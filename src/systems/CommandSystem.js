@@ -1,0 +1,551 @@
+// Tactical-view RTS controls: click / box selection of friendly stacks, contextual
+// right-click orders (move, attack, move-and-hold), right-drag to move and face the way you
+// drag (an arrow shows it; drag next to a squad to just turn it), hotkeys, selection rings and
+// order markers.
+// Double-click a stack (or select it and press Tab) to take direct control of it.
+// Targeting mode (fortify / air strike buttons): a ghost follows the cursor; LMB confirms,
+// RMB or Esc cancels, Q / E rotate a structure.
+// Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
+// here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import * as THREE from 'three';
+import { STRUCTURES } from './Construction.js';
+import { KINDS } from './AirStrike.js';
+import { CameraMode } from '../core/CameraManager.js';
+import { enemyOf } from '../data/factions.js';
+import { dist2DSq } from '../core/math.js';
+import { GroundDecal } from '../world/GroundDecal.js';
+
+const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
+const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
+
+export class CommandSystem {
+  constructor(game) {
+    this.game = game;
+    this.faction = game.playerFaction;
+    this.enemy = enemyOf(this.faction);
+    this.selected = new Set();
+    this.rings = new Map();
+    this.markers = [];
+    this.drag = null;
+    this.boxEl = document.getElementById('select-box');
+
+    this.raycaster = new THREE.Raycaster();
+    this.ndc = new THREE.Vector2();
+    this._p = new THREE.Vector3();
+    this._v = new THREE.Vector3();
+
+    this.ringGeo = new THREE.RingGeometry(0.92, 1, 48);
+    this.ringGeo.rotateX(-Math.PI / 2);
+    this.ringMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0xffc35a).multiplyScalar(1.5), transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+    });
+
+    const bus = game.bus;
+    bus.on('mousedown', (e) => this.onMouseDown(e));
+    bus.on('mouseup', (e) => this.onMouseUp(e));
+    bus.on('key', (e) => this.onKey(e));
+    bus.on('ui:command', (cmd) => this.runCommand(cmd));
+    bus.on('stack:destroyed', (s) => {
+      if (this.selected.delete(s)) this.emitSelection();
+    });
+    bus.on('stack:removed', (s) => {
+      if (this.selected.delete(s)) this.emitSelection();
+    });
+  }
+
+  get active() {
+    return this.game.cameraManager.mode === CameraMode.TACTICAL && !this.game.ended;
+  }
+
+  playerStacks() {
+    // co-op: not your partner's; never fortifications or the lane waves (they go by themselves)
+    return this.game.world.stacksOf(this.faction).filter((s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
+  }
+
+  // ---------------------------------------------------------------- picking
+
+  pickGround(x, y, out) {
+    const rect = this.game.canvas.getBoundingClientRect();
+    this.ndc.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+    this.raycaster.setFromCamera(this.ndc, this.game.camera);
+    const ray = this.raycaster.ray;
+    return this.game.terrain.raycast(ray.origin, ray.direction, 900, out);
+  }
+
+  /** Visible stack of `faction` with a living unit (edge) closest to `point`, within maxDist. */
+  stackNear(point, faction, maxDist = 2.8) {
+    let best = null;
+    let bestD = maxDist;
+    for (const s of this.game.world.stacksOf(faction)) {
+      if (s.visible === false) continue;
+      for (const u of s.units) {
+        if (!u.alive || u.visible === false) continue;
+        const d = Math.sqrt(dist2DSq(point, u.pos)) - u.radius;
+        if (d < bestD) { bestD = d; best = s; }
+      }
+    }
+    return best;
+  }
+
+  /** Replace the selection (used when returning from direct control). */
+  select(stacks) {
+    this.selected = new Set(stacks.filter((s) => s.alive));
+    this.emitSelection();
+  }
+
+  // ---------------------------------------------------------------- input
+
+  onMouseDown({ button, x, y, shift, ctrl }) {
+    if (!this.active) return;
+    if (this.targeting) {
+      if (button === 0) this.confirmTargeting(x, y);
+      else if (button === 2) this.cancelTargeting();
+      return;
+    }
+    if (button === 0) this.drag = { x0: x, y0: y, shift };
+    else if (button === 2) {
+      // a click orders at once on release; a drag sets the facing (see update / onMouseUp)
+      const p = this.pickGround(x, y, this._p);
+      this.rdrag = { x0: x, y0: y, ctrl, p0: p ? p.clone() : null };
+    }
+  }
+
+  onMouseUp({ button, x, y }) {
+    if (button === 2 && this.rdrag) {
+      const r = this.rdrag;
+      this.rdrag = null;
+      this.hideFacingArrow();
+      if (!this.active) return;
+      const far = Math.hypot(x - r.x0, y - r.y0) > 10;
+      const p1 = far ? this.pickGround(x, y, this._v) : null;
+      if (far && r.p0 && p1 && this.selected.size) this.issueFacing(r.p0, p1, r.ctrl);
+      else this.issueOrder(r.x0, r.y0, r.ctrl);
+      return;
+    }
+    if (button !== 0 || !this.drag) return;
+    const d = this.drag;
+    this.drag = null;
+    this.boxEl.hidden = true;
+    if (!this.active) return;
+    if (Math.abs(x - d.x0) < 6 && Math.abs(y - d.y0) < 6) this.clickSelect(x, y, d.shift);
+    else this.boxSelect(Math.min(x, d.x0), Math.min(y, d.y0), Math.max(x, d.x0), Math.max(y, d.y0), d.shift);
+  }
+
+  onKey({ code, shift }) {
+    if (!this.active) return;
+    if (this.targeting) {
+      if (code === 'Escape') { this.cancelTargeting(); this.escConsumed = true; }
+      else if (code === 'KeyQ') this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) + Math.PI / 12;
+      else if (code === 'KeyE') this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) - Math.PI / 12;
+      return;
+    }
+    if (code === 'KeyH') this.runCommand('hold');
+    else if (code === 'KeyN') this.runCommand('build:sandbags');
+    else if (code === 'KeyT') this.runCommand('build:trench');
+    else if (code === 'KeyV') this.runCommand('build:wire');
+    else if (code === 'KeyF') this.runCommand('build:mines');
+    else if (code === 'KeyY') this.runCommand('air');
+    else if (code === 'KeyJ') this.runCommand('air:jet');
+    else if (code === 'KeyP') this.runCommand('air:lift');
+    else if (code === 'KeyK') this.runCommand('smoke');
+    else if (code === 'KeyU') this.runCommand('unload');
+    else if (code === 'KeyX') this.runCommand('engineer');
+    else if (code === 'KeyL') this.runCommand('flare');
+    else if (code === 'KeyC') this.game.bus.emit('ui:reinforcements');
+    else if (code === 'KeyE') this.runCommand('leave');
+    else if (code === 'KeyQ') this.runCommand('selectAll');
+    else if (code.startsWith('Digit')) {
+      const stack = this.playerStacks()[Number(code.slice(5)) - 1];
+      if (!stack) return;
+      if (!shift) this.selected.clear();
+      this.selected.add(stack);
+      this.emitSelection();
+    }
+  }
+
+  runCommand(cmd) {
+    if (cmd === 'selectAll') {
+      this.selected = new Set(this.playerStacks());
+      this.emitSelection();
+    } else if (cmd === 'hold') {
+      if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
+      this.game.orders.issue({ t: 'hold', s: ids(this.selected) });
+      for (const s of this.selected) this.addMarker(s.centroid, 'hold');
+      this.game.bus.emit('order', { kind: 'hold' });
+    } else if (cmd === 'control') {
+      this.game.toggleView();
+    } else if (cmd.startsWith('build:')) {
+      const builders = [...this.selected].filter((st) => st.alive && st.usesCover);
+      if (builders.length !== 1) return this.game.bus.emit('toast', 'Select one infantry stack to build with');
+      this.startTargeting({ kind: 'build', structure: cmd.slice(6), stack: builders[0] });
+    } else if (cmd === 'leave') {
+      const inside = [...this.selected].filter((s) => s.alive && s.garrison);
+      if (!inside.length) return this.game.bus.emit('toast', 'Select a stack inside a building');
+      this.game.orders.issue({ t: 'leave', s: ids(inside) });
+      this.game.bus.emit('order', { kind: 'move' });
+    } else if (cmd === 'flare') {
+      if (!this.game.conditions?.night) return this.game.bus.emit('toast', 'Illumination rounds are for night battles');
+      const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
+      if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
+      this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd === 'engineer') {
+      const eng = [...this.selected].filter((st) => st.alive && st.stats.engineer);
+      if (eng.length !== 1) return this.game.bus.emit('toast', 'Select one engineer stack');
+      this.startTargeting({ kind: 'engineer', stack: eng[0] });
+    } else if (cmd === 'unload') {
+      const carriers = [...this.selected].filter((s) => this.game.transport.canUnload(s));
+      if (!carriers.length) return this.game.bus.emit('toast', 'Select loaded IFVs to unload');
+      const squads = this.game.orders.issue({ t: 'unload', s: ids(carriers) }) ?? [];
+      for (const sq of squads) this.selected.add(sq);
+      this.emitSelection();
+    } else if (cmd === 'smoke') {
+      const sel = [...this.selected].filter((s) => s.alive);
+      const vehicles = sel.filter((s) => s.smokeLeft > 0);
+      const mortars = sel.filter((s) => s.smokeRounds > 0);
+      if (mortars.length) return this.startTargeting({ kind: 'smoke', stacks: mortars });
+      if (!vehicles.length) return this.game.bus.emit('toast', 'Select vehicles with smoke launchers, or a mortar team');
+      this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
+    } else if (cmd === 'air' || cmd.startsWith('air:')) {
+      const air = cmd.slice(4) || 'heli';
+      if (!this.game.air.ready(this.faction, air)) {
+        return this.game.bus.emit('toast', `${KINDS[air].aircraft[this.faction].name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
+      }
+      this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
+    }
+  }
+
+  // ---------------------------------------------------------------- targeting mode
+
+  startTargeting(t) {
+    this.cancelTargeting();
+    const scene = this.game.scene;
+    if (t.kind === 'build') {
+      const def = STRUCTURES[t.structure];
+      const ghost = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0.35, depthWrite: false });
+      ghost.add(new THREE.Mesh(new THREE.BoxGeometry(def.length, 0.8, def.width), mat));
+      const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 4), mat);
+      arrow.rotation.x = Math.PI / 2; // points to the front (enemy side)
+      arrow.position.set(0, 0.2, def.width / 2 + 0.8);
+      ghost.add(arrow);
+      t.ghost = ghost;
+      // face the enemy by default
+      const base = this.game.world.bases[this.enemy];
+      t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
+      this.game.bus.emit('toast', `Place ${def.name} (${def.cost} CP) — Q/E rotate, click to confirm, right-click to cancel`);
+    } else if (t.kind === 'engineer') {
+      const geo = new THREE.RingGeometry(0.9, 1, 48);
+      geo.rotateX(-Math.PI / 2);
+      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
+      t.ghost = t.decal.mesh;
+      this.game.bus.emit('toast', this.game.map.bridgeAt
+        ? 'Engineers: click mines or wire to clear them, or a bridge to blow it — right-click cancels'
+        : 'Engineers: click mines or wire to clear them — right-click cancels');
+    } else if (t.kind === 'smoke') {
+      const geo = new THREE.RingGeometry(0.92, 1, 48);
+      geo.rotateX(-Math.PI / 2);
+      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
+      t.ghost = t.decal.mesh;
+      this.game.bus.emit('toast', t.flare ? 'Illumination: click where to light up — right-click cancels' : 'Smoke mission: click where to lay the screen — right-click cancels');
+    } else {
+      // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
+      // an air assault: the landing zone, with the arrow it comes in along
+      const p = KINDS[t.air];
+      const shape = new THREE.Shape();
+      const L = (p.runLength || 30) / 2;
+      shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
+      shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
+      if (t.air === 'lift') {
+        const hole = new THREE.Path();
+        hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
+        shape.moveTo(0, L + 20);
+        shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
+        shape.holes.push(hole);
+      }
+      const geo = new THREE.ShapeGeometry(shape);
+      if (t.air === 'lift') geo.translate(0, -(L + 12), 0); // the ring sits on the clicked spot
+      geo.rotateX(Math.PI / 2);
+      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0xff6a3d).multiplyScalar(1.6), transparent: true, opacity: 0.6, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+      }), this.game.terrain, 0.3);
+      t.ghost = t.decal.mesh;
+      this.game.bus.emit('toast', t.air === 'lift'
+        ? `Air assault (${p.cost} CP): click the landing zone — Q/E turn the approach, right-click cancels`
+        : `${p.label} (${p.cost} CP): click the target — Q/E turn the run, right-click cancels`);
+    }
+    scene.add(t.ghost);
+    this.targeting = t;
+  }
+
+  cancelTargeting() {
+    const t = this.targeting;
+    if (!t) return;
+    t.ghost.removeFromParent();
+    this.targeting = null;
+  }
+
+  confirmTargeting(x, y) {
+    const t = this.targeting;
+    const p = this.pickGround(x, y, this._p);
+    if (!p) return;
+    if (t.kind === 'build') {
+      if (!t.stack.alive) return this.cancelTargeting();
+      this.game.orders.issue({ t: 'build', s: t.stack.id, k: t.structure, x: p.x, z: p.z, yaw: t.yaw });
+      this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'engineer') {
+      if (!t.stack.alive) return this.cancelTargeting();
+      const bridge = this.game.map.bridgeAt?.(p.x, p.z);
+      const at = bridge && !bridge.blown ? bridge : p;
+      this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
+      this.addMarker(at, 'attack');
+      this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke') {
+      this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });
+      this.addMarker(p, 'hold');
+    } else if (this.game.orders.issue({ t: 'air', x: p.x, z: p.z, yaw: t.yaw ?? this.game.air.defaultYaw(this.faction, p.x, p.z), k: t.air }) === false) {
+      return;
+    } else {
+      this.addMarker(p, 'attack');
+    }
+    this.cancelTargeting();
+  }
+
+  updateTargeting() {
+    const t = this.targeting;
+    if (!t) return;
+    if (!this.active) return this.cancelTargeting();
+    const m = this.game.input.mouse;
+    const p = this.pickGround(m.x, m.y, this._p);
+    if (!p) return;
+    if (t.kind === 'build') {
+      t.ghost.position.set(p.x, p.y + 0.4, p.z);
+      t.ghost.rotation.y = t.yaw;
+    } else {
+      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, 10);
+      if (t.kind === 'engineer') {
+        const bridge = this.game.map.bridgeAt?.(p.x, p.z);
+        return bridge && !bridge.blown ? t.decal.place(bridge.x, bridge.z, 7) : t.decal.place(p.x, p.z, 9);
+      }
+      t.autoYaw = this.game.air.defaultYaw(this.faction, p.x, p.z);
+      t.decal.place(p.x, p.z, 1, t.yaw ?? t.autoYaw);
+    }
+  }
+
+  // ---------------------------------------------------------------- selection
+
+  clickSelect(x, y, shift) {
+    const p = this.pickGround(x, y, this._p);
+    const near = p ? this.stackNear(p, this.faction) : null;
+    const stack = near && this.game.mine(near) && !near.stats.structure && !near.autonomous ? near : null;
+    if (!shift) this.selected.clear();
+    if (stack) {
+      if (shift && this.selected.has(stack)) this.selected.delete(stack);
+      else this.selected.add(stack);
+      // double-click: take control
+      const now = performance.now();
+      if (this.lastClick?.stack === stack && now - this.lastClick.time < 350) {
+        this.lastClick = null;
+        this.game.bus.emit('ui:possess', stack);
+        return;
+      }
+      this.lastClick = { stack, time: now };
+    }
+    this.emitSelection();
+  }
+
+  boxSelect(x0, y0, x1, y1, shift) {
+    if (!shift) this.selected.clear();
+    const rect = this.game.canvas.getBoundingClientRect();
+    for (const s of this.playerStacks()) {
+      const v = this._v.copy(s.centroid).project(this.game.camera);
+      if (v.z > 1) continue;
+      const sx = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+      const sy = rect.top + (-v.y * 0.5 + 0.5) * rect.height;
+      if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) this.selected.add(s);
+    }
+    this.emitSelection();
+  }
+
+  emitSelection() {
+    this.game.bus.emit('selection', [...this.selected]);
+  }
+
+  // ---------------------------------------------------------------- orders
+
+  issueOrder(x, y, hold) {
+    if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
+    const p = this.pickGround(x, y, this._p);
+    if (!p) return;
+    const target = this.stackNear(p, this.enemy, 3.5);
+    // right-click your own IFVs with infantry selected: climb in
+    const own = target ? null : this.stackNear(p, this.faction, 3.5);
+    if (own?.stats.carries) {
+      const squads = [...this.selected].filter((s) => s.usesCover && s !== own);
+      if (squads.length) {
+        this.game.bus.emit('order', { kind: 'move' });
+        this.game.orders.issue({ t: 'board', s: squads[0].id, c: own.id });
+        return;
+      }
+    }
+    // right-click a house with infantry selected: garrison it
+    const building = target ? null : this.game.buildings.at(p.x, p.z, 0.5);
+    if (building) {
+      const squads = [...this.selected].filter((s) => s.usesCover);
+      if (squads.length) {
+        this.game.orders.issue({ t: 'garrison', s: ids(squads), b: building.index });
+        const others = [...this.selected].filter((s) => !s.usesCover);
+        if (others.length) this.moveGroup(others, p, { hold });
+        this.game.bus.emit('order', { kind: 'hold' });
+        this.addMarker({ x: building.x, z: building.z }, 'hold');
+        return;
+      }
+    }
+    this.game.bus.emit('order', { kind: target ? 'attack' : hold ? 'hold' : 'move' });
+    if (target) {
+      this.game.orders.issue({ t: 'attack', s: ids(this.selected), target: target.id });
+      this.addMarker(target.centroid, 'attack');
+      return;
+    }
+    this.moveGroup([...this.selected], p, { hold });
+    this.addMarker(p, hold ? 'hold' : 'move');
+  }
+
+  /** Right-drag: move the selection to `p0` and hold there facing toward `p1`. */
+  issueFacing(p0, p1) {
+    const stacks = [...this.selected].filter((s) => s.alive);
+    if (!stacks.length) return;
+    const yaw = Math.atan2(p1.x - p0.x, p1.z - p0.z);
+    const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+    // a squad dragged right next to itself only turns round
+    const one = stacks.length === 1 ? stacks[0] : null;
+    const dest = one && Math.hypot(one.centroid.x - p0.x, one.centroid.z - p0.z) < one.footprint + 3 ? one.centroid.clone() : p0;
+    this.moveGroup(stacks, dest, { hold: true, facing: dir, face: yaw });
+    this.addMarker(dest, 'hold');
+    this.game.bus.emit('order', { kind: 'hold' });
+  }
+
+  /** The arrow shown while right-dragging: from the press point toward the cursor. */
+  showFacingArrow(p0, p1) {
+    if (!this.arrow) {
+      const shape = new THREE.Shape();
+      shape.moveTo(-0.6, 0); shape.lineTo(0.6, 0); shape.lineTo(0.6, 0.78); shape.lineTo(1.6, 0.78);
+      shape.lineTo(0, 1); shape.lineTo(-1.6, 0.78); shape.lineTo(-0.6, 0.78); shape.closePath();
+      const geo = new THREE.ShapeGeometry(shape);
+      geo.rotateX(Math.PI / 2); // flat, pointing along +z
+      this.arrow = new GroundDecal(geo, new THREE.MeshBasicMaterial({
+        color: new THREE.Color(MARKER_COLORS.hold).multiplyScalar(1.5), transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+      }), this.game.terrain, 0.3);
+      this.game.scene.add(this.arrow.mesh);
+    }
+    const len = Math.max(6, Math.min(60, Math.hypot(p1.x - p0.x, p1.z - p0.z)));
+    this.arrow.mesh.visible = true;
+    this.arrow.place(p0.x, p0.z, len, Math.atan2(p1.x - p0.x, p1.z - p0.z));
+  }
+
+  hideFacingArrow() {
+    if (this.arrow) this.arrow.mesh.visible = false;
+  }
+
+  /**
+   * Spread a group around `point`: frontline stacks in a row at the point, the rest in a row
+   * behind them. Rows run perpendicular to `facing` (default: from the group toward the point).
+   * `face` (yaw): they hold there looking that way.
+   */
+  moveGroup(stacks, point, { hold = false, facing = null, face = null } = {}) {
+    if (!stacks.length) return;
+    const dir = new THREE.Vector3();
+    if (facing) dir.copy(facing);
+    else {
+      for (const s of stacks) dir.add(s.centroid);
+      dir.divideScalar(stacks.length).subVectors(point, dir);
+    }
+    dir.y = 0;
+    if (dir.lengthSq() < 1) dir.set(0, 0, -1);
+    dir.normalize();
+    const perp = new THREE.Vector3(-dir.z, 0, dir.x);
+
+    const front = stacks.filter((s) => s.type.role === 'frontline');
+    const back = stacks.filter((s) => s.type.role !== 'frontline');
+    const rows = front.length && back.length ? [[front, 0], [back, -14]] : [[stacks, 0]];
+
+    const moves = [];
+    for (const [row, depth] of rows) {
+      row.sort((a, b) => perp.dot(a.centroid) - perp.dot(b.centroid)); // keep left/right order, no crossing
+      const widths = row.map((s) => s.footprint * 2 + 2);
+      let cursor = -widths.reduce((a, b) => a + b, 0) / 2;
+      row.forEach((s, i) => {
+        const off = cursor + widths[i] / 2;
+        cursor += widths[i];
+        const dest = point.clone().addScaledVector(perp, off).addScaledVector(dir, depth);
+        moves.push([s.id, Math.round(dest.x * 100) / 100, Math.round(dest.z * 100) / 100]);
+      });
+    }
+    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000 });
+  }
+
+  addMarker(point, kind) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(MARKER_COLORS[kind]).multiplyScalar(1.6), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+    });
+    const decal = new GroundDecal(this.ringGeo, mat, this.game.terrain, 0.2);
+    decal.place(point.x, point.z);
+    this.game.scene.add(decal.mesh);
+    this.markers.push({ decal, x: point.x, z: point.z, t: 0 });
+  }
+
+  // ---------------------------------------------------------------- per frame
+
+  update(dt) {
+    this.updateTargeting();
+    // right-drag: show which way they'll face
+    if (this.rdrag?.p0 && this.active) {
+      const m = this.game.input.mouse;
+      const p = Math.hypot(m.x - this.rdrag.x0, m.y - this.rdrag.y0) > 10 ? this.pickGround(m.x, m.y, this._v) : null;
+      if (p && this.selected.size) this.showFacingArrow(this.rdrag.p0, p); else this.hideFacingArrow();
+    }
+    // Drag box
+    if (this.drag && this.active) {
+      const m = this.game.input.mouse;
+      const x0 = Math.min(m.x, this.drag.x0);
+      const y0 = Math.min(m.y, this.drag.y0);
+      const w = Math.abs(m.x - this.drag.x0);
+      const h = Math.abs(m.y - this.drag.y0);
+      this.boxEl.hidden = w < 6 && h < 6;
+      Object.assign(this.boxEl.style, { left: `${x0}px`, top: `${y0}px`, width: `${w}px`, height: `${h}px` });
+    }
+
+    // Selection rings under selected stacks
+    for (const s of this.game.world.stacks) {
+      if (s.faction !== this.faction) continue;
+      let ring = this.rings.get(s);
+      const show = s.alive && this.selected.has(s);
+      if (!ring) {
+        if (!show) continue;
+        ring = new GroundDecal(this.ringGeo, this.ringMat, this.game.terrain, 0.2);
+        this.game.scene.add(ring.mesh);
+        this.rings.set(s, ring);
+      }
+      ring.mesh.visible = show;
+      if (show) ring.place(s.centroid.x, s.centroid.z, s.footprint + 0.8);
+    }
+
+    // Order markers expand and fade
+    for (let i = this.markers.length - 1; i >= 0; i--) {
+      const mk = this.markers[i];
+      mk.t += dt;
+      const p = mk.t / 0.7;
+      const mesh = mk.decal.mesh;
+      if (p >= 1) {
+        mesh.removeFromParent();
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        this.markers.splice(i, 1);
+        continue;
+      }
+      mk.decal.place(mk.x, mk.z, 1 + p * 2.5);
+      mesh.material.opacity = 1 - p;
+    }
+  }
+}

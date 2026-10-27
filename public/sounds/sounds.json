@@ -1,0 +1,358 @@
+{
+  "_comment": "Recorded sounds: sound key → files in this folder (one is picked at random per shot). Keys without files keep their synthesised sound. See README.md for every key, CREDITS.md for sources.",
+  "nato.rifle": [
+    "guns/m16-1.wav",
+    "guns/m16-2.wav",
+    "guns/m16-3.wav",
+    "guns/m16-4.wav"
+  ],
+  "pact.rifle": [
+    "guns/ak-1.wav",
+    "guns/ak-2.wav",
+    "guns/ak-3.wav",
+    "guns/ak-4.wav",
+    "guns/ak-5.wav",
+    "guns/ak-6.wav",
+    "guns/ak-7.wav",
+    "guns/ak-8.wav",
+    "guns/ak-9.wav",
+    "guns/ak-10.wav",
+    "guns/ak-11.wav"
+  ],
+  "nato.mg": [
+    "guns/m60-1.wav",
+    "guns/m60-2.wav",
+    "guns/m60-3.wav",
+    "guns/m60-4.wav"
+  ],
+  "pact.mg": [
+    "guns/pkm-1.wav",
+    "guns/pkm-2.wav",
+    "guns/pkm-3.wav",
+    "guns/pkm-4.wav"
+  ],
+  "explosion": [
+    "explosions/eod-1.mp3",
+    "explosions/blast-1.mp3",
+    "explosions/fire-1.mp3"
+  ],
+  "explosion.big": [
+    "explosions/heavy-1.mp3",
+    "explosions/blowup-1.wav",
+    "explosions/illegal-1.wav"
+  ],
+  "explosion.far": [
+    "explosions/far-forest-200m.mp3"
+  ],
+  "explosion.big.far": [
+    "explosions/far-forest-200m.mp3"
+  ],
+  "nato.cannon": [
+    "weapons/tank-fire.mp3"
+  ],
+  "pact.cannon": [
+    "weapons/tank-fire-t.wav",
+    "weapons/tank-fire.mp3"
+  ],
+  "nato.arty": [
+    "weapons/howitzer.mp3"
+  ],
+  "pact.arty": [
+    "weapons/howitzer.mp3"
+  ],
+  "nato.mortar": [
+    "weapons/mortar-120mm.mp3",
+    "weapons/mortar-m327-1.wav"
+  ],
+  "pact.mortar": [
+    "weapons/mortar-m327-1.wav",
+    "weapons/mortar-m327-2.wav"
+  ],
+  "nato.autocannon": [
+    "weapons/bushmaster-1.wav",
+    "weapons/bushmaster-2.wav",
+    "weapons/bushmaster-3.wav"
+  ],
+  "pact.autocannon": [
+    "weapons/bushmaster-1.wav",
+    "weapons/bushmaster-2.wav",
+    "weapons/bushmaster-3.wav"
+  ],
+  "rotor.uh60": [
+    "aircraft/uh60-hover.mp3"
+  ],
+  "rotor.mi8": [
+    "aircraft/helicopter-loop.mp3"
+  ],
+  "rotor.hind": [
+    "aircraft/helicopter-loop.mp3"
+  ],
+  "rotor.cobra": [
+    "aircraft/military-rotor.mp3"
+  ],
+  "engine.diesel": [
+    "vehicles/diesel-idle.mp3"
+  ],
+  "engine.dieselSmall": [
+    "vehicles/diesel-idle.mp3"
+  ],
+  "tracks.heavy": [
+    "vehicles/t26-moving.mp3"
+  ],
+  "tracks.light": [
+    "vehicles/tracked-vehicle.mp3"
+  ],
+  "nato.rocket": [
+    "weapons/rocket-launch-1.wav",
+    "weapons/rocket-launch-2.wav"
+  ],
+  "pact.rocket": [
+    "weapons/rocket-launch-3.wav",
+    "weapons/rocket-launch-low.wav"
+  ],
+  "heli.rocket": [
+    "weapons/rocket-launch-2.wav",
+    "weapons/rocket-launch-3.wav"
+  ],
+  "nato.mlrs": [
+    "weapons/himars-1.wav",
+    "weapons/himars-2.wav",
+    "weapons/himars-3.wav"
+  ],
+  "pact.mlrs": [
+    "weapons/rocket-launch-low.wav",
+    "weapons/himars-2.wav"
+  ],
+  "nato.sam": [
+    "weapons/missile-1.wav"
+  ],
+  "pact.sam": [
+    "weapons/missile-2.wav",
+    "weapons/missile-1.wav"
+  ],
+  "jet.missile": [
+    "weapons/missile-1.wav",
+    "weapons/missile-2.wav"
+  ],
+  "nato.aa": [
+    "weapons/vulcan-1.wav",
+    "weapons/vulcan-2.wav",
+    "weapons/vulcan-3.wav",
+    "weapons/vulcan-4.wav"
+  ],
+  "pact.aa": [
+    "weapons/zsu-1.wav",
+    "weapons/zsu-2.wav",
+    "weapons/zsu-3.wav"
+  ],
+  "heli.m197": [
+    "weapons/m197-1.wav",
+    "weapons/m197-2.wav",
+    "weapons/m197-3.wav",
+    "weapons/m197-4.wav"
+  ],
+  "heli.yakb": [
+    "weapons/yakb-1.wav",
+    "weapons/yakb-2.wav",
+    "weapons/yakb-3.wav",
+    "weapons/yakb-4.wav"
+  ],
+  "jet.gau8": [
+    "weapons/gau8.wav"
+  ],
+  "jet.gsh30": [
+    "weapons/gsh30.wav"
+  ],
+  "ricochet": {
+    "files": [
+      "impacts/ricochet-1.wav",
+      "impacts/ricochet-2.wav",
+      "impacts/ricochet-3.wav"
+    ],
+    "gain": 0.6
+  },
+  "snap": [
+    "impacts/snap-1.wav",
+    "impacts/snap-2.wav"
+  ],
+  "nato.reload": [
+    "soldiers/reload-nato.wav"
+  ],
+  "pact.reload": [
+    "soldiers/reload-pact.wav"
+  ],
+  "death": [
+    "soldiers/fall-1.wav",
+    "soldiers/fall-2.wav",
+    "soldiers/fall-3.wav"
+  ],
+  "hurt": [
+    "soldiers/grunt-1.wav",
+    "soldiers/grunt-2.wav",
+    "soldiers/grunt-3.wav",
+    "soldiers/grunt-4.wav"
+  ],
+  "smoke.pop": [
+    "weapons/smoke-pop.wav"
+  ],
+  "flare.pop": [
+    "weapons/flare-pop.wav"
+  ],
+  "nato.radio": [
+    "ui/radio-nato.wav"
+  ],
+  "pact.radio": [
+    "ui/radio-pact.wav"
+  ],
+  "whoosh": [
+    "ui/whoosh.wav"
+  ],
+  "crow": [
+    "ambience/crow-1.wav",
+    "ambience/crow-2.wav"
+  ],
+  "birds": [
+    "ambience/birds.mp3"
+  ],
+  "wind": [
+    "ambience/wind.mp3"
+  ],
+  "rain": [
+    "ambience/rain.mp3"
+  ],
+  "incoming.0": [
+    "weapons/incoming-1.wav"
+  ],
+  "incoming.1": [
+    "weapons/incoming-2.wav"
+  ],
+  "incoming.2": [
+    "weapons/incoming-3.wav"
+  ],
+  "jet": [
+    "aircraft/jet-loop.mp3"
+  ],
+  "engine.turbine": {
+    "files": [
+      "aircraft/jet-loop.mp3"
+    ],
+    "gain": 0.35
+  },
+  "impact.armor": [
+    "impacts/armor-1.ogg",
+    "impacts/armor-2.ogg",
+    "impacts/armor-3.ogg",
+    "impacts/armor-4.ogg",
+    "impacts/armor-5.ogg"
+  ],
+  "impact.stone": [
+    "impacts/stone-1.ogg",
+    "impacts/stone-2.ogg",
+    "impacts/stone-3.ogg",
+    "impacts/stone-4.ogg"
+  ],
+  "impact.ground": [
+    "impacts/ground-1.ogg",
+    "impacts/ground-2.ogg",
+    "impacts/ground-3.ogg",
+    "impacts/ground-4.ogg"
+  ],
+  "impact.flesh": [
+    "impacts/flesh-1.ogg",
+    "impacts/flesh-2.ogg",
+    "impacts/flesh-3.ogg"
+  ],
+  "step.0": [
+    "steps/grass-1.ogg",
+    "steps/grass-2.ogg",
+    "steps/grass-3.ogg",
+    "steps/grass-4.ogg",
+    "steps/grass-5.ogg"
+  ],
+  "step.1": [
+    "steps/grass-1.ogg",
+    "steps/grass-2.ogg",
+    "steps/grass-3.ogg",
+    "steps/grass-4.ogg",
+    "steps/grass-5.ogg"
+  ],
+  "step.2": [
+    "steps/concrete-1.ogg",
+    "steps/concrete-2.ogg",
+    "steps/concrete-3.ogg",
+    "steps/concrete-4.ogg",
+    "steps/concrete-5.ogg"
+  ],
+  "step.3": [
+    "steps/snow-1.ogg",
+    "steps/snow-2.ogg",
+    "steps/snow-3.ogg",
+    "steps/snow-4.ogg",
+    "steps/snow-5.ogg"
+  ],
+  "click": [
+    "ui/click-1.ogg",
+    "ui/click-2.ogg",
+    "ui/click-3.ogg"
+  ],
+  "order": [
+    "ui/order-1.ogg",
+    "ui/order-2.ogg"
+  ],
+  "ready": [
+    "ui/ready.ogg"
+  ],
+  "nato.rifle.far": [
+    "far/m16-1.wav",
+    "far/m16-2.wav",
+    "far/m16-3.wav"
+  ],
+  "pact.rifle.far": [
+    "far/ak-1.wav",
+    "far/ak-2.wav",
+    "far/ak-3.wav"
+  ],
+  "nato.mg.far": [
+    "far/m60-1.wav",
+    "far/m60-2.wav",
+    "far/m60-3.wav"
+  ],
+  "pact.mg.far": [
+    "far/pkm-1.wav",
+    "far/pkm-2.wav",
+    "far/pkm-3.wav"
+  ],
+  "nato.cannon.far": [
+    "far/cannon-1.wav"
+  ],
+  "pact.cannon.far": [
+    "far/cannon-2.wav"
+  ],
+  "nato.autocannon.far": [
+    "far/bushmaster-1.wav",
+    "far/bushmaster-2.wav"
+  ],
+  "pact.autocannon.far": [
+    "far/bushmaster-1.wav",
+    "far/bushmaster-2.wav"
+  ],
+  "nato.aa.far": [
+    "far/vulcan-1.wav",
+    "far/vulcan-2.wav"
+  ],
+  "pact.aa.far": [
+    "far/zsu-1.wav",
+    "far/zsu-2.wav"
+  ],
+  "nato.arty.far": [
+    "far/howitzer-1.wav"
+  ],
+  "pact.arty.far": [
+    "far/howitzer-2.wav"
+  ],
+  "arty.distant": [
+    "far/horizon-1.wav",
+    "far/horizon-2.wav",
+    "explosions/far-forest-200m.mp3"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  // TypeScript checks the code without building it (Vite does that). The game is still mostly
+  // JavaScript: allowJs lets .js and .ts files sit side by side while files move to TypeScript
+  // one at a time; checkJs stays off so untouched .js files don't flood the checker.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noImplicitAny": false,  // for now: helpers in converted files keep untyped params (data shapes are still checked)
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src"]
+}

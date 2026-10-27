@@ -1,0 +1,41 @@
+// Radio traffic from the rest of the war, for the radio log (ui/RadioLog.js): what the other
+// units of the corps / the front are doing while you fight your corner of it. Pure flavour —
+// one line every half minute or so, picked at random without repeats.
+export const RADIO = {
+  nato: [
+    'V Corps: 11th Armored Cavalry still holding the Fulda road. Expect armour from the north-east.',
+    'Brigade: all bridges on the Fulda are prepared for demolition. Do not let them cross intact.',
+    'Div arty: counter-battery fire on Vacha. Shift fires on request.',
+    'Air: two A-10s working the Hünfeld–Rasdorf road. Watch your panels.',
+    'Medevac: Dustoff inbound for the aid station behind Mackenzell, ETA ten minutes.',
+    'All stations: chemical attack reported in the northern sector. Check your masks.',
+    'Recon: column of BMPs on route 84, moving south-west. Twenty-plus vehicles.',
+    'Brigade: 3rd Battalion is falling back to the second line. Your left is open.',
+    'Logistics: fuel and ammunition at the old quarry. Bring your own trucks.',
+    'Bundeswehr: Panzergrenadiers of the 2nd Division are tying in on your right.',
+    'V Corps: hold until relieved. Relief is not expected before nightfall.',
+    'Air: enemy Hinds sighted low over the Ulster valley. Air defence, weapons free.',
+    'Engineers: minefield laid across the Haune crossing. Lanes are marked white.',
+    'Division: the enemy\'s second echelon is moving up. Expect a heavier push within the hour.',
+    'Signal: jamming on the battalion net. Switch to alternate frequency on my mark.',
+    'Recon: enemy bridging equipment spotted near Geisa.',
+  ],
+  pact: [
+    'Front HQ: 8th Guards Army continues the advance. Keep to the timetable.',
+    'Regiment: second echelon moving up behind you. Clear the road.',
+    'Artillery: preparatory fire on the enemy\'s forward positions in two minutes.',
+    'Division: the Americans are falling back on Fulda. Pursue without pause.',
+    'Air: Su-25s working the Hünfeld road. Mark your forward line.',
+    'Recon: enemy anti-tank positions on the ridge west of Rasdorf.',
+    'All stations: NATO helicopters active low over the valley. Shilkas, weapons free.',
+    'Engineers: the PMP bridge column is held up at Vacha. Hold the crossing open.',
+    'Political officer: the comrades of the 1st Battalion took Point Alpha at a heavy price.',
+    'Regiment: fuel convoy delayed. Conserve what you have.',
+    'Front HQ: West German reserves reported moving east from Bad Hersfeld.',
+    'Signal: enemy jamming on the regimental net. Use the reserve frequency.',
+    'Division: the 57th Guards on your left have broken through. Keep pace with them.',
+    'Artillery: smoke on the river line at your request — say when.',
+    'Recon: American cavalry withdrawing south-west. Their rearguard is thin.',
+    'Medical: casualty collection point moved to the church in Geisa.',
+  ],
+};
