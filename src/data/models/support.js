@@ -281,45 +281,104 @@ export const buildNatoM88 = vehicle(() => {
 
 // ---------------------------------------------------------------- Pact: BRDM-2 and 9P148
 
+// BRDM-2: a long boat hull with the four road wheels set into arches in its sides (the hull
+// comes down to the ground between and around them), the steep armoured windscreen with its two
+// vision ports and their shutters raised, the commander's and driver's roof hatches behind it,
+// the sloping engine deck at the rear with its louvres and exhausts, the belly wheels between
+// the axles. The 9P148 Konkurs carrier is the same hull with the launcher on its roof.
+const BRDM_ARCH = 0.62;              // half-length of a wheel arch along the hull
 const brdmHull = (extra = []) => ({
-  wheels: wheeled([1.45, -1.45], 1.12, 0.5),
+  wheels: wheeled([1.45, -1.45], 0.92, 0.52),
   hull: grime(merge([
-    // the boat hull: a narrow belly between the wheels, the body overhanging them, the sloped
-    // nose with the driver's and commander's armoured vision ports
     stationHull([
-      [-2.9, [[0, 0.65], [0.85, 0.65], [0.85, 1.0], [1.15, 1.0], [1.15, 1.35], [0.95, 1.45], [0, 1.45]]],
-      [-1.0, [[0, 0.55], [0.88, 0.55], [0.88, 1.0], [1.2, 1.0], [1.2, 1.55], [1.0, 1.8], [0, 1.8]]],
-      [1.4, [[0, 0.55], [0.88, 0.55], [0.88, 1.0], [1.2, 1.0], [1.2, 1.55], [1.0, 1.8], [0, 1.8]]],
-      [2.55, [[0, 0.6], [0.85, 0.6], [0.85, 0.98], [1.12, 0.98], [1.12, 1.15], [0.95, 1.22], [0, 1.22]]],
-      [2.85, [[0, 0.85], [0.7, 0.85], [0.7, 0.95], [0.92, 0.95], [0.92, 1.0], [0.8, 1.04], [0, 1.04]]],
+      [-2.85, [[0, 0.72], [0.7, 0.72], [0.7, 1.12], [1.12, 1.12], [1.12, 1.34], [0.95, 1.55], [0, 1.56]]],
+      [-2.2, [[0, 0.5], [0.7, 0.5], [0.7, 1.12], [1.17, 1.12], [1.17, 1.42], [0.98, 1.72], [0, 1.73]]],
+      [1.65, [[0, 0.5], [0.7, 0.5], [0.7, 1.12], [1.17, 1.12], [1.17, 1.42], [0.98, 1.8], [0, 1.8]]],
+      [2.05, [[0, 0.52], [0.7, 0.52], [0.7, 1.12], [1.15, 1.12], [1.15, 1.32], [0.98, 1.42], [0, 1.43]]],
+      [2.6, [[0, 0.58], [0.68, 0.58], [0.68, 1.05], [1.08, 1.05], [1.08, 1.22], [0.94, 1.3], [0, 1.31]]],
+      [2.95, [[0, 0.86], [0.55, 0.86], [0.55, 0.95], [0.88, 0.95], [0.88, 1.0], [0.78, 1.03], [0, 1.04]]],
     ], { color: PACT }),
-    P.box(1.6, 0.35, 0.06, { y: 1.55, z: 1.9, rx: -0.75, color: 0x2a3a44 }),     // vision blocks
-    ...pair((s) => P.box(0.7, 0.4, 0.06, { x: s * 0.42, y: 1.6, z: 1.98, rx: -0.75, color: PACT_DK })), // their armoured shutters, open
-    ...pair((s) => P.box(0.5, 0.25, 0.9, { x: s * 1.0, y: 0.75, z: 0, color: PACT_DK })), // belly wheel housings
-    ...pair((s) => P.cyl(0.08, 0.08, 0.1, { x: s * 0.75, y: 1.12, z: 2.65, rx: Math.PI / 2 - 0.5, color: STEEL }, 10)), // headlights
-    P.box(1.6, 0.06, 0.6, { y: 1.83, z: -2.1, color: PACT_DK }),                 // engine deck louvres
-    P.cyl(0.025, 0.025, 3.2, { x: 1.21, y: 1.25, z: -0.5, rx: Math.PI / 2, color: STEEL }, 6),
+    // the hull's lower sides around the wheel arches, and the lips over the arches
+    ...pair((s) => [
+      [-0.85 + 0.02, 0.85 - 0.02], [1.45 + BRDM_ARCH, 2.55], [-2.75, -1.45 - BRDM_ARCH],
+    ].map(([z0, z1]) => P.box(0.06, 0.6, z1 - z0, { x: s * 1.15, y: 0.83, z: (z0 + z1) / 2, color: PACT }))).flat(),
+    ...pair((s) => [1.45, -1.45].map((z) => P.box(0.12, 0.05, BRDM_ARCH * 2.1, { x: s * 1.17, y: 1.13, z, color: PACT_DK }))).flat(),
+    // the steep armoured windscreen: two vision ports, their shutters raised above them
+    ...pair((s) => P.box(0.62, 0.3, 0.04, { x: s * 0.42, y: 1.6, z: 1.86, rx: -0.76, color: GLASS })),
+    ...pair((s) => P.box(0.7, 0.04, 0.42, { x: s * 0.42, y: 1.86, z: 1.82, rx: 0.25, color: PACT_DK })),
+    ...pair((s) => P.box(0.04, 0.08, 0.3, { x: s * 0.06, y: 1.78, z: 1.75, color: STEEL })),        // shutter hinges
+    // commander's and driver's hatches, periscopes
+    ...pair((s) => P.cyl(0.3, 0.32, 0.06, { x: s * 0.45, y: 1.82, z: 1.15, color: PACT_DK }, 14)),
+    ...pair((s) => P.box(0.12, 0.08, 0.05, { x: s * 0.45, y: 1.86, z: 1.48, rx: 0.3, color: GLASS })),
+    // firing ports with their visors along the sides
+    ...pair((s) => [0.35, -0.55].map((z) => P.box(0.05, 0.2, 0.22, { x: s * 1.18, y: 1.3, z, color: PACT_DK }))).flat(),
+    // the engine deck: louvres, exhaust stubs, rear lights, tow hitch; headlights on the bow
+    P.box(1.5, 0.05, 0.95, { y: 1.66, z: -2.45, rx: 0.33, color: PACT_DK }),
+    ...[-2.15, -2.35, -2.55, -2.75].map((z) => P.box(1.4, 0.03, 0.06, { y: 1.71 - (z + 2.15) * -0.33 - 0.05, z, color: STEEL })),
+    ...pair((s) => P.cyl(0.07, 0.07, 0.3, { x: s * 0.9, y: 1.25, z: -2.9, rx: Math.PI / 2, color: STEEL }, 8)),
+    ...pair((s) => P.box(0.12, 0.08, 0.03, { x: s * 0.85, y: 1.38, z: -2.87, color: 0x5a1a14 })),
+    P.box(0.18, 0.12, 0.2, { y: 0.8, z: -2.9, color: STEEL }),
+    ...pair((s) => P.cyl(0.085, 0.085, 0.1, { x: s * 0.78, y: 1.15, z: 2.68, rx: Math.PI / 2 - 0.5, color: STEEL }, 10)),
+    ...pair((s) => P.cyl(0.07, 0.07, 0.02, { x: s * 0.78, y: 1.17, z: 2.73, rx: Math.PI / 2 - 0.5, color: GLASS }, 10)),
+    // belly wheels between the axles, raised; tow cable
+    ...pair((s) => P.cyl(0.3, 0.3, 0.2, { x: s * 0.6, y: 0.48, z: 0.0, rz: Math.PI / 2, color: 0x1e1e1c, surf: 'rubber' }, 12)),
+    P.cyl(0.025, 0.025, 2.6, { x: 1.19, y: 1.42, z: -0.4, rx: Math.PI / 2, color: STEEL }, 6),
     ...extra,
   ]), 1.0, 0.4),
 });
 
 export const buildPactBRDM = vehicle(() => ({
   ...brdmHull(),
-  turret: { geo: merge([P.cyl(0.55, 0.72, 0.6, { y: 0.3, color: PACT }, 8)]), at: [0, 1.8, 0.1] },
-  gun: { geo: merge([P.cyl(0.07, 0.08, 1.9, { z: 0.95, rx: Math.PI / 2, color: STEEL }, 8)]), at: [0, 0.35, 0.5] },
-  muzzle: [0, 0, 1.95],
-  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.215, y: 1.3, z: -0.8 })]),
+  // BPU-1 turret: an eight-sided cone with the 14.5 mm KPVT and coaxial PKT, the sight on its roof
+  turret: {
+    geo: merge([
+      P.cyl(0.52, 0.7, 0.58, { y: 0.29, color: PACT }, 8),
+      P.cyl(0.74, 0.74, 0.06, { y: 0.02, color: PACT_DK }, 16),
+      P.box(0.16, 0.14, 0.14, { x: -0.18, y: 0.63, z: 0.2, color: PACT_DK }),
+      P.box(0.12, 0.06, 0.02, { x: -0.18, y: 0.64, z: 0.28, color: GLASS }),
+      P.box(0.34, 0.3, 0.2, { y: 0.32, z: 0.6, color: PACT }),                       // mantlet
+    ]),
+    at: [0, 1.8, 0.1],
+  },
+  gun: {
+    geo: merge([
+      P.cyl(0.075, 0.075, 0.7, { z: 0.35, rx: Math.PI / 2, color: PACT_DK }, 10),   // KPVT cooling jacket
+      P.cyl(0.035, 0.04, 1.3, { z: 1.3, rx: Math.PI / 2, color: STEEL }, 8),       // barrel
+      P.cyl(0.05, 0.045, 0.12, { z: 1.98, rx: Math.PI / 2, color: STEEL }, 8),     // flash hider
+      P.cyl(0.02, 0.02, 0.6, { x: 0.16, z: 0.45, rx: Math.PI / 2, color: STEEL }, 6), // PKT
+    ]),
+    at: [0, 0.34, 0.6],
+  },
+  muzzle: [0, 0, 2.05],
+  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.175, y: 1.27, z: -1.05 })]),
 }));
 
 export const buildPactKonkurs = vehicle(() => ({
-  ...brdmHull([P.box(1.6, 0.2, 1.6, { y: 1.85, z: -0.2, color: PACT_DK })]),
-  turret: { geo: merge([P.box(0.5, 0.4, 0.5, { y: 0.2, color: PACT })]), at: [0, 1.95, -0.2] },
-  gun: { // five Konkurs tubes on the raised launcher
-    geo: merge([...[-0.4, -0.2, 0, 0.2, 0.4].map((x) => P.cyl(0.08, 0.08, 1.2, { x, y: 0.2, z: 0.3, rx: Math.PI / 2, color: PACT_DK }, 8))]),
-    at: [0, 0.3, 0],
+  ...brdmHull([
+    P.box(1.5, 0.08, 1.4, { y: 1.83, z: -0.3, color: PACT_DK }),                   // the launcher hatch in the roof
+  ]),
+  // the launcher raised out of its hatch: a pillar, the armoured cover tipped back behind it
+  turret: {
+    geo: merge([
+      P.box(0.3, 0.45, 0.3, { y: 0.22, color: PACT_DK }),
+      P.box(1.4, 0.06, 1.2, { y: 0.52, z: -0.85, rx: 1.0, color: PACT }),
+    ]),
+    at: [0, 1.87, -0.3],
   },
-  muzzle: [0, 0.2, 1.0],
-  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.215, y: 1.3, z: -0.8 })]),
+  gun: { // five 9M113 Konkurs containers side by side on their rail
+    geo: merge([
+      P.box(1.25, 0.08, 0.5, { y: 0.0, z: 0.1, color: STEEL }),
+      ...[-0.5, -0.25, 0, 0.25, 0.5].flatMap((x) => [
+        P.cyl(0.085, 0.085, 1.22, { x, y: 0.13, z: 0.3, rx: Math.PI / 2, color: 0x4f5a36 }, 10),
+        P.cyl(0.092, 0.092, 0.05, { x, y: 0.13, z: 0.9, rx: Math.PI / 2, color: 0x3a4428 }, 10),
+        P.cyl(0.092, 0.092, 0.05, { x, y: 0.13, z: -0.3, rx: Math.PI / 2, color: 0x3a4428 }, 10),
+        P.cyl(0.065, 0.065, 0.02, { x, y: 0.13, z: 0.93, rx: Math.PI / 2, color: 0x141414 }, 10),
+      ]),
+    ]),
+    at: [0, 0.5, 0],
+  },
+  muzzle: [0, 0.13, 0.95],
+  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.175, y: 1.27, z: -1.05 })]),
 }));
 
 // ---------------------------------------------------------------- Pact: BM-21 Grad

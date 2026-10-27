@@ -430,6 +430,7 @@ export class GameEngine {
     this.quality.update(raw);
     // An exception here would stop the render loop for good (a frozen picture while the
     // audio plays on). Keep running, and show the error so it can be reported.
+    const t0 = performance.now();
     try {
       if (this.net?.isClient) this.stepClient(dt);
       else if (this.waiting) this.stepWaiting(dt);
@@ -438,6 +439,9 @@ export class GameEngine {
     } catch (e) {
       this.reportError(e);
     }
+    // the processor's share of the frame (simulation + preparing the draw), shown by the frame
+    // counter: close to the whole frame time = the CPU is the limit, far below = the GPU is
+    this.cpuMs = (this.cpuMs ?? 0) * 0.9 + (performance.now() - t0) * 0.1;
   }
 
   reportError(e) {

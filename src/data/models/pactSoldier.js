@@ -6,11 +6,11 @@
 // helmet, and the RD-54 swapped for a parachutist's bag. A red armband and a red star on the
 // helmet identify the side. Same model contract as natoSoldier.js.
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
-import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars } from './soldierBody.js';
+import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
 
-const KHAKI = 0x8a8558;
-const KHAKI_DK = 0x6f6b45;
-const POCKET = 0x7a764c;
+const KHAKI = 0x7a7650;      // the Afghanka: a dusty olive-tan, faded
+const KHAKI_DK = 0x625f3e;
+const POCKET = 0x6c6946;
 const HELMET = 0x47533a;
 const RIG = 0x6b6a44;
 const BOOTS = 0x161616;
@@ -101,31 +101,34 @@ export function buildPactSoldier({ weapon: kind = 'rifle', crew = false, scout =
   const torso = [
     // Afghanka: trousers, the jacket over them with its fold-down collar, breast and hip pockets
     ...trunk({ upper: KHAKI, lower: KHAKI, cut: 1.0 }),
-    loft([[0, 1.54, -0.01, 0.105, 0.09, 2], [0, 1.585, -0.02, 0.098, 0.084, 2], [0, 1.6, -0.025, 0.09, 0.078, 2]], { color: KHAKI_DK }, 12), // collar
-    ...pair((s) => P.box(0.11, 0.11, 0.02, { x: s * 0.09, y: 1.38, z: 0.12, color: POCKET })),
-    ...pair((s) => P.box(0.115, 0.025, 0.024, { x: s * 0.09, y: 1.44, z: 0.122, color: KHAKI_DK })),        // flaps
-    ...pair((s) => P.box(0.12, 0.13, 0.02, { x: s * 0.11, y: 1.11, z: 0.11, color: POCKET })),
-    P.box(0.012, 0.42, 0.012, { y: 1.3, z: 0.128, color: KHAKI_DK }),                                       // button placket
+    loft([[0, 1.54, -0.01, 0.118, 0.1, 2], [0, 1.585, -0.02, 0.11, 0.094, 2], [0, 1.6, -0.025, 0.1, 0.086, 2]], { color: KHAKI_DK }, 12), // collar
+    ...pair((s) => P.box(0.11, 0.11, 0.02, { x: s * 0.095, y: 1.38, z: 0.137, color: POCKET })),
+    ...pair((s) => P.box(0.115, 0.025, 0.024, { x: s * 0.095, y: 1.44, z: 0.139, color: KHAKI_DK })),        // flaps
+    ...pair((s) => P.box(0.12, 0.13, 0.02, { x: s * 0.115, y: 1.11, z: 0.125, color: POCKET })),
+    P.box(0.012, 0.42, 0.012, { y: 1.3, z: 0.143, color: KHAKI_DK }),                                       // button placket
     // leather belt with its buckle
-    loft([[0, 1.04, 0, 0.172, 0.118, 3], [0, 1.08, 0, 0.168, 0.114, 3]], { color: 0x3b2a1c }, 12),
-    P.box(0.05, 0.045, 0.012, { y: 1.06, z: 0.12, color: 0x8a7a40 }),
+    loft([[0, 1.04, 0, 0.19, 0.132, 3], [0, 1.08, 0, 0.186, 0.128, 3]], { color: 0x3b2a1c }, 12),
+    P.box(0.05, 0.045, 0.012, { y: 1.06, z: 0.134, color: 0x8a7a40 }),
+    P.box(0.035, 0.24, 0.05, { x: -0.2, y: 0.95, z: -0.03, rz: 0.15, color: 0x3b2a1c }),                 // bayonet in its scabbard
+    P.box(0.1, 0.12, 0.06, { x: 0.19, y: 1.0, z: 0.04, color: KHAKI_DK }),                              // grenade pouch
+    P.box(0.02, 0.5, 0.012, { x: 0.05, y: 1.32, z: 0.145, rz: -0.7, color: 0x3b2a1c }),                  // the rifle sling across the chest
     ...(radio ? [                                                                 // R-107 on the back
-      loft([[0, 1.18, -0.32, 0.15, 0.075, 5], [0, 1.5, -0.325, 0.15, 0.075, 5]], { color: 0x4a4e36 }, 10),
+      loft([[0, 1.18, -0.335, 0.155, 0.076, 5], [0, 1.5, -0.34, 0.155, 0.076, 5]], { color: 0x4a4e36 }, 10),
       P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: -0.36, rx: -0.12, color: STEEL }, 4),
     ] : []),
     ...(airAssault ? [
-      P.box(0.16, 0.12, 0.02, { y: 1.5, z: 0.125, color: 0xe8e8e8 }),               // telnyashka at the collar…
+      P.box(0.16, 0.12, 0.02, { y: 1.5, z: 0.118, color: 0xe8e8e8 }),               // telnyashka at the collar…
       ...[1.47, 1.52].map((y) => P.box(0.165, 0.018, 0.022, { y, z: 0.127, color: 0x2a3f8a })), // …blue stripes
-      loft([[0, 1.18, -0.2, 0.14, 0.06, 4], [0, 1.42, -0.21, 0.145, 0.065, 4]], { color: KHAKI_DK }, 10), // jump bag
+      loft([[0, 1.18, -0.215, 0.15, 0.062, 4], [0, 1.42, -0.225, 0.155, 0.067, 4]], { color: KHAKI_DK }, 10), // jump bag
     ] : []),
     // chest rig for four AK magazines and grenades, RD-54 pack with the rolled cape on top
     ...(rig ? [
-      loft([[0, 1.2, 0.14, 0.15, 0.02, 4], [0, 1.4, 0.15, 0.16, 0.022, 4]], { color: RIG }, 10),
-      ...[-0.09, -0.03, 0.03, 0.09].map((x) => loft([[x, 1.21, 0.165, 0.026, 0.022, 4], [x, 1.35, 0.172, 0.027, 0.024, 4]], { color: KHAKI_DK }, 8)),
-      ...pair((s) => loft([[s * 0.145, 1.25, 0.15, 0.028, 0.024, 3], [s * 0.145, 1.33, 0.155, 0.03, 0.026, 3]], { color: KHAKI_DK }, 8)),
-      loft([[0, 1.24, -0.2, 0.13, 0.06, 4], [0, 1.4, -0.215, 0.135, 0.07, 4.5], [0, 1.5, -0.2, 0.125, 0.06, 4]], { color: KHAKI_DK }, 12),
-      P.cyl(0.05, 0.05, 0.3, { y: 1.56, z: -0.2, rz: Math.PI / 2, color: 0x5a4a32 }, 8),                   // rolled cape
-      P.cyl(0.04, 0.042, 0.12, { x: 0.165, y: 0.98, z: -0.08, color: KHAKI_DK }, 10),                       // canteen
+      loft([[0, 1.2, 0.152, 0.16, 0.02, 4], [0, 1.4, 0.163, 0.17, 0.022, 4]], { color: RIG }, 10),
+      ...[-0.09, -0.03, 0.03, 0.09].map((x) => loft([[x, 1.21, 0.178, 0.027, 0.023, 4], [x, 1.35, 0.186, 0.028, 0.025, 4]], { color: KHAKI_DK }, 8)),
+      ...pair((s) => loft([[s * 0.155, 1.25, 0.163, 0.029, 0.025, 3], [s * 0.155, 1.33, 0.168, 0.031, 0.027, 3]], { color: KHAKI_DK }, 8)),
+      loft([[0, 1.24, -0.215, 0.14, 0.062, 4], [0, 1.4, -0.23, 0.145, 0.072, 4.5], [0, 1.5, -0.215, 0.135, 0.062, 4]], { color: KHAKI_DK }, 12),
+      P.cyl(0.052, 0.052, 0.32, { y: 1.57, z: -0.215, rz: Math.PI / 2, color: 0x5a4a32 }, 8),                   // rolled cape
+      P.cyl(0.042, 0.044, 0.12, { x: 0.185, y: 0.98, z: -0.09, color: KHAKI_DK }, 10),                       // canteen
     ] : []),
     ...head(),
     ...(scout ? [
@@ -147,20 +150,20 @@ export function buildPactSoldier({ weapon: kind = 'rifle', crew = false, scout =
   // arms and weapon: a separate part, pivoting at the shoulders (aim, lower, recoil, reload)
   const arms = [...armsHold({ sleeve: KHAKI, cuff: KHAKI_DK }), ...w.parts];
   const glow = [
-    P.cyl(0.066, 0.066, 0.06, { x: -0.25, y: 1.38, rz: 0.12 }, 10),               // armband
+    P.cyl(0.08, 0.08, 0.06, { x: -0.272, y: 1.38, rz: 0.12 }, 10),               // armband
     P.cyl(0.026, 0.026, 0.01, { y: airAssault ? 1.83 : crew ? 1.79 : scout ? 1.81 : 1.8, z: airAssault ? 0.105 : crew ? 0.105 : scout ? 0.108 : 0.152, rx: Math.PI / 2 }, 5), // red star
   ];
   const thigh = merge([
     thighPart({ color: KHAKI }),
-    P.box(0.04, 0.13, 0.14, { x: 0.075, y: -0.24, color: POCKET }),
+    P.box(0.04, 0.14, 0.15, { x: 0.098, y: -0.24, color: POCKET }),
   ]);
   const shin = grime(merge(shinPart({ color: KHAKI, boot: BOOTS, bootTop: 0.3 })), -0.3, -0.5); // kirza jackboots, muddy
   return {
-    torso: merge(torso),
-    arms: merge(arms),
+    torso: finish(merge(torso)),
+    arms: finish(merge(arms)),
     glow: merge(glow),
-    thigh,
-    shin,
+    thigh: finish(thigh, false),
+    shin: finish(shin, false),
     rig: { hipX: 0.12, hipY: 0.96, thighLen: 0.48, shinLen: 0.48, shoulderY: 1.47 },
     muzzle: w.muzzle,
   };

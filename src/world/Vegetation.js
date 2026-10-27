@@ -299,7 +299,7 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
   trunks.count = k;
   spruces.count = spruceCards.count = ks;
   leaves.count = cards.count = kl;
-  scene.add(trunks, spruces, spruceCards, leaves, cards);
+  scene.add(trunks, spruces, detail(spruceCards, 'foliage'), leaves, detail(cards, 'foliage')); // leaf cards: off on Very low
   return {
     update(dt, t) {
       time.value = t;

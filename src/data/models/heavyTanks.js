@@ -8,7 +8,7 @@
 //                box, smoke dischargers in a band across the front and the 125 mm 2A46 gun.
 import * as THREE from 'three';
 import { P, part, merge, pair, grime } from '../units/geometry.js';
-import { planProfile, trackedHull } from './vehicleCommon.js';
+import { planProfile, trackedHull, castTurret } from './vehicleCommon.js';
 import { vehicle, tracked } from './support.js';
 
 const SAND_GREEN = 0x4f5a37;
@@ -17,6 +17,8 @@ const PACT = 0x4c5835;
 const PACT_DK = 0x3a4428;
 const STEEL = 0x2b2d28;
 const RUBBER = 0x1f201c;
+const ERA = 0x55603c;
+const GLASS = 0x1a1d1c;
 const C = { camo: 1 };
 
 export const buildNatoM1IP = vehicle(() => {
@@ -68,10 +70,12 @@ export const buildNatoM1IP = vehicle(() => {
   };
 });
 
-/** The T-80's cast turret: a low turned dome, stretched forward. */
+/** The T-80's cast turret: lower and a little narrower than the T-72's, the same thick cheeks. */
 function t80Dome() {
-  const pts = [[0, 0.02], [1.42, 0.02], [1.5, 0.15], [1.38, 0.42], [1.0, 0.62], [0.5, 0.72], [0, 0.74]].map(([r, y]) => new THREE.Vector2(r, y));
-  return part(new THREE.LatheGeometry(pts, 28), { sz: 1.18, z: 0.15, color: PACT });
+  return castTurret([
+    [1.95, 0.42, 0.3], [1.7, 1.08, 0.55], [1.2, 1.5, 0.7], [0.4, 1.6, 0.74],
+    [-0.4, 1.55, 0.72], [-1.1, 1.34, 0.6], [-1.55, 0.95, 0.44], [-1.75, 0.42, 0.22],
+  ], { color: PACT });
 }
 
 export const buildPactT80 = vehicle(() => {
@@ -93,6 +97,19 @@ export const buildPactT80 = vehicle(() => {
       ...pair((s) => P.box(0.45, 0.32, 1.6, { x: s * 1.42, y: 1.25, z: -1.2, color: PACT_DK })),       // fender tanks
       P.cyl(0.12, 0.12, 2.8, { y: 1.45, z: -3.55, rz: Math.PI / 2, color: 0x5a4632 }, 10),             // unditching log
       P.box(0.48, 0.07, 0.42, { y: 1.38, z: 2.1, color: PACT_DK }),                                    // driver's hatch
+      // Kontakt-1 bricks over the upper glacis (the T-80BV of 1985), the V splash rib below them
+      ...Array.from({ length: 3 }, (_, row) => Array.from({ length: 6 }, (_, col) => {
+        const t = (row + 0.5) / 3, z = 2.4 + t * 0.95, y = 1.36 - t * 0.36;
+        return P.box(0.34, 0.08, 0.28, { x: -0.88 + col * 0.35, y: y + 0.05, z, rx: Math.atan2(0.38, 1.1), color: ERA });
+      })).flat(),
+      ...pair((s) => P.box(0.06, 0.05, 0.8, { x: s * 0.35, y: 1.03, z: 3.3, rx: 0.33, ry: s * -0.55, color: PACT_DK })),
+      ...pair((s) => P.cyl(0.075, 0.075, 0.1, { x: s * 1.3, y: 1.14, z: 3.05, rx: Math.PI / 2, color: STEEL }, 10)),   // headlights…
+      ...pair((s) => P.cyl(0.06, 0.06, 0.02, { x: s * 1.3, y: 1.14, z: 3.11, rx: Math.PI / 2, color: GLASS }, 10)),
+      ...pair((s) => P.box(0.2, 0.16, 0.02, { x: s * 1.3, y: 1.16, z: 3.16, color: STEEL })),                      // …and their guards
+      ...[-0.12, 0.12].map((x) => P.box(0.12, 0.07, 0.04, { x, y: 1.41, z: 2.32, rx: 0.3, color: GLASS })),       // driver's periscopes
+      // rubber side skirts along the rest of the hull, tow cables
+      ...pair((s) => P.box(0.04, 0.42, 4.0, { x: s * 1.66, y: 0.9, z: -1.25, color: RUBBER, surf: 'rubber' })),
+      ...pair((s) => P.cyl(0.025, 0.025, 3.6, { x: s * 1.18, y: 1.38, z: -0.5, rx: Math.PI / 2, color: STEEL }, 6)),
     ]), 1.2, 0.3),
     turret: {
       geo: grime(merge([
@@ -103,6 +120,19 @@ export const buildPactT80 = vehicle(() => {
         P.cyl(0.025, 0.025, 1.0, { x: 0.6, y: 1.04, z: 0.5, rx: Math.PI / 2, color: STEEL }, 6),
         ...[-0.9, -0.7, -0.5, 0.5, 0.7, 0.9].map((a) => P.cyl(0.06, 0.06, 0.35, { x: Math.sin(a) * 1.45, y: 0.5, z: Math.cos(a) * 1.65, rx: Math.PI / 2 - 0.4, ry: a, color: PACT_DK }, 8)), // smoke band
         P.box(1.6, 0.35, 0.5, { y: 0.32, z: -1.65, color: PACT_DK }),                                   // rear stowage
+        // Kontakt-1 round the turret front, stowage boxes on the sides, the snorkel, IR searchlight
+        // bricks along the cheeks either side of the gun, following the turret's front contour
+        ...pair((s) => [0.55, 0.8, 1.05, 1.3].map((x) => {
+          const z = x < 1.08 ? 1.95 - ((x - 0.42) / 0.66) * 0.25 : 1.7 - ((x - 1.08) / 0.42) * 0.5;
+          const slope = x < 1.08 ? 0.25 / 0.66 : 0.5 / 0.42;
+          return P.box(0.3, 0.22, 0.2, { x: s * x, y: 0.4, z: z + 0.08, ry: s * Math.atan(slope), color: ERA });
+        })).flat(),
+        ...pair((s) => P.box(0.28, 0.3, 0.8, { x: s * 1.42, y: 0.3, z: -0.95, ry: -s * 0.4, color: PACT_DK })),
+        P.cyl(0.08, 0.08, 1.8, { x: -0.9, y: 0.5, z: -1.55, rz: Math.PI / 2, ry: 0.35, color: PACT_DK }, 8),
+        P.cyl(0.16, 0.16, 0.3, { x: 0.55, y: 0.6, z: 1.3, rx: Math.PI / 2, color: STEEL }, 12),
+        P.cyl(0.13, 0.13, 0.02, { x: 0.55, y: 0.6, z: 1.46, rx: Math.PI / 2, color: 0x2a2232 }, 12),
+        ...[0, 1, 2, 3].map((k) => P.box(0.09, 0.06, 0.03, { x: 0.6 + Math.sin(k * 0.6 - 0.9) * 0.36, y: 0.92, z: -0.3 + Math.cos(k * 0.6 - 0.9) * 0.36, ry: k * 0.6 - 0.9, color: GLASS })), // cupola periscopes
+        P.box(0.3, 0.16, 0.02, { x: -0.6, y: 0.9, z: 0.78, color: GLASS }),                             // sight window
         P.box(0.75, 0.48, 0.4, { y: 0.4, z: 1.75, color: PACT }),                                       // mantlet
       ]), 0.9, 0, 0.4),
       at: [0, 1.36, 0.15],
@@ -118,6 +148,6 @@ export const buildPactT80 = vehicle(() => {
     },
     muzzle: [0, 0, 5.6],
     recoil: 0.4,
-    marks: merge([...pair((s) => P.cyl(0.17, 0.17, 0.02, { x: s * 1.45, y: 0.36, z: -0.45, rz: Math.PI / 2, ry: s * 0.25 }, 5))]),
+    marks: merge([...pair((s) => P.cyl(0.17, 0.17, 0.02, { x: s * 1.69, y: 0.92, z: -0.6, rz: Math.PI / 2 }, 5))]),
   };
 });

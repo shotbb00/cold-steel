@@ -127,7 +127,7 @@ export class PaintPlugin extends GlslPlugin {
             #ifdef INSTANCES
               vPaintPos += world3.xyz * 0.37;
             #endif
-            #ifdef INSTANCESCOLOR
+            #if defined(INSTANCES) && defined(INSTANCESCOLOR)   // a mesh with no instances yet compiles without the colour
               vTint = instanceColor.rgb;
             #endif
           #endif`,

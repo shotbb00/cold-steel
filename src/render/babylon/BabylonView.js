@@ -130,6 +130,7 @@ export class BabylonView {
     this.pipeline.bloomKernel = 48;
     this.pipeline.bloomScale = 0.5;
     this.pipeline.imageProcessingEnabled = true;
+    this.postOn = true;
   }
 
   resize() {
@@ -147,6 +148,15 @@ export class BabylonView {
     if (ao && !this.ssaoOn) mgr.attachCamerasToRenderPipeline('ssao', this.camera);
     if (!ao && this.ssaoOn) mgr.detachCamerasFromRenderPipeline('ssao', this.camera);
     this.ssaoOn = ao;
+    // Very low: no post-processing pass at all (one full-screen copy fewer — weak laptop GPUs
+    // are short of memory bandwidth); tone mapping then happens in the materials themselves
+    const post = q.post !== false;
+    if (post !== this.postOn) {
+      if (post) mgr.attachCamerasToRenderPipeline('post', this.camera);
+      else mgr.detachCamerasFromRenderPipeline('post', this.camera);
+      this.scene.imageProcessingConfiguration.applyByPostProcess = post;
+      this.postOn = post;
+    }
     this.shadowSize = q.shadowSize;
     this.shadowQuality = q;
     this.tuneShadows();
@@ -157,6 +167,7 @@ export class BabylonView {
     const gen = this.shadowGen;
     const q = this.shadowQuality;
     if (!gen || !q) return;
+    gen.getLight().shadowEnabled = q.shadows !== false;   // Very low: no sun shadows
     const map = gen.getShadowMap();
     if (map.getSize().width !== q.shadowSize) map.resize(q.shadowSize);
     gen.filteringQuality = { low: ShadowGenerator.QUALITY_LOW, medium: ShadowGenerator.QUALITY_MEDIUM, high: ShadowGenerator.QUALITY_HIGH }[q.shadowFilter] ?? ShadowGenerator.QUALITY_MEDIUM;
@@ -473,9 +484,14 @@ export class BabylonView {
       rec.colorVersion = ic.version;
     }
     if (o.count !== rec.count) {
-      mesh.thinInstanceCount = o.count;
+      // at 0 instances Babylon turns instancing off, and its vertex-colour mixing still reads the
+      // instance colour (a shader that won't compile): keep one instance and hide the mesh instead
+      // (the soldiers' near / far meshes empty out all the time — render/StackRenderer.js)
+      mesh.thinInstanceCount = Math.max(1, o.count);
+      rec.hidden = o.count === 0;
       rec.count = o.count;
     }
+    if (rec.hidden !== undefined) mesh.isVisible = !rec.hidden;
   }
 
   // ---------------------------------------------------------------- materials

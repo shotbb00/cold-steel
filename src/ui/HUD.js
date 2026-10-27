@@ -83,7 +83,7 @@ export class HUD {
     this.frames++;
     const now = performance.now();
     if (now - this.fpsStart >= 500) {
-      el.fps.textContent = `${Math.round((this.frames * 1000) / (now - this.fpsStart))} fps`;
+      el.fps.textContent = `${Math.round((this.frames * 1000) / (now - this.fpsStart))} fps · CPU ${Math.round(g.cpuMs ?? 0)} ms`;
       this.frames = 0;
       this.fpsStart = now;
     }

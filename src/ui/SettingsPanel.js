@@ -59,6 +59,21 @@ function toggle(value, onChange) {
   return b;
 }
 
+/** The GPU the browser draws with (laptops often run the browser on the weaker built-in chip). */
+let GPU;
+function graphicsCard() {
+  if (GPU !== undefined) return GPU;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    GPU = (gl && (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER))) || null;
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch {
+    GPU = null;
+  }
+  return GPU;
+}
+
 /** Build the settings form into `container`. */
 export function buildSettings(container) {
   container.replaceChildren();
@@ -67,7 +82,18 @@ export function buildSettings(container) {
   const q = settings.get('quality');
   g.append(row('Quality', q ? 'G cycles it in battle' : 'Not chosen yet — the first battle picks one to suit this machine',
     segmented(Object.entries(QUALITY).map(([k, v]) => [k, v.label]), q, (v) => settings.set('quality', v))));
-  g.append(row('Frame counter', '', toggle(settings.get('showFps'), (v) => settings.set('showFps', v))));
+  g.append(row('Render scale', 'Lower draws fewer pixels: the biggest gain on weak graphics. Preset = what the quality level uses',
+    segmented([[null, 'Preset'], [0.5, '50 %'], [0.67, '67 %'], [0.75, '75 %'], [1, '100 %']], settings.get('renderScale'), (v) => settings.set('renderScale', v))));
+  g.append(row('Frame counter', 'Also shows the CPU time per frame: near the whole frame time, the processor is the limit', toggle(settings.get('showFps'), (v) => settings.set('showFps', v))));
+  const gpu = graphicsCard();
+  if (gpu) {
+    const intel = /intel/i.test(gpu);
+    const name = el('div', 'set-value');
+    name.textContent = gpu.replace(/^ANGLE \((.*)\)$/, '$1').replace(/ Direct3D.*$/, '');
+    g.append(row('Graphics card in use', intel
+      ? 'The built-in Intel chip. If this laptop also has an NVIDIA or AMD card: Windows Settings → System → Display → Graphics → add your browser → High performance, then restart the browser'
+      : '', name));
+  }
 
   const a = el('section', 'set-group');
   a.append(el('h3', '', 'Sound'));

@@ -7,7 +7,7 @@
 // Red stars on the turret. See render/RigRenderer.js for the contract.
 import * as THREE from 'three';
 import { P, part, merge, pair, grime } from '../units/geometry.js';
-import { stationHull, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
+import { stationHull, castTurret, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
 
 const GREEN = 0x4a5634;
 const GREEN_DK = 0x3a4428;
@@ -17,10 +17,15 @@ const RUBBER = 0x1f201c;
 const WOOD = 0x5a4632;
 const GLASS = 0x1a1d1c;
 
-/** The cast turret: a turned dome, stretched fore and aft. */
+/**
+ * The cast turret: low and wide, the thick cheeks either side of the gun, the roof nearly flat,
+ * tapering to the rear — one smooth casting (vehicleCommon castTurret).
+ */
 function turretDome() {
-  const pts = [[0, 0.02], [1.5, 0.02], [1.58, 0.18], [1.46, 0.46], [1.12, 0.68], [0.6, 0.79], [0, 0.82]].map(([r, y]) => new THREE.Vector2(r, y));
-  return part(new THREE.LatheGeometry(pts, 30), { sz: 1.13, z: 0.05, color: GREEN });
+  return castTurret([
+    [1.85, 0.45, 0.34], [1.6, 1.15, 0.6], [1.1, 1.6, 0.76], [0.3, 1.72, 0.82],
+    [-0.5, 1.66, 0.78], [-1.2, 1.42, 0.64], [-1.65, 1.0, 0.46], [-1.85, 0.45, 0.24],
+  ], { color: GREEN });
 }
 
 let GEO = null;
@@ -107,12 +112,12 @@ function geometry() {
       P.box(0.66, 0.4, 0.25, { y: 0.44, z: 1.95, color: 0x4d5236 }),                           // canvas mantlet cover
     ]), 0.9, 0.0, 0.4),
     marks: merge([
-      ...pair((s) => P.cyl(0.18, 0.18, 0.02, { x: s * 1.52, y: 0.4, z: -0.45, rz: Math.PI / 2, ry: s * 0.25 }, 5)),
+      ...pair((s) => P.cyl(0.18, 0.18, 0.02, { x: s * 1.59, y: 0.38, z: -0.45, rz: Math.PI / 2 }, 5)),
     ]),
     gun: merge([
       P.cyl(0.1, 0.13, 5.6, { z: 2.8, rx: Math.PI / 2, color: GREEN }, 14),
       ...[0.7, 1.4, 3.3, 4.1, 4.8].map((z) => P.cyl(0.15, 0.15, 0.6, { z, rx: Math.PI / 2, color: GREEN_DK }, 14)), // thermal sleeve
-      ...[0.4, 1.05, 1.75, 3.0, 3.7, 4.45, 5.1].map((z) => P.cyl(0.158, 0.158, 0.05, { z, rx: Math.PI / 2, color: STEEL }, 14)), // straps
+      ...[1.05, 3.0, 4.45].map((z) => P.cyl(0.155, 0.155, 0.04, { z, rx: Math.PI / 2, color: GREEN_DK }, 14)), // sleeve straps
       P.cyl(0.18, 0.18, 0.55, { z: 2.35, rx: Math.PI / 2, color: GREEN }, 14),               // fume extractor
     ]),
   };

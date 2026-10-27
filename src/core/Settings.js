@@ -5,6 +5,7 @@ const STORE = 'coldsteel.settings';
 
 export const DEFAULTS = {
   quality: null,       // 'low' | 'medium' | 'high'; null = not chosen yet (auto-detect on first run)
+  renderScale: null,   // 0.5 … 1: render resolution against the screen; null = the quality preset's
   volume: 0.8,         // master volume 0..1
   sensitivity: 1,      // mouse look multiplier (direct control)
   invertY: false,

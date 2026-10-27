@@ -70,7 +70,23 @@ export function grime(geo, clean, dirty, amount = 1) {
   return geo;
 }
 
+/**
+ * Level of detail for the models being built right now: `lod.low` is set while a distant
+ * stand-in is made (render/StackRenderer.js) — fewer segments round every swept shape and
+ * primitive, and merge() drops the small parts (eyes, fingers, buckles) nobody sees from afar.
+ */
+export const lod = { low: false };
+const seg = (n, min = 4) => (lod.low ? Math.max(min, Math.round(n * 0.5)) : n);
+const SMALL = 0.03;   // m: parts smaller than this (bounding radius) are left out of a low model
+
 export function merge(parts) {
+  if (lod.low) {
+    const kept = parts.filter((g) => {
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      return g.boundingSphere.radius >= SMALL;
+    });
+    if (kept.length) parts = kept;
+  }
   const g = mergeGeometries(parts, false);
   g.computeBoundingSphere();
   return g;
@@ -79,9 +95,9 @@ export function merge(parts) {
 /** Shorthand primitives: P.box(w, h, d, opts), P.sphere(r, opts), … */
 export const P = {
   box: (w, h, d, o) => part(new THREE.BoxGeometry(w, h, d), o),
-  sphere: (r, o, ws = 10, hs = 8) => part(new THREE.SphereGeometry(r, ws, hs), o),
-  cyl: (rt, rb, h, o, seg = 10) => part(new THREE.CylinderGeometry(rt, rb, h, seg), o),
-  cone: (r, h, o, seg = 6) => part(new THREE.ConeGeometry(r, h, seg), o),
+  sphere: (r, o, ws = 10, hs = 8) => part(new THREE.SphereGeometry(r, seg(ws, 5), seg(hs, 3)), o),
+  cyl: (rt, rb, h, o, n = 10) => part(new THREE.CylinderGeometry(rt, rb, h, seg(n, 5)), o),
+  cone: (r, h, o, n = 6) => part(new THREE.ConeGeometry(r, h, seg(n, 4)), o),
   capsule: (r, len, o) => part(new THREE.CapsuleGeometry(r, len, 3, 8), o),
   torus: (r, t, o, seg = 16) => part(new THREE.TorusGeometry(r, t, 5, seg), o),
   octa: (r, o) => part(new THREE.OctahedronGeometry(r), o),
@@ -95,6 +111,7 @@ export const P = {
  * `warp(v)` to bend the vertices (THREE.Vector3, changed in place) before the normals are made.
  */
 export function loft(sections, o = {}, radial = 10) {
+  radial = seg(radial, 5);
   const n = sections.length;
   const pos = [];
   const idx = [];

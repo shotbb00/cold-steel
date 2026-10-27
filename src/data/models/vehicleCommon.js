@@ -7,7 +7,7 @@
 //                               distance driven
 //   groundTilt / meshAdder    – hull settling on slopes, adding meshes to rig groups
 import * as THREE from 'three';
-import { P, part, merge, grime } from '../units/geometry.js';
+import { P, part, merge, grime, loft } from '../units/geometry.js';
 
 /**
  * Extrude a side-view outline [[z, y], …] (z forward, y up) to `width`, centred on x = 0.
@@ -78,6 +78,15 @@ export function stationHull(stations, opts = {}, axis = 'z') {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.computeVertexNormals();
   return part(g, opts);
+}
+
+/**
+ * A cast turret (T-72, T-80): one smooth casting swept through sections [[z, halfWidth, height], …]
+ * from the gun end back, low and wide with thick cheeks, its underside cut flat at the turret
+ * ring (y = 0). `e` > 2 flattens the roof and squares the shoulders a little.
+ */
+export function castTurret(sections, opts = {}, e = 2.6) {
+  return loft(sections.map(([z, w, h]) => [0, 0, z, w, h, e]), { ...opts, warp: (v) => { if (v.y < 0) v.y = 0; } }, 22);
 }
 
 /**

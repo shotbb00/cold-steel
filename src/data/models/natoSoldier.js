@@ -12,7 +12,7 @@
 //   thigh / shin – one leg segment, pivot at its top joint, hanging down -y
 //   rig   – hip offset/height and segment lengths; muzzle – where rounds leave the weapon
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
-import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars } from './soldierBody.js';
+import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
 
 const OD = 0x4b5331;
 const OD_DK = 0x3c4428;
@@ -111,36 +111,40 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
   const torso = [
     // woodland BDU: trousers and the blouse worn over them
     ...trunk({ upper: OD, lower: OD, camoUpper: 1, camoLower: 1, cut: 1.04, broad }),
-    ...pair((s) => P.box(0.1, 0.1, 0.02, { x: s * 0.085, y: 1.38, z: 0.125, color: OD_DK, ...C })),    // breast pockets
+    ...pair((s) => P.box(0.1, 0.1, 0.02, { x: s * 0.09, y: 1.38, z: 0.14, color: OD_DK, ...C })),    // breast pockets
     // LC-2 pistol belt, ammo pouches with their flaps, canteen
-    loft([[0, 1.05, 0, 0.176, 0.122, 3], [0, 1.09, 0, 0.172, 0.118, 3]], { color: WEB }, 12),
-    ...pair((s) => loft([[s * 0.1, 1.03, 0.13, 0.045, 0.028, 4], [s * 0.1, 1.13, 0.135, 0.046, 0.03, 4]], { color: WEB }, 8)),
-    ...pair((s) => P.box(0.095, 0.035, 0.065, { x: s * 0.1, y: 1.14, z: 0.135, rx: 0.15, color: WEB })),
-    P.cyl(0.042, 0.045, 0.15, { x: -0.17, y: 1.0, z: -0.09, color: OD_DK, ...C }, 10),
-    P.cyl(0.018, 0.018, 0.03, { x: -0.17, y: 1.085, z: -0.09, color: BLACK }, 6),
+    loft([[0, 1.05, 0, 0.196, 0.136, 3], [0, 1.09, 0, 0.192, 0.132, 3]], { color: WEB }, 12),
+    ...pair((s) => loft([[s * 0.1, 1.03, 0.148, 0.046, 0.03, 4], [s * 0.1, 1.13, 0.152, 0.047, 0.032, 4]], { color: WEB }, 8)),
+    ...pair((s) => P.box(0.095, 0.035, 0.065, { x: s * 0.1, y: 1.14, z: 0.152, rx: 0.15, color: WEB })),
+    P.cyl(0.044, 0.047, 0.15, { x: -0.19, y: 1.0, z: -0.1, color: OD_DK, ...C }, 10),
+    P.cyl(0.018, 0.018, 0.03, { x: -0.19, y: 1.085, z: -0.1, color: BLACK }, 6),
     // PASGT flak vest with its collar, medium ALICE pack on its frame (crewmen and scouts go without)
     ...(armour ? [
       loft([
-        [0, 1.1, 0.0, 0.188, 0.135, 3], [0, 1.22, 0.01, 0.19, 0.14, 3], [0, 1.34, 0.016, 0.205, 0.148, 3],
-        [0, 1.44, 0.008, 0.214, 0.142, 3.2], [0, 1.51, -0.004, 0.2, 0.124, 3], [0, 1.545, -0.01, 0.13, 0.1, 2.6],
+        [0, 1.1, 0.0, 0.205, 0.15, 3], [0, 1.22, 0.01, 0.208, 0.155, 3], [0, 1.34, 0.016, 0.224, 0.163, 3],
+        [0, 1.44, 0.008, 0.234, 0.157, 3.2], [0, 1.51, -0.004, 0.222, 0.138, 3], [0, 1.545, -0.01, 0.148, 0.11, 2.6],
       ], { color: OD_DK, ...C }, 14),
-      loft([[0, 1.53, -0.012, 0.1, 0.092, 2], [0, 1.575, -0.02, 0.098, 0.088, 2]], { color: OD_DK, ...C }, 12),  // collar
-      P.box(0.012, 0.36, 0.02, { y: 1.31, z: 0.155, color: 0x2a2a20 }),                 // front closure
-      loft([[0, 1.2, -0.235, 0.15, 0.07, 4], [0, 1.36, -0.25, 0.155, 0.08, 4.5], [0, 1.5, -0.235, 0.14, 0.07, 4]], { color: WEB }, 12), // pack
-      P.box(0.3, 0.06, 0.16, { y: 1.5, z: -0.24, rx: -0.15, color: POCKET }),          // flap
-      ...[-0.11, 0, 0.11].map((x) => loft([[x, 1.24, -0.315, 0.04, 0.025, 4], [x, 1.33, -0.32, 0.042, 0.027, 4]], { color: POCKET }, 8)), // outer pockets
-      ...pair((s) => P.box(0.02, 0.5, 0.02, { x: s * 0.12, y: 1.23, z: -0.19, color: 0x22241c })),           // frame
-      P.cyl(0.04, 0.04, 0.32, { y: 1.15, z: -0.24, rz: Math.PI / 2, color: OD_DK, ...C }, 8),               // poncho roll
+      loft([[0, 1.53, -0.012, 0.112, 0.102, 2], [0, 1.575, -0.02, 0.108, 0.097, 2]], { color: OD_DK, ...C }, 12),  // collar
+      P.box(0.012, 0.36, 0.02, { y: 1.31, z: 0.172, color: 0x2a2a20 }),                 // front closure
+      ...pair((s) => P.box(0.04, 0.4, 0.016, { x: s * 0.12, y: 1.32, z: 0.188, rz: s * -0.14, color: WEB })),  // LC-2 suspenders…
+      ...pair((s) => P.box(0.04, 0.4, 0.016, { x: s * 0.1, y: 1.32, z: -0.165, rz: s * 0.2, color: WEB })),    // …crossing behind
+      ...pair((s) => P.box(0.05, 0.06, 0.03, { x: s * 0.13, y: 1.43, z: 0.19, color: 0x2a2a20 })),            // first-aid pouch, snap links
+      P.box(0.06, 0.14, 0.05, { x: 0.15, y: 1.25, z: 0.195, color: OD_DK, camo: 1 }),                           // compass pouch
+      loft([[0, 1.2, -0.25, 0.16, 0.072, 4], [0, 1.36, -0.265, 0.165, 0.082, 4.5], [0, 1.5, -0.25, 0.15, 0.072, 4]], { color: WEB }, 12), // pack
+      P.box(0.32, 0.06, 0.17, { y: 1.5, z: -0.255, rx: -0.15, color: POCKET }),          // flap
+      ...[-0.11, 0, 0.11].map((x) => loft([[x, 1.24, -0.332, 0.042, 0.026, 4], [x, 1.33, -0.338, 0.044, 0.028, 4]], { color: POCKET }, 8)), // outer pockets
+      ...pair((s) => P.box(0.02, 0.5, 0.02, { x: s * 0.13, y: 1.23, z: -0.2, color: 0x22241c })),           // frame
+      P.cyl(0.042, 0.042, 0.34, { y: 1.15, z: -0.255, rz: Math.PI / 2, color: OD_DK, ...C }, 8),               // poncho roll
     ] : []),
     ...(radio ? [                                                                 // PRC-77 on the back
-      loft([[0, 1.2, -0.32, 0.14, 0.07, 5], [0, 1.48, -0.325, 0.14, 0.07, 5]], { color: 0x3f4430 }, 10),
+      loft([[0, 1.2, -0.335, 0.145, 0.072, 5], [0, 1.48, -0.34, 0.145, 0.072, 5]], { color: 0x3f4430 }, 10),
       P.box(0.06, 0.05, 0.05, { x: 0.1, y: 1.5, z: -0.33, color: BLACK }),
       P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: -0.36, rx: -0.12, color: BLACK }, 4), // whip antenna
       P.box(0.05, 0.1, 0.04, { x: -0.2, y: 1.6, z: 0.08, color: BLACK }),          // handset on the shoulder
     ] : []),
     ...(airAssault ? [
-      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.17, rz: 0.65, color: WEB }),           // bandoliers
-      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.175, rz: -0.65, color: WEB }),
+      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.186, rz: 0.65, color: WEB }),           // bandoliers
+      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.19, rz: -0.65, color: WEB }),
       P.box(0.22, 0.05, 0.05, { y: 1.81, z: 0.12, color: BLACK }),                  // goggles on the helmet
       ...pair((s) => P.cyl(0.03, 0.03, 0.02, { x: s * 0.055, y: 1.81, z: 0.147, rx: Math.PI / 2, color: 0x6a7a70 }, 8)),
     ] : []),
@@ -149,7 +153,7 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
       P.cyl(0.19, 0.2, 0.012, { y: 1.8, color: OD, ...C }, 16),                 // boonie hat brim and crown
       loft([[0, 1.8, -0.01, 0.105, 0.115, 2.4], [0, 1.85, -0.012, 0.1, 0.11, 2.4], [0, 1.875, -0.012, 0.085, 0.095, 2.4], [0, 1.885, -0.012, 0.03, 0.03, 2]], { color: OD, ...C }, 12),
       ...binoculars(BLACK),                                                       // binoculars on the chest
-      P.box(0.3, 0.2, 0.12, { y: 1.12, z: -0.17, color: WEB }),                  // butt pack, no ALICE frame
+      P.box(0.32, 0.2, 0.12, { y: 1.12, z: -0.185, color: WEB }),                  // butt pack, no ALICE frame
     ] : crew ? [
       // DH-132 combat vehicle crewman helmet: rounded shell with ear cups and a boom mic
       helmet([[1.72, 0.105, 1.08], [1.76, 0.112], [1.81, 0.106], [1.845, 0.085], [1.868, 0.04]], { color: TANKER, skirt: 0.03 }),
@@ -165,20 +169,20 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
   // arms and weapon: a separate part, pivoting at the shoulders (aim, lower, recoil, reload)
   const arms = [...armsHold({ sleeve: OD, ...C, broad }), ...w.parts];
   const glow = [
-    P.cyl(0.066, 0.066, 0.06, { x: -0.255 * broad, y: 1.38, rz: 0.12 }, 10), // armband (team colour)
+    P.cyl(0.08, 0.08, 0.06, { x: -0.272 * broad, y: 1.38, rz: 0.12 }, 10), // armband (team colour)
   ];
   const thigh = merge([
     thighPart({ color: OD, ...C }),
-    P.box(0.04, 0.14, 0.15, { x: 0.075, y: -0.24, color: BROWN, ...C }), // cargo pocket and its flap
-    P.box(0.045, 0.03, 0.155, { x: 0.077, y: -0.165, color: BROWN, ...C }),
+    P.box(0.04, 0.15, 0.16, { x: 0.098, y: -0.24, color: BROWN, ...C }), // cargo pocket and its flap
+    P.box(0.045, 0.03, 0.165, { x: 0.1, y: -0.16, color: BROWN, ...C }),
   ]);
   const shin = grime(merge(shinPart({ color: OD, ...C, boot: BLACK, bootTop: 0.2 })), -0.3, -0.5); // muddy boots
   return {
-    torso: merge(torso),
-    arms: merge(arms),
+    torso: finish(merge(torso)),
+    arms: finish(merge(arms)),
     glow: merge(glow),
-    thigh,
-    shin,
+    thigh: finish(thigh, false),
+    shin: finish(shin, false),
     rig: { hipX: 0.12, hipY: 0.96, thighLen: 0.48, shinLen: 0.48, shoulderY: 1.47 },
     muzzle: w.muzzle,
   };
