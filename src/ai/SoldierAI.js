@@ -110,7 +110,10 @@ export function thinkSoldier(u, stack, world, interval) {
     // man the position before contact: cover that faces the squad's front
     _center.x = anchor.x + Math.sin(stack.facing) * 40;
     _center.z = anchor.z + Math.cos(stack.facing) * 40;
-    const spot = cover.findSpot(u, _center, anchor, leash, s.range);
+    // the spot the order planned (and the command view showed), while it is still free
+    const planned = ai.plannedSpots?.get(u);
+    const free = planned && (!planned.occupant || planned.occupant === u || !planned.occupant.alive);
+    const spot = free ? planned : cover.findSpot(u, _center, anchor, leash, s.range);
     if (spot) cover.claim(spot, u);
     else u.coverSearchT = 3;
   }

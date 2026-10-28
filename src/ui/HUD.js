@@ -110,7 +110,7 @@ export class HUD {
     const sel = [...this.game.commands.selected];
     const box = this.el.selection;
     if (!sel.length) {
-      box.textContent = 'Click or drag to select your stacks';
+      box.textContent = this.game.input.touch ? 'Tap a stack to select it' : 'Click or drag to select your stacks';
       return;
     }
     box.replaceChildren(...sel.map((s) => {

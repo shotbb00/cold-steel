@@ -3,13 +3,14 @@
 //               attacks (DIFFICULTY)
 //   air         false: no air support for either side
 //   changingWeather  the weather moves on every few minutes (systems/WeatherChange.js)
+//   timePasses  the day goes on: day → dusk → night → dawn (systems/WeatherChange.js)
 // and, for the point-capture modes (mode.economy — Frontline, Infantry only):
 //   startCp     command points each side starts with
 //   income      multiplier on both sides' command-point income
 //   strength    front strength each side starts with: how long a battle lasts
 //   maxStacks   stacks each side may have in the field (null: the map's own limit)
 // Multiplayer and campaign battles use the defaults.
-export const DEFAULT_RULES = { difficulty: 'normal', air: true, changingWeather: true, startCp: 350, income: 1, strength: 1000, maxStacks: null };
+export const DEFAULT_RULES = { difficulty: 'normal', air: true, changingWeather: true, timePasses: true, startCp: 350, income: 1, strength: 1000, maxStacks: null };
 
 export const DIFFICULTY = {
   //            enemy aim (spread ×)  enemy income ×  first assault, gaps between operations ×
@@ -24,6 +25,7 @@ export const RULE_OPTIONS = {
   difficulty: Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]),
   air: [[true, 'On'], [false, 'Off']],
   changingWeather: [[true, 'Changes'], [false, 'Stays as chosen']],
+  timePasses: [[true, 'Passes'], [false, 'Stays as chosen']],
   startCp: [[150, '150'], [350, '350'], [600, '600'], [1000, '1000']],
   income: [[0.5, 'Low'], [1, 'Normal'], [1.5, 'High'], [2.5, 'Very high']],
   strength: [[500, 'Short'], [1000, 'Normal'], [1800, 'Long'], [3000, 'Very long']],

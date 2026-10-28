@@ -15,7 +15,7 @@
 .menu-nav { display: flex; flex-direction: column; gap: 4px; }
 .menu-nav button {
   all: unset; cursor: pointer; padding: 11px 14px; border-left: 3px solid transparent;
-  font: 700 20px/1.1 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  font: 700 20px/1.1 var(--font-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
 }
 .menu-nav button:hover { color: var(--text); background: rgba(200, 210, 180, 0.06); }
 .menu-nav button.on { color: var(--text); border-left-color: var(--gold); background: rgba(224, 180, 90, 0.08); }
@@ -34,7 +34,7 @@
   all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
   padding: 14px 16px; min-height: 92px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line);
 }
-.card b { font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; }
+.card b { font: 700 18px var(--font-ui); letter-spacing: 0.01em; }
 .card span { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .card:hover { background: rgba(30, 33, 25, 0.9); }
 .card.on { border-color: rgba(224, 180, 90, 0.55); border-left-color: var(--gold); }
@@ -44,14 +44,14 @@
 .deploy-row { margin-top: 30px; }
 .deploy {
   all: unset; cursor: pointer; padding: 14px 44px; background: var(--gold); color: #14150f;
-  font: 700 19px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.3em; text-transform: uppercase;
+  font: 700 19px var(--font-ui); letter-spacing: 0.3em; text-transform: uppercase;
 }
 .deploy:hover { background: #ecc46e; }
 
 /* segmented buttons, toggles, sliders */
 .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); }
 .seg button {
-  all: unset; cursor: pointer; padding: 7px 14px; font: 600 13.5px 'Bahnschrift', 'Segoe UI', sans-serif;
+  all: unset; cursor: pointer; padding: 7px 14px; font: 600 13.5px var(--font-ui);
   letter-spacing: 0.08em; color: var(--muted); border-right: 1px solid var(--line);
 }
 .seg button:last-child { border-right: 0; }
@@ -59,10 +59,10 @@
 .seg button.on { background: rgba(224, 180, 90, 0.16); color: var(--text); box-shadow: inset 0 -2px 0 var(--gold); }
 .seg button.nato.on { box-shadow: inset 0 -2px 0 var(--ally); background: rgba(111, 168, 255, 0.14); }
 .seg button.pact.on { box-shadow: inset 0 -2px 0 var(--enemy); background: rgba(255, 90, 72, 0.12); }
-.set-button { all: unset; cursor: pointer; padding: 7px 14px; border: 1px solid var(--line); background: rgba(224, 180, 90, 0.12); color: var(--text); font: 600 13.5px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.06em; }
+.set-button { all: unset; cursor: pointer; padding: 7px 14px; border: 1px solid var(--line); background: rgba(224, 180, 90, 0.12); color: var(--text); font: 600 13.5px var(--font-ui); letter-spacing: 0.06em; }
 .set-button:hover { background: rgba(224, 180, 90, 0.24); }
 .set-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.set-value { font: 600 13.5px 'Bahnschrift', 'Segoe UI', sans-serif; color: var(--text); text-align: right; max-width: 52%; overflow-wrap: anywhere; }
+.set-value { font: 600 13.5px var(--font-ui); color: var(--text); text-align: right; max-width: 52%; overflow-wrap: anywhere; }
 .toggle { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--muted); }
 .toggle i { width: 38px; height: 20px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); position: relative; }
 .toggle i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--muted); transition: left 0.12s; }
@@ -92,7 +92,7 @@
 .unit-list { display: flex; flex-direction: column; gap: 4px; }
 .unit-list button {
   all: unset; cursor: pointer; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid transparent;
-  font: 600 15px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.06em;
+  font: 600 15px var(--font-ui); letter-spacing: 0.06em;
 }
 .unit-list button:hover { background: rgba(30, 33, 25, 0.9); }
 .unit-list button.on { border-left-color: var(--gold); }
@@ -126,7 +126,7 @@
 .pause-buttons button {
   all: unset; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
   padding: 11px 14px; background: rgba(200, 210, 180, 0.06); border: 1px solid var(--line);
-  font: 600 16px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.1em; text-transform: uppercase;
+  font: 600 16px var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase;
 }
 .pause-buttons button:hover { background: rgba(200, 210, 180, 0.14); }
 .pause-box .settings { margin-top: 20px; }
@@ -162,7 +162,7 @@
 .mp-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .mp-btn {
   all: unset; cursor: pointer; padding: 9px 18px; border: 1px solid var(--line); background: rgba(200, 210, 180, 0.06);
-  font: 600 14px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.12em; text-transform: uppercase;
+  font: 600 14px var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase;
 }
 .mp-btn:hover { background: rgba(200, 210, 180, 0.14); }
 .mp-btn:disabled { opacity: 0.4; cursor: default; }
@@ -253,9 +253,9 @@
 @media (max-width: 900px) { .unit-list button:not(.air) + button.air { margin-top: 0; } }
 
 /* key bindings (src/ui/SettingsPanel.js keyGroup) */
-.keys-sub { margin: 14px 0 2px; font: 600 11px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.keys-sub { margin: 14px 0 2px; font: 600 11px var(--font-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
 .key-bind { all: unset; cursor: pointer; min-width: 74px; padding: 5px 10px; text-align: center; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3);
-  color: var(--text); font: 600 13px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.06em; }
+  color: var(--text); font: 600 13px var(--font-ui); letter-spacing: 0.06em; }
 .key-bind:hover { border-color: var(--gold); }
 .key-bind:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .key-bind.listening { border-color: var(--gold); color: var(--gold); }
@@ -268,14 +268,14 @@
 
 /* the encyclopedia entry under a unit's stats (src/data/codex.js) */
 .codex { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-.codex-row h4 { margin: 0 0 2px; font: 600 11px 'Bahnschrift', 'Segoe UI', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.codex-row h4 { margin: 0 0 2px; font: 600 11px var(--font-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
 .codex-row p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text); }
 .codex-history { padding-top: 10px; border-top: 1px solid var(--line); }
 .codex-history p { color: var(--muted); font-style: italic; }
 
 /* multiplayer: your name, who's in, the lobby chat (src/ui/Lobby.js) */
 .mp-name { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px; font-size: 13px; color: var(--muted); }
-.mp-name-input { all: unset; min-width: 0; width: 200px; padding: 7px 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); color: var(--text); font: 600 14px 'Bahnschrift', 'Segoe UI', sans-serif; }
+.mp-name-input { all: unset; min-width: 0; width: 200px; padding: 7px 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); color: var(--text); font: 600 14px var(--font-ui); }
 .mp-name-input:focus-visible { border-color: var(--gold); }
 .mp-players { display: flex; flex-direction: column; gap: 6px; margin: 12px 0 6px; max-width: 520px; }
 .mp-player { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center; padding: 8px 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); border-left: 3px solid var(--muted); font-size: 14px; }
@@ -305,3 +305,126 @@
 .cp-intel dt { color: var(--muted); }
 .cp-intel dd { margin: 0; font-variant-numeric: tabular-nums; }
 .cp-men i { font-style: normal; color: var(--gold); }
+
+/* ================================================================ the map table (redesign)
+   The menu and loading screen sit on a topographic sheet of the battle map (ui/MapSheet.js).
+   One memorable thing — the map — and quiet type and panels around it. */
+.title-screen { background: var(--table); }
+.map-sheet[hidden] { display: none; }
+.map-sheet { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
+.title-screen.menu-open > :not(.map-sheet), .title-screen.loading-open > :not(.map-sheet) { position: relative; z-index: 1; }
+
+/* the mark (public/brand/mark.svg) and its tagline */
+.logo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.logo-art { display: block; width: 250px; height: auto; }
+.logo-tag { font: 600 15px/1.2 var(--font-ui); color: var(--gold); letter-spacing: 0.02em; padding-left: 110px; }
+.loading-card .logo-art { width: 320px; }
+.loading-card .logo-tag { padding-left: 141px; font-size: 16px; }
+
+/* the rail */
+.menu-side { background: linear-gradient(90deg, rgba(14, 16, 11, 0.94), rgba(14, 16, 11, 0.82)); gap: 34px; padding: 34px 26px 24px; }
+.menu-brand { padding: 4px 0 6px; }
+.menu-nav button {
+  font: 600 19px/1.15 var(--font-ui); letter-spacing: 0.01em; text-transform: none; padding: 10px 14px;
+}
+.menu-blurb { font-size: 14px; max-width: 30ch; }
+
+/* the panel: headings in stencil, sentence case */
+.menu-panel { padding: 38px 48px 56px; }
+.menu-panel > * { max-width: 640px; }
+.menu-panel[data-panel="battle"] > *, .menu-panel[data-panel="multi"] > * { max-width: 540px; } /* the map gets the rest */
+.menu-panel[data-panel="units"] > *, .menu-panel[data-panel="settings"] > * { max-width: none; }
+/* settings: the whole width, its groups side by side */
+.menu-panel[data-panel="settings"] .settings { max-width: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 22px 40px; align-items: start; }
+/* the campaign in the column beside the map of its coming battle: its own strategic map above the briefing */
+.menu-panel[data-panel="campaign"] .campaign > * { max-width: 540px; }
+.menu-panel[data-panel="campaign"] .cp-grid { grid-template-columns: 1fr; }
+.menu-panel[data-panel="campaign"] .cp-units { grid-template-columns: 1fr; }
+.menu-panel h2, #pause h2 {
+  font: 800 40px/1 var(--font-display); letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 14px; color: #ecebe0;
+}
+.menu-sub { font: 600 16px/1.2 var(--font-ui); letter-spacing: 0.01em; text-transform: none; color: var(--gold); }
+.mp-lead { font-size: 16px; }
+
+/* battle setup: three questions */
+.setup-q { margin: 26px 0 0; }
+.setup-q h3 { margin: 0 0 10px; font: 600 19px/1.2 var(--font-ui); color: var(--ink); }
+.mode-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.mode-item {
+  all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 9.5em 1fr; gap: 10px; align-items: baseline;
+  padding: 10px 14px; background: rgba(16, 18, 14, 0.82); border-left: 3px solid transparent;
+}
+.mode-item b { font: 600 17px var(--font-ui); color: var(--text); }
+.mode-item span { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.mode-item:hover { background: rgba(32, 36, 26, 0.92); }
+.mode-item.on { border-left-color: var(--gold); background: rgba(46, 42, 26, 0.92); }
+.mode-item.on b { color: var(--gold); }
+.map-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-chip {
+  all: unset; cursor: pointer; padding: 8px 14px; font: 600 15px var(--font-ui); color: var(--muted);
+  background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line);
+}
+.map-chip:hover { color: var(--text); }
+.map-chip.on { color: #14150f; background: var(--ink); border-color: var(--ink); }
+.map-about { margin: 10px 0 0; max-width: 62ch; color: var(--muted); font-size: 14.5px; line-height: 1.5; min-height: 1.5em; }
+.side-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.side-card {
+  all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 5px;
+  padding: 13px 16px; background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line); border-top: 3px solid var(--line);
+}
+.side-card b { font: 700 20px var(--font-ui); }
+.side-card span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.side-card.nato b { color: var(--ally); }
+.side-card.pact b { color: var(--enemy); }
+.side-card.nato.on { border-top-color: var(--ally); background: rgba(24, 34, 52, 0.88); }
+.side-card.pact.on { border-top-color: var(--enemy); background: rgba(52, 26, 22, 0.88); }
+.setup-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-top: 26px; padding: 12px 14px; background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line);
+}
+.setup-summary p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text); }
+.setup-more { margin-top: 6px; padding: 4px 14px 14px; background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line); border-top: 0; }
+.setup-more[hidden] { display: none; }
+.deploy { font: 700 20px var(--font-ui); letter-spacing: 0.08em; text-transform: none; padding: 14px 52px; }
+.mode-item:focus-visible, .map-chip:focus-visible, .side-card:focus-visible, .deploy:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* start-up (index.html, before the menu): the mark large in the middle of the screen */
+.title-screen.boot {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 9px),
+    radial-gradient(ellipse at 50% 42%, #2a2e22 0%, #14160f 55%, #0b0c08 100%);
+}
+.boot-card { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+.boot-card .logo { align-items: flex-start; gap: 10px; }
+.boot-card .logo-art { width: min(620px, 86vw); }
+.boot-card .logo-tag { padding-left: min(272px, 38vw); font-size: clamp(15px, 2.4vw, 22px); }
+.boot-card #ts-status { font: 600 15px var(--font-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+
+/* the loading screen: the battle's own map, the mark, a tip */
+.title-screen.loading-open { display: flex; align-items: flex-start; justify-content: flex-end; flex-direction: column; padding: 0; }
+.loading-card {
+  margin: auto 0 8vh 6vw; max-width: min(520px, calc(100vw - 32px)); padding: 22px 26px 20px;
+  background: rgba(14, 16, 11, 0.86); border-left: 3px solid var(--gold); text-align: left;
+}
+.loading-card #ts-status { margin-top: 18px; font: 600 16px var(--font-ui); letter-spacing: 0.02em; text-transform: none; }
+.loading-tip { margin: 8px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; max-width: 52ch; }
+
+@media (max-width: 760px) {
+  .logo-art { width: 210px; }
+  .logo-tag { padding-left: 92px; }
+  .menu-panel { padding: 24px 16px 40px; }
+  .menu-panel h2 { font-size: 32px; }
+  .mode-list { grid-template-columns: 1fr; }
+  .mode-item { grid-template-columns: 1fr; gap: 2px; }
+  .loading-card { margin: auto 16px 24px; }
+}
+@media (max-height: 520px) {
+  .menu-side { gap: 14px; padding: 16px 18px; }
+  .logo-art { width: 170px; }
+  .logo-tag { padding-left: 75px; font-size: 13px; }
+  .menu-nav button { padding: 6px 12px; font-size: 16px; }
+  .menu-blurb { display: none; }
+  .menu-panel { padding: 18px 24px 30px; }
+  .loading-card { margin: auto 0 16px 24px; padding: 14px 18px; }
+}

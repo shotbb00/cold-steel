@@ -15,6 +15,7 @@ import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
 import { keys } from '../core/Keys.js';
+import { planCover } from '../world/CoverPlan.js';
 
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
 const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
@@ -35,6 +36,7 @@ export class CommandSystem {
     this._p = new THREE.Vector3();
     this._v = new THREE.Vector3();
 
+    this.preview = this.buildPreview();
     this.ringGeo = new THREE.RingGeometry(0.92, 1, 48);
     this.ringGeo.rotateX(-Math.PI / 2);
     this.ringMat = new THREE.MeshBasicMaterial({
@@ -341,10 +343,42 @@ export class CommandSystem {
 
   // ---------------------------------------------------------------- selection
 
-  clickSelect(x, y, shift) {
+  /**
+   * The stack of `faction` under a click at screen (x, y): its label, or the man (or vehicle)
+   * drawn nearest the cursor within a few pixels, so a squad far out or zoomed away is as easy
+   * to hit as a tank; failing both, the old ground test.
+   */
+  stackAt(x, y, faction, ok = () => true) {
+    const labels = this.game.labels?.items;
+    if (labels) {
+      for (const [s, item] of labels) {
+        if (s.faction !== faction || !s.alive || s.visible === false || !ok(s) || item.el.hidden || item.el.style.display === 'none') continue;
+        const r = item.el.getBoundingClientRect();
+        if (r.width && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return s;
+      }
+    }
+    const rect = this.game.canvas.getBoundingClientRect();
+    const reach = this.game.input.touch ? 34 : 20;
+    let best = null;
+    let bestD = reach * reach;
+    for (const s of this.game.world.stacksOf(faction)) {
+      if (s.visible === false || !ok(s)) continue;
+      for (const u of s.units) {
+        if (!u.alive || u.visible === false) continue;
+        const v = this._v.set(u.pos.x, u.pos.y + 0.9, u.pos.z).project(this.game.camera);
+        if (v.z > 1) continue;
+        const d = (rect.left + (v.x * 0.5 + 0.5) * rect.width - x) ** 2 + (rect.top + (-v.y * 0.5 + 0.5) * rect.height - y) ** 2;
+        if (d < bestD) { bestD = d; best = s; }
+      }
+    }
+    if (best) return best;
     const p = this.pickGround(x, y, this._p);
-    const near = p ? this.stackNear(p, this.faction) : null;
-    const stack = near && this.game.mine(near) && !near.stats.structure && !near.autonomous ? near : null;
+    const near = p ? this.stackNear(p, faction) : null;
+    return near && ok(near) ? near : null;
+  }
+
+  clickSelect(x, y, shift) {
+    const stack = this.stackAt(x, y, this.faction, (s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
     if (!shift) this.selected.clear();
     if (stack) {
       if (shift && this.selected.has(stack)) this.selected.delete(stack);
@@ -382,9 +416,9 @@ export class CommandSystem {
 
   issueOrder(x, y, hold) {
     if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
+    const target = this.stackAt(x, y, this.enemy);
     const p = this.pickGround(x, y, this._p);
     if (!p) return;
-    const target = this.stackNear(p, this.enemy, 3.5);
     // right-click your own IFVs with infantry selected: climb in
     const own = target ? null : this.stackNear(p, this.faction, 3.5);
     if (own?.stats.carries) {
@@ -423,6 +457,15 @@ export class CommandSystem {
     const stacks = [...this.selected].filter((s) => s.alive);
     if (!stacks.length) return;
     const yaw = Math.atan2(p1.x - p0.x, p1.z - p0.z);
+    // dragged from a house with infantry selected: garrison it, manning the windows that way
+    const building = this.game.buildings.at(p0.x, p0.z, 0.5);
+    const squads = stacks.filter((s) => s.usesCover);
+    if (building && squads.length) {
+      this.game.orders.issue({ t: 'garrison', s: ids(squads), b: building.index, face: Math.round(yaw * 1000) / 1000 });
+      this.addMarker({ x: building.x, z: building.z }, 'hold');
+      this.game.bus.emit('order', { kind: 'hold' });
+      return;
+    }
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     // a squad dragged right next to itself only turns round
     const one = stacks.length === 1 ? stacks[0] : null;
@@ -461,6 +504,12 @@ export class CommandSystem {
    */
   moveGroup(stacks, point, { hold = false, facing = null, face = null } = {}) {
     if (!stacks.length) return;
+    const moves = this.groupDests(stacks, point, facing).map(([s, x, z]) => [s.id, x, z]);
+    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000 });
+  }
+
+  /** Where each of `stacks` goes when sent to `point` together: [[stack, x, z]], side by side. */
+  groupDests(stacks, point, facing = null) {
     const dir = new THREE.Vector3();
     if (facing) dir.copy(facing);
     else {
@@ -485,10 +534,91 @@ export class CommandSystem {
         const off = cursor + widths[i] / 2;
         cursor += widths[i];
         const dest = point.clone().addScaledVector(perp, off).addScaledVector(dir, depth);
-        moves.push([s.id, Math.round(dest.x * 100) / 100, Math.round(dest.z * 100) / 100]);
+        moves.push([s, Math.round(dest.x * 100) / 100, Math.round(dest.z * 100) / 100]);
       });
     }
-    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000 });
+    return moves;
+  }
+
+  // ---------------------------------------------------------------- cover preview
+
+  /**
+   * Markers over the view where the men will lie, each with a tick toward the cover that shields
+   * it. Drawn as page elements, not in the 3D scene, so walls and roofs never hide them and they
+   * stay the same size at any zoom.
+   */
+  buildPreview() {
+    const root = document.createElement('div');
+    root.id = 'cover-preview';
+    (document.getElementById('labels') ?? document.body).append(root);
+    return { root, els: [], spots: [], key: '', at: 0, v: new THREE.Vector3(), w: new THREE.Vector3() };
+  }
+
+  /**
+   * While you aim a move with infantry selected — hovering the ground, or dragging out the
+   * facing (right-drag, or hold-and-drag on touch) — show the cover each man would take there
+   * (world/CoverPlan.js, the plan the order then follows; onto a house, the windows its men
+   * would man). Nothing near any cover: nothing shown.
+   */
+  updatePreview() {
+    const pv = this.preview;
+    const hide = () => { pv.spots = []; pv.key = ''; this.drawPreview(); };
+    const inf = [...this.selected].filter((s) => s.alive && s.usesCover && this.game.mine(s));
+    if (!this.active || this.targeting || this.drag || !inf.length) return hide();
+    const m = this.game.input.mouse;
+    let point = null;
+    let face = null;
+    if (this.rdrag?.p0) {
+      point = this.rdrag.p0;
+      const far = Math.hypot(m.x - this.rdrag.x0, m.y - this.rdrag.y0) > 10 ? this.pickGround(m.x, m.y, this._v) : null;
+      if (far) face = Math.atan2(far.x - point.x, far.z - point.z);
+    } else if (!this.game.input.touch && m.inside && !m.buttons.size) {
+      point = this.pickGround(m.x, m.y, this._p);
+      if (point && this.stackAt(m.x, m.y, this.enemy)) point = null; // that click would be an attack
+    }
+    if (!point) return hide();
+    const key = `${Math.round(point.x * 2)},${Math.round(point.z * 2)},${face === null ? '-' : Math.round(face * 20)},${inf.map((s) => s.id).join(',')}`;
+    const now = performance.now();
+    if (key !== pv.key && now - pv.at >= 80) {
+      pv.key = key;
+      pv.at = now;
+      const dir = face === null ? null : new THREE.Vector3(Math.sin(face), 0, Math.cos(face));
+      const all = [...this.selected].filter((s) => s.alive);
+      // onto a house: the windows the squads would man (Buildings.pickWindows)
+      const building = this.game.buildings.at(point.x, point.z, 0.5);
+      const men = inf.reduce((a, s) => a + s.units.filter((u) => u.alive).length, 0);
+      pv.spots = building
+        ? this.game.buildings.pickWindows(building, men, face, this.faction)
+        : this.groupDests(all, point, dir).filter(([s]) => s.usesCover).flatMap(([s, x, z]) => [...(planCover(this.game.world, s, { x, z }, face)?.values() ?? [])]);
+    }
+    this.drawPreview();
+  }
+
+  /** Place the markers for pv.spots on screen (every frame: the camera moves). */
+  drawPreview() {
+    const pv = this.preview;
+    const terrain = this.game.terrain;
+    const cam = this.game.camera;
+    const rect = this.game.canvas.getBoundingClientRect();
+    const screen = (v) => [rect.left + (v.x * 0.5 + 0.5) * rect.width, rect.top + (-v.y * 0.5 + 0.5) * rect.height];
+    let n = 0;
+    for (const spot of pv.spots) {
+      const y = terrain.heightAt(spot.x, spot.z) + 0.3;
+      const v = pv.v.set(spot.x, y, spot.z).project(cam);
+      if (v.z > 1) continue;
+      const [x0, y0] = screen(v);
+      const [x1, y1] = screen(pv.w.set(spot.x + (spot.dirX ?? 0) * 1.2, y, spot.z + (spot.dirZ ?? 1) * 1.2).project(cam));
+      let el = pv.els[n];
+      if (!el) {
+        el = document.createElement('i');
+        pv.root.append(el);
+        pv.els.push(el);
+      }
+      el.hidden = false;
+      el.style.transform = `translate(${x0.toFixed(1)}px, ${y0.toFixed(1)}px) rotate(${Math.atan2(y1 - y0, x1 - x0).toFixed(3)}rad)`;
+      n++;
+    }
+    for (let i = n; i < pv.els.length; i++) pv.els[i].hidden = true;
   }
 
   addMarker(point, kind) {
@@ -506,6 +636,7 @@ export class CommandSystem {
 
   update(dt) {
     this.updateTargeting();
+    this.updatePreview();
     // right-drag: show which way they'll face
     if (this.rdrag?.p0 && this.active) {
       const m = this.game.input.mouse;

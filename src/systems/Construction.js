@@ -75,7 +75,8 @@ export class Construction {
     this.game.netEvent('site', site.id, kind, x, z, yaw, faction);
     if (stack) {
       // stand just behind the work so the squad isn't silhouetted in front of it
-      const back = def.width / 2 + 2;
+      // (a clearing or demolition job covers a wide patch but is worked from its middle: close in)
+      const back = def.action ? 3 : def.width / 2 + 2;
       stack.ai.moveTo({ x: x - Math.sin(yaw) * back, z: z - Math.cos(yaw) * back }, { hold: true, ordered: this.game.isHuman(stack.faction) });
       stack.fortifications = (stack.fortifications ?? 0) + 1;
     }

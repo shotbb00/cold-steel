@@ -29,8 +29,10 @@ const btn = (label, cls, fn) => {
 };
 
 export class CampaignPanel {
-  constructor({ onBattle }) {
+  /** `onPreview(mapId, side)`: the map the coming battle is fought on, for the menu's map table. */
+  constructor({ onBattle, onPreview = () => {} }) {
     this.onBattle = onBattle;
+    this.onPreview = onPreview;
     this.root = el('div', 'campaign');
     this.side = 'nato';
     this.render();
@@ -40,7 +42,11 @@ export class CampaignPanel {
     const r = this.root;
     r.replaceChildren(el('h2', '', 'Campaign'));
     const c = loadCampaign();
-    if (!c) return this.renderNew();
+    if (!c) {
+      this.renderNew();
+      return this.onPreview('fulda-gap', this.side);
+    }
+    this.onPreview(c.next && !c.next.choose ? c.next.map : 'fulda-gap', c.side);
     this.c = c;
     const me = c.side;
     r.append(el('p', 'mp-lead', `${esc(FACTIONS[me].name)} · turn ${Math.min(c.turn, TURNS)} of ${TURNS} · we hold ${held(c, me)} of ${COLUMNS.length * ROWS} sectors · <b>${c.points}</b> replacement points`));
@@ -75,6 +81,7 @@ export class CampaignPanel {
       const card = btn(`<b>${FACTIONS[f].name}</b><span>${text}</span>`, `card ${f}${this.side === f ? ' on' : ''}`, () => {
         this.side = f;
         for (const o of sides.children) o.classList.toggle('on', o === card);
+        this.onPreview('fulda-gap', f);
       });
       sides.append(card);
     }

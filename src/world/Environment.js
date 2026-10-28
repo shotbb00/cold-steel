@@ -95,8 +95,9 @@ export function buildEnvironment(scene, theme, shadowExtent = 140) {
   sky.userData.babylon = 'native'; // render/babylon/sky.js draws it under Babylon
   scene.add(sky);
 
-  // ---- stars, faint, only high up where the sky is dark
-  if (theme.stars) {
+  // ---- stars, faint, only high up where the sky is dark (built always: time can pass into night)
+  let stars = null;
+  {
   const starPos = [];
   for (let i = 0; i < 1200; i++) {
     const u = Math.random() * Math.PI * 2;
@@ -106,9 +107,11 @@ export function buildEnvironment(scene, theme, shadowExtent = 140) {
   }
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({
+  stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
     color: 0xffffff, size: 1.3, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.45, depthWrite: false,
-  })));
+  }));
+  stars.visible = !!theme.stars;
+  scene.add(stars);
   }
 
   // ---- a ringed planet over the horizon
@@ -131,13 +134,26 @@ export function buildEnvironment(scene, theme, shadowExtent = 140) {
   }
 
   // the shadow camera's own axes (it looks down -sunDir with world up), for texel snapping
-  const lightRight = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), sunDir).normalize();
-  const lightUp = new THREE.Vector3().crossVectors(sunDir, lightRight);
+  const lightRight = new THREE.Vector3();
+  const lightUp = new THREE.Vector3();
+  const axes = () => {
+    lightRight.crossVectors(new THREE.Vector3(0, 1, 0), sunDir).normalize();
+    lightUp.crossVectors(sunDir, lightRight);
+  };
+  axes();
   const centre = new THREE.Vector3();
 
   return {
     sun,
     hemi,
+    rim,
+    stars,
+    /** Move the sun (or moon) to [x, y, z] (time passing: systems/WeatherChange.js). */
+    setSunDir(dir) {
+      sunDir.set(...dir).normalize();
+      axes();
+      rim.position.set(-sunDir.x * 100, 40, -sunDir.z * 100);
+    },
     sky: skyMat,   // its uniforms change with the weather (systems/WeatherChange.js)
     /** `focus` (where the camera looks) keeps the sharp shadow area under the action. */
     update(dt, t, focus = null) {

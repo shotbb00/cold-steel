@@ -15,9 +15,23 @@ import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
 import { takeMenuTab } from '../core/replay.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
-import { RULE_OPTIONS, rulesFrom } from '../data/rules.js';
+import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX } from '../data/codex.js';
 import { keyOf } from '../core/Keys.js';
+import { MapSheet } from './MapSheet.js';
+import { logo } from './Logo.js';
+
+// shown on the loading screen while a battle is built
+const TIPS = [
+  'Infantry takes points; tanks cannot. Let the riflemen lead into the villages.',
+  'Mortars and guns fire on anything your side can see. Forward observers make them land tight.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
+  'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
+  'At night, flares light the ground and thermal sights see through the dark (N in direct control).',
+  'Engineers clear wire and mines. The enemy uses them too.',
+  'Wounded men in a campaign come back after the next battle; the dead do not.',
+];
 
 /** Two rows of segmented buttons: time of day and weather (core/Conditions.js). */
 export function conditionsPicker(choice, onChange = () => {}) {
@@ -50,9 +64,9 @@ const RULES_KEY = 'coldsteel.rules';
 export function loadRules() {
   try { return rulesFrom(JSON.parse(localStorage.getItem(RULES_KEY) ?? 'null')); } catch { return rulesFrom(null); }
 }
-function rulesPicker(rules, economy) {
+function rulesPicker(rules, economy, onChange = () => {}) {
   const box = el('div', 'conditions rules');
-  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets and air assault for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first']];
+  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets and air assault for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
     ['startCp', 'Starting CP', 'Command points each side starts with'],
     ['income', 'CP income', 'How fast both sides earn command points'],
@@ -73,6 +87,7 @@ function rulesPicker(rules, economy) {
         for (const o of seg.children) o.classList.toggle('on', o === b);
         rules[key] = v;
         try { localStorage.setItem(RULES_KEY, JSON.stringify(rules)); } catch { /* private mode */ }
+        onChange();
       });
       seg.append(b);
     }
@@ -170,9 +185,10 @@ export class MainMenu {
   build() {
     const r = this.root;
     r.classList.add('menu-open');
+    r.classList.remove('loading-open', 'boot');
     r.replaceChildren();
     const side = el('aside', 'menu-side');
-    side.append(el('div', 'ts-brand', `<h1>${GAME.title}</h1><p>${GAME.tagline}</p>`));
+    side.append(el('div', 'menu-brand', logo(GAME.title, GAME.tagline)));
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
@@ -185,6 +201,8 @@ export class MainMenu {
     side.append(nav, el('p', 'menu-blurb', GAME.blurb));
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
+    this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
+    this.sheet.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side);
   }
 
   open(id) {
@@ -192,13 +210,28 @@ export class MainMenu {
     if (id !== 'units' && this.preview) { this.preview.dispose(); this.preview = null; }
     this.panel.replaceChildren();
     this.panel.dataset.panel = id;
+    // the map table beside a battle being set up or about to be fought (single player, multiplayer,
+    // boot camp, the campaign's next battle); units and settings on the plain table
+    if (id === 'battle') this.sheet?.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side, true, 'menu');
+    else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
+    else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
-      this.panel.append(new CampaignPanel({ onBattle: (choice) => this.deploy(choice) }).root);
+      this.panel.append(new CampaignPanel({
+        onBattle: (choice) => this.deploy(choice),
+        onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? Object.values(MAPS)[0], side, true, 'menu'); },
+      }).root);
     } else if (id === 'multi') {
-      this.lobby ??= new Lobby({ onStart: (choice) => this.deploy(choice) });
+      this.lobby ??= new Lobby({
+        onStart: (choice) => this.deploy(choice),
+        onPreview: (map, side) => {
+          if (this.panel.dataset.panel !== 'multi') return;
+          if (MAPS[map]) this.sheet?.show(MAPS[map], side, true, 'menu'); else this.sheet?.hide();
+        },
+      });
       this.panel.append(this.lobby.root);
+      this.lobby.preview();
     } else if (id === 'units') this.unitsPanel();
     else {
       this.panel.append(el('h2', '', 'Settings'));
@@ -212,40 +245,101 @@ export class MainMenu {
 
   battlePanel() {
     const p = this.panel;
+    const c = this.choice;
     p.append(el('h2', '', 'Single player'));
-    p.append(el('p', 'mp-lead', 'Against the AI. Command from above, or take direct control of any of your squads and vehicles (Tab, or double-click a stack).'));
-    p.append(el('h3', 'menu-sub', 'Game mode'));
-    const modes = el('div', 'cards');
+    p.append(el('p', 'mp-lead', 'Against the AI. Command from above, or take direct control of any of your squads and vehicles.'));
+
+    const q = (title, body) => {
+      const sec = el('section', 'setup-q');
+      sec.append(el('h3', '', title), body);
+      p.append(sec);
+      return sec;
+    };
+
+    // what kind of battle: the names, and what the chosen one is about
+    const kinds = el('div', 'map-pick');
+    const modes = el('div', 'map-chips');
+    modes.setAttribute('role', 'radiogroup');
+    const modeAbout = el('p', 'map-about', MODES[c.mode]?.description ?? '');
     for (const m of Object.values(MODES).filter((m) => !m.hidden)) {
-      modes.append(this.card(m.name, m.description, this.choice.mode === m.id, () => { this.choice.mode = m.id; this.drawRules(); }, modes));
+      const b = el('button', `map-chip${c.mode === m.id ? ' on' : ''}`, m.name);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(c.mode === m.id));
+      b.addEventListener('click', () => {
+        c.mode = m.id;
+        for (const o of modes.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
+        modeAbout.textContent = m.description;
+        this.drawRules();
+        this.drawSummary();
+      });
+      modes.append(b);
     }
-    p.append(modes);
+    kinds.append(modes, modeAbout);
+    q('What kind of battle', kinds);
 
-    p.append(el('h3', 'menu-sub', 'Map'));
-    const maps = el('div', 'cards');
+    // where: the map table behind redraws as you pick
+    const where = el('div', 'map-pick');
+    const chips = el('div', 'map-chips');
+    chips.setAttribute('role', 'radiogroup');
+    const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
     for (const m of Object.values(MAPS)) {
-      maps.append(this.card(m.name, m.description ?? '', this.choice.map === m.id, () => { this.choice.map = m.id; }, maps));
+      const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(c.map === m.id));
+      b.addEventListener('click', () => {
+        c.map = m.id;
+        for (const o of chips.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
+        about.textContent = m.description ?? '';
+        this.sheet?.show(m, c.side);
+      });
+      chips.append(b);
     }
-    p.append(maps);
+    where.append(chips, about);
+    q('Where', where);
 
-    p.append(el('h3', 'menu-sub', 'Side'));
-    const sides = el('div', 'cards sides');
+    // which side
+    const sides = el('div', 'side-pick');
     const sideText = {
-      nato: 'Defend the West German border: dig in, hold the villages, break the offensive.',
-      pact: 'Punch through the Fulda Gap: mass your guards, find the weak point, take Hünfeld.',
+      nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
+      pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
     for (const f of ['nato', 'pact']) {
-      sides.append(this.card(FACTIONS[f].name, sideText[f], this.choice.side === f, () => { this.choice.side = f; }, sides, f));
+      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${FACTIONS[f].name}</b><span>${sideText[f]}</span>`);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(c.side === f));
+      b.addEventListener('click', () => {
+        c.side = f;
+        for (const o of sides.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-pressed', String(o === b)); }
+        this.sheet?.show(MAPS[c.map], f);
+      });
+      sides.append(b);
     }
-    p.append(sides);
+    q('Which side', sides);
 
-    p.append(el('h3', 'menu-sub', 'Conditions'));
-    p.append(conditionsPicker(this.choice));
-
-    p.append(el('h3', 'menu-sub', 'Battle rules'));
+    // conditions and rules: one sentence, the controls folded away until asked for
+    const more = el('div', 'setup-more');
+    more.hidden = true;
+    more.append(el('h3', 'menu-sub', 'Time and weather'), conditionsPicker(c, () => this.drawSummary()));
+    more.append(el('h3', 'menu-sub', 'Battle rules'));
     this.rulesBox = el('div', 'rules-box');
-    p.append(this.rulesBox);
+    more.append(this.rulesBox);
+    const sum = el('div', 'setup-summary');
+    this.summaryText = el('p', '');
+    const change = el('button', 'set-button', 'Change conditions');
+    change.type = 'button';
+    change.setAttribute('aria-expanded', 'false');
+    change.addEventListener('click', () => {
+      more.hidden = !more.hidden;
+      change.textContent = more.hidden ? 'Change conditions' : 'Done';
+      change.setAttribute('aria-expanded', String(!more.hidden));
+      this.drawSummary();
+    });
+    sum.append(this.summaryText, change);
+    p.append(sum, more);
     this.drawRules();
+    this.drawSummary();
 
     const go = el('button', 'deploy', 'Deploy');
     go.type = 'button';
@@ -272,10 +366,23 @@ export class MainMenu {
     p.append(row);
   }
 
+  /** The conditions and rules in a sentence or two, under the three questions. */
+  drawSummary() {
+    if (!this.summaryText) return;
+    const c = this.choice;
+    const r = c.rules;
+    const sky = { clear: 'Clear skies', overcast: 'Overcast', rain: 'Rain', fog: 'Fog' }[c.weather] ?? WEATHER[c.weather]?.name;
+    const when = { day: 'by day', dawn: 'at dawn', dusk: 'at dusk', night: 'at night' }[c.time] ?? '';
+    const enemy = `${DIFFICULTY[r.difficulty]?.label ?? 'Regular'} enemy`;
+    const moving = [r.changingWeather !== false ? 'the weather' : '', r.timePasses !== false ? 'the daylight' : ''].filter(Boolean).join(' and ');
+    const air = r.air === false ? ' No air support.' : '';
+    this.summaryText.textContent = `${sky} ${when}, ${enemy.toLowerCase()}.${moving ? ` ${moving[0].toUpperCase()}${moving.slice(1)} will change as the battle goes on.` : ''}${air}`;
+  }
+
   /** The rules rows for the chosen mode (economy rows only where command points matter). */
   drawRules() {
     if (!this.rulesBox) return;
-    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy));
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.drawSummary()));
   }
 
   card(title, text, on, pick, group, extra = '') {
@@ -293,7 +400,12 @@ export class MainMenu {
     this.preview?.dispose();
     this.preview = null;
     this.root.classList.remove('menu-open');
-    this.root.replaceChildren(el('div', 'ts-brand', `<h1>${GAME.title}</h1><p>${GAME.tagline}</p>`), el('div', 'ts-menu', '<div id="ts-status">Deploying forces…</div>'));
+    const sheet = this.sheet?.canvas;
+    this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
+    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const box = el('div', 'loading-card', `${logo(GAME.title, GAME.tagline)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    this.root.replaceChildren(...(sheet ? [sheet] : []), box);
+    this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page
     requestAnimationFrame(() => setTimeout(() => this.onDeploy({ ...choice }), 30));
   }

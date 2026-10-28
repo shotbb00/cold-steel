@@ -1,0 +1,16 @@
+{
+  "name": "Cold Steel",
+  "short_name": "Cold Steel",
+  "description": "World War III, 1985: command from above or fight in person.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0c0e0a",
+  "theme_color": "#10120c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

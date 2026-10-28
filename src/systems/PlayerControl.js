@@ -57,6 +57,32 @@ export class PlayerControl {
     }
     else if (keys.is(code, 'prevMember')) this.cycle(-1);
     else if (keys.is(code, 'nextMember')) this.cycle(1);
+    else if (keys.is(code, 'sight')) this.toggleSight();
+  }
+
+  /**
+   * The sight this stack fights with at night: 'thermal' (its side's nightSight 0.85 or better —
+   * the Abrams, the Bradleys), 'ir' (any lesser night sight: Pact infrared, scouts' goggles), or null.
+   */
+  sightKind(stack = this.stack) {
+    const ns = stack?.stats.nightSight;
+    const v = typeof ns === 'number' ? ns : ns?.[stack.faction];
+    return !v ? null : v >= 0.85 ? 'thermal' : 'ir';
+  }
+
+  /** N: the sight on or off (render/babylon/sight.js). */
+  toggleSight() {
+    const kind = this.sightKind();
+    if (!kind) return this.game.bus.emit('toast', `${this.stack.name} has no night sight`);
+    if (!this.game.babylon) return this.game.bus.emit('toast', 'Sights need the default renderer');
+    this.setSight(this.sight ? null : kind);
+    this.game.bus.emit('toast', this.sight ? (this.sight === 'thermal' ? 'Thermal sight' : 'Night sight') : 'Sight off');
+  }
+
+  setSight(mode) {
+    this.sight = mode;
+    this.game.babylon?.setSight(mode);
+    document.body.classList.toggle('sighting', !!mode);
   }
 
   /** Take over `unit` (default: the living member of `stack` nearest the stack's centre). */
@@ -65,6 +91,7 @@ export class PlayerControl {
     if (!candidates.length) return false;
     unit ??= candidates.reduce((best, m) => (m.pos.distanceToSquared(stack.centroid) < best.pos.distanceToSquared(stack.centroid) ? m : best));
     if (this.unit && this.unit !== unit) this.detach();
+    if (this.sight && this.stack !== stack) this.setSight(null); // another stack, another sight
 
     this.unit = unit;
     this.stack = stack;
@@ -110,6 +137,7 @@ export class PlayerControl {
 
   /** Back to the tactical view. */
   release() {
+    if (this.sight) this.setSight(null);
     const u = this.unit;
     const stack = this.stack;
     this.detach();

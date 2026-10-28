@@ -99,6 +99,7 @@ export function createSky(scene, theme) {
       mat.setColor3('cloudDark', lin(theme.cloudDark ?? 0x8a8e92));
       mat.setFloat('sunDisk', theme.sunDisk ?? 1);
       mat.setFloat('clouds', theme.clouds ?? 0);
+      if (theme.sunDir) mat.setVector3('sunDir', new Vector3(...theme.sunDir).normalize()); // time passing: the sun moves
     },
   };
 }

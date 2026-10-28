@@ -38,21 +38,50 @@ export class Buildings {
     return Math.abs(dx * c - dz * s) <= b.w / 2 + margin && Math.abs(dx * s + dz * c) <= b.d / 2 + margin;
   }
 
-  /** Send an infantry stack into a building. */
-  garrison(stack, b) {
-    if (stack.entered === b) return;
+  /**
+   * Send an infantry stack into a building. `face` (yaw): the way the order pointed (a
+   * right-drag onto the house) — the windows looking that way are manned first; without it,
+   * the ones toward the enemy's side of the field.
+   */
+  garrison(stack, b, face = null) {
+    if (stack.entered === b) {
+      // already in: a new direction re-mans the windows that way
+      if (face == null) return;
+      stack.garrisonFace = face;
+      for (const u of stack.units) this.game.cover.release(u);
+      return this.enter(stack, b);
+    }
     const free = this.windows(b).filter((s) => !s.occupant || !s.occupant.alive).length;
     if (!free) return this.game.tell(stack.faction, `The ${b.name} is full`);
     if (stack.entered) this.exit(stack);
     const door = this.door(b, stack.anchor);
     stack.ai.moveTo(door, { hold: true, ordered: this.game.isHuman(stack.faction) });
     stack.garrison = b; // after moveTo, which clears it
+    stack.garrisonFace = face;
     this.game.tell(stack.faction, `${stack.name} moving into the ${b.name}`);
   }
 
   /** The window positions of a building: its inside wall cover spots. */
   windows(b) {
     return (b.windows ??= this.game.cover.spots.filter((s) => s.interior === b));
+  }
+
+  /**
+   * The free windows `n` men of `faction` would man in `b`, best first: those looking most
+   * squarely toward `face` (default: the enemy's side of the field), then the sides.
+   */
+  pickWindows(b, n, face, faction) {
+    let yaw = face;
+    if (yaw == null) {
+      const foe = Object.entries(this.game.world.bases).find(([f]) => f !== faction)?.[1];
+      yaw = foe ? Math.atan2(foe.x - b.x, foe.z - b.z) : 0;
+    }
+    const fx = Math.sin(yaw);
+    const fz = Math.cos(yaw);
+    const out = (w) => -(w.dirX * fx + w.dirZ * fz); // a window's spot faces the wall: out is -dir
+    // front and side windows only: a man at a back window just watches the wrong way — the rest
+    // wait in the room (enter()) until a new order points the squad elsewhere
+    return this.windows(b).filter((w) => (!w.occupant || !w.occupant.alive) && out(w) > -0.3).sort((a, c) => out(c) - out(a)).slice(0, n);
   }
 
   /** A point just outside the building on the side facing `from`. */
@@ -79,7 +108,8 @@ export class Buildings {
   /** Everyone in: a window each (facing out), the rest inside the room. */
   enter(s, b) {
     const cover = this.game.cover;
-    const free = this.windows(b).filter((w) => !w.occupant || !w.occupant.alive);
+    const men = s.units.filter((u) => u.alive).length;
+    const free = this.pickWindows(b, men, s.garrisonFace, s.faction); // the side that matters first
     const terrain = this.game.terrain;
     let i = 0;
     for (const u of s.units) {
@@ -105,7 +135,8 @@ export class Buildings {
     s.anchor.set(b.x, s.anchor.y, b.z);
     s.moveTarget = null;
     if (s.ai.state !== 'Defend') s.ai.defend();
-    this.game.tell(s.faction, `${s.name} is in the ${b.name}${i > free.length ? ' — not enough windows for everyone' : ''}`);
+    if (s.garrisonFace != null) s.facing = s.holdFacing = s.garrisonFace;
+    this.game.tell(s.faction, `${s.name} is in the ${b.name}${i > free.length ? ` — ${i - free.length} wait inside` : ''}`);
   }
 
   /** Out of the building, onto the side they came in by. */

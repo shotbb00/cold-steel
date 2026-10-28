@@ -6,11 +6,12 @@
 //   { t: 'hold', s: [ids] }                      { t: 'move', m: [[id, x, z], …], hold, face? (yaw) }
 //   { t: 'attack', s: [ids], target: id }        { t: 'build', s: id, k: kind, x, z, yaw }
 //   { t: 'unload', s: [ids] }                    { t: 'board', s: id, c: carrierId }
-//   { t: 'garrison', s: [ids], b: buildingIndex }{ t: 'popSmoke', s: [ids] }
+//   { t: 'garrison', s: [ids], b: buildingIndex, face? }{ t: 'popSmoke', s: [ids] }
 //   { t: 'smoke', s: [ids], x, z }               { t: 'air', x, z, yaw, k: 'heli' | 'jet' | 'lift' }
 //   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 import { STRUCTURES } from '../systems/Construction.js';
+import { planCover } from '../world/CoverPlan.js';
 
 export class Orders {
   constructor(game) {
@@ -52,7 +53,15 @@ export class Orders {
         for (const s of mine(cmd.s)) s.ai.defend();
         return null;
       case 'move':
-        for (const [id, x, z] of cmd.m ?? []) own(id)?.ai.moveTo({ x, z }, { hold: !!cmd.hold, face: Number.isFinite(cmd.face) ? cmd.face : null });
+        for (const [id, x, z] of cmd.m ?? []) {
+          const s = own(id);
+          if (!s) continue;
+          const face = Number.isFinite(cmd.face) ? cmd.face : null;
+          s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
+          // infantry sent next to cover takes it — the spots the command view previewed
+          const plan = s.moveTarget && planCover(g.world, s, s.moveTarget, face);
+          if (plan) { s.ai.plannedSpots = plan; s.ai.holdOnArrival = true; }
+        }
         return null;
       case 'attack': {
         const target = g.world.stackById(cmd.target);
@@ -84,7 +93,7 @@ export class Orders {
       case 'garrison': {
         const b = g.buildings.list[cmd.b];
         if (!b || b.collapsed) return null;
-        for (const s of mine(cmd.s)) if (s.usesCover) g.buildings.garrison(s, b);
+        for (const s of mine(cmd.s)) if (s.usesCover) g.buildings.garrison(s, b, Number.isFinite(cmd.face) ? cmd.face : null);
         return null;
       }
       case 'leave':

@@ -24,7 +24,11 @@
 // and the group, vehicles popping theirs). Forward observers take ground that sees the objective
 // of the running assault — or, between offensives, the enemy facing the most exposed point — so
 // its guns land tight there (UnitStack.observed). Stacks with most of their men badly hurt pull
-// out to the field ambulance (or the rear) and rejoin once patched up.
+// out to the field ambulance (or the rear) and rejoin once patched up. Before going in, it looks
+// at the approach: wire it can see and minefields it has found are cleared by its engineers
+// under mortar smoke, and the assault waits for the lane (or a minute). Garrisons fortify in
+// order — sandbags, a trench, wire, a minefield, then a second belt to the side — and a side
+// that only defends (Breakthrough's defence) digs in twice as fast.
 // Contested points of its own are reinforced at any time. Garrisons that have settled
 // fortify (sandbags, then a trench). Assaults open with a helicopter strafing run on the target,
 // and dug-in positions near its front get shelled now and then. It buys reinforcements from
@@ -54,6 +58,9 @@ const FIRST_ASSAULT = 110;          // seconds before the first offensive
 const LULL = [90, 150];             // seconds of regrouping between offensives
 const PROBE_EVERY = [45, 75];
 const SMOKE_SETTLE = 9;             // seconds the assault waits for its smoke screen to land
+const BREACH_WAIT = 60;             // seconds the assault waits for its engineers to open a lane
+// what a settled garrison builds, in order: [kind, metres ahead, metres to the side]
+const FORT = [['sandbags', 3.5, 0], ['trench', 1, 0], ['wire', 14, 0], ['mines', 30, 0], ['wire', 16, 11], ['mines', 34, -14]];
 const RECOVER_AGAIN = 150;          // seconds before a stack that was pulled out goes again
 
 /** Share of a stack's living men (or vehicles) under half health. */
@@ -221,14 +228,14 @@ export class FrontlineDirector {
   /** A settled, quiet garrison digs in: sandbags first, later a trench, facing the enemy. */
   fortify(s) {
     const done = s.fortifications ?? 0;
-    if (done >= 4 || s.ai.state !== AIState.DEFEND || s.ai.defendTime < (done ? 40 + done * 20 : 20)) return;
+    const pace = this.opts.attack ? 1 : 0.5; // a side that only defends digs in faster
+    if (done >= FORT.length || s.ai.state !== AIState.DEFEND || s.ai.defendTime < (done ? 40 + done * 20 : 20) * pace) return;
     if (s.units.some((u) => u.alive && u.threat)) return;
-    const kind = ['sandbags', 'trench', 'wire', 'mines'][done];
+    const [kind, ahead, side] = FORT[done];
     const foeBase = this.game.world.bases[enemyOf(this.faction)];
     const yaw = Math.atan2(foeBase.x - s.anchor.x, foeBase.z - s.anchor.z);
-    const ahead = [3.5, 1, 14, 30][done];
-    const x = s.anchor.x + Math.sin(yaw) * ahead + (Math.random() - 0.5) * 4;
-    const z = s.anchor.z + Math.cos(yaw) * ahead;
+    const x = s.anchor.x + Math.sin(yaw) * ahead + Math.cos(yaw) * side + (Math.random() - 0.5) * 4;
+    const z = s.anchor.z + Math.cos(yaw) * ahead - Math.sin(yaw) * side;
     if (!this.game.spend(this.faction, STRUCTURES[kind].cost)) return;
     if (!this.game.construction.place(kind, x, z, yaw, this.faction, s)) {
       this.game.refund(this.faction, STRUCTURES[kind].cost);
@@ -283,12 +290,22 @@ export class FrontlineDirector {
           const lz = this.offsetTowardBase(t, 35);
           this.game.air.call(this.faction, lz.x, lz.z, null, 'lift'); // and a squad landed right behind it
         }
+        op.breach = this.breach(op, group, plan.stage, t);  // its smoke first: the mortars it takes are busy
         op.smoked = this.screenAssault(group.filter((s) => !this.baseOfFire(s)), t);
         this.setPhase(op, 'prep');
         return;
       }
       case 'prep': {
         if (op.smoked && this.now - op.since < SMOKE_SETTLE) return; // let the screen build up first
+        if (op.breach) {
+          // the engineers are cutting a lane: wait for it, a minute at most
+          const left = op.breach.obstacles.filter((ob) => this.game.construction.obstacles.includes(ob));
+          if (left.length && op.breach.stack.alive && this.now - op.since < BREACH_WAIT) {
+            if (!left.includes(op.breach.current)) this.clearNext(op.breach, left[0]); // that one's gone: the next
+            return;
+          }
+          op.breach = null;
+        }
         this.game.bus.emit('toast', `Enemy assault on ${t.name}!`);
         for (const s of group) {
           if (this.baseOfFire(s)) continue; // stays on the line, shooting the defenders down
@@ -431,6 +448,44 @@ export class FrontlineDirector {
     const cz = group.reduce((a, s) => a + s.anchor.z, 0) / n;
     this.smokeAt(cx + (t.x - cx) * 0.4, cz + (t.z - cz) * 0.4);
     for (const s of group) if (s.stats.smoke && s.smokeLeft > 0) this.game.orders.run(this.faction, { t: 'popSmoke', s: [s.id] });
+  }
+
+  /**
+   * Obstacles of the enemy's on the way from `stage` to `target` that this side knows of — wire
+   * (plain to see) and minefields that have been found — and engineers to clear them: the
+   * group's own, or the nearest free ones. Sets the clearing jobs going under mortar smoke.
+   * Returns { obstacles, stack } or null.
+   */
+  breach(op, group, stage, target) {
+    const c = this.game.construction;
+    const dx = target.x - stage.x;
+    const dz = target.z - stage.z;
+    const len2 = dx * dx + dz * dz || 1;
+    const nearPath = (ob) => {
+      const k = Math.max(0, Math.min(1, ((ob.x - stage.x) * dx + (ob.z - stage.z) * dz) / len2));
+      return Math.hypot(stage.x + dx * k - ob.x, stage.z + dz * k - ob.z) < 14 + Math.max(ob.hx, ob.hz);
+    };
+    const obstacles = c.obstacles.filter((ob) => ob.faction !== this.faction && (ob.kind === 'wire' || ob.revealed) && nearPath(ob));
+    if (!obstacles.length) return null;
+    let eng = group.find((s) => s.stats.engineer && s.alive);
+    if (!eng) {
+      eng = this.nearestFree(obstacles[0], (s) => s.stats.engineer);
+      if (!eng) return null;
+      this.roles.set(eng, { role: 'strike', point: target, op });
+      op.plan.group.push(eng);
+    }
+    // nearest first, one at a time (a job walks the engineers to it: clearNext)
+    obstacles.sort((a, b) => Math.hypot(a.x - stage.x, a.z - stage.z) - Math.hypot(b.x - stage.x, b.z - stage.z));
+    const b = { obstacles, stack: eng, yaw: Math.atan2(dx, dz), target };
+    this.clearNext(b, obstacles[0]);
+    return b;
+  }
+
+  /** The engineers onto obstacle `ob`, under smoke between it and the guns covering it. */
+  clearNext(b, ob) {
+    b.current = ob;
+    this.game.construction.place('clear', ob.x, ob.z, b.yaw, this.faction, b.stack, { force: true });
+    this.smokeAt(ob.x + (b.target.x - ob.x) * 0.3, ob.z + (b.target.z - ob.z) * 0.3);
   }
 
   /** Goes in as the base of fire rather than with the assault. */

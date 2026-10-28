@@ -54,8 +54,22 @@ export class Flares {
   constructor(game) {
     this.game = game;
     this.list = [];
+    this.lights = [];
     this.enabled = !!game.conditions?.night;
-    if (!this.enabled) return;
+  }
+
+  get enabled() {
+    return this._enabled;
+  }
+
+  /** Night or not; the lights and parts are made the first time it gets dark (the day can pass). */
+  set enabled(on) {
+    this._enabled = on;
+    if (on && !this.geo) this.build();
+  }
+
+  build() {
+    const game = this.game;
     this.lights = [0, 1].map(() => {
       const l = new THREE.PointLight(0xfff1d6, 0, 260, 1.4);
       game.scene.add(l);
@@ -112,7 +126,7 @@ export class Flares {
   }
 
   update(dt) {
-    if (!this.enabled) return;
+    if (!this.geo || (!this.enabled && !this.list.length)) return; // after dawn, the last ones still burn out
     const g = this.game;
     const terrain = g.terrain;
     for (let i = this.list.length - 1; i >= 0; i--) {

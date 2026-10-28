@@ -53,6 +53,7 @@ export class StackAI {
     this.ordered = ordered;
     this.holdOnArrival = hold || face !== null;
     this.faceOnArrival = face;
+    this.plannedSpots = null;   // the move order may plan the cover to take (world/CoverPlan.js)
     s.holdFacing = null;
     s.faceTarget = null;
     s.garrison = null; // a new move order leaves any building (Buildings.garrison sets it again)

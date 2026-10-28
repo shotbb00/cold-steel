@@ -192,8 +192,9 @@ export class GameEngine {
     this.ambience = new Ambience(this);
     this.rain = this.conditions.rain ? new Rain(this) : null;
     this.radio = new RadioLog(this);
-    // single player: the weather can change during the battle (systems/WeatherChange.js)
-    if (!net && !campaign && !mode.fixedWeather && this.rules.changingWeather !== false) this.systems.push(new WeatherChange(this));
+    // single player: the weather can change and the day go on during the battle (systems/WeatherChange.js)
+    const sky = { weather: this.rules.changingWeather !== false, time: this.rules.timePasses !== false };
+    if (!net && !campaign && !mode.fixedWeather && (sky.weather || sky.time)) this.systems.push(new WeatherChange(this, sky));
 
     window.addEventListener('resize', () => this.onResize());
     // a multiplayer host whose window is minimised or in the background gets no animation

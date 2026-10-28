@@ -1,3 +1,10 @@
+/* Fonts (public/fonts, SIL Open Font License): Big Shoulders Stencil for the name and headings,
+   Barlow Semi Condensed for everything else. Bundled, so the game needs no network. */
+@font-face { font-family: 'Big Shoulders Stencil'; src: url('../fonts/BigShouldersStencil.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Barlow Semi Condensed'; src: url('../fonts/BarlowSemiCondensed-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Barlow Semi Condensed'; src: url('../fonts/BarlowSemiCondensed-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Barlow Semi Condensed'; src: url('../fonts/BarlowSemiCondensed-SemiBold.woff2') format('woff2'); font-weight: 600 700; font-display: swap; }
+
 :root {
   --ally: #6fa8ff;   /* NATO blue */
   --enemy: #ff5a48;  /* Warsaw Pact red */
@@ -6,6 +13,10 @@
   --line: rgba(190, 200, 170, 0.22);
   --text: #e4e6dc;
   --muted: #9a9e8c;
+  --font-ui: 'Barlow Semi Condensed', 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Big Shoulders Stencil', 'Bahnschrift', 'Segoe UI', sans-serif;
+  --table: #151912;   /* the map table behind the menu */
+  --ink: #cfc9ad;     /* map ink */
 }
 
 * { box-sizing: border-box; }
@@ -16,7 +27,7 @@ html, body {
   overflow: hidden;
   background: #0d0f0b;
   color: var(--text);
-  font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-ui);
   user-select: none;
 }
 
@@ -26,7 +37,7 @@ html, body {
 #hud { z-index: 5; }
 
 kbd {
-  font: 600 11px/1 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+  font: 600 11px/1 var(--font-ui);
   padding: 2px 5px;
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -101,7 +112,7 @@ body.tactical #command-panel { display: block; }
 #selection-info .sel em { color: var(--muted); font-style: normal; }
 .cmd-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .cmd-buttons button, #banner button {
-  font: 600 14px 'Bahnschrift', 'Segoe UI', system-ui, sans-serif; color: var(--text);
+  font: 600 14px var(--font-ui); color: var(--text);
   background: rgba(200, 210, 180, 0.07); border: 1px solid var(--line);
   padding: 6px 10px; cursor: pointer;
 }
@@ -192,7 +203,8 @@ body.tactical #help .help-tactical { display: block; }
 #ts-blurb { max-width: 520px; margin: 22px 0 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
 .ts-menu { margin-top: 28px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 #ts-status { font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text); animation: blink 1.6s ease-in-out infinite; }
-.ts-note { max-width: 460px; color: var(--muted); margin-top: 18px; opacity: 0.7; }
+.ts-note { display: block; max-width: 460px; color: var(--muted); margin-top: 14px; opacity: 0; animation: ts-late 0.4s 6s forwards; } /* only if loading stalls */
+@keyframes ts-late { to { opacity: 0.7; } }
 
 /* ---------- soldier callouts ---------- */
 .bark {
@@ -234,7 +246,7 @@ body.tactical #help .help-tactical { display: block; }
 #reinforce { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 #reinforce[hidden] { display: none; }
 .rf-open {
-  font: 600 14px 'Bahnschrift', 'Segoe UI', system-ui, sans-serif; color: var(--text); cursor: pointer;
+  font: 600 14px var(--font-ui); color: var(--text); cursor: pointer;
   background: rgba(224, 180, 90, 0.14); border: 1px solid rgba(224, 180, 90, 0.5); padding: 6px 10px;
 }
 .rf-open:hover { background: rgba(224, 180, 90, 0.26); }
@@ -378,7 +390,7 @@ body:not(.night) .night-only { display: none; }
 .bld-mark svg { width: 14px; height: 14px; color: var(--ally); }
 .bld-mark.enemy svg { color: var(--enemy); }
 .bld-mark button {
-  font: 600 11px 'Bahnschrift', 'Segoe UI', sans-serif; color: var(--text); cursor: pointer;
+  font: 600 11px var(--font-ui); color: var(--text); cursor: pointer;
   background: rgba(200, 210, 180, 0.1); border: 1px solid var(--line); padding: 1px 6px;
 }
 .bld-mark button:hover { background: rgba(200, 210, 180, 0.25); }
@@ -496,11 +508,23 @@ body.bootcamp #radio-log { top: auto; bottom: 220px; }
 body.touch #touch-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 body.touch #touch-bar:not(:has(button:not([hidden]))) { display: none; }
 #topbar .tb-pause { display: none; }
+/* touch: the command panel collapses to its Orders button (and the touch row) */
+#command-panel .tb-orders { display: none; }
+body.touch #command-panel { display: none; flex-direction: column; }
+body.touch.tactical #command-panel { display: flex; }
+body.touch #command-panel .tb-orders { display: block; order: -2; align-self: flex-end; margin: -2px 0 8px; }
+body.touch #command-panel #touch-bar { order: -1; }
+body.touch #command-panel .tb-orders::after { content: ' ▾'; color: var(--gold); }
+body.touch #command-panel.collapsed .tb-orders::after { content: ' ▴'; }
+body.touch #command-panel.collapsed { width: auto; max-width: min(300px, 60vw); padding: 6px; border-top-width: 1px; }
+body.touch #command-panel.collapsed > :not(.tb-orders):not(#touch-bar) { display: none; }
+body.touch #command-panel.collapsed .tb-orders { margin: 0; }
+body.touch #command-panel.collapsed #touch-bar { margin: 6px 0 0; justify-content: flex-end; }
 body.touch #topbar .tb-pause { display: block; order: 3; }
 .touch-only, body.touch .mouse-only { display: none; }
 body.touch .touch-only { display: block; }
-#touch-bar button, #touch-pad button, #topbar .tb-pause {
-  font: 600 13px 'Bahnschrift', 'Segoe UI', system-ui, sans-serif; color: var(--text); letter-spacing: 0.04em;
+#touch-bar button, #touch-pad button, #topbar .tb-pause, #command-panel .tb-orders {
+  font: 600 13px var(--font-ui); color: var(--text); letter-spacing: 0.04em;
   min-height: 40px; padding: 0 14px; background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line);
   touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
 }
@@ -522,7 +546,9 @@ body.touch:not(.tactical) #touch-pad { display: block; position: absolute; inset
   grid-column: 3; grid-row: 1 / span 2; width: 84px; height: 84px; border-radius: 50%; padding: 0;
   background: rgba(255, 90, 72, 0.28); border-color: rgba(255, 90, 72, 0.7); font-size: 15px;
 }
-#touch-pad .tp-toggleView { grid-column: 1 / span 2; border-color: rgba(224, 180, 90, 0.6); color: var(--gold); }
+#touch-pad .tp-toggleView { border-color: rgba(224, 180, 90, 0.6); color: var(--gold); }
+#touch-pad .tp-sight[hidden] { display: none; }
+#touch-pad .tp-sight[hidden] + .tp-toggleView { grid-column: 1 / span 2; }
 body.touch #help, body.touch #control-hint, body.touch #lock-hint { display: none !important; }
 body.touch:not(.tactical) #minimap { display: none; } /* the stick needs that corner */
 body.touch .cmd-buttons kbd, body.touch .rf-open kbd, body.touch #tutorial .tu-skip kbd { display: none; }
@@ -574,3 +600,13 @@ body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: 
   .stack-label { transform-origin: 50% 100%; font-size: 10px; }
   #banner h1 { font-size: 36px; }
 }
+
+/* cover preview while aiming a move (src/systems/CommandSystem.js updatePreview) */
+#cover-preview { position: absolute; inset: 0; pointer-events: none; }
+#cover-preview i {
+  position: absolute; left: 0; top: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  background: rgba(255, 195, 90, 0.9); box-shadow: 0 0 0 2px rgba(20, 16, 6, 0.65), 0 0 8px rgba(255, 195, 90, 0.6);
+  will-change: transform; transform-origin: 6px 6px;
+}
+#cover-preview i::after { content: ''; position: absolute; left: 11px; top: 4.5px; width: 10px; height: 3px; border-radius: 2px; background: rgba(255, 195, 90, 0.95); }
+#cover-preview i[hidden] { display: none; }

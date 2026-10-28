@@ -50,8 +50,10 @@ async function copy(text, field) {
 }
 
 export class Lobby {
-  constructor({ onStart }) {
+  /** `onPreview(map, side)`: the battle as it stands — the menu shows its map (ui/MapSheet.js). */
+  constructor({ onStart, onPreview = () => {} }) {
     this.onStart = onStart;
+    this.onPreview = onPreview;
     const mode = Object.values(MODES).find((m) => m.multiplayer);
     this.choice = { mode: mode?.id ?? 'frontline', map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', coop: false };
     this.role = 'host';
@@ -104,16 +106,40 @@ export class Lobby {
     return this.statusEl;
   }
 
+  /** Names to pick from, and what the picked one is about underneath (as in the single-player setup). */
+  chips(list, current, pick) {
+    const box = el('div', 'map-pick');
+    const row = el('div', 'map-chips');
+    row.setAttribute('role', 'radiogroup');
+    const about = el('p', 'map-about', list.find((m) => m.id === current)?.description ?? '');
+    for (const m of list) {
+      const b = el('button', `map-chip${m.id === current ? ' on' : ''}`, m.name);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(m.id === current));
+      b.addEventListener('click', () => {
+        for (const o of row.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
+        about.textContent = m.description ?? '';
+        pick(m);
+      });
+      row.append(b);
+    }
+    box.append(row, about);
+    return box;
+  }
+
   choices(box) {
-    box.append(el('h3', 'menu-sub', 'Game mode'));
-    const modes = el('div', 'cards');
-    const modeCards = Object.values(MODES).filter((m) => m.multiplayer);
+    const q = (title, ...body) => {
+      const sec = el('section', 'setup-q');
+      sec.append(el('h3', '', title), ...body);
+      box.append(sec);
+    };
     const together = el('div', 'seg mp-together');
     const setTogether = () => {
       const only = MODES[this.choice.mode]?.multiplayer === 'coop';
       if (only) this.choice.coop = true;
       together.replaceChildren();
-      for (const [coop, label] of [[false, 'Versus — one side each'], [true, 'Co-op — together against the AI']]) {
+      for (const [coop, label] of [[false, 'Versus: one side each'], [true, 'Co-op: together against the AI']]) {
         if (only && !coop) continue;
         const b = el('button', this.choice.coop === coop ? 'on' : '', label);
         b.type = 'button';
@@ -121,23 +147,14 @@ export class Lobby {
         together.append(b);
       }
     };
-    for (const m of modeCards) {
-      modes.append(this.card(m.name, m.description, this.choice.mode === m.id, () => { this.choice.mode = m.id; setTogether(); this.renderSides(); this.sendLobby(); }, modes));
-    }
-    box.append(modes, together);
+    const modes = this.chips(Object.values(MODES).filter((m) => m.multiplayer), this.choice.mode, (m) => { this.choice.mode = m.id; setTogether(); this.renderSides(); this.sendLobby(); });
+    q('What kind of battle', modes, together);
     setTogether();
-    box.append(el('h3', 'menu-sub', 'Map'));
-    const maps = el('div', 'cards');
-    for (const m of Object.values(MAPS)) {
-      maps.append(this.card(m.name, m.description ?? '', this.choice.map === m.id, () => { this.choice.map = m.id; this.sendLobby(); }, maps));
-    }
-    box.append(maps);
-    box.append(el('h3', 'menu-sub', 'Your side'));
-    this.sidesBox = el('div', 'cards sides');
-    box.append(this.sidesBox);
+    q('Where', this.chips(Object.values(MAPS), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
+    this.sidesBox = el('div', 'side-pick');
+    q('Which side', this.sidesBox);
     this.renderSides();
-    box.append(el('h3', 'menu-sub', 'Conditions'));
-    box.append(conditionsPicker(this.choice, () => this.sendLobby()));
+    q('Time and weather', conditionsPicker(this.choice, () => this.sendLobby()));
   }
 
   renderSides() {
@@ -146,18 +163,12 @@ export class Lobby {
     sides.replaceChildren();
     for (const f of ['nato', 'pact']) {
       const text = this.choice.coop ? 'You both command it, each your own stacks.' : `Your friend commands ${sideName(enemyOf(f))}.`;
-      sides.append(this.card(FACTIONS[f].name, text, this.choice.side === f, () => { this.choice.side = f; this.sendLobby(); }, sides, f));
+      const b = el('button', `side-card ${f}${this.choice.side === f ? ' on' : ''}`, `<b>${FACTIONS[f].name}</b><span>${text}</span>`);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(this.choice.side === f));
+      b.addEventListener('click', () => { this.choice.side = f; this.renderSides(); this.sendLobby(); });
+      sides.append(b);
     }
-  }
-
-  card(title, text, on, pick, group, extra = '') {
-    const c = el('button', `card${on ? ' on' : ''} ${extra}`, `<b>${title}</b><span>${text}</span>`);
-    c.type = 'button';
-    c.addEventListener('click', () => {
-      for (const o of group.children) o.classList.toggle('on', o === c);
-      pick();
-    });
-    return c;
   }
 
   renderHost() {
@@ -395,7 +406,7 @@ export class Lobby {
       });
       link.on('lobbyReady', (m) => { this.peerReady = !!m.ready; this.render(); });
     } else {
-      link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); });
+      link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
       link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
@@ -424,7 +435,16 @@ export class Lobby {
 
   sendLobby() {
     this.drawPlayers();
+    this.preview();
     if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.choice, name: myName() });
+  }
+
+  /** The map and the side this player would fight on, for the map table. */
+  preview() {
+    const host = this.role === 'host';
+    const info = host ? this.choice : this.lobbyInfo;
+    if (!info) return this.onPreview(null); // a guest before the host has said: no map yet
+    this.onPreview(info.map, host || info.coop ? info.side : enemyOf(info.side));
   }
 
   start() {

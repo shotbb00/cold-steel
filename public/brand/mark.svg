@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 605.21 268"><defs>
+  <linearGradient id="cs-rim" x1="0.15" y1="0.05" x2="0.85" y2="0.95"><stop offset="0" stop-color="#dfe3e5"/><stop offset="0.45" stop-color="#8d959b"/><stop offset="0.7" stop-color="#5d656b"/><stop offset="1" stop-color="#a9b0b5"/></linearGradient>
+  <linearGradient id="cs-bevel" x1="0.85" y1="0.95" x2="0.15" y2="0.05"><stop offset="0" stop-color="#e2e6e8"/><stop offset="1" stop-color="#3b4146"/></linearGradient>
+  <radialGradient id="cs-face" cx="0.38" cy="0.3" r="0.85"><stop offset="0" stop-color="#454b50"/><stop offset="0.6" stop-color="#2a2e32"/><stop offset="1" stop-color="#1b1e21"/></radialGradient>
+  <linearGradient id="cs-blade" x1="0" x2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.35" stop-color="#e3e6e8"/><stop offset="0.55" stop-color="#b2b8bc"/><stop offset="1" stop-color="#7c8388"/></linearGradient>
+  <linearGradient id="cs-brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa1a6"/><stop offset="0.5" stop-color="#5b6268"/><stop offset="1" stop-color="#3a4045"/></linearGradient>
+  <clipPath id="cs-l"><rect x="0" y="0" width="120" height="270"/></clipPath>
+  <clipPath id="cs-r"><rect x="120" y="0" width="120" height="270"/></clipPath>
+  <filter id="cs-sh" x="-30%" y="-10%" width="160%" height="130%"><feGaussianBlur stdDeviation="2.4"/></filter>
+</defs>
+<circle cx="120" cy="124" r="108" fill="url(#cs-rim)"/>
+<circle cx="120" cy="124" r="96" fill="url(#cs-bevel)"/>
+<circle cx="120" cy="124" r="93" fill="url(#cs-face)"/>
+<circle cx="146.01" cy="26.92" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="144.91" cy="25.72" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="191.06" cy="52.94" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="189.96" cy="51.74" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="217.08" cy="97.99" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="215.98" cy="96.79" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="217.08" cy="150.01" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="215.98" cy="148.81" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="191.06" cy="195.06" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="189.96" cy="193.86" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="146.01" cy="221.08" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="144.91" cy="219.88" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="93.99" cy="221.08" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="92.89" cy="219.88" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="48.94" cy="195.06" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="47.84" cy="193.86" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="22.92" cy="150.01" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="21.82" cy="148.81" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="22.92" cy="97.99" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="21.82" cy="96.79" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="48.94" cy="52.94" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="47.84" cy="51.74" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="93.99" cy="26.92" r="3.6" fill="#6a7277" stroke="#2f3438" stroke-width="1"/><circle cx="92.89" cy="25.72" r="1.4" fill="#eef1f2" opacity="0.8"/>
+<circle cx="120" cy="124" r="86" fill="none" stroke="#3d4347" stroke-width="1.2"/>
+<g clip-path="url(#cs-l)">
+<polygon points="120,126 102.37,101.73 120,50" fill="#4787f3"/>
+<polygon points="120,126 120,50 137.63,101.73" fill="#437fe5"/>
+<polygon points="120,126 137.63,101.73 192.28,102.51" fill="#315ea8"/>
+<polygon points="120,126 192.28,102.51 148.53,135.27" fill="#2a5090"/>
+<polygon points="120,126 148.53,135.27 164.67,187.49" fill="#1e3968"/>
+<polygon points="120,126 164.67,187.49 120,156" fill="#1e3967"/>
+<polygon points="120,126 120,156 75.33,187.49" fill="#284d8a"/>
+<polygon points="120,126 75.33,187.49 91.47,135.27" fill="#305aa2"/>
+<polygon points="120,126 91.47,135.27 47.72,102.51" fill="#427de0"/>
+<polygon points="120,126 47.72,102.51 102.37,101.73" fill="#4786f0"/>
+</g>
+<g clip-path="url(#cs-r)">
+<polygon points="120,126 102.37,101.73 120,50" fill="#fb4534"/>
+<polygon points="120,126 120,50 137.63,101.73" fill="#ed4131"/>
+<polygon points="120,126 137.63,101.73 192.28,102.51" fill="#ae2f24"/>
+<polygon points="120,126 192.28,102.51 148.53,135.27" fill="#95281f"/>
+<polygon points="120,126 148.53,135.27 164.67,187.49" fill="#6b1d16"/>
+<polygon points="120,126 164.67,187.49 120,156" fill="#6a1d16"/>
+<polygon points="120,126 120,156 75.33,187.49" fill="#8f271d"/>
+<polygon points="120,126 75.33,187.49 91.47,135.27" fill="#a82e23"/>
+<polygon points="120,126 91.47,135.27 47.72,102.51" fill="#e83f30"/>
+<polygon points="120,126 47.72,102.51 102.37,101.73" fill="#f84433"/>
+</g>
+<path d="M111.5 206 L112.6 46 Q113.6 22 119.4 4 L127.4 36 L128.5 206 Z" transform="translate(4 5)" fill="#000" opacity="0.55" filter="url(#cs-sh)"/>
+<path d="M111.5 206 L112.6 46 Q113.6 22 119.4 4 L127.4 36 L128.5 206 Z" fill="url(#cs-blade)" stroke="#40464b" stroke-width="1.3" stroke-linejoin="round"/>
+<path d="M121.6 192 L121.9 60" stroke="#7d8489" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M112.9 200 L113.7 48 Q114.5 28 118.6 12" fill="none" stroke="#ffffff" stroke-width="1.1" opacity="0.85"/>
+<circle cx="89" cy="211" r="9.5" fill="none" stroke="url(#cs-brass)" stroke-width="5.5"/>
+<rect x="96" y="205" width="52" height="12" rx="3" fill="url(#cs-brass)" stroke="#2c3135" stroke-width="1.2"/>
+<rect x="111" y="217" width="18" height="34" rx="3" fill="#1d1f20" stroke="#0c0d0e" stroke-width="1.2"/>
+<path d="M113 221 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 225 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 229 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 233 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 237 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 241 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<path d="M113 245 H127" stroke="#3a3d3f" stroke-width="1.4"/>
+<rect x="109" y="251" width="22" height="11" rx="3" fill="url(#cs-brass)" stroke="#2c3135" stroke-width="1.2"/>
+<circle cx="124.5" cy="256.5" r="2.2" fill="#262a2d"/><g transform="translate(268 14) scale(0.96)"><defs><mask id="csw-cut" maskUnits="userSpaceOnUse" x="-4" y="-4" width="360" height="246"><rect x="-4" y="-4" width="360" height="246" fill="#fff"/><g transform="translate(0 0)"><rect x="-1" y="52" width="22" height="6" fill="#000"/><rect x="72" y="52" width="22" height="6" fill="#000"/><rect x="112" y="52" width="22" height="6" fill="#000"/><rect x="218" y="52" width="22" height="6" fill="#000"/><rect x="258" y="52" width="22" height="6" fill="#000"/></g><g transform="translate(0 128)"></g></mask><linearGradient id="csw-steel" x1="0" y1="0" x2="0" y2="110" gradientUnits="userSpaceOnUse" spreadMethod="repeat"><stop offset="0" stop-color="#f3f4f1"/><stop offset="0.6" stop-color="#d9dcd8"/><stop offset="1" stop-color="#bcc1be"/></linearGradient></defs><g mask="url(#csw-cut)" fill="url(#csw-steel)"><path transform="translate(0 0)" d="M15 0 L60 0 L60 20 L26 20 L20 26 L20 84 L26 90 L60 90 L60 110 L15 110 L0 95 L0 15 Z M88 0 L118 0 L133 15 L133 95 L118 110 L88 110 L73 95 L73 15 Z M99 20 L107 20 L113 26 L113 84 L107 90 L99 90 L93 84 L93 26 Z M146 0 L166 0 L166 90 L206 90 L206 110 L161 110 L146 95 Z M219 0 L257 0 L279 22 L279 88 L257 110 L219 110 Z M239 20 L250 20 L259 29 L259 81 L250 90 L239 90 Z" fill-rule="evenodd"/><path transform="translate(0 128)" d="M15 0 L60 0 L60 20 L20 20 L20 45 L45 45 L60 60 L60 95 L45 110 L0 110 L0 90 L40 90 L40 65 L15 65 L0 50 L0 15 Z M73 0 L133 0 L133 20 L113 20 L113 110 L93 110 L93 20 L73 20 Z M161 0 L206 0 L206 20 L166 20 L166 45 L197 45 L197 65 L166 65 L166 90 L206 90 L206 110 L161 110 L146 95 L146 15 Z M234 0 L279 0 L279 20 L239 20 L239 45 L270 45 L270 65 L239 65 L239 90 L279 90 L279 110 L234 110 L219 95 L219 15 Z M292 0 L312 0 L312 90 L352 90 L352 110 L307 110 L292 95 Z" fill-rule="evenodd"/></g></g></svg>

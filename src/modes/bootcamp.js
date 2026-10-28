@@ -92,7 +92,7 @@ const STEPS = [
   },
   {
     title: 'Mortar smoke',
-    touch: 'An enemy machine gun covers the open field — crossing it in the open would be costly. A mortar team has joined you. Tap it, tap <b>Smoke</b> in the panel, then tap the ground between your squad and the gun. Smoke blocks sight both ways for about forty seconds. Mortars also fire on their own at enemies your side can see, but not closer than their minimum range.',
+    touch: 'An enemy machine gun covers the open field — crossing it in the open would be costly. A mortar team has joined you. Tap it, open <b>Orders</b> at the bottom right and tap <b>Smoke</b>, then tap the ground between your squad and the gun. Smoke blocks sight both ways for about forty seconds. Mortars also fire on their own at enemies your side can see, but not closer than their minimum range.',
     text: 'An enemy machine gun covers the open field — crossing it in the open would be costly. A mortar team has joined you. Select it, press <kbd data-key="smoke"></kbd> (or the Smoke button at the bottom), then <b>left-click</b> on the ground between your squad and the gun. Smoke blocks sight both ways for about forty seconds. Mortars also fire on their own at enemies your side can see, but they cannot hit anything closer than their minimum range.',
     start(game, ctx) {
       const me = game.playerFaction;
@@ -158,7 +158,7 @@ const STEPS = [
   },
   {
     title: 'Reinforcements',
-    touch: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: tap <b>Reinforcements</b> at the top of the panel. New units drive in from your base. You have been given enough for a tank.',
+    touch: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: open <b>Orders</b> at the bottom right and tap <b>Reinforcements</b>. New units drive in from your base. You have been given enough for a tank.',
     text: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: press <kbd data-key="reinforce"></kbd> or click <b>Reinforcements</b> at the bottom right. New units drive in from your base. You have been given enough for a tank.',
     start(game, ctx) {
       game.modeState.cp[game.playerFaction] += 450;

@@ -47,6 +47,7 @@ import '@babylonjs/core/Rendering/depthRendererSceneComponent.js';
 import '@babylonjs/core/Rendering/prePassRendererSceneComponent.js';
 import '@babylonjs/core/Rendering/geometryBufferRendererSceneComponent.js';
 import { createSky } from './sky.js';
+import { createSight } from './sight.js';
 import { particleLayer, sprite, lines, points } from './extras.js';
 import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin } from './plugins.js';
 
@@ -100,6 +101,7 @@ export class BabylonView {
     this.meshes = new Map();     // Three object → { mesh, versions }
     this.geometries = new WeakMap();
     this.materials = new WeakMap();
+    this.materialList = [];      // [Three material, Babylon material] — for the sights (sight.js)
     this.textures = new WeakMap();
     this.lights = new Map();
     this.extras = new Map();     // Three object → a native counterpart (particles, sprites, lines, points)
@@ -138,6 +140,17 @@ export class BabylonView {
   }
 
   /** The weather changed the sky (systems/WeatherChange.js): new colours, and the sky light re-rendered. */
+  /** Direct-control sight over the view: 'thermal', 'ir' or null (render/babylon/sight.js). */
+  setSight(mode) {
+    this.sight ??= createSight(this);
+    this.sight.set(mode);
+  }
+
+  /** The tone-mapping exposure (time passing: night is exposed brighter). */
+  setExposure(exposure) {
+    this.scene.imageProcessingConfiguration.exposure = exposure * EXPOSURE;
+  }
+
   setSky(theme, relight = false) {
     this.sky?.set(theme);
     if (relight) this.probe?.cubeTexture.resetRefreshCounter();
@@ -536,6 +549,7 @@ export class BabylonView {
     if (tm.userData?.terrain) new TerrainPlugin(m);
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
+    this.materialList.push([tm, m]);
     this.syncMaterial(tm, m);
     return m;
   }
@@ -551,6 +565,7 @@ export class BabylonView {
       const k = tm.emissiveIntensity ?? 1;
       m.emissiveColor.set(tm.emissive.r * k, tm.emissive.g * k, tm.emissive.b * k);
     }
+    if (this.heat && tm.userData?.paint) m.emissiveColor.set(0.5, 0.5, 0.5); // thermal: soldiers, vehicles, aircraft glow (sight.js)
     m.alpha = tm.opacity ?? 1;
   }
 

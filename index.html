@@ -4,7 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cold Steel</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="icons/favicon-64.png">
+  <!-- installable (PWA): manifest, icons; the service worker is registered by src/pwa/register.js -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#10120c">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/menu.css">
   <!-- Libraries (three, peerjs) come from npm and are bundled by Vite: `npm run dev` / `npm run build`. -->
@@ -53,7 +60,7 @@
         <button tabindex="-1" data-cmd="air:lift" title="Air assault: a helicopter lands a squad where you click">Air assault <small>280</small> <kbd data-key="lift"></kbd></button>
       </div>
       <p class="hint mouse-only">Right-click: move · on an enemy: attack · on a house: occupy · drag: move and face that way</p>
-      <p class="hint touch-only">Tap: select · move · attack · occupy — hold, then drag: box select — two fingers: zoom, turn, tilt</p>
+      <p class="hint touch-only">Tap: select · move · attack · occupy — hold, then drag: move and face (none selected: box select) — two fingers: zoom, turn, tilt</p>
     </div>
     <div id="control-hint" class="sp-only"><kbd data-key="toggleView"></kbd> or double-click a stack — take direct control</div>
 
@@ -81,16 +88,12 @@
   </div>
 
   <!-- Title screen while the scripts load; src/main.js turns it into the main menu (ui/MainMenu.js). -->
-  <div id="loading" class="title-screen">
-    <div class="ts-brand">
-      <h1 id="ts-title">Cold Steel</h1>
-      <p id="ts-tagline">World War III · 1985</p>
-    </div>
-    <p id="ts-blurb"></p>
-    <div class="ts-menu">
+  <div id="loading" class="title-screen boot">
+    <div class="boot-card">
+      <div class="logo"><img class="logo-art" src="brand/mark.svg" alt="Cold Steel" width="605" height="268"><span class="logo-tag">World War III, 1985</span></div>
       <div id="ts-status">Loading…</div>
+      <small class="ts-note">If this stays here, start the game with <b>start.bat</b> — browsers won't load ES modules from a double-clicked file.</small>
     </div>
-    <small class="ts-note">If this stays here, start the game with <b>start.bat</b> — browsers won't load ES modules from a double-clicked file.</small>
   </div>
 
   <script>

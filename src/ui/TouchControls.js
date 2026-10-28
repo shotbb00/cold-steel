@@ -9,10 +9,14 @@
 //                     attack; on a house, garrison it. In a targeting mode (smoke, air support,
 //                     building) the tap places it.
 //   drag              pan: the ground follows the finger
-//   hold, then drag   box select
+//   hold, then drag   with stacks selected: move there and face the way you drag (the men's
+//                     cover spots show while you aim, like a right-drag); with none, box select
 //   two fingers       pinch to zoom, twist to turn the view, slide both up or down to tilt it
 // A row at the top of the command panel adds what a mouse does with keys (take control,
-// deselect, cancel a targeting), and a pause button sits in the top bar in both views.
+// deselect, cancel a targeting), and a pause button sits in the top bar in both views. On touch
+// the panel starts collapsed to its Orders button and that row, so the battlefield stays clear;
+// Orders opens the rest (reinforcements, building, smoke, air support), and any command given
+// folds it away again.
 // Direct control: a stick on the left (pushed to the rim it sprints), drag on the right half
 // to look, a fire button (hold), reload / crouch / prone / next man, and back to command.
 // body.touch is set at once on a phone or tablet (coarse pointer), and on a laptop with a touch
@@ -110,7 +114,7 @@ export class TouchControls {
       else s.mode = 'pan';
     }
     if (s.mode === 'pan') this.pan(before.get(s.id), f);
-    else if (s.mode === 'box') this.point(f.x, f.y);
+    else if (s.mode === 'box' || s.mode === 'aim') this.point(f.x, f.y);
   }
 
   end(e, cancelled = false) {
@@ -122,9 +126,10 @@ export class TouchControls {
       if (!s || t.identifier !== s.id || !f) continue;
       clearTimeout(this.holdTimer);
       this.single = null;
-      if (cancelled || !this.commanding) { if (s.mode === 'box') this.cancelBox(); continue; }
+      if (cancelled || !this.commanding) { if (s.mode === 'box' || s.mode === 'aim') this.cancelBox(); continue; }
       if (s.mode === 'pending') this.tap(f.x, f.y);
       else if (s.mode === 'box') this.mouse('mouseup', 0, f.x, f.y);
+      else if (s.mode === 'aim') { this.point(f.x, f.y); this.mouse('mouseup', 2, f.x, f.y); }
     }
     if (this.pair && this.fingers.size < 2) {
       this.pair = null;
@@ -139,9 +144,7 @@ export class TouchControls {
     const cs = this.game.commands;
     this.point(x, y);
     if (cs.targeting) return this.mouse('mousedown', 0, x, y);
-    const p = cs.pickGround(x, y, cs._p);
-    const near = p ? cs.stackNear(p, cs.faction) : null;
-    const own = near && this.game.mine(near) && !near.stats.structure && !near.autonomous;
+    const own = cs.stackAt(x, y, cs.faction, (s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
     const button = own || !cs.selected.size ? 0 : 2;
     this.mouse('mousedown', button, x, y);
     this.mouse('mouseup', button, x, y);
@@ -150,19 +153,22 @@ export class TouchControls {
   startBox() {
     const s = this.single;
     if (!s || s.mode !== 'pending' || !this.commanding) return;
-    s.mode = 'box';
-    this.mouse('mousedown', 0, s.x0, s.y0);
+    // with a selection: aim a move-and-face order (the right-drag); without: a selection box
+    s.mode = this.game.commands.selected.size ? 'aim' : 'box';
+    this.mouse('mousedown', s.mode === 'aim' ? 2 : 0, s.x0, s.y0);
   }
 
   cancelBox() {
     const cs = this.game.commands;
     cs.drag = null;
+    cs.rdrag = null;
     cs.boxEl.hidden = true;
+    cs.hideFacingArrow();
   }
 
   cancelSingle() {
     clearTimeout(this.holdTimer);
-    if (this.single?.mode === 'box') this.cancelBox();
+    if (this.single?.mode === 'box' || this.single?.mode === 'aim') this.cancelBox();
     this.single = null;
   }
 
@@ -230,9 +236,27 @@ export class TouchControls {
     cancel.addEventListener('click', () => this.game.commands.cancelTargeting());
     pause.addEventListener('click', () => this.game.bus.emit('key', { code: 'Escape' }));
     bar.append(cancel, control, clear);
-    document.getElementById('command-panel').prepend(bar);
+    const panel = document.getElementById('command-panel');
+    const orders = btn('tb-orders', 'Orders', 'Show or hide the orders panel');
+    orders.addEventListener('click', () => this.setPanel(panel.classList.contains('collapsed')));
+    panel.prepend(orders, bar);
+    this.panel = panel;
+    // a command given — a button in the panel (not Orders or Reinforcements, which open things),
+    // a unit bought, an order on the battlefield — folds the panel away again
+    panel.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (b && !b.matches('.tb-orders, .rf-open')) setTimeout(() => this.setPanel(false), 0);
+    });
+    for (const ev of ['order', 'ui:reinforce']) this.game.bus.on(ev, () => this.setPanel(false));
     document.getElementById('topbar').append(pause);
-    this.tb = { control, clear, cancel };
+    this.tb = { control, clear, cancel, orders };
+    this.setPanel(false);
+  }
+
+  /** Open or collapse the command panel (touch layout only; the mouse layout ignores it). */
+  setPanel(open) {
+    this.panel.classList.toggle('collapsed', !open);
+    this.tb.orders?.setAttribute('aria-expanded', String(open));
   }
 
   // ------------------------------------------------------------------ direct control pad
@@ -311,7 +335,7 @@ export class TouchControls {
     fire.addEventListener('touchend', press(false), opts);
     fire.addEventListener('touchcancel', press(false), opts);
     box.append(fire);
-    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['toggleView', 'Command']]) {
+    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['sight', 'Sight'], ['toggleView', 'Command']]) {
       const b = btn(`tp-${action}`, label);
       b.addEventListener('touchstart', (e) => { e.preventDefault(); this.key(action); }, opts);
       box.append(b);
@@ -334,6 +358,8 @@ export class TouchControls {
     this.tb.cancel.hidden = !cs.targeting;
     this.tb.control.hidden = !cs.selected.size || !!this.game.net;
     this.tb.clear.hidden = !cs.selected.size;
+    this.sightBtn ??= this.pad.querySelector('.tp-sight');
+    if (this.sightBtn) this.sightBtn.hidden = !this.game.player.sightKind?.();
     if (commanding && (this.held.size || this.input.mouse.buttons.has(0))) {
       this.hold(new Set());
       if (!this.single) this.input.mouse.buttons.delete(0);

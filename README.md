@@ -28,7 +28,14 @@ npm run typecheck  # TypeScript check (files move from .js to .ts one at a time)
 Players of a built version need only a browser: `dist/` is plain static files with relative
 paths, so it works from any web host or sub-folder.
 
-The **main menu** has these panels:
+The **main menu** sits on a map table: a topographic sheet of the chosen battle map drawn from
+its own terrain (ui/MapSheet.js: contours, villages, both bases, grease-pencil front arrows),
+with the Cold Steel mark (ui/Logo.js). The battle setup asks three things (what kind of battle,
+where, which side) and folds time, weather and battle rules into one sentence you can open.
+The loading screen shows the battle's map and a tip. **Installable:** on a phone or desktop the
+browser offers to install the game (manifest + service worker, src/pwa/); it then runs full
+screen and offline, and every deploy reaches it on its own (it reloads into the new build at
+the menu) — no reinstalling. It has these panels:
 - **Boot camp:** a guided exercise near your base (modes/bootcamp.js, card in ui/Tutorial.js):
   the camera, selecting and moving, attacking and suppression, mortar smoke, artillery with a
   forward observer, direct control, reinforcements and taking a point. Tasks tick off as you do
