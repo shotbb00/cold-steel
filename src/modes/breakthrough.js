@@ -84,6 +84,9 @@ export default {
     state.strength[att] = state.maxStrength = Math.max(fieldStrength(game, att), fieldStrength(game, def)) * 1.2;
     state.strength[def] = fieldStrength(game, def);
 
+    // campaign events (campaign/Campaign.js EVENTS): who may call in aircraft
+    if (camp?.event === 'airCover') game.air.limit[enemyOf(game.playerFaction)] = 0;
+    if (camp?.event === 'enemyAir') game.air.limit[game.playerFaction] = 0;
     game.systems.push(points);
     const ai = enemyOf(game.playerFaction);
     if (!game.net || game.coop) {

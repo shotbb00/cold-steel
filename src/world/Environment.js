@@ -10,7 +10,8 @@ export function buildEnvironment(scene, theme, shadowExtent = 140) {
   scene.fog = new THREE.FogExp2(theme.fogColor, theme.fogDensity);
 
   // ---- lights
-  scene.add(new THREE.HemisphereLight(theme.hemiSky, theme.hemiGround, theme.hemiIntensity));
+  const hemi = new THREE.HemisphereLight(theme.hemiSky, theme.hemiGround, theme.hemiIntensity);
+  scene.add(hemi);
   const sunDir = new THREE.Vector3(...theme.sunDir).normalize();
   const sun = new THREE.DirectionalLight(theme.sunColor, theme.sunIntensity);
   sun.position.copy(sunDir).multiplyScalar(220);
@@ -136,6 +137,8 @@ export function buildEnvironment(scene, theme, shadowExtent = 140) {
 
   return {
     sun,
+    hemi,
+    sky: skyMat,   // its uniforms change with the weather (systems/WeatherChange.js)
     /** `focus` (where the camera looks) keeps the sharp shadow area under the action. */
     update(dt, t, focus = null) {
       if (focus) {

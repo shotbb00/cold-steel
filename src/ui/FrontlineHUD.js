@@ -42,7 +42,7 @@ export class FrontlineHUD {
 
     const panel = document.createElement('div');
     panel.id = 'reinforce';
-    panel.innerHTML = '<button type="button" tabindex="-1" class="rf-open">Reinforcements <kbd>C</kbd></button><span class="rf-stacks" title="Stacks in the field / limit"></span><span class="rf-cp"></span>';
+    panel.innerHTML = '<button type="button" tabindex="-1" class="rf-open">Reinforcements <kbd data-key="reinforce"></kbd></button><span class="rf-stacks" title="Stacks in the field / limit"></span><span class="rf-cp"></span>';
     document.getElementById('command-panel').prepend(panel);
     if (state.noReinforcements) panel.hidden = true; // e.g. Recon raid: you have what you came with
     this.cpText = panel.querySelector('.rf-cp');

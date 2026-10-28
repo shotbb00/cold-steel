@@ -1,11 +1,17 @@
 // Draws a stack with five InstancedMeshes per model variant (torso, arms + weapon, markings,
 // thighs, shins) and poses every soldier procedurally each frame:
-//   legs   – walk / run cycle with stride and knee lift from speed, a limp when wounded,
-//            kneeling blend from crouch, a shuffle when turning on the spot, crawling prone
-//   torso  – leans into a run, breathes, bobs, kicks back with recoil, flinches when hit
+//   legs   – walk / run cycle with planted feet: the swing reaches as far as the body travels
+//            per step (stats.stride), the knee folds while the leg swings through and gives a
+//            little under the weight, the hip dips at double support (a walk) or floats (a
+//            run, blended in smoothly); a limp when wounded, kneeling blend from crouch, a
+//            shuffle when turning on the spot, and a leopard crawl prone — knees drawn up to
+//            the side in turn, the body rolling onto the pushing leg
+//   torso  – leans into a run, counter-twists against the stride, breathes, kicks back with
+//            recoil, flinches when hit
 //   arms   – pivot at the shoulders: weapon up and aimed at the target's elevation, held at
-//            low ready on the move, lowered and jiggled for a reload, chopping when digging,
-//            pawing forward when crawling; muzzle climb on each shot
+//            low ready on the move, a reload in steps (magazine out, the new one seated with a
+//            knock, the charging handle racked, back up), chopping when digging, pawing forward
+//            when crawling; muzzle climb on each shot
 //   death  – one of three falls per soldier (backward, forward over the knees, sideways
 //            crumple), then the body lies a while and sinks away
 // Level of detail: every model is built twice, the full one and a light stand-in (units/geometry.js
@@ -26,6 +32,7 @@ const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness
 const modelCache = new Map();
 
 const X_AXIS = new THREE.Vector3(1, 0, 0);
+const HALF_PI = Math.PI / 2;
 const ONE = new THREE.Vector3(1, 1, 1);
 const WHITE = new THREE.Color(1, 1, 1);
 const _root = new THREE.Matrix4();
@@ -41,6 +48,20 @@ const _c = new THREE.Color();
 
 const CORPSE_TIME = 10; // seconds bodies stay before sinking away
 const smooth = (cur, want, rate, dt) => cur + (want - cur) * Math.min(1, rate * dt);
+const ease = (x) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
+
+/**
+ * The weapon through a reload, q = 0..1 of the way: [pitch, yaw, roll] of the arms and how far
+ * the head and shoulders bend over it. Down and canted to swap the magazine, a knock as the new
+ * one seats, a jerk on the charging handle, then back up into the aim.
+ */
+function reloadPose(q) {
+  const down = ease(q / 0.14) * (1 - ease((q - 0.82) / 0.18));
+  const knock = Math.exp(-(((q - 0.5) / 0.035) ** 2));    // the magazine slapped home
+  const rack = Math.exp(-(((q - 0.7) / 0.04) ** 2));      // charging handle back and let go
+  const fumble = q > 0.18 && q < 0.45 ? Math.sin(q * 60) * 0.03 : 0;
+  return [down * 0.6 - knock * 0.12 + fumble, down * 0.28 + rack * 0.16, down * (0.42 - ease((q - 0.6) / 0.1) * 0.2) - rack * 0.12, down * 0.14];
+}
 
 let LOD_DISTANCE = 45;   // metres: soldiers farther from the camera are drawn by the light model
 let LOD_CAMERA = null;
@@ -119,6 +140,9 @@ export class StackRenderer {
     this.prevYaw = Float32Array.from(stack.units, (u) => u.yaw);
     this.turnPhase = new Float32Array(n);
     this.turnAmt = new Float32Array(n);
+    this.runAmt = new Float32Array(n);
+    this.crawlAmt = new Float32Array(n);
+    this.reloadClock = new Float32Array(n);
     this.done = false;
   }
 
@@ -155,6 +179,9 @@ export class StackRenderer {
     const hipStand = r.hipY;
     const hipKneel = r.shinLen + 0.17 * L1 + 0.03; // front foot flat, back knee on the ground
     const shoulderY = r.shoulderY ?? 1.47;
+    const legLen = L1 + r.shinLen;
+    // swing that reaches as far as the body moves on one step, so the stance foot stays put
+    const amp = Math.asin(Math.min(0.8, (this.stack.stats?.stride ?? 1.1) / (2 * legLen)));
     const idt = dt > 0 ? 1 / dt : 0;
     let animating = false;
     const cam = LOD_CAMERA?.position;
@@ -185,14 +212,19 @@ export class StackRenderer {
       this.turnAmt[k] = smooth(this.turnAmt[k], turning ? 1 : 0, 6, dt);
       if (this.turnAmt[k] > 0.01) this.turnPhase[k] += dt * 9;
 
+      this.runAmt[k] = smooth(this.runAmt[k], u.run && u.gait > 0.5 ? 1 : 0, 4, dt);
+      this.crawlAmt[k] = smooth(this.crawlAmt[k], u.alive && pr > 0.5 && u.moving ? 1 : 0, 5, dt);
+      const cr = this.crawlAmt[k];
+      this.reloadClock[k] = u.reloadT > 0 ? this.reloadClock[k] + dt : 0;
+
       let deathStyle = 0;
       if (u.alive) {
         animating = true;
         c = u.crouch;
-        run = u.run && u.gait > 0.5 ? 1 : 0;
-        m = u.gait * (1 - pr * 0.6); // crawling: smaller leg motion
+        run = this.runAmt[k] * (1 - pr);
+        m = Math.min(1, u.gait * 2.5) * (1 - pr) * (1 - c * 0.5); // walking; crawling has its own legs
         tilt = pr * 1.45 - u.flinch * 0.22 * (1 - pr);
-        if (pr > 0.5 && u.moving) roll = Math.sin(u.walkPhase) * 0.12 * pr; // crawl wriggle
+        roll = Math.sin(u.walkPhase) * 0.16 * cr; // rolling onto the leg that pushes
       } else {
         u.deathTime += dt;
         deathStyle = Math.floor((u.phase / TAU) * 3) % 3;
@@ -209,33 +241,44 @@ export class StackRenderer {
       _e.set(tilt, u.yaw, roll, 'YXZ');
       _root.compose(_p.set(u.pos.x, u.pos.y - sink + pr * 0.28, u.pos.z), _q.setFromEuler(_e), _s.setScalar(scale));
 
-      // --- legs: rotation about local x, negative swings the foot forward
+      // --- legs: rotation about local x, negative swings the foot forward. Left leg at phase
+      // ph, right at ph + π; a leg swings through while cos(phase) < 0 and stands on the
+      // ground while cos(phase) > 0.
       const ph = u.walkPhase;
-      const stride = 0.6 + run * 0.3;
       const limp = u.wounded ? 0.45 : 1;
-      let sw = Math.sin(ph) * stride * m;
+      const A = amp * (1 + run * 0.15);
+      const sw = Math.sin(ph) * A * m;
+      const swingL = Math.max(0, -Math.cos(ph));                 // 0..1..0 through the swing
+      const swingR = Math.max(0, Math.cos(ph));
+      const lift = 0.85 + run * 0.85;                              // the knee folds: a run kicks the heel up
+      const give = 0.12 + run * 0.25;                              // ...and gives a little under the weight
       const tA = this.turnAmt[k];
-      if (tA > 0.01) sw += Math.sin(this.turnPhase[k]) * 0.3 * tA;
-      let aL = sw;
+      const shuffle = tA > 0.01 ? Math.sin(this.turnPhase[k]) * 0.3 * tA : 0;
+      let aL = sw + shuffle;
       let aR = -sw * limp;
-      const lift = 0.9 + run * 0.5;
-      let bL = aL + Math.max(0, Math.sin(ph + 1.3)) * lift * m + (tA > 0.01 ? Math.max(0, Math.sin(this.turnPhase[k] + 1.3)) * 0.4 * tA : 0);
-      let bR = aR + Math.max(0, Math.sin(ph + 1.3 + Math.PI)) * lift * m * limp;
+      let bL = aL + (swingL * lift + swingR * give) * m + (tA > 0.01 ? Math.max(0, Math.sin(this.turnPhase[k] + 1.3)) * 0.4 * tA : 0);
+      let bR = aR + (swingR * lift + swingL * give) * m * limp;
       aL = lerp(aL, -1.35, c);
       bL = lerp(bL, -0.05, c);
       aR = lerp(aR, 0.2, c);
       bR = lerp(bR, 1.45, c);
       if (!u.alive && deathStyle !== 1) { aL -= 0.3; aR += 0.2; } // legs go loose
-      const bob = Math.abs(Math.cos(ph)) * (0.035 + run * 0.04) * m;
+      // the hip: down a little with both feet on the ground (walk), up in the float (run)
+      const spread = 1 - Math.cos(A * Math.sin(ph));
+      const bob = (-0.5 * legLen * spread * (1 - run) + run * 0.07 * Math.abs(Math.sin(ph)) - give * 0.04 * Math.abs(Math.cos(ph))) * m;
       const hipY = lerp(hipStand, hipKneel, c) + bob;
+      // leopard crawl: each knee drawn up beside the body in turn, the shin folded back
+      const drawL = Math.max(0, Math.sin(ph)) * cr;
+      const drawR = Math.max(0, -Math.sin(ph)) * cr;
 
       // --- torso: pivots at the hip
       const breathe = u.alive ? Math.sin(t * 1.7 + u.phase) * 0.012 : 0;
       // prone: the chest only a little up off the ground, propped on the elbows (~20°), not sitting up
-      let lean = (0.07 * m + 0.22 * run + 0.2 * c + u.reloadAnim * 0.15 + (u.working ? 0.35 : 0)) * (1 - pr) - pr * 0.3;
-      lean += breathe - u.recoil * 0.05;
-      let twist = 0;
-      let side = u.reloadAnim * Math.sin(t * 9 + u.phase) * 0.07;
+      const rq = u.alive && u.reloadT > 0 ? reloadPose((this.reloadClock[k] / Math.max(0.5, u.stats.reloadTime ?? 2)) % 1) : null;
+      let lean = (0.06 * m + 0.24 * run + 0.2 * c + (rq ? rq[3] : 0) + (u.working ? 0.35 : 0)) * (1 - pr) - pr * 0.3;
+      lean += breathe - u.recoil * 0.05 + Math.cos(ph * 2) * 0.025 * run; // a run pumps with each stride
+      let twist = -Math.sin(ph) * (0.07 + run * 0.06) * m;               // shoulders against the hips
+      let side = Math.sin(ph) * 0.025 * m;                              // weight over the standing leg
       if (u.wounded && u.alive) side += Math.sin(ph) * 0.06 * m; // limping sway
       if (u.alive && pr < 0.5 && u.target) twist = -0.18; // bladed stance behind the weapon
       _e.set(lean, twist, side, 'XYZ');
@@ -256,10 +299,10 @@ export class StackRenderer {
           wantRoll = 0.3;
         } else if (u.working) {
           wantPitch = 0.9 + Math.sin(t * 6 + u.phase) * 0.45; // digging, filling sandbags
-        } else if (u.reloadT > 0) {
-          wantPitch = 0.55 - P * 0.4 + Math.sin(t * 7 + u.phase) * 0.06;
-          wantRoll = 0.25;
-          wantYaw = 0.25;
+        } else if (rq) {
+          wantPitch = rq[0] - P * (0.4 + pr * 0.6) + 0.05;
+          wantYaw = rq[1];
+          wantRoll = rq[2];
         } else if (aiming) {
           // level the weapon against the body's own pitch, then raise it to the target
           let elev = 0;
@@ -281,7 +324,7 @@ export class StackRenderer {
           wantPitch = 0.35 - P * 0.5 + breathe * 2; // at ease, muzzle down
           wantYaw = 0.2;
         }
-        const rate = aiming ? 10 : 5;
+        const rate = aiming ? 10 : rq ? 14 : 5;
         this.armPitch[k] = smooth(this.armPitch[k], wantPitch, rate, dt);
         this.armYaw[k] = smooth(this.armYaw[k], wantYaw, rate, dt);
         this.armRoll[k] = smooth(this.armRoll[k], wantRoll, rate, dt);
@@ -292,12 +335,18 @@ export class StackRenderer {
 
       for (let sd = 0; sd < 2; sd++) {
         const sx = sd ? r.hipX : -r.hipX;
-        const a = sd ? aR : aL;
-        const b = sd ? bR : bL;
-        _local.compose(_p.set(sx, hipY, 0), _q.setFromAxisAngle(X_AXIS, a), ONE);
-        L.thigh.setMatrixAt(i * 2 + sd, _out.multiplyMatrices(_root, _local));
-        _local.compose(_p.set(sx, hipY - L1 * Math.cos(a), -L1 * Math.sin(a)), _q.setFromAxisAngle(X_AXIS, b), ONE);
-        L.shin.setMatrixAt(i * 2 + sd, _out.multiplyMatrices(_root, _local));
+        const out = sd ? 1 : -1;
+        const draw = sd ? drawR : drawL;
+        // crawling: the thigh swings out sideways along the ground and turns on its own axis so
+        // the knee folds in that plane too
+        const a = lerp(sd ? aR : aL, 0, cr);
+        const knee = lerp((sd ? bR : bL) - (sd ? aR : aL), 0.25 + draw * 1.6, cr);
+        _e.set(a, out * HALF_PI * cr, out * (0.12 + draw * 0.85) * cr, 'XZY');
+        _local.compose(_p.set(sx, hipY, 0), _q.setFromEuler(_e), ONE);
+        _body.multiplyMatrices(_root, _local);
+        L.thigh.setMatrixAt(i * 2 + sd, _body);
+        _local.compose(_p.set(0, -L1, 0), _q.setFromAxisAngle(X_AXIS, knee), ONE);
+        L.shin.setMatrixAt(i * 2 + sd, _out.multiplyMatrices(_body, _local));
       }
 
       // Palette lives in the vertex colours; the instance colour adds personal tint and hit flash.

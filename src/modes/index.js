@@ -7,6 +7,7 @@ import rearguard from './rearguard.js';
 import recon from './recon.js';
 import lanes from './lanes.js';
 import infantry from './infantry.js';
+import bootcamp from './bootcamp.js';
 
 export const MODES = {
   [frontline.id]: frontline,
@@ -16,6 +17,7 @@ export const MODES = {
   [recon.id]: recon,
   [lanes.id]: lanes,
   [skirmish.id]: skirmish,
+  [bootcamp.id]: bootcamp,   // hidden: started from the Boot camp tab
 };
 
 export const DEFAULT_MODE = frontline.id;

@@ -18,6 +18,7 @@ import { soundDefinitions } from './SoundBank.js';
 import { SampleBank } from './SampleBank.js';
 import { angleDelta, TAU } from '../core/math.js';
 import { settings } from '../core/Settings.js';
+import { keys } from '../core/Keys.js';
 
 const MAX_VOICES = 40;     // simultaneous one-shots; beyond this the least audible one is cut
 const MAX_PER_KEY = 5;     // instances of one sound at once (an MG burst, a barrage)
@@ -82,7 +83,7 @@ export class AudioSystem {
     window.addEventListener('keydown', unlock);
 
     const bus = game.bus;
-    bus.on('key', ({ code }) => { if (code === 'KeyM') this.toggleMute(); });
+    bus.on('key', ({ code }) => { if (keys.is(code, 'mute')) this.toggleMute(); });
     bus.on('unit:death', ({ unit, stack }) => { if (stack.usesCover) this.play('death', unit.pos, { volume: 0.5 }); });
     bus.on('player:down', () => this.play('hurt', null, { volume: 1 }));
     bus.on('player:reloaded', () => this.play('ready', null, { volume: 0.3 }));

@@ -424,7 +424,7 @@ export class UnitStack {
     const s = u.stats;
     u.cooldown -= dt * u.fireRateMult;
     if (u.reloadT > 0) {
-      u.reloadT -= dt * (u.buffed ? 1.25 : 1);
+      u.reloadT -= dt;
       if (u.reloadT <= 0) u.mag = s.magSize;
     }
     if (this.usesCover) {
@@ -473,7 +473,7 @@ export class UnitStack {
     u.cooldown -= dt * u.fireRateMult;
     u.retarget -= dt;
     if (u.reloadT > 0) {
-      u.reloadT -= dt * (u.buffed ? 1.25 : 1);
+      u.reloadT -= dt;
       if (u.reloadT <= 0) u.mag = s.magSize;
     }
 
@@ -796,11 +796,25 @@ export class UnitStack {
     u.recoil = 1;
   }
 
-  /** Forward observers (data/units/observers.js) who can see `point`: their scatter factor, else 1. */
+  /**
+   * Forward observers (data/units/observers.ts) who can see `point`: their scatter factor, else 1.
+   * One of the team has to really see it — within his sight (more with binoculars while still),
+   * over the terrain and not through a smoke screen. An observer behind a hill corrects nothing.
+   */
   observed(point) {
+    const terrain = this.world.terrain;
+    const smoke = this.services.smoke;
+    const gy = terrain.heightAt(point.x, point.z);
     for (const o of this.world.stacksOf(this.faction)) {
       const ob = o.stats.observer;
-      if (ob && o.alive && dist2DSq(o.centroid, point) < o.stats.sight * o.stats.sight) return ob.scatter;
+      if (!ob || !o.alive) continue;
+      for (const u of o.units) {
+        if (!u.alive) continue;
+        const sight = o.stats.sight * (o.stats.binoculars && !u.moving ? 1.25 : 1);
+        if (dist2DSq(u.pos, point) > sight * sight) continue;
+        if (smoke?.blocks(u.pos.x, u.pos.z, point.x, point.z)) continue;
+        if (terrain.lineOfSight(u.pos.x, u.pos.y + (o.stats.eyeHeight ?? 1.5), u.pos.z, point.x, gy + 1, point.z)) return ob.scatter; // eye height as for spotting (VisibilitySystem)
+      }
     }
     return 1;
   }
@@ -861,7 +875,6 @@ export class UnitStack {
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
       * (u.wounded ? 1.3 : 1)
-      * (u.buffed ? 0.8 : 1)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3);           // an MG fired from the hip sprays
     this.shoot(u, _v, spread);
@@ -991,14 +1004,12 @@ export class UnitStack {
   }
 
   updateMorale(dt) {
-    let buffed = false;
     let calm = true;
     for (const u of this.units) {
       if (!u.alive) continue;
-      if (u.buffed || u.possessed) buffed = true;
       if (u.threat) calm = false;
     }
-    const rate = 0.01 + (buffed ? 0.05 : 0) + (calm ? 0.03 : 0) + (this.ai.state === AIState.RETREAT ? 0.02 : 0) + 0.012 * this.rank;
+    const rate = 0.01 + (calm ? 0.03 : 0) + (this.ai.state === AIState.RETREAT ? 0.02 : 0) + 0.012 * this.rank;
     this.morale = Math.min(1, this.morale + rate * dt);
   }
 

@@ -58,9 +58,8 @@ export class Unit {
     this.reloadT = 0;
     this.peekT = 0;
     this.deployT = 0;      // seconds stationary — heavy weapons need to be set up
-    this.fireRateMult = 1; // set each frame by AuraSystem
+    this.fireRateMult = 1;
     this.damageMult = 1;
-    this.buffed = false;
 
     // Body / animation
     this.suppression = 0;

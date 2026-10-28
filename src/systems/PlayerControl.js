@@ -2,14 +2,15 @@
 // its members — a soldier or a vehicle — in third person:
 //   WASD move · Shift sprint · C crouch · Z prone (infantry) · mouse aim · LMB fire
 //   R reload · Q / E switch to another member of the same stack · Tab back to command
-// The rest of the stack follows and fights around you (StackAI Follow), and your presence
-// steadies and empowers nearby allies (AuraSystem). If your unit falls you take over the
+// The rest of the stack follows and fights around you (StackAI Follow) — no bonuses: you are one
+// more man (or vehicle) in the fight, not a buff for the others. If your unit falls you take over the
 // next living member; when the whole stack is gone you return to the tactical view.
 import * as THREE from 'three';
 import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { angleDelta, clamp } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
+import { keys } from '../core/Keys.js';
 
 const DEFAULT_CAMERA = { distance: 6.6, height: 2.7, shoulder: 1.3 };
 const _wish = new THREE.Vector3();
@@ -47,15 +48,15 @@ export class PlayerControl {
 
   onKey(code) {
     if (!this.unit) return;
-    if (code === 'KeyR') this.reload();
-    else if (code === 'KeyC' && this.stack.usesCover) {
+    if (keys.is(code, 'reload')) this.reload();
+    else if (keys.is(code, 'crouch') && this.stack.usesCover) {
       this.unit.crouchTarget = this.unit.crouchTarget > 0.5 ? 0 : 1;
       this.unit.proneTarget = 0;
-    } else if (code === 'KeyZ' && this.stack.usesCover) {
+    } else if (keys.is(code, 'prone') && this.stack.usesCover) {
       this.unit.proneTarget = this.unit.proneTarget > 0.5 ? 0 : 1;
     }
-    else if (code === 'KeyQ') this.cycle(-1);
-    else if (code === 'KeyE') this.cycle(1);
+    else if (keys.is(code, 'prevMember')) this.cycle(-1);
+    else if (keys.is(code, 'nextMember')) this.cycle(1);
   }
 
   /** Take over `unit` (default: the living member of `stack` nearest the stack's centre). */
@@ -166,10 +167,10 @@ export class PlayerControl {
     const infantry = stack.usesCover;
 
     // --- movement, camera-relative
-    const fwd = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
-    const strafe = input.axis(['KeyA', 'ArrowLeft'], ['KeyD', 'ArrowRight']);
+    const fwd = input.axis(keys.all('down'), keys.all('up'));
+    const strafe = input.axis(keys.all('left'), keys.all('right'));
     _wish.set(0, 0, 0).addScaledVector(cam.flatForward(_f), fwd).addScaledVector(cam.right(_r), strafe);
-    const sprint = infantry && (input.isDown('ShiftLeft') || input.isDown('ShiftRight'));
+    const sprint = infantry && keys.all('sprint').some((k) => input.isDown(k));
     if (sprint) u.crouchTarget = u.proneTarget = 0;
     if (_wish.lengthSq() > 0) {
       let speed = s.speed * (sprint ? 1.7 : 1.15);
@@ -199,7 +200,7 @@ export class PlayerControl {
 
     // --- weapon
     this.fireTimer -= dt;
-    const trigger = input.locked && input.isMouseDown(0) && !game.ended;
+    const trigger = (input.locked || input.touch) && input.isMouseDown(0) && !game.ended;
     if (ws.weapon === 'beam') {
       if (trigger && !this.beam && u.cooldown <= 0) {
         this.beam = game.beams.start(u, stack, { player: true, aim: this.aimPoint });

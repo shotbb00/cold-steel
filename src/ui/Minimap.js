@@ -117,6 +117,10 @@ export class Minimap {
     const rect = this.canvas.getBoundingClientRect();
     const { x, z } = this.toWorld(((e.clientX - rect.left) / rect.width) * this.w, ((e.clientY - rect.top) / rect.height) * this.h);
     const game = this.game;
+    if (e.altKey && game.coop && (e.button === 0 || e.button === 2)) {
+      game.bus.emit('ping', { x, z, kind: e.button === 2 ? 'danger' : 'here' }); // co-op: mark it for the teammate
+      return;
+    }
     if (e.button === 0) {
       if (game.cameraManager.mode === CameraMode.TACTICAL) game.cameraManager.tactical.target.set(x, 0, z);
     } else if (e.button === 2) {
@@ -273,6 +277,16 @@ export class Minimap {
       c.fill();
     }
     if (game.cameraManager.mode === CameraMode.TACTICAL) this.drawViewFootprint(c);
+    // co-op pings (ui/Chat.js): pulsing rings
+    for (const p of game.chat?.pings ?? []) {
+      const [px, py] = this.toMap(p.x, p.z);
+      c.strokeStyle = p.kind === 'danger' ? '#ff5a48' : '#ffc35a';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(px, py, 5 + 3 * Math.abs(Math.sin(p.t * 3)), 0, Math.PI * 2);
+      c.stroke();
+    }
+    c.lineWidth = 1;
   }
 
   /** Is an enemy structure where your side can see? (fog of war applies to fortifications too) */

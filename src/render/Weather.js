@@ -26,6 +26,7 @@ export class Rain {
     this.lines.userData.noAO = true;
     game.scene.add(this.lines);
     this.loop = null;
+    this.intensity = 1;   // 0…1: the rain fading in or out (systems/WeatherChange.js)
   }
 
   update(dt) {
@@ -58,5 +59,8 @@ export class Rain {
     // the hiss follows the listener
     this.loop ??= this.game.audio.loop('rain', cam, 0.5);
     this.loop.setPos(cam);
+    this.loop.setGain?.(0.5 * this.intensity);
+    this.lines.material.opacity = 0.32 * this.intensity;
+    this.lines.visible = this.intensity > 0.02;
   }
 }

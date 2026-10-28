@@ -4,8 +4,11 @@
 // with pasted invitation / reply codes instead (net/Link.js), which also works offline on a LAN.
 // The host also picks the mode and whether it's versus (one side each) or co-op (both on the
 // same side against the AI; a mode's `multiplayer` is true for both, 'coop' for co-op only).
-// Lobby messages: hello { v } (joiner) → lobby { map, mode, side, coop, time, weather } (host,
-// again on every change) → start { … } (host). A version mismatch gets refuse { reason }.
+// Each player has a name (settings.playerName); once connected both see who's in, the guest
+// marks themselves ready and the host's Start waits for that, and the two can chat (ui/Chat.js).
+// Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, name }
+// (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
+// start { … } (host). A version mismatch gets refuse { reason }.
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
 import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
@@ -13,6 +16,11 @@ import { NET_VERSION } from '../net/protocol.js';
 import { hostGame, joinGame, createInvite, acceptInvite, acceptReply, cleanCode, CODE_LEN } from '../net/Link.js';
 import { conditionsPicker } from './MainMenu.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
+import { settings } from '../core/Settings.js';
+import { ChatBox } from './Chat.js';
+
+/** This player's name as the other one sees it. */
+export const myName = () => (settings.get('playerName') || '').trim() || 'Commander';
 
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
@@ -59,7 +67,8 @@ export class Lobby {
     const r = this.root;
     r.replaceChildren();
     r.append(el('h2', '', 'Multiplayer'));
-    r.append(el('p', 'mp-lead', 'Play a friend over the internet or on your network — one of you hosts, the other joins with a code. No account, no server to rent: your browsers connect directly. Your friend needs this same version of Cold Steel, started with <b>start.bat</b>.'));
+    r.append(el('p', 'mp-lead', 'Play a friend over the internet or on your network — one of you hosts, the other joins with a code. No account, no server to rent: your browsers connect directly. Your friend just opens the same game (the same link) — you both need the same version.'));
+    r.append(this.nameField());
     if (this.link) return this.renderConnected();
 
     const seg = el('div', 'seg mp-role');
@@ -72,6 +81,20 @@ export class Lobby {
     }
     r.append(seg);
     if (this.role === 'host') this.renderHost(); else this.renderJoin();
+  }
+
+  /** Your name, saved for next time; sent to the other player when it changes. */
+  nameField() {
+    const box = el('label', 'mp-name');
+    box.append(el('span', '', 'Your name'));
+    const input = el('input', 'mp-name-input');
+    Object.assign(input, { maxLength: 24, value: settings.get('playerName') ?? '', placeholder: 'Commander', autocomplete: 'nickname', spellcheck: false });
+    input.addEventListener('change', () => {
+      settings.set('playerName', input.value.trim());
+      if (this.link) this.role === 'host' ? this.sendLobby() : this.link.send({ k: 'hello', v: NET_VERSION, name: myName() });
+    });
+    box.append(input);
+    return box;
   }
 
   status(text, kind = '') {
@@ -261,14 +284,19 @@ export class Lobby {
     const r = this.root;
     const host = this.role === 'host';
     const card = el('div', 'mp-connected');
-    card.append(el('b', '', 'Connected to your opponent'));
+    card.append(el('b', '', 'Connected'));
     this.pingEl = el('span', 'mp-ping', '');
     card.append(this.pingEl);
     r.append(card);
+    this.players = el('div', 'mp-players');
+    r.append(this.players);
+    this.drawPlayers();
     if (host) {
       this.choices(r);
       const row = el('div', 'deploy-row mp-row');
-      row.append(button('Start battle', 'deploy', () => this.start()));
+      const go = button(this.peerReady ? 'Start battle' : 'Waiting for your friend to be ready', 'deploy', () => this.start());
+      go.disabled = !this.peerReady;
+      row.append(go);
       row.append(button('Leave', 'mp-btn', () => this.leave()));
       r.append(row);
     } else {
@@ -278,11 +306,23 @@ export class Lobby {
       const modeName = info ? MODES[info.mode]?.name ?? info.mode : '…';
       const when = info ? `${TIMES[info.time]?.name ?? 'Day'}, ${(WEATHER[info.weather]?.name ?? 'Overcast').toLowerCase()}` : '…';
       r.append(el('p', 'mp-wait', `The host picks the mode, map, sides and conditions.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>.`));
-      r.append(this.status('Waiting for the host to start the battle…'));
+      r.append(this.status(this.peerReady ? 'Ready — waiting for the host to start the battle…' : 'Press Ready when you are, then the host can start.'));
       const row = el('div', 'deploy-row mp-row');
+      row.append(button(this.peerReady ? 'Not ready' : 'Ready', 'deploy', () => {
+        this.peerReady = !this.peerReady;
+        this.link.send({ k: 'lobbyReady', ready: this.peerReady });
+        this.render();
+      }));
       row.append(button('Leave', 'mp-btn', () => this.leave()));
       r.append(row);
     }
+    r.append(el('h3', 'menu-sub', 'Chat'));
+    this.chat?.dispose();
+    this.chat = new ChatBox(r, { link: this.link, me: myName(), peer: this.peerName ?? (host ? 'Your friend' : 'Host'), inline: true });
+    for (const [from, text, kind] of this.chatLog ?? []) this.chat.add(from, text, kind);
+    // keep the conversation across re-renders
+    const add = this.chat.add.bind(this.chat);
+    this.chat.add = (from, text, kind) => { (this.chatLog ??= []).push([from, text, kind]); add(from, text, kind); };
     clearInterval(this.pinger);
     this.pinger = setInterval(() => {
       if (this.pingEl && this.link) this.pingEl.textContent = this.link.rtt ? `Ping ${Math.round(this.link.rtt)} ms` : '';
@@ -349,29 +389,55 @@ export class Lobby {
           setTimeout(() => link.close(), 300);
           return;
         }
+        this.peerName = String(m.name ?? '').slice(0, 24) || 'Your friend';
         this.sendLobby();
+        this.render();
       });
+      link.on('lobbyReady', (m) => { this.peerReady = !!m.ready; this.render(); });
     } else {
-      link.on('lobby', (m) => { this.lobbyInfo = m; this.render(); });
+      link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
-      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, net: { role: 'client', link } }));
-      link.send({ k: 'hello', v: NET_VERSION });
+      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
+      link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
     this.render();
   }
 
+  /** Who's in, on which side, and whether the guest is ready. */
+  drawPlayers() {
+    if (!this.players || !this.link) return;
+    const host = this.role === 'host';
+    const info = host ? this.choice : this.lobbyInfo;
+    const peerSide = info ? (info.coop ? info.side : enemyOf(info.side)) : null;
+    const hostSide = info?.side ?? null;
+    const row = (name, side, tag, ready) => {
+      const p = el('div', `mp-player ${side ?? ''}`);
+      p.append(el('b', '', ''), el('span', '', side ? FACTIONS[side].name : '…'), el('em', ready ? 'ready' : '', ready ? 'Ready' : tag));
+      p.firstChild.textContent = name;
+      return p;
+    };
+    this.players.replaceChildren(
+      row(host ? `${myName()} (you)` : this.peerName ?? 'Host', hostSide, 'Host', false),
+      row(host ? this.peerName ?? 'Your friend' : `${myName()} (you)`, peerSide, 'Not ready', this.peerReady),
+    );
+  }
+
   sendLobby() {
-    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.choice });
+    this.drawPlayers();
+    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.choice, name: myName() });
   }
 
   start() {
+    if (!this.peerReady) return;
     const link = this.link;
     link.send({ k: 'start', ...this.choice });
-    this.begin({ ...this.choice, net: { role: 'host', link } });
+    this.begin({ ...this.choice, net: { role: 'host', link, names: { me: myName(), peer: this.peerName ?? 'Your friend' } } });
   }
 
   begin(choice) {
-    for (const k of ['hello', 'lobby', 'refuse', 'start']) this.link.off(k);
+    for (const k of ['hello', 'lobby', 'refuse', 'start', 'lobbyReady']) this.link.off(k);
+    this.chat?.dispose();   // the battle's chat takes over (ui/Chat.js BattleChat)
+    this.chat = null;
     clearInterval(this.pinger);
     this.started = true;
     this.onStart(choice);
@@ -386,6 +452,11 @@ export class Lobby {
     clearInterval(this.pinger);
     this.link = null;
     this.lobbyInfo = null;
+    this.peerName = null;
+    this.peerReady = false;
+    this.chat?.dispose();
+    this.chat = null;
+    this.chatLog = null;
     this.render();
     this.root.append(this.status(this.refused ?? 'The connection was closed.', 'bad'));
     this.refused = null;

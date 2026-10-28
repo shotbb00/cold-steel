@@ -9,6 +9,7 @@
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
 import { STRUCTURES } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
+import { keyOf } from '../core/Keys.js';
 
 const ACTIONS = [
   { cmd: 'build:sandbags', label: 'Sandbags', key: 'N', cost: STRUCTURES.sandbags.cost, tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
@@ -32,6 +33,12 @@ function one(sel, test) {
 }
 
 const value = (v, g) => (typeof v === 'function' ? v(g) : v);
+
+// which key action each button's command is (core/Keys.js), so the hint follows a rebinding
+const ACTION_OF = {
+  hold: 'hold', 'build:sandbags': 'sandbags', 'build:trench': 'trench', 'build:wire': 'wire', 'build:mines': 'mines',
+  engineer: 'engineer', smoke: 'smoke', flare: 'flare', unload: 'unload', leave: 'leave',
+};
 
 export class ActionBar {
   constructor(game) {
@@ -78,7 +85,7 @@ export class ActionBar {
       b.dataset.cmd = a.cmd;
       b.title = value(a.tip, g);
       const n = a.count?.(sel);
-      b.innerHTML = `${value(a.label, g)}${a.cost ? ` <small>${a.cost}</small>` : ''}${n ? ` <small class="n">×${n}</small>` : ''} <kbd>${a.key}</kbd>`;
+      b.innerHTML = `${value(a.label, g)}${a.cost ? ` <small>${a.cost}</small>` : ''}${n ? ` <small class="n">×${n}</small>` : ''} <kbd data-key="${ACTION_OF[a.cmd] ?? ''}">${ACTION_OF[a.cmd] ? keyOf(ACTION_OF[a.cmd]) : a.key}</kbd>`;
       return b;
     }));
     this.el.hidden = !shown.length;

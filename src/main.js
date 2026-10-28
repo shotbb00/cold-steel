@@ -11,15 +11,16 @@ import { getMode } from './modes/index.js';
 import { MainMenu } from './ui/MainMenu.js';
 import { FACTIONS, PLAYER_FACTION } from './data/factions.js';
 import { takeReplay, rememberBattle } from './core/replay.js';
+import './core/Keys.js';   // fills every key hint in the page (data-key) and keeps them current
 
 document.title = GAME.title;
 const screen = document.getElementById('loading');
 
-function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null }) {
+function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null }) {
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
-  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather });
+  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
-  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign });
+  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules });
   window.game = game; // handy for poking at the simulation from the dev console
 }
 

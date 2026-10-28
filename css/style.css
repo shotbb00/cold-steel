@@ -86,8 +86,6 @@ body.tactical #crosshair { opacity: 0; }
 .bar.hp i { background: linear-gradient(90deg, #6f8a4a, #a5c070); }
 .bar.heat i { background: linear-gradient(90deg, #ffb347, #ff6a3d); }
 .bar.heat.overheated i { background: var(--enemy); animation: blink 0.4s steps(2) infinite; }
-#aura-state { margin-top: 4px; font-size: 13px; color: var(--gold); text-align: center; min-height: 17px; }
-#aura-state.off { color: var(--muted); }
 @keyframes blink { 50% { opacity: 0.35; } }
 body.tactical #vitals { opacity: 0.55; }
 
@@ -321,6 +319,7 @@ body.online .sp-only { display: none; }
 .rl-line time { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
 .rl-line.good { border-left-color: var(--ally); }
 .rl-line.bad { border-left-color: var(--enemy); }
+.rl-line.weather { border-left-color: #9fb4c8; }
 .rl-line.radio span { color: #c9cdbd; font-style: italic; }
 @keyframes rl-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 body:not(.tactical) #radio-log { opacity: 0.75; }
@@ -392,3 +391,186 @@ body:not(.night) .night-only { display: none; }
 
 /* support powers on cooldown (src/ui/ActionBar.js) */
 .cmd-buttons.support button.cooling { opacity: 0.55; }
+
+/* suppression and morale on the stack labels (src/ui/StackLabels.js) */
+.sl-sup { height: 2px; margin: 0 0 2px; background: transparent; }
+.sl-sup i { display: block; height: 100%; width: 0; background: #e0a43a; transition: width 0.25s; }
+.stack-label[data-morale="shaken"] .sl-morale { color: #e8c060; }
+.stack-label[data-morale="wavering"] .sl-morale { color: #f08a3c; }
+.stack-label[data-morale="broken"] .sl-morale { color: #ff5a48; animation: sl-flash 0.8s steps(2) infinite; }
+.stack-label[data-morale="dug-in"] .sl-morale { color: #b8d89a; }
+#labels:not(.tactical) .stack-label.pinned .sl-pinned { margin-left: 0; }
+.sl-pinned { display: none; margin-left: 6px; padding: 0 4px; background: #e0a43a; color: #17140c; font-weight: 700; letter-spacing: 0.06em; }
+.stack-label.pinned .sl-pinned { display: inline-block; animation: sl-flash 1s steps(2) infinite; }
+.stack-label.pinned { border-left-color: #e0a43a; }
+#labels:not(.tactical) .stack-label.pinned .sl-state { display: block; }
+#labels:not(.tactical) .stack-label.pinned .sl-ai, #labels:not(.tactical) .stack-label.pinned .sl-sep,
+#labels:not(.tactical) .stack-label.pinned .sl-morale { display: none; }
+@keyframes sl-flash { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .sl-pinned, .stack-label[data-morale="broken"] .sl-morale { animation: none; } }
+
+/* direct control under fire: the edges of the view close in (src/ui/HUD.js) */
+#suppress-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(10, 8, 4, 0.85) 100%); transition: opacity 0.15s; }
+
+/* the lower half of the after-action report (src/ui/AfterAction.js) */
+.aar-lower { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 22px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.aar-lower h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.aar-map svg { width: 100%; height: auto; display: block; }
+.aar-field { fill: rgba(60, 70, 48, 0.35); stroke: var(--line); }
+.aar-point { fill: none; stroke-width: 2; }
+.aar-man { opacity: 0.85; }
+.aar-veh { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1; }
+.aar-legend { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.aar-legend i { display: inline-block; vertical-align: middle; margin: 0 3px 0 8px; background: var(--text); }
+.aar-legend i:first-child { margin-left: 0; }
+.aar-legend i.m { width: 5px; height: 5px; border-radius: 50%; }
+.aar-legend i.v { width: 7px; height: 7px; }
+.aar-legend i.p { width: 9px; height: 9px; border-radius: 50%; background: none; border: 2px solid var(--muted); }
+.aar-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.aar-mvp { padding: 8px 12px; border-left: 3px solid var(--gold); background: rgba(224, 180, 90, 0.08); display: flex; flex-direction: column; }
+.aar-mvp span { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+.aar-mvp b { font-size: 16px; }
+.aar-mvp em { font-style: normal; color: var(--muted); font-size: 12.5px; }
+.aar-moments ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 13px; max-height: 190px; overflow-y: auto; }
+.aar-moments li { display: grid; grid-template-columns: 42px 1fr; padding-left: 8px; border-left: 2px solid var(--line); }
+.aar-moments li.ally { border-left-color: var(--ally); }
+.aar-moments li.enemy { border-left-color: var(--enemy); }
+.aar-moments time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.aar-lost ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+.aar-lost li { display: flex; gap: 6px; }
+.aar-lost li span { color: var(--muted); }
+@media (max-width: 760px) { .aar-lower { grid-template-columns: 1fr; } }
+#hud.over > :not(#banner), #labels.over { display: none !important; }
+#banner .aar p { margin: 0; font-size: 13px; color: var(--muted); }
+#banner .aar .aar-legend { margin-top: 6px; font-size: 11px; }
+
+/* chat: in battle bottom left over the minimap (src/ui/Chat.js), and inline in the lobby */
+.chat { font-size: 13px; }
+#hud > .chat { position: absolute; left: 16px; bottom: 260px; width: min(420px, calc(100vw - 32px)); pointer-events: none; z-index: 2; }
+#hud > .chat.open { pointer-events: auto; }
+.chat-log { display: flex; flex-direction: column; gap: 2px; }
+.chat-line { padding: 3px 8px; background: rgba(10, 11, 8, 0.72); color: var(--text); text-shadow: 0 1px 2px #000; transition: opacity 0.6s; overflow-wrap: anywhere; }
+.chat-line b { color: var(--gold); margin-right: 4px; }
+.chat-line.me b { color: var(--ally); }
+.chat-line.system { color: var(--muted); font-style: italic; }
+.chat-line.ping { border-left: 2px solid #ffc35a; }
+#hud > .chat:not(.open) .chat-line.old { opacity: 0; }
+.chat-form input { all: unset; box-sizing: border-box; width: 100%; margin-top: 4px; padding: 7px 10px; background: rgba(10, 11, 8, 0.92); border: 1px solid var(--gold); color: var(--text); font: 13.5px 'Segoe UI', sans-serif; }
+.chat.inline { max-width: 520px; }
+.chat.inline .chat-log { max-height: 200px; min-height: 60px; overflow-y: auto; padding: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.chat.inline .chat-line { background: none; text-shadow: none; padding: 2px 0; }
+.chat.inline .chat-form input { border-color: var(--line); }
+.chat.inline .chat-form input:focus-visible { border-color: var(--gold); }
+@media (max-width: 760px) { #hud > .chat { bottom: 220px; } }
+
+/* boot camp card (src/ui/Tutorial.js) */
+#tutorial {
+  position: absolute; left: 16px; top: 64px; width: min(360px, calc(100vw - 32px)); padding: 12px 14px 12px;
+  background: rgba(12, 14, 10, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--gold);
+  font-size: 13.5px; line-height: 1.5; pointer-events: auto; z-index: 3;
+}
+#tutorial .tu-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+#tutorial .tu-skip, #tutorial .tu-show { background: none; border: 1px solid var(--line); color: var(--muted); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer; }
+#tutorial .tu-skip:hover, #tutorial .tu-show:hover { color: var(--text); border-color: var(--gold); }
+#tutorial .tu-skip { text-transform: none; letter-spacing: 0; }
+#tutorial h3 { margin: 6px 0 4px; font-size: 17px; color: var(--gold); letter-spacing: 0.02em; }
+#tutorial .tu-text { margin: 0 0 8px; color: #d4d6cb; }
+#tutorial .tu-text b { color: var(--text); }
+#tutorial kbd { display: inline-block; min-width: 1.6em; margin: 0 2px; padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; background: rgba(255, 255, 255, 0.06); font: 600 11.5px/1.6 inherit; text-align: center; color: var(--text); }
+#tutorial .tu-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+#tutorial .tu-tasks li { position: relative; padding-left: 22px; color: var(--text); }
+#tutorial .tu-tasks li::before { content: ''; position: absolute; left: 2px; top: 4px; width: 11px; height: 11px; border: 1.5px solid var(--muted); }
+#tutorial .tu-tasks li.done { color: var(--muted); }
+#tutorial .tu-tasks li.done::before { border-color: var(--ally); background: var(--ally); box-shadow: inset 0 0 0 2px rgba(12, 14, 10, 0.9); }
+#tutorial .tu-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+#tutorial .tu-foot button[hidden], #tutorial .tu-skip[hidden] { display: none; }
+#tutorial.done { border-left-color: var(--ally); }
+#tutorial.final .tu-foot { justify-content: flex-start; }
+body.bootcamp #radio-log { top: auto; bottom: 220px; }
+#frontline.bootcamp .fl-side { visibility: hidden; }
+@media (max-width: 600px) { #tutorial { top: 104px; max-height: 46vh; overflow-y: auto; font-size: 12.5px; } body.bootcamp #radio-log { display: none; } }
+
+/* ---------- touch (src/ui/TouchControls.js) ---------- */
+#touch-bar, #touch-pad, #rotate-hint { display: none; }
+body.touch #touch-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+body.touch #touch-bar:not(:has(button:not([hidden]))) { display: none; }
+#topbar .tb-pause { display: none; }
+body.touch #topbar .tb-pause { display: block; order: 3; }
+.touch-only, body.touch .mouse-only { display: none; }
+body.touch .touch-only { display: block; }
+#touch-bar button, #touch-pad button, #topbar .tb-pause {
+  font: 600 13px 'Bahnschrift', 'Segoe UI', system-ui, sans-serif; color: var(--text); letter-spacing: 0.04em;
+  min-height: 40px; padding: 0 14px; background: rgba(16, 18, 14, 0.82); border: 1px solid var(--line);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+#touch-bar button[hidden] { display: none; }
+#touch-bar .tb-control { border-color: rgba(224, 180, 90, 0.6); color: var(--gold); }
+#topbar .tb-pause { min-width: 44px; min-height: 36px; padding: 0; pointer-events: auto; }
+body.touch:not(.tactical) #touch-pad { display: block; position: absolute; inset: 0; pointer-events: none; }
+#touch-pad .tp-look { position: absolute; top: 0; right: 0; bottom: 0; width: 55%; pointer-events: auto; touch-action: none; }
+#touch-pad .tp-stick {
+  position: absolute; left: 28px; bottom: 28px; width: 132px; height: 132px; border-radius: 50%;
+  background: rgba(16, 18, 14, 0.45); border: 1px solid rgba(255, 255, 255, 0.18); pointer-events: auto; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+#touch-pad .tp-stick i { width: 54px; height: 54px; border-radius: 50%; background: rgba(224, 225, 215, 0.35); border: 1px solid rgba(255, 255, 255, 0.4); }
+#touch-pad .tp-buttons {
+  position: absolute; right: 18px; bottom: 22px; display: grid; grid-template-columns: repeat(3, auto); gap: 8px; align-items: end; pointer-events: auto;
+}
+#touch-pad .tp-fire {
+  grid-column: 3; grid-row: 1 / span 2; width: 84px; height: 84px; border-radius: 50%; padding: 0;
+  background: rgba(255, 90, 72, 0.28); border-color: rgba(255, 90, 72, 0.7); font-size: 15px;
+}
+#touch-pad .tp-toggleView { grid-column: 1 / span 2; border-color: rgba(224, 180, 90, 0.6); color: var(--gold); }
+body.touch #help, body.touch #control-hint, body.touch #lock-hint { display: none !important; }
+body.touch:not(.tactical) #minimap { display: none; } /* the stick needs that corner */
+body.touch .cmd-buttons kbd, body.touch .rf-open kbd, body.touch #tutorial .tu-skip kbd { display: none; }
+body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: translateX(-50%); width: min(260px, 40vw); padding: 5px 10px; } /* between the stick and the buttons */
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-hint {
+    position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(8, 9, 6, 0.96); pointer-events: auto; text-align: center; padding: 24px;
+  }
+  #rotate-hint svg { width: 72px; height: 72px; fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #rotate-hint b { font-size: 20px; letter-spacing: 0.08em; text-transform: uppercase; }
+  #rotate-hint span { color: var(--muted); }
+}
+
+/* ---------- short screens (phones held sideways) ---------- */
+@media (max-height: 520px) {
+  #topbar { top: 6px; left: 8px; right: 8px; gap: 6px; }
+  #mode-badge { padding: 3px 8px; font-size: 11px; }
+  #battle-status { padding: 3px 10px; font-size: 12px; gap: 8px; }
+  #fps { display: none; }
+  #frontline { top: 34px; padding: 3px 8px; gap: 8px; font-size: 11px; }
+  .fl-side { min-width: 0; gap: 5px; }
+  .fl-bar { width: 56px; height: 5px; }
+  .fl-point { width: 20px; height: 20px; }
+  .fl-point b { font-size: 11px; }
+  .fl-status { font-size: 11px; padding: 2px 8px; }
+  #toasts { top: 34px; font-size: 12px; }
+  #help, #control-hint { display: none; }
+  #minimap { left: 8px; bottom: 8px; width: 112px; }
+  #command-panel { right: 8px; bottom: 8px; width: min(300px, 46vw); padding: 7px 9px; max-height: calc(100vh - 110px); overflow-y: auto; font-size: 12.5px; }
+  #selection-info { font-size: 12.5px; margin-bottom: 5px; }
+  .cmd-buttons { gap: 4px; }
+  .cmd-buttons button { padding: 4px 8px; font-size: 12px; }
+  #reinforce { margin-bottom: 6px; padding-bottom: 5px; }
+  .rf-open { font-size: 12.5px; padding: 4px 8px; }
+  #reinforce-window { top: 8px; bottom: 8px; right: calc(min(300px, 46vw) + 16px); width: min(480px, calc(100vw - min(300px, 46vw) - 32px)); max-height: none; }
+  #radio-log { top: 34px; left: 8px; width: min(280px, 36vw); font-size: 11px; }
+  #radio-log .rl-line:nth-child(n + 4) { display: none; }
+  #tutorial { top: 34px; left: 8px; width: min(320px, 42vw); max-height: calc(100vh - 170px); overflow-y: auto; padding: 8px 10px; font-size: 12px; }
+  #tutorial h3 { font-size: 14px; margin: 3px 0 2px; }
+  body.bootcamp #radio-log { display: none; }
+  body.touch #touch-bar button { min-height: 34px; font-size: 12px; padding: 0 10px; }
+  body.touch #topbar .tb-pause { min-height: 28px; min-width: 36px; }
+  #touch-pad .tp-stick { left: 18px; bottom: 18px; width: 116px; height: 116px; }
+  #touch-pad .tp-buttons { right: 12px; bottom: 12px; gap: 6px; }
+  #touch-pad .tp-fire { width: 74px; height: 74px; }
+  #touch-pad button { min-height: 36px; font-size: 12px; padding: 0 10px; }
+  #vitals { bottom: 8px; padding: 5px 10px; width: min(320px, 40vw); }
+  .stack-label { transform-origin: 50% 100%; font-size: 10px; }
+  #banner h1 { font-size: 36px; }
+}

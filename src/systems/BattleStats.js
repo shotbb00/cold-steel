@@ -6,6 +6,7 @@
 //   per stack: kills (credited to the stack that fired, or to the air strike, the minefield …)
 //   timeline:  every 10 s each side's front strength and villages held, plus the moments that
 //              mattered (captures, vehicles knocked out, helicopters down, houses collapsing)
+//   losses:    where every man and vehicle fell (for the map of losses), rounded to metres
 // Runs where the simulation runs (single player, multiplayer host); report() is plain data, so
 // the host sends it to the client with the battle's end.
 import { enemyOf } from '../data/factions.js';
@@ -27,6 +28,7 @@ export class BattleStats {
     this.stacks = new Map();   // stack id → { name, faction, type, kills, rank, alive }
     this.timeline = [];        // { t, strength: {f: n}, points: {f: n} }
     this.events = [];          // { t, faction, kind, text }
+    this.losses = [];          // { x, z, f: faction, v: 1 for a vehicle }
     this.sampleT = 0;
     const bus = game.bus;
     bus.on('unit:death', (e) => this.onDeath(e));
@@ -74,8 +76,10 @@ export class BattleStats {
     this.events.push({ t: Math.round(this.game.time), faction, kind, text });
   }
 
-  onDeath({ stack, killer }) {
+  onDeath({ stack, unit, killer }) {
     const side = this.sides[stack.faction];
+    const at = unit?.pos ?? stack.centroid;
+    if (at && this.losses.length < 1500) this.losses.push({ x: Math.round(at.x), z: Math.round(at.z), f: stack.faction, v: stack.usesCover ? 0 : 1 });
     if (stack.usesCover) side.menLost++;
     else {
       side.vehiclesLost++;
@@ -134,6 +138,10 @@ export class BattleStats {
       timeline: this.timeline,
       events: this.events.slice(-40),
       maxStrength: this.game.modeState?.maxStrength ?? null,
+      losses: this.losses,
+      bounds: this.game.map.bounds ?? null,
+      baseZ: Object.fromEntries(Object.entries(this.game.map.bases ?? {}).map(([f, b]) => [f, Math.round(b.z)])),
+      points: (this.game.modeState?.points?.points ?? []).map((p) => ({ x: Math.round(p.x), z: Math.round(p.z), name: p.name, owner: p.owner ?? null })),
     };
   }
 }

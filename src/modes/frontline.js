@@ -14,6 +14,7 @@ import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 import { makeBuyer } from './shared.js';
 import { getUnitType } from '../data/units/index.js';
+import { DIFFICULTY } from '../data/rules.js';
 
 const START_CP = 350;
 const BASE_INCOME = 1.5;      // CP / s regardless of points
@@ -28,6 +29,7 @@ export default {
   name: 'Frontline',
   description: 'Hold and take control points. Points earn command points for reinforcements; the side holding fewer bleeds strength.',
   multiplayer: true,
+  economy: true,   // the menu offers the command-point and strength rules (data/rules.js)
 
   setup(game) {
     if (game.net?.isClient) return this.setupClient(game);
@@ -40,19 +42,21 @@ export default {
     }
     const foe = enemyOf(game.playerFaction);
     const points = new ControlPoints(game, map.points);
+    const R = game.rules;
     const state = {
       points,
-      cp: { [game.playerFaction]: START_CP, [foe]: START_CP },
-      strength: { [game.playerFaction]: START_STRENGTH, [foe]: START_STRENGTH },
-      maxStrength: START_STRENGTH,
-      maxStacks: map.maxStacks ?? MAX_STACKS,
+      cp: { [game.playerFaction]: R.startCp ?? START_CP, [foe]: R.startCp ?? START_CP },
+      strength: { [game.playerFaction]: R.strength ?? START_STRENGTH, [foe]: R.strength ?? START_STRENGTH },
+      maxStrength: R.strength ?? START_STRENGTH,
+      maxStacks: R.maxStacks ?? map.maxStacks ?? MAX_STACKS,
       allow: this.allow ?? null,
+      income: { [game.playerFaction]: R.income ?? 1, [foe]: (R.income ?? 1) * (DIFFICULTY[R.difficulty]?.income ?? 1) },
     };
     state.buy = makeBuyer(game, state);
     if (this.air === false) for (const f of [game.playerFaction, foe]) game.air.limit[f] = 0;
     game.modeState = state;
     game.systems.push(points);
-    if (!game.net || game.coop) game.systems.push(new FrontlineDirector(game, foe, state)); // versus: a person plays it
+    if (!game.net || game.coop) game.systems.push(new FrontlineDirector(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
     game.frontlineHud = new FrontlineHUD(game, state);
 
     game.bus.on('unit:death', ({ stack }) => {
@@ -99,8 +103,8 @@ export default {
     const foe = enemyOf(me);
     const mine = state.points.owned(me);
     const theirs = state.points.owned(foe);
-    state.cp[me] += dt * (BASE_INCOME + POINT_INCOME * mine);
-    state.cp[foe] += dt * (BASE_INCOME + POINT_INCOME * theirs);
+    state.cp[me] += dt * (BASE_INCOME + POINT_INCOME * mine) * (state.income?.[me] ?? 1);
+    state.cp[foe] += dt * (BASE_INCOME + POINT_INCOME * theirs) * (state.income?.[foe] ?? 1);
     if (mine > theirs) state.strength[foe] -= (mine - theirs) * BLEED * dt;
     else if (theirs > mine) state.strength[me] -= (theirs - mine) * BLEED * dt;
     game.frontlineHud.update();

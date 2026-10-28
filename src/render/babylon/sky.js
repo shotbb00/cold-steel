@@ -89,5 +89,16 @@ export function createSky(scene, theme) {
     update(time) {
       mat.setFloat('time', time);
     },
+    /** New colours and cloud cover (the weather changing: systems/WeatherChange.js). */
+    set(theme) {
+      mat.setColor3('top', lin(theme.skyTop));
+      mat.setColor3('horizon', lin(theme.skyHorizon));
+      mat.setColor3('bottom', lin(theme.skyBottom));
+      mat.setColor3('sunColor', lin(theme.sunColor));
+      mat.setColor3('cloudLight', lin(theme.cloudLight ?? 0xd8d8d4));
+      mat.setColor3('cloudDark', lin(theme.cloudDark ?? 0x8a8e92));
+      mat.setFloat('sunDisk', theme.sunDisk ?? 1);
+      mat.setFloat('clouds', theme.clouds ?? 0);
+    },
   };
 }

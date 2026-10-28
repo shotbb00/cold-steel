@@ -1,5 +1,5 @@
 // Owns the renderer, scene and main loop, and wires the modules together. The frame order:
-//   step:   input → player-controlled unit → leader aura → squad AI → units (think, move,
+//   step:   input → player-controlled unit → squad AI → units (think, move,
 //           fight) → squad separation → construction → air strikes → projectiles → beams →
 //           unit renderers → effects → fog of war → mode systems / win check → environment →
 //           camera → HUD   (render: labels, callouts, minimap → post-processed render)
@@ -31,9 +31,9 @@ import { ProjectileSystem } from '../combat/ProjectileSystem.js';
 import { BeamSystem } from '../combat/BeamSystem.js';
 import { UnitStack } from '../entities/UnitStack.js';
 import { StackAI } from '../ai/StackAI.js';
-import { AuraSystem } from '../systems/AuraSystem.js';
 import { CommandSystem } from '../systems/CommandSystem.js';
 import { PlayerControl } from '../systems/PlayerControl.js';
+import { TouchControls } from '../ui/TouchControls.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { Construction } from '../systems/Construction.js';
 import { CrewBailout } from '../systems/CrewBailout.js';
@@ -60,6 +60,10 @@ import { RangeIndicators } from '../ui/RangeIndicators.js';
 import { NetHost } from '../net/NetHost.js';
 import { NetClient } from '../net/NetClient.js';
 import { BabylonView } from '../render/babylon/BabylonView.js';
+import { keys } from './Keys.js';
+import { rulesFrom, DIFFICULTY } from '../data/rules.js';
+import { BattleChat } from '../ui/Chat.js';
+import { WeatherChange } from '../systems/WeatherChange.js';
 
 /** Which renderer draws the battle: Babylon.js (default), or ?renderer=three for the original. */
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
@@ -69,12 +73,13 @@ export class GameEngine {
    * `net`: { role: 'host' | 'client', link } for a multiplayer battle;
    * `conditions`: { time, weather } (core/Conditions.js).
    */
-  constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null }) {
+  constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null }) {
     this.map = map;
     this.mode = mode;
     this.playerFaction = playerFaction;
     this.coop = !!(net && coop);
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
+    this.rules = rulesFrom(net || campaign ? null : rules); // battle rules (data/rules.js): single player only
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -141,7 +146,6 @@ export class GameEngine {
     rootStyle.setProperty('--ally', FACTIONS[playerFaction].css);
     rootStyle.setProperty('--enemy', FACTIONS[enemyOf(playerFaction)].css);
 
-    this.aura = new AuraSystem(this.world);
     this.commands = new CommandSystem(this);
     this.player = new PlayerControl(this);
     this.visibility = new VisibilitySystem(this, playerFaction);
@@ -156,6 +160,9 @@ export class GameEngine {
     this.orders = new Orders(this);
     this.stats = net?.role === 'client' ? null : new BattleStats(this); // where the simulation runs
     this.net = net?.role === 'host' ? new NetHost(this, net.link) : net?.role === 'client' ? new NetClient(this, net.link) : null;
+    this.netNames = net?.names ?? null;      // { me, peer } from the lobby (ui/Chat.js)
+    this.chat = new BattleChat(this);        // multiplayer chat and co-op pings
+    this.touchControls = new TouchControls(this); // fingers: gestures, toolbar, direct-control pad
     if (this.net?.isHost) this.setWaiting(true); // until the other player has loaded
     if (this.net) this.showNetStatus();
     this.quality = new Quality(this); // after the map is decorated: it thins detail meshes
@@ -169,6 +176,7 @@ export class GameEngine {
 
     this.bindControls();
     mode.setup(this);
+    if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: the opening forces are shared out between the two players
     if (this.coop && this.net.isHost) {
       this.world.stacksOf(playerFaction).forEach((s, i) => { s.owner = i % 2 ? 'guest' : 'host'; });
@@ -184,6 +192,8 @@ export class GameEngine {
     this.ambience = new Ambience(this);
     this.rain = this.conditions.rain ? new Rain(this) : null;
     this.radio = new RadioLog(this);
+    // single player: the weather can change during the battle (systems/WeatherChange.js)
+    if (!net && !campaign && !mode.fixedWeather && this.rules.changingWeather !== false) this.systems.push(new WeatherChange(this));
 
     window.addEventListener('resize', () => this.onResize());
     // a multiplayer host whose window is minimised or in the background gets no animation
@@ -220,6 +230,9 @@ export class GameEngine {
       },
     });
     stack.ai = new StackAI(stack, this.world);
+    // difficulty (data/rules.js): the AI side shoots better or worse
+    const aim = !this.net && faction !== this.playerFaction ? DIFFICULTY[this.rules.difficulty]?.aim ?? 1 : 1;
+    if (aim !== 1) for (const u of stack.units) u.skill *= aim;
     if (this.coop && faction === this.playerFaction && !stack.owner) stack.owner = this.currentOwner ?? 'host';
     this.world.addStack(stack);
     this.transport?.setup(stack);
@@ -331,14 +344,14 @@ export class GameEngine {
 
   bindControls() {
     this.bus.on('key', ({ code }) => {
-      if (code === 'Tab') this.toggleView();
-      else if (code === 'KeyB') this.bloom.enabled = !this.bloom.enabled;
-      else if (code === 'KeyO') {
+      if (keys.is(code, 'toggleView')) this.toggleView();
+      else if (keys.is(code, 'bloom')) this.bloom.enabled = !this.bloom.enabled;
+      else if (keys.is(code, 'ao')) {
         this.post.ao.enabled = !this.post.ao.enabled;
         this.bus.emit('toast', `Ambient occlusion ${this.post.ao.enabled ? 'on' : 'off'} (O)`);
       }
       else if (code === 'KeyR' && this.ended) requestReplay();
-      else if (code === 'Home') this.cameraManager.resetView();
+      else if (keys.is(code, 'resetView')) this.cameraManager.resetView();
     });
     // double-click the middle button: the command camera back to its default angle
     let lastMiddle = -1;
@@ -474,7 +487,6 @@ export class GameEngine {
     world.refresh();
     this.cameraManager.handleInput(dt);
     this.player.update(dt);
-    this.aura.update(this.player.unit);
 
     for (const s of world.stacks) s.ai.update(dt);
     for (const s of world.stacks) s.update(dt, t);
@@ -540,6 +552,8 @@ export class GameEngine {
 
   render(dt = 0) {
     this.buildingMarkers.update();
+    this.chat?.update(dt);
+    this.touchControls?.update();
     this.fow.update(dt);
     this.ranges.update();
     this.ambience.update(dt);

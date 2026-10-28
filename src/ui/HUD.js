@@ -6,7 +6,6 @@ import { renderReport } from './AfterAction.js';
 import { ActionBar } from './ActionBar.js';
 import { settings } from '../core/Settings.js';
 import { CameraMode } from '../core/CameraManager.js';
-import { LEADER_AURA } from '../systems/AuraSystem.js';
 
 export class HUD {
   constructor(game) {
@@ -16,7 +15,7 @@ export class HUD {
       modeBadge: $('mode-badge'), allyCount: $('ally-count'), enemyCount: $('enemy-count'), fps: $('fps'),
       unitName: $('unit-name'), hpFill: $('hp-fill'), hpText: $('hp-text'),
       ammoLabel: $('ammo-label'), ammoFill: $('ammo-fill'), ammoText: $('ammo-text'), ammoBar: $('ammo-bar'),
-      crosshair: $('crosshair'), aura: $('aura-state'), lockHint: $('lock-hint'),
+      crosshair: $('crosshair'), lockHint: $('lock-hint'),
       selection: $('selection-info'), toasts: $('toasts'), banner: $('banner'),
     };
 
@@ -79,6 +78,10 @@ export class HUD {
       el.crosshair.classList.toggle('overheated', u.reloadT > 0);
     }
     el.lockHint.classList.toggle('show', !tactical && !!u && !g.input.locked && !g.ended);
+    // under fire in direct control: the view closes in with the man's suppression
+    const sup = !tactical && u?.alive ? Math.min(1, u.suppression) : 0;
+    const vig = Math.round(sup * 20) / 20;
+    if (vig !== this.vignette) { this.vignette = vig; (this.vigEl ??= document.getElementById('suppress-vignette')).style.opacity = String(vig * 0.9); }
 
     this.frames++;
     const now = performance.now();
@@ -98,11 +101,6 @@ export class HUD {
         el.unitName.append(u.stack.name, Object.assign(document.createElement('em'), {
           textContent: ` · ${u.stack.type.shortName}${u.stack.units.length > 1 ? ` ${u.index + 1}/${u.stack.units.length}` : ''}`,
         }));
-        const n = g.aura.count;
-        el.aura.textContent = n
-          ? `Leading ${n} allies (+${Math.round((LEADER_AURA.fireRate - 1) * 100)}% fire rate, +${Math.round((LEADER_AURA.damage - 1) * 100)}% damage)`
-          : 'No allies close enough to inspire';
-        el.aura.className = n ? '' : 'off';
       }
       if (tactical) this.renderSelection();
     }
@@ -148,5 +146,8 @@ export class HUD {
     b.querySelector('[data-act="again"]').hidden = !!this.game.net || !!this.game.campaign; // multiplayer / campaign: via the menu
     if (this.game.campaign) b.querySelector('[data-act="menu"]').textContent = 'Continue campaign';
     b.hidden = false;
+    // the report takes the screen: the battle HUD (score bar, minimap, radio log …) steps aside
+    document.getElementById('hud')?.classList.add('over');
+    document.getElementById('labels')?.classList.add('over');
   }
 }

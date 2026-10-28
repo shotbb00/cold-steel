@@ -14,6 +14,7 @@ import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
+import { keys } from '../core/Keys.js';
 
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
 const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
@@ -96,8 +97,14 @@ export class CommandSystem {
 
   // ---------------------------------------------------------------- input
 
-  onMouseDown({ button, x, y, shift, ctrl }) {
+  onMouseDown({ button, x, y, shift, ctrl, alt }) {
     if (!this.active) return;
+    if (alt && this.game.coop && (button === 0 || button === 2)) {
+      // co-op: Alt + click marks the spot for the teammate (ui/Chat.js), Alt + right-click danger
+      const p = this.pickGround(x, y, this._p);
+      if (p) this.game.bus.emit('ping', { x: p.x, z: p.z, kind: button === 2 ? 'danger' : 'here' });
+      return;
+    }
     if (this.targeting) {
       if (button === 0) this.confirmTargeting(x, y);
       else if (button === 2) this.cancelTargeting();
@@ -136,25 +143,25 @@ export class CommandSystem {
     if (!this.active) return;
     if (this.targeting) {
       if (code === 'Escape') { this.cancelTargeting(); this.escConsumed = true; }
-      else if (code === 'KeyQ') this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) + Math.PI / 12;
-      else if (code === 'KeyE') this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) - Math.PI / 12;
+      else if (keys.is(code, 'turnLeft')) this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) + Math.PI / 12;
+      else if (keys.is(code, 'turnRight')) this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) - Math.PI / 12;
       return;
     }
-    if (code === 'KeyH') this.runCommand('hold');
-    else if (code === 'KeyN') this.runCommand('build:sandbags');
-    else if (code === 'KeyT') this.runCommand('build:trench');
-    else if (code === 'KeyV') this.runCommand('build:wire');
-    else if (code === 'KeyF') this.runCommand('build:mines');
-    else if (code === 'KeyY') this.runCommand('air');
-    else if (code === 'KeyJ') this.runCommand('air:jet');
-    else if (code === 'KeyP') this.runCommand('air:lift');
-    else if (code === 'KeyK') this.runCommand('smoke');
-    else if (code === 'KeyU') this.runCommand('unload');
-    else if (code === 'KeyX') this.runCommand('engineer');
-    else if (code === 'KeyL') this.runCommand('flare');
-    else if (code === 'KeyC') this.game.bus.emit('ui:reinforcements');
-    else if (code === 'KeyE') this.runCommand('leave');
-    else if (code === 'KeyQ') this.runCommand('selectAll');
+    if (keys.is(code, 'hold')) this.runCommand('hold');
+    else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
+    else if (keys.is(code, 'trench')) this.runCommand('build:trench');
+    else if (keys.is(code, 'wire')) this.runCommand('build:wire');
+    else if (keys.is(code, 'mines')) this.runCommand('build:mines');
+    else if (keys.is(code, 'heli')) this.runCommand('air');
+    else if (keys.is(code, 'jet')) this.runCommand('air:jet');
+    else if (keys.is(code, 'lift')) this.runCommand('air:lift');
+    else if (keys.is(code, 'smoke')) this.runCommand('smoke');
+    else if (keys.is(code, 'unload')) this.runCommand('unload');
+    else if (keys.is(code, 'engineer')) this.runCommand('engineer');
+    else if (keys.is(code, 'flare')) this.runCommand('flare');
+    else if (keys.is(code, 'reinforce')) this.game.bus.emit('ui:reinforcements');
+    else if (keys.is(code, 'leave')) this.runCommand('leave');
+    else if (keys.is(code, 'selectAll')) this.runCommand('selectAll');
     else if (code.startsWith('Digit')) {
       const stack = this.playerStacks()[Number(code.slice(5)) - 1];
       if (!stack) return;

@@ -18,6 +18,13 @@
 // stacks nearest its target, launched a minute or so apart — parallel battles on several axes.
 // Before any of that, empty neutral points are claimed by single infantry stacks (the land grab
 // that opens a battle); the one who took a point stays as its garrison.
+// The group goes in as fire and manoeuvre: MG teams stop on the direct line as a base of fire
+// while the rest comes in from the flank, and the mortars' smoke gets a few seconds to land
+// before anyone moves. A failed assault pulls back under smoke (mortars between the objective
+// and the group, vehicles popping theirs). Forward observers take ground that sees the objective
+// of the running assault — or, between offensives, the enemy facing the most exposed point — so
+// its guns land tight there (UnitStack.observed). Stacks with most of their men badly hurt pull
+// out to the field ambulance (or the rear) and rejoin once patched up.
 // Contested points of its own are reinforced at any time. Garrisons that have settled
 // fortify (sandbags, then a trench). Assaults open with a helicopter strafing run on the target,
 // and dug-in positions near its front get shelled now and then. It buys reinforcements from
@@ -46,6 +53,14 @@ const OP_GAP = [45, 90];            // seconds between launching one operation a
 const FIRST_ASSAULT = 110;          // seconds before the first offensive
 const LULL = [90, 150];             // seconds of regrouping between offensives
 const PROBE_EVERY = [45, 75];
+const SMOKE_SETTLE = 9;             // seconds the assault waits for its smoke screen to land
+const RECOVER_AGAIN = 150;          // seconds before a stack that was pulled out goes again
+
+/** Share of a stack's living men (or vehicles) under half health. */
+const hurtShare = (s) => {
+  const alive = s.units.filter((u) => u.alive);
+  return alive.length ? alive.filter((u) => u.hp < u.maxHp * 0.5).length / alive.length : 0;
+};
 
 const strength = (s) => (s.alive ? s.hpRatio * (s.type.cost ?? 150) : 0);
 const rand = ([a, b]) => a + Math.random() * (b - a);
@@ -55,12 +70,13 @@ export class FrontlineDirector {
     this.game = game;
     this.faction = faction;
     this.state = state;      // mode state: { points, cp, buy() }
-    this.opts = { attack: true, buy: true, expand: true, targetable: null, firstAssault: FIRST_ASSAULT, ...opts };
+    this.opts = { attack: true, buy: true, expand: true, targetable: null, firstAssault: FIRST_ASSAULT, tempo: 1, ...opts };
+    this.tempo = this.opts.tempo;   // difficulty (data/rules.js): < 1 attacks sooner and more often
     this.timer = 6;          // let the opening settle
     this.buildIndex = 0;
     this.roles = new Map();  // stack → { role: 'garrison' | 'strike' | 'probe', point, until }
     this.ops = [];           // running operations: { phase, since, plan: { target, stage, group, startStrength } }
-    this.nextOffensive = this.opts.firstAssault;
+    this.nextOffensive = this.opts.firstAssault * this.tempo;
     this.nextProbe = 50;
   }
 
@@ -79,6 +95,8 @@ export class FrontlineDirector {
     for (const s of this.roles.keys()) if (!s.alive) this.roles.delete(s);
     if (this.opts.buy) this.buy();
     this.illuminate();
+    this.casualties();
+    this.observe();
     if (this.opts.expand) this.expand();
     this.garrison();
     this.respond();
@@ -243,27 +261,37 @@ export class FrontlineDirector {
     this.ops.push(op);
     for (const s of plan.group) {
       this.roles.set(s, { role: 'strike', point: plan.target, op });
-      s.ai.moveTo(this.jitter(plan.stage, 10), { hold: s.usesCover, ordered: false });
+      const base = this.baseOfFire(s);
+      s.ai.moveTo(this.jitter(base ? plan.support : plan.stage, base ? 6 : 10), { hold: s.usesCover, ordered: false });
     }
-    this.nextOffensive = this.now + rand(OP_GAP); // the next operation can open on another axis
+    this.nextOffensive = this.now + rand(OP_GAP) * this.tempo; // the next operation can open on another axis
   }
 
   runOp(op) {
     const plan = op.plan;
-    const group = plan.group.filter((s) => s.alive);
+    const group = plan.group.filter((s) => s.alive && this.roles.get(s)?.op === op); // not the ones pulled out hurt
     const t = plan.target;
     switch (op.phase) {
       case 'stage': {
-        const gathered = group.every((s) => Math.hypot(s.anchor.x - plan.stage.x, s.anchor.z - plan.stage.z) < 30 || s.ai.state === AIState.DEFEND);
+        const gathered = group.every((s) => {
+          const at = this.baseOfFire(s) ? plan.support : plan.stage;
+          return Math.hypot(s.anchor.x - at.x, s.anchor.z - at.z) < 30 || s.ai.state === AIState.DEFEND;
+        });
         if (!gathered && this.now - op.since < 70) return;
         this.game.air.call(this.faction, t.x, t.z); // a strafing run ahead of the assault (if affordable and ready)
         if (this.state.cp[this.faction] > 450) {
           const lz = this.offsetTowardBase(t, 35);
           this.game.air.call(this.faction, lz.x, lz.z, null, 'lift'); // and a squad landed right behind it
         }
-        this.screenAssault(group, t);
+        op.smoked = this.screenAssault(group.filter((s) => !this.baseOfFire(s)), t);
+        this.setPhase(op, 'prep');
+        return;
+      }
+      case 'prep': {
+        if (op.smoked && this.now - op.since < SMOKE_SETTLE) return; // let the screen build up first
         this.game.bus.emit('toast', `Enemy assault on ${t.name}!`);
         for (const s of group) {
+          if (this.baseOfFire(s)) continue; // stays on the line, shooting the defenders down
           if (s.usesCover) s.ai.moveTo(this.jitter(t, 6), { hold: true, ordered: false }); // take it and dig in
           else {
             const foe = this.game.world.nearestEnemyGroup(t, this.faction, 100);
@@ -279,7 +307,8 @@ export class FrontlineDirector {
         if (t.owner === this.faction) {
           this.setPhase(op, 'consolidate');
         } else if (left < plan.startStrength * 0.4 || this.now - op.since > 170 || !group.length) {
-          // failed: fall back to the staging area and regroup
+          // failed: fall back to the staging area under smoke and regroup
+          this.coverWithdrawal(group, t);
           for (const s of group) s.ai.moveTo(this.jitter(plan.stage, 10), { hold: s.usesCover, ordered: false });
           this.endOp(op);
         }
@@ -298,7 +327,7 @@ export class FrontlineDirector {
   endOp(op) {
     for (const [s, r] of this.roles) if (r.role === 'strike' && r.op === op) this.roles.delete(s);
     this.ops.splice(this.ops.indexOf(op), 1);
-    if (!this.ops.length) this.nextOffensive = Math.max(this.nextOffensive, this.now + rand(LULL));
+    if (!this.ops.length) this.nextOffensive = Math.max(this.nextOffensive, this.now + rand(LULL) * this.tempo);
   }
 
   /**
@@ -348,13 +377,15 @@ export class FrontlineDirector {
       x: target.x + px * 48 * side - (dx / d) * 38,
       z: target.z + pz * 48 * side - (dz / d) * 38,
     });
-    return { target, stage, group, startStrength: ours };
+    // the base of fire: on the direct line from our front, short of the objective
+    const support = this.game.world.clampToBounds({ x: target.x - (dx / d) * 60, z: target.z - (dz / d) * 60 });
+    return { target, stage, support, group, startStrength: ours };
   }
 
   /** Send a marksman or MG team to overwatch ground ahead of the line for a while. */
   probe() {
     if (this.now < this.nextProbe) return;
-    this.nextProbe = this.now + rand(PROBE_EVERY);
+    this.nextProbe = this.now + rand(PROBE_EVERY) * this.tempo;
     if (Math.random() < 0.35 && this.harass()) return;
     // a random exposed point of ours (so probes come from every sector), toward its nearest unowned point
     const exposed = this.points.filter((p) => p.owner === this.faction).sort((a, b) => this.frontness(a) - this.frontness(b)).slice(0, 3);
@@ -378,12 +409,117 @@ export class FrontlineDirector {
     const cx = group.reduce((a, s) => a + s.anchor.x, 0) / n;
     const cz = group.reduce((a, s) => a + s.anchor.z, 0) / n;
     const d = Math.hypot(t.x - cx, t.z - cz) || 1;
-    const x = t.x - ((t.x - cx) / d) * 22;
-    const z = t.z - ((t.z - cz) / d) * 22;
+    return this.smokeAt(t.x - ((t.x - cx) / d) * 22, t.z - ((t.z - cz) / d) * 22);
+  }
+
+  /** Smoke from every mortar in range on (x, z). Did any take the order? */
+  smokeAt(x, z) {
+    let any = false;
     for (const s of this.game.world.stacksOf(this.faction)) {
-      if (s.smokeRounds > 0 && Math.hypot(s.centroid.x - x, s.centroid.z - z) < s.unitStats(0).range) {
+      if (s.smokeRounds > 0 && !s.smokeOrder && Math.hypot(s.centroid.x - x, s.centroid.z - z) < s.unitStats(0).range) {
         s.smokeOrder = { x, z, left: 3 };
+        any = true;
       }
+    }
+    return any;
+  }
+
+  /** A beaten assault: mortar smoke between the objective and the group, vehicles pop theirs. */
+  coverWithdrawal(group, t) {
+    const n = group.length || 1;
+    const cx = group.reduce((a, s) => a + s.anchor.x, 0) / n;
+    const cz = group.reduce((a, s) => a + s.anchor.z, 0) / n;
+    this.smokeAt(cx + (t.x - cx) * 0.4, cz + (t.z - cz) * 0.4);
+    for (const s of group) if (s.stats.smoke && s.smokeLeft > 0) this.game.orders.run(this.faction, { t: 'popSmoke', s: [s.id] });
+  }
+
+  /** Goes in as the base of fire rather than with the assault. */
+  baseOfFire(s) {
+    return s.type.id === 'mgTeam';
+  }
+
+  // ---------------------------------------------------------------- observers & casualties
+
+  /**
+   * Forward observers onto ground that sees what matters most right now: a point of ours under
+   * attack, else the objective of a running assault, else the enemy point facing our most exposed
+   * one. Our guns fire on whatever the side spots; an observer who sees the spot makes them land
+   * far tighter there.
+   */
+  observe() {
+    const focus = this.points.find((p) => p.owner === this.faction && p.contested)
+      ?? this.ops.find((o) => o.phase !== 'consolidate')?.plan.target
+      ?? this.facing();
+    if (!focus) return;
+    for (const s of this.myStacks()) {
+      if (!s.stats.observer || s.ai.state === AIState.RETREAT) continue;
+      const r = this.roles.get(s);
+      if (r && !['observe', 'garrison', 'expand', 'probe'].includes(r.role)) continue; // hurt, or in an assault
+      if (r?.role === 'observe' && (r.point === focus ? this.now < r.until : this.now < r.since + 45)) continue; // don't chase every flicker
+      const spot = this.lookout(s, focus);
+      this.roles.set(s, { role: 'observe', point: focus, spot, since: this.now, until: this.now + 60 });
+      s.ai.moveTo(spot, { hold: true, ordered: false });
+    }
+  }
+
+  /** The enemy-held point nearest our most exposed one. */
+  facing() {
+    const front = this.points.filter((p) => p.owner === this.faction).sort((a, b) => this.frontness(a) - this.frontness(b))[0];
+    if (!front) return null;
+    return this.points.filter((p) => p.owner !== this.faction)
+      .sort((a, b) => Math.hypot(a.x - front.x, a.z - front.z) - Math.hypot(b.x - front.x, b.z - front.z))[0] ?? null;
+  }
+
+  /**
+   * Where an observer team should lie to watch `p`: about 70 % of its sight away, on our side,
+   * with a clear view of the ground there and no enemy close by — the higher the better.
+   */
+  lookout(s, p) {
+    const world = this.game.world;
+    const terrain = world.terrain;
+    const base = world.bases[this.faction];
+    const home = Math.atan2(base.x - p.x, base.z - p.z);
+    const r = s.stats.sight * 0.7;
+    const foes = world.stacksOf(enemyOf(this.faction));
+    const gy = terrain.heightAt(p.x, p.z);
+    let best = null;
+    let bestScore = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      const a = home + (i - 4) * 0.3;
+      const spot = world.clampToBounds({ x: p.x + Math.sin(a) * r, z: p.z + Math.cos(a) * r });
+      const y = terrain.heightAt(spot.x, spot.z);
+      let score = y - Math.abs(i - 4) * 0.5;
+      if (!terrain.lineOfSight(spot.x, y + 1, spot.z, p.x, gy + 1, p.z)) score -= 100;
+      if (foes.some((f) => Math.hypot(f.centroid.x - spot.x, f.centroid.z - spot.z) < 45)) score -= 60;
+      if (score > bestScore) { bestScore = score; best = spot; }
+    }
+    return best;
+  }
+
+  /**
+   * Stacks with most of their men (or vehicles) badly hurt pull out — to a field ambulance or
+   * recovery vehicle if we have one (systems/Support.js patches them up), else back toward our
+   * base — and rejoin the pool once fit or after a while. A garrison holds on while its point is
+   * being fought for, unless it is nearly gone.
+   */
+  casualties() {
+    const mine = this.myStacks();
+    for (const [s, r] of this.roles) {
+      if (r.role === 'recover' && (this.now > r.until || hurtShare(s) < 0.2)) {
+        this.roles.delete(s);
+        s.recoveredAt = this.now;
+      }
+    }
+    for (const s of mine) {
+      const r = this.roles.get(s);
+      if (r?.role === 'recover' || s.stats.heal || s.stats.repair || s.stats.structure || s.ai.state === AIState.RETREAT) continue;
+      if (this.now - (s.recoveredAt ?? -Infinity) < RECOVER_AGAIN || hurtShare(s) < 0.5) continue;
+      if (r?.role === 'garrison' && r.point.contested && s.hpRatio > 0.25) continue;
+      const fixer = mine.find((o) => o.alive && (s.usesCover ? o.stats.heal : o.stats.repair));
+      const to = fixer ? this.jitter(fixer.centroid, 6) : this.offsetTowardBase(s.centroid, 60);
+      this.roles.set(s, { role: 'recover', until: this.now + (fixer ? 120 : 50) });
+      s.ai.moveTo(this.game.world.clampToBounds(to), { hold: s.usesCover, ordered: false });
+      if (fixer && !fixer.working) fixer.ai.moveTo(this.jitter(s.centroid, 8), { ordered: false });
     }
   }
 

@@ -28,7 +28,11 @@ npm run typecheck  # TypeScript check (files move from .js to .ts one at a time)
 Players of a built version need only a browser: `dist/` is plain static files with relative
 paths, so it works from any web host or sub-folder.
 
-The **main menu** has four panels:
+The **main menu** has these panels:
+- **Boot camp:** a guided exercise near your base (modes/bootcamp.js, card in ui/Tutorial.js):
+  the camera, selecting and moving, attacking and suppression, mortar smoke, artillery with a
+  forward observer, direct control, reinforcements and taking a point. Tasks tick off as you do
+  them; the targets shoot back harmlessly.
 - **Single player:** pick a mode, a map, your side, the time of day and the weather, then
   *Deploy* — against the AI, with direct control.
 - **Campaign:** a war of up to twelve battles on the Fulda front with one battalion (see below).
@@ -79,6 +83,9 @@ straight back into the same battle; any other start or reload shows the menu. Fo
 - **Time and weather:** day, dawn, dusk or night; clear, overcast, rain or fog. Low light and bad
   weather shorten everyone's sight (night much more — except the Abrams' and Bradley's thermal
   sights); rain is mud (vehicles slower); mortars carry illumination flares for the night (L).
+  In single player the weather moves on every four to seven minutes unless the battle rule says
+  otherwise (systems/WeatherChange.js): announced on the radio a minute ahead, then blended in
+  over a minute or so — sight, fog, sky, light, rain and mud.
 
 ## Campaign
 
@@ -91,15 +98,30 @@ Between battles, replacement points (more for every sector held) refill squads o
 stacks. A successful attack pushes the front a sector; a defence that holds keeps it. Break
 through to the enemy's rear to win — or hold more ground after twelve turns. Saved in the browser.
 
+About four in ten of the men a surviving stack loses were only wounded: they rejoin it after the
+next battle (shown as +n). The briefing gives intel on the enemy force — counted if the battalion
+has scouts or a recon vehicle, otherwise only guessed. Every turn brings an event for the coming
+battle: air superiority for one side (the other's aircraft grounded), a battery of guns attached
+for that battle, fresh enemy reserves, a supply convoy lost, or fog. The other two columns fight
+their own battles and may move a sector (never into either rear). The map marks every battle
+fought and shows an arrow on the coming one.
+
 ## Multiplayer
 
 One player hosts, the other joins; both need this same version of the game (the same link, or
 the same build).
 
-1. Host: *Multiplayer → Host a game*, pick the map and your side, press **Host game**. A
+1. Both: type **your name** at the top of the Multiplayer tab (kept for next time).
+2. Host: *Multiplayer → Host a game*, pick the map and your side, press **Host game**. A
    five-letter **join code** appears (e.g. `K7Q2M`) — send it to your friend.
-2. Friend: *Multiplayer → Join a game*, type the code, **Join**.
-3. Host: **Start battle**. Both load the map; the battle begins when both are in.
+3. Friend: *Multiplayer → Join a game*, type the code, **Join**. Both see who is in and on
+   which side, and can **chat** in the lobby.
+4. Friend: **Ready**. Host: **Start battle** (it waits until the friend is ready). Both load the
+   map; the battle begins when both are in.
+
+In battle, **Enter** opens the chat line (Enter sends, Esc closes — the key can be rebound). In
+co-op, **Alt + click** on the battlefield or the minimap marks a spot for your teammate and
+**Alt + right-click** marks danger: a pulsing ring on the ground and the minimap for a few seconds.
 
 The host also picks the mode and **versus** (one side each) or **co-op** (both on the same side
 against the AI — each player commands their own stacks; your partner's are marked; command
@@ -175,7 +197,11 @@ all and the three support powers (with their price, or the seconds until ready) 
   helicopter run and a mortar smoke screen), then *consolidate* — or fall back if it fails. With
   a big enough army it runs two or three such operations at once in different sectors. It
   garrisons its exposed points, fortifies them (sandbags, trench, wire, mines) and reinforces any
-  that are contested.
+  that are contested. Assaults go in as fire and manoeuvre: MG teams stop short on the direct
+  line as a base of fire while the rest comes in from the flank, and the infantry waits a few
+  seconds for the smoke to build; a failed assault pulls back under smoke. Its forward observers
+  take ground that sees the fight (so its guns land tight there), and badly hurt stacks pull out
+  to its ambulance or the rear and come back once patched up.
 - **Lethal infantry.** 100 HP: a solid hit puts a soldier down ~70 % of the time, otherwise
   he's wounded — slow, prone, crawling back — and the next hit finishes him. Rifles fire single
   aimed shots (aiming takes longer at range and under fire). Soldiers stand, crouch or go
@@ -340,7 +366,7 @@ src/
   combat/      ProjectileSystem (rounds, tracers, rockets, shells, splash, directional armour),
                EffectsSystem (particle smoke / fire / dirt, flash lights, burning wrecks), BeamSystem (unused)
   systems/     PlayerControl (direct control), CommandSystem (RTS orders + targeting mode),
-               VisibilitySystem (fog of war, view cones), ControlPoints, AuraSystem (leadership),
+               VisibilitySystem (fog of war, view cones), ControlPoints,
                Construction (sandbags, trenches, wire, mines), AirStrike (helicopter strafing runs), CrewBailout,
                Smoke (screens that block sight), Transport (IFV passengers), Buildings (occupation, collapse),
                Flares (night illumination), BattleStats (after-action record, veterancy), Ambience (the war beyond the map)

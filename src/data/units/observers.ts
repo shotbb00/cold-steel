@@ -1,6 +1,7 @@
 // Forward observers: a two-man team with binoculars and the radio. Like scouts they see far and
 // are hard to find, but their job is the fire: every mortar, gun and rocket of their side that
-// shoots at something within their sight lands far tighter (`observer`: scatter ×0.4) — the
+// shoots at something one of them can actually see (in range, over the terrain, not through smoke)
+// lands far tighter (`observer`: scatter ×0.4) — the
 // difference between a barrage on the trench and one in the field next to it.
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';

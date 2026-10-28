@@ -137,6 +137,12 @@ export class BabylonView {
     this.engine.resize();
   }
 
+  /** The weather changed the sky (systems/WeatherChange.js): new colours, and the sky light re-rendered. */
+  setSky(theme, relight = false) {
+    this.sky?.set(theme);
+    if (relight) this.probe?.cubeTexture.resetRefreshCounter();
+  }
+
   /** A render/Quality.js preset: resolution, anti-aliasing, AO, bloom, shadow map size. */
   applyQuality(q) {
     this.setPixelRatio(q.resolution);

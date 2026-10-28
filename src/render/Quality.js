@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import { settings } from '../core/Settings.js';
 import { setLodDistance } from './StackRenderer.js';
+import { keys } from '../core/Keys.js';
 
 export const QUALITY = {
   verylow: {
@@ -48,6 +49,7 @@ const ORDER = ['verylow', 'low', 'medium', 'high'];
 const WATCH_FROM = 4;   // seconds after start before the frame rate counts (shaders compiling)
 const WATCH_FOR = 8;    // seconds of frame rate to average
 const TOO_SLOW = 32;    // fps below which the auto check steps down
+const BENCH_GOAL = 40;  // the benchmark (settings 'benchmark') looks for the best level that holds this
 
 const load = () => settings.get('quality');
 const save = (level) => settings.set('quality', level);
@@ -58,9 +60,11 @@ export class Quality {
     const stored = load();
     this.level = QUALITY[stored] ? stored : 'medium';
     this.auto = !QUALITY[stored]; // only judge the machine when the player hasn't chosen
+    this.goal = TOO_SLOW;
     this.watch = { t: 0, frames: 0, time: 0 };
     this.apply(this.level);
-    game.bus.on('key', ({ code }) => { if (code === 'KeyG') this.cycle(); });
+    if (settings.get('benchmark')) this.benchmark();   // asked for from the main menu: run it in this battle
+    game.bus.on('key', ({ code }) => { if (keys.is(code, 'quality')) this.cycle(); });
     // chosen in a settings panel
     settings.on((key, value) => {
       if (key === 'quality' && QUALITY[value] && value !== this.level) {
@@ -69,7 +73,24 @@ export class Quality {
         this.apply(value);
       }
       if (key === 'renderScale') this.apply(this.level);
+      if (key === 'benchmark' && value) this.benchmark();   // asked for from the pause menu: run it now
     });
+  }
+
+  /**
+   * Find the best setting for this machine: start on High with the preset's own resolution and
+   * step down a level each time the frame rate over a few seconds falls short of BENCH_GOAL fps.
+   */
+  benchmark() {
+    settings.set('benchmark', false);
+    settings.set('renderScale', null);
+    this.auto = true;
+    this.goal = BENCH_GOAL;
+    this.benching = true;
+    this.level = 'high';
+    this.apply('high');
+    this.watch = { t: 0, frames: 0, time: 0 };
+    this.game.bus.emit('toast', 'Benchmark: testing graphics levels for a few seconds each…');
   }
 
   cycle() {
@@ -131,12 +152,17 @@ export class Quality {
     if (w.time < WATCH_FOR) return;
     const fps = w.frames / w.time;
     const i = ORDER.indexOf(this.level);
-    if (fps < TOO_SLOW && i > 0) {
+    if (fps < this.goal && i > 0) {
       this.set(ORDER[i - 1], ` — ${Math.round(fps)} fps was too slow`);
       this.watch = { t: WATCH_FROM - 1, frames: 0, time: 0 }; // check again on the new setting
     } else {
       this.auto = false;
       save(this.level);
+      if (this.benching) {
+        this.benching = false;
+        this.goal = TOO_SLOW;
+        this.game.bus.emit('toast', `Benchmark done: ${QUALITY[this.level].label} suits this machine (${Math.round(fps)} fps)${fps < BENCH_GOAL ? ' — try a lower render scale too' : ''}`);
+      }
     }
   }
 }

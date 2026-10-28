@@ -9,6 +9,13 @@
 //   • Your battalion: every stack keeps its men and its experience. Survivors come home with
 //     what they have; the dead are gone. Between battles replacement points (more for every
 //     sector held) refill squads or bring in new stacks.
+//   • Wounded: about four in ten of the men a surviving stack loses were only wounded — they
+//     rejoin it after the next battle. A stack wiped out loses its wounded too.
+//   • Intel: the briefing estimates the enemy force; with scouts or a recon vehicle in the
+//     battalion it counts them, without it can only guess.
+//   • The war goes on around you: every turn brings an event for the coming battle (air
+//     superiority one way or the other, attached guns, enemy reserves, a supply convoy lost,
+//     fog), and the other two columns may move on their own — never far enough to decide it.
 //   • You win by breaking through to the enemy's rear in any column, or by holding more ground
 //     than they do after twelve turns. You lose if they reach yours.
 // Saved in localStorage ('coldsteel.campaign').
@@ -32,6 +39,26 @@ export const START_BATTALION = ['rifles', 'rifles', 'rifles', 'rifles', 'mgTeam'
 const REPLACEMENTS = 450;           // per turn…
 const PER_SECTOR = 60;              // …plus per sector held
 const MAX_BATTALION = 18;
+const WOUNDED_SHARE = 0.4;          // of a surviving stack's losses: back after the next battle
+const ELSEWHERE = 0.3;              // chance per other column that its front moves this turn
+const RECON = ['scouts', 'reconVehicle'];
+
+// what can happen before a battle; weight = how often, apply(c, battle) changes it
+export const EVENTS = {
+  quiet: { weight: 5 },
+  airCover: { weight: 1, text: 'Our air force holds the sky over the sector: the enemy\'s aircraft stay grounded for this battle.' },
+  enemyAir: { weight: 1, text: 'Enemy air superiority: our helicopters and jets are grounded for this battle.' },
+  guns: { weight: 1, text: 'Corps artillery has a battery to spare: a battery of guns is attached to us for this battle.' },
+  reserves: { weight: 1, text: 'The enemy has brought up fresh reserves: expect more armour.' },
+  supply: { weight: 1, text: 'A supply convoy was shot up on the road: 150 replacement points lost.', apply: (c) => { c.points = Math.max(0, c.points - 150); } },
+  fog: { weight: 1, text: 'Fog has settled in the valleys.', apply: (c, b) => { b.weather = 'fog'; } },
+};
+const rollEvent = () => {
+  const all = Object.entries(EVENTS);
+  let r = Math.random() * all.reduce((a, [, e]) => a + e.weight, 0);
+  for (const [id, e] of all) if ((r -= e.weight) < 0) return id;
+  return 'quiet';
+};
 
 let uid = 1;
 const unit = (type, name) => ({ cid: `c${Date.now().toString(36)}${uid++}`, type, name, men: UNIT_TYPES[type].formation.count, xp: 0 });
@@ -66,6 +93,7 @@ export function newCampaign(side) {
     front: { west: 3, centre: 3, east: 3 }, // sectors 0..front-1 are NATO's, front..5 the Pact's
     battalion,
     points: 200,
+    history: [],   // battles fought: { col, row, won, turn }
     log: [`Turn 1 — the war begins. The ${side === 'nato' ? 'Warsaw Pact is massing on the border' : 'NATO line is thin along the border'}.`],
     next: null,
     over: null,
@@ -101,7 +129,7 @@ export function planBattle(c, col = null) {
   // the contested sector: the defender's sector at the front in that column
   const row = attacker === 'pact' ? c.front[col] - 1 : c.front[col];
   const s = sector(c, col, Math.max(0, Math.min(ROWS - 1, row)));
-  return {
+  const b = {
     attacker,
     col,
     row,
@@ -110,7 +138,26 @@ export function planBattle(c, col = null) {
     time: HOURS[(c.turn - 1) % HOURS.length],
     weather: WEATHERS[Math.floor(Math.random() * WEATHERS.length)],
     choose: false,
+    event: c.turn === 1 ? 'quiet' : rollEvent(),
   };
+  EVENTS[b.event]?.apply?.(c, b);
+  return b;
+}
+
+/**
+ * The briefing's picture of the enemy: counted by kind with recon in the battalion, otherwise
+ * only a rough word for each. Returns [label, estimate] pairs.
+ */
+export function intel(c, battle) {
+  const force = enemyForce(c, battle);
+  const scouted = c.battalion.some((u) => RECON.includes(u.type));
+  const kinds = { Infantry: 0, Armour: 0, 'Fire support': 0, 'Air defence': 0 };
+  for (const { type } of force) {
+    const cat = UNIT_TYPES[type]?.category;
+    kinds[cat === 'armour' ? 'Armour' : cat === 'fire' ? 'Fire support' : cat === 'airdefence' ? 'Air defence' : 'Infantry']++;
+  }
+  const guess = (n) => (n === 0 ? 'none seen' : n <= 1 ? 'some' : n <= 3 ? 'several' : 'strong');
+  return { scouted, rows: Object.entries(kinds).map(([k, n]) => [k, scouted ? (n ? `${n} stack${n > 1 ? 's' : ''}` : 'none') : guess(n)]) };
 }
 
 /** The enemy's force for this battle: grows with the war. */
@@ -120,7 +167,8 @@ export function enemyForce(c, battle) {
     ? ['rifles', 'rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'tank', 'tank', 'ifv', 'mortar', 'engineers', 'scouts', 'aa']
     : ['rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'atTeam', 'tank', 'mortar', 'engineers', 'scouts'];
   const extra = ['rifles', 'tank', 'ifv', 'atTeam', 'mgTeam', 'artillery'].slice(0, Math.floor(c.turn / 2));
-  return [...base, ...extra].map((type) => ({ type }));
+  const reserves = battle.event === 'reserves' ? ['tank', 'ifv', 'rifles'] : [];
+  return [...base, ...extra, ...reserves].map((type) => ({ type }));
 }
 
 /** What a battle needs to start: the menu hands this to main.js start(). */
@@ -135,8 +183,10 @@ export function battleChoice(c) {
     campaign: {
       attacker: b.attacker,
       sector: b.name,
+      event: b.event ?? 'quiet',
       forces: {
-        [c.side]: c.battalion.map((u) => ({ ...u })),
+        // the battalion (wounded men stay behind), plus guns attached for this battle only
+        [c.side]: [...c.battalion.map((u) => ({ ...u })), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : [])],
         [enemyOf(c.side)]: enemyForce(c, b),
       },
     },
@@ -151,9 +201,17 @@ export function recordBattle(c, { won, survivors }) {
   const b = c.next;
   const byId = new Map(survivors.filter((s) => s.cid).map((s) => [s.cid, s]));
   const before = c.battalion.length;
+  let wounded = 0;
+  let back = 0;
   c.battalion = c.battalion.filter((u) => byId.has(u.cid)).map((u) => {
     const s = byId.get(u.cid);
-    return { ...u, men: s.men, xp: s.xp, rank: s.rank };
+    const full = UNIT_TYPES[u.type].formation.count;
+    // last battle's wounded come back; some of today's losses were only wounded
+    const returning = Math.min(u.wounded ?? 0, full - s.men);
+    back += returning;
+    const hurt = Math.round(Math.max(0, u.men - s.men) * WOUNDED_SHARE);
+    wounded += hurt;
+    return { ...u, men: s.men + returning, wounded: hurt, xp: s.xp, rank: s.rank };
   });
   const lost = before - c.battalion.length;
   for (const s of survivors) if (!s.cid && c.battalion.length < MAX_BATTALION) c.battalion.push({ ...unit(s.type, s.name), men: s.men, xp: s.xp, rank: s.rank });
@@ -162,7 +220,11 @@ export function recordBattle(c, { won, survivors }) {
   const winner = won ? c.side : enemyOf(c.side);
   const attackerWon = winner === b.attacker;
   if (attackerWon) c.front[b.col] = Math.max(0, Math.min(ROWS, c.front[b.col] + (winner === 'nato' ? 1 : -1)));
-  c.log.unshift(`Turn ${c.turn} — ${b.name} (${b.col}): ${attackerWon ? `${b.attacker === c.side ? 'our attack broke through' : 'the enemy broke through'}` : `${b.attacker === c.side ? 'our attack was thrown back' : 'we held'}`}.${lost > 0 ? ` ${lost} stack${lost > 1 ? 's' : ''} lost.` : ''}`);
+  (c.history ??= []).push({ col: b.col, row: b.row, won, turn: c.turn });
+  const men = [lost > 0 ? `${lost} stack${lost > 1 ? 's' : ''} lost` : '', wounded ? `${wounded} wounded` : '', back ? `${back} back from the aid station` : ''].filter(Boolean).join(', ');
+  c.log.unshift(`Turn ${c.turn} — ${b.name} (${b.col}): ${attackerWon ? `${b.attacker === c.side ? 'our attack broke through' : 'the enemy broke through'}` : `${b.attacker === c.side ? 'our attack was thrown back' : 'we held'}`}.${men ? ` ${men[0].toUpperCase()}${men.slice(1)}.` : ''}`);
+  const news = elsewhere(c, b.col, winner);
+  if (news) c.log.unshift(`Turn ${c.turn} — elsewhere: ${news}`);
   // replacements
   const gain = REPLACEMENTS + PER_SECTOR * held(c, c.side);
   c.points += gain;
@@ -184,6 +246,27 @@ export function recordBattle(c, { won, survivors }) {
   c.next = c.over ? null : planBattle(c);
   saveCampaign(c);
   return { gain };
+}
+
+/**
+ * The other columns fight their own battles: each may move one sector, more likely toward the
+ * side that just won here. It never reaches either rear — only your battles decide the war.
+ * Returns a line for the log, or ''.
+ */
+function elsewhere(c, fought, winner) {
+  const lines = [];
+  for (const col of COLUMNS) {
+    if (col === fought || Math.random() > ELSEWHERE) continue;
+    const natoGains = Math.random() < (winner === 'nato' ? 0.6 : 0.4);
+    const next = c.front[col] + (natoGains ? 1 : -1);
+    if (next < 1 || next > ROWS - 1) continue;
+    // the sector that changed hands: NATO took the Pact's front sector, or lost its own
+    const name = NAMES[col][natoGains ? c.front[col] : c.front[col] - 1];
+    c.front[col] = next;
+    const ours = (natoGains ? 'nato' : 'pact') === c.side;
+    lines.push(`in the ${col} ${ours ? 'our neighbours took' : 'the enemy took'} ${name}`);
+  }
+  return lines.length ? `${lines.join('; ')}.` : '';
 }
 
 /** Between battles: refill a squad (men back to full) — cost by the share missing. */

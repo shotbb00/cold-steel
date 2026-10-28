@@ -5,11 +5,14 @@ const STORE = 'coldsteel.settings';
 
 export const DEFAULTS = {
   quality: null,       // 'low' | 'medium' | 'high'; null = not chosen yet (auto-detect on first run)
+  benchmark: false,    // true: the next (or current) battle runs the graphics benchmark (render/Quality.js)
   renderScale: null,   // 0.5 … 1: render resolution against the screen; null = the quality preset's
   volume: 0.8,         // master volume 0..1
   sensitivity: 1,      // mouse look multiplier (direct control)
   invertY: false,
   showFps: true,
+  keys: {},
+  playerName: '',      // shown to the other player in multiplayer (lobby, chat)            // the player's own key bindings: { action: KeyboardEvent.code } (core/Keys.js)
 };
 
 function load() {

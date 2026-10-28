@@ -74,7 +74,7 @@ export class InputHandler {
   }
 
   eventInfo(e) {
-    return { button: e.button, x: e.clientX, y: e.clientY, shift: e.shiftKey, ctrl: e.ctrlKey || e.altKey || e.metaKey };
+    return { button: e.button, x: e.clientX, y: e.clientY, shift: e.shiftKey, ctrl: e.ctrlKey || e.altKey || e.metaKey, alt: e.altKey };
   }
 
   isDown(code) {

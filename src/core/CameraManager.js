@@ -6,6 +6,7 @@
 import { settings } from './Settings.js';
 import * as THREE from 'three';
 import { clamp } from './math.js';
+import { keys } from './Keys.js';
 
 export const CameraMode = Object.freeze({ ACTION: 'action', TACTICAL: 'tactical' });
 
@@ -111,7 +112,7 @@ export class CameraManager {
     const wheel = this.input.consumeWheel();
 
     if (this.mode === CameraMode.ACTION) {
-      if (this.input.locked) {
+      if (this.input.locked || this.input.touch) { // touch: the look pad feeds the same deltas (ui/TouchControls.js)
         const a = this.action;
         const k = a.sensitivity * settings.get('sensitivity');
         a.yaw -= md.x * k;
@@ -121,8 +122,8 @@ export class CameraManager {
     }
 
     const tc = this.tactical;
-    let px = this.input.axis(['KeyA', 'ArrowLeft'], ['KeyD', 'ArrowRight']);
-    let pz = this.input.axis(['KeyW', 'ArrowUp'], ['KeyS', 'ArrowDown']);
+    let px = this.input.axis(keys.all('left'), keys.all('right'));
+    let pz = this.input.axis(keys.all('up'), keys.all('down'));
     const m = this.input.mouse;
     if (m.inside && !this.input.isMouseDown(0)) {
       if (m.x < tc.edge) px -= 1; else if (m.x > innerWidth - tc.edge) px += 1;

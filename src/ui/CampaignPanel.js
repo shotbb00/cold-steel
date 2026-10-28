@@ -1,7 +1,9 @@
 // The Campaign tab of the main menu (campaign/Campaign.js): start a campaign as either side;
-// then the strategic map (three columns, six sectors deep, your rear at the bottom), the
-// coming battle (or, on your turns, a choice of where to attack), the battalion with its men
-// and ranks — refill squads and recruit with replacement points — and the war so far.
+// then the strategic map (three columns, six sectors deep, your rear at the bottom; the battles
+// fought so far marked where they were, an arrow on the coming one), the briefing for the coming
+// battle (or, on your turns, a choice of where to attack) with the war's latest event and what
+// intel knows of the enemy, the battalion with its men, wounded and ranks — refill squads and
+// recruit with replacement points — and the war so far.
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { MAPS } from '../maps/index.js';
@@ -9,7 +11,7 @@ import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RANKS } from '../entities/UnitStack.js';
 import {
   loadCampaign, newCampaign, clearCampaign, saveCampaign, planBattle, battleChoice, sector, held,
-  refill, refillCost, recruit, COLUMNS, ROWS, TURNS, MAX_BATTALION,
+  refill, refillCost, recruit, intel, EVENTS, COLUMNS, ROWS, TURNS, MAX_BATTALION,
 } from '../campaign/Campaign.js';
 
 const el = (tag, cls, html) => {
@@ -110,6 +112,26 @@ export class CampaignPanel {
       const fy = me === 'nato' ? H - c.front[col] * rh : c.front[col] * rh;
       cells += `<line class="cp-front" x1="${i * cw}" x2="${(i + 1) * cw}" y1="${fy}" y2="${fy}"/>`;
     });
+    // battles fought: a mark in the sector's corner, ours won or lost (the latest on top)
+    const seen = new Set();
+    for (const h of [...(c.history ?? [])].reverse()) {
+      const k = `${h.col}:${h.row}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const x = COLUMNS.indexOf(h.col) * cw + cw - 14;
+      const y = rowY(h.row) + 14;
+      cells += `<g class="cp-mark ${h.won ? 'won' : 'lost'}"><title>Turn ${h.turn}: ${h.won ? 'won' : 'lost'}</title><circle cx="${x}" cy="${y}" r="7"/><path d="M${x - 3.5} ${y - 3.5}L${x + 3.5} ${y + 3.5}M${x + 3.5} ${y - 3.5}L${x - 3.5} ${y + 3.5}"/></g>`;
+    }
+    // the coming battle: an arrow from the attacker's side across the front into the target
+    if (b && !b.choose) {
+      const x = COLUMNS.indexOf(b.col) * cw + cw / 2;
+      const fromUs = b.attacker === me;   // we attack upward (our rear is at the bottom)
+      const fy = me === 'nato' ? H - c.front[b.col] * rh : c.front[b.col] * rh;
+      const dir = fromUs ? -1 : 1;
+      const y0 = fy - dir * rh * 0.45;
+      const y1 = fy + dir * rh * 0.3;
+      cells += `<g class="cp-arrow ${fromUs ? 'ours' : 'theirs'}"><path d="M${x} ${y0}L${x} ${y1}"/><path class="head" d="M${x - 9} ${y1 - dir * 9}L${x} ${y1 + dir * 3}L${x + 9} ${y1 - dir * 9}"/></g>`;
+    }
     const wrap = el('div', 'cp-map');
     wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Strategic map">${cells}</svg>
       <div class="cp-legend"><span class="ours">${esc(FACTIONS[me].name)}</span><span class="theirs">${esc(FACTIONS[enemyOf(me)].name)}</span><span class="river">Werra crossing</span></div>`;
@@ -142,6 +164,16 @@ export class CampaignPanel {
     card.append(el('p', 'cp-hint', enemyAttacks
       ? 'They come at us here. You have two minutes to dig in before the assault — hold every line, or hold until the clock runs out.'
       : 'We go in here. Take their lines one after another before time runs out.'));
+    const ev = EVENTS[b.event];
+    if (ev?.text) card.append(el('p', `cp-event ${b.event}`, esc(ev.text)));
+    const { scouted, rows } = intel(c, b);
+    const box = el('div', 'cp-intel');
+    box.append(el('span', 'cp-kicker', scouted ? 'Intel · scouted' : 'Intel · estimate'));
+    const dl = el('dl');
+    for (const [k, v] of rows) dl.append(el('dt', '', esc(k)), el('dd', '', esc(v)));
+    box.append(dl);
+    if (!scouted) box.append(el('p', 'cp-hint', 'Scouts or a recon vehicle in the battalion would give us numbers.'));
+    card.append(box);
     const go = btn('Fight', 'deploy', () => this.onBattle(battleChoice(c)));
     go.disabled = !c.battalion.length;
     card.append(go);
@@ -156,7 +188,8 @@ export class CampaignPanel {
       const T = UNIT_TYPES[u.type];
       const row = el('div', 'cp-unit');
       const rank = u.rank ? `<span class="cp-rank" title="${RANKS[u.rank]?.name}">${'★'.repeat(u.rank)}</span>` : '';
-      row.append(el('span', 'cp-name', `${rank}${esc(u.name)}`), el('span', 'cp-men', `${u.men} / ${T.formation.count}`));
+      const hurt = u.wounded ? ` <i title="Wounded, back after the next battle">+${u.wounded}</i>` : '';
+      row.append(el('span', 'cp-name', `${rank}${esc(u.name)}`), el('span', 'cp-men', `${u.men} / ${T.formation.count}${hurt}`));
       const cost = refillCost(u);
       const b = btn(cost ? `Refill ${cost}` : 'Full', 'mp-btn', () => { if (refill(c, u.cid)) this.render(); });
       b.disabled = !cost || cost > c.points;
