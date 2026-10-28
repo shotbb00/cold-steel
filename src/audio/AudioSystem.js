@@ -24,11 +24,23 @@ const MAX_VOICES = 40;     // simultaneous one-shots; beyond this the least audi
 const MAX_PER_KEY = 5;     // instances of one sound at once (an MG burst, a barrage)
 const BUDGET = 8;          // new one-shots per control tick (bursts beyond that are dropped)
 const FAR = 110;           // metres beyond which shots switch to their '.far' version
-const CULL_DISTANCE = 320; // metres; farther sounds are skipped (guns carry)
+// How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
+// fades within a few hundred metres, a howitzer is heard across the whole map.
+const CARRY = {
+  rifle: 8, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, arty: 64,
+  explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
+};
+const carry = (key) => CARRY[key.replace(/^(nato|pact)\./, '').replace(/\.far$/, '')] ?? 6;
+const CULL = 40;           // sounds beyond this many reference distances are skipped (rifle: 320 m)
 const CONTROL_DT = 0.05;   // seconds between control-rate updates (20 Hz)
 const MACHINE_CHANNELS = 4;
-const MACHINE_RANGE = 140;
+const MACHINE_RANGE = 120;
+const MACHINE_REF = 5;    // engines are far quieter than guns: they fade sooner
 const ENGINE_LEVEL = { 'engine.turbine': 0.55 }; // gas turbines: a hiss, not a roar — kept well under the diesels
+const WIND = 0.11;         // the wind bed; halved while the guns are talking
+const BED = 0.2;           // the distant battle at its loudest
+const BED_FILL = 90;       // weighted shots in the last ~20 s for the bed to be about two-thirds up
+const SHOT_WEIGHT = { cannon: 3, arty: 5, mlrs: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
 const QUIET_FOR = 18;      // seconds without gunfire before birds come back
 const BUILD_SLICE_MS = 6;  // main-thread time per background synthesis slice
 
@@ -114,6 +126,17 @@ export class AudioSystem {
     this.reverbIn = new GainNode(ctx, { gain: 0.6 });
     this.reverbIn.connect(this.reverb).connect(this.master);
 
+    // Everything outside reaches you through this: walls muffle it when you're indoors.
+    this.outdoor = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0.5 });
+    this.outdoor.connect(this.master);
+    // A small room: the hard slap of a shot fired inside a house.
+    this.room = ctx.createConvolver();
+    this.room.buffer = makeImpulse(ctx, 0.45);
+    this.roomIn = new GainNode(ctx, { gain: 0.9 });
+    this.roomIn.connect(this.room).connect(this.master);
+    this.indoors = false;
+    this.intensity = 0; // how hard the battle is going: weighted shots, fading over ~20 s
+
     this.buildBank(soundDefinitions(ctx));
     // recorded sounds, matched to the synthesised ones (so they load once those are built)
     this.samples = new SampleBank(ctx);
@@ -156,7 +179,8 @@ export class AudioSystem {
   startWind() {
     const ctx = this.ctx;
     const wind = new AudioBufferSourceNode(ctx, { buffer: this.bank.wind, loop: true }); // (synthesised: it starts before recordings load)
-    wind.connect(new GainNode(ctx, { gain: 0.22 })).connect(this.master);
+    this.windGain = new GainNode(ctx, { gain: WIND });
+    wind.connect(this.windGain).connect(this.outdoor);
     wind.start();
   }
 
@@ -189,18 +213,19 @@ export class AudioSystem {
    * Play a sound. With `pos` it is spatialised in the world; without, it plays straight
    * (the player's own gun, UI). `throttle` limits how often one key can retrigger.
    */
-  play(key, pos = null, { volume = 1, rate = 1, throttle = 0.025 } = {}) {
+  play(key, pos = null, { volume = 1, rate = 1, throttle = 0.025, room = 0 } = {}) {
     if (!this.running || this.budget <= 0) return;
     const ctx = this.ctx;
     const dist = pos ? this.distanceTo(pos) : 0;
-    if (dist > CULL_DISTANCE) return;
+    const ref = carry(key);
+    if (dist > ref * CULL) return;
     if (pos && dist > FAR && (this.bank[`${key}.far`] || this.samples?.samples[`${key}.far`])) key = `${key}.far`; // a distant thump and echo
     const take = this.sound(key);
     if (!take) return; // not built yet
     const now = ctx.currentTime;
     if (now - (this.lastPlay.get(key) ?? -1) < throttle) return;
     // how loud this will be here — used to decide what to cut when too much is playing
-    const level = volume / (1 + Math.max(0, dist - 6) / 5);
+    const level = volume * ref / (ref + this.rolloff * Math.max(0, dist - ref));
     if (!this.makeRoom(key, level, now)) return;
     this.lastPlay.set(key, now);
     this.budget--;
@@ -212,18 +237,28 @@ export class AudioSystem {
     if (pos) {
       const air = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: airCutoff(dist), Q: 0.5 });
       const panner = new PannerNode(ctx, {
-        panningModel: 'equalpower', distanceModel: 'inverse', refDistance: 6, maxDistance: 400, rolloffFactor: 1.2,
+        panningModel: 'equalpower', distanceModel: 'inverse', refDistance: ref, maxDistance: 3000, rolloffFactor: this.rolloff,
         positionX: pos.x, positionY: pos.y + 1.2, positionZ: pos.z,
       });
       const send = new GainNode(ctx, { gain: 0.12 + 0.4 * Math.min(1, dist / 90) });
-      gain.connect(air).connect(panner).connect(this.master);
+      gain.connect(air).connect(panner).connect(this.outdoor);
       panner.connect(send).connect(this.reverbIn);
       nodes.push(air, panner, send);
+      if (room) { // fired inside a building: the walls slap it back
+        const slap = new GainNode(ctx, { gain: room });
+        panner.connect(slap).connect(this.roomIn);
+        nodes.push(slap);
+      }
     } else {
-      const send = new GainNode(ctx, { gain: 0.1 });
+      const send = new GainNode(ctx, { gain: this.indoors ? 0.04 : 0.1 });
       gain.connect(this.master);
       gain.connect(send).connect(this.reverbIn);
       nodes.push(send);
+      if (this.indoors) { // your own shot in a room
+        const slap = new GainNode(ctx, { gain: 0.6 });
+        gain.connect(slap).connect(this.roomIn);
+        nodes.push(slap);
+      }
     }
     const voice = { src, gain, key, start: now, level };
     this.playing.push(voice);
@@ -267,10 +302,11 @@ export class AudioSystem {
   }
 
   /** Weapon discharge, flavoured by faction and weapon kind. */
-  weapon(faction, kind, pos) {
+  weapon(faction, kind, pos, indoors = false) {
     this.lastLoud = this.game.world.time;
+    this.intensity += SHOT_WEIGHT[kind] ?? 1;
     const volume = { cannon: 0.85, arty: 0.85, mlrs: 0.85, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
-    this.play(`${faction}.${kind}`, pos, { volume, throttle: kind === 'cannon' ? 0.06 : 0.02 });
+    this.play(`${faction}.${kind}`, pos, { volume, throttle: kind === 'cannon' ? 0.06 : 0.02, room: indoors ? 0.5 : 0 });
   }
 
   // ---------------------------------------------------------------- loops
@@ -279,7 +315,7 @@ export class AudioSystem {
    * A positional looping sound. Returns { setPos(p), setRate(r), setGain(g), stop() } —
    * call the setters at control rate, not per frame. A silent stub when audio can't play.
    */
-  loop(key, pos, volume = 1) {
+  loop(key, pos, volume = 1, ref = 10) {
     const ctx = this.ctx;
     const stub = { setPos() {}, setRate() {}, setGain() {}, stop() {} };
     const take = ctx ? this.sound(key) : null;
@@ -290,11 +326,11 @@ export class AudioSystem {
     const gain = new GainNode(ctx, { gain: 0 });
     const air = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: airCutoff(this.distanceTo(pos)), Q: 0.5 });
     const panner = new PannerNode(ctx, {
-      panningModel: 'equalpower', distanceModel: 'inverse', refDistance: 10, maxDistance: 500, rolloffFactor: 1,
+      panningModel: 'equalpower', distanceModel: 'inverse', refDistance: ref, maxDistance: 500, rolloffFactor: 1.3,
       positionX: pos.x, positionY: pos.y + 1, positionZ: pos.z,
     });
     const send = new GainNode(ctx, { gain: 0.2 });
-    src.connect(gain).connect(air).connect(panner).connect(this.master);
+    src.connect(gain).connect(air).connect(panner).connect(this.outdoor);
     panner.connect(send).connect(this.reverbIn);
     src.start(0, Math.random() * buffer.duration); // machines don't all run in phase
     if (volume) set(gain.gain, volume * k, ctx.currentTime, 0.1);
@@ -382,9 +418,9 @@ export class AudioSystem {
       const k = Math.min(1, Math.hypot(u.vel.x, u.vel.z) / ch.s.stats.speed);
       const busy = u.cooldown > 0 || !!u.target; // the gunner's foot on it in a fight
       ch.engine.setRate(0.8 + 0.5 * k + (busy ? 0.05 : 0));
-      ch.engine.setGain((0.32 + 0.4 * k) * ch.level);
+      ch.engine.setGain((0.16 + 0.24 * k) * ch.level);
       ch.tracks.setRate(0.45 + 1.05 * k);
-      ch.tracks.setGain(k > 0.05 ? 0.2 + 0.5 * k : 0);
+      ch.tracks.setGain(k > 0.05 ? 0.1 + 0.28 * k : 0);
       const turn = dt > 0 ? Math.abs(angleDelta(ch.turretYaw, u.turretYaw)) / dt : 0;
       ch.turretYaw = u.turretYaw;
       ch.turret.setGain(Math.min(0.22, turn * 0.35));
@@ -399,10 +435,10 @@ export class AudioSystem {
     const key = typeof e === 'string' ? e : e[s.faction];
     this.channels.push({
       u, s, d,
-      engine: this.loop(key, u.pos, 0),
+      engine: this.loop(key, u.pos, 0, MACHINE_REF),
       level: ENGINE_LEVEL[key] ?? 1,
-      tracks: this.loop(s.type.tracks ?? 'tracks.heavy', u.pos, 0),
-      turret: this.loop('traverse', u.pos, 0),
+      tracks: this.loop(s.type.tracks ?? 'tracks.heavy', u.pos, 0, MACHINE_REF),
+      turret: this.loop('traverse', u.pos, 0, MACHINE_REF),
       turretYaw: u.turretYaw,
     });
   }
@@ -425,7 +461,7 @@ export class AudioSystem {
     const l = this.listenerPos;
     const crowCall = Math.random() < 0.35;
     this.play(crowCall ? 'crow' : 'birds', { x: l.x + Math.cos(a) * r, y: this.game.terrain.heightAt(l.x, l.z) + 4, z: l.z + Math.sin(a) * r },
-      { volume: crowCall ? 0.9 : 0.6, throttle: 3 });
+      { volume: crowCall ? 0.55 : 0.35, throttle: 3 });
   }
 
   /**
@@ -464,9 +500,36 @@ export class AudioSystem {
     this.budget = BUDGET;
     if (!this.running) return;
     this.updateListener();
+    if (this.windGain) set(this.windGain.gain, this.game.world.time - this.lastLoud < QUIET_FOR ? WIND * 0.5 : WIND, this.ctx.currentTime, 1.5);
+    this.updateBed(step);
+    this.updateIndoors();
     this.updateMachines(step);
     this.updateAmbience(this.game.world.time);
   }
+
+  /** The rest of the front: a far rumble of guns that swells as the fighting here grows. */
+  updateBed(dt) {
+    this.intensity *= Math.exp(-dt / 20);
+    if (!this.bed && this.bank['battle.bed']) {
+      const src = new AudioBufferSourceNode(this.ctx, { buffer: this.bank['battle.bed'], loop: true });
+      this.bed = new GainNode(this.ctx, { gain: 0 });
+      src.connect(this.bed).connect(this.outdoor);
+      src.start();
+    }
+    if (this.bed) set(this.bed.gain, BED * (1 - Math.exp(-this.intensity / BED_FILL)), this.ctx.currentTime, 2);
+  }
+
+  /** Inside a building (the soldier you control): the battle outside is muffled by the walls. */
+  updateIndoors() {
+    const u = this.game.player.unit;
+    const inside = !!u?.alive && u.atCover && !!u.coverSpot?.interior;
+    if (inside === this.indoors) return;
+    this.indoors = inside;
+    set(this.outdoor.frequency, inside ? 1300 : 20000, this.ctx.currentTime, 0.12);
+  }
+
+  /** Distance falloff: from above in the command view the whole field is heard more evenly. */
+  get rolloff() { return 1.2 - 0.45 * (this.game.cameraManager?.blend ?? 0); }
 
   /** Where the "ears" are: the camera, or hovering over the battlefield in the command view. */
   updateListenerPos() {

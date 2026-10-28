@@ -2,12 +2,12 @@
 // view, wind-slanted, recycled as they reach the ground; plus the hiss of it. Only made when
 // the battle's conditions have rain.
 import * as THREE from 'three';
+import { wind } from '../world/Wind.js';
 
 const DROPS = 3500;
 const BOX = 70;           // metres around the camera
 const HEIGHT = 40;
 const SPEED = 18;         // m/s
-const WIND = [2.5, 0.8];
 
 export class Rain {
   constructor(game) {
@@ -37,9 +37,9 @@ export class Rain {
     const fall = SPEED * dt;
     for (let i = 0; i < DROPS; i++) {
       const o = i * 3;
-      d[o] += WIND[0] * dt;
+      d[o] += wind.x * dt;
       d[o + 1] -= fall;
-      d[o + 2] += WIND[1] * dt;
+      d[o + 2] += wind.z * dt;
       if (d[o + 1] < ground - cam.y - 5 || d[o + 1] < -HEIGHT) d[o + 1] += HEIGHT;
       // keep the box centred on the camera (wrap horizontally)
       if (d[o] > BOX) d[o] -= BOX * 2; else if (d[o] < -BOX) d[o] += BOX * 2;
@@ -51,15 +51,15 @@ export class Rain {
       p[q] = x;
       p[q + 1] = y;
       p[q + 2] = z;
-      p[q + 3] = x - WIND[0] * 0.04;
+      p[q + 3] = x - wind.x * 0.04;
       p[q + 4] = y + SPEED * 0.045;
-      p[q + 5] = z - WIND[1] * 0.04;
+      p[q + 5] = z - wind.z * 0.04;
     }
     this.lines.geometry.attributes.position.needsUpdate = true;
     // the hiss follows the listener
-    this.loop ??= this.game.audio.loop('rain', cam, 0.5);
+    this.loop ??= this.game.audio.loop('rain', cam, 0.3);
     this.loop.setPos(cam);
-    this.loop.setGain?.(0.5 * this.intensity);
+    this.loop.setGain?.(0.3 * this.intensity);
     this.lines.material.opacity = 0.32 * this.intensity;
     this.lines.visible = this.intensity > 0.02;
   }

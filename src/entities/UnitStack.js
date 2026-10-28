@@ -21,6 +21,7 @@
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
+import { MASKED } from '../systems/Gas.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
@@ -875,6 +876,7 @@ export class UnitStack {
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
       * (u.wounded ? 1.3 : 1)
+      * (u.masked > 0 ? MASKED.spread : 1)    // fogged gas-mask lenses (systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3);           // an MG fired from the hip sprays
     this.shoot(u, _v, spread);
@@ -884,7 +886,7 @@ export class UnitStack {
   fireAt(u, point) {
     const s = u.stats;
     if (s.weapon === 'artillery') return this.lob(u, point);
-    const spread = s.spread * 0.3 * (u.moving ? 1.6 : 1) * (1 + u.suppression * 0.5)
+    const spread = s.spread * 0.3 * (u.moving ? 1.6 : 1) * (1 + u.suppression * 0.5) * (u.masked > 0 ? MASKED.spread : 1)
       * (u.prone > 0.8 ? 0.6 : 1) * (this.deployed(u) ? 1 : 3);
     this.shoot(u, _v.copy(point), spread);
   }
@@ -916,7 +918,7 @@ export class UnitStack {
       trail: !!s.trail,
     });
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
-    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
+    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
   }

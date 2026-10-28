@@ -6,6 +6,9 @@
 //                                     command (K); `stats.smoke.charges` per stack
 //   mortar smoke rounds             – K with a mortar team selected, then click the spot
 //   (the enemy director screens its assaults with its mortars)
+// Clouds drift with the wind (world/Wind.js) and a strong wind thins them sooner.
+import { wind, updateWind } from '../world/Wind.js';
+
 export const SMOKE = {
   radius: 10,       // metres, fully grown
   build: 3.5,       // seconds to billow to full size
@@ -21,18 +24,23 @@ export class SmokeSystem {
 
   /** Lay a cloud at (x, z). */
   add(x, z, { radius = SMOKE.radius, duration = SMOKE.duration } = {}) {
+    duration /= 1 + 0.12 * wind.speed; // a gale tears a screen apart sooner
     const cloud = { x, z, maxR: radius, r: 0, t: 0, duration };
     this.clouds.push(cloud);
     const y = this.game.terrain.heightAt(x, z);
-    this.game.effects.screen({ x, y, z }, radius, duration + 6);
+    cloud.emitter = this.game.effects.screen({ x, y, z }, radius, duration + 6);
     this.game.audio?.play('smoke.pop', { x, y, z }, { volume: 0.5, throttle: 0.1 });
     return cloud;
   }
 
   update(dt) {
+    updateWind(this.game.time, this.game.conditions?.weather);
     for (let i = this.clouds.length - 1; i >= 0; i--) {
       const c = this.clouds[i];
       c.t += dt;
+      c.x += wind.x * 0.7 * dt;
+      c.z += wind.z * 0.7 * dt;
+      if (c.emitter) { c.emitter.pos.x = c.x; c.emitter.pos.z = c.z; }
       if (c.t > c.duration) { this.clouds.splice(i, 1); continue; }
       const grow = Math.min(1, c.t / SMOKE.build);
       const fade = Math.min(1, (c.duration - c.t) / SMOKE.thin);

@@ -13,10 +13,10 @@
 //   trail(pos, dir)                   – one step of a rocket's smoke trail
 //   burn(pos, duration, size)         – keep a wreck burning and smoking
 import * as THREE from 'three';
+import { wind } from '../world/Wind.js';
 
 const MAX_SMOKE = 3000;
 const MAX_FIRE = 1500;
-const WIND = new THREE.Vector3(0.9, 0, 0.35); // m/s drift for smoke
 const _p = new THREE.Vector3();
 const _v = new THREE.Vector3();
 const _c = new THREE.Color();
@@ -184,9 +184,9 @@ class ParticleLayer {
       const k = Math.max(0, 1 - this.drag[i] * dt);
       vel[i3] *= k; vel[i3 + 1] = vel[i3 + 1] * k - this.grav[i] * dt; vel[i3 + 2] *= k;
       const w = this.wind[i] * dt;
-      pos[i3] += vel[i3] * dt + WIND.x * w;
+      pos[i3] += vel[i3] * dt + wind.x * w;
       pos[i3 + 1] += vel[i3 + 1] * dt;
-      pos[i3 + 2] += vel[i3 + 2] * dt + WIND.z * w;
+      pos[i3 + 2] += vel[i3 + 2] * dt + wind.z * w;
       this.rot[i] += this.spin[i] * dt;
     }
     this.n = n;
@@ -435,7 +435,8 @@ export class EffectsSystem {
 
   /** A smoke screen: dense white billows filling `radius` for `duration` seconds (systems/Smoke.js). */
   screen(pos, radius, duration) {
-    this.emitters.push({ kind: 'screen', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size: radius, acc: 0 });
+    const e = { kind: 'screen', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size: radius, acc: 0 };
+    this.emitters.push(e);
     for (let i = 0; i < 10; i++) {  // the initial burst
       const a = Math.random() * 6.283;
       this.smoke.spawn(pos.x, pos.y + 1, pos.z, {
@@ -443,6 +444,7 @@ export class EffectsSystem {
         life: rnd(10, 16), alpha: 0.85, color: 0xd8d6d0, drag: 1.2, wind: 0.3,
       });
     }
+    return e; // the smoke system moves it with its drifting cloud
   }
 
   /** Keep a smoke screen full: billows spread over its radius, thinning near the end. */

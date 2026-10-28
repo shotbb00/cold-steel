@@ -610,3 +610,23 @@ body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: 
 }
 #cover-preview i::after { content: ''; position: absolute; left: 11px; top: 4.5px; width: 10px; height: 3px; border-radius: 2px; background: rgba(255, 195, 90, 0.95); }
 #cover-preview i[hidden] { display: none; }
+
+/* Looking out through a gas mask (systems/Gas.js): two round lenses fogging at the rims, a sickly
+   tint, and the dark rubber of the mask everywhere outside them. */
+#gas-mask {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity 0.6s;
+  --lens-a: ellipse 31% 46% at 30% 48%;
+  --lens-b: ellipse 31% 46% at 70% 48%;
+  background:
+    radial-gradient(var(--lens-a), transparent 64%, rgba(205, 210, 195, 0.2) 82%, transparent 86%),
+    radial-gradient(var(--lens-b), transparent 64%, rgba(205, 210, 195, 0.2) 82%, transparent 86%),
+    rgba(120, 125, 70, 0.1);
+}
+#gas-mask::before {
+  content: ''; position: absolute; inset: 0; background: #0b0c0b;
+  -webkit-mask-image: radial-gradient(var(--lens-a), transparent 84%, #000 88%), radial-gradient(var(--lens-b), transparent 84%, #000 88%);
+  mask-image: radial-gradient(var(--lens-a), transparent 84%, #000 88%), radial-gradient(var(--lens-b), transparent 84%, #000 88%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+#gas-mask.on { opacity: 1; }

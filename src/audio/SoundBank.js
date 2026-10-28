@@ -430,6 +430,7 @@ export function soundDefinitions(ctx) {
     'incoming.0': () => incoming(ctx, { dur: 1.0, f0: 1100, f1: 320, tone: 0 }),
     'incoming.1': () => incoming(ctx, { dur: 0.8, f0: 900, f1: 380, tone: 0 }),
     'incoming.2': () => incoming(ctx, { dur: 1.1, f0: 1250, f1: 280, tone: 0.02 }),
+    'incoming.big': () => incoming(ctx, { dur: 2.3, f0: 1500, f1: 180, tone: 0.05 }), // a howitzer shell tearing down
     explosion: () => blast(ctx, { dur: 2.6, thumpF: 46, rumble: 0.9, rumbleDecay: 1.9, debris: 0.25, lp: 1100 }),
     'explosion.big': () => blast(ctx, { dur: 4, thumpF: 32, rumble: 1.3, rumbleDecay: 1.1, debris: 0.35, lp: 800 }),
 
@@ -656,6 +657,51 @@ export function soundDefinitions(ctx) {
         lp += lpCoef(t < 0.05 ? 3000 : 1400, sr) * (w - lp);
         d[i] = lp * (t < 0.05 ? 1.5 : 0.25 * Math.exp(-(t - 0.05) * 1.5)) + Math.sin(TAU * 90 * t) * Math.exp(-t * 30) * 0.8;
       }
+    }),
+    // the rest of the front: far guns thudding and rolling, MG fire too far to make out (a loop)
+    'battle.bed': () => makeBuffer(ctx, 12, (d, sr, n) => {
+      let lp = 0;
+      for (let i = 0; i < n; i++) {               // the low roll of it all
+        lp += lpCoef(70, sr) * (Math.random() * 2 - 1 - lp);
+        d[i] = lp * 2;
+      }
+      for (let k = 0; k < 34; k++) {              // single far thumps, each with its long roll
+        const at = Math.floor(Math.random() * (n - sr * 2.5));
+        const f = 28 + Math.random() * 26;
+        const a = 0.3 + Math.random() * 0.7;
+        let r = 0;
+        for (let j = 0; j < sr * 2.5; j++) {
+          const t = j / sr;
+          r += lpCoef(160, sr) * (Math.random() * 2 - 1 - r);
+          d[at + j] += (Math.sin(TAU * f * t) * Math.exp(-t * 7) + r * 3 * Math.exp(-t * 1.6)) * a * Math.min(1, t / 0.02);
+        }
+      }
+      for (let k = 0; k < 7; k++) {               // a burst of something automatic, far off
+        const at = Math.floor(Math.random() * (n - sr * 3));
+        const rate = 7 + Math.random() * 5;
+        let m = 0;
+        for (let j = 0; j < sr * (0.8 + Math.random() * 1.5); j++) {
+          const t = j / sr;
+          m += lpCoef(380, sr) * (Math.random() * 2 - 1 - m);
+          d[at + j] += m * Math.exp(-((t * rate) % 1) * 9) * 0.9;
+        }
+      }
+      loopify(d, sr, n, 0.5);
+    }),
+    // breathing through a gas mask: a rasping intake through the filter, the valve, a slow exhale
+    breath: () => makeBuffer(ctx, 3.6, (d, sr, n) => {
+      const inhale = bandpass(1100, 2.5, sr);
+      const exhale = bandpass(520, 2, sr);
+      for (let i = 0; i < n; i++) {
+        const t = i / sr;
+        const w = Math.random() * 2 - 1;
+        const a = t < 1.2 ? Math.sin(Math.PI * t / 1.2) ** 1.5 : 0;
+        const b = t > 1.5 && t < 3.1 ? Math.sin(Math.PI * (t - 1.5) / 1.6) ** 2 : 0;
+        d[i] = inhale(w) * a * 0.9 + exhale(w) * b * 0.6;
+        const v = t - 1.32; // the exhale valve clicking open
+        if (v > 0 && v < 0.03) d[i] += Math.sin(TAU * 900 * v) * Math.exp(-v * 180) * 0.5;
+      }
+      loopify(d, sr, n, 0.15);
     }),
   };
 }

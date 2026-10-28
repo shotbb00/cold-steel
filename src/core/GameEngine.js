@@ -64,6 +64,7 @@ import { keys } from './Keys.js';
 import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
+import { Gas } from '../systems/Gas.js';
 
 /** Which renderer draws the battle: Babylon.js (default), or ?renderer=three for the original. */
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
@@ -139,6 +140,7 @@ export class GameEngine {
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;
+    this.projectiles.cameraManager = this.cameraManager; // big blasts nearby shake the view
     this.beams.audio = this.audio;
     const cs = map.cameraStart?.[playerFaction] ?? map.cameraStart;
     const start = cs && 'x' in cs ? cs : map.bases?.[playerFaction] ?? { x: 0, z: 0 };
@@ -199,6 +201,8 @@ export class GameEngine {
     // single player: the weather can change and the day go on during the battle (systems/WeatherChange.js)
     const sky = { weather: this.rules.changingWeather !== false, time: this.rules.timePasses !== false };
     if (!net && !campaign && !mode.fixedWeather && (sky.weather || sky.time)) this.systems.push(new WeatherChange(this, sky));
+    // single player: now and then a chemical attack on a village (systems/Gas.js)
+    if (!net && !mode.fixedWeather && this.modeState?.points?.points?.length) this.systems.push(this.gas = new Gas(this));
 
     window.addEventListener('resize', () => this.onResize());
     // a multiplayer host whose window is minimised or in the background gets no animation

@@ -107,11 +107,13 @@ export class ProjectileSystem {
       b.life -= dt;
       b.age += dt;
       if (b.trail) this.effects.trail(b.pos, b.dir);
-      if (b.whistleAt >= 0 && b.age >= b.whistleAt) {
+      const heavy = b.splash > 5; // howitzer / rocket artillery: a long tearing scream, heard farther
+      if (b.whistleAt >= 0 && b.age >= b.whistleAt - (heavy ? 1.2 : 0)) {
         b.whistleAt = -1;
         // only heard by whoever is close to where it lands
         const d = this.audio ? this.audio.distanceTo(b.target) : Infinity;
-        if (d < 70) this.audio.play(`incoming.${Math.floor(Math.random() * 3)}`, b.target, { volume: 0.4 * (1 - d / 90), throttle: 1.2 });
+        if (heavy && d < 160) this.audio.play('incoming.big', b.target, { volume: 0.8 * (1 - d / 190), throttle: 0.5 });
+        else if (d < 70) this.audio.play(`incoming.${Math.floor(Math.random() * 3)}`, b.target, { volume: 0.4 * (1 - d / 90), throttle: 1.2 });
       }
 
       let dead = b.life <= 0;
@@ -271,6 +273,11 @@ export class ProjectileSystem {
       this.world.terrain.dig(point.x, point.z, cr + 1, b.crater, (x, z) => Math.max(0, 1 - Math.hypot(x - point.x, z - point.z) / cr) ** 1.5, 0.9);
     }
     this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, { volume: 0.75, throttle: 0.05 });
+    if (this.cameraManager && this.audio && size > 0.9) { // the ground shakes under the camera
+      const d = this.audio.distanceTo(point);
+      const reach = 35 * size;
+      if (d < reach) this.cameraManager.shake(0.07 * size * (1 - d / reach));
+    }
   }
 
   /** Impacts near enemies of the shooter make them flinch and duck. */

@@ -270,6 +270,12 @@ all and the three support powers (with their price, or the seconds until ready) 
   the enemy's last choice of target. Left alone, both drive to nearby work
   (`src/systems/Support.js`). Units can differ per side on top of their shared stats
   (`factionStats`, e.g. the M3's TOWs).
+- **Wind.** It veers slowly and blows harder in rain (calm in fog): smoke screens drift with it
+  and a strong wind thins them sooner (world/Wind.js).
+- **Chemical attack** (single player, some battles): gas shells on a village you hold; the low
+  cloud drifts with the wind for a few minutes. Infantry near it mask up, aim worse and see less
+  until they are out of it a while; vehicles are sealed. In direct control you look through the
+  mask's lenses and hear yourself breathe (systems/Gas.js).
 - **Smoke.** Tanks and IFVs carry smoke launchers (K, and automatically when hit by an
   anti-armour weapon); mortars fire smoke bombs where you click. Nobody sees through a screen.
 - **Mortars** (190 CP): indirect fire on anything spotted, no line of sight needed.
@@ -312,7 +318,12 @@ all and the three support powers (with their price, or the seconds until ready) 
 - **Movement.** No pathfinding: a man who keeps pushing into a wall sidesteps around it, and
   after a few failed tries climbs over. A direct move order gets men up and sprinting even
   when pinned.
-- **Sound.** Synthesised per weapon and calibre (crack, body, thump, echo tail); beyond ~110 m
+- **Sound.** Synthesised per weapon and calibre (crack, body, thump, echo tail). Each calibre
+  carries its own distance (a rifle a few hundred metres, a howitzer the whole map), and in the
+  command view the field is heard more evenly; engines fade sooner and the wind drops while the
+  guns talk. Heavy shells scream down for two seconds before they land and shake the ground near
+  the camera; inside a building the battle outside is muffled and shots slap off the walls; a far
+  rumble of the rest of the front swells as the fighting grows. Beyond ~110 m
   shots and blasts switch to a dull thump with a long rolling echo. Machines: the Abrams' gas
   turbine whine, T-72 / artillery diesels, track clatter and squeal, turret traverse whine —
   revs and clatter follow speed (a pool of 4 channels for the nearest vehicles). Supersonic snaps, ricochets,
