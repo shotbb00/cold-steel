@@ -76,6 +76,10 @@ export class GameEngine {
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null }) {
     this.map = map;
     this.mode = mode;
+    // the size the picture is drawn at: the container, not innerWidth/innerHeight — on an iPhone
+    // Safari's sliding toolbar makes those differ, and every label placed by them drifts (onResize)
+    this.container = container;
+    this.view = { w: container.clientWidth || innerWidth, h: container.clientHeight || innerHeight };
     this.playerFaction = playerFaction;
     this.coop = !!(net && coop);
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
@@ -90,7 +94,7 @@ export class GameEngine {
     // ---- rendering
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(1); // render/Quality.js sets the real value
-    this.renderer.setSize(innerWidth, innerHeight);
+    this.renderer.setSize(this.view.w, this.view.h);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -99,7 +103,7 @@ export class GameEngine {
     if (RENDERER === 'three') container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 2000);
+    this.camera = new THREE.PerspectiveCamera(62, this.view.w / this.view.h, 0.1, 2000);
     // Babylon mirrors the Three scene graph and draws it (render/babylon/BabylonView.js)
     this.babylon = RENDERER === 'babylon'
       ? new BabylonView(container, { scene: this.scene, camera: this.camera }, { exposure: this.conditions.theme.exposure ?? 1.1, theme: this.conditions.theme })
@@ -429,8 +433,10 @@ export class GameEngine {
   }
 
   onResize() {
-    const w = innerWidth;
-    const h = innerHeight;
+    const w = this.container.clientWidth || innerWidth;
+    const h = this.container.clientHeight || innerHeight;
+    this.view.w = w;
+    this.view.h = h;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
@@ -552,6 +558,8 @@ export class GameEngine {
   }
 
   render(dt = 0) {
+    // iOS doesn't always say when its toolbar slides: check the size every frame (two reads)
+    if (this.container.clientWidth !== this.view.w || this.container.clientHeight !== this.view.h) this.onResize();
     this.buildingMarkers.update();
     this.chat?.update(dt);
     this.touchControls?.update();

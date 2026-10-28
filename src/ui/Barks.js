@@ -45,8 +45,8 @@ export class Barks {
         continue;
       }
       b.el.style.display = '';
-      const x = (v.x * 0.5 + 0.5) * innerWidth;
-      const y = (-v.y * 0.5 + 0.5) * innerHeight;
+      const x = (v.x * 0.5 + 0.5) * this.game.view.w;
+      const y = (-v.y * 0.5 + 0.5) * this.game.view.h;
       b.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
     }
   }

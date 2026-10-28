@@ -110,10 +110,10 @@ export class Quality {
     const q = { ...QUALITY[level], resolution: settings.get('renderScale') ?? QUALITY[level].resolution };
     const { renderer, post, environment, scene } = this.game;
     renderer.setPixelRatio(q.resolution);
-    renderer.setSize(innerWidth, innerHeight);
+    renderer.setSize(this.game.view.w, this.game.view.h);
     post.setPixelRatio(q.resolution);
     post.setSamples(q.msaa);
-    post.setSize(innerWidth, innerHeight);
+    post.setSize(this.game.view.w, this.game.view.h);
     post.ao.enabled = q.ao;
     post.ao.setScale(q.aoScale);
     post.bloom.enabled = q.bloom;

@@ -45,7 +45,7 @@ export class BuildingMarkers {
       const show = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1 && (tactical || dist < 70);
       item.el.style.display = show ? '' : 'none';
       if (!show) continue;
-      item.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * innerWidth).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * innerHeight).toFixed(1)}px) translate(-50%, -100%)`;
+      item.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * g.view.w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * g.view.h).toFixed(1)}px) translate(-50%, -100%)`;
       const key = `${e.men}|${e.mine.length}|${e.foe}`;
       if (key !== item.last) {
         item.last = key;

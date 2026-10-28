@@ -41,8 +41,7 @@ export class StackLabels {
   update() {
     const { camera, cameraManager, commands, world } = this.game;
     const tactical = cameraManager.blend > 0.5;
-    const w = innerWidth;
-    const h = innerHeight;
+    const { w, h } = this.game.view; // the drawn size (GameEngine.onResize)
     this.root.classList.toggle('tactical', tactical);
 
     for (const stack of world.stacks) {
