@@ -242,12 +242,12 @@ export class TouchControls {
     panel.prepend(orders, bar);
     this.panel = panel;
     // a command given — a button in the panel (not Orders or Reinforcements, which open things),
-    // a unit bought, an order on the battlefield — folds the panel away again
+    // an order on the battlefield — folds the panel away again
     panel.addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (b && !b.matches('.tb-orders, .rf-open')) setTimeout(() => this.setPanel(false), 0);
     });
-    for (const ev of ['order', 'ui:reinforce']) this.game.bus.on(ev, () => this.setPanel(false));
+    this.game.bus.on('order', () => this.setPanel(false)); // (buying a unit doesn't: the reinforcements stay open for the next)
     document.getElementById('topbar').append(pause);
     this.tb = { control, clear, cancel, orders };
     this.setPanel(false);
@@ -256,8 +256,6 @@ export class TouchControls {
   /** Open or collapse the command panel (touch layout only; the mouse layout ignores it). */
   setPanel(open) {
     this.panel.classList.toggle('collapsed', !open);
-    // the reinforcements window is opened from the panel: it goes when the panel folds away
-    if (!open && document.body.classList.contains('touch')) this.game.frontlineHud?.window.toggle(false);
     this.tb.orders?.setAttribute('aria-expanded', String(open));
   }
 

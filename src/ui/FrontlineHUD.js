@@ -43,7 +43,12 @@ export class FrontlineHUD {
     const panel = document.createElement('div');
     panel.id = 'reinforce';
     panel.innerHTML = '<button type="button" tabindex="-1" class="rf-open">Reinforcements <kbd data-key="reinforce"></kbd></button><span class="rf-stacks" title="Stacks in the field / limit"></span><span class="rf-cp"></span>';
-    document.getElementById('command-panel').prepend(panel);
+    // its own bar beside the orders, bottom right: the points stay in sight with the orders folded away
+    const orders = document.getElementById('command-panel');
+    const dock = document.createElement('div');
+    dock.id = 'dock';
+    orders.before(dock);
+    dock.append(panel, orders);
     if (state.noReinforcements) panel.hidden = true; // e.g. Recon raid: you have what you came with
     this.cpText = panel.querySelector('.rf-cp');
     this.stacksText = panel.querySelector('.rf-stacks');

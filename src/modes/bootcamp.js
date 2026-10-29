@@ -285,8 +285,8 @@ const ENGINEERS = {
 
 const REINFORCE = {
   title: 'Reinforcements',
-  touch: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: open <b>Orders</b> at the bottom right and tap <b>Reinforcements</b>. New units drive in from your base. You have been given enough for a tank.',
-  text: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: press <kbd data-key="reinforce"></kbd> or click <b>Reinforcements</b> at the bottom right. New units drive in from your base. You have been given enough for a tank.',
+  touch: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: tap <b>Reinforcements</b> at the bottom right, beside Orders, where your points and stacks are counted. New units drive in from your base. You have been given enough for a tank.',
+  text: 'Battles are won with what you bring in. You earn <b>command points</b> over time (more for every point you hold) and spend them on reinforcements: press <kbd data-key="reinforce"></kbd> or click <b>Reinforcements</b> at the bottom right, beside Orders, where your points and stacks are counted. New units drive in from your base. You have been given enough for a tank.',
   start(game, ctx) {
     game.modeState.cp[game.playerFaction] += 450;
     ctx.had = new Set(game.world.stacksOf(game.playerFaction));
