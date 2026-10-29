@@ -235,7 +235,9 @@ all and the three support powers (with their price, or the seconds until ready) 
   what their side can't see — weapons outrange sight, so spotters matter. Whatever none of your
   units can see right now is drawn darker and greyer — ground, trees, houses — in both camera
   modes and on the minimap (ridges cast real sight shadows). Selected stacks (and the one you lead
-  in direct control) show a faint white ring at their weapon reach on the ground.
+  in direct control) show a faint white ring where their guns reach, and a fainter one where an
+  anti-tank missile reaches vehicles (IFVs, recon vehicles, tank destroyers); they only fire at
+  what your side has spotted.
 - **Fortifications.** A selected infantry stack can build **sandbags** (a chest-high wall, 15
   CP) or dig a **trench** (30 CP): the terrain is really dug out, a sandbag parapet goes in
   front and a spoil mound behind, and trench positions shelter from every direction. Building

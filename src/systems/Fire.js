@@ -161,11 +161,11 @@ export class Fire {
       }
     }
     // the roar and crackle of the nearest fire
-    if (nearest && nd < 120) {
+    if (nearest && nd < 60) { // a crackle for whoever is close, not a roar over the battlefield
       const pos = { x: nearest.x, y: g.terrain.heightAt(nearest.x, nearest.z) + 1, z: nearest.z };
-      this.sound ??= g.audio?.loop('fire', pos, 0) ?? null;
+      this.sound ??= g.audio?.loop('fire', pos, 0, 4) ?? null;
       this.sound?.setPos(pos);
-      this.sound?.setGain(Math.min(0.9, 0.3 + this.burning.length * 0.03));
+      this.sound?.setGain(Math.min(0.4, 0.12 + this.burning.length * 0.012) * (1 - nd / 60));
     } else if (this.sound) { this.sound.stop(); this.sound = null; }
   }
 }

@@ -268,7 +268,10 @@ export class ProjectileSystem {
       this.buildings?.blast(point, b.damage, r);
     }
     const size = Math.max(0.5, r / 3.5); // tank round / rocket ~1, 155 mm ~2
-    this.effects.explosion(point, size, { ground });
+    // earth is thrown up only where it bursts on the earth; a hedge, tree or wall top hit in the air
+    // makes a grey puff, and only a vehicle hit the black smoke of something burning
+    const low = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
+    this.effects.explosion(point, size, { ground: ground && low, soot: !ground && !!directTarget });
     if (b.crater && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) {
       const cr = r * 0.45;
       this.world.terrain.dig(point.x, point.z, cr + 1, b.crater, (x, z) => Math.max(0, 1 - Math.hypot(x - point.x, z - point.z) / cr) ** 1.5, 0.9);

@@ -370,7 +370,7 @@ export class EffectsSystem {
    * High-explosive burst. `size` ~1 is a tank round or rocket, ~2 a 155 mm shell. Ground
    * bursts throw a column of dark earth and clods; air bursts / vehicle hits skip the dirt.
    */
-  explosion(pos, size = 1, { ground = true, fire = 1 } = {}) {
+  explosion(pos, size = 1, { ground = true, fire = 1, soot = !ground } = {}) {
     const F = this.fire;
     const S = this.smoke;
     const k = Math.sqrt(size);
@@ -415,7 +415,7 @@ export class EffectsSystem {
     for (let i = 0; i < 10; i++) {
       S.spawn(pos.x + rnd(-1.5, 1.5) * size, pos.y + rnd(1, 3) * size, pos.z + rnd(-1.5, 1.5) * size, {
         vx: rnd(-0.6, 0.6), vy: rnd(1.5, 3), vz: rnd(-0.6, 0.6), size: rnd(2.5, 4) * size, grow: 2.5,
-        life: rnd(8, 14), alpha: 0.55, color: ground ? SMOKE_GREY : SMOKE_BLACK, drag: 0.7, wind: 1,
+        life: rnd(8, 14), alpha: 0.55, color: soot ? SMOKE_BLACK : SMOKE_GREY, drag: 0.7, wind: 1, // black: a vehicle hit
       });
     }
   }

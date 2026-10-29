@@ -819,6 +819,10 @@ export class UnitStack {
     const s = u.stats;
     const terrain = this.world.terrain;
     const r2 = s.range * s.range;
+    // a gun plus an anti-tank missile (IFVs, ATGM carriers): the gun's reach for troops, the
+    // missile's only against vehicles while there are missiles — else it locks onto men it can't hit
+    const gun2 = s.gunRange ? s.gunRange * s.gunRange : r2;
+    const missiles = s.atgm && (u.atgmLeft ?? s.atgm.count) > 0;
     const focus = this.ai?.targetGroup;
     const eyeY = u.pos.y + (s.eyeHeight ?? 1.4);
     let best = null;
@@ -828,6 +832,7 @@ export class UnitStack {
       if (!e.alive || !e.spotted) continue; // you can only shoot what your side can see
       const d2 = dist2DSq(u.pos, e.pos);
       if (d2 > r2) continue;
+      if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
