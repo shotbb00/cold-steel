@@ -71,6 +71,8 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
 
     /** The best way from a to b over the river (or null when they're on the same bank). */
     plan(a, b) {
+      const on = this.bridgeAt(a.x, a.z);
+      if (on && !on.blown) return null; // already on a bridge: walk straight off it, whichever end
       const sa = this.side(a.x, a.z);
       const sb = this.side(b.x, b.z);
       if (sa === sb) return null;

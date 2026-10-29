@@ -235,8 +235,7 @@ all and the three support powers (with their price, or the seconds until ready) 
   what their side can't see — weapons outrange sight, so spotters matter. Whatever none of your
   units can see right now is drawn darker and greyer — ground, trees, houses — in both camera
   modes and on the minimap (ridges cast real sight shadows). Selected stacks (and the one you lead
-  in direct control) show a faint white ring at their weapon reach and a pale fan of their view
-  cone on the ground.
+  in direct control) show a faint white ring at their weapon reach on the ground.
 - **Fortifications.** A selected infantry stack can build **sandbags** (a chest-high wall, 15
   CP) or dig a **trench** (30 CP): the terrain is really dug out, a sandbag parapet goes in
   front and a spoil mound behind, and trench positions shelter from every direction. Building
@@ -419,7 +418,7 @@ src/
                ambience, footsteps)
   public/sounds/  recorded sounds (CC0, sources in CREDITS.md; how to add more in README.md)
   ui/          MainMenu, Lobby (multiplayer), CampaignPanel, ReinforceWindow, ActionBar, BuildingMarkers, RadioLog,
-               AfterAction, RangeIndicators (weapon reach, view cone), UnitPreview, SettingsPanel, PauseMenu, HUD, FrontlineHUD, StackLabels, Barks, Minimap
+               AfterAction, RangeIndicators (weapon reach), UnitPreview, SettingsPanel, PauseMenu, HUD, FrontlineHUD, StackLabels, Barks, Minimap
   core/Settings.js           saved player settings (localStorage), live change events
   core/Conditions.js         time of day and weather: light, sky, sight, mud
   world/River.js             rivers: carving, water, crossings, routing, demolition

@@ -81,6 +81,7 @@ export class Construction {
     ghost.visible = faction === this.game.playerFaction; // you don't see the enemy's blueprints
     this.game.scene.add(ghost);
     const site = { id: id ?? this.nextId++, def, kind, x, z, yaw, faction, progress: 0, ghost, bridge, stack, stackId: stack?.id ?? stackId };
+    if (bridge && stack && river) site.home = river.side(stack.centroid.x, stack.centroid.z); // the bank they set out from
     this.sites.push(site);
     this.game.netEvent('site', site.id, kind, x, z, yaw, faction, site.stackId);
     if (stack) {
@@ -190,7 +191,7 @@ export class Construction {
       const c = site.bridge;
       const river = game.world.river;
       const s = site.stack;
-      const side = s?.alive ? river.side(s.anchor.x, s.anchor.z) : 1;
+      const side = site.home ?? (s?.alive ? river.side(s.centroid.x, s.centroid.z) : 1); // back the way they came
       if (s?.alive) s.ai.moveTo({ x: c.x, z: c.z + side * (river.halfWidth + 22) }, { hold: true, ordered: game.isHuman(s.faction) });
       this.fuses.push({ bridge: c, at: game.time + FUSE });
       game.tell(site.faction, `Charges set on the ${c.name} — clear the bridge, ${FUSE} seconds!`);
