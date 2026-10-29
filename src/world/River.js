@@ -57,6 +57,11 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
       return Math.sign(z - path(x)) || 1;
     },
 
+    /** The surface at (x, z): the ground, or the water where the ground is below it. */
+    surfaceAt(terrain, x, z) {
+      return Math.max(terrain.heightAt(x, z), level);
+    },
+
     /** Water depth at (x, z) on this terrain (negative = dry). */
     depthAt(terrain, x, z) {
       return level - terrain.heightAt(x, z);

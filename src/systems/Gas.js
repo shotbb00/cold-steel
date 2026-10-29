@@ -84,7 +84,7 @@ export class Gas {
         const r = Math.sqrt(Math.random()) * c.r;
         const x = c.x + Math.cos(a) * r;
         const z = c.z + Math.sin(a) * r;
-        g.effects.smoke.spawn(x, g.terrain.heightAt(x, z) + rnd(0.2, 1.2), z, {
+        g.effects.smoke.spawn(x, (g.world.river?.surfaceAt(g.terrain, x, z) ?? g.terrain.heightAt(x, z)) + rnd(0.2, 1.2), z, { // over water: on its surface
           vx: rnd(-0.2, 0.2), vy: rnd(0.02, 0.15), vz: rnd(-0.2, 0.2), size: rnd(4, 6), grow: 0.6, life: rnd(9, 13), alpha: 0.3 * fade + 0.05, color: COLOR, drag: 0.6, wind: 0.4,
         });
       }

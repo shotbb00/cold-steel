@@ -40,7 +40,13 @@ export class SmokeSystem {
       c.t += dt;
       c.x += wind.x * 0.7 * dt;
       c.z += wind.z * 0.7 * dt;
-      if (c.emitter) { c.emitter.pos.x = c.x; c.emitter.pos.z = c.z; }
+      if (c.emitter) { // drifting: it rides the ground below it — or the water, never under it
+        c.emitter.pos.x = c.x;
+        c.emitter.pos.z = c.z;
+        const river = this.game.world.river;
+        const ground = this.game.terrain.heightAt(c.x, c.z);
+        c.emitter.pos.y = river && ground < river.level ? river.level + 1.5 : ground;
+      }
       if (c.t > c.duration) { this.clouds.splice(i, 1); continue; }
       const grow = Math.min(1, c.t / SMOKE.build);
       const fade = Math.min(1, (c.duration - c.t) / SMOKE.thin);

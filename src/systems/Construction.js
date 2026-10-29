@@ -111,6 +111,12 @@ export class Construction {
     }
     for (let i = this.sites.length - 1; i >= 0; i--) {
       const site = this.sites[i];
+      // an engineer or bridge-layer job dies with the team that was sent to do it (on the host;
+      // the client hears it as 'unsite')
+      if (site.def.action && site.stack && (!site.stack.alive || site.stack.removed) && !this.game.net?.isClient) {
+        this.cancel(site, false);
+        continue;
+      }
       let workers = 0;
       for (const s of this.game.world.stacksOf(site.faction)) {
         if (site.def.layer) { // only its own bridge layer, parked on the bank
@@ -176,7 +182,7 @@ export class Construction {
   }
 
   /** Call off a job not yet finished: the blueprint goes, its command points come back. */
-  cancel(site) {
+  cancel(site, refund = true) {
     const i = this.sites.indexOf(site);
     if (i < 0) return false;
     this.sites.splice(i, 1);
@@ -188,7 +194,7 @@ export class Construction {
       if (layer) layer.laying = false;
     }
     if (!this.game.net?.isClient) {
-      this.game.refund(site.faction, site.def.cost);
+      if (refund) this.game.refund(site.faction, site.def.cost);
       this.game.netEvent('unsite', site.id);
     }
     return true;
