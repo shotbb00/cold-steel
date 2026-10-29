@@ -15,7 +15,7 @@ import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
-import { keys } from '../core/Keys.js';
+import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
 const ARROW_SIZE = 10;     // metres long: the facing arrow drawn while right-dragging
@@ -247,6 +247,11 @@ export class CommandSystem {
   startTargeting(t) {
     this.cancelTargeting();
     const scene = this.game.scene;
+    // the hint chip at the bottom (ui/HUD.js) says what to do, in finger or mouse words
+    const touch = this.game.input.touch;
+    const click = touch ? 'tap' : 'click';
+    const cancel = touch ? 'Cancel stops' : 'right-click cancels';
+    const turn = (what) => (touch ? `the arrows turn ${what}` : `${keyOf('turnLeft')}/${keyOf('turnRight')} turn ${what}`);
     if (t.kind === 'build') {
       const def = STRUCTURES[t.structure];
       const ghost = new THREE.Group();
@@ -260,23 +265,22 @@ export class CommandSystem {
       // face the enemy by default
       const base = this.game.world.bases[this.enemy];
       t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
-      this.game.bus.emit('toast', `Place ${def.name} (${def.cost} CP) — Q/E rotate, click to confirm, right-click to cancel`);
+      t.hint = `${def.name} (${def.cost} CP): ${click} to place — ${turn('it')}, ${cancel}`;
     } else if (t.kind === 'engineer') {
       const geo = new THREE.RingGeometry(0.9, 1, 48);
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      this.game.bus.emit('toast', t.layer ? 'Bridge layer: click the river where the bridge should go — right-click cancels' : this.game.map.bridgeAt
-        ? 'Engineers: click mines or wire to clear them, or a bridge to blow it — right-click cancels'
-        : 'Engineers: click mines or wire to clear them — right-click cancels');
+      t.hint = t.layer ? `Bridge layer: ${click} the river where the bridge should go — ${cancel}`
+        : `Engineers: ${click} mines or wire to clear them${this.game.map.bridgeAt ? ', or a bridge to blow it' : ''} — ${cancel}`;
     } else if (t.kind === 'smoke') {
       const geo = new THREE.RingGeometry(0.92, 1, 48);
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
       if (t.gas) t.decal.mesh.material.color.set(0xd8d27a);
-      this.game.bus.emit('toast', t.gas ? `Gas (${GAS.cost} CP): click where the shells should fall — right-click cancels`
-        : t.flare ? 'Illumination: click where to light up — right-click cancels' : 'Smoke mission: click where to lay the screen — right-click cancels');
+      t.hint = t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells should fall — ${cancel}`
+        : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
       // an air assault: the landing zone, with the arrow it comes in along
@@ -299,9 +303,9 @@ export class CommandSystem {
         color: new THREE.Color(0xff6a3d).multiplyScalar(1.6), transparent: true, opacity: 0.6, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
       }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      this.game.bus.emit('toast', t.air === 'lift'
-        ? `Air assault (${p.cost} CP): click the landing zone — Q/E turn the approach, right-click cancels`
-        : `${p.label} (${p.cost} CP): click the target — Q/E turn the run, right-click cancels`);
+      t.hint = t.air === 'lift'
+        ? `Air assault (${p.cost} CP): ${click} the landing zone — ${turn('the approach')}, ${cancel}`
+        : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;
     }
     scene.add(t.ghost);
     this.targeting = t;

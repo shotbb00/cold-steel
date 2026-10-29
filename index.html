@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Cold Steel</title>
   <link rel="icon" href="icons/favicon-64.png">
   <!-- installable (PWA): manifest, icons; the service worker is registered by src/pwa/register.js -->
@@ -25,13 +25,13 @@
     <div id="crosshair"><span></span></div>
 
     <div id="topbar">
-      <div id="mode-badge">Command view</div>
+      <div class="tb-left"><div id="mode-badge">Command</div><button type="button" tabindex="-1" id="keys-open" class="mouse-only" title="Keys and mouse (F1)">?</button></div>
       <div id="battle-status">
         <span class="ally"><b id="ally-count">0</b> allied stacks</span>
         <span class="vs">vs</span>
         <span class="enemy"><b id="enemy-count">0</b> enemy stacks</span>
       </div>
-      <div id="fps">-- fps</div>
+      <div id="fps" hidden>-- fps</div>
       <div id="suppress-vignette"></div>
     </div>
 
@@ -50,28 +50,16 @@
     </div>
 
     <div id="command-panel">
-      <div id="selection-info">No stacks selected</div>
-      <!-- what the selection can do (src/ui/ActionBar.js) -->
+      <div class="sel-head">
+        <div id="selection-info">No stacks selected</div>
+        <button type="button" tabindex="-1" class="sel-all" data-cmd="selectAll" title="Select all your stacks">All <kbd data-key="selectAll"></kbd></button>
+      </div>
+      <!-- what the selection can do, and the support powers (src/ui/ActionBar.js) -->
       <div id="cmd-actions" class="cmd-buttons" hidden></div>
-      <div class="cmd-buttons support">
-        <button tabindex="-1" data-cmd="selectAll">Select all <kbd data-key="selectAll"></kbd></button>
-        <button tabindex="-1" data-cmd="air" title="Attack helicopter: rockets and the chin gun along a line">Helicopter <small>150</small> <kbd data-key="heli"></kbd></button>
-        <button tabindex="-1" data-cmd="air:jet" title="Ground-attack jet: one fast, devastating gun run">Jet <small>220</small> <kbd data-key="jet"></kbd></button>
-        <button tabindex="-1" data-cmd="air:lift" title="Air assault: a helicopter lands a squad where you click">Air assault <small>280</small> <kbd data-key="lift"></kbd></button>
-        <button tabindex="-1" data-cmd="gas" title="Gas: chemical shells; infantry there mask up, aim worse and see less">Gas <small>200</small> <kbd data-key="gas"></kbd></button>
-      </div>
-      <p class="hint mouse-only">Right-click: move · on an enemy: attack · on a house: occupy · drag: move and face that way</p>
+      <div class="cmd-buttons support"></div>
     </div>
-    <div id="control-hint" class="sp-only"><kbd data-key="toggleView"></kbd> or double-click a stack — take direct control</div>
-
-    <div id="help">
-      <div class="help-action">
-        <b>Control</b> <span class="k" data-key="up"></span><span class="k" data-key="left"></span><span class="k" data-key="down"></span><span class="k" data-key="right"></span> move · <span class="k" data-key="sprint"></span> sprint · <span class="k" data-key="crouch"></span> crouch · <span class="k" data-key="prone"></span> prone · Mouse aim · LMB fire · <span class="k" data-key="reload"></span> reload · <span class="k" data-key="prevMember"></span>/<span class="k" data-key="nextMember"></span> switch member · <span class="k" data-key="toggleView"></span> back to command · <span class="k" data-key="quality"></span> graphics quality · <span class="k" data-key="ao"></span> ambient occlusion · <span class="k" data-key="bloom"></span> bloom · <span class="k" data-key="mute"></span> mute
-      </div>
-      <div class="help-tactical">
-        <b>Command</b> <span class="k" data-key="up"></span><span class="k" data-key="left"></span><span class="k" data-key="down"></span><span class="k" data-key="right"></span> / edge pan · Wheel zoom · MMB drag: turn and tilt the view (<span class="k" data-key="resetView"></span> or double-click MMB: reset) · LMB select / drag · RMB order (drag: face) · <span class="k" data-key="reinforce"></span> reinforcements · <span class="k" data-key="selectAll"></span> all · 1–9 pick · <span class="k" data-key="sandbags"></span>/<span class="k" data-key="trench"></span>/<span class="k" data-key="wire"></span>/<span class="k" data-key="mines"></span> sandbags, trench, wire, mines · <span class="k" data-key="smoke"></span> smoke · <span class="k" data-key="flare"></span> flare (night, mortars) · <span class="k" data-key="engineer"></span> engineers: clear mines and wire, blow bridges · <span class="k" data-key="unload"></span> unload (right-click an IFV to board) · <span class="k" data-key="leave"></span> leave a building · <span class="k" data-key="heli"></span> helicopter · <span class="k" data-key="jet"></span> jet gun run · <span class="k" data-key="lift"></span> air assault (<span class="k" data-key="turnLeft"></span>/<span class="k" data-key="turnRight"></span> turn the run) · <span class="k" data-key="gas"></span> gas · minimap: LMB look, RMB move · all keys: Settings → Controls
-      </div>
-    </div>
+    <div id="target-hint" hidden></div>
+    <div id="key-card" hidden></div>
 
     <div id="lock-hint">Click to aim</div>
     <div id="rotate-hint"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="6" width="20" height="36" rx="3"/><path d="M8 30a16 16 0 0 0 14 12m-3 -4 3 4 -4 2"/></svg><b>Turn your phone sideways</b><span>Battles are played in landscape.</span></div>

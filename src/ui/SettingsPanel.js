@@ -89,7 +89,7 @@ export function buildSettings(container) {
   g.append(row('Benchmark', 'Tries the levels in a battle for a few seconds each and keeps the best one that runs smoothly (40 fps)', bench));
   g.append(row('Render scale', 'Auto follows the frame rate: sharp when there is room, softer in heavy fights. A fixed value draws exactly that many pixels',
     segmented([[null, 'Auto'], [0.5, '50 %'], [0.67, '67 %'], [0.75, '75 %'], [1, '100 %']], settings.get('renderScale'), (v) => settings.set('renderScale', v))));
-  g.append(row('Frame counter', 'Also shows the CPU time per frame: near the whole frame time, the processor is the limit', toggle(settings.get('showFps'), (v) => settings.set('showFps', v))));
+  g.append(row('Frame counter', 'Also shows the CPU time per frame: near the whole frame time, the processor is the limit', toggle(settings.get('fpsCounter'), (v) => settings.set('fpsCounter', v))));
   const gpu = graphicsCard();
   if (gpu) {
     const intel = /intel/i.test(gpu);
@@ -106,6 +106,8 @@ export function buildSettings(container) {
     slider(0, 1, 0.05, settings.get('volume'), (v) => `${Math.round(v * 100)} %`, (v) => settings.set('volume', v))));
   a.append(row('Menu music', 'The synth tune in the main menu',
     slider(0, 1, 0.05, settings.get('music'), (v) => `${Math.round(v * 100)} %`, (v) => settings.set('music', v))));
+  a.append(row('Radio chatter', 'Traffic from the rest of the war in the radio log, besides your own battle',
+    toggle(settings.get('radioChatter'), (v) => settings.set('radioChatter', v))));
 
   const c = el('section', 'set-group');
   c.append(el('h3', '', 'Controls'));

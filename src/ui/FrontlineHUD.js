@@ -1,9 +1,10 @@
-// Frontline mode HUD: a strip at the top with both sides' front strength and every control
-// point (owner colour, capture progress, contested pulse), plus a reinforcement panel in the
+// Frontline mode HUD: a strip at the top centre with both sides' name, front strength and stacks
+// in the field (yours left, theirs right, the same width) round every control point (owner colour, capture progress, contested pulse), plus a reinforcement panel in the
 // tactical command panel: command points, stacks in the field / limit, and the button that
 // opens the reinforcement window (ui/ReinforceWindow.js, also C).
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { ReinforceWindow } from './ReinforceWindow.js';
+import { icon } from './Icons.js';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 
@@ -16,16 +17,16 @@ export class FrontlineHUD {
 
     const bar = document.createElement('div');
     bar.id = 'frontline';
-    bar.innerHTML = `
-      <div class="fl-side ally"><div class="fl-bar"><i></i></div><span></span></div>
-      <div class="fl-points"></div>
-      <div class="fl-side enemy"><span></span><div class="fl-bar"><i></i></div></div>
-      <div class="fl-status"></div>`;
+    const side = (cls, f) => `<div class="fl-side ${cls}"><div class="fl-top"><b>${FACTIONS[f].name}</b><span class="fl-val"></span></div>
+      <div class="fl-bar"><i></i></div><small class="fl-n"></small></div>`;
+    bar.innerHTML = `${side('ally', this.me)}<div class="fl-points"></div>${side('enemy', this.foe)}<div class="fl-status"></div>`;
     document.getElementById('hud').appendChild(bar);
     this.allyFill = bar.querySelector('.ally i');
-    this.allyText = bar.querySelector('.ally span');
+    this.allyText = bar.querySelector('.ally .fl-val');
+    this.allyN = bar.querySelector('.ally .fl-n');
+    this.enemyN = bar.querySelector('.enemy .fl-n');
     this.enemyFill = bar.querySelector('.enemy i');
-    this.enemyText = bar.querySelector('.enemy span');
+    this.enemyText = bar.querySelector('.enemy .fl-val');
     this.statusEl = bar.querySelector('.fl-status');
     const strip = bar.querySelector('.fl-points');
     // nearest to your base first, so your side of the strip sits next to your strength bar
@@ -42,7 +43,8 @@ export class FrontlineHUD {
 
     const panel = document.createElement('div');
     panel.id = 'reinforce';
-    panel.innerHTML = '<button type="button" tabindex="-1" class="rf-open">Reinforcements <kbd data-key="reinforce"></kbd></button><span class="rf-stacks" title="Stacks in the field / limit"></span><span class="rf-cp"></span>';
+    panel.innerHTML = `<div class="rf-info"><b class="rf-cp"></b><span class="rf-stacks" title="Stacks in the field / limit"></span></div>
+      <button type="button" tabindex="-1" class="rf-open">${icon('reinforce')}<span>Reinforce</span><kbd data-key="reinforce"></kbd></button>`;
     // its own bar beside the orders, bottom right: the points stay in sight with the orders folded away
     const orders = document.getElementById('command-panel');
     const dock = document.createElement('div');
@@ -84,7 +86,10 @@ export class FrontlineHUD {
     this.cpText.textContent = `${myCp} CP`;
     const stacks = this.game.world.stacksOf(this.me).filter((s) => !s.stats.structure && !s.autonomous).length;
     const full = stacks >= this.state.maxStacks;
-    this.stacksText.textContent = `${stacks} / ${this.state.maxStacks} stacks`;
+    this.stacksText.textContent = `${stacks}/${this.state.maxStacks} stacks`;
+    const g = this.game;
+    this.allyN.textContent = `${g.world.stacksOf(this.me).length} stacks`;
+    this.enemyN.textContent = `${g.world.stacks.filter((s) => s.alive && s.faction === this.foe && s.visible !== false).length} seen`;
     this.stacksText.classList.toggle('full', full);
     this.window.update();
   }

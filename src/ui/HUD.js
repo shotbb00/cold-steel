@@ -1,11 +1,21 @@
-// DOM HUD: view badge, stack counts, FPS, toasts, the tactical selection panel, the end
-// banner and — while you control a unit — its health, weapon state (ammo / reload / beam
+// DOM HUD: view badge (and the ? that opens the key card, also F1), stack counts, FPS, toasts,
+// the targeting hint, the tactical selection panel, the end banner and — while you control a unit — its health, weapon state (ammo / reload / beam
 // charge) and leadership bonus. Markup lives in index.html; modes may add their own HUD.
 import { requestReplay, toMenu } from '../core/replay.js';
 import { renderReport } from './AfterAction.js';
 import { ActionBar } from './ActionBar.js';
 import { settings } from '../core/Settings.js';
 import { CameraMode } from '../core/CameraManager.js';
+import { ACTIONS, keys, keyName } from '../core/Keys.js';
+import { silhouette } from './Icons.js';
+
+// the key card: every bound key by where it works, and what the mouse does
+const MOUSE = {
+  command: ['Left click / drag: select', 'Right click: move · on an enemy: attack · on a house: occupy', 'Right drag: move and face that way',
+    'Wheel: zoom · middle drag: turn and tilt the view', 'Double-click a stack: take direct control', 'Minimap: left looks, right moves'],
+  control: ['Mouse: aim · left button: fire'],
+};
+const CARD = [['command', 'Command view'], ['control', 'Direct control'], ['both', 'Everywhere']];
 
 export class HUD {
   constructor(game) {
@@ -17,7 +27,10 @@ export class HUD {
       ammoLabel: $('ammo-label'), ammoFill: $('ammo-fill'), ammoText: $('ammo-text'), ammoBar: $('ammo-bar'),
       crosshair: $('crosshair'), lockHint: $('lock-hint'),
       selection: $('selection-info'), toasts: $('toasts'), banner: $('banner'),
+      targetHint: $('target-hint'), keyCard: $('key-card'),
     };
+    $('keys-open').addEventListener('click', (e) => { e.currentTarget.blur(); this.toggleKeys(); });
+    this.el.keyCard.addEventListener('click', (e) => { if (e.target === this.el.keyCard || e.target.closest('.kc-close')) this.toggleKeys(false); });
 
     // command buttons, including the ones the action bar adds and removes
     document.getElementById('command-panel').addEventListener('click', (e) => {
@@ -36,6 +49,10 @@ export class HUD {
 
     const bus = game.bus;
     bus.on('toast', (msg) => this.toast(msg));
+    bus.on('key', ({ code }) => {
+      if (code === 'F1') this.toggleKeys();
+      else if (code === 'Escape' && !this.el.keyCard.hidden) { this.toggleKeys(false); game.commands.escConsumed = true; }
+    });
     bus.on('stack:destroyed', (s) => this.toast(`${s.name} ${s.faction === game.playerFaction ? 'lost' : 'destroyed'}`));
     bus.on('selection', () => this.renderSelection());
     bus.on('game:end', (r) => this.showBanner(r));
@@ -43,9 +60,9 @@ export class HUD {
     this.slowTimer = 0;
     this.frames = 0;
     this.fpsStart = performance.now();
-    const showFps = () => { this.el.fps.style.visibility = settings.get('showFps') ? '' : 'hidden'; };
+    const showFps = () => { this.el.fps.hidden = !settings.get('fpsCounter'); };
     showFps();
-    settings.on((key) => { if (key === 'showFps') showFps(); });
+    settings.on((key) => { if (key === 'fpsCounter') showFps(); });
   }
 
   update(dt) {
@@ -54,7 +71,9 @@ export class HUD {
     const tactical = g.cameraManager.mode === CameraMode.TACTICAL;
     const el = this.el;
     document.body.classList.toggle('tactical', tactical);
-    el.modeBadge.textContent = tactical ? 'Command view' : 'Direct control';
+    el.modeBadge.textContent = tactical ? 'Command' : 'Control';
+    const hint = (tactical && g.commands.targeting?.hint) || '';
+    if (hint !== this.hint) { this.hint = hint; el.targetHint.textContent = hint; el.targetHint.hidden = !hint; }
 
     const u = g.player.unit;
     if (u) {
@@ -107,22 +126,55 @@ export class HUD {
   }
 
   renderSelection() {
-    const sel = [...this.game.commands.selected];
+    const sel = [...this.game.commands.selected].filter((s) => s.alive);
     const box = this.el.selection;
     if (!sel.length) {
+      box.className = 'empty';
       box.textContent = this.game.input.touch ? 'Tap a stack to select it' : 'Click or drag to select your stacks';
       return;
     }
-    box.replaceChildren(...sel.map((s) => {
+    const span = (cls, text) => Object.assign(document.createElement('span'), { className: cls, textContent: text });
+    const bar = (s) => {
+      const b = document.createElement('i');
+      b.className = 'sel-hp';
+      b.style.setProperty('--hp', String(s.units.reduce((a, u) => a + Math.max(0, u.hp) / u.maxHp, 0) / s.units.length));
+      return b;
+    };
+    if (sel.length === 1) {
+      const [s] = sel;
+      box.className = 'one';
+      const top = document.createElement('div');
+      top.className = 'sel-top';
+      top.append(span('sel-name', s.name), span('sel-type', `${s.type.shortName} · ${s.aliveCount}/${s.units.length}`));
+      box.replaceChildren(top, span('sel-state', `${s.ai.state} · ${s.moraleWord}`), bar(s));
+      box.insertAdjacentHTML('afterbegin', silhouette(s.type.id, s.faction, 'sel-sil'));
+      return;
+    }
+    box.className = 'many';
+    const head = span('sel-count', `${sel.length} stacks`);
+    const rows = sel.slice(0, 4).map((s) => {
       const row = document.createElement('div');
       row.className = 'sel';
-      const name = document.createElement('span');
-      name.textContent = s.name;
-      const info = document.createElement('em');
-      info.textContent = `${s.ai.state} · ${s.moraleWord} · ${s.aliveCount}/${s.units.length}`;
-      row.append(name, info);
+      row.append(span('sel-name', s.name), span('sel-type', `${s.aliveCount}/${s.units.length}`), bar(s));
       return row;
-    }));
+    });
+    if (sel.length > 4) rows.push(span('sel-more', `+ ${sel.length - 4} more`));
+    box.replaceChildren(head, ...rows);
+  }
+
+  /** The key card (F1, the ? in the top bar): built fresh each time, so it shows rebindings. */
+  toggleKeys(on = this.el.keyCard.hidden) {
+    const card = this.el.keyCard;
+    card.hidden = !on;
+    if (!on) return;
+    const touch = this.game.input.touch;
+    const cols = CARD.map(([ctx, title]) => {
+      const list = ACTIONS.filter((a) => a.ctx === ctx && !(this.game.net && a.ctx === 'control'));
+      const rows = list.map((a) => `<li><kbd>${keyName(keys.code(a.id))}</kbd><span>${a.label}</span></li>`).join('');
+      const mouse = touch ? '' : (MOUSE[ctx] ?? []).map((m) => `<li class="kc-mouse"><span>${m}</span></li>`).join('');
+      return `<section><h4>${title}</h4><ul>${mouse}${rows}</ul></section>`;
+    }).join('');
+    card.innerHTML = `<div class="kc-box"><div class="kc-head"><b>Keys</b><span>Rebind them in Settings → Controls</span><button type="button" class="kc-close" aria-label="Close">×</button></div><div class="kc-cols">${cols}</div></div>`;
   }
 
   toast(message) {

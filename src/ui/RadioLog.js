@@ -1,11 +1,14 @@
 // The radio log: a short running record of the battle on the left of the screen — villages
 // changing hands, stacks lost and destroyed, and traffic from the rest of the war (data/radio.js)
-// every half minute or so. Each line carries the battle clock. Built from events every machine
+// every half minute or so (Settings: Radio chatter, off by default). Each line carries the battle
+// clock and fades after a few seconds. Built from events every machine
 // sees (multiplayer clients included), so both players get their own side's log.
 import { RADIO } from '../data/radio.js';
 import { FACTIONS } from '../data/factions.js';
+import { settings } from '../core/Settings.js';
 
-const LINES = 6;
+const LINES = 3;
+const LIFE = 12;            // seconds a line stays (the fade is in style.css)
 const CHATTER = [25, 55];   // seconds between radio traffic lines
 const rand = ([a, b]) => a + Math.random() * (b - a);
 
@@ -43,11 +46,12 @@ export class RadioLog {
     row.querySelector('span').textContent = text;
     this.el.append(row);
     while (this.el.children.length > LINES) this.el.firstChild.remove();
+    setTimeout(() => row.remove(), LIFE * 1000);
   }
 
   update() {
     const t = this.game.time;
-    if (t < this.next || !this.lines.length) return;
+    if (t < this.next || !this.lines.length || !settings.get('radioChatter')) return;
     this.next = t + rand(CHATTER);
     const line = this.lines.shift();
     this.lines.push(line); // round and round, never twice in a row

@@ -32,8 +32,8 @@ export const ACTIONS = [
   { id: 'jet', label: 'Jet gun run', ctx: 'command', key: 'KeyJ' },
   { id: 'lift', label: 'Air assault', ctx: 'command', key: 'KeyP' },
   { id: 'gas', label: 'Gas fire mission', ctx: 'command', key: 'KeyI' },
-  { id: 'turnLeft', label: 'Turn the air run left', ctx: 'command', key: 'KeyQ', targeting: true },
-  { id: 'turnRight', label: 'Turn the air run right', ctx: 'command', key: 'KeyE', targeting: true },
+  { id: 'turnLeft', label: 'Turn left (placing, air runs)', ctx: 'command', key: 'KeyQ', targeting: true },
+  { id: 'turnRight', label: 'Turn right (placing, air runs)', ctx: 'command', key: 'KeyE', targeting: true },
   // direct control
   { id: 'sprint', label: 'Sprint', ctx: 'control', key: 'ShiftLeft', alt: 'ShiftRight' },
   { id: 'reload', label: 'Reload', ctx: 'control', key: 'KeyR' },

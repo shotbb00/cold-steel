@@ -11,7 +11,8 @@ export const DEFAULTS = {
   music: 0.6,          // menu music 0..1 (audio/MenuMusic.js), on top of the master volume
   sensitivity: 1,      // mouse look multiplier (direct control)
   invertY: false,
-  showFps: true,
+  fpsCounter: false,   // the frame counter in the top bar
+  radioChatter: false, // radio traffic from the rest of the war in the radio log
   keys: {},
   playerName: '',      // shown to the other player in multiplayer (lobby, chat)            // the player's own key bindings: { action: KeyboardEvent.code } (core/Keys.js)
 };

@@ -13,7 +13,8 @@
 //                     cover spots show while you aim, like a right-drag); with none, box select
 //   two fingers       pinch to zoom, twist to turn the view, slide both up or down to tilt it
 // A row at the top of the command panel adds what a mouse does with keys (take control,
-// deselect, cancel a targeting), and a pause button sits in the top bar in both views. On touch
+// deselect, cancel a targeting, and while placing a work or aiming an air run the two arrows that
+// turn it, like Q/E), and a pause button sits in the top bar in both views. On touch
 // the panel starts collapsed to its Orders button and that row, so the battlefield stays clear;
 // Orders opens the rest (reinforcements, building, smoke, air support), and any command given
 // folds it away again.
@@ -23,6 +24,7 @@
 // screen only once it is touched, so it keeps its mouse layout until then.
 import { CameraMode } from '../core/CameraManager.js';
 import { keys } from '../core/Keys.js';
+import { icon } from './Icons.js';
 
 const HOLD = 0.42;        // seconds before a still finger starts a box select
 const SLOP = 12;          // px a finger may wander and still be a tap
@@ -227,15 +229,19 @@ export class TouchControls {
   buildToolbar() {
     const bar = (this.toolbar = document.createElement('div'));
     bar.id = 'touch-bar';
-    const control = btn('tb-control', 'Take control');
-    const clear = btn('tb-clear', 'Deselect');
-    const cancel = btn('tb-cancel', 'Cancel');
-    const pause = btn('tb-pause', '❚❚', 'Pause');
+    const control = btn('tb-control', `${icon('control')}<span>Control</span>`, 'Take direct control');
+    const clear = btn('tb-clear', `${icon('deselect')}<span>Deselect</span>`, 'Deselect');
+    const cancel = btn('tb-cancel', `${icon('close')}<span>Cancel</span>`, 'Cancel');
+    const left = btn('tb-turn', icon('turnLeft'), 'Turn left');
+    const right = btn('tb-turn', icon('turnRight'), 'Turn right');
+    const pause = btn('tb-pause', icon('pause'), 'Pause');
+    left.addEventListener('click', () => this.key('turnLeft'));
+    right.addEventListener('click', () => this.key('turnRight'));
     control.addEventListener('click', () => this.game.toggleView());
     clear.addEventListener('click', () => { this.game.commands.select([]); });
     cancel.addEventListener('click', () => this.game.commands.cancelTargeting());
     pause.addEventListener('click', () => this.game.bus.emit('key', { code: 'Escape' }));
-    bar.append(cancel, control, clear);
+    bar.append(left, right, cancel, control, clear);
     const panel = document.getElementById('command-panel');
     const orders = btn('tb-orders', 'Orders', 'Show or hide the orders panel');
     orders.addEventListener('click', () => this.setPanel(panel.classList.contains('collapsed')));
@@ -245,11 +251,11 @@ export class TouchControls {
     // an order on the battlefield — folds the panel away again
     panel.addEventListener('click', (e) => {
       const b = e.target.closest('button');
-      if (b && !b.matches('.tb-orders, .rf-open')) setTimeout(() => this.setPanel(false), 0);
+      if (b && !b.matches('.tb-orders, .rf-open, .tb-turn')) setTimeout(() => this.setPanel(false), 0);
     });
     this.game.bus.on('order', () => this.setPanel(false)); // (buying a unit doesn't: the reinforcements stay open for the next)
     document.getElementById('topbar').append(pause);
-    this.tb = { control, clear, cancel, orders };
+    this.tb = { control, clear, cancel, orders, left, right };
     this.setPanel(false);
   }
 
@@ -356,6 +362,7 @@ export class TouchControls {
     const cs = this.game.commands;
     const commanding = this.commanding;
     this.tb.cancel.hidden = !cs.targeting;
+    this.tb.left.hidden = this.tb.right.hidden = !(cs.targeting?.kind === 'build' || cs.targeting?.kind === 'air');
     this.tb.control.hidden = !cs.selected.size || !!this.game.net;
     this.tb.clear.hidden = !cs.selected.size;
     this.sightBtn ??= this.pad.querySelector('.tp-sight');

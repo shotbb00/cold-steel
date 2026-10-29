@@ -1,7 +1,7 @@
 // Keyboard / mouse state plus pointer lock. Continuous state is polled (isDown, mouse),
 // discrete presses are broadcast on the event bus ('key', 'mousedown', 'mouseup').
 
-const BLOCKED_KEYS = new Set(['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const BLOCKED_KEYS = new Set(['F1', 'Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 export class InputHandler {
   constructor(canvas, bus) {

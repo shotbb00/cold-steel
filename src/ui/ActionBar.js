@@ -1,34 +1,41 @@
-// The command panel's action buttons, shown only when the selection can use them:
-//   sandbags / trench / wire / mines   one infantry stack selected (they dig and wire it)
-//   clear (and blow bridge)            engineers selected: lift mines and cut wire, or charge a bridge
-//   smoke                              vehicles with smoke launchers, or a mortar with smoke bombs
-//   flare                              at night, a mortar with illumination rounds
-//   unload                             IFVs with a squad inside
-// The support powers (helicopter, jet, air assault) are always there (bottom row), as is
-// "select all"; each shows its price, or the seconds until it's ready again.
+// The command panel's buttons (src/ui/Icons.js draws them):
+//   actions         what the selection can do, as icon tiles with the key in the corner —
+//                   sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
+//                   (engineers), lay a bridge, smoke, flare (night), unload, cancel a job, leave a building
+//   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
+//                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
 import { STRUCTURES } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { GAS } from '../systems/Gas.js';
 import { keyOf } from '../core/Keys.js';
+import { icon } from './Icons.js';
 
 const ACTIONS = [
-  { cmd: 'build:sandbags', label: 'Sandbags', key: 'N', cost: STRUCTURES.sandbags.cost, tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:trench', label: 'Trench', key: 'T', cost: STRUCTURES.trench.cost, tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:wire', label: 'Wire', key: 'V', cost: STRUCTURES.wire.cost, tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:mines', label: 'Mines', key: 'F', cost: STRUCTURES.mines.cost, tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: STRUCTURES.sandbags.cost, tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: STRUCTURES.trench.cost, tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: STRUCTURES.wire.cost, tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: STRUCTURES.mines.cost, tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
   {
-    cmd: 'engineer', key: 'X',
-    label: (g) => (g.map.bridgeAt ? 'Clear / blow bridge' : 'Clear mines & wire'),
+    cmd: 'engineer', icon: 'engineer', key: 'engineer',
+    label: (g) => (g.map.bridgeAt ? 'Clear / blow' : 'Clear'),
     tip: (g) => `Engineers: click a minefield or wire to lift it${g.map.bridgeAt ? ', or a bridge to blow it (8 s fuse)' : ''}`,
     when: (sel) => sel.some((s) => s.stats.engineer),
   },
-  { cmd: 'bridge', label: 'Lay bridge', key: 'X', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
-  { cmd: 'smoke', label: 'Smoke', key: 'K', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
-  { cmd: 'flare', label: 'Flare', key: 'L', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
-  { cmd: 'unload', label: 'Unload', key: 'U', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
-  { cmd: 'cancelJob', label: 'Cancel job', key: '⌫', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
-  { cmd: 'leave', label: 'Leave building', key: 'E', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
+  { cmd: 'bridge', label: 'Lay bridge', icon: 'bridge', key: 'engineer', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
+  { cmd: 'smoke', label: 'Smoke', icon: 'smoke', key: 'smoke', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
+  { cmd: 'flare', label: 'Flare', icon: 'flare', key: 'flare', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
+  { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
+  { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
+  { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
+];
+
+// the support powers: [command, icon, key action, label, tooltip]
+const SUPPORT = [
+  ['air', 'heli', 'heli', 'Helicopter', 'Attack helicopter: rockets and the chin gun along a line'],
+  ['air:jet', 'jet', 'jet', 'Jet', 'Ground-attack jet: one fast, devastating gun run'],
+  ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
+  ['gas', 'gas', 'gas', 'Gas', 'Chemical shells: infantry there mask up, aim worse and see less'],
 ];
 
 function one(sel, test) {
@@ -37,20 +44,30 @@ function one(sel, test) {
 
 const value = (v, g) => (typeof v === 'function' ? v(g) : v);
 
-// which key action each button's command is (core/Keys.js), so the hint follows a rebinding
-const ACTION_OF = {
-  hold: 'hold', 'build:sandbags': 'sandbags', 'build:trench': 'trench', 'build:wire': 'wire', 'build:mines': 'mines',
-  engineer: 'engineer', bridge: 'engineer', cancelJob: 'cancelJob', smoke: 'smoke', flare: 'flare', unload: 'unload', leave: 'leave',
-};
-
 export class ActionBar {
   constructor(game) {
     this.game = game;
     this.el = document.getElementById('cmd-actions');
     this.key = '';
     this.timer = 0;
+    this.buildSupport();
     game.bus.on('selection', () => this.render(true));
     game.bus.on('order', () => setTimeout(() => this.render(true), 0)); // a job placed: its Cancel button at once
+  }
+
+  buildSupport() {
+    const row = document.querySelector('.cmd-buttons.support');
+    this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.className = 'sup';
+      b.dataset.cmd = cmd;
+      b.title = `${label} — ${tip}`;
+      b.innerHTML = `<i class="cd"></i>${icon(ic)}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
+      return { b, cmd, small: b.querySelector('small') };
+    });
+    row.replaceChildren(...this.support.map((s) => s.b));
   }
 
   update(dt) {
@@ -61,24 +78,21 @@ export class ActionBar {
     this.supportPowers();
   }
 
-  /** Price or cooldown on the support-power buttons. */
+  /** Price or recharge on the support powers: a ring runs round while one is cooling down. */
   supportPowers() {
     const g = this.game;
-    for (const b of document.querySelectorAll('.cmd-buttons.support [data-cmd^="air"]')) {
-      const kind = b.dataset.cmd.slice(4) || 'heli';
-      const left = Math.ceil(g.air.cooldownLeft(g.playerFaction, kind));
-      const text = left > 0 ? `${left} s` : String(KINDS[kind].cost);
-      const small = b.querySelector('small');
-      if (small && small.textContent !== text) small.textContent = text;
+    const me = g.playerFaction;
+    const off = g.air.limit[me] === 0; // no support in this battle
+    for (const { b, cmd, small } of this.support) {
+      const gas = cmd === 'gas';
+      const kind = gas ? null : cmd.slice(4) || 'heli';
+      const left = Math.ceil(gas ? g.gas.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
+      const total = gas ? GAS.cooldown : KINDS[kind].cooldown;
+      const text = left > 0 ? `${left} s` : String(gas ? GAS.cost : KINDS[kind].cost);
+      if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
-      b.hidden = g.air.limit[g.playerFaction] === 0; // no air support in this battle
-    }
-    const b = document.querySelector('.cmd-buttons.support [data-cmd="gas"]');
-    if (b) {
-      const left = Math.ceil(g.gas.cooldownLeft(g.playerFaction));
-      b.querySelector('small').textContent = left > 0 ? `${left} s` : String(GAS.cost);
-      b.classList.toggle('cooling', left > 0);
-      b.hidden = g.air.limit[g.playerFaction] === 0; // support powers off in this battle
+      b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
+      b.hidden = off;
     }
   }
 
@@ -92,11 +106,14 @@ export class ActionBar {
     this.key = key;
     this.el.replaceChildren(...shown.map((a) => {
       const b = document.createElement('button');
+      b.type = 'button';
       b.tabIndex = -1;
+      b.className = 'act';
       b.dataset.cmd = a.cmd;
-      b.title = value(a.tip, g);
+      const label = value(a.label, g);
+      b.title = `${label}${a.cost ? ` (${a.cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${value(a.label, g)}${a.cost ? ` <small>${a.cost}</small>` : ''}${n ? ` <small class="n">×${n}</small>` : ''} <kbd data-key="${ACTION_OF[a.cmd] ?? ''}">${ACTION_OF[a.cmd] ? keyOf(ACTION_OF[a.cmd]) : a.key}</kbd>`;
+      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${a.cost ? `<small>${a.cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`;
       return b;
     }));
     this.el.hidden = !shown.length;
