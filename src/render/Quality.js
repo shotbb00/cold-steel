@@ -21,8 +21,7 @@
 // sharp, heavy fights a little softer, and the load is what the frame rate allows either way.
 // Phones (a coarse pointer) spend their budget on pixels rather than on effects hard to see on a
 // small screen: no ambient occlusion, cheaper shadows, thinner grass, and a higher ceiling.
-// Edges are always smoothed (FXAA where there's no MSAA, even on Very low), and a light sharpen
-// pass crispens an image drawn below the screen's own resolution.
+// Edges are always smoothed (FXAA where there's no MSAA, even on Very low).
 //   Babylon renderer (render/babylon/BabylonView.js applyQuality) also: shadow filtering, whether
 //   the shadow map is redrawn every frame, and AO only on High
 //   (sun shadows and SSAO are by far its biggest costs on laptop graphics)
@@ -179,7 +178,7 @@ export class Quality {
     renderer.setSize(this.game.view.w, this.game.view.h);
     post.setPixelRatio(r);
     post.setSize(this.game.view.w, this.game.view.h);
-    this.game.babylon?.setResolution?.(r, devicePixelRatio);
+    this.game.babylon?.setResolution?.(r);
   }
 
   /** Dynamic resolution: follow the frame rate between MIN_RES and the preset's ceiling. */

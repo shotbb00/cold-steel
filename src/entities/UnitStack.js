@@ -198,12 +198,28 @@ export class UnitStack {
   slotPosition(u, out) {
     const c = Math.cos(this.facing);
     const s = Math.sin(this.facing);
-    const column = this.crossing ? 0.2 : 1; // over a bridge or a ford: single file
-    const ox = (u.offset.x * LOOSENESS + u.wander.x) * column;
+    const ox = this.crossing ? 0 : u.offset.x * LOOSENESS + u.wander.x; // over a bridge: single file
     const oy = (u.offset.y * LOOSENESS + u.wander.y) * (this.crossing ? 1.6 : 1) - (this.crossing ? Math.abs(u.offset.x) * 1.5 : 0);
     out.set(this.anchor.x + ox * c + oy * s, 0, this.anchor.z - ox * s + oy * c);
+    this.onDeck(out);
     out.y = this.world.terrain.heightAt(out.x, out.z);
     return out;
+  }
+
+  /**
+   * Over the river by a bridge, keep point p (a slot, a body) on the deck: its centre no
+   * further from the bridge's middle than the deck's half-width less the unit's own half-width.
+   */
+  onDeck(p, body = false) {
+    const river = this.world.river;
+    if (!river || this.usesCover && !body && !this.crossing) return;
+    // the bridge it is on (its own crossing, or whichever deck it stands beside — the stack's
+    // crossing ends when its anchor is over, with the last of the column still on the bridge)
+    const c = this.crossing?.crossing ?? river.bridgeAt(p.x, p.z);
+    if (!c || c.blown || Math.abs(p.z - c.z) > river.halfWidth + (body ? 1 : 6)) return;
+    if (Math.abs(p.x - c.x) > c.width / 2 + 4) return; // only beside the deck: never a jump
+    const room = Math.max(0, c.width / 2 - this.stats.radius * 0.8);
+    p.x = c.x + Math.max(-room, Math.min(room, p.x - c.x));
   }
 
   /** Shift the whole area (used by world separation). */
@@ -510,6 +526,7 @@ export class UnitStack {
     u.pos.z += u.vel.z * dt;
     if (!(u.ghostT > 0)) this.world.cover.resolveCircle(u.pos, u.radius * 0.85); // ghostT: climbing over
     this.world.clampToBounds(u.pos);
+    this.onDeck(u.pos, true); // nobody pushed off the side of a bridge
     const w = this.world.river?.water;
     if (w) {
       // deep water is a wall — but never a trap: going shallower is always allowed

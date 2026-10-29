@@ -206,15 +206,12 @@ export class BabylonView {
     this.engine.setHardwareScalingLevel(1 / Math.max(0.25, r));
   }
 
-  /** Render at r pixels per screen point; below the screen's own density, sharpen a little. */
-  setResolution(r, dpr = devicePixelRatio) {
+  /**
+   * Render at r pixels per screen point. (No sharpen pass: it drew dark seams beside thin bright
+   * lines — every tracer — on high-density screens.)
+   */
+  setResolution(r) {
     this.setPixelRatio(r);
-    const soft = r < dpr * 0.9;
-    this.pipeline.sharpenEnabled = soft;
-    if (soft) {
-      this.pipeline.sharpen.edgeAmount = Math.min(0.35, 0.15 + (dpr - r) * 0.12);
-      this.pipeline.sharpen.colorAmount = 1;
-    }
   }
 
   // ---------------------------------------------------------------- per frame
