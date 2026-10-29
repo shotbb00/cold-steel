@@ -87,8 +87,8 @@ export function buildSettings(container) {
   bench.type = 'button';
   bench.addEventListener('click', () => { settings.set('benchmark', true); bench.textContent = window.game ? 'Running…' : 'Runs in the next battle'; });
   g.append(row('Benchmark', 'Tries the levels in a battle for a few seconds each and keeps the best one that runs smoothly (40 fps)', bench));
-  g.append(row('Render scale', 'Lower draws fewer pixels: the biggest gain on weak graphics. Preset = what the quality level uses',
-    segmented([[null, 'Preset'], [0.5, '50 %'], [0.67, '67 %'], [0.75, '75 %'], [1, '100 %']], settings.get('renderScale'), (v) => settings.set('renderScale', v))));
+  g.append(row('Render scale', 'Auto follows the frame rate: sharp when there is room, softer in heavy fights. A fixed value draws exactly that many pixels',
+    segmented([[null, 'Auto'], [0.5, '50 %'], [0.67, '67 %'], [0.75, '75 %'], [1, '100 %']], settings.get('renderScale'), (v) => settings.set('renderScale', v))));
   g.append(row('Frame counter', 'Also shows the CPU time per frame: near the whole frame time, the processor is the limit', toggle(settings.get('showFps'), (v) => settings.set('showFps', v))));
   const gpu = graphicsCard();
   if (gpu) {

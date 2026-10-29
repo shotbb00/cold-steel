@@ -14,7 +14,15 @@
 //   shadows     – false: no sun shadows at all (Very low)
 //   post        – false: no post-processing pass (Very low: tone mapping happens in the materials)
 //   lod         – metres from the camera beyond which soldiers use their light model (0: always)
-// The render-scale setting (settings 'renderScale', 0.5–1) overrides the preset's resolution.
+// Dynamic resolution: unless the player fixed a render scale (settings 'renderScale', 0.5–1),
+// the resolution is not a fixed number but follows the frame rate — every ADJUST_EVERY seconds it
+// steps down when the game runs below its target and back up toward the preset's ceiling
+// (maxRes, capped by the screen's pixel density) when there is room. Calm moments are drawn
+// sharp, heavy fights a little softer, and the load is what the frame rate allows either way.
+// Phones (a coarse pointer) spend their budget on pixels rather than on effects hard to see on a
+// small screen: no ambient occlusion, cheaper shadows, thinner grass, and a higher ceiling.
+// Edges are always smoothed (FXAA where there's no MSAA, even on Very low), and a light sharpen
+// pass crispens an image drawn below the screen's own resolution.
 //   Babylon renderer (render/babylon/BabylonView.js applyQuality) also: shadow filtering, whether
 //   the shadow map is redrawn every frame, and AO only on High
 //   (sun shadows and SSAO are by far its biggest costs on laptop graphics)
@@ -25,27 +33,43 @@ import { keys } from '../core/Keys.js';
 
 export const QUALITY = {
   verylow: {
-    label: 'Very low', resolution: 0.5, msaa: 0, ao: false, aoScale: 0.5, bloom: false,
+    label: 'Very low', resolution: 0.5, maxRes: 0.75, msaa: 0, ao: false, aoScale: 0.5, bloom: false,
     shadowSize: 512, shadowType: THREE.PCFShadowMap, detail: { grass: 0.1, hedge: 0.3, clutter: 0.15, foliage: 0 },
-    shadowFilter: 'low', shadowEvery: 2, babylonAO: false, shadows: false, post: false, lod: 0,
+    shadowFilter: 'low', shadowEvery: 2, babylonAO: false, shadows: false, lod: 0,
   },
   low: {
-    label: 'Low', resolution: 0.75, msaa: 0, ao: false, aoScale: 0.5, bloom: false,
+    label: 'Low', resolution: 0.75, maxRes: 1, msaa: 0, ao: false, aoScale: 0.5, bloom: false,
     shadowSize: 1024, shadowType: THREE.PCFShadowMap, detail: { grass: 0.35, hedge: 0.5, clutter: 0.4, foliage: 1 },
     shadowFilter: 'low', shadowEvery: 2, babylonAO: false, lod: 30,
   },
   medium: {
-    label: 'Medium', resolution: 1, msaa: 2, ao: true, aoScale: 0.5, bloom: true,
+    label: 'Medium', resolution: 1, maxRes: 1.5, msaa: 2, ao: true, aoScale: 0.5, bloom: true,
     shadowSize: 2048, shadowType: THREE.PCFShadowMap, detail: { grass: 0.65, hedge: 0.8, clutter: 0.7, foliage: 1 },
     shadowFilter: 'medium', shadowEvery: 1, babylonAO: false, lod: 45,
   },
   high: {
-    label: 'High', resolution: Math.min(devicePixelRatio, 1.5), msaa: 4, ao: true, aoScale: 0.75, bloom: true,
+    label: 'High', resolution: Math.min(devicePixelRatio, 1.5), maxRes: 2, msaa: 4, ao: true, aoScale: 0.75, bloom: true,
     shadowSize: 4096, shadowType: THREE.PCFSoftShadowMap, detail: { grass: 1, hedge: 1, clutter: 1, foliage: 1 },
     shadowFilter: 'high', shadowEvery: 1, babylonAO: true, lod: 75,
   },
 };
 const ORDER = ['verylow', 'low', 'medium', 'high'];
+const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+/** A preset as this device runs it: phones trade effects for pixels. */
+function preset(level) {
+  const q = { ...QUALITY[level] };
+  if (PHONE) {
+    Object.assign(q, { ao: false, babylonAO: false, shadowFilter: 'low', shadowSize: Math.min(q.shadowSize, 1024), maxRes: q.maxRes + 0.5 });
+    q.detail = { ...q.detail, grass: q.detail.grass * 0.6, clutter: q.detail.clutter * 0.7 };
+  }
+  q.maxRes = Math.min(q.maxRes, devicePixelRatio);
+  return q;
+}
+const MIN_RES = 0.5;
+const STEP = 0.1;           // resolution change per adjustment
+const ADJUST_EVERY = 1.5;   // seconds of frame rate behind each adjustment
+const TARGET = PHONE ? 45 : 55; // fps the dynamic resolution holds
+const RECOVER = 20;         // seconds after a step down before it tries that resolution again
 const WATCH_FROM = 4;   // seconds after start before the frame rate counts (shaders compiling)
 const WATCH_FOR = 8;    // seconds of frame rate to average
 const TOO_SLOW = 32;    // fps below which the auto check steps down
@@ -62,6 +86,7 @@ export class Quality {
     this.auto = !QUALITY[stored]; // only judge the machine when the player hasn't chosen
     this.goal = TOO_SLOW;
     this.watch = { t: 0, frames: 0, time: 0 };
+    this.dyn = { t: 0, frames: 0, time: 0, cap: Infinity, capT: 0 };
     this.apply(this.level);
     if (settings.get('benchmark')) this.benchmark();   // asked for from the main menu: run it in this battle
     game.bus.on('key', ({ code }) => { if (keys.is(code, 'quality')) this.cycle(); });
@@ -106,14 +131,19 @@ export class Quality {
     this.game.bus.emit('toast', `Graphics: ${QUALITY[level].label}${note} (G to change)`);
   }
 
+  /** The fixed render scale the player chose, or null for dynamic resolution. */
+  get fixedScale() {
+    return settings.get('renderScale') ?? null;
+  }
+
   apply(level) {
-    const q = { ...QUALITY[level], resolution: settings.get('renderScale') ?? QUALITY[level].resolution };
+    const q = preset(level);
+    this.q = q;
+    this.res = Math.min(q.maxRes, this.fixedScale ?? q.resolution); // dynamic resolution climbs from here when there's room
+    q.resolution = this.res;
     const { renderer, post, environment, scene } = this.game;
-    renderer.setPixelRatio(q.resolution);
-    renderer.setSize(this.game.view.w, this.game.view.h);
-    post.setPixelRatio(q.resolution);
+    this.setResolution(this.res);
     post.setSamples(q.msaa);
-    post.setSize(this.game.view.w, this.game.view.h);
     post.ao.enabled = q.ao;
     post.ao.setScale(q.aoScale);
     post.bloom.enabled = q.bloom;
@@ -141,8 +171,42 @@ export class Quality {
     });
   }
 
-  /** Called every frame with the real frame time: the one-time automatic check. */
+  /** Draw at `r` render pixels per screen point (renderer, post-processing, Babylon). */
+  setResolution(r) {
+    const { renderer, post } = this.game;
+    this.res = r;
+    renderer.setPixelRatio(r);
+    renderer.setSize(this.game.view.w, this.game.view.h);
+    post.setPixelRatio(r);
+    post.setSize(this.game.view.w, this.game.view.h);
+    this.game.babylon?.setResolution?.(r, devicePixelRatio);
+  }
+
+  /** Dynamic resolution: follow the frame rate between MIN_RES and the preset's ceiling. */
+  adjust(dt) {
+    const d = this.dyn;
+    d.capT -= dt;
+    if (d.capT <= 0) d.cap = Infinity;
+    d.frames++;
+    d.time += dt;
+    if (d.time < ADJUST_EVERY) return;
+    const fps = d.frames / d.time;
+    d.frames = 0;
+    d.time = 0;
+    let r = this.res;
+    if (fps < TARGET * 0.9 && r > MIN_RES) {
+      d.cap = r;                 // this was too much: don't come straight back to it
+      d.capT = RECOVER;
+      r = Math.max(MIN_RES, r - STEP);
+    } else if (fps > Math.min(TARGET * 1.12, 57) && r + STEP <= Math.min(this.q.maxRes, d.cap - 0.01)) {
+      r += STEP;
+    } else return;
+    this.setResolution(Math.round(r * 100) / 100);
+  }
+
+  /** Called every frame with the real frame time: dynamic resolution, and the one-time automatic check. */
   update(dt) {
+    if (this.fixedScale == null && dt > 0 && dt < 0.5) this.adjust(dt);
     if (!this.auto) return;
     const w = this.watch;
     w.t += dt;
@@ -152,7 +216,10 @@ export class Quality {
     if (w.time < WATCH_FOR) return;
     const fps = w.frames / w.time;
     const i = ORDER.indexOf(this.level);
-    if (fps < this.goal && i > 0) {
+    const roomLeft = this.fixedScale == null && this.res > MIN_RES + 0.01; // dynamic resolution still has room to drop first
+    if (fps < this.goal && i > 0 && roomLeft && !this.benching) {
+      this.watch = { t: WATCH_FROM - 1, frames: 0, time: 0 };
+    } else if (fps < this.goal && i > 0) {
       this.set(ORDER[i - 1], ` — ${Math.round(fps)} fps was too slow`);
       this.watch = { t: WATCH_FROM - 1, frames: 0, time: 0 }; // check again on the new setting
     } else {

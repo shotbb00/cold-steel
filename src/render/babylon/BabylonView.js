@@ -158,7 +158,7 @@ export class BabylonView {
 
   /** A render/Quality.js preset: resolution, anti-aliasing, AO, bloom, shadow map size. */
   applyQuality(q) {
-    this.setPixelRatio(q.resolution);
+    this.setResolution(q.resolution);
     this.pipeline.samples = q.msaa > 0 ? q.msaa : 1;
     this.pipeline.fxaaEnabled = !(q.msaa > 0);
     this.pipeline.bloomEnabled = q.bloom;
@@ -204,6 +204,17 @@ export class BabylonView {
 
   setPixelRatio(r) {
     this.engine.setHardwareScalingLevel(1 / Math.max(0.25, r));
+  }
+
+  /** Render at r pixels per screen point; below the screen's own density, sharpen a little. */
+  setResolution(r, dpr = devicePixelRatio) {
+    this.setPixelRatio(r);
+    const soft = r < dpr * 0.9;
+    this.pipeline.sharpenEnabled = soft;
+    if (soft) {
+      this.pipeline.sharpen.edgeAmount = Math.min(0.35, 0.15 + (dpr - r) * 0.12);
+      this.pipeline.sharpen.colorAmount = 1;
+    }
   }
 
   // ---------------------------------------------------------------- per frame
