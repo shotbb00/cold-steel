@@ -147,8 +147,9 @@ export class Construction {
   }
 
   /**
-   * A bridge being laid: the span comes off the vehicle standing upright at the near bank and
-   * swings down across the river like a drawbridge, following the job's progress.
+   * A bridge being laid, scissors-fashion, following the job's progress: the bridge comes off the
+   * vehicle folded in half, rises at the near bank until it stands upright with its hinge on top,
+   * then lowers across the river while the outer half unfolds over it, until both lie flat.
    */
   layingAnimation(site) {
     const river = this.game.world.river;
@@ -157,17 +158,26 @@ export class Construction {
     if (layer) layer.laying = true; // the bridge is off its back, swinging out
     if (!site.anim) {
       const L = river.spanLength;
-      const pivot = new THREE.Group();
-      const span = river.steelSpan();
-      span.position.set(0, 0, -side * L / 2); // hinged at its near end, reaching across
-      pivot.add(span);
+      const pivot = new THREE.Group();           // at the near bank: the near half swings about it
+      const near = river.steelSpan(L / 2);
+      near.position.set(0, 0, -side * L / 4);
+      const hinge = new THREE.Group();           // the scissors hinge at the near half's far end
+      hinge.position.set(0, 0, -side * L / 2);
+      const far = river.steelSpan(L / 2);
+      far.position.set(0, 0, -side * L / 4);
+      hinge.add(far);
+      pivot.add(near, hinge);
       pivot.position.set(site.x, river.deck, site.z + side * L / 2);
       this.game.scene.add(pivot);
-      site.anim = pivot;
+      site.anim = { pivot, hinge };
     }
-    const k = Math.min(1, Math.max(0, (site.progress - 0.1) / 0.9));
-    const ease = k * k * (3 - 2 * k);
-    site.anim.rotation.x = side * (Math.PI / 2) * (1 - ease); // upright → flat
+    const ease = (t) => { const k = Math.min(1, Math.max(0, t)); return k * k * (3 - 2 * k); };
+    const p = site.progress;
+    const rise = ease((p - 0.05) / 0.3);         // folded, lying back over the vehicle → upright
+    const open = ease((p - 0.35) / 0.65);        // upright → lowered across, unfolding as it goes
+    const up = Math.PI * 0.85 - Math.PI * 0.35 * rise;  // the near half's angle: ~150° → 90°…
+    site.anim.pivot.rotation.x = side * (up - (Math.PI / 2) * open); // …→ 0°, flat across the river
+    site.anim.hinge.rotation.x = -side * Math.PI * (1 - open);          // the outer half: folded back → straight, opening out over the river
   }
 
   /** The blueprint is done: take it away and build the real thing. */
@@ -177,7 +187,7 @@ export class Construction {
     this.sites.splice(i, 1);
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
-    site.anim?.removeFromParent(); // the laid bridge takes its place
+    site.anim?.pivot.removeFromParent(); // the laid bridge takes its place
     this.complete(site);
   }
 
@@ -189,7 +199,7 @@ export class Construction {
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
     if (site.anim) { // called off half-laid: the bridge goes back on the vehicle
-      site.anim.removeFromParent();
+      site.anim.pivot.removeFromParent();
       const layer = this.game.world.stackById(site.stackId)?.units[0];
       if (layer) layer.laying = false;
     }

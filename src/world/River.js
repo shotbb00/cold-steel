@@ -223,9 +223,9 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
     /**
      * A bridge layer's steel span, centred on its middle with the deck at y = 0, along z: two
      * treadways on side girders, the scissors hinge in the middle, short ramps at the ends.
+     * `L`: its length (a half of the scissors for the laying animation).
      */
-    steelSpan() {
-      const L = (halfWidth + 7) * 2;
+    steelSpan(L = (halfWidth + 7) * 2) {
       const steel = new THREE.MeshStandardMaterial({ color: 0x4f5446, roughness: 0.8, metalness: 0.3 });
       const dark = new THREE.MeshStandardMaterial({ color: 0x2c2f28, roughness: 0.9 });
       const span = new THREE.Group();

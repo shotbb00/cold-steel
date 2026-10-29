@@ -40,6 +40,13 @@ const LEADERLESS = { react: 1.25 };
 const OFFICER_DOWN = 0.25;  // morale lost on top when the platoon leader falls
 // Ambush: a unit nobody has spotted yet fires its first volley with this much more punch
 const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
+// Look-ahead: a moving unit probes the way in front of it; when a wall, hedge or tree stands
+// between it and where it's going, it heads for the obstacle's nearer end (or past a trunk) at
+// once instead of walking into it, and turns back onto its line once that is clear.
+// checkStuck's sidestep stays as the fallback for dead ends.
+const LOOK = { every: 0.2, ahead: 1.6, min: 3, max: 8, clear: 0.8, passed: 2 };
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -316,6 +323,7 @@ export class UnitStack {
       const sp = Math.max(Math.hypot(_w.x, _w.z), maxSpeed * 0.8);
       _w.multiplyScalar(0.25).add(_p.set(u.detourX * sp, 0, u.detourZ * sp));
     }
+    if (!(u.ghostT > 0) && !(u.detourT > 0) && !((u.lookOffT -= dt) > 0)) this.lookAhead(u, _w, d, dt); // a sidestep in progress has the say
     this.separate(u, _w);
     u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
     const px = u.pos.x;
@@ -377,7 +385,95 @@ export class UnitStack {
     u.detourX = -dz * side;
     u.detourZ = dx * side;
     u.detourT = 0.5 + Math.min(u.stuckN, 4) * 0.35;
+    u.avoid = null;    // the look-ahead's way round didn't work here: let the sidestep try
+    u.lookOffT = 2;
     if (u.stuckN >= 3) u.ghostT = 1.6;
+  }
+
+  /**
+   * Bend the wanted velocity `w` around cover ahead. Every LOOK.every seconds three rays (the
+   * middle and both shoulders) go out a speed-scaled distance toward the destination; if one
+   * hits short of it, the unit heads for the way round that obstacle (detour()) until the
+   * straight line is free again.
+   */
+  lookAhead(u, w, distToDest, dt) {
+    const speed = Math.hypot(w.x, w.z);
+    u.avoidT = (u.avoidT ?? 0) - dt;
+    if (speed < 0.5) { u.avoid = null; return; }
+    if (u.avoidT <= 0) {
+      u.avoidT = LOOK.every;
+      const reach = Math.min(Math.max(speed * LOOK.ahead, LOOK.min), LOOK.max) + u.radius;
+      const dx = (u.dest.x - u.pos.x) / (distToDest || 1);
+      const dz = (u.dest.z - u.pos.z) / (distToDest || 1);
+      // where the unit is really going: its slot only leads it by a few metres while the stack
+      // moves, so the stack's goal decides whether cover ahead is in the way or where it's headed
+      const goal = this.moveTarget ?? u.dest;
+      const goalD = Math.max(distToDest, Math.hypot(goal.x - u.pos.x, goal.z - u.pos.z));
+      const y = u.pos.y + 0.6; // at knee height: the rays are 3D, low walls stand on high ground too
+      let hit = null;
+      u.passedT = (u.passedT ?? 0) - LOOK.every;
+      const passed = u.passedT > 0 ? u.passed : null; // just went round it: it's behind us now
+      for (const side of [0, -1, 1]) {
+        _a.set(u.pos.x - dz * side * u.radius * 0.9, y, u.pos.z + dx * side * u.radius * 0.9);
+        _b.set(_a.x + dx * reach, y, _a.z + dz * reach);
+        const t = this.world.cover.segmentHit(_a, _b, passed); // (cover right at the goal, the wall of a cover spot, is short of nothing)
+        if (t >= 0 && t * reach < goalD - 0.4) { hit = this.world.cover.lastHit; break; } // in the way, short of the goal
+      }
+      if (!hit) u.avoid = null;
+      else if (hit !== u.avoid?.c) u.avoid = this.detour(u, hit, goal); // null: no open way round, leave it to checkStuck
+    }
+    const a = u.avoid;
+    if (!a) return;
+    const ex = a.x - u.pos.x;
+    const ez = a.z - u.pos.z;
+    const d = Math.hypot(ex, ez);
+    if (d < 1) { // round it: back to the straight line, and that obstacle is behind us
+      u.passed = a.c;
+      u.passedT = LOOK.passed;
+      u.avoid = null;
+      return;
+    }
+    w.x = (ex / d) * speed;
+    w.z = (ez / d) * speed;
+  }
+
+  /**
+   * The way round collider `c` toward `goal`: a wall or hedge's nearer end (the one that makes
+   * the shorter path, unless that spot is itself blocked), a body's width clear of it; a tree or
+   * post: past whichever side lies toward the goal.
+   */
+  detour(u, c, goal = u.dest) {
+    const m = u.radius + LOOK.clear;
+    const ends = [];
+    if (c.type === 'cyl') {
+      const dx = goal.x - u.pos.x;
+      const dz = goal.z - u.pos.z;
+      const l = Math.hypot(dx, dz) || 1;
+      for (const s of [1, -1]) ends.push({ x: c.x - (dz / l) * s * (c.r + m), z: c.z + (dx / l) * s * (c.r + m) });
+    } else {
+      const long = c.hx >= c.hz;
+      const ax = long ? c.cos : c.sin;   // the long side's direction in the world
+      const az = long ? -c.sin : c.cos;
+      const half = (long ? c.hx : c.hz) + m;
+      // past the end and a step onto the goal's side of the wall, so the way on is clear
+      const nx = az;
+      const nz = -ax;
+      const toward = Math.sign((goal.x - c.x) * nx + (goal.z - c.z) * nz) || 1;
+      const off = (long ? c.hz : c.hx) + m;
+      for (const s of [1, -1]) ends.push({ x: c.x + ax * half * s + nx * toward * off, z: c.z + az * half * s + nz * toward * off });
+    }
+    const cost = (e) => Math.hypot(e.x - u.pos.x, e.z - u.pos.z) + Math.hypot(goal.x - e.x, goal.z - e.z)
+      + (this.world.cover.pointBlocked(e.x, e.z, u.radius) ? 1000 : 0);
+    ends.sort((p, q) => cost(p) - cost(q));
+    // only a way round that is itself open: in a tangle of walls and trees no end may be, and then
+    // checkStuck's sidestep does better than dithering between detours
+    const y = u.pos.y + 0.6;
+    for (const e of ends) {
+      _a.set(u.pos.x, y, u.pos.z);
+      _b.set(e.x, y, e.z);
+      if (this.world.cover.segmentHit(_a, _b, c) < 0 && !this.world.cover.pointBlocked(e.x, e.z, u.radius)) return { c, x: e.x, z: e.z };
+    }
+    return null;
   }
 
   /** Push away from neighbours, scaled by both bodies' sizes. */
