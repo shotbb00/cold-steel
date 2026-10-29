@@ -12,6 +12,7 @@ import { smoothstep } from '../core/math.js';
 import { FIELD } from './Fields.js';
 
 const EARTH = new THREE.Color(0x3d2f24); // freshly turned soil
+const ASH = new THREE.Color(0x15130f);   // scorched ground: blasts, wrecks, burnt fields
 
 export class Terrain {
   /**
@@ -106,7 +107,7 @@ export class Terrain {
    * at that point (0 outside the hole). Used for trenches and shell craters. Updates the height
    * grid (so units, LOS and bolts feel it), the mesh, its normals and colours (fresh earth).
    */
-  dig(cx, cz, radius, depth, shape, scorch = 0.7) {
+  dig(cx, cz, radius, depth, shape, scorch = 0.7, tint = EARTH) {
     const { segments: s, n, cell, half } = this;
     const ix0 = Math.max(0, Math.floor((cx - radius + half) / cell));
     const ix1 = Math.min(s, Math.ceil((cx + radius + half) / cell));
@@ -124,7 +125,7 @@ export class Terrain {
         this.heights[i] -= depth * k;
         pos.setY(i, this.heights[i]);
         const t = Math.min(1, k * scorch);
-        col.setXYZ(i, col.getX(i) + (EARTH.r - col.getX(i)) * t, col.getY(i) + (EARTH.g - col.getY(i)) * t, col.getZ(i) + (EARTH.b - col.getZ(i)) * t);
+        col.setXYZ(i, col.getX(i) + (tint.r - col.getX(i)) * t, col.getY(i) + (tint.g - col.getY(i)) * t, col.getZ(i) + (tint.b - col.getZ(i)) * t);
         fur.setX(i, fur.getX(i) * (1 - Math.min(1, k * 2))); // dug ground has no furrows
       }
     }
@@ -142,6 +143,11 @@ export class Terrain {
       }
       a.needsUpdate = true;
     }
+  }
+
+  /** Blacken the ground around (cx, cz) — a blast, a burnt-out wreck, a field fire — for good. */
+  scorch(cx, cz, radius, amount = 0.6) {
+    this.dig(cx, cz, radius, 0, (x, z) => Math.max(0, 1 - Math.hypot(x - cx, z - cz) / radius) ** 0.7 * (0.75 + Math.random() * 0.25), amount, ASH);
   }
 
   /** Recompute vertex normals from the height grid (central differences) in a window. */

@@ -9,6 +9,7 @@
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
 import { STRUCTURES } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
+import { GAS } from '../systems/Gas.js';
 import { keyOf } from '../core/Keys.js';
 
 const ACTIONS = [
@@ -22,9 +23,11 @@ const ACTIONS = [
     tip: (g) => `Engineers: click a minefield or wire to lift it${g.map.bridgeAt ? ', or a bridge to blow it (8 s fuse)' : ''}`,
     when: (sel) => sel.some((s) => s.stats.engineer),
   },
+  { cmd: 'bridge', label: 'Lay bridge', key: 'X', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
   { cmd: 'smoke', label: 'Smoke', key: 'K', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
   { cmd: 'flare', label: 'Flare', key: 'L', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
   { cmd: 'unload', label: 'Unload', key: 'U', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
+  { cmd: 'cancelJob', label: 'Cancel job', key: '⌫', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
   { cmd: 'leave', label: 'Leave building', key: 'E', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 
@@ -37,7 +40,7 @@ const value = (v, g) => (typeof v === 'function' ? v(g) : v);
 // which key action each button's command is (core/Keys.js), so the hint follows a rebinding
 const ACTION_OF = {
   hold: 'hold', 'build:sandbags': 'sandbags', 'build:trench': 'trench', 'build:wire': 'wire', 'build:mines': 'mines',
-  engineer: 'engineer', smoke: 'smoke', flare: 'flare', unload: 'unload', leave: 'leave',
+  engineer: 'engineer', bridge: 'engineer', cancelJob: 'cancelJob', smoke: 'smoke', flare: 'flare', unload: 'unload', leave: 'leave',
 };
 
 export class ActionBar {
@@ -47,6 +50,7 @@ export class ActionBar {
     this.key = '';
     this.timer = 0;
     game.bus.on('selection', () => this.render(true));
+    game.bus.on('order', () => setTimeout(() => this.render(true), 0)); // a job placed: its Cancel button at once
   }
 
   update(dt) {
@@ -68,6 +72,13 @@ export class ActionBar {
       if (small && small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.hidden = g.air.limit[g.playerFaction] === 0; // no air support in this battle
+    }
+    const b = document.querySelector('.cmd-buttons.support [data-cmd="gas"]');
+    if (b) {
+      const left = Math.ceil(g.gas.cooldownLeft(g.playerFaction));
+      b.querySelector('small').textContent = left > 0 ? `${left} s` : String(GAS.cost);
+      b.classList.toggle('cooling', left > 0);
+      b.hidden = g.air.limit[g.playerFaction] === 0; // support powers off in this battle
     }
   }
 

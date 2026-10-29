@@ -31,6 +31,15 @@ import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 
+// Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
+// stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
+// his platoon is slower than one that never had him.
+const LEAD_RANGE = 45;      // metres
+const LED = { nerve: 0.6, rally: 1.5, react: 0.75 };
+const LEADERLESS = { react: 1.25 };
+const OFFICER_DOWN = 0.25;  // morale lost on top when the platoon leader falls
+// Ambush: a unit nobody has spotted yet fires its first volley with this much more punch
+const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -102,6 +111,9 @@ export class UnitStack {
       this.units.push(u);
     }
     this.aliveCount = count;
+    this.hadOfficer = type.kind === 'infantry' && count >= 8 && !type.stats.structure; // a rifle platoon has a leader
+    if (this.hadOfficer) this.units[0].officer = true;
+    this.led = false;
     this.smokeLeft = type.stats.smoke?.charges ?? 0;             // vehicle smoke grenade salvos
     this.smokeRounds = type.specialist?.stats.smokeRounds ?? this.stats.smokeRounds ?? 0;  // mortar smoke bombs (SP mortars: in stats)
     this.flareRounds = type.specialist?.stats.flareRounds ?? this.stats.flareRounds ?? 0;  // …and illumination rounds
@@ -483,7 +495,7 @@ export class UnitStack {
       u.retarget = Math.min(u.retarget, 0.15);
     }
     if (u.retarget <= 0) {
-      u.retarget = 0.4 + Math.random() * 0.3 + u.suppression * 0.3;
+      u.retarget = (0.4 + Math.random() * 0.3 + u.suppression * 0.3) * (this.led ? LED.react : this.hadOfficer ? LEADERLESS.react : 1);
       u.target = this.smokeMission(u) ?? this.pickTarget(u);
     }
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
@@ -893,6 +905,11 @@ export class UnitStack {
 
   shoot(u, aimPoint, spread) {
     const s = u.stats;
+    const ambush = !u.spotted && !u.possessed; // nobody has seen us yet: the first volley counts
+    if (ambush && this.world.time - (this.ambushAt ?? -Infinity) > AMBUSH.tellEvery) {
+      this.ambushAt = this.world.time;
+      this.services.game?.tellBoth(this.faction, `${this.name} springs an ambush!`, "Ambush! We're taking fire!");
+    }
     this.muzzleWorld(u, _p);
     _w.subVectors(aimPoint, _p).normalize();
     _w.x += (Math.random() - 0.5) * spread * 2;
@@ -903,7 +920,7 @@ export class UnitStack {
       origin: _p,
       dir: _w,
       speed: s.boltSpeed,
-      damage: s.damage * u.damageMult,
+      damage: s.damage * u.damageMult * (ambush ? AMBUSH.damage : 1),
       faction: this.faction,
       color: this.boltColor,
       size: s.boltSize,
@@ -912,7 +929,7 @@ export class UnitStack {
       splash: s.splash ?? 0,
       pierce: s.pierce ?? 0,
       vsArmor: s.vsArmor ?? 1,
-      suppress: s.suppressPower ?? 1,
+      suppress: (s.suppressPower ?? 1) * (ambush ? AMBUSH.suppress : 1),
       ignore: u.coverSpot?.collider ?? null, // shoot over / around our own cover
       tracer: Math.random() < (s.tracer ?? 1),
       trail: !!s.trail,
@@ -970,7 +987,7 @@ export class UnitStack {
     u.flash = 0.12;
     u.flinch = 1;
     u.suppress(this.usesCover ? 0.35 : 0.05);
-    this.morale = Math.max(0, this.morale - 0.006);
+    this.morale = Math.max(0, this.morale - 0.006 * this.nerve);
     if (source && source.faction !== this.faction && source.alive) {
       this.lastAttacker = source;
       this.lastHitTime = this.world.time;
@@ -994,7 +1011,13 @@ export class UnitStack {
     this.world.cover.release(u);
     this.aliveCount--;
     this.renderer.done = false;
-    this.morale = Math.max(0, this.morale - (0.1 + 0.3 / this.units.length) * (1 - 0.15 * this.rank));
+    this.morale = Math.max(0, this.morale - (0.1 + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
+    if (u.officer) {
+      this.morale = Math.max(0, this.morale - OFFICER_DOWN * (1 - 0.15 * this.rank));
+      const w = this.units.find((m) => m.alive);
+      if (w) this.bark(w, 'officer', 1, true);
+      this.services.tell(this.faction, `${this.name}: the platoon leader is down!`);
+    }
     const shock = this.usesCover ? 0.02 : 0.08; // a tank brewing up rattles everyone
     for (const o of this.world.stacksOf(this.faction)) {
       if (o !== this && dist2DSq(o.centroid, this.centroid) < 1600) o.morale = Math.max(0, o.morale - shock);
@@ -1011,8 +1034,23 @@ export class UnitStack {
       if (!u.alive) continue;
       if (u.threat) calm = false;
     }
-    const rate = 0.01 + (calm ? 0.03 : 0) + (this.ai.state === AIState.RETREAT ? 0.02 : 0) + 0.012 * this.rank;
+    this.ledT = (this.ledT ?? 0) - dt;
+    if (this.ledT <= 0) {
+      this.ledT = 1;
+      this.led = this.world.stacksOf(this.faction).some((o) => o.officerAlive && dist2DSq(o.centroid, this.centroid) < LEAD_RANGE * LEAD_RANGE);
+    }
+    const rate = (0.01 + (calm ? 0.03 : 0) + (this.ai.state === AIState.RETREAT ? 0.02 : 0) + 0.012 * this.rank) * (this.led ? LED.rally : 1);
     this.morale = Math.min(1, this.morale + rate * dt);
+  }
+
+  /** Is this platoon's leader still alive? */
+  get officerAlive() {
+    return this.hadOfficer && !!this.units[0]?.alive;
+  }
+
+  /** How hard losses hit morale: an officer nearby steadies them. */
+  get nerve() {
+    return this.led ? LED.nerve : 1;
   }
 
   updateCentroid() {

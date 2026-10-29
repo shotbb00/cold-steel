@@ -495,7 +495,7 @@ body:not(.night) .night-only { display: none; }
 #tutorial .tu-tasks li::before { content: ''; position: absolute; left: 2px; top: 4px; width: 11px; height: 11px; border: 1.5px solid var(--muted); }
 #tutorial .tu-tasks li.done { color: var(--muted); }
 #tutorial .tu-tasks li.done::before { border-color: var(--ally); background: var(--ally); box-shadow: inset 0 0 0 2px rgba(12, 14, 10, 0.9); }
-#tutorial .tu-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+#tutorial .tu-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 #tutorial .tu-foot button[hidden], #tutorial .tu-skip[hidden] { display: none; }
 #tutorial.done { border-left-color: var(--ally); }
 #tutorial.final .tu-foot { justify-content: flex-start; }
@@ -630,3 +630,9 @@ body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: 
   mask-composite: intersect;
 }
 #gas-mask.on { opacity: 1; }
+body.touch .rw-close { min-width: 44px; min-height: 44px; font-size: 30px; margin: -10px -10px -10px auto; }
+/* the platoon leader (entities/UnitStack.js officers): LT while he lives, struck through once he's down */
+.sl-off { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--gold); margin-right: 4px; }
+.sl-off:empty { display: none; }
+.sl-off.lost { color: var(--muted); text-decoration: line-through; }
+#tutorial .tu-next { font-size: 15px; padding: 9px 16px; letter-spacing: 0.04em; } /* the closing card's Next chapter */

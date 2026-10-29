@@ -180,6 +180,7 @@ export class NetHost {
       ]) ?? null,
       status: ms?.statusFor?.(this.remoteFaction) ?? ms?.status?.() ?? null,
       air: round(g.air.readyAt),
+      gas: round(g.gas.readyAt),
       sites: g.construction.sites.map((s) => [s.id, r2(s.progress)]),
     });
   }

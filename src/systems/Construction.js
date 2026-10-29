@@ -12,6 +12,8 @@
 // Engineer jobs (only stacks with stats.engineer work on them; engineers also build ×3):
 //   clear    – lift every mine and cut every coil of wire within ~9 m of the spot
 //   demolish – charges on a bridge (map.bridgeAt); when done the bridge goes up (game.blowBridge)
+// Bridge layers (stats.bridgeLayer) have one job of their own:
+//   span     – drive to the near bank at the clicked spot and lay a bridge over (game.layBridge)
 // Engineers also find enemy minefields within 16 m, and set them off only a quarter as often.
 // Orientation: `yaw` turns the structure like Object3D.rotation.y; its "front" (parapet side)
 // faces local +z, i.e. world (sin yaw, cos yaw).
@@ -26,6 +28,7 @@ export const STRUCTURES = {
   mines: { id: 'mines', name: 'Minefield', cost: 40, work: 70, length: 14, width: 9, mines: 8 },
   clear: { id: 'clear', name: 'Clearing', cost: 0, work: 40, length: 12, width: 12, action: true, engineers: true },
   demolish: { id: 'demolish', name: 'Demolition charges', cost: 30, work: 55, length: 8, width: 7, action: true, engineers: true },
+  span: { id: 'span', name: 'Bridge', cost: 0, work: 20, length: 5, width: 26, action: true, layer: true },
 };
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
@@ -58,26 +61,36 @@ export class Construction {
    * Lay a blueprint and send `stack` to build it. Returns the site or null if the spot is bad.
    * A multiplayer client passes the host's `id` (and `force`: the host already checked the spot).
    */
-  place(kind, x, z, yaw, faction, stack = null, { id = null, force = false } = {}) {
+  place(kind, x, z, yaw, faction, stack = null, { id = null, force = false, stackId = null } = {}) {
     const def = STRUCTURES[kind];
     const { cover, world } = this.game;
     if (!force && (Math.abs(x) > world.bounds.x || Math.abs(z) > world.bounds.z)) return null;
     if (!force && !def.action && cover.pointBlocked(x, z, def.width * 0.5 + 0.4)) return null;
     const bridge = kind === 'demolish' ? this.game.map.bridgeAt?.(x, z) ?? null : null;
     if (kind === 'demolish' && (!bridge || bridge.blown)) return null;
+    const river = this.game.world.river;
+    if (kind === 'span') {
+      if (!river || Math.abs(z - river.path(x)) > river.halfWidth + 25) return null; // not at the river
+      if (river.crossings.some((c) => !c.blown && Math.abs(c.x - x) < 14)) return null;   // a crossing already there
+      z = river.path(x);
+      yaw = 0;
+    }
     const ghost = new THREE.Mesh(new THREE.BoxGeometry(def.length, def.action ? 0.25 : 1, def.width), ghostMat);
     ghost.position.set(x, this.game.terrain.heightAt(x, z) + 0.5, z);
     ghost.rotation.y = yaw;
     ghost.visible = faction === this.game.playerFaction; // you don't see the enemy's blueprints
     this.game.scene.add(ghost);
-    const site = { id: id ?? this.nextId++, def, kind, x, z, yaw, faction, progress: 0, ghost, bridge, stack };
+    const site = { id: id ?? this.nextId++, def, kind, x, z, yaw, faction, progress: 0, ghost, bridge, stack, stackId: stack?.id ?? stackId };
     this.sites.push(site);
-    this.game.netEvent('site', site.id, kind, x, z, yaw, faction);
+    this.game.netEvent('site', site.id, kind, x, z, yaw, faction, site.stackId);
     if (stack) {
       // stand just behind the work so the squad isn't silhouetted in front of it
       // (a clearing or demolition job covers a wide patch but is worked from its middle: close in)
       const back = def.action ? 3 : def.width / 2 + 2;
-      stack.ai.moveTo({ x: x - Math.sin(yaw) * back, z: z - Math.cos(yaw) * back }, { hold: true, ordered: this.game.isHuman(stack.faction) });
+      const to = def.layer // a bridge layer pulls up at the near bank, facing across
+        ? { x, z: z + river.side(stack.anchor.x, stack.anchor.z) * (river.halfWidth + 9) }
+        : { x: x - Math.sin(yaw) * back, z: z - Math.cos(yaw) * back };
+      stack.ai.moveTo(to, { hold: true, ordered: this.game.isHuman(stack.faction) });
       stack.fortifications = (stack.fortifications ?? 0) + 1;
     }
     return site;
@@ -95,6 +108,11 @@ export class Construction {
       const site = this.sites[i];
       let workers = 0;
       for (const s of this.game.world.stacksOf(site.faction)) {
+        if (site.def.layer) { // only its own bridge layer, parked on the bank
+          const u = s === site.stack && s.units[0];
+          if (u?.alive && !u.dropped && Math.hypot(u.pos.x - site.x, u.pos.z - site.z) < this.game.world.river.halfWidth + 14 && !u.moving) workers += 1;
+          continue;
+        }
         if (!s.usesCover) continue;
         if (site.def.engineers && !s.stats.engineer) continue; // engineer jobs
         const rate = s.stats.engineer ? 3 : 1;
@@ -124,6 +142,20 @@ export class Construction {
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
     this.complete(site);
+  }
+
+  /** Call off a job not yet finished: the blueprint goes, its command points come back. */
+  cancel(site) {
+    const i = this.sites.indexOf(site);
+    if (i < 0) return false;
+    this.sites.splice(i, 1);
+    site.ghost.removeFromParent();
+    site.ghost.geometry.dispose();
+    if (!this.game.net?.isClient) {
+      this.game.refund(site.faction, site.def.cost);
+      this.game.netEvent('unsite', site.id);
+    }
+    return true;
   }
 
   siteById(id) {
@@ -162,6 +194,11 @@ export class Construction {
       if (s?.alive) s.ai.moveTo({ x: c.x, z: c.z + side * (river.halfWidth + 22) }, { hold: true, ordered: game.isHuman(s.faction) });
       this.fuses.push({ bridge: c, at: game.time + FUSE });
       game.tell(site.faction, `Charges set on the ${c.name} — clear the bridge, ${FUSE} seconds!`);
+    } else if (site.kind === 'span') {
+      const u = site.stack?.units[0];
+      if (!u?.alive || u.dropped) return;
+      u.dropped = true;
+      game.layBridge(site.x);
     }
   }
 

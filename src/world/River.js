@@ -8,6 +8,7 @@
 //                   steers its anchor to the near end, across, and on), or null if no need
 //   bridgeAt(x, z)  the bridge here, for engineers' demolition charges
 //   blow(c)         a bridge goes: the span drops into the river (terrain dug out, mesh broken)
+//   lay(x)          a bridge layer puts a steel treadway bridge across at x: a new crossing
 //   build(scene)    the water surface and the bridges
 // Crossings: { id, name, x, kind: 'bridge' | 'ford', width } — the river decides where across.
 import * as THREE from 'three';
@@ -168,6 +169,47 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
         g.add(stake);
       }
       return g;
+    },
+
+    /**
+     * A bridge layer's bridge across at x: the ground under it rises to deck height (so units
+     * walk over it like any bridge), a steel treadway span on top, and a new crossing in the list
+     * — routes plan over it, engineers can blow it. Returns the crossing.
+     */
+    lay(x, terrain, scene) {
+      const width = 4.4;
+      const c = { id: this.crossings.length, name: 'assault bridge', kind: 'bridge', x, z: path(x), width, blown: false, laid: true };
+      this.crossings.push(c);
+      const along = halfWidth + 7;
+      terrain.dig(x, c.z, along + width, -1, (px, pz) => {
+        const ax = 1 - smoothstep(width * 0.5 - 0.2, width * 0.5 + 0.6, Math.abs(px - x));
+        const az = 1 - smoothstep(along - 3, along, Math.abs(pz - c.z));
+        return ax * az * Math.max(0, deck - 0.15 - terrain.heightAt(px, pz));
+      }, 0);
+      const steel = new THREE.MeshStandardMaterial({ color: 0x4f5446, roughness: 0.8, metalness: 0.3 });
+      const dark = new THREE.MeshStandardMaterial({ color: 0x2c2f28, roughness: 0.9 });
+      const g = new THREE.Group();
+      const span = new THREE.Group();
+      g.add(span);
+      const L = along * 2;
+      const add = (geo, mat, px, py, pz) => {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(px, py, pz);
+        m.castShadow = m.receiveShadow = true;
+        span.add(m);
+      };
+      for (const sx of [-1, 1]) {
+        add(new THREE.BoxGeometry(1.7, 0.22, L), steel, sx * 1.1, deck, 0);            // the two treadways
+        add(new THREE.BoxGeometry(0.16, 0.7, L - 2), dark, sx * 2.05, deck - 0.2, 0);   // side girders
+      }
+      add(new THREE.BoxGeometry(width, 0.5, 0.4), dark, 0, deck - 0.3, 0);             // the hinge in the middle
+      for (const end of [-1, 1]) add(new THREE.BoxGeometry(width, 0.12, 1.6), steel, 0, deck - 0.15, end * (L / 2 - 0.4)); // ramps onto the banks
+      g.position.set(x, 0, c.z);
+      scene.add(g);
+      c.mesh = g;
+      c.span = span;
+      c.spanL = L;
+      return c;
     },
 
     /** The bridge is blown: the span falls into the river (terrain and looks). */

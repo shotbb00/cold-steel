@@ -55,10 +55,11 @@ function geometry() {
       // commander's cupola with .50 cal, loader's hatch and M240, gunner's sight doghouse
       P.cyl(0.38, 0.42, 0.3, { x: 0.62, y: 0.9, z: -0.45, color: GREEN, ...C }, 14),
       ...[0, 1, 2, 3, 4, 5].map((k) => P.box(0.1, 0.07, 0.03, { x: 0.62 + Math.sin(k * 1.047) * 0.4, y: 0.98, z: -0.45 + Math.cos(k * 1.047) * 0.4, ry: k * 1.047, color: 0x1a1d1c })), // vision blocks
-      P.box(0.1, 0.12, 0.35, { x: 0.62, y: 1.13, z: -0.15, color: STEEL }),
-      P.cyl(0.022, 0.022, 0.95, { x: 0.62, y: 1.15, z: 0.4, rx: Math.PI / 2, color: STEEL }, 6),
+      P.box(0.1, 0.12, 0.35, { x: 0.62, y: 1.11, z: -0.15, color: STEEL }),            // .50 cal, sitting on the cupola
+      P.cyl(0.022, 0.022, 0.95, { x: 0.62, y: 1.13, z: 0.4, rx: Math.PI / 2, color: STEEL }, 6),
       P.cyl(0.33, 0.33, 0.06, { x: -0.65, y: 0.79, z: -0.35, color: DARK }, 14),
-      P.box(0.06, 0.09, 0.7, { x: -0.95, y: 0.98, z: -0.1, color: STEEL }),
+      P.box(0.06, 0.09, 0.7, { x: -0.95, y: 0.98, z: -0.1, color: STEEL }),            // M240…
+      P.box(0.05, 0.2, 0.05, { x: -0.95, y: 0.85, z: -0.3, color: STEEL }),            // …on its pintle by the loader's hatch
       P.box(0.46, 0.38, 0.56, { x: 0.78, y: 0.95, z: 0.85, color: GREEN, ...C }),
       P.box(0.36, 0.2, 0.03, { x: 0.78, y: 0.98, z: 1.14, color: 0x14181a }),           // sight glass
       P.cyl(0.015, 0.015, 0.6, { x: -0.25, y: 1.05, z: -1.7, color: STEEL }, 5),        // wind sensor

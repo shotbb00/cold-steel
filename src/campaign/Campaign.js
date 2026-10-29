@@ -20,6 +20,7 @@
 //     than they do after twelve turns. You lose if they reach yours.
 // Saved in localStorage ('coldsteel.campaign').
 import { UNIT_TYPES } from '../data/units/index.js';
+import { writeLetter } from './Letters.js';
 import { enemyOf } from '../data/factions.js';
 
 const KEY = 'coldsteel.campaign';
@@ -225,6 +226,7 @@ export function recordBattle(c, { won, survivors }) {
   c.log.unshift(`Turn ${c.turn} — ${b.name} (${b.col}): ${attackerWon ? `${b.attacker === c.side ? 'our attack broke through' : 'the enemy broke through'}` : `${b.attacker === c.side ? 'our attack was thrown back' : 'we held'}`}.${men ? ` ${men[0].toUpperCase()}${men.slice(1)}.` : ''}`);
   const news = elsewhere(c, b.col, winner);
   if (news) c.log.unshift(`Turn ${c.turn} — elsewhere: ${news}`);
+  writeLetter(c, b, { attackerWon, lost, wounded }); // a soldier writes home about it (campaign/Letters.js)
   // replacements
   const gain = REPLACEMENTS + PER_SECTOR * held(c, c.side);
   c.points += gain;

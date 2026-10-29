@@ -2,9 +2,9 @@
 // a short description — hull outline, running gear or wheels, a turret / launcher that
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
-//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle
+//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -26,6 +26,8 @@ const C = { camo: 1 };
  *   hull: geometry · wheels: { geo, list, r } · turret: { geo, at: [x, y, z] }
  *   gun: { geo, at, pitch (fixed) | null (follows u.gunPitch) } · muzzle: [x, y, z] in the gun (or turret)
  *   marks: geometry painted in the faction's marking colour
+ *   load: geometry carried on the hull that can be put down (a bridge layer's bridge): hidden
+ *         once the unit has `dropped` it
  */
 export function vehicle(describe) {
   let d = null;
@@ -36,6 +38,9 @@ export function vehicle(describe) {
     root.add(hull);
     meshAdder(hull)(d.hull, mats.body);
     if (d.marks) meshAdder(hull)(d.marks, mats.glow, false);
+    const load = new THREE.Group();
+    hull.add(load);
+    if (d.load) meshAdder(load)(d.load, mats.body);
     const wheels = d.wheels ? spinningWheels(hull, d.wheels.geo, d.wheels.list, d.wheels.r, mats.body) : null;
     const turret = new THREE.Group();
     hull.add(turret);
@@ -66,6 +71,7 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
+        load.visible = !u.dropped;
       },
       die(time) {
         turret.rotation.z = Math.min(0.25, time * 0.4);
@@ -490,7 +496,7 @@ export const buildPactNona = vehicle(() => {
     },
     muzzle: [0, 0, 1.75],
     recoil: 0.25,
-    marks: merge([P.box(0.02, 0.3, 0.3, { x: 0.94, y: 0.3, z: -0.3 })]),
+    marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.345, y: 1.05, z: -0.6 })]), // on the hull side, above the fender
   };
 });
 
@@ -642,5 +648,60 @@ export const buildNatoM3 = vehicle(() => {
     muzzle: [0, 0, 2.7],
     recoil: 0.1,
     marks: merge([P.box(0.02, 0.32, 0.55, { x: 1.66, y: 1.65, z: -1.8 })]),
+  };
+});
+
+// ---------------------------------------------------------------- bridge layers
+
+/**
+ * The folded scissors bridge a bridge layer carries: two treadway halves lying one on the
+ * other along the hull, the hinge at the front, girders along the sides.
+ */
+const scissors = ({ y, length, width, color, dark }) => merge([
+  ...[0, 1].map((k) => P.box(width, 0.24, length, { y: y + k * 0.26, color: k ? color : dark, ...C })),
+  ...pair((s) => P.box(0.12, 0.5, length, { x: s * (width / 2 - 0.06), y: y + 0.13, color: dark })),
+  P.box(0.3, 0.5, width * 0.18, { y: y + 0.13, z: length / 2 + 0.1, color: STEEL }),                  // the hinge
+  P.box(width * 0.06, 0.52, 0.35, { y: y + 0.13, z: length / 2 + 0.1, color: STEEL }),
+  ...[-0.3, 0.1, 0.5].map((f) => P.box(width - 0.2, 0.04, 0.12, { y: y + 0.4, z: f * length, color: STEEL })), // deck cleats, on the top half (its top at y + 0.38)
+]);
+
+/** M60 AVLB: an M60 hull carrying an 18 m scissors bridge, the launcher arm at the front. */
+export const buildNatoAVLB = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 4.9, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 3, trackWidth: 0.6, wheelColor: NATO_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.3, 1.45, 0.5], [-3.0, 1.55, 0.45], [2.4, 1.6, 0.45], [3.3, 1.1, 0.6], [3.5, 0.98, 0.8]],
+        { belly: 1.15, fender: 1.72, fenderY: 1.1, chamfer: 0.05 }, { color: NATO, ...C }),
+      // the low launcher cab where the turret would be, the hydraulic arm and its cylinders
+      stationHull([[-0.6, [[0, 1.55], [0.9, 1.55], [0.9, 1.95], [0.75, 2.05], [0, 2.05]]], [1.0, [[0, 1.55], [0.9, 1.55], [0.9, 1.95], [0.75, 2.05], [0, 2.05]]]], { color: NATO, ...C }),
+      ...pair((s) => P.box(0.22, 0.22, 1.6, { x: s * 0.75, y: 1.75, z: 2.6, rx: 0.25, color: NATO_DK })),
+      ...pair((s) => P.cyl(0.09, 0.09, 1.2, { x: s * 0.75, y: 1.5, z: 2.9, rx: Math.PI / 2 + 0.5, color: STEEL }, 8)),
+      P.box(2.6, 0.18, 0.3, { y: 1.3, z: 3.55, color: NATO_DK }),                                    // the front spade
+      ...pair((s) => P.box(0.2, 0.14, 0.1, { x: s * 1.45, y: 1.25, z: 3.45, color: STEEL })),
+      ...pair((s) => P.box(0.06, 0.55, 6.6, { x: s * 1.75, y: 0.85, z: 0.0, color: NATO, ...C })),   // side skirts
+    ]), 1.2, 0.3),
+    load: grime(scissors({ y: 2.1, length: 9.4, width: 3.8, color: NATO, dark: NATO_DK }), 1.2, 0.3),
+    marks: merge([P.box(0.02, 0.3, 0.6, { x: 1.77, y: 1.3, z: -1.2 })]),
+  };
+});
+
+/** MTU-20: a T-55 hull with its 20 m bridge, the two halves folded on the deck. */
+export const buildPactMTU = vehicle(() => {
+  const g = tracked({ halfWidth: 1.4, length: 4.6, wheels: 5, wheelR: 0.4, sprocket: -1, rollers: 0, trackWidth: 0.58, wheelColor: PACT_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.2, 1.35, 0.5], [-2.9, 1.45, 0.45], [2.2, 1.5, 0.45], [3.1, 1.0, 0.6], [3.3, 0.92, 0.8]],
+        { belly: 1.1, fender: 1.66, fenderY: 1.05, chamfer: 0.05 }, { color: PACT }),
+      ...pair((s) => P.box(0.2, 0.5, 6.0, { x: s * 1.25, y: 1.75, z: -0.2, color: PACT_DK })),       // the launching rails
+      ...pair((s) => P.cyl(0.1, 0.1, 1.4, { x: s * 0.9, y: 1.6, z: 2.5, rx: Math.PI / 2 + 0.4, color: STEEL }, 8)),
+      ...pair((s) => P.cyl(0.3, 0.3, 1.0, { x: s * 0.72, y: 1.7, z: -3.0, rz: Math.PI / 2, color: PACT_DK }, 16)), // fuel drums
+      ...pair((s) => P.cyl(0.08, 0.08, 0.1, { x: s * 1.2, y: 1.12, z: 3.0, rx: Math.PI / 2, color: STEEL }, 10)),
+    ]), 1.2, 0.3),
+    load: grime(scissors({ y: 2.05, length: 9.8, width: 3.4, color: PACT, dark: PACT_DK }), 1.2, 0.3),
+    marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.67, y: 1.3, z: -0.8 })]),
   };
 });

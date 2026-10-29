@@ -332,7 +332,7 @@
 /* the panel: headings in stencil, sentence case */
 .menu-panel { padding: 38px 48px 56px; }
 .menu-panel > * { max-width: 640px; }
-.menu-panel[data-panel="battle"] > *, .menu-panel[data-panel="multi"] > * { max-width: 540px; } /* the map gets the rest */
+.menu-panel[data-panel="battle"] > *, .menu-panel[data-panel="multi"] > *, .menu-panel[data-panel="bootcamp"] > * { max-width: 540px; } /* the map gets the rest */
 .menu-panel[data-panel="units"] > *, .menu-panel[data-panel="settings"] > * { max-width: none; }
 /* settings: the whole width, its groups side by side */
 .menu-panel[data-panel="settings"] .settings { max-width: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 22px 40px; align-items: start; }
@@ -427,4 +427,30 @@
   .menu-blurb { display: none; }
   .menu-panel { padding: 18px 24px 30px; }
   .loading-card { margin: auto 0 16px 24px; padding: 14px 18px; }
+}
+
+/* A letter home (ui/CampaignPanel.js letterView): field-post paper, ruled, written by hand */
+.cp-letter { margin: 18px 0 6px; max-width: 640px; }
+.cp-paper {
+  background: repeating-linear-gradient(#e9e2cf 0 25px, #cfc6ae 25px 26px), #e9e2cf;
+  color: #2a2a3a; padding: 18px 22px 14px; border-radius: 2px; transform: rotate(-0.4deg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+  font-size: 15px; line-height: 26px;
+}
+.cp-paper p { margin: 0 0 0; }
+.cp-paper .cp-greet { margin-bottom: 4px; }
+.cp-paper .cp-sign { margin-top: 10px; text-align: right; }
+
+/* Boot camp chapters (ui/MainMenu.js bootcampPanel) */
+.bc-chapters { display: grid; gap: 10px; margin-top: 6px; }
+.bc-chapter { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); background: rgba(16, 17, 13, 0.94); }
+.bc-chapter .bc-num { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bc-chapter.done .bc-num { background: var(--gold); color: #14150f; }
+.bc-chapter h3 { margin: 0 0 2px; font-size: 16px; }
+.bc-chapter p { margin: 0 0 3px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.bc-chapter small { color: var(--muted); font-size: 12px; }
+.bc-chapter button { white-space: nowrap; }
+@media (max-width: 560px) {
+  .bc-chapter { grid-template-columns: 30px 1fr; }
+  .bc-chapter button { grid-column: 1 / -1; }
 }

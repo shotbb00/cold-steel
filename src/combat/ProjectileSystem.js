@@ -127,6 +127,7 @@ export class ProjectileSystem {
         const gy = terrain.heightAt(b.pos.x, b.pos.z);
         if (b.pos.y <= gy + 0.3 || cover.segmentHit(b.prev, b.pos, b.ignore) >= 0) {
           if (!this.cosmetic) this.smoke?.add(b.pos.x, b.pos.z); // (the host sends the client its screens)
+          if (!this.cosmetic) this.fire?.ignite(b.pos.x, b.pos.z, 0.35); // white phosphorus sets the grass alight
           dead = true;
         }
       } else if (!dead) {
@@ -272,6 +273,9 @@ export class ProjectileSystem {
       const cr = r * 0.45;
       this.world.terrain.dig(point.x, point.z, cr + 1, b.crater, (x, z) => Math.max(0, 1 - Math.hypot(x - point.x, z - point.z) / cr) ** 1.5, 0.9);
     }
+    const onGround = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
+    if (onGround && size >= 0.8) this.world.terrain.scorch(point.x, point.z, r * 0.7 + 1, 0.45); // the blast leaves a black mark
+    if (onGround && !this.cosmetic) this.fire?.ignite(point.x, point.z, 0.18 * size); // dry grass may catch
     this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, { volume: 0.75, throttle: 0.05 });
     if (this.cameraManager && this.audio && size > 0.9) { // the ground shakes under the camera
       const d = this.audio.distanceTo(point);

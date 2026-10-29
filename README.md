@@ -36,16 +36,20 @@ The loading screen shows the battle's map and a tip. **Installable:** on a phone
 browser offers to install the game (manifest + service worker, src/pwa/); it then runs full
 screen and offline, and every deploy reaches it on its own (it reloads into the new build at
 the menu) — no reinstalling. It has these panels:
-- **Boot camp:** a guided exercise near your base (modes/bootcamp.js, card in ui/Tutorial.js):
-  the camera, selecting and moving, attacking and suppression, mortar smoke, artillery with a
-  forward observer, direct control, reinforcements and taking a point. Tasks tick off as you do
-  them; the targets shoot back harmlessly.
+- **Boot camp:** guided exercises near your base in five chapters, taken in any order
+  (modes/bootcamp.js, card in ui/Tutorial.js): *Basics* (camera, selecting, moving and facing, a
+  first contact, taking a point), *Fire support* (mortar smoke, artillery and observers, air,
+  gas), *Digging in* (trenches, wire and mines, cancelling a job, houses, engineers clearing a
+  minefield), *Armour and transport* (reinforcements, smoke launchers, IFVs, repairs) and
+  *Fighting in person* (direct control, officers, the ambush). Tasks tick off as you do them; the
+  targets shoot back harmlessly; each chapter ends with the next one a click away, and the menu
+  ticks the ones done.
 - **Single player:** pick a mode, a map, your side, the time of day and the weather, then
   *Deploy* — against the AI, with direct control.
 - **Campaign:** a war of up to twelve battles on the Fulda front with one battalion (see below).
 - **Multiplayer:** host or join a battle with a friend — against each other or together (see below).
 - **Units:** a 3D preview of every unit for both sides, with poses and stats.
-- **Settings:** graphics quality, frame counter, volume, mouse sensitivity, invert Y. Settings
+- **Settings:** graphics quality, frame counter, volume, menu music, mouse sensitivity, invert Y. Settings
   are saved in the browser and apply live.
 
 In battle, **Esc** pauses (resume, settings, restart, main menu; in multiplayer it opens the
@@ -95,6 +99,10 @@ straight back into the same battle; any other start or reload shows the menu. Fo
   over a minute or so — sight, fog, sky, light, rain and mud.
 
 ## Campaign
+
+After every battle a soldier of the battalion writes home about it: where you fought, whether
+you held, the weather, who didn't come back (campaign/Letters.js). The same man writes while his
+unit lives; if it's lost, a comrade takes over.
 
 Three columns (west, centre, east), six sectors deep. Turns alternate: the enemy attacks where
 it's strongest, then you pick an enemy front sector to attack. Every battle is a Breakthrough on
@@ -165,7 +173,7 @@ keeps running. The top bar shows the ping. Frontline is the multiplayer mode.
 | RMB a house / your IFV (infantry selected) | occupy the building (the men take its windows) / climb in |
 | E · U · K · L | leave a building · unload IFVs · smoke (vehicles: launchers; mortars: click) · flare (night, mortars) |
 | X (engineers) | clear mines and wire (click the obstacle) · blow a bridge (click it, 8 s fuse) |
-| Y · J · P | support powers: helicopter strafing run · jet gun run · air assault (lands a squad) — click the target, Q/E turn the run |
+| Y · J · P · I | support powers: helicopter strafing run · jet gun run · air assault (lands a squad) · gas — click the target, Q/E turn the run |
 | Minimap: LMB · RMB | look there · send the selected stacks there (Ctrl: and hold) |
 
 | Direct control | |
@@ -272,18 +280,31 @@ all and the three support powers (with their price, or the seconds until ready) 
   (`factionStats`, e.g. the M3's TOWs).
 - **Wind.** It veers slowly and blows harder in rain (calm in fog): smoke screens drift with it
   and a strong wind thins them sooner (world/Wind.js).
-- **Chemical attack** (single player, some battles): gas shells on a village you hold; the low
-  cloud drifts with the wind for a few minutes. Infantry near it mask up, aim worse and see less
-  until they are out of it a while; vehicles are sealed. In direct control you look through the
-  mask's lenses and hear yourself breathe (systems/Gas.js).
+- **Gas** (I, 200 CP, 150 s cooldown): a chemical fire mission, a support power like the air
+  strikes (the AI uses it too, on dug-in infantry). Shells land 9 s after the call; the low cloud
+  drifts with the wind for a few minutes. Infantry of both sides near it mask up, aim worse and see
+  less until they are out of it a while; vehicles are sealed. In direct control you look through
+  the mask's lenses and hear yourself breathe (systems/Gas.js). Off with the air support rule.
 - **Smoke.** Tanks and IFVs carry smoke launchers (K, and automatically when hit by an
   anti-armour weapon); mortars fire smoke bombs where you click. Nobody sees through a screen.
 - **Mortars** (190 CP): indirect fire on anything spotted, no line of sight needed.
 - **IFVs** (420 CP: Bradley / BMP-2) carry a rifle squad (U unloads, right-click one with
   infantry to climb in) and fire a guided anti-tank missile. A knocked-out IFV loses some of its
   passengers.
+- **Bridge layers** (240 CP, maps with a river: M60 AVLB / MTU-20): select, X, click the river —
+  it drives to the near bank and lays a steel bridge in about 20 s. A new crossing for everyone
+  (routes plan over it, engineers can blow it); one bridge per vehicle.
+- **Fire.** HE bursts, burning wrecks and white phosphorus (mortar smoke rounds) can set the
+  ground alight: stubble burns best, meadow and pasture less, ploughed fields hardly; woods
+  well. It spreads downwind, burns out after a minute and leaves black ground; men caught in it
+  are burned and pull out upwind. Damp weather slows it, rain puts it out (systems/Fire.js).
 - **Engineers** (160 CP): dig and wire three times as fast, find enemy minefields from close by
   (and rarely set one off), clear mines and wire, and blow bridges.
+- **Officers.** A rifle platoon's first man is its leader (LT on the label). While he lives, his
+  platoon and every friendly stack within 45 m lose morale slower, rally faster and react
+  quicker; when he falls the platoon is shaken and slower than one that never had him.
+- **Ambush.** A unit nobody has spotted yet fires its first volley with 1.6× the damage and twice
+  the suppression — hold your fire, let them come, then spring it.
 - **Veterancy.** Kills earn a stack experience: Veteran, Hardened, Elite (★ on its label) — they
   aim faster and truer, shrug off losses and steady sooner.
 - **After the battle** a report: both sides' losses, kills, captures, CP spent, rounds fired,
@@ -313,6 +334,10 @@ all and the three support powers (with their price, or the seconds until ready) 
 - **Armour.** Tank platoons (3: M1 Abrams / T-72B) fire HE-frag with splash; armour is
   directional — side hits do more, rear hits much more. Knocked-out tanks explode (the T-72
   throws its turret), then burn and smoke for a minute.
+- **The field remembers.** Bodies and wrecks stay for the whole battle, blasts leave black
+  scorch marks and craters. Knocked-out fighting vehicles often cook off: their ammunition
+  goes up in pops and showers of sparks for half a minute, sometimes ending in one big blast
+  that hurts anyone close.
 - **Effects.** Soft particle smoke, dust, dirt columns with falling clods, fireballs, sparks on
   armour, muzzle blasts with flash lighting, rocket backblast and trails, craters.
 - **Movement.** No pathfinding: a man who keeps pushing into a wall sidesteps around it, and

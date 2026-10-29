@@ -57,6 +57,7 @@ export class CampaignPanel {
     grid.append(right);
     r.append(grid);
     r.append(this.battalionView(c));
+    if (c.letter) r.append(this.letterView(c.letter));
     const log = el('div', 'cp-log');
     log.append(el('h3', 'menu-sub', 'The war so far'));
     for (const line of c.log.slice(0, 8)) log.append(el('p', '', esc(line)));
@@ -69,6 +70,18 @@ export class CampaignPanel {
       this.render();
     }));
     r.append(end);
+  }
+
+  /** The latest letter home (campaign/Letters.js), on a sheet of field-post paper. */
+  letterView(l) {
+    const box = el('div', 'cp-letter');
+    box.append(el('h3', 'menu-sub', 'A letter home'));
+    const paper = el('div', 'cp-paper');
+    paper.append(el('p', 'cp-greet', esc(l.greet)));
+    for (const line of l.body) paper.append(el('p', '', esc(line)));
+    paper.append(el('p', 'cp-sign', `${esc(l.sign)}<br>${esc(l.from)}${l.unit ? `, ${esc(l.unit)}` : ''}`));
+    box.append(paper);
+    return box;
   }
 
   renderNew() {
@@ -206,7 +219,7 @@ export class CampaignPanel {
     box.append(list);
     box.append(el('h3', 'menu-sub', 'Recruit'));
     const rec = el('div', 'cp-recruit');
-    for (const T of Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly)) {
+    for (const T of Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && !t.needsRiver)) {
       const b = btn(`${T.shortName}<small>${T.cost}</small>`, 'mp-btn', () => { if (recruit(c, T.id)) this.render(); });
       b.disabled = T.cost > c.points || c.battalion.length >= MAX_BATTALION;
       rec.append(b);

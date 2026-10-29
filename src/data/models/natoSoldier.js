@@ -11,7 +11,8 @@
 //   glow  – identification markings (tinted with the faction marking colour)
 //   thigh / shin – one leg segment, pivot at its top joint, hanging down -y
 //   rig   – hip offset/height and segment lengths; muzzle – where rounds leave the weapon
-import { P, merge, pair, grime, loft } from '../units/geometry.js';
+import { P, merge, pair, grime, loft, limb } from '../units/geometry.js';
+import { FACTIONS } from '../factions.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
 
 const OD = 0x4b5331;
@@ -54,7 +55,9 @@ function weapon(kind) {
         parts: [
           P.cyl(0.045, 0.05, 1.1, { x: 0.05, y: 1.05, z: 0.62, rx: 0.65, color: OD_DK }, 10),
           P.cyl(0.055, 0.055, 0.08, { x: 0.05, y: 1.49, z: 0.95, rx: 0.65, color: STEEL }, 10),
-          ...pair((s) => P.cyl(0.012, 0.012, 0.75, { x: 0.05 + s * 0.18, y: 0.85, z: 0.95, rz: s * 0.35, color: STEEL }, 5)),
+          P.cyl(0.056, 0.056, 0.06, { x: 0.05, y: 1.225, z: 0.753, rx: 0.65, color: STEEL }, 10),      // bipod collar on the tube…
+          ...pair((s) => limb([0.05 + s * 0.03, 1.2, 0.76], [0.05 + s * 0.3, 0.56, 0.88], [[0, 0.012, 0.012], [1, 0.012, 0.012]], { color: STEEL }, 5)), // …and its legs to the ground
+          P.box(0.5, 0.02, 0.02, { x: 0.05, y: 0.78, z: 0.84, color: STEEL }),                           // the spread chain between them
           P.box(0.38, 0.05, 0.38, { x: 0.05, y: 0.55, z: 0.28, color: STEEL }),
         ],
         muzzle: { x: 0.05, y: 1.5, z: 0.98 },
@@ -126,8 +129,10 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
       ], { color: OD_DK, ...C }, 14),
       loft([[0, 1.53, -0.012, 0.112, 0.102, 2], [0, 1.575, -0.02, 0.108, 0.097, 2]], { color: OD_DK, ...C }, 12),  // collar
       P.box(0.012, 0.36, 0.02, { y: 1.31, z: 0.172, color: 0x2a2a20 }),                 // front closure
-      ...pair((s) => P.box(0.04, 0.4, 0.016, { x: s * 0.12, y: 1.32, z: 0.188, rz: s * -0.14, color: WEB })),  // LC-2 suspenders…
-      ...pair((s) => P.box(0.04, 0.4, 0.016, { x: s * 0.1, y: 1.32, z: -0.165, rz: s * 0.2, color: WEB })),    // …crossing behind
+      ...pair((s) => loft([[0.12, 1.14, 0.152], [0.125, 1.24, 0.163], [0.125, 1.34, 0.177], [0.12, 1.44, 0.165], [0.115, 1.51, 0.136], [0.11, 1.55, 0.1]]
+        .map(([x, y, z]) => [s * x, y, z, 0.02, 0.006, 2]), { color: WEB }, 6)),                                // LC-2 suspenders on the vest…
+      ...pair((s) => loft([[0.1, 1.14, -0.13], [0.1, 1.24, -0.141], [0.1, 1.34, -0.143], [0.1, 1.44, -0.145], [0.1, 1.51, -0.138], [0.1, 1.55, -0.117]]
+        .map(([x, y, z]) => [s * x, y, z, 0.02, 0.006, 2]), { color: WEB }, 6)),                                // …and down the back
       ...pair((s) => P.box(0.05, 0.06, 0.03, { x: s * 0.13, y: 1.43, z: 0.19, color: 0x2a2a20 })),            // first-aid pouch, snap links
       P.box(0.06, 0.14, 0.05, { x: 0.15, y: 1.25, z: 0.195, color: OD_DK, camo: 1 }),                           // compass pouch
       loft([[0, 1.2, -0.25, 0.16, 0.072, 4], [0, 1.36, -0.265, 0.165, 0.082, 4.5], [0, 1.5, -0.25, 0.15, 0.072, 4]], { color: WEB }, 12), // pack
@@ -137,14 +142,17 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
       P.cyl(0.042, 0.042, 0.34, { y: 1.15, z: -0.255, rz: Math.PI / 2, color: OD_DK, ...C }, 8),               // poncho roll
     ] : []),
     ...(radio ? [                                                                 // PRC-77 on the back
-      loft([[0, 1.2, -0.335, 0.145, 0.072, 5], [0, 1.48, -0.34, 0.145, 0.072, 5]], { color: 0x3f4430 }, 10),
-      P.box(0.06, 0.05, 0.05, { x: 0.1, y: 1.5, z: -0.33, color: BLACK }),
-      P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: -0.36, rx: -0.12, color: BLACK }, 4), // whip antenna
-      P.box(0.05, 0.1, 0.04, { x: -0.2, y: 1.6, z: 0.08, color: BLACK }),          // handset on the shoulder
+      // on the ALICE frame when he carries one, else straight on his back
+      loft([[0, 1.2, armour ? -0.335 : -0.215, 0.145, 0.072, 5], [0, 1.48, armour ? -0.34 : -0.22, 0.145, 0.072, 5]], { color: 0x3f4430 }, 10),
+      P.box(0.06, 0.05, 0.05, { x: 0.1, y: 1.5, z: armour ? -0.33 : -0.21, color: BLACK }),
+      P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: armour ? -0.36 : -0.24, rx: -0.12, color: BLACK }, 4), // whip antenna
+      P.box(0.05, 0.1, 0.035, { x: -0.13, y: 1.42, z: armour ? 0.205 : 0.16, rx: 0.1, color: BLACK }), // handset clipped to the chest
     ] : []),
     ...(airAssault ? [
-      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.186, rz: 0.65, color: WEB }),           // bandoliers
-      P.box(0.06, 0.5, 0.05, { y: 1.33, z: 0.19, rz: -0.65, color: WEB }),
+      // a bandolier from the left shoulder to the right hip, in two pieces that follow the vest
+      P.box(0.055, 0.24, 0.022, { x: -0.07, y: 1.39, z: 0.183, rz: 0.6, rx: -0.08, color: WEB }),
+      P.box(0.055, 0.24, 0.022, { x: 0.07, y: 1.2, z: 0.17, rz: 0.6, rx: 0.12, color: WEB }),
+      ...[[-0.1, 1.43, 0.19], [-0.03, 1.33, 0.192], [0.04, 1.24, 0.183], [0.11, 1.15, 0.168]].map(([x, y, z]) => P.box(0.05, 0.04, 0.02, { x, y, z, rz: 0.6, color: POCKET })), // its pockets
       P.box(0.22, 0.05, 0.05, { y: 1.81, z: 0.12, color: BLACK }),                  // goggles on the helmet
       ...pair((s) => P.cyl(0.03, 0.03, 0.02, { x: s * 0.055, y: 1.81, z: 0.147, rx: Math.PI / 2, color: 0x6a7a70 }, 8)),
     ] : []),
@@ -167,10 +175,7 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
     ]),
   ];
   // arms and weapon: a separate part, pivoting at the shoulders (aim, lower, recoil, reload)
-  const arms = [...armsHold({ sleeve: OD, ...C, broad }), ...w.parts];
-  const glow = [
-    P.cyl(0.08, 0.08, 0.06, { x: -0.272 * broad, y: 1.38, rz: 0.12 }, 10), // armband (team colour)
-  ];
+  const arms = [...armsHold({ sleeve: OD, ...C, broad, band: FACTIONS.nato.marking }), ...w.parts]; // the blue armband rides on the sleeve
   const thigh = merge([
     thighPart({ color: OD, ...C }),
     P.box(0.04, 0.15, 0.16, { x: 0.098, y: -0.24, color: BROWN, ...C }), // cargo pocket and its flap
@@ -180,7 +185,7 @@ export function buildNatoSoldier({ weapon: kind = 'rifle', crew = false, scout =
   return {
     torso: finish(merge(torso)),
     arms: finish(merge(arms)),
-    glow: merge(glow),
+    glow: null, // no torso markings: the armband is on the arms
     thigh: finish(thigh, false),
     shin: finish(shin, false),
     rig: { hipX: 0.12, hipY: 0.96, thighLen: 0.48, shinLen: 0.48, shoulderY: 1.47 },

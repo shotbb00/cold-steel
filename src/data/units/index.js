@@ -22,6 +22,7 @@ import manpads from './manpads.ts';
 import sam from './sam.ts';
 import recovery from './recovery.ts';
 import ambulance from './ambulance.ts';
+import bridgeLayer from './bridgeLayer.ts';
 import airAssault from './airAssault.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 
@@ -46,6 +47,7 @@ export const UNIT_TYPES = {
   [sam.id]: sam,
   [recovery.id]: recovery,
   [ambulance.id]: ambulance,
+  [bridgeLayer.id]: bridgeLayer,
   [airAssault.id]: airAssault,
   [crew.id]: crew,
   [bunker.id]: bunker,

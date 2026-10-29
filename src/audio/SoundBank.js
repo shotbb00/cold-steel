@@ -688,6 +688,20 @@ export function soundDefinitions(ctx) {
       }
       loopify(d, sr, n, 0.5);
     }),
+    // a grass fire: a low roar with sharp crackles and pops (a loop)
+    fire: () => makeBuffer(ctx, 4, (d, sr, n) => {
+      let lp = 0;
+      for (let i = 0; i < n; i++) {
+        lp += lpCoef(500, sr) * (Math.random() * 2 - 1 - lp);
+        d[i] = lp * 1.6;
+      }
+      for (let k = 0; k < 420; k++) {
+        const at = Math.floor(Math.random() * (n - sr * 0.01));
+        const a = Math.random() ** 3 * 1.4;
+        for (let j = 0; j < sr * 0.006; j++) d[at + j] += (Math.random() * 2 - 1) * Math.exp(-j / (sr * 0.0012)) * a;
+      }
+      loopify(d, sr, n, 0.1);
+    }),
     // breathing through a gas mask: a rasping intake through the filter, the valve, a slow exhale
     breath: () => makeBuffer(ctx, 3.6, (d, sr, n) => {
       const inhale = bandpass(1100, 2.5, sr);

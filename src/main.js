@@ -9,6 +9,7 @@ import { GAME } from './data/game.js';
 import { getMap } from './maps/index.js';
 import { getMode } from './modes/index.js';
 import { MainMenu } from './ui/MainMenu.js';
+import { MenuMusic } from './audio/MenuMusic.js';
 import { FACTIONS, PLAYER_FACTION } from './data/factions.js';
 import { takeReplay, rememberBattle } from './core/replay.js';
 import { registerServiceWorker } from './pwa/register.js';
@@ -29,6 +30,9 @@ const params = new URLSearchParams(location.search);
 const replay = takeReplay();
 if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather') });
 else if (replay) start(replay);
-else new MainMenu(screen, { onDeploy: start });
+else {
+  const music = new MenuMusic(); // the menu's own synth tune, until a battle is deployed
+  new MainMenu(screen, { onDeploy: (o) => { music.stop(); start(o); } });
+}
 registerServiceWorker(); // the installed game keeps itself up to date (src/pwa/)
 window.booted = true; // every module loaded: the index.html watchdog stands down

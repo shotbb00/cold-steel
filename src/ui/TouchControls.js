@@ -256,6 +256,8 @@ export class TouchControls {
   /** Open or collapse the command panel (touch layout only; the mouse layout ignores it). */
   setPanel(open) {
     this.panel.classList.toggle('collapsed', !open);
+    // the reinforcements window is opened from the panel: it goes when the panel folds away
+    if (!open && document.body.classList.contains('touch')) this.game.frontlineHud?.window.toggle(false);
     this.tb.orders?.setAttribute('aria-expanded', String(open));
   }
 

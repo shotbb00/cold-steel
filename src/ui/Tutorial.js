@@ -1,7 +1,8 @@
 // The boot camp card (modes/bootcamp.js): the current step's title, what to do, and its tasks,
 // ticked off as they are done; when all are, the next step follows after a moment. "Show me"
-// swings the command camera to what the step is about; Skip moves on. After the last step a
-// closing card leads back to the menu. Gold ground rings (marker()) show where to go.
+// swings the command camera to what the step is about; Skip moves on. After the chapter's last
+// step a closing card offers the next chapter, or the way back to the menu. Gold ground rings
+// (marker()) show where to go.
 import * as THREE from 'three';
 import { GroundDecal } from '../world/GroundDecal.js';
 import { toMenu } from '../core/replay.js';
@@ -9,10 +10,12 @@ import { toMenu } from '../core/replay.js';
 const NEXT_AFTER = 1.6;   // seconds the finished step stays ticked before the next one
 
 export class Tutorial {
-  constructor(game, steps, shared = {}) {
+  /** opts: { label (the card's header), outro (closing text), onFinish(), next: { title, go() } } */
+  constructor(game, steps, shared = {}, opts = {}) {
     this.game = game;
     this.steps = steps;
     this.shared = shared;
+    this.opts = opts;
     this.index = -1;
     this.wait = 0;
     this.markers = [];
@@ -30,6 +33,7 @@ export class Tutorial {
     this.showBtn = root.querySelector('.tu-show');
     root.querySelector('.tu-skip').addEventListener('click', (e) => { e.currentTarget.blur(); this.next(); });
     this.showBtn.addEventListener('click', (e) => { e.currentTarget.blur(); this.lookAt(this.ctx?.focus); });
+    game.tutorial = this; // the first step's start() already points things out through it
     this.next();
   }
 
@@ -44,7 +48,7 @@ export class Tutorial {
     if (!this.step) return this.finish();
     this.ctx = { ...this.shared };
     this.step.start?.(this.game, this.ctx);
-    this.count.textContent = `Boot camp · ${this.index + 1} / ${this.steps.length}`;
+    this.count.textContent = `${this.opts.label ?? 'Boot camp'} · ${this.index + 1} / ${this.steps.length}`;
     this.title.textContent = this.step.title;
     this.touchText = null;   // update() fills in the text for mouse or fingers
     this.list.replaceChildren(...this.step.tasks.map(([label]) => Object.assign(document.createElement('li'), { textContent: label })));
@@ -79,15 +83,23 @@ export class Tutorial {
   }
 
   finish() {
-    this.count.textContent = 'Boot camp';
-    this.title.textContent = 'Training complete';
-    this.text.innerHTML = 'That is the core of it. In a real battle the enemy plays the same game: it takes points, digs in, scouts, shells what its observers can see and attacks from the flank under smoke. Try a <b>Frontline</b> battle on Recruit, and look up any unit in the <b>Units</b> tab of the menu.';
+    this.opts.onFinish?.();
+    this.count.textContent = this.opts.label ?? 'Boot camp';
+    this.title.textContent = 'Chapter complete';
+    this.text.innerHTML = this.opts.outro ?? 'That is the core of it.';
     this.list.replaceChildren();
     this.root.classList.add('done', 'final');
     const foot = this.root.querySelector('.tu-foot');
-    const menu = Object.assign(document.createElement('button'), { type: 'button', className: 'deploy', textContent: 'Back to the menu' });
-    menu.addEventListener('click', () => toMenu('battle'));
-    foot.replaceChildren(menu);
+    const btn = (label, cls, fn) => {
+      const b = Object.assign(document.createElement('button'), { type: 'button', className: cls, textContent: label });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const next = this.opts.next;
+    foot.replaceChildren(...[
+      next && btn(`Next: ${next.title}`, 'deploy tu-next', () => next.go()),
+      btn(next ? 'All chapters' : 'Back to the menu', next ? 'tu-show' : 'deploy', () => toMenu(next ? 'bootcamp' : 'battle')),
+    ].filter(Boolean));
     this.root.querySelector('.tu-skip').hidden = true;
   }
 

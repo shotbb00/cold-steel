@@ -180,8 +180,11 @@ function hand(at, dir, palm, skin, glove, side = 1) {
   return parts;
 }
 
-/** Both arms in the hold, sleeves of `sleeve` colour (camo flag), optional gloves. */
-export function arms({ sleeve, camo = 0, skin = SKIN, glove = null, cuff = null, broad = 1 }) {
+/**
+ * Both arms in the hold, sleeves of `sleeve` colour (camo flag), optional gloves; `band`: the
+ * side's armband round the left upper sleeve (on the arm, so it follows it when aiming).
+ */
+export function arms({ sleeve, camo = 0, skin = SKIN, glove = null, cuff = null, broad = 1, band = null }) {
   const sh = (p) => [p[0] * broad, p[1], p[2]];
   const upper = [[0, 0.078, 0.08], [0.2, 0.076, 0.078], [0.65, 0.068, 0.07], [1, 0.064, 0.066]];   // loose sleeves
   const fore = [[0, 0.064, 0.066], [0.25, 0.064, 0.066], [0.75, 0.05, 0.05], [0.9, 0.047, 0.046], [0.96, 0.036, 0.034], [1, 0.032, 0.03]]; // cuff, then the wrist
@@ -194,6 +197,11 @@ export function arms({ sleeve, camo = 0, skin = SKIN, glove = null, cuff = null,
     ...hand(R_HAND, [0, -0.45, 0.89], [-1, 0, 0], skin, glove, 1),        // round the pistol grip, palm toward the stock
     ...hand(L_HAND, dir(L_ELBOW, L_HAND), [0, 1, 0.1], skin, glove, -1),   // cupping the fore-end from below
   ];
+  if (band != null) {
+    const a = sh(L_SHOULDER);
+    const at = (t) => [a[0] + (L_ELBOW[0] - a[0]) * t, a[1] + (L_ELBOW[1] - a[1]) * t, a[2] + (L_ELBOW[2] - a[2]) * t];
+    parts.push(limb(at(0.22), at(0.4), [[0, 0.083, 0.085], [1, 0.081, 0.083]], { color: band }, 10));
+  }
   if (cuff) {
     // rolled or buttoned cuffs just short of the wrists
     for (const [e, h] of [[R_ELBOW, R_HAND], [L_ELBOW, L_HAND]]) {

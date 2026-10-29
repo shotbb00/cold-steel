@@ -20,7 +20,7 @@ export class StackLabels {
     const el = document.createElement('div');
     const g = this.game;
     el.className = `stack-label ${stack.faction === g.playerFaction ? (g.mine(stack) ? 'ally' : 'ally partner') : 'enemy'}`;
-    el.innerHTML = '<div class="sl-head"><span class="sl-rank"></span><span class="sl-name"></span><span class="sl-count"></span></div>'
+    el.innerHTML = '<div class="sl-head"><span class="sl-rank"></span><span class="sl-off" title="Platoon leader"></span><span class="sl-name"></span><span class="sl-count"></span></div>'
       + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div><div class="sl-state"><span class="sl-ai"></span><span class="sl-sep"> · </span><span class="sl-morale"></span><span class="sl-pinned">Pinned</span></div>';
     el.querySelector('.sl-name').textContent = stack.name;
     this.root.appendChild(el);
@@ -28,6 +28,7 @@ export class StackLabels {
       el,
       count: el.querySelector('.sl-count'),
       rank: el.querySelector('.sl-rank'),
+      off: el.querySelector('.sl-off'),
       fill: el.querySelector('.sl-bar i'),
       ai: el.querySelector('.sl-ai'),
       morale: el.querySelector('.sl-morale'),
@@ -85,6 +86,12 @@ export class StackLabels {
       this.set(item, 'rank', stack.rank, () => {
         item.rank.textContent = '★'.repeat(stack.rank);
         item.rank.title = RANK_NAMES[stack.rank] ?? '';
+      });
+      const off = stack.hadOfficer ? (stack.officerAlive ? 'on' : 'lost') : '';
+      this.set(item, 'off', off, () => {
+        item.off.textContent = off ? 'LT' : '';
+        item.off.className = `sl-off ${off}`;
+        item.off.title = off === 'lost' ? 'Platoon leader down: slower to react' : 'Platoon leader: steadies this and nearby stacks';
       });
       this.set(item, 'auto', !!stack.autonomous, () => item.el.classList.toggle('wave', !!stack.autonomous));
       const sel = commands.selected.has(stack);

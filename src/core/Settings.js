@@ -8,6 +8,7 @@ export const DEFAULTS = {
   benchmark: false,    // true: the next (or current) battle runs the graphics benchmark (render/Quality.js)
   renderScale: null,   // 0.5 … 1: render resolution against the screen; null = the quality preset's
   volume: 0.8,         // master volume 0..1
+  music: 0.6,          // menu music 0..1 (audio/MenuMusic.js), on top of the master volume
   sensitivity: 1,      // mouse look multiplier (direct control)
   invertY: false,
   showFps: true,

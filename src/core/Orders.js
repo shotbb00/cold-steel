@@ -10,6 +10,8 @@
 //   { t: 'smoke', s: [ids], x, z }               { t: 'air', x, z, yaw, k: 'heli' | 'jet' | 'lift' }
 //   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
+//   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
+//   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 import { STRUCTURES } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -72,13 +74,14 @@ export class Orders {
       case 'build': {
         const s = own(cmd.s);
         const def = STRUCTURES[cmd.k];
-        if (!s || !def || !s.usesCover) return null;
+        if (!s || !def || (def.layer ? !s.stats.bridgeLayer : !s.usesCover)) return null;
         if (def.engineers && !s.stats.engineer) return g.tell(faction, 'Only engineers can do that');
+        if (def.layer && s.units[0]?.dropped) return g.tell(faction, `${s.name} has already laid its bridge`);
         if (cmd.k === 'demolish' && !g.map.bridgeAt?.(cmd.x, cmd.z)) return g.tell(faction, 'No bridge there to blow');
         if (!g.spend(faction, def.cost)) return g.tell(faction, `Not enough command points (${def.cost})`);
         if (!g.construction.place(cmd.k, cmd.x, cmd.z, cmd.yaw, faction, s)) {
           g.refund(faction, def.cost);
-          g.tell(faction, "Can't build there");
+          g.tell(faction, def.layer ? 'Pick a spot on the river, away from the other crossings' : "Can't build there");
         }
         return null;
       }
@@ -133,6 +136,17 @@ export class Orders {
         return null;
       case 'air':
         return g.air.call(faction, cmd.x, cmd.z, cmd.yaw ?? null, cmd.k ?? 'heli');
+      case 'cancelBuild': {
+        const ids = new Set(mine(cmd.s).map((s) => s.id));
+        const jobs = g.construction.sites.filter((site) => site.faction === faction && ids.has(site.stackId));
+        const back = jobs.reduce((n, site) => n + site.def.cost, 0);
+        for (const site of jobs) g.construction.cancel(site);
+        for (const s of mine(cmd.s)) if (jobs.some((site) => site.stackId === s.id)) s.ai.halt(); // stop where they are
+        g.tell(faction, jobs.length ? `Order cancelled${back ? ` — ${back} CP back` : ''}` : 'Nothing to cancel');
+        return null;
+      }
+      case 'gas':
+        return g.gas.call(faction, cmd.x, cmd.z);
       case 'buy':
         return g.modeState?.buy?.(faction, cmd.u) ?? null;
       default:

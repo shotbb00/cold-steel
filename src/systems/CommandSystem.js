@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { STRUCTURES } from './Construction.js';
 import { KINDS } from './AirStrike.js';
+import { GAS } from './Gas.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
@@ -17,6 +18,7 @@ import { GroundDecal } from '../world/GroundDecal.js';
 import { keys } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
+const ARROW_SIZE = 10;     // metres long: the facing arrow drawn while right-dragging
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
 const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
 
@@ -157,6 +159,8 @@ export class CommandSystem {
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
+    else if (keys.is(code, 'gas')) this.runCommand('gas');
+    else if (keys.is(code, 'cancelJob')) this.runCommand('cancelJob');
     else if (keys.is(code, 'smoke')) this.runCommand('smoke');
     else if (keys.is(code, 'unload')) this.runCommand('unload');
     else if (keys.is(code, 'engineer')) this.runCommand('engineer');
@@ -198,8 +202,18 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd === 'cancelJob') {
+      const sel = [...this.selected].filter((s) => s.alive);
+      if (!sel.length) return this.game.bus.emit('toast', 'Select the stack whose order to cancel');
+      this.game.orders.issue({ t: 'cancelBuild', s: ids(sel) });
+      this.game.bus.emit('order', { kind: 'cancel' });
+    } else if (cmd === 'bridge') {
+      const layers = [...this.selected].filter((st) => st.alive && st.stats.bridgeLayer && !st.units[0].dropped);
+      if (!layers.length) return this.game.bus.emit('toast', 'Select a bridge layer that still carries its bridge');
+      this.startTargeting({ kind: 'engineer', stack: layers[0], layer: true });
     } else if (cmd === 'engineer') {
       const eng = [...this.selected].filter((st) => st.alive && st.stats.engineer);
+      if (!eng.length && [...this.selected].some((st) => st.stats.bridgeLayer)) return this.runCommand('bridge'); // X for both
       if (eng.length !== 1) return this.game.bus.emit('toast', 'Select one engineer stack');
       this.startTargeting({ kind: 'engineer', stack: eng[0] });
     } else if (cmd === 'unload') {
@@ -221,6 +235,10 @@ export class CommandSystem {
         return this.game.bus.emit('toast', `${KINDS[air].aircraft[this.faction].name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
+    } else if (cmd === 'gas') {
+      if (this.game.air.limit[this.faction] === 0) return this.game.bus.emit('toast', 'No support in this battle');
+      if (!this.game.gas.ready(this.faction)) return this.game.bus.emit('toast', `Gas not ready (${Math.ceil(this.game.gas.cooldownLeft(this.faction))} s)`);
+      this.startTargeting({ kind: 'smoke', gas: true });
     }
   }
 
@@ -248,7 +266,7 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      this.game.bus.emit('toast', this.game.map.bridgeAt
+      this.game.bus.emit('toast', t.layer ? 'Bridge layer: click the river where the bridge should go — right-click cancels' : this.game.map.bridgeAt
         ? 'Engineers: click mines or wire to clear them, or a bridge to blow it — right-click cancels'
         : 'Engineers: click mines or wire to clear them — right-click cancels');
     } else if (t.kind === 'smoke') {
@@ -256,7 +274,9 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      this.game.bus.emit('toast', t.flare ? 'Illumination: click where to light up — right-click cancels' : 'Smoke mission: click where to lay the screen — right-click cancels');
+      if (t.gas) t.decal.mesh.material.color.set(0xd8d27a);
+      this.game.bus.emit('toast', t.gas ? `Gas (${GAS.cost} CP): click where the shells should fall — right-click cancels`
+        : t.flare ? 'Illumination: click where to light up — right-click cancels' : 'Smoke mission: click where to lay the screen — right-click cancels');
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
       // an air assault: the landing zone, with the arrow it comes in along
@@ -304,11 +324,20 @@ export class CommandSystem {
       this.game.bus.emit('order', { kind: 'build' });
     } else if (t.kind === 'engineer') {
       if (!t.stack.alive) return this.cancelTargeting();
+      if (t.layer) {
+        this.game.orders.issue({ t: 'build', s: t.stack.id, k: 'span', x: p.x, z: p.z, yaw: 0 });
+        this.addMarker(p, 'hold');
+        this.game.bus.emit('order', { kind: 'build' });
+        return this.cancelTargeting();
+      }
       const bridge = this.game.map.bridgeAt?.(p.x, p.z);
       const at = bridge && !bridge.blown ? bridge : p;
       this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
       this.addMarker(at, 'attack');
       this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke' && t.gas) {
+      if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke') {
       this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
@@ -332,6 +361,10 @@ export class CommandSystem {
       t.ghost.rotation.y = t.yaw;
     } else {
       if (t.kind === 'smoke') return t.decal.place(p.x, p.z, 10);
+      if (t.kind === 'engineer' && t.layer) {
+        const river = this.game.world.river;
+        return t.decal.place(p.x, river ? river.path(p.x) : p.z, 6);
+      }
       if (t.kind === 'engineer') {
         const bridge = this.game.map.bridgeAt?.(p.x, p.z);
         return bridge && !bridge.blown ? t.decal.place(bridge.x, bridge.z, 7) : t.decal.place(p.x, p.z, 9);
@@ -479,8 +512,8 @@ export class CommandSystem {
   showFacingArrow(p0, p1) {
     if (!this.arrow) {
       const shape = new THREE.Shape();
-      shape.moveTo(-0.6, 0); shape.lineTo(0.6, 0); shape.lineTo(0.6, 0.78); shape.lineTo(1.6, 0.78);
-      shape.lineTo(0, 1); shape.lineTo(-1.6, 0.78); shape.lineTo(-0.6, 0.78); shape.closePath();
+      shape.moveTo(-0.12, 0); shape.lineTo(0.12, 0); shape.lineTo(0.12, 0.6); shape.lineTo(0.35, 0.6); // a slim shaft,
+      shape.lineTo(0, 1); shape.lineTo(-0.35, 0.6); shape.lineTo(-0.12, 0.6); shape.closePath();          // then the head
       const geo = new THREE.ShapeGeometry(shape);
       geo.rotateX(Math.PI / 2); // flat, pointing along +z
       this.arrow = new GroundDecal(geo, new THREE.MeshBasicMaterial({
@@ -488,9 +521,8 @@ export class CommandSystem {
       }), this.game.terrain, 0.3);
       this.game.scene.add(this.arrow.mesh);
     }
-    const len = Math.max(6, Math.min(60, Math.hypot(p1.x - p0.x, p1.z - p0.z)));
     this.arrow.mesh.visible = true;
-    this.arrow.place(p0.x, p0.z, len, Math.atan2(p1.x - p0.x, p1.z - p0.z));
+    this.arrow.place(p0.x, p0.z, ARROW_SIZE, Math.atan2(p1.x - p0.x, p1.z - p0.z)); // only the direction counts: one size however far you drag
   }
 
   hideFacingArrow() {

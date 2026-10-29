@@ -104,6 +104,8 @@ export interface UnitStats {
   crew?: number;
   bailChance?: number;
   engineer?: boolean;
+  /** carries a bridge it can lay over a river (data/units/bridgeLayer.ts) */
+  bridgeLayer?: boolean;
   observer?: { scatter: number };
   repair?: { range: number; rate: number; mend: number; seek: number };
   heal?: { range: number; rate: number; seek: number };
@@ -130,6 +132,8 @@ export interface UnitType {
   hidden?: boolean;
   /** only arrives by helicopter (air assault) */
   airOnly?: boolean;
+  /** only offered on maps with a river */
+  needsRiver?: boolean;
   formation: { count: number; columns: number; spacing: number };
   stats: UnitStats;
   /** per-side changes on top of `stats` */

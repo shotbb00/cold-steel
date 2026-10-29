@@ -27,9 +27,11 @@ export const ACTIONS = [
   { id: 'flare', label: 'Illumination flare (night)', ctx: 'command', key: 'KeyL' },
   { id: 'unload', label: 'Unload', ctx: 'command', key: 'KeyU' },
   { id: 'leave', label: 'Leave a building', ctx: 'command', key: 'KeyE' },
+  { id: 'cancelJob', label: 'Cancel a build order', ctx: 'command', key: 'Backspace', alt: 'Delete' },
   { id: 'heli', label: 'Helicopter', ctx: 'command', key: 'KeyY' },
   { id: 'jet', label: 'Jet gun run', ctx: 'command', key: 'KeyJ' },
   { id: 'lift', label: 'Air assault', ctx: 'command', key: 'KeyP' },
+  { id: 'gas', label: 'Gas fire mission', ctx: 'command', key: 'KeyI' },
   { id: 'turnLeft', label: 'Turn the air run left', ctx: 'command', key: 'KeyQ', targeting: true },
   { id: 'turnRight', label: 'Turn the air run right', ctx: 'command', key: 'KeyE', targeting: true },
   // direct control

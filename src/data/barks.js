@@ -15,6 +15,7 @@ const LINES = {
     flank: ['Flanking left!', 'Move around them!', 'Second squad, go right!'],
     rally: ['On me!', 'Form up on me!', 'Regroup!'],
     bail: ['Bail out, bail out!', 'We\'re hit, get out!', 'Out, out, out!'],
+    officer: ['The LT\'s down!', 'Lieutenant\'s hit!', 'We lost the lieutenant!', 'Who\'s in charge?!'],
   },
   pact: {
     contact: ['Protivnik!', 'Vizhu vraga!', 'Kontakt!', 'Vrag vperedi!'],
@@ -28,6 +29,7 @@ const LINES = {
     flank: ['Obkhodim sleva!', 'V obkhod!'],
     rally: ['Ko mne!', 'Vperyod!', 'Za mnoy!'],
     bail: ['Pokinut\' mashinu!', 'Gorim! Vylezay!'],
+    officer: ['Leytenanta ubili!', 'Komandir ranen!', 'Kto komanduyet?!'],
   },
 };
 

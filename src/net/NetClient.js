@@ -284,7 +284,12 @@ export class NetClient {
         break;
       }
       case 'toast': g.bus.emit('toast', e[1]); break;
-      case 'site': g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true }); break;
+      case 'site': g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true, stackId: e[7] ?? null }); break;
+      case 'unsite': {
+        const site = g.construction.sites.find((s) => s.id === e[1]);
+        if (site) g.construction.cancel(site);
+        break;
+      }
       case 'built': {
         const site = g.construction.sites.find((s) => s.id === e[1]);
         if (site) g.construction.finish(site);
@@ -307,6 +312,14 @@ export class NetClient {
       }
       case 'air': g.air.sorties.push(new SortieView(g, e[1], e[2], e[3], e[4], e[5], e[6] ?? 'heli')); break;
       case 'flare': g.flares.add(e[1], e[2], e[3]); break;
+      case 'gas': g.gas.land(e[1], e[2]); break;
+      case 'fire': g.fire.light(e[1], e[2]); break;
+      case 'span': {
+        const river = g.world.river;
+        if (river) { river.lay(e[1], g.terrain, g.scene); g.bus.emit('terrain:changed'); }
+        for (const s of g.world.stacks) if (s.stats.bridgeLayer && Math.abs(s.centroid.x - e[1]) < 25) s.units[0].dropped = true; // its bridge is down
+        break;
+      }
       case 'bridge': {
         const river = g.world.river;
         const c = river?.crossings[e[1]];
@@ -357,6 +370,7 @@ export class NetClient {
       if (m.status !== undefined) ms.statusText = m.status ?? '';
     }
     if (m.air) Object.assign(g.air.readyAt, m.air);
+    if (m.gas) Object.assign(g.gas.readyAt, m.gas);
     for (const [id, progress] of m.sites ?? []) {
       const site = g.construction.sites.find((s) => s.id === id);
       if (site) { site.progress = progress; g.construction.showProgress(site); }

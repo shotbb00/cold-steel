@@ -104,6 +104,8 @@ export function buildSettings(container) {
   a.append(el('h3', '', 'Sound'));
   a.append(row('Master volume', `${keyOf('mute')} mutes in battle`,
     slider(0, 1, 0.05, settings.get('volume'), (v) => `${Math.round(v * 100)} %`, (v) => settings.set('volume', v))));
+  a.append(row('Menu music', 'The synth tune in the main menu',
+    slider(0, 1, 0.05, settings.get('music'), (v) => `${Math.round(v * 100)} %`, (v) => settings.set('music', v))));
 
   const c = el('section', 'set-group');
   c.append(el('h3', '', 'Controls'));

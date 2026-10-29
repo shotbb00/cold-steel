@@ -65,6 +65,7 @@ import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
 import { Gas } from '../systems/Gas.js';
+import { Fire } from '../systems/Fire.js';
 
 /** Which renderer draws the battle: Babylon.js (default), or ?renderer=three for the original. */
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
@@ -162,6 +163,9 @@ export class GameEngine {
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);
+    this.gas = new Gas(this);             // chemical fire missions (a support power)
+    this.fire = new Fire(this);           // grass and forest fires
+    this.projectiles.fire = this.fire;
     // multiplayer: the connection is set up before the interface, which adapts to it
     this.orders = new Orders(this);
     this.stats = net?.role === 'client' ? null : new BattleStats(this); // where the simulation runs
@@ -201,8 +205,6 @@ export class GameEngine {
     // single player: the weather can change and the day go on during the battle (systems/WeatherChange.js)
     const sky = { weather: this.rules.changingWeather !== false, time: this.rules.timePasses !== false };
     if (!net && !campaign && !mode.fixedWeather && (sky.weather || sky.time)) this.systems.push(new WeatherChange(this, sky));
-    // single player: now and then a chemical attack on a village (systems/Gas.js)
-    if (!net && !mode.fixedWeather && this.modeState?.points?.points?.length) this.systems.push(this.gas = new Gas(this));
 
     window.addEventListener('resize', () => this.onResize());
     // a multiplayer host whose window is minimised or in the background gets no animation
@@ -236,6 +238,7 @@ export class GameEngine {
         scene: this.scene, bus: this.bus, projectiles: this.projectiles, beams: this.beams,
         effects: this.effects, world: this.world, audio: this.audio, air: this.air, smoke: this.smoke,
         tell: (f, msg) => this.tell(f, msg),
+        game: this,
       },
     });
     stack.ai = new StackAI(stack, this.world);
@@ -291,6 +294,17 @@ export class GameEngine {
     this.netEvent('bridge', c.id);
     this.bus.emit('terrain:changed');
     this.announce(`The ${c.name} has been blown!`);
+  }
+
+  /** A bridge layer's bridge goes down across the river at x: a new crossing for everyone. */
+  layBridge(x) {
+    const river = this.world.river;
+    if (!river) return;
+    const c = this.quietly(() => river.lay(x, this.terrain, this.scene));
+    this.netEvent('span', Math.round(x * 10) / 10);
+    this.bus.emit('terrain:changed');
+    this.audio.play('stomp', { x, y: river.level + 1, z: c.z }, { volume: 1 });
+    this.announce('A bridge has been laid across the river.');
   }
 
   /** May this machine's player command stack `s`? (Co-op: only their own.) */
@@ -509,6 +523,8 @@ export class GameEngine {
     this.buildings.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
+    this.gas.update(dt);
+    this.fire.update(dt);
 
     net?.mute(); // the client flies its own rounds and runs its own renderers and effects
     this.projectiles.update(dt);
@@ -542,6 +558,8 @@ export class GameEngine {
     this.effects.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
+    this.gas.update(dt);
+    this.fire.update(dt);
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);
     this.decor?.update?.(dt, t);

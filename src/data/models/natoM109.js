@@ -28,7 +28,9 @@ function geometry() {
       P.box(1.0, 0.05, 0.8, { x: 0.6, y: 1.5, z: 2.1, rx: -0.38, color: DARK }),            // driver's hatch
       P.box(2.6, 0.4, 0.06, { y: 1.15, z: -3.12, color: DARK }),                           // rear door
       ...pair((s) => P.box(0.3, 0.12, 0.12, { x: s * 1.2, y: 1.2, z: 3.0, color: STEEL })),  // headlights
-      ...pair((s) => P.box(0.08, 0.9, 0.08, { x: s * 0.4, y: 1.7, z: 2.5, rx: 0.5, color: STEEL })), // travel lock A-frame, lowered
+      // gun travel lock: the A-frame folded down flat on the sloping front plate, its cradle at the front
+      ...pair((s) => P.box(0.08, 0.07, 0.85, { x: s * 0.4, y: 1.42, z: 2.33, rx: 0.37, color: STEEL })),
+      P.box(0.9, 0.08, 0.1, { y: 1.28, z: 2.7, rx: 0.37, color: STEEL }),
     ]), 1.25, 0.3),
     turret: grime(merge([
       planProfile([[-1.4, 1.95], [1.4, 1.95], [1.5, 1.4], [1.5, -2.2], [-1.5, -2.2], [-1.5, 1.4]], 1.15, { color: GREEN, ...C }),

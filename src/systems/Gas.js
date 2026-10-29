@@ -1,15 +1,18 @@
-// Chemical attack (single player). In some battles the enemy's guns fire persistent agent onto a
-// village you hold: a few soft pops, then a low yellow-grey cloud that drifts with the wind
-// (world/Wind.js) and thins over a few minutes. Infantry in or near it mask up, and keep the
-// mask on a while after leaving: masked men aim worse (UnitStack.aim) and see less
-// (VisibilitySystem). Vehicles are sealed and don't care. In direct control you look out through
-// the mask's lenses and hear yourself breathe.
+// Chemical fire mission: a support power beside the air strikes (I, COST CP, a cooldown per side).
+// Click a spot: after the shells' flight time a few soft pops, then a low yellow-grey cloud
+// that drifts with the wind (world/Wind.js) and thins over a few minutes. Infantry of both sides
+// in or near it mask up, and keep the mask on a while after leaving: masked men aim worse
+// (UnitStack.aim) and see less (VisibilitySystem). Vehicles are sealed and don't care. In direct
+// control you look out through the mask's lenses and hear yourself breathe.
+// The host runs the masks; each landing is sent to a multiplayer client ('gas' event), which
+// grows and drifts the same cloud itself (the wind follows the shared battle clock).
 import { wind } from '../world/Wind.js';
 
-const FIRST = [360, 840];   // seconds into the battle the attack may come
-const CHANCE = 0.6;         // share of battles that get one
+export const GAS = { cost: 200, cooldown: 150, label: 'Gas', key: 'I' };
+const FLIGHT = 9;           // seconds from the call to the first shell landing
 const SHELLS = 6;
-const RADIUS = 22;          // metres, fully spread
+const SPREAD = 14;          // metres around the aim point the shells fall
+const RADIUS = 22;          // metres a cloud spreads to
 const DURATION = 150;       // seconds the agent hangs
 const MARGIN = 12;          // masks go on this far outside the cloud
 const HOLD = 25;            // seconds a man keeps his mask on after leaving the gas
@@ -23,7 +26,7 @@ export class Gas {
     this.game = game;
     this.clouds = [];
     this.shells = [];       // [time, x, z] still in the air
-    this.at = Math.random() < CHANCE ? rnd(...FIRST) : Infinity;
+    this.readyAt = {};      // faction → battle time it can fire again
     this.tick = 0;
     this.overlay = document.createElement('div');
     this.overlay.id = 'gas-mask';
@@ -31,20 +34,30 @@ export class Gas {
     this.breath = null;
   }
 
-  /** Shell a village with gas now (also handy from the console: game.gas.strike()). */
-  strike() {
-    const g = this.game;
-    const points = g.modeState?.points?.points ?? [];
-    const mine = points.filter((p) => p.owner === g.playerFaction);
-    const pool = mine.length ? mine : points.filter((p) => p.owner);
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    if (!p) return;
-    for (let i = 0; i < SHELLS; i++) this.shells.push([g.time + 1.5 + i * rnd(0.3, 0.8), p.x + rnd(-14, 14), p.z + rnd(-14, 14)]);
-    g.radio?.add(p.owner === g.playerFaction ? `GAS, GAS, GAS! Chemical shells on ${p.name}. Masks on.` : `Chemical strike on ${p.name}. The enemy is masking up.`, p.owner === g.playerFaction ? 'bad' : 'good');
+  ready(faction) {
+    return this.game.time >= (this.readyAt[faction] ?? 0);
   }
 
+  cooldownLeft(faction) {
+    return Math.max(0, (this.readyAt[faction] ?? 0) - this.game.time);
+  }
+
+  /** `faction` fires gas at (x, z). Returns false if it can't (cooldown, command points). */
+  call(faction, x, z) {
+    const g = this.game;
+    if (g.air.limit[faction] === 0) return g.tell(faction, 'No support in this battle') ?? false; // the air support rule covers gas too
+    if (!this.ready(faction)) return g.tell(faction, `Gas not ready (${Math.ceil(this.cooldownLeft(faction))} s)`) ?? false;
+    if (!g.spend(faction, GAS.cost)) return g.tell(faction, `Not enough command points for gas (${GAS.cost})`) ?? false;
+    this.readyAt[faction] = g.time + GAS.cooldown;
+    for (let i = 0; i < SHELLS; i++) this.shells.push([g.time + FLIGHT + i * rnd(0.3, 0.8), x + rnd(-SPREAD, SPREAD), z + rnd(-SPREAD, SPREAD)]);
+    g.tellBoth(faction, `Gas fire mission — shells landing in ${FLIGHT} s`, 'GAS, GAS, GAS! Chemical shells incoming. Masks on.');
+    return true;
+  }
+
+  /** A shell bursts: a soft pop and the start of a cloud (on the client too, from the host's event). */
   land(x, z) {
     const g = this.game;
+    g.netEvent('gas', Math.round(x * 10) / 10, Math.round(z * 10) / 10);
     const y = g.terrain.heightAt(x, z);
     g.audio?.play('smoke.pop', { x, y, z }, { volume: 0.7, throttle: 0.05 });
     for (let i = 0; i < 6; i++) g.effects.smoke.spawn(x, y + 0.5, z, { vx: rnd(-3, 3), vy: rnd(0.3, 1), vz: rnd(-3, 3), size: rnd(2, 3), grow: 2, life: rnd(6, 9), alpha: 0.6, color: COLOR, drag: 1.2, wind: 0.4 });
@@ -53,7 +66,6 @@ export class Gas {
 
   update(dt) {
     const g = this.game;
-    if (g.time >= this.at) { this.at = Infinity; this.strike(); }
     for (let i = this.shells.length - 1; i >= 0; i--) {
       if (g.time < this.shells[i][0]) continue;
       this.land(this.shells[i][1], this.shells[i][2]);
@@ -78,7 +90,7 @@ export class Gas {
       }
     }
     this.tick -= dt;
-    if (this.tick > 0) return;
+    if (this.tick > 0 || g.net?.isClient) return; // masks are the host's business
     const step = 0.5 - this.tick;
     this.tick = 0.5;
     for (const s of g.world.stacks) {

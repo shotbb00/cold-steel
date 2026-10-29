@@ -13,7 +13,7 @@
 //            knock, the charging handle racked, back up), chopping when digging, pawing forward
 //            when crawling; muzzle climb on each shot
 //   death  – one of three falls per soldier (backward, forward over the knees, sideways
-//            crumple), then the body lies a while and sinks away
+//            crumple), then the body lies where it fell for the rest of the battle
 // Level of detail: every model is built twice, the full one and a light stand-in (units/geometry.js
 // `lod`: half the segments, no small parts). Each frame every soldier is drawn by one of the two by
 // his distance from the camera (setLodDistance — render/Quality.js; 0 = always the light one), the
@@ -46,7 +46,7 @@ const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _c = new THREE.Color();
 
-const CORPSE_TIME = 10; // seconds bodies stay before sinking away
+const FALL_TIME = 2;    // seconds a body takes to fall; it then lies where it fell for the rest of the battle
 const smooth = (cur, want, rate, dt) => cur + (want - cur) * Math.min(1, rate * dt);
 const ease = (x) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
 
@@ -92,7 +92,7 @@ class Level {
   constructor(model, n, scene, make) {
     this.torso = make(model.torso, bodyMaterial, n, scene, true);
     this.arms = model.arms ? make(model.arms, bodyMaterial, n, scene, true) : null;
-    this.glow = make(model.glow, glowMaterial, n, scene, false);
+    this.glow = model.glow ? make(model.glow, glowMaterial, n, scene, false) : null; // markings on the torso, if any
     this.thigh = make(model.thigh, bodyMaterial, n * 2, scene, true);
     this.shin = make(model.shin, bodyMaterial, n * 2, scene, true);
     this.meshes = [this.torso, this.arms, this.glow, this.thigh, this.shin].filter(Boolean);
@@ -102,7 +102,8 @@ class Level {
   /** Draw only the first n instances of every mesh. */
   setCount(n) {
     this.n = n;
-    this.torso.count = this.glow.count = n;
+    this.torso.count = n;
+    if (this.glow) this.glow.count = n;
     if (this.arms) this.arms.count = n;
     this.thigh.count = this.shin.count = n * 2;
   }
@@ -197,7 +198,6 @@ export class StackRenderer {
       const i = far ? nLo++ : nHi++;
       let tilt = 0;   // whole body pitch about the feet (prone, falls)
       let roll = 0;
-      let sink = 0;
       let scale = 1;
       let c = 0;      // kneel blend
       let m = 0;      // leg motion amount
@@ -234,12 +234,11 @@ export class StackRenderer {
         else if (deathStyle === 0) { tilt = -e * 1.42; c = Math.max(0, 0.35 - u.deathTime) ; }             // thrown back, legs straighten
         else if (deathStyle === 1) { c = Math.min(1, u.deathTime * 4); tilt = Math.max(0, (u.deathTime - 0.25) / 0.5) ** 1.5 * 1.45; tilt = Math.min(1.45, tilt); } // knees, then forward
         else { c = Math.min(1, u.deathTime * 3.5); roll = e * 1.35 * (u.index % 2 ? 1 : -1); tilt = e * 0.25; } // crumples sideways
-        if (u.deathTime > CORPSE_TIME) sink = (u.deathTime - CORPSE_TIME) * 0.5;
-        if (u.deathTime > CORPSE_TIME + 3) scale = 0; else animating = true;
+        if (u.deathTime < FALL_TIME) animating = true;
       }
 
       _e.set(tilt, u.yaw, roll, 'YXZ');
-      _root.compose(_p.set(u.pos.x, u.pos.y - sink + pr * 0.28, u.pos.z), _q.setFromEuler(_e), _s.setScalar(scale));
+      _root.compose(_p.set(u.pos.x, u.pos.y + pr * 0.28, u.pos.z), _q.setFromEuler(_e), _s.setScalar(scale));
 
       // --- legs: rotation about local x, negative swings the foot forward. Left leg at phase
       // ph, right at ph + π; a leg swings through while cos(phase) < 0 and stands on the
@@ -285,7 +284,7 @@ export class StackRenderer {
       _local.compose(_p.set(0, hipY, 0), _q.setFromEuler(_e), ONE).multiply(_shift.makeTranslation(0, -hipStand, 0));
       _body.multiplyMatrices(_root, _local);
       L.torso.setMatrixAt(i, _body);
-      L.glow.setMatrixAt(i, _body);
+      L.glow?.setMatrixAt(i, _body);
 
       // --- arms + weapon: pivot at the shoulders, relative to the torso
       if (L.arms) {
@@ -359,7 +358,7 @@ export class StackRenderer {
       L.thigh.setColorAt(i * 2 + 1, _c);
       L.shin.setColorAt(i * 2, _c);
       L.shin.setColorAt(i * 2 + 1, _c);
-      L.glow.setColorAt(i, _c.copy(glowColor).multiplyScalar(u.alive ? 1 : 0.5));
+      L.glow?.setColorAt(i, _c.copy(glowColor).multiplyScalar(u.alive ? 1 : 0.5));
     }
     v.hi.setCount(nHi);
     v.lo.setCount(nLo);

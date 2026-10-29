@@ -5,7 +5,8 @@
 // assault) wear the striped telnyashka under an open collar, the blue beret instead of the
 // helmet, and the RD-54 swapped for a parachutist's bag. A red armband and a red star on the
 // helmet identify the side. Same model contract as natoSoldier.js.
-import { P, merge, pair, grime, loft } from '../units/geometry.js';
+import { P, merge, pair, grime, loft, limb } from '../units/geometry.js';
+import { FACTIONS } from '../factions.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
 
 const KHAKI = 0x7a7650;      // the Afghanka: a dusty olive-tan, faded
@@ -51,7 +52,9 @@ function weapon(kind) {
         parts: [
           P.cyl(0.045, 0.05, 1.1, { x: 0.05, y: 1.05, z: 0.62, rx: 0.65, color: KHAKI_DK }, 10),
           P.cyl(0.055, 0.055, 0.08, { x: 0.05, y: 1.49, z: 0.95, rx: 0.65, color: STEEL }, 10),
-          ...pair((s) => P.cyl(0.012, 0.012, 0.75, { x: 0.05 + s * 0.18, y: 0.85, z: 0.95, rz: s * 0.35, color: STEEL }, 5)),
+          P.cyl(0.056, 0.056, 0.06, { x: 0.05, y: 1.225, z: 0.753, rx: 0.65, color: STEEL }, 10),      // bipod collar on the tube…
+          ...pair((s) => limb([0.05 + s * 0.03, 1.2, 0.76], [0.05 + s * 0.3, 0.56, 0.88], [[0, 0.012, 0.012], [1, 0.012, 0.012]], { color: STEEL }, 5)), // …and its legs to the ground
+          P.box(0.5, 0.02, 0.02, { x: 0.05, y: 0.78, z: 0.84, color: STEEL }),                           // the spread chain between them
           P.box(0.38, 0.05, 0.38, { x: 0.05, y: 0.55, z: 0.28, color: STEEL }),
         ],
         muzzle: { x: 0.05, y: 1.5, z: 0.98 },
@@ -113,12 +116,13 @@ export function buildPactSoldier({ weapon: kind = 'rifle', crew = false, scout =
     P.box(0.1, 0.12, 0.06, { x: 0.19, y: 1.0, z: 0.04, color: KHAKI_DK }),                              // grenade pouch
     P.box(0.02, 0.5, 0.012, { x: 0.05, y: 1.32, z: 0.145, rz: -0.7, color: 0x3b2a1c }),                  // the rifle sling across the chest
     ...(radio ? [                                                                 // R-107 on the back
-      loft([[0, 1.18, -0.335, 0.155, 0.076, 5], [0, 1.5, -0.34, 0.155, 0.076, 5]], { color: 0x4a4e36 }, 10),
-      P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: -0.36, rx: -0.12, color: STEEL }, 4),
+      // over the RD-54 when he carries one, else straight on his back
+      loft([[0, 1.18, rig ? -0.335 : -0.21, 0.155, 0.076, 5], [0, 1.5, rig ? -0.34 : -0.215, 0.155, 0.076, 5]], { color: 0x4a4e36 }, 10),
+      P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: rig ? -0.36 : -0.24, rx: -0.12, color: STEEL }, 4),
     ] : []),
     ...(airAssault ? [
-      P.box(0.16, 0.12, 0.02, { y: 1.5, z: 0.118, color: 0xe8e8e8 }),               // telnyashka at the collar…
-      ...[1.47, 1.52].map((y) => P.box(0.165, 0.018, 0.022, { y, z: 0.127, color: 0x2a3f8a })), // …blue stripes
+      P.box(0.075, 0.055, 0.012, { y: 1.525, z: 0.097, color: 0xe8e8e8 }),          // telnyashka showing in the open collar…
+      ...[1.512, 1.536].map((y) => P.box(0.077, 0.01, 0.008, { y, z: 0.103, color: 0x2a3f8a })), // …its blue stripes
       loft([[0, 1.18, -0.215, 0.15, 0.062, 4], [0, 1.42, -0.225, 0.155, 0.067, 4]], { color: KHAKI_DK }, 10), // jump bag
     ] : []),
     // chest rig for four AK magazines and grenades, RD-54 pack with the rolled cape on top
@@ -148,9 +152,8 @@ export function buildPactSoldier({ weapon: kind = 'rifle', crew = false, scout =
     ]),
   ];
   // arms and weapon: a separate part, pivoting at the shoulders (aim, lower, recoil, reload)
-  const arms = [...armsHold({ sleeve: KHAKI, cuff: KHAKI_DK }), ...w.parts];
+  const arms = [...armsHold({ sleeve: KHAKI, cuff: KHAKI_DK, band: FACTIONS.pact.marking }), ...w.parts]; // the red armband rides on the sleeve
   const glow = [
-    P.cyl(0.08, 0.08, 0.06, { x: -0.272, y: 1.38, rz: 0.12 }, 10),               // armband
     P.cyl(0.026, 0.026, 0.01, { y: airAssault ? 1.83 : crew ? 1.79 : scout ? 1.81 : 1.8, z: airAssault ? 0.105 : crew ? 0.105 : scout ? 0.108 : 0.152, rx: Math.PI / 2 }, 5), // red star
   ];
   const thigh = merge([

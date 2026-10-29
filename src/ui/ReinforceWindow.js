@@ -32,7 +32,7 @@ export class ReinforceWindow {
     this.stacks = root.querySelector('.rw-stacks');
     const body = root.querySelector('.rw-body');
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
-    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!allow || allow(t))); // air assault squads come by helicopter
+    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
     this.cards = [];
     for (const [cat, title] of SECTIONS) {
       const list = types.filter((t) => (SECTIONS.some(([c]) => c === t.category) ? t.category : 'other') === cat);

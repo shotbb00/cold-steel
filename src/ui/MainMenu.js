@@ -14,6 +14,7 @@ import { KINDS } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
 import { takeMenuTab } from '../core/replay.js';
+import { CHAPTERS, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX } from '../data/codex.js';
@@ -66,7 +67,7 @@ export function loadRules() {
 }
 function rulesPicker(rules, economy, onChange = () => {}) {
   const box = el('div', 'conditions rules');
-  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets and air assault for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
+  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault and gas for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
     ['startCp', 'Starting CP', 'Command points each side starts with'],
     ['income', 'CP income', 'How fast both sides earn command points'],
@@ -154,8 +155,10 @@ function statRows(type) {
     rows.push(['Toughness', 'one solid hit usually downs a man']);
   }
   const w = sp ?? s;
-  if (w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
-  else rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
+  const armed = w.range > 1; // ambulances, bridge layers: no gun to describe
+  if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
+  else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
+  if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
   if (aa) rows.push(['Anti-air', aa.missile ? `heat-seeking missiles, ${aa.count} ready, out to ${aa.range} m` : `radar-directed, out to ${aa.range} m`]);
   if (s.repair) rows.push(['Repairs', `vehicles within ${s.repair.range} m, mends blown tracks`]);
@@ -168,7 +171,7 @@ function statRows(type) {
   if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
   if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
-  rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
+  if (armed) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
 }
 
@@ -352,18 +355,22 @@ export class MainMenu {
   bootcampPanel() {
     const p = this.panel;
     p.append(el('h2', '', 'Boot camp'));
-    p.append(el('p', 'mp-lead', 'New to Cold Steel? A short, guided exercise near your base on the Fulda Gap — about ten minutes, nothing to lose.'));
-    const list = el('ol', 'bc-steps');
-    for (const s of ['Moving the command camera', 'Selecting and moving a squad', 'Attacking and suppression', 'Mortar smoke', 'Artillery and forward observers', 'Direct control of a soldier', 'Calling in reinforcements', 'Taking a control point']) {
-      list.append(el('li', '', s));
-    }
+    p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base on the Fulda Gap, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
+    const done = chaptersDone();
+    const list = el('div', 'bc-chapters');
+    CHAPTERS.forEach((c, i) => {
+      const card = el('div', `bc-chapter${done.has(c.id) ? ' done' : ''}`);
+      card.append(el('span', 'bc-num', done.has(c.id) ? '✓' : String(i + 1)));
+      const body = el('div', 'bc-body');
+      body.append(el('h3', '', c.title), el('p', '', c.blurb), el('small', '', `${c.steps.length} lessons${done.has(c.id) ? ' · done' : ''}`));
+      card.append(body);
+      const go = el('button', i === 0 && !done.has(c.id) ? 'deploy' : 'mp-btn', done.has(c.id) ? 'Again' : 'Start');
+      go.type = 'button';
+      go.addEventListener('click', () => this.deploy({ ...this.choice, ...chapterBattle(c.id, this.choice.rules) }));
+      card.append(go);
+      list.append(card);
+    });
     p.append(list);
-    const go = el('button', 'deploy', 'Start boot camp');
-    go.type = 'button';
-    go.addEventListener('click', () => this.deploy({ ...this.choice, mode: 'bootcamp', map: 'fulda-gap', side: 'nato', time: 'day', weather: 'clear' }));
-    const row = el('div', 'deploy-row');
-    row.append(go);
-    p.append(row);
   }
 
   /** The conditions and rules in a sentence or two, under the three questions. */

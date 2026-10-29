@@ -48,7 +48,9 @@ export const buildNatoM1IP = vehicle(() => {
         P.box(0.14, 0.16, 0.55, { x: 0.7, y: 1.22, z: -0.2, color: STEEL }),                             // M2 .50
         P.cyl(0.03, 0.03, 1.1, { x: 0.7, y: 1.24, z: 0.5, rx: Math.PI / 2, color: STEEL }, 6),
         P.cyl(0.3, 0.3, 0.06, { x: -0.7, y: 0.86, z: -0.5, color: NATO_DK }, 14),                        // loader's hatch
-        P.cyl(0.02, 0.02, 0.9, { x: -0.7, y: 1.0, z: 0.1, rx: Math.PI / 2, color: STEEL }, 6),           // M240
+        P.cyl(0.02, 0.02, 0.9, { x: -0.7, y: 1.0, z: 0.1, rx: Math.PI / 2, color: STEEL }, 6),           // M240…
+        P.box(0.07, 0.08, 0.3, { x: -0.7, y: 1.0, z: -0.25, color: STEEL }),                            // …its receiver…
+        P.box(0.05, 0.13, 0.05, { x: -0.7, y: 0.93, z: -0.3, color: STEEL }),                           // …on a pintle at the hatch
         P.box(0.5, 0.45, 0.4, { x: 0.65, y: 1.0, z: 0.9, color: NATO_DK }),                              // GPS doghouse
         ...pair((s) => P.box(0.3, 0.25, 0.35, { x: s * 1.55, y: 0.6, z: 1.35, ry: s * 0.5, color: NATO_DK })), // smoke dischargers
         P.box(0.9, 0.62, 0.2, { y: 0.4, z: 2.1, color: SAND_GREEN }),                                    // mantlet
