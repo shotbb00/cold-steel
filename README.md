@@ -82,8 +82,8 @@ straight back into the same battle; any other start or reload shows the menu. Fo
   Concrete shrugs off small arms — tanks, AT, artillery, mortars and air strikes bring it down.
 - **Skirmish** — the old waves mode.
 - **Maps:** *Fulda Gap* (three sectors of farmland split by wooded ridges) and *Werra Valley* (a
-  river across the border with five ways over it — three bridges, two fords. Deep water stops
-  everyone, fords slow; stacks route over the best crossing in single file, and engineers can
+  river across the border with three bridges over it and no fords. Deep water stops
+  everyone; stacks route over the best crossing in single file, and engineers can
   blow a bridge), *Hünfeld* (a town fight: a grid of cobbled streets, ~120 houses to occupy, the
   market square, two churches, the station and the brickworks), *Thuringian Forest* (spruce
   hills cut by three valley roads; the map's `woods` density cuts sight through the trees, so

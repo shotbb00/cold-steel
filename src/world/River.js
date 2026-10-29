@@ -72,7 +72,11 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
     /** The best way from a to b over the river (or null when they're on the same bank). */
     plan(a, b) {
       const on = this.bridgeAt(a.x, a.z);
-      if (on && !on.blown) return null; // already on a bridge: walk straight off it, whichever end
+      if (on && !on.blown) { // already on a bridge: along the deck to the end facing the goal, then on
+        const sb = this.side(b.x, b.z);
+        const exit = { x: on.x, z: on.z + sb * (halfWidth + 12) };
+        return { crossing: on, entry: { x: on.x, z: a.z }, exit, cost: 0, target: b, entered: true };
+      }
       const sa = this.side(a.x, a.z);
       const sb = this.side(b.x, b.z);
       if (sa === sb) return null;
@@ -188,12 +192,38 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
         const az = 1 - smoothstep(along - 3, along, Math.abs(pz - c.z));
         return ax * az * Math.max(0, deck - 0.15 - terrain.heightAt(px, pz));
       }, 0);
-      const steel = new THREE.MeshStandardMaterial({ color: 0x4f5446, roughness: 0.8, metalness: 0.3 });
-      const dark = new THREE.MeshStandardMaterial({ color: 0x2c2f28, roughness: 0.9 });
       const g = new THREE.Group();
-      const span = new THREE.Group();
+      const span = this.steelSpan();
+      span.position.y = deck;
       g.add(span);
       const L = along * 2;
+      g.position.set(x, 0, c.z);
+      scene.add(g);
+      c.mesh = g;
+      c.span = span;
+      c.spanL = L;
+      return c;
+    },
+
+    /** Length of a laid bridge, bank to bank. */
+    get spanLength() {
+      return (halfWidth + 7) * 2;
+    },
+
+    /** Deck height of every bridge. */
+    get deck() {
+      return deck;
+    },
+
+    /**
+     * A bridge layer's steel span, centred on its middle with the deck at y = 0, along z: two
+     * treadways on side girders, the scissors hinge in the middle, short ramps at the ends.
+     */
+    steelSpan() {
+      const L = (halfWidth + 7) * 2;
+      const steel = new THREE.MeshStandardMaterial({ color: 0x4f5446, roughness: 0.8, metalness: 0.3 });
+      const dark = new THREE.MeshStandardMaterial({ color: 0x2c2f28, roughness: 0.9 });
+      const span = new THREE.Group();
       const add = (geo, mat, px, py, pz) => {
         const m = new THREE.Mesh(geo, mat);
         m.position.set(px, py, pz);
@@ -201,17 +231,12 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
         span.add(m);
       };
       for (const sx of [-1, 1]) {
-        add(new THREE.BoxGeometry(1.7, 0.22, L), steel, sx * 1.1, deck, 0);            // the two treadways
-        add(new THREE.BoxGeometry(0.16, 0.7, L - 2), dark, sx * 2.05, deck - 0.2, 0);   // side girders
+        add(new THREE.BoxGeometry(1.7, 0.22, L), steel, sx * 1.1, 0, 0);            // the two treadways
+        add(new THREE.BoxGeometry(0.16, 0.7, L - 2), dark, sx * 2.05, -0.2, 0);      // side girders
       }
-      add(new THREE.BoxGeometry(width, 0.5, 0.4), dark, 0, deck - 0.3, 0);             // the hinge in the middle
-      for (const end of [-1, 1]) add(new THREE.BoxGeometry(width, 0.12, 1.6), steel, 0, deck - 0.15, end * (L / 2 - 0.4)); // ramps onto the banks
-      g.position.set(x, 0, c.z);
-      scene.add(g);
-      c.mesh = g;
-      c.span = span;
-      c.spanL = L;
-      return c;
+      add(new THREE.BoxGeometry(4.4, 0.5, 0.4), dark, 0, -0.3, 0);                   // the hinge in the middle
+      for (const end of [-1, 1]) add(new THREE.BoxGeometry(4.4, 0.12, 1.6), steel, 0, -0.15, end * (L / 2 - 0.4)); // ramps onto the banks
+      return span;
     },
 
     /** The bridge is blown: the span falls into the river (terrain and looks). */

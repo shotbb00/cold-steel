@@ -71,6 +71,8 @@ export class Construction {
     const river = this.game.world.river;
     if (kind === 'span') {
       if (!river || Math.abs(z - river.path(x)) > river.halfWidth + 25) return null; // not at the river
+      const sid = stack?.id ?? stackId;
+      for (const old of this.sites.filter((s) => s.kind === 'span' && s.stackId === sid)) this.cancel(old); // only the last order counts
       if (river.crossings.some((c) => !c.blown && Math.abs(c.x - x) < 14)) return null;   // a crossing already there
       z = river.path(x);
       yaw = 0;
@@ -81,7 +83,9 @@ export class Construction {
     ghost.visible = faction === this.game.playerFaction; // you don't see the enemy's blueprints
     this.game.scene.add(ghost);
     const site = { id: id ?? this.nextId++, def, kind, x, z, yaw, faction, progress: 0, ghost, bridge, stack, stackId: stack?.id ?? stackId };
-    if (bridge && stack && river) site.home = river.side(stack.centroid.x, stack.centroid.z); // the bank they set out from
+    const from = stack ?? (site.stackId != null ? world.stackById(site.stackId) : null);
+    if ((bridge || kind === 'span') && from && river) site.home = river.side(from.centroid.x, from.centroid.z); // the bank they set out from
+    if (kind === 'span') ghost.visible = false; // the laying animation shows the work instead
     this.sites.push(site);
     this.game.netEvent('site', site.id, kind, x, z, yaw, faction, site.stackId);
     if (stack) {
@@ -133,6 +137,31 @@ export class Construction {
   showProgress(site) {
     site.ghost.scale.y = 0.15 + Math.min(1, site.progress) * 0.85;
     site.ghost.material.opacity = 0.2 + site.progress * 0.2;
+    if (site.kind === 'span' && site.progress > 0) this.layingAnimation(site);
+  }
+
+  /**
+   * A bridge being laid: the span comes off the vehicle standing upright at the near bank and
+   * swings down across the river like a drawbridge, following the job's progress.
+   */
+  layingAnimation(site) {
+    const river = this.game.world.river;
+    const side = site.home ?? 1;
+    const layer = this.game.world.stackById(site.stackId)?.units[0];
+    if (layer) layer.laying = true; // the bridge is off its back, swinging out
+    if (!site.anim) {
+      const L = river.spanLength;
+      const pivot = new THREE.Group();
+      const span = river.steelSpan();
+      span.position.set(0, 0, -side * L / 2); // hinged at its near end, reaching across
+      pivot.add(span);
+      pivot.position.set(site.x, river.deck, site.z + side * L / 2);
+      this.game.scene.add(pivot);
+      site.anim = pivot;
+    }
+    const k = Math.min(1, Math.max(0, (site.progress - 0.1) / 0.9));
+    const ease = k * k * (3 - 2 * k);
+    site.anim.rotation.x = side * (Math.PI / 2) * (1 - ease); // upright → flat
   }
 
   /** The blueprint is done: take it away and build the real thing. */
@@ -142,6 +171,7 @@ export class Construction {
     this.sites.splice(i, 1);
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
+    site.anim?.removeFromParent(); // the laid bridge takes its place
     this.complete(site);
   }
 
@@ -152,6 +182,11 @@ export class Construction {
     this.sites.splice(i, 1);
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
+    if (site.anim) { // called off half-laid: the bridge goes back on the vehicle
+      site.anim.removeFromParent();
+      const layer = this.game.world.stackById(site.stackId)?.units[0];
+      if (layer) layer.laying = false;
+    }
     if (!this.game.net?.isClient) {
       this.game.refund(site.faction, site.def.cost);
       this.game.netEvent('unsite', site.id);
@@ -197,8 +232,9 @@ export class Construction {
       game.tell(site.faction, `Charges set on the ${c.name} — clear the bridge, ${FUSE} seconds!`);
     } else if (site.kind === 'span') {
       const u = site.stack?.units[0];
-      if (!u?.alive || u.dropped) return;
+      if (!u?.alive) return;
       u.dropped = true;
+      u.laying = false;
       game.layBridge(site.x);
     }
   }

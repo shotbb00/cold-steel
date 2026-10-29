@@ -71,7 +71,7 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
-        load.visible = !u.dropped;
+        load.visible = !u.dropped && !u.laying; // laid, or being laid
       },
       die(time) {
         turret.rotation.z = Math.min(0.25, time * 0.4);

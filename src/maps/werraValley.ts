@@ -1,8 +1,7 @@
 // Werra Valley, November 1985: the river Werra winds east–west through the middle of the map
-// along the inner-German border, between wooded bluffs. Five ways across, and nothing else —
-// the battle is about the crossings:
-//   west and east road bridges (Philippsthal, Heringen), the big centre bridge at Vacha, and
-//   two shallow fords between them (slow, wet, exposed — and engineers can't blow a ford).
+// along the inner-German border, between wooded bluffs. Three ways across, and nothing else —
+// the battle is about the bridges: west and east road bridges (Philippsthal, Heringen) and the
+// big centre bridge at Vacha. Engineers can blow them; bridge layers can add a crossing.
 // Villages sit at each bridgehead on both banks; Vacha bridge itself is the centre point; a
 // wooded hill on each side overlooks the valley. NATO holds the south bank (+z), the Pact the
 // north. Point-mirrored, so neither side gets the better ground.
@@ -32,9 +31,7 @@ const river = createRiver({
   valley: 80,
   crossings: [
     { name: 'Philippsthal bridge', x: -SIDE_X, kind: 'bridge', width: 7 },
-    { name: 'west ford', x: -95, kind: 'ford', width: 12, depth: 0.7 },
     { name: 'Vacha bridge', x: 0, kind: 'bridge', width: 9 },
-    { name: 'east ford', x: 95, kind: 'ford', width: 12, depth: 0.7 },
     { name: 'Heringen bridge', x: SIDE_X, kind: 'bridge', width: 7 },
   ],
 });
@@ -79,7 +76,7 @@ const points: ControlPointDef[] = [
 export default {
   id: 'werra-valley',
   name: 'Werra Valley',
-  description: 'A river across the border and only five ways over it — three bridges and two fords. Hold the crossings, or blow them.',
+  description: 'A river across the border and only three bridges over it. Hold them, blow them, or lay your own.',
   size: 1000,
   segments: 600,
   bounds: { x: 300, z: 310 },

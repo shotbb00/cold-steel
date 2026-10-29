@@ -317,7 +317,9 @@ export class NetClient {
       case 'span': {
         const river = g.world.river;
         if (river) { river.lay(e[1], g.terrain, g.scene); g.bus.emit('terrain:changed'); }
-        for (const s of g.world.stacks) if (s.stats.bridgeLayer && Math.abs(s.centroid.x - e[1]) < 25) s.units[0].dropped = true; // its bridge is down
+        for (const s of g.world.stacks) {
+          if (s.stats.bridgeLayer && Math.abs(s.centroid.x - e[1]) < 25) Object.assign(s.units[0], { dropped: true, laying: false }); // its bridge is down
+        }
         break;
       }
       case 'bridge': {
