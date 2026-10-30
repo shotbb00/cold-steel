@@ -21,7 +21,8 @@ import { settings } from '../core/Settings.js';
 import { keys } from '../core/Keys.js';
 
 const MAX_VOICES = 40;     // simultaneous one-shots; beyond this the least audible one is cut
-const MAX_PER_KEY = 5;     // instances of one sound at once (an MG burst, a barrage)
+const MAX_PER_KEY = 5;     // instances of one sound starting within FRESH s (an MG burst, a barrage)
+const FRESH = 0.35;        // seconds: a voice's attack; older ones are tails left to ring
 const BUDGET = 8;          // new one-shots per control tick (bursts beyond that are dropped)
 const FAR = 110;           // metres beyond which shots switch to their '.far' version
 // How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
@@ -118,7 +119,10 @@ export class AudioSystem {
     const comp = new DynamicsCompressorNode(ctx, { threshold: -8, knee: 14, ratio: 3, attack: 0.004, release: 0.09 });
     this.master = new GainNode(ctx, { gain: this.masterLevel });
     settings.on((key) => { if (key === 'volume') set(this.master.gain, this.masterLevel, ctx.currentTime, 0.05); });
-    this.master.connect(comp).connect(ctx.destination);
+    // and a limiter last: the compressor adds make-up gain, and a salvo of overlapping blasts
+    // would otherwise clip the output into crackle
+    this.limiter = new DynamicsCompressorNode(ctx, { threshold: -2, knee: 0, ratio: 20, attack: 0.001, release: 0.12 });
+    this.master.connect(comp).connect(this.limiter).connect(ctx.destination);
 
     // Valley echo on a send bus: distant sounds get more of it.
     this.reverb = ctx.createConvolver();
@@ -277,14 +281,20 @@ export class AudioSystem {
    */
   makeRoom(key, level, now) {
     const score = (v) => v.level / (1 + (now - v.start) * 2); // older tails count for less
-    let oldest = null;
+    // the cap per sound counts only voices still in their attack: a salvo of blasts mustn't cut
+    // each other's rolling tails off, which made heavy fire sound broken (tails go below, with
+    // everything else, when all MAX_VOICES are in use)
+    let weakest = null;
     let same = 0;
     for (const v of this.playing) {
-      if (v.key !== key) continue;
+      if (v.key !== key || now - v.start > FRESH) continue;
       same++;
-      if (!oldest || v.start < oldest.start) oldest = v;
+      if (!weakest || score(v) < score(weakest)) weakest = v;
     }
-    if (same >= MAX_PER_KEY) this.cut(oldest);
+    if (same >= MAX_PER_KEY) {
+      if (score(weakest) > level) return false; // the new one is the faintest: skip it, not a near blast
+      this.cut(weakest);
+    }
     if (this.playing.length < MAX_VOICES) return true;
     let worst = null;
     for (const v of this.playing) if (!worst || score(v) < score(worst)) worst = v;
