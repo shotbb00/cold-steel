@@ -127,11 +127,17 @@ export class NetClient {
     let n = 0;
     while (n < this.queue.length && this.queue[n][0] <= now) n++;
     if (n) {
+      const from = now - span; // what the last frame showed: events since then belong to this one
       for (const [t, e] of this.queue.splice(0, n)) {
-        // back from a hidden tab: don't replay a minute of gunfire at once — only the state
-        if (t < now - 0.5 && STALE_SKIP.has(e[0])) continue;
+        // back from a hidden tab: don't replay a minute of gunfire at once — only the state. (Only
+        // what is older than the last frame: a slow frame in heavy fire covers half a second or
+        // more, and dropping its early part silenced the battle.)
+        if (t < from - 0.5 && STALE_SKIP.has(e[0])) continue;
+        // sounds keep their spacing within the frame instead of all starting at once
+        g.audio.lag = e[0] === 'a' ? Math.min(0.5, Math.max(0, t - from)) : 0;
         this.apply(e);
       }
+      g.audio.lag = 0;
     }
 
     while (this.snaps.length > 2 && this.snaps[1].time <= now) this.snaps.shift();

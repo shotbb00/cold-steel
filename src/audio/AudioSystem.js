@@ -22,6 +22,7 @@ import { keys } from '../core/Keys.js';
 
 const MAX_VOICES = 40;     // simultaneous one-shots; beyond this the least audible one is cut
 const MAX_PER_KEY = 5;     // instances of one sound starting within FRESH s (an MG burst, a barrage)
+const DEFER = 0.15;        // seconds a sound may wait for its turn (the throttle) before it's dropped
 const FRESH = 0.35;        // seconds: a voice's attack; older ones are tails left to ring
 const BUDGET = 8;          // new one-shots per control tick (bursts beyond that are dropped)
 const FAR = 110;           // metres beyond which shots switch to their '.far' version
@@ -226,8 +227,13 @@ export class AudioSystem {
     if (pos && dist > FAR && (this.bank[`${key}.far`] || this.samples?.samples[`${key}.far`])) key = `${key}.far`; // a distant thump and echo
     const take = this.sound(key);
     if (!take) return; // not built yet
-    const now = ctx.currentTime;
-    if (now - (this.lastPlay.get(key) ?? -1) < throttle) return;
+    let now = ctx.currentTime + (this.lag ?? 0); // a multiplayer guest spreads a slow frame's sounds (NetClient)
+    const last = this.lastPlay.get(key) ?? -1;
+    if (now - last < throttle) {
+      // a burst within one frame (a slow frame, a salvo): a moment later instead of not at all
+      now = last + throttle;
+      if (now - ctx.currentTime > DEFER) return;
+    }
     // how loud this will be here — used to decide what to cut when too much is playing
     const level = volume * ref / (ref + this.rolloff * Math.max(0, dist - ref));
     if (!this.makeRoom(key, level, now)) return;
@@ -271,7 +277,7 @@ export class AudioSystem {
       if (i >= 0) this.playing.splice(i, 1);
       for (const node of nodes) node.disconnect();
     };
-    src.start();
+    src.start(now);
   }
 
   /**
@@ -507,7 +513,10 @@ export class AudioSystem {
     if (this.controlT < CONTROL_DT) return;
     const step = this.controlT;
     this.controlT = 0;
-    this.budget = BUDGET;
+    // a slow frame (real time, not the capped battle step): its share of new sounds
+    const real = this.ctx.currentTime - (this.tickAt ?? this.ctx.currentTime);
+    this.tickAt = this.ctx.currentTime;
+    this.budget = Math.round(BUDGET * Math.min(10, Math.max(1, real / CONTROL_DT)));
     if (!this.running) return;
     this.updateListener();
     if (this.windGain) set(this.windGain.gain, this.game.world.time - this.lastLoud < QUIET_FOR ? WIND * 0.5 : WIND, this.ctx.currentTime, 1.5);
