@@ -75,6 +75,14 @@ export const CODEX = {
     nato: 'Army snipers carried the M21, an accurised M14 with an Adjustable Ranging Telescope, until the bolt-action M24 replaced it from 1988.',
     pact: 'Every Soviet motor-rifle platoon had a designated marksman with the SVD — a semi-automatic rifle built for exactly this job.',
   },
+  cbRadar: {
+    use: 'Park it behind your lines facing the enemy and wait: it watches a sector of about 90° in front of it. Every enemy gun, mortar or rocket launcher that fires from inside that sector within 500 m is plotted — it shows on your map for 25 seconds, the radio says where, and your own artillery and mortars take it before anything else.',
+    strong: 'Making the enemy\'s artillery pay for every barrage; showing you where it is',
+    weak: 'No weapon, no use on the move, blind to the sides and rear, and only as good as your own guns',
+    counter: 'Shoot and move: fire a few salvos, then shift the guns. Find the radar with recon and kill it.',
+    nato: 'The AN/TPQ-37 Firefinder (and the smaller TPQ-36) entered service in the early 1980s: radars that track shells in flight and compute the battery\'s position before the first round lands.',
+    pact: 'The ARK-1 Rys on the MT-LBu chassis gave Soviet artillery regiments the same: the enemy battery\'s position within a few rounds.',
+  },
   observers: {
     use: 'The radio that makes your artillery accurate: every shell, bomb and rocket aimed at something one of them can see lands with 40 % of its usual scatter. Keep them hidden with a view of the target area.',
     strong: 'Turning mortars and guns into precision weapons, spotting',

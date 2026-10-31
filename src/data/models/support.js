@@ -3,9 +3,9 @@
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
 //         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
-//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2
+//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -1070,3 +1070,52 @@ export const buildPactTunguska = vehicle(() => {
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.69, y: 1.3, z: -1.0 })]),
   };
 });
+
+
+// ---------------------------------------------------------------- counter-battery radars
+
+/** AN/TPQ-37 Firefinder: the M35 2½-ton truck with the operations shelter, and the big phased-array
+ *  antenna standing up on its own trailer behind, tilted back and facing forward over the cab. */
+export const buildNatoFirefinder = vehicle(() => ({
+  wheels: wheeled([1.95, -0.55, -1.65], 0.95, 0.5),
+  hull: grime(merge([
+    ...pair((s) => P.box(0.15, 0.22, 5.6, { x: s * 0.42, y: 0.88, z: 0.2, color: STEEL })),
+    // M35: flat-topped bonnet, the cab with its canvas top, wide front fenders
+    stationHull([[2.15, [[0, 1.05], [0.62, 1.05], [0.62, 1.62], [0, 1.64]]], [3.3, [[0, 1.05], [0.6, 1.05], [0.6, 1.55], [0, 1.57]]]], { color: NATO, ...C }),
+    P.box(1.15, 0.5, 0.04, { y: 1.3, z: 3.33, color: 0x1e1e1c }),                                    // grille
+    ...pair((s) => P.box(0.55, 0.05, 1.3, { x: s * 0.88, y: 1.32, z: 2.6, color: NATO_DK })),
+    stationHull([[1.05, [[0, 1.1], [1.0, 1.1], [1.0, 1.85], [0, 1.85]]], [2.15, [[0, 1.1], [1.0, 1.1], [1.0, 1.8], [0, 1.8]]]], { color: NATO, ...C }),
+    P.box(2.0, 0.55, 1.1, { y: 2.12, z: 1.6, color: 0x4f5238 }),                                     // canvas cab top
+    P.box(1.9, 0.5, 0.04, { y: 2.0, z: 2.17, rx: -0.1, color: GLASS }),
+    ...pair((s) => P.box(0.03, 0.4, 0.6, { x: s * 1.01, y: 1.95, z: 1.6, color: GLASS })),
+    P.box(2.3, 0.18, 0.14, { y: 0.95, z: 3.45, color: STEEL }),
+    // the S-280 operations shelter on the bed, its door and air conditioner
+    P.box(2.15, 1.75, 2.6, { y: 2.05, z: -0.65, color: NATO, ...C }),
+    P.box(0.7, 1.2, 0.04, { x: -0.4, y: 1.9, z: -1.96, color: NATO_DK }),
+    P.box(0.6, 0.4, 0.4, { x: 0.6, y: 3.1, z: 0.2, color: NATO_DK }),
+    // the antenna trailer behind: drawbar, the array on its pedestal, tilted back to look out over the cab
+    P.box(0.12, 0.12, 1.2, { y: 0.75, z: -2.4, color: STEEL }),
+    P.box(1.8, 0.35, 1.6, { y: 0.8, z: -3.6, color: NATO, ...C }),
+    ...pair((s) => P.cyl(0.42, 0.42, 0.25, { x: s * 1.0, y: 0.42, z: -3.6, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
+    P.box(0.4, 0.9, 0.4, { y: 1.4, z: -3.6, color: NATO_DK }),
+    P.box(3.0, 2.2, 0.25, { y: 2.85, z: -3.5, rx: -0.38, color: NATO_DK }),                          // the phased array…
+    ...[-1.2, -0.6, 0, 0.6, 1.2].map((x) => P.box(0.05, 2.1, 0.04, { x, y: 2.86, z: -3.36, rx: -0.38, color: STEEL })), // …its rows of elements
+    ...[-0.7, 0, 0.7].map((y) => P.box(2.9, 0.05, 0.04, { y: 2.85 + y * Math.cos(0.38), z: -3.36 + y * Math.sin(0.38), rx: -0.38, color: STEEL })),
+  ]), 1.0, 0.3),
+  marks: merge([P.box(0.02, 0.35, 0.5, { x: 1.08, y: 2.1, z: -0.6 })]),
+}));
+
+/** ARK-1 Rys on the MT-LBu: the taller command hull, the large rectangular antenna raised on the roof
+ *  facing forward, the generator box and whip aerials. */
+export const buildPactARK1 = vehicle(() => ({
+  ...mtlbHull([
+    P.box(2.7, 0.45, 3.4, { y: 1.78, z: -1.4, color: PACT }),                                          // the raised rear superstructure
+    P.box(0.9, 0.5, 0.8, { x: -0.7, y: 2.25, z: -2.6, color: PACT_DK }),                               // generator
+    ...pair((s) => P.cyl(0.006, 0.006, 2.2, { x: s * 1.1, y: 3.1, z: -2.9, color: STEEL }, 4)),        // aerials
+    P.box(0.5, 0.8, 0.5, { y: 2.4, z: -0.9, color: PACT_DK }),                                          // antenna mast
+    P.box(3.1, 1.7, 0.2, { y: 3.45, z: -0.85, rx: -0.3, color: PACT_DK }),                              // the antenna…
+    ...[-1.2, -0.6, 0, 0.6, 1.2].map((x) => P.box(0.05, 1.6, 0.04, { x, y: 3.45, z: -0.73, rx: -0.3, color: STEEL })),
+    P.box(3.0, 0.08, 0.06, { y: 4.25, z: -0.62, rx: -0.3, color: STEEL }),
+  ], 1.7),
+  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.465, y: 1.3, z: 0.6 })]),
+}));

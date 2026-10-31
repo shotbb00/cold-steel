@@ -73,6 +73,7 @@ export interface UnitStats {
   holdFire?: boolean;
   marksman?: boolean;
   vsStructure?: number;
+  cbRadar?: { range: number; arc: number; deploy: number }; // a counter-battery radar (systems/CounterBattery.js)
   airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
   demolition?: boolean; // goes for bunkers, held houses and trenches first
   dozer?: boolean;      // digs vehicle positions (Construction 'revetment')   // a sniper: officers, crews and observers first, never vehicles

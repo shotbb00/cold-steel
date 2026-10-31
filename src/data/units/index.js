@@ -23,6 +23,7 @@ import cev from './cev.ts';
 import rockets from './rockets.ts';
 import spMortar from './spMortar.ts';
 import observers from './observers.ts';
+import cbRadar from './cbRadar.ts';
 import manpads from './manpads.ts';
 import sam from './sam.ts';
 import recovery from './recovery.ts';
@@ -53,6 +54,7 @@ export const UNIT_TYPES = {
   [rockets.id]: rockets,
   [spMortar.id]: spMortar,
   [observers.id]: observers,
+  [cbRadar.id]: cbRadar,
   [manpads.id]: manpads,
   [sam.id]: sam,
   [recovery.id]: recovery,

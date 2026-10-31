@@ -65,6 +65,7 @@ import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
 import { Gas } from '../systems/Gas.js';
+import { CounterBattery } from '../systems/CounterBattery.js';
 import { Fire } from '../systems/Fire.js';
 
 /** Which renderer draws the battle: Babylon.js (default), or ?renderer=three for the original. */
@@ -164,6 +165,7 @@ export class GameEngine {
     this.air = new AirStrike(this);
     this.support = new Support(this);
     this.gas = new Gas(this);             // chemical fire missions (a support power)
+    this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.fire = new Fire(this);           // grass and forest fires
     this.projectiles.fire = this.fire;
     // multiplayer: the connection is set up before the interface, which adapts to it
@@ -525,6 +527,7 @@ export class GameEngine {
     this.flares.update(dt);
     this.gas.update(dt);
     this.fire.update(dt);
+    this.counterBattery.update(dt);
 
     net?.mute(); // the client flies its own rounds and runs its own renderers and effects
     this.projectiles.update(dt);

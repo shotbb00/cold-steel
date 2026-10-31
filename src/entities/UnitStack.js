@@ -897,7 +897,8 @@ export class UnitStack {
       if (d < s.minRange || d > s.range) continue;
       let cluster = 0;
       for (const o of this.world.neighbors(e.pos, 8, _near)) if (o.faction === foe) cluster++;
-      const score = d * 0.05 - cluster * 6 - (e.stack.dugIn ? 4 : 0) - (e.stack.usesCover ? 0 : 3) + (e.stack.stats.medical ? 20 : 0);
+      const located = e.locatedUntil > this.world.time ? 30 : 0; // the counter-battery radar's find: the enemy's guns first
+      const score = d * 0.05 - cluster * 6 - located - (e.stack.dugIn ? 4 : 0) - (e.stack.usesCover ? 0 : 3) + (e.stack.stats.medical ? 20 : 0);
       if (score < bestScore) { bestScore = score; best = e; }
     }
     return best;
@@ -938,6 +939,7 @@ export class UnitStack {
     this.services.effects.muzzle(_p, _w, 1, s.muzzleKind ?? 'artillery');
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
     VisibilitySystem.revealShooter(u);
+    if (!smoke && !flare) this.services.game?.counterBattery?.fired(this, u); // an enemy radar may track it back
     u.recoil = 1;
   }
 

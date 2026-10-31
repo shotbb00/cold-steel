@@ -85,6 +85,7 @@ export class VisibilitySystem {
   }
 
   isSeen(u, spotters, terrain) {
+    if (u.locatedUntil > this.game.time) return true; // tracked back by a counter-battery radar (systems/CounterBattery.js)
     const smoke = this.game.smoke;
     const cond = this.game.conditions;
     const lit = this.game.flares?.lit(u.pos.x, u.pos.z) ?? false;
