@@ -26,6 +26,9 @@ const TRANSITION = 75;         // seconds a weather change takes
 const TIME_TRANSITION = 100;   // seconds the light takes to go (or come)
 const COLOURS = ['fogColor', 'sunColor', 'hemiSky', 'hemiGround', 'skyTop', 'skyHorizon', 'skyBottom', 'cloudLight', 'cloudDark', 'rimColor'];
 const NUMBERS = ['fogDensity', 'sunIntensity', 'hemiIntensity', 'clouds', 'sunDisk', 'exposure', 'rimIntensity'];
+// what a theme without the value means — the same fallbacks the renderers use (GameEngine,
+// sky.js); blending from 0 instead turned the screen black as daylight began to change
+const UNSET = { exposure: 1.1, sunDisk: 1 };
 const SAY = {
   clear: 'The cloud is breaking up — clear skies within the minute. Long sight lines.',
   overcast: 'Cloud thickening over the sector.',
@@ -114,7 +117,10 @@ export class WeatherChange {
     const a = this.from.theme;
     const b = this.to.theme;
     const t = {};
-    for (const key of NUMBERS) t[key] = (a[key] ?? 0) + ((b[key] ?? 0) - (a[key] ?? 0)) * k;
+    for (const key of NUMBERS) {
+      const from = a[key] ?? UNSET[key] ?? 0;
+      t[key] = from + ((b[key] ?? UNSET[key] ?? 0) - from) * k;
+    }
     for (const key of COLOURS) {
       if (a[key] == null || b[key] == null) { t[key] = b[key] ?? a[key]; continue; }
       t[key] = _a.set(a[key]).lerp(_b.set(b[key]), k).getHex();
