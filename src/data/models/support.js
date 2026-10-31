@@ -948,7 +948,7 @@ export const buildNatoFAAR = vehicle(() => ({
 export const buildPactP19 = vehicle(() => ({
   wheels: wheeled([2.1, -0.95, -2.2], 1.0, 0.5),
   hull: grime(merge([
-    ...pair((s) => P.box(0.16, 0.22, 6.6, { x: s * 0.45, y: 0.9, z: -0.1, color: STEEL })),
+    ...pair((s) => P.box(0.16, 0.22, 7.0, { x: s * 0.45, y: 0.9, z: 0.1, color: STEEL })),           // chassis rails, out to the bumper
     // ZiL-131: rounded bonnet and wings, the cab
     loft([[0, 1.1, 2.4, 0.78, 0.4, 3], [0, 1.2, 3.0, 0.74, 0.38, 3], [0, 1.15, 3.45, 0.66, 0.32, 3]], { color: PACT }, 12),
     P.box(1.2, 0.42, 0.04, { y: 1.15, z: 3.5, color: 0x1e1e1c }),                                    // grille
@@ -957,7 +957,7 @@ export const buildPactP19 = vehicle(() => ({
     ...pair((s) => P.box(0.03, 0.4, 0.62, { x: s * 1.11, y: 1.95, z: 1.95, color: GLASS })),
     ...pair((s) => P.box(0.5, 0.06, 1.4, { x: s * 0.98, y: 1.35, z: 2.55, color: PACT_DK })),          // wings
     ...pair((s) => P.cyl(0.1, 0.1, 0.1, { x: s * 0.82, y: 1.45, z: 3.3, rx: Math.PI / 2, color: GLASS }, 10)),
-    P.box(2.3, 0.18, 0.14, { y: 0.92, z: 3.62, color: STEEL }),
+    P.box(2.3, 0.18, 0.14, { y: 0.92, z: 3.6, color: STEEL }),
     // the van body (KUNG) with door, ladder and air conditioner
     P.box(2.3, 1.85, 3.6, { y: 2.08, z: -1.15, color: PACT }),
     P.box(0.6, 1.2, 0.04, { x: 0.5, y: 1.9, z: -2.96, color: PACT_DK }),
@@ -1082,7 +1082,7 @@ export const buildPactTunguska = vehicle(() => {
 export const buildNatoFirefinder = vehicle(() => ({
   wheels: wheeled([1.95, -0.55, -1.65], 0.95, 0.5),
   hull: grime(merge([
-    ...pair((s) => P.box(0.15, 0.22, 5.6, { x: s * 0.42, y: 0.88, z: 0.2, color: STEEL })),
+    ...pair((s) => P.box(0.15, 0.22, 6.2, { x: s * 0.42, y: 0.88, z: 0.25, color: STEEL })),         // chassis rails, out to the bumper
     // M35: flat-topped bonnet, the cab with its canvas top, wide front fenders
     stationHull([[2.15, [[0, 1.05], [0.62, 1.05], [0.62, 1.62], [0, 1.64]]], [3.3, [[0, 1.05], [0.6, 1.05], [0.6, 1.55], [0, 1.57]]]], { color: NATO, ...C }),
     P.box(1.15, 0.5, 0.04, { y: 1.3, z: 3.33, color: 0x1e1e1c }),                                    // grille
@@ -1091,7 +1091,7 @@ export const buildNatoFirefinder = vehicle(() => ({
     P.box(2.0, 0.55, 1.1, { y: 2.12, z: 1.6, color: 0x4f5238 }),                                     // canvas cab top
     P.box(1.9, 0.5, 0.04, { y: 2.0, z: 2.17, rx: -0.1, color: GLASS }),
     ...pair((s) => P.box(0.03, 0.4, 0.6, { x: s * 1.01, y: 1.95, z: 1.6, color: GLASS })),
-    P.box(2.3, 0.18, 0.14, { y: 0.95, z: 3.45, color: STEEL }),
+    P.box(2.3, 0.18, 0.14, { y: 0.92, z: 3.38, color: STEEL }),                                      // bumper, on the rails' ends
     // the S-280 operations shelter on the bed, its door and air conditioner
     P.box(2.15, 1.75, 2.6, { y: 2.05, z: -0.65, color: NATO, ...C }),
     P.box(0.7, 1.2, 0.04, { x: -0.4, y: 1.9, z: -1.96, color: NATO_DK }),

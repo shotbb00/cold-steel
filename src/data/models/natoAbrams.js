@@ -77,7 +77,7 @@ function geometry() {
       P.cyl(0.155, 0.155, 0.5, { z: 2.8, rx: Math.PI / 2, color: GREEN, ...C }, 14),          // bore evacuator
       P.cyl(0.11, 0.1, 0.12, { z: 5.42, rx: Math.PI / 2, color: STEEL }, 14),                 // muzzle reference
       P.box(0.5, 0.42, 0.5, { z: 0.15, color: DARK }),                                        // canvas mantlet cover
-    ]),
+    ]).scale(1, 1, 0.7), // the barrel's real length out of the mantlet (~3.8 m); it was drawn half again too long
   };
   return GEO;
 }
@@ -100,7 +100,7 @@ export function buildNatoAbrams(mats) {
   turret.add(gun);
   meshAdder(gun)(g.gun, mats.body);
   const muzzle = new THREE.Object3D();
-  muzzle.position.set(0, 0, 5.55);
+  muzzle.position.set(0, 0, 3.88);
   gun.add(muzzle);
 
   const st = {};

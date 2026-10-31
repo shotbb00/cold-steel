@@ -62,11 +62,11 @@ export const buildNatoM1IP = vehicle(() => {
         P.cyl(0.09, 0.12, 5.4, { z: 2.7, rx: Math.PI / 2, color: SAND_GREEN }, 14),
         P.cyl(0.17, 0.17, 0.7, { z: 3.1, rx: Math.PI / 2, color: NATO_DK }, 14),                        // bore evacuator
         P.cyl(0.11, 0.11, 0.08, { z: 5.38, rx: Math.PI / 2, color: STEEL }, 14),                        // muzzle ring
-      ]),
+      ]).scale(1, 1, 0.7), // real exposed length
       at: [0, 0.42, 2.1],
       pitch: 0,
     },
-    muzzle: [0, 0, 5.5],
+    muzzle: [0, 0, 3.85],
     recoil: 0.4,
     marks: merge([...pair((s) => P.box(0.02, 0.3, 0.6, { x: s * 1.79, y: 0.45, z: -0.6 }))]),
   };
@@ -144,11 +144,11 @@ export const buildPactT80 = vehicle(() => {
         P.cyl(0.1, 0.13, 5.5, { z: 2.75, rx: Math.PI / 2, color: PACT }, 14),
         ...[0.8, 1.6, 3.4, 4.3].map((z) => P.cyl(0.15, 0.15, 0.65, { z, rx: Math.PI / 2, color: PACT_DK }, 14)), // thermal sleeve
         P.cyl(0.18, 0.18, 0.5, { z: 2.45, rx: Math.PI / 2, color: PACT }, 14),                         // fume extractor
-      ]),
+      ]).scale(1, 1, 0.72), // real exposed length
       at: [0, 0.42, 1.8],
       pitch: 0,
     },
-    muzzle: [0, 0, 5.6],
+    muzzle: [0, 0, 4.03],
     recoil: 0.4,
     marks: merge([...pair((s) => P.cyl(0.17, 0.17, 0.02, { x: s * 1.69, y: 0.92, z: -0.6, rz: Math.PI / 2 }, 5))]),
   };

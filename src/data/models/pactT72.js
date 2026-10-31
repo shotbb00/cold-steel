@@ -119,7 +119,7 @@ function geometry() {
       ...[0.7, 1.4, 3.3, 4.1, 4.8].map((z) => P.cyl(0.15, 0.15, 0.6, { z, rx: Math.PI / 2, color: GREEN_DK }, 14)), // thermal sleeve
       ...[1.05, 3.0, 4.45].map((z) => P.cyl(0.155, 0.155, 0.04, { z, rx: Math.PI / 2, color: GREEN_DK }, 14)), // sleeve straps
       P.cyl(0.18, 0.18, 0.55, { z: 2.35, rx: Math.PI / 2, color: GREEN }, 14),               // fume extractor
-    ]),
+    ]).scale(1, 1, 0.72), // the 2A46's real length out of the mantlet (~4 m)
   };
   return GEO;
 }
@@ -142,7 +142,7 @@ export function buildPactT72(mats) {
   turret.add(gun);
   meshAdder(gun)(g.gun, mats.body);
   const muzzle = new THREE.Object3D();
-  muzzle.position.set(0, 0, 5.65);
+  muzzle.position.set(0, 0, 4.07);
   gun.add(muzzle);
 
   const st = {};

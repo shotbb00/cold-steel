@@ -137,8 +137,8 @@ function aircraftRows(kind, faction) {
 }
 
 /** Rows for the stats card. */
-function statRows(type) {
-  const s = type.stats;
+function statRows(type, faction) {
+  const s = type.factionStats?.[faction] ? { ...type.stats, ...type.factionStats[faction] } : type.stats; // the side's own numbers (UnitStack does the same)
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
@@ -154,13 +154,32 @@ function statRows(type) {
   } else {
     rows.push(['Toughness', 'one solid hit usually downs a man']);
   }
-  const w = sp ?? s;
-  const armed = w.range > 1; // ambulances, bridge layers: no gun to describe
+  const w = sp ? { ...s, ...sp } : s;
+  const armed = w.range > 1 && (w.damage ?? 1) > 0; // ambulances, bridge layers: no gun to describe
   if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
-  if (aa) rows.push(['Anti-air', aa.missile ? `heat-seeking missiles, ${aa.count} ready, out to ${aa.range} m` : `radar-directed, out to ${aa.range} m`]);
+  if (aa) {
+    const reach = aa.optical ? `the gunner's eyes: ${Math.round(aa.range * aa.optical)} m (${aa.range} m under an air search radar)` : `out to ${aa.range} m`;
+    rows.push(['Anti-air', aa.shared ? `${s.atgm.count} missiles in one rack for aircraft and armour, ${reach}`
+      : aa.missile ? `heat-seeking missiles, ${aa.count} ready, ${reach}` : aa.optical ? `cannon, ${reach}` : `radar-directed cannon, ${reach}`]);
+    // can it hit back at the ground? (anti-air that can't needs the line in front of it)
+    const gun = w.range > 1 && w.damage > 0 ? (s.gunRange && s.gunRange < w.range ? s.gunRange : w.range) : 0;
+    const ground = [];
+    if (s.atgm) ground.push(`missiles against vehicles out to ${s.atgm.range} m`);
+    if (gun > 1) ground.push(`${w.weapon === 'autocannon' || aa.missile === undefined ? 'cannon' : 'small arms'} out to ${gun} m${(w.vsArmor ?? 1) < 0.5 ? ' (infantry and trucks, not armour)' : ''}`);
+    if (!ground.length && sp && s.range > 1) ground.push(`the rest of the team's rifles, out to ${s.range} m`);
+    rows.push(['Ground targets', ground.length ? `yes — ${ground.join('; ')}` : 'none: keep it behind the line']);
+  }
+  if (s.airRadar) rows.push(['Radar', `warns of aircraft within ${s.airRadar.detect} m; air defence within ${s.airRadar.cover} m reaches further (set up ${s.airRadar.deploy} s)`]);
+  if (s.cbRadar) rows.push(['Radar', `locates guns firing within ${s.cbRadar.range} m in a ${Math.round(s.cbRadar.arc * 57.3)}° sector ahead (set up ${s.cbRadar.deploy} s)`]);
+  if (s.jammer) rows.push(['Jamming', `enemy support calls, observers and radars within ${s.jammer.radius} m (set up ${s.jammer.deploy} s); seen while it jams`]);
+  if (s.commandPost) rows.push(['Command post', `reinforcements arrive here once set up (${s.commandPost.deploy} s); steadies stacks within ${s.commandPost.lead} m`]);
+  if (s.dozer) rows.push(['Blade', `digs vehicle positions (${keyOf('trench')}): hull down behind the berm`]);
+  if (s.minePlough) rows.push(['Plough', 'lifts mines as it drives through a field and leaves a safe lane']);
+  if (s.lineCharge) rows.push(['Line charge', `${s.lineCharge.count}, blow a lane through mines and wire, 25–${s.lineCharge.range} m (${keyOf('engineer')})`]);
+  if (sp?.marksman) rows.push(['Marksman', 'picks officers first, then crews and observers; a shot gives little away']);
   if (s.repair) rows.push(['Repairs', `vehicles within ${s.repair.range} m, mends blown tracks`]);
   if (s.heal) rows.push(['Heals', `wounded infantry within ${s.heal.range} m`]);
   if (s.observer) rows.push(['Observes', `indirect fire on what they see: ${Math.round(s.observer.scatter * 100)} % of the scatter`]);
@@ -550,7 +569,7 @@ export class MainMenu {
     if (v.weapon) this.info.append(el('p', 'unit-weapon', v.weapon));
     if (v.text) this.info.append(el('p', 'unit-text', v.text));
     const dl = el('dl', 'stats');
-    for (const [k, val] of statRows(type)) dl.append(el('dt', '', k), el('dd', '', String(val)));
+    for (const [k, val] of statRows(type, faction)) dl.append(el('dt', '', k), el('dd', '', String(val)));
     this.info.append(dl);
     this.codex(id, faction);
   }
