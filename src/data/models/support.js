@@ -3,9 +3,9 @@
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
 //         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
-//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder · M60A3 with mine plough
+//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder · M60A3 with mine plough · AN/MLQ-34 TACJAM
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit · R-330 jammer
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -1203,3 +1203,60 @@ export const buildPactUR77 = vehicle(() => {
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.49, y: 1.3, z: 0.6 })]),
   };
 });
+
+
+// ---------------------------------------------------------------- electronic warfare
+
+/** A log-periodic jamming antenna: the boom and its dipoles shortening toward the tip, on a mast head. */
+const logPeriodic = (color, n = 7, len = 1.8) => [
+  P.box(0.06, 0.06, len, { z: len / 2 - 0.2, color }),
+  ...Array.from({ length: n }, (_, k) => P.box(1.6 - (k * 1.1) / n, 0.03, 0.03, { z: -0.1 + (k * len) / n, color })),
+];
+
+/** AN/MLQ-34 TACJAM on the M1015: the M548-family tracked carrier, its small armoured cab, the big
+ *  equipment shelter, and the telescopic mast raised with the jamming antennas. */
+export const buildNatoTACJAM = vehicle(() => {
+  const g = tracked({ halfWidth: 1.2, length: 4.4, wheels: 5, wheelR: 0.3, sprocket: 1, rollers: 0, trackWidth: 0.38, wheelColor: NATO_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      stationHull([[-2.6, [[0, 0.5], [0.95, 0.5], [0.95, 1.0], [1.35, 1.0], [1.35, 1.25], [0, 1.25]]], [2.4, [[0, 0.5], [0.95, 0.5], [0.95, 1.0], [1.35, 1.0], [1.35, 1.25], [0, 1.25]]], [2.75, [[0, 0.75], [0.95, 0.75], [0.95, 1.0], [1.32, 1.0], [1.32, 1.1], [0, 1.12]]]], { color: NATO, ...C }),
+      P.box(2.5, 0.95, 1.2, { y: 1.72, z: 1.85, color: NATO, ...C }),                                // cab
+      P.box(2.2, 0.4, 0.04, { y: 1.85, z: 2.46, rx: -0.15, color: GLASS }),
+      P.box(2.6, 1.6, 3.0, { y: 2.05, z: -0.75, color: NATO, ...C }),                                 // the equipment shelter
+      P.box(0.7, 1.1, 0.04, { x: 0.5, y: 1.85, z: -2.26, color: NATO_DK }),
+      P.box(0.7, 0.4, 0.5, { x: -0.7, y: 3.05, z: 0.2, color: NATO_DK }),                             // air conditioner
+      P.cyl(0.14, 0.18, 3.6, { y: 4.6, z: -1.8, color: STEEL }, 10),                                  // the raised mast
+      ...pair((s) => P.cyl(0.006, 0.006, 2.6, { x: s * 1.1, y: 4.1, z: -2.0, color: STEEL }, 4)),     // whip antennas
+      ...pair((s) => P.box(0.06, 0.06, 0.4, { x: s * 1.3, y: 1.12, z: 2.3, color: STEEL })),
+    ]), 1.0, 0.3),
+    spin: { geo: merge([P.box(0.3, 0.3, 0.3, { color: NATO_DK }), ...logPeriodic(STEEL).map((g2) => g2)]), at: [0, 6.5, -1.8], rate: 0.25 },
+    marks: merge([P.box(0.02, 0.3, 0.5, { x: 1.31, y: 2.1, z: -0.6 })]),
+  };
+});
+
+/** R-330 jamming station on a Ural-4320: the cab, the KUNG van, two telescopic masts with their
+ *  log-periodic antennas, the generator trailer hitched behind. */
+export const buildPactR330 = vehicle(() => ({
+  wheels: wheeled([2.0, -0.7, -1.95], 1.0, 0.55),
+  hull: grime(merge([
+    ...pair((s) => P.box(0.16, 0.25, 6.6, { x: s * 0.45, y: 0.95, z: 0.1, color: STEEL })),
+    stationHull([[2.35, [[0, 1.15], [0.72, 1.15], [0.74, 1.72], [0.64, 1.86], [0, 1.88]]], [3.35, [[0, 1.15], [0.68, 1.15], [0.7, 1.68], [0.6, 1.8], [0, 1.82]]]], { color: PACT }),
+    P.box(1.2, 0.5, 0.04, { y: 1.42, z: 3.37, color: 0x1e1e1c }),
+    stationHull([[1.0, [[0, 1.2], [1.15, 1.2], [1.15, 2.32], [1.04, 2.52], [0, 2.54]]], [2.35, [[0, 1.2], [1.15, 1.2], [1.15, 2.28], [1.04, 2.46], [0, 2.48]]]], { color: PACT }),
+    ...pair((s) => P.box(0.86, 0.46, 0.03, { x: s * 0.5, y: 2.06, z: 2.37, rx: -0.08, color: GLASS })),
+    ...pair((s) => P.box(0.48, 0.06, 1.3, { x: s * 0.98, y: 1.42, z: 2.3, color: PACT_DK })),
+    P.box(2.3, 0.2, 0.14, { y: 1.0, z: 3.5, color: STEEL }),
+    P.box(2.4, 2.0, 3.8, { y: 2.2, z: -1.1, color: PACT }),                                             // the KUNG
+    P.box(0.6, 1.2, 0.04, { x: -0.5, y: 2.0, z: -3.01, color: PACT_DK }),
+    ...pair((s) => P.cyl(0.12, 0.15, 3.0, { x: s * 0.8, y: 4.7, z: -2.2, color: STEEL }, 10)),          // the two masts
+    ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.25, z: -1.4, color: PACT_DK })),
+    P.box(0.12, 0.12, 1.2, { y: 0.75, z: -3.6, color: STEEL }),                                          // the generator trailer behind
+    P.box(1.5, 0.9, 1.6, { y: 1.15, z: -4.8, color: PACT_DK }),
+    ...pair((s) => P.cyl(0.38, 0.38, 0.22, { x: s * 0.85, y: 0.38, z: -4.8, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
+    // the two antennas on the mast heads, one pointing each way across the front
+    ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 6.3, -2.2))).flat(),
+  ]), 1.0, 0.4),
+  marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.21, y: 2.2, z: -0.5 })]),
+}));

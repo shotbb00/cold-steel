@@ -31,7 +31,7 @@ export class CounterBattery {
         const p = u.pos;
         if (!u.alive || !r.at || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > STILL * STILL) { r.at = { x: p.x, z: p.z }; r.still = 0; }
         else r.still += dt;
-        u.radarOn = u.alive && r.still >= s.stats.cbRadar.deploy;
+        u.radarOn = u.alive && r.still >= s.stats.cbRadar.deploy && !this.game.jamming?.jammed(s.faction, p.x, p.z); // jammed: blind
       }
     }
   }

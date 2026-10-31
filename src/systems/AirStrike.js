@@ -15,6 +15,7 @@
 // a machine aborts its run and trails smoke; enough hits and it goes down and crashes. Each
 // side has a cooldown per kind. Used by the player (CommandSystem targeting) and the enemy
 // director (before assaults, against dug-in troops).
+import { JAM } from './Jamming.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT } from '../data/air.ts';
 import { FACTIONS, enemyOf } from '../data/factions.js';
@@ -635,11 +636,19 @@ export class AirStrike {
     }
     this.readyAt[this.key(faction, kind)] = game.time + p.cooldown;
     if (this.limit[faction] > 0) this.limit[faction]--;
+    const jam = game.jamming?.jammed(faction, x, z);
+    if (jam) { // the request gets through garbled: late, and not quite where it was asked for
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * JAM.miss;
+      x += Math.cos(a) * r;
+      z += Math.sin(a) * r;
+    }
     const heading = yaw ?? this.defaultYaw(faction, x, z);
     const sortie = new Sortie(game, faction, x, z, heading, this.nextId++, kind, game.currentOwner ?? null);
+    if (jam) sortie.appearAt += JAM.delay;
     this.sorties.push(sortie);
     game.netEvent('air', sortie.id, faction, x, z, heading, kind);
-    game.tell(faction, `${name} tasked — on station in ${p.delay} s`);
+    game.tell(faction, jam ? `Radio jammed — ${name} tasked, but late (${p.delay + JAM.delay} s) and off the mark` : `${name} tasked — on station in ${p.delay} s`);
     game.bus.emit('airstrike', { faction, x, z, kind });
     return true;
   }
@@ -675,7 +684,7 @@ export class AirStrike {
       const p = r.u.pos;
       if (!r.at || !r.u.alive || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > 2.5 * 2.5) { r.at = { x: p.x, z: p.z }; r.still = 0; }
       else r.still += dt;
-      r.on = r.u.alive && r.still >= r.deploy;
+      r.on = r.u.alive && r.still >= r.deploy && !game.jamming?.jammed(r.faction, r.u.pos.x, r.u.pos.z); // jammed: blind
       r.u.spinning = r.on;
       if (!r.on) continue;
       for (const s of this.sorties) {

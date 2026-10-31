@@ -957,6 +957,7 @@ export class UnitStack {
       if (!ob || !o.alive) continue;
       for (const u of o.units) {
         if (!u.alive) continue;
+        if (this.services.game?.jamming?.jammed(this.faction, u.pos.x, u.pos.z)) continue; // his radio is jammed: no corrections get through
         const sight = o.stats.sight * (o.stats.binoculars && !u.moving ? 1.25 : 1);
         if (dist2DSq(u.pos, point) > sight * sight) continue;
         if (smoke?.blocks(u.pos.x, u.pos.z, point.x, point.z)) continue;

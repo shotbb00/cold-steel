@@ -6,6 +6,7 @@
 // control you look out through the mask's lenses and hear yourself breathe.
 // The host runs the masks; each landing is sent to a multiplayer client ('gas' event), which
 // grows and drifts the same cloud itself (the wind follows the shared battle clock).
+import { JAM } from './Jamming.js';
 import { wind } from '../world/Wind.js';
 
 export const GAS = { cost: 200, cooldown: 150, label: 'Gas', key: 'I' };
@@ -49,7 +50,11 @@ export class Gas {
     if (!this.ready(faction)) return g.tell(faction, `Gas not ready (${Math.ceil(this.cooldownLeft(faction))} s)`) ?? false;
     if (!g.spend(faction, GAS.cost)) return g.tell(faction, `Not enough command points for gas (${GAS.cost})`) ?? false;
     this.readyAt[faction] = g.time + GAS.cooldown;
-    for (let i = 0; i < SHELLS; i++) this.shells.push([g.time + FLIGHT + i * rnd(0.3, 0.8), x + rnd(-SPREAD, SPREAD), z + rnd(-SPREAD, SPREAD)]);
+    const jam = g.jamming?.jammed(faction, x, z); // a jammed fire mission: late and off the mark
+    if (jam) { x += rnd(-JAM.miss, JAM.miss); z += rnd(-JAM.miss, JAM.miss); }
+    const late = jam ? JAM.delay : 0;
+    if (jam) g.tell(faction, 'Radio jammed — the gas mission will be late and off the mark');
+    for (let i = 0; i < SHELLS; i++) this.shells.push([g.time + FLIGHT + late + i * rnd(0.3, 0.8), x + rnd(-SPREAD, SPREAD), z + rnd(-SPREAD, SPREAD)]);
     g.tellBoth(faction, `Gas fire mission — shells landing in ${FLIGHT} s`, 'GAS, GAS, GAS! Chemical shells incoming. Masks on.');
     return true;
   }

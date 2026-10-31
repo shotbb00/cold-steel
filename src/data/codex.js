@@ -75,6 +75,14 @@ export const CODEX = {
     nato: 'Army snipers carried the M21, an accurised M14 with an Adjustable Ranging Telescope, until the bolt-action M24 replaced it from 1988.',
     pact: 'Every Soviet motor-rifle platoon had a designated marksman with the SVD — a semi-automatic rifle built for exactly this job.',
   },
+  jammer: {
+    use: 'Park it close behind the front with its mast up: after ten seconds it jams the enemy\'s radio nets within 160 m. Air strikes and gas they call in there come 8 s late and up to 25 m off target, their forward observers there lose their bonus, their radars go blind. Put it where you are about to attack, or over your own positions before their barrage.',
+    strong: 'Spoiling the enemy\'s support — air, gas, artillery corrections, radars',
+    weak: 'No weapon; while it jams, the enemy sees it on the map',
+    counter: 'It gives itself away: shell it, send a helicopter at it (from outside its circle), or hunt it with recon.',
+    nato: 'The AN/MLQ-34 TACJAM on the M1015 carrier was the US Army\'s divisional communications jammer of the 1980s.',
+    pact: 'Soviet radio-electronic combat battalions jammed NATO nets with stations like the R-330 family, together with direction-finders that located the transmitters.',
+  },
   mineClear: {
     use: 'Opening a way through minefields and wire. NATO\'s M60 ploughs its own lane — just drive it through the field (it is still a tank). The Pact\'s UR-77 fires a line charge (X): aim where the lane should end, 25–110 m away, and the whole strip goes up, mines, wire and anyone in it.',
     strong: 'Minefields and wire in seconds; the M60 fights as well',
