@@ -3,9 +3,9 @@
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
 //         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
-//         AN/MPQ-49 FAAR on the M561
+//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -29,7 +29,8 @@ const C = { camo: 1 };
  *   marks: geometry painted in the faction's marking colour
  *   load: geometry carried on the hull that can be put down (a bridge layer's bridge): hidden
  *         once the unit has `dropped` it
- *   spin: { geo, at, rate } — turns about its own up axis while the unit's `spinning` is set (an antenna)
+ *   spin: { geo, at, rate, onTurret, always } — turns about its own up axis while the unit's
+ *         `spinning` is set, or all the time (`always`): a search radar antenna
  */
 export function vehicle(describe) {
   let d = null;
@@ -62,6 +63,7 @@ export function vehicle(describe) {
       spin.position.set(...d.spin.at);
       meshAdder(spin)(d.spin.geo, mats.body);
     }
+    if (d.spin?.onTurret) turret.add(spin); // a radar on the turret turns with it
     const muzzle = new THREE.Object3D();
     muzzle.position.set(...(d.muzzle ?? [0, 0, 1]));
     (d.gun ? gun : turret).add(muzzle);
@@ -79,7 +81,7 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
-        if (d.spin && u.spinning) spin.rotation.y += dt * (d.spin.rate ?? 1.5);
+        if (d.spin && (u.spinning || d.spin.always) && u.alive) spin.rotation.y += dt * (d.spin.rate ?? 1.5);
         load.visible = !u.dropped && !u.laying; // laid, or being laid
       },
       die(time) {
@@ -978,3 +980,93 @@ export const buildPactP19 = vehicle(() => ({
   },
   marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.16, y: 2.1, z: -0.5 })]),
 }));
+
+
+// ---------------------------------------------------------------- gun-missile air defence
+
+/** ADATS on the M113A2: the turret with its FLIR / laser head, two banks of four missile tubes
+ *  that elevate together, and the search radar turning on its mast at the back. */
+export const buildNatoADATS = vehicle(() => ({
+  ...m113Hull([
+    ...pair((s) => P.box(0.06, 0.6, 3.6, { x: s * 1.4, y: 1.3, z: 0.0, color: NATO, ...C })),        // add-on side skirts
+  ]),
+  turret: {
+    geo: grime(merge([
+      P.cyl(0.85, 0.9, 0.25, { y: 0.12, color: NATO, ...C }, 16),
+      P.box(0.9, 0.95, 1.4, { y: 0.72, z: 0.0, color: NATO, ...C }),                                  // the electronics housing
+      P.box(0.55, 0.42, 0.25, { y: 0.88, z: 0.75, color: NATO_DK }),                                   // electro-optical head…
+      ...pair((s) => P.cyl(0.11, 0.11, 0.05, { x: s * 0.13, y: 0.88, z: 0.89, rx: Math.PI / 2, color: GLASS }, 12)), // …its FLIR and TV windows
+      P.cyl(0.06, 0.08, 0.6, { y: 1.45, z: -0.55, color: STEEL }, 8),                                  // radar mast
+    ]), 0.8, 0, 0.3),
+    at: [0, 1.85, -0.5],
+  },
+  gun: { // two banks of four tubes, either side of the housing
+    geo: merge([
+      ...pair((s) => P.box(0.12, 0.12, 0.6, { x: s * 0.52, color: STEEL })),                         // trunnions
+      ...pair((s) => [0, 1].flatMap((i) => [0, 1].map((j) => P.cyl(0.1, 0.1, 2.2, { x: s * (0.78 + i * 0.22), y: -0.05 + j * 0.22, z: 0.4, rx: Math.PI / 2, color: NATO_DK }, 10)))).flat(),
+      ...pair((s) => P.box(0.5, 0.5, 0.05, { x: s * 0.89, y: 0.06, z: 1.5, color: STEEL })),          // the tube banks' front frames
+    ]),
+    at: [0, 0.75, 0.1],
+  },
+  spin: {
+    geo: merge([P.box(1.3, 0.35, 0.08, { y: 0.15, color: NATO_DK }), P.box(1.2, 0.06, 0.25, { y: 0.35, z: -0.06, color: STEEL })]),
+    at: [0, 1.75, -0.55],
+    rate: 2.4,
+    onTurret: true,
+    always: true,
+  },
+  muzzle: [0.89, 0.06, 1.55],
+  marks: merge([P.box(0.02, 0.3, 0.5, { x: 1.43, y: 1.3, z: -0.8 })]),
+}));
+
+/** 2S6 Tunguska: the GM-352 chassis, the big turret with the search radar folding up at the back
+ *  and the tracking radar in front, a twin 30 mm 2A38 either side with four missile tubes above. */
+export const buildPactTunguska = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 5.4, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 3, trackWidth: 0.5, wheelColor: PACT_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.5, 1.5, 0.5], [-3.2, 1.6, 0.45], [2.5, 1.62, 0.45], [3.45, 1.15, 0.6], [3.6, 1.02, 0.8]],
+        { belly: 1.12, fender: 1.65, fenderY: 1.05, chamfer: 0.05 }, { color: PACT }),
+      ...pair((s) => P.box(0.04, 0.5, 6.6, { x: s * 1.66, y: 0.85, z: -0.1, color: 0x1f201c, surf: 'rubber' })), // rubber skirts
+      P.box(0.6, 0.05, 0.6, { x: -0.7, y: 1.66, z: 2.4, color: PACT_DK }),                           // driver's hatch
+      ...pair((s) => P.box(0.18, 0.12, 0.1, { x: s * 1.2, y: 1.35, z: 3.35, color: STEEL })),
+    ]), 1.2, 0.3),
+    turret: {
+      geo: grime(merge([
+        stationHull([
+          [-1.7, [[0, 0], [1.25, 0], [1.3, 0.75], [1.15, 1.0], [0, 1.02]]],
+          [1.0, [[0, 0], [1.3, 0], [1.35, 0.85], [1.2, 1.08], [0, 1.1]]],
+          [1.6, [[0, 0.1], [1.1, 0.1], [1.15, 0.7], [1.0, 0.85], [0, 0.88]]],
+        ], { color: PACT }),
+        P.cyl(0.45, 0.45, 0.65, { y: 0.75, z: 1.75, rx: Math.PI / 2, color: PACT_DK }, 16),             // tracking radar housing…
+        P.cyl(0.38, 0.38, 0.04, { y: 0.75, z: 2.09, rx: Math.PI / 2, color: 0x2a2f26 }, 16),            // …and its dish face
+        P.box(0.35, 0.5, 0.5, { x: 0.8, y: 1.25, z: 0.5, color: PACT_DK }),                             // optical sight
+        P.box(0.3, 0.5, 0.3, { y: 1.3, z: -1.35, color: STEEL }),                                       // radar pedestal
+      ]), 0.8, 0, 0.3),
+      at: [0, 1.62, -0.6],
+    },
+    gun: { // either side: the twin cannon and above it the pod of four 9M311 missiles
+      geo: merge([
+        ...pair((s) => P.box(0.3, 0.38, 1.2, { x: s * 1.58, color: PACT_DK })),                          // gun housings
+        ...pair((s) => [0, 1].map((i) => P.cyl(0.035, 0.035, 2.2, { x: s * (1.52 + i * 0.13), y: -0.05, z: 1.6, rx: Math.PI / 2, color: STEEL }, 8))).flat(),
+        ...pair((s) => [0, 1].map((i) => P.cyl(0.055, 0.055, 0.14, { x: s * (1.52 + i * 0.13), y: -0.05, z: 2.7, rx: Math.PI / 2, color: STEEL }, 8))).flat(),
+        ...pair((s) => [0, 1].flatMap((i) => [0, 1].map((j) => P.cyl(0.09, 0.09, 2.0, { x: s * (1.5 + i * 0.2), y: 0.32 + j * 0.2, z: 0.5, rx: Math.PI / 2, color: PACT }, 10)))).flat(),
+      ]),
+      at: [0, 0.55, 0.2],
+    },
+    spin: {
+      geo: merge([
+        P.box(1.9, 0.8, 0.12, { y: 0.4, rx: -0.15, color: PACT_DK }),                                  // the search antenna
+        ...[-0.6, -0.2, 0.2, 0.6].map((x) => P.box(0.04, 0.75, 0.05, { x, y: 0.4, z: 0.07, rx: -0.15, color: STEEL })),
+      ]),
+      at: [0, 1.55, -1.35],
+      rate: 2,
+      onTurret: true,
+      always: true,
+    },
+    muzzle: [1.65, 0.42, 1.55],
+    marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.69, y: 1.3, z: -1.0 })]),
+  };
+});

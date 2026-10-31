@@ -35,6 +35,14 @@ export const CODEX = {
     nato: 'Long-range reconnaissance patrols — LRRP teams trained to slip behind the lines and watch the roads the Soviet echelons would use.',
     pact: 'Divisional razvedka: the reconnaissance troops who were to find NATO\'s defences before the regiments ran into them.',
   },
+  gunMissile: {
+    use: 'Air defence that never sits idle. Its eight missiles go for aircraft out to 520 m and for tanks out to 480 m — from the same rack, so every one fired at a tank is one fewer for a helicopter. The Tunguska adds cannons for anything close.',
+    strong: 'Aircraft and armour at long range, covering a whole flank',
+    weak: 'Its rack runs dry and takes 40 s to reload; infantry close in (ADATS has no gun); price',
+    counter: 'Make it spend its missiles — send light vehicles first — then come in while it reloads. Artillery and AT teams in cover.',
+    nato: 'ADATS (Air Defence Anti-Tank System) was bought by Canada in the late 1980s and trialled by the US Army: one missile for both helicopters and tanks.',
+    pact: 'The 2S6 Tunguska entered service in 1982 to replace the Shilka: radar, two twin 30 mm cannons and eight 9M311 missiles on one tracked chassis.',
+  },
   airRadar: {
     use: 'Park it behind your air defence and leave it: after ten seconds its antenna turns, and every enemy aircraft that comes on station within 900 m is called out on the radio with its bearing. Towed AA guns within 380 m get their full reach, and all other air defence there reaches a fifth further.',
     strong: 'Warning, making cheap guns deadly, a whole sector\'s air defence',

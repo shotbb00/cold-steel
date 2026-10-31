@@ -747,24 +747,27 @@ export class UnitStack {
   engageAirMissile(u, dt) {
     const aa = u.stats.antiAir;
     const now = this.world.time;
-    u.missilesLeft ??= aa.count;
-    if (u.missilesLeft <= 0 && now >= (u.missileReload ?? 0)) u.missilesLeft = aa.count;
+    // `shared`: one rack for aircraft and armour (ADATS, Tunguska) — the ground missiles' count
+    const pool = aa.shared ? 'atgmLeft' : 'missilesLeft';
+    const full = aa.shared ? u.stats.atgm.count : aa.count;
+    u[pool] ??= full;
+    if (u[pool] <= 0 && now >= (u.missileReload ?? 0)) { u[pool] = full; u.missileReload = 0; }
     const air = this.services.air;
     const h = air?.nearestThreat(this.faction, u.pos, aa.range * (air?.radarCovers?.(this.faction, u.pos) ? RADAR_BONUS : 1));
-    u.airTarget = u.missilesLeft > 0 || !this.usesCover ? h : null;
+    u.airTarget = u[pool] > 0 || !this.usesCover ? h : null;
     if (!u.airTarget) { u.lockT = 0; return false; }
     const dx = h.pos.x - u.pos.x;
     const dz = h.pos.z - u.pos.z;
     u.airYaw = Math.atan2(dx, dz);
     u.airPitch = Math.atan2(h.pos.y - (u.pos.y + 2), Math.hypot(dx, dz));
-    if (u.missilesLeft <= 0) return true;                 // vehicles keep tracking while they reload
+    if (u[pool] <= 0) return true;                        // vehicles keep tracking while they reload
     const aim = this.usesCover ? u.yaw : u.turretYaw;
     if (Math.abs(angleDelta(aim, u.airYaw)) > 0.15) return true; // still turning onto it
     u.lockT = (u.lockT ?? 0) + dt;                        // seeker growl until it locks
     if (u.lockT < 1.1 || now < (u.nextMissile ?? 0)) return true;
     u.lockT = 0;
     u.nextMissile = now + 3.5;
-    if (--u.missilesLeft <= 0) u.missileReload = now + aa.reload;
+    if (--u[pool] <= 0) u.missileReload = now + aa.reload;
     this.muzzleWorld(u, _p);
     _p.y += 0.2;
     air.missile(_p, h, this.faction, aa);
@@ -778,7 +781,7 @@ export class UnitStack {
 
   /** Wire-guided missile from an IFV's launcher: slow, smoky, deadly to tanks. */
   fireMissile(u, m) {
-    u.atgmLeft--;
+    if (--u.atgmLeft <= 0 && u.stats.antiAir?.shared) u.missileReload = this.world.time + u.stats.antiAir.reload; // the shared rack reloads
     u.atgmReady = this.world.time + m.reload;
     const t = u.target;
     this.muzzleWorld(u, _p);

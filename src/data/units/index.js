@@ -10,6 +10,7 @@ import crew from './crew.ts';
 import aa from './aa.ts';
 import towedAA from './towedAA.ts';
 import airRadar from './airRadar.ts';
+import gunMissile from './gunMissile.ts';
 import mortar from './mortar.ts';
 import ifv from './ifv.ts';
 import scouts from './scouts.ts';
@@ -44,6 +45,7 @@ export const UNIT_TYPES = {
   [aa.id]: aa,
   [towedAA.id]: towedAA,
   [airRadar.id]: airRadar,
+  [gunMissile.id]: gunMissile,
   [reconVehicle.id]: reconVehicle,
   [tankDestroyer.id]: tankDestroyer,
   [heavyTank.id]: heavyTank,
