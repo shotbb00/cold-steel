@@ -136,7 +136,7 @@ export default {
         `The line has fallen — fall back to ${this.pointsOf(state.line).map((p) => p.name).join(', ')}!`);
     }
     if (game.time >= state.deadline) return this.finish(game, att, 'The attack has run out of time.');
-    const spent = (f) => game.world.stacksOf(f).length === 0 && state.cp[f] < 150;
+    const spent = (f) => game.world.stacksOf(f).length === 0 && Math.max(state.cp[f], state.cp[`${f}:guest`] ?? 0) < 150;
     if (spent(att)) return this.finish(game, att, 'The attack has spent itself.');
     if (spent(def)) return this.finish(game, def, 'The defence has been wiped out.');
     game.frontlineHud.update();

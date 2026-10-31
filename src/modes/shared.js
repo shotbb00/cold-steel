@@ -21,7 +21,7 @@ export function makeBuyer(game, state) {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
     if (!type || type.hidden || type.airOnly || (state.allow && !state.allow(type))) return null;
-    if (state.cp[faction] < type.cost) {
+    if (state.cp[game.wallet(faction)] < type.cost) {
       game.tell(faction, `Not enough command points for ${type.shortName} (${type.cost})`);
       return null;
     }

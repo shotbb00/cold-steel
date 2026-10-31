@@ -83,7 +83,7 @@ export class FrontlineHUD {
       this.statusEl.textContent = status;
       this.statusEl.hidden = !status;
     }
-    const myCp = Math.floor(cp[this.me]);
+    const myCp = Math.floor(cp[this.game.wallet(this.me, this.game.myOwner)]); // co-op: your own
     this.cpText.textContent = `${myCp} CP`;
     const stacks = forces(this.game, this.me).length; // what counts toward the limit (bailed-out crews don't)
     const full = stacks >= this.state.maxStacks;

@@ -109,7 +109,7 @@ export default {
     else if (theirs > mine) state.strength[me] -= (theirs - mine) * BLEED * dt;
     game.frontlineHud.update();
 
-    const outOf = (f) => game.world.stacksOf(f).length === 0 && state.cp[f] < 150;
+    const outOf = (f) => game.world.stacksOf(f).length === 0 && Math.max(state.cp[f], state.cp[`${f}:guest`] ?? 0) < 150;
     const lost = (f) => state.strength[f] <= 0 || outOf(f);
     const loser = lost(foe) ? foe : lost(me) ? me : null;
     if (!loser) return;

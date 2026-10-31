@@ -102,7 +102,7 @@ export class ReinforceWindow {
     if (!this.open) return;
     const g = this.game;
     const me = g.playerFaction;
-    const cp = Math.floor(this.state.cp[me]);
+    const cp = Math.floor(this.state.cp[g.wallet(me, g.myOwner)]); // co-op: your own
     const mine = g.world.stacksOf(me).filter((s) => g.mine(s));
     const count = forces(g, me).length;
     const full = count >= this.state.maxStacks;

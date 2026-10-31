@@ -195,6 +195,13 @@ export class GameEngine {
     this.bindControls();
     mode.setup(this);
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
+    // co-op: each player has command points of their own, earned at the full rate (wallet()), and
+    // the AI side starts with and earns twice as much to make up for it
+    const cp = this.modeState?.cp;
+    if (this.coop && cp) {
+      cp[this.wallet(playerFaction, 'guest')] = cp[playerFaction];
+      cp[enemyOf(playerFaction)] *= 2;
+    }
     // co-op: the opening forces are shared out between the two players
     if (this.coop && this.net.isHost) {
       this.world.stacksOf(playerFaction).forEach((s, i) => { s.owner = i % 2 ? 'guest' : 'host'; });
@@ -429,9 +436,18 @@ export class GameEngine {
   spend(faction, cost) {
     const cp = this.modeState?.cp;
     if (!cp) return true;
-    if (cp[faction] < cost) return false;
-    cp[faction] -= cost;
+    const w = this.wallet(faction);
+    if (cp[w] < cost) return false;
+    cp[w] -= cost;
     return true;
+  }
+
+  /**
+   * The key in modeState.cp that `owner` (default: whoever gives the order running now) pays
+   * from: the side's — but in co-op the guest has a pool of their own on the players' side.
+   */
+  wallet(faction, owner = this.currentOwner) {
+    return this.coop && faction === this.playerFaction && owner === 'guest' ? `${faction}:guest` : faction;
   }
 
   /** A withdrawn stack reaches its base: off the field, and half its price back for what is left of it. */
@@ -440,13 +456,13 @@ export class GameEngine {
     const health = alive.reduce((a, u) => a + u.hp / u.maxHp, 0) / stack.units.length;
     const back = Math.round(stack.type.cost * 0.5 * health);
     this.removeStack(stack);
-    if (this.modeState?.cp) this.refund(stack.faction, back);
+    if (this.modeState?.cp) this.refund(stack.faction, back, stack.owner);
     this.tell(stack.faction, `${stack.name} withdrawn${this.modeState?.cp ? ` — ${back} CP back` : ''}`);
   }
 
-  refund(faction, cost) {
+  refund(faction, cost, owner = this.currentOwner) {
     const cp = this.modeState?.cp;
-    if (cp) cp[faction] += cost;
+    if (cp) cp[this.wallet(faction, owner)] += cost;
   }
 
   end(result) {
@@ -561,7 +577,19 @@ export class GameEngine {
     net?.unmute();
     this.visibility.update(dt);
     for (const sys of this.systems) sys.update(dt, t);
-    if (!this.ended) this.mode.update?.(this, dt);
+    if (!this.ended) {
+      // co-op: what the mode pays out to the side (income) goes to both players, and twice to the AI
+      const cp = this.coop && !this.net?.isClient ? this.modeState?.cp : null;
+      const foe = enemyOf(this.playerFaction);
+      const was = cp && [cp[this.playerFaction], cp[foe]];
+      this.mode.update?.(this, dt);
+      if (cp) {
+        const mine = cp[this.playerFaction] - was[0];
+        const theirs = cp[foe] - was[1];
+        if (mine > 0) cp[this.wallet(this.playerFaction, 'guest')] += mine;
+        if (theirs > 0) cp[foe] += theirs;
+      }
+    }
     if (!this.ended) this.stats.update(dt);
     net?.end(dt);
 
