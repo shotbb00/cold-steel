@@ -71,6 +71,8 @@ export interface UnitStats {
   binoculars?: boolean;
   stealth?: number;
   holdFire?: boolean;
+  marksman?: boolean;   // a sniper: officers, crews and observers first, never vehicles
+  quietShot?: number;   // share of the usual time a shot keeps the shooter revealed
   // weapon
   weapon?: 'rifle' | 'rocket' | 'cannon' | 'artillery' | 'autocannon' | 'beam';
   weaponSound?: string;

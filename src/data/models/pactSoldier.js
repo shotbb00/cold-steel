@@ -70,6 +70,26 @@ function weapon(kind) {
         ],
         muzzle: { x: 0.17, y: 1.58, z: 0.96 },
       };
+    case 'sniper': // SVD Dragunov: skeleton stock, long barrel and slotted flash hider, PSO-1 on the left
+      return {
+        parts: [
+          P.box(0.03, 0.13, 0.03, { x: 0.2, y: 1.275, z: -0.12, color: WOOD }),                               // butt
+          P.box(0.026, 0.028, 0.22, { x: 0.2, y: 1.335, z: -0.01, color: WOOD }),                             // the stock's upper bar…
+          P.box(0.026, 0.026, 0.2, { x: 0.2, y: 1.235, z: -0.02, rx: -0.38, color: WOOD }),                   // …and the lower one to the grip
+          P.box(0.03, 0.03, 0.08, { x: 0.2, y: 1.36, z: -0.03, color: WOOD }),                                // cheek rest
+          P.box(0.045, 0.06, 0.26, { x: 0.2, y: 1.33, z: 0.24, color: STEEL }),                               // receiver
+          P.box(0.048, 0.055, 0.24, { x: 0.2, y: 1.335, z: 0.5, color: WOOD }),                               // slotted handguard
+          P.box(0.03, 0.11, 0.075, { x: 0.2, y: 1.25, z: 0.33, rx: 0.15, color: STEEL }),                     // 10-round magazine
+          P.cyl(0.011, 0.011, 0.5, { x: 0.2, y: 1.335, z: 0.87, rx: Math.PI / 2, color: STEEL }, 6),          // barrel
+          P.cyl(0.015, 0.015, 0.09, { x: 0.2, y: 1.335, z: 1.15, rx: Math.PI / 2, color: STEEL }, 8),         // flash hider
+          P.box(0.03, 0.03, 0.12, { x: 0.18, y: 1.38, z: 0.26, color: STEEL }),                               // side rail mount
+          P.cyl(0.018, 0.018, 0.27, { x: 0.165, y: 1.42, z: 0.25, rx: Math.PI / 2, color: STEEL }, 10),    // PSO-1 telescope…
+          P.cyl(0.023, 0.018, 0.05, { x: 0.165, y: 1.42, z: 0.41, rx: Math.PI / 2, color: STEEL }, 10),    // …its objective…
+          P.cyl(0.025, 0.02, 0.07, { x: 0.165, y: 1.42, z: 0.09, rx: Math.PI / 2, color: STEEL }, 10),        // …the rubber eyecup
+          P.box(0.025, 0.025, 0.03, { x: 0.165, y: 1.447, z: 0.25, color: STEEL }),                        // turrets
+        ],
+        muzzle: { x: 0.2, y: 1.335, z: 1.2 },
+      };
     case 'smg': // AKS-74U
       return {
         parts: [

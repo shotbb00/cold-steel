@@ -35,6 +35,14 @@ export const CODEX = {
     nato: 'Long-range reconnaissance patrols — LRRP teams trained to slip behind the lines and watch the roads the Soviet echelons would use.',
     pact: 'Divisional razvedka: the reconnaissance troops who were to find NATO\'s defences before the regiments ran into them.',
   },
+  sniper: {
+    use: 'Kill the enemy\'s leaders from far away. Put them on high ground or in a hedgerow 250–300 m from the enemy: the marksman picks off the platoon leader first, then mortar and MG crews and observers, and the platoon left without its officer wavers.',
+    strong: 'Range, choosing the target, staying hidden while he shoots',
+    weak: 'Vehicles (he won\'t even try), anything that reaches them; slow fire',
+    counter: 'When officers start dropping, sweep the hedgerows and the high ground in front of you with a recon vehicle, or shell the likely hides. Smoke blinds him.',
+    nato: 'Army snipers carried the M21, an accurised M14 with an Adjustable Ranging Telescope, until the bolt-action M24 replaced it from 1988.',
+    pact: 'Every Soviet motor-rifle platoon had a designated marksman with the SVD — a semi-automatic rifle built for exactly this job.',
+  },
   observers: {
     use: 'The radio that makes your artillery accurate: every shell, bomb and rocket aimed at something one of them can see lands with 40 % of its usual scatter. Keep them hidden with a view of the target area.',
     strong: 'Turning mortars and guns into precision weapons, spotting',

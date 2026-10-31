@@ -858,6 +858,11 @@ export class UnitStack {
       if (e === u.target) score -= 3;
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
+      if (s.marksman) {
+        if (!e.stack.usesCover) continue;      // a rifle bullet off armour gives him away for nothing
+        if (e.officer) score -= 150;           // the platoon leader first
+        else if (e.stack.stats.indirect || e.stack.stats.binoculars || e.stack.type.specialist) score -= 60; // then the crews and the eyes
+      }
       if (score >= bestScore) continue;
       if (s.holdFire && !u.spotted && d2 > 30 * 30) continue; // recon: don't give yourself away
       if (!terrain.lineOfSight(u.pos.x, eyeY, u.pos.z, e.pos.x, e.pos.y + e.aimHeight, e.pos.z)) continue;
@@ -999,7 +1004,7 @@ export class UnitStack {
     this.muzzleWorld(u, _p);
     _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
     const dist = _v.distanceTo(_p);
-    if (t.vel) _v.addScaledVector(t.vel, (dist / s.boltSpeed) * 0.7); // lead moving targets a little
+    if (t.vel) _v.addScaledVector(t.vel, (dist / s.boltSpeed) * (s.marksman ? 1 : 0.7)); // lead moving targets a little (a sniper: fully)
     const spread = s.spread * u.skill
       * (1 - 0.1 * this.rank)                  // veterans shoot straighter
       * (1 + (0.8 * dist) / s.range)

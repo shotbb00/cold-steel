@@ -1,7 +1,7 @@
 // NATO infantryman, mid-1980s US Army: M81 woodland BDU, PASGT helmet and flak vest, ALICE
 // webbing and pack. The figure is the shared one in soldierBody.js (head with a face, shaped
 // trunk, tapered limbs, hands, boots); this file dresses and arms it. Weapon variants: M16A2
-// rifle, M60 machine gun, Carl Gustaf recoilless rifle, FIM-92 Stinger; crewmen wear a CVC
+// rifle, M60 machine gun, Carl Gustaf recoilless rifle, FIM-92 Stinger, M21 sniper rifle; crewmen wear a CVC
 // helmet and carry an M3 grease gun. Forward observers carry the PRC-77 radio with its whip
 // antenna; air assault troops (101st) wear goggles on the helmet, bandoliers across the chest
 // and a lighter assault pack. A blue armband identifies the side. Model contract (see
@@ -72,6 +72,25 @@ function weapon(kind) {
           P.box(0.05, 0.07, 0.1, { x: 0.1, y: 1.64, z: 0.26, color: BLACK }),           // sight
         ],
         muzzle: { x: 0.17, y: 1.58, z: 0.98 },
+      };
+    case 'sniper': // M21: the M14 in its walnut stock, an ART telescope on a side mount
+      return {
+        parts: [
+          loft([[0.2, 1.285, -0.13, 0.021, 0.062, 3], [0.2, 1.295, -0.02, 0.022, 0.052, 3], [0.2, 1.305, 0.12, 0.023, 0.04, 3],
+            [0.2, 1.318, 0.3, 0.024, 0.032, 3], [0.2, 1.322, 0.62, 0.021, 0.026, 3]], { color: BROWN }, 8),           // stock to fore-end
+          P.box(0.04, 0.05, 0.22, { x: 0.2, y: 1.348, z: 0.3, color: STEEL }),                                // receiver
+          P.box(0.034, 0.1, 0.055, { x: 0.2, y: 1.27, z: 0.34, rx: 0.08, color: STEEL }),                     // 20-round box
+          P.box(0.012, 0.035, 0.07, { x: 0.2, y: 1.27, z: 0.24, color: STEEL }),                              // trigger guard
+          P.cyl(0.011, 0.011, 0.4, { x: 0.2, y: 1.34, z: 0.82, rx: Math.PI / 2, color: STEEL }, 6),           // barrel
+          P.cyl(0.014, 0.014, 0.12, { x: 0.2, y: 1.318, z: 0.64, rx: Math.PI / 2, color: STEEL }, 6),         // gas cylinder
+          P.cyl(0.016, 0.016, 0.06, { x: 0.2, y: 1.34, z: 1.03, rx: Math.PI / 2, color: BLACK }, 8),          // flash suppressor
+          ...[0.24, 0.38].map((z) => P.box(0.02, 0.035, 0.02, { x: 0.2, y: 1.385, z, color: BLACK })),       // scope mount
+          P.cyl(0.019, 0.019, 0.3, { x: 0.2, y: 1.42, z: 0.3, rx: Math.PI / 2, color: BLACK }, 10),           // telescope…
+          P.cyl(0.027, 0.02, 0.06, { x: 0.2, y: 1.42, z: 0.48, rx: Math.PI / 2, color: BLACK }, 10),          // …objective bell
+          P.cyl(0.023, 0.023, 0.04, { x: 0.2, y: 1.42, z: 0.13, rx: Math.PI / 2, color: BLACK }, 10),         // …eyepiece
+          P.cyl(0.012, 0.012, 0.03, { x: 0.2, y: 1.447, z: 0.3, color: BLACK }, 6),                           // elevation turret
+        ],
+        muzzle: { x: 0.2, y: 1.34, z: 1.06 },
       };
     case 'smg': // M3 grease gun
       return {

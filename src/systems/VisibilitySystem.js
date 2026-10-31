@@ -56,7 +56,7 @@ export class VisibilitySystem {
 
   /** Note that a unit fired (called from UnitStack.shoot). */
   static revealShooter(u) {
-    u.revealT = REVEAL_TIME;
+    u.revealT = REVEAL_TIME * (u.stats.quietShot ?? 1); // a sniper's single shot is hard to place
   }
 
   update(dt) {
