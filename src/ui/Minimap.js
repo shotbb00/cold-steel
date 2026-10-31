@@ -56,6 +56,41 @@ export class Minimap {
     return [((f * x + this.bx) / (2 * this.bx)) * this.w, ((f * z + this.bz) / (2 * this.bz)) * this.h];
   }
 
+  /** The areas of our own special vehicles, as RangeIndicators shows them on the ground for the selected ones. */
+  drawAreas(c) {
+    const game = this.game;
+    const radarOn = new Set((game.air.radars ?? []).filter((r) => r.on).map((r) => r.u));
+    const area = (x, z, r, color, on, arc = null, yaw = 0) => {
+      c.beginPath();
+      if (arc) { // a sector: its outline as points, mapped (the minimap may be turned)
+        const [cx, cy] = this.toMap(x, z);
+        c.moveTo(cx, cy);
+        for (let i = 0; i <= 24; i++) {
+          const a = yaw - arc / 2 + (arc * i) / 24;
+          c.lineTo(...this.toMap(x + Math.sin(a) * r, z + Math.cos(a) * r));
+        }
+        c.closePath();
+      } else {
+        const [mx, my] = this.toMap(x, z);
+        c.ellipse(mx, my, (r / (2 * this.bx)) * this.w, (r / (2 * this.bz)) * this.h, 0, 0, Math.PI * 2);
+      }
+      c.setLineDash(on ? [] : [2, 3]);
+      c.strokeStyle = color + (on ? 'cc' : '77');
+      c.stroke();
+      if (on) { c.fillStyle = color + '22'; c.fill(); }
+      c.setLineDash([]);
+    };
+    for (const s of game.world.stacksOf(game.playerFaction)) {
+      const st = s.stats;
+      const u = s.units[0];
+      if (!u?.alive || !game.mine(s)) continue;
+      if (st.airRadar) area(u.pos.x, u.pos.z, st.airRadar.cover, '#7ff0ff', radarOn.has(u));
+      if (st.cbRadar) area(u.pos.x, u.pos.z, st.cbRadar.range, '#ffc46a', !!u.radarOn, st.cbRadar.arc, u.yaw);
+      if (st.jammer) area(u.pos.x, u.pos.z, st.jammer.radius, '#c49bff', !!u.jamming);
+      if (st.commandPost) area(u.pos.x, u.pos.z, st.commandPost.lead, '#9fe08a', s.postReady);
+    }
+  }
+
   /** Darken what your side can't see (the same picture as the 3D fog of war). */
   drawFog(c) {
     const fow = this.game.fow;
@@ -158,6 +193,9 @@ export class Minimap {
       c.textBaseline = 'middle';
       c.fillText(p.id, mx, my);
     }
+
+    // our radars, jammers and command posts: what they cover (dashed until they work)
+    this.drawAreas(c);
 
     // the mode's own marks (Recon raid: search areas, marked targets)
     for (const m of game.modeState?.markers?.() ?? []) {
