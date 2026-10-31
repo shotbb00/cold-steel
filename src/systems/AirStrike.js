@@ -680,11 +680,7 @@ export class AirStrike {
       }
     }
     for (const r of this.radars) {
-      // set up = stayed put (the idle shuffle of a metre or so doesn't count as moving off)
-      const p = r.u.pos;
-      if (!r.at || !r.u.alive || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > 2.5 * 2.5) { r.at = { x: p.x, z: p.z }; r.still = 0; }
-      else r.still += dt;
-      r.on = r.u.alive && r.still >= r.deploy && !game.jamming?.jammed(r.faction, r.u.pos.x, r.u.pos.z); // jammed: blind
+      r.on = r.u.alive && (r.u.deployK ?? 0) >= 1 && !game.jamming?.jammed(r.faction, r.u.pos.x, r.u.pos.z); // set up (UnitStack), not jammed
       r.u.spinning = r.on;
       if (!r.on) continue;
       for (const s of this.sorties) {

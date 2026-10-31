@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const PACK = 0.5;          // packing up takes this share of the set-up time
 const PARKED = 1.5;        // m: a parked vehicle ignores its slot drifting less than this
 const REVERSE = { angle: 2.3, within: 14, speed: 0.5 }; // vehicles back up to points just behind them, at half speed
 const WITHDRAWN = 30;      // m from its base where a withdrawing stack leaves the field
@@ -294,6 +295,7 @@ export class UnitStack {
 
   updateAnchor(dt) {
     const s = this.stats;
+    if (this.moveTarget && this.deploySeconds && this.units.some((u) => u.alive && (u.deployK ?? 0) > 0)) return; // still packing up
     if (this.moveTarget) {
       const goal = this.routeTarget();
       _v.subVectors(goal, this.anchor);
@@ -357,6 +359,15 @@ export class UnitStack {
     let maxSpeed = s.speed * u.speedMul * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
+    // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
+    // tents go up, the vehicle kit's `deploy`), and when ordered off they pack up first, standing
+    // still, in PACK of that time — they only work fully set up
+    const deploy = this.deploySeconds;
+    if (deploy) {
+      const off = !!this.moveTarget;
+      u.deployK = Math.min(1, Math.max(0, (u.deployK ?? 0) + (off ? -dt / (deploy * PACK) : dt / deploy)));
+      if (off && u.deployK > 0) maxSpeed = 0;
+    }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
     _v.set(u.dest.x - u.pos.x, 0, u.dest.z - u.pos.z);
     const d = _v.length();
@@ -587,6 +598,7 @@ export class UnitStack {
     u.moving = speed > 0.5;
     // where and since when it has stayed put (the idle shuffle of a metre or two doesn't count)
     if (!u.setUp || (u.pos.x - u.setUp.x) ** 2 + (u.pos.z - u.setUp.z) ** 2 > SET_UP_SLACK * SET_UP_SLACK) u.setUp = { x: u.pos.x, z: u.pos.z, at: this.world.time };
+
     u.gait += (Math.min(1, speed / (s.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
     u.walkPhase += dt * speed * (Math.PI / (s.stride ?? 1.1));
     if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
@@ -1240,10 +1252,19 @@ export class UnitStack {
   }
 
   /** A forward command post that has stood set up long enough to work (data/units/commandPost.ts). */
+  /** Seconds a radar / jammer / command post takes to set up (null: it doesn't). */
+  get deploySeconds() {
+    const s = this.stats;
+    return s.commandPost?.deploy ?? s.jammer?.deploy ?? s.airRadar?.deploy ?? s.cbRadar?.deploy ?? null;
+  }
+
+  /** Fully set up (and so working)? */
+  setUpFully(u = this.units[0]) {
+    return !!u?.alive && (u.deployK ?? 0) >= 1;
+  }
+
   get postReady() {
-    const cp = this.stats.commandPost;
-    const u = this.units[0];
-    return !!cp && !!u?.alive && !!u.setUp && this.world.time - u.setUp.at >= cp.deploy;
+    return !!this.stats.commandPost && this.setUpFully();
   }
 
   get officerAlive() {

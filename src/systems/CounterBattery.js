@@ -1,4 +1,4 @@
-// Counter-battery radar (data/units/cbRadar.ts): a set-up radar (parked 12 s) watches a sector in
+// Counter-battery radar (data/units/cbRadar.ts): a set-up radar (UnitStack: parked, its mast up) watches a sector in
 // front of it — about a quarter of the compass, so it must be faced toward the enemy. Every
 // shell, bomb or rocket an enemy gun fires from inside that sector and within `range` is tracked
 // back to where it came from: that gun counts as spotted for HOLD seconds (VisibilitySystem asks
@@ -8,7 +8,6 @@ import { angleDelta } from '../core/math.js';
 
 const HOLD = 25;          // seconds a located gun stays on the map
 const TELL_EVERY = 15;    // seconds between radio calls about the same enemy battery
-const STILL = 2.5;        // metres it may shuffle and still count as set up
 
 /** Compass direction from `a` to `b`: +z is north on our maps. */
 function bearing(a, b) {
@@ -19,19 +18,13 @@ function bearing(a, b) {
 export class CounterBattery {
   constructor(game) {
     this.game = game;
-    this.radars = new Map();  // unit → { at, still }
   }
 
   update(dt) {
     for (const s of this.game.world.stacks) {
       if (!s.stats.cbRadar) continue;
       for (const u of s.units) {
-        let r = this.radars.get(u);
-        if (!r) this.radars.set(u, (r = { at: null, still: 0 }));
-        const p = u.pos;
-        if (!u.alive || !r.at || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > STILL * STILL) { r.at = { x: p.x, z: p.z }; r.still = 0; }
-        else r.still += dt;
-        u.radarOn = u.alive && r.still >= s.stats.cbRadar.deploy && !this.game.jamming?.jammed(s.faction, p.x, p.z); // jammed: blind
+        u.radarOn = s.setUpFully(u) && !this.game.jamming?.jammed(s.faction, u.pos.x, u.pos.z); // set up (UnitStack), not jammed
       }
     }
   }

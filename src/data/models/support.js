@@ -29,7 +29,12 @@ const C = { camo: 1 };
  *   marks: geometry painted in the faction's marking colour
  *   load: geometry carried on the hull that can be put down (a bridge layer's bridge): hidden
  *         once the unit has `dropped` it
- *   tow: geometry of the vehicle towing it, shown while the unit's `towing` is set (towed guns)
+ *   tow: { geo, hitch } the vehicle towing it, shown while the unit's `towing` is set (towed guns);
+ *        hinged at z = hitch, its tail there: it swings into turns ahead of the gun
+ *   trailer: { geo, hitch } a trailer it pulls, hinged at z = hitch (its drawbar end there): it lags
+ *        behind turns
+ *   deploy: { geo, at, unfold } what is only up once the unit is set up (masts, a tent): grows from
+ *        its base (and with `unfold` out backwards) as u.deployK goes 0 → 1
  *   spin: { geo, at, rate, onTurret, always } — turns about its own up axis while the unit's
  *         `spinning` is set, or all the time (`always`): a search radar antenna
  */
@@ -67,7 +72,14 @@ export function vehicle(describe) {
     if (d.spin?.onTurret) turret.add(spin); // a radar on the turret turns with it
     const tow = new THREE.Group();
     hull.add(tow);
-    if (d.tow) meshAdder(tow)(d.tow, mats.body);
+    if (d.tow) { tow.position.z = d.tow.hitch; meshAdder(tow)(d.tow.geo, mats.body); }
+    const trailer = new THREE.Group();
+    hull.add(trailer);
+    if (d.trailer) { trailer.position.z = d.trailer.hitch; meshAdder(trailer)(d.trailer.geo, mats.body); }
+    const deploy = new THREE.Group();
+    hull.add(deploy);
+    if (d.deploy) { deploy.position.set(...d.deploy.at); meshAdder(deploy)(d.deploy.geo, mats.body); }
+    if (d.spin?.onDeploy) deploy.add(spin); // an antenna on a mast goes up with it
     const muzzle = new THREE.Object3D();
     muzzle.position.set(...(d.muzzle ?? [0, 0, 1]));
     (d.gun ? gun : turret).add(muzzle);
@@ -85,6 +97,19 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
+        // hinged parts swing with the turn: a tow truck leads into it, a trailer lags behind
+        if (d.tow || d.trailer) {
+          const turn = st.prevYaw == null ? 0 : Math.atan2(Math.sin(u.yaw - st.prevYaw), Math.cos(u.yaw - st.prevYaw)) / Math.max(dt, 1e-3);
+          st.prevYaw = u.yaw;
+          if (u.moving) st.swing = (st.swing ?? 0) + (Math.max(-0.7, Math.min(0.7, turn * 0.9)) - (st.swing ?? 0)) * Math.min(1, dt * 2);
+          tow.rotation.y = st.swing ?? 0;
+          trailer.rotation.y = -(st.swing ?? 0);
+        }
+        if (d.deploy) {
+          const k = u.alive ? u.deployK ?? 1 : 1;
+          deploy.visible = k > 0.02;
+          deploy.scale.set(1, 0.04 + 0.96 * k, d.deploy.unfold ? 0.05 + 0.95 * k : 1);
+        }
         tow.visible = !!u.towing && u.alive;
         if (u.towing && d.turret) turret.rotation.y = 0; // travel lock: the gun points the way it goes
         if (d.spin && (u.spinning || d.spin.always) && u.alive) spin.rotation.y += dt * (d.spin.rate ?? 1.5);
@@ -896,7 +921,7 @@ export const buildNatoM167 = vehicle(() => ({
   },
   muzzle: [0, 0, 2.0],
   recoil: 0.04,
-  tow: grime(merge(towTruck({ color: NATO, dark: NATO_DK, length: 6.4, width: 2.4 }).map((g) => g.translate(0, 0, 2.55))), 1, 0.3), // an M35 2½-ton on the lunette
+  tow: { geo: grime(merge(towTruck({ color: NATO, dark: NATO_DK, length: 6.4, width: 2.4 })), 1, 0.3), hitch: 2.55 }, // an M35 2½-ton on the lunette
   marks: merge([P.box(0.02, 0.2, 0.4, { x: 0.455, y: 0.6, z: 0.4 })]),
 }));
 
@@ -934,7 +959,7 @@ export const buildPactZU23 = vehicle(() => ({
   },
   muzzle: [0, 0, 2.6],
   recoil: 0.05,
-  tow: grime(merge(towTruck({ color: PACT, dark: PACT_DK, length: 5.65, width: 2.3, bonnet: 'round' }).map((g) => g.translate(0, 0, 1.5))), 1, 0.4), // a GAZ-66 on the trail eye
+  tow: { geo: grime(merge(towTruck({ color: PACT, dark: PACT_DK, length: 5.65, width: 2.3, bonnet: 'round' })), 1, 0.4), hitch: 1.5 }, // a GAZ-66 on the trail eye
   marks: merge([P.box(0.02, 0.16, 0.3, { x: 0.505, y: 0.48, z: 0.2 })]),
 }));
 
@@ -967,11 +992,11 @@ export const buildNatoFAAR = vehicle(() => ({
     stationHull([[-2.4, [[0, 0.6], [0.92, 0.6], [0.92, 1.1], [0, 1.1]]], [-0.05, [[0, 0.55], [0.95, 0.55], [0.95, 1.12], [0, 1.12]]]], { color: NATO, ...C }),
     P.box(1.7, 1.0, 1.9, { y: 1.62, z: -1.3, color: NATO, ...C }),                                  // radar and plotting shelter
     P.box(0.5, 0.8, 0.03, { x: 0.86, y: 1.6, z: -1.0, color: NATO_DK }),                            // its door
-    P.cyl(0.08, 0.1, 1.2, { y: 2.7, z: -1.9, color: STEEL }, 8),                                    // the mast
     P.box(0.5, 0.3, 0.5, { x: -0.6, y: 2.25, z: -0.6, color: NATO_DK }),                            // generator
     P.cyl(0.4, 0.4, 1.4, { x: -0.65, y: 2.25, z: -1.6, rx: Math.PI / 2, color: 0x56583e }, 10),     // cable reels
   ]), 1.0, 0.3),
-  spin: { geo: faarAntenna(NATO, NATO_DK), at: [0, 3.25, -1.9], rate: 1.6 },
+  deploy: { geo: merge([P.cyl(0.08, 0.1, 1.2, { y: 0.6, color: STEEL }, 8)]), at: [0, 2.1, -1.9] }, // the mast…
+  spin: { geo: faarAntenna(NATO, NATO_DK), at: [0, 1.15, 0], rate: 1.6, onDeploy: true }, // …and the antenna turning on it
   marks: merge([P.box(0.02, 0.3, 0.45, { x: 0.96, y: 0.85, z: 1.3 })]),
 }));
 
@@ -1128,7 +1153,9 @@ export const buildNatoFirefinder = vehicle(() => ({
     P.box(2.15, 1.75, 2.6, { y: 2.05, z: -0.65, color: NATO, ...C }),
     P.box(0.7, 1.2, 0.04, { x: -0.4, y: 1.9, z: -1.96, color: NATO_DK }),
     P.box(0.6, 0.4, 0.4, { x: 0.6, y: 3.1, z: 0.2, color: NATO_DK }),
-    // the antenna trailer behind: drawbar, the array on its pedestal, tilted back to look out over the cab
+  ]), 1.0, 0.3),
+  trailer: { // the antenna trailer, hitched behind the truck: drawbar, the array on its pedestal
+    geo: grime(merge([
     P.box(0.12, 0.12, 1.2, { y: 0.75, z: -2.4, color: STEEL }),
     P.box(1.8, 0.35, 1.6, { y: 0.8, z: -3.6, color: NATO, ...C }),
     ...pair((s) => P.cyl(0.42, 0.42, 0.25, { x: s * 1.0, y: 0.42, z: -3.6, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
@@ -1136,7 +1163,9 @@ export const buildNatoFirefinder = vehicle(() => ({
     P.box(3.0, 2.2, 0.25, { y: 2.85, z: -3.5, rx: -0.38, color: NATO_DK }),                          // the phased array…
     ...[-1.2, -0.6, 0, 0.6, 1.2].map((x) => P.box(0.05, 2.1, 0.04, { x, y: 2.86, z: -3.36, rx: -0.38, color: STEEL })), // …its rows of elements
     ...[-0.7, 0, 0.7].map((y) => P.box(2.9, 0.05, 0.04, { y: 2.85 + y * Math.cos(0.38), z: -3.36 - y * Math.sin(0.38), rx: -0.38, color: STEEL })),
-  ]), 1.0, 0.3),
+    ].map((g) => g.translate(0, 0, 1.8))), 1, 0.3), // drawn where they stand, moved to the hitch
+    hitch: -1.8,
+  },
   marks: merge([P.box(0.02, 0.35, 0.5, { x: 1.08, y: 2.1, z: -0.6 })]),
 }));
 
@@ -1269,11 +1298,11 @@ export const buildNatoTACJAM = vehicle(() => {
       P.box(2.6, 1.6, 3.0, { y: 2.05, z: -0.75, color: NATO, ...C }),                                 // the equipment shelter
       P.box(0.7, 1.1, 0.04, { x: 0.5, y: 1.85, z: -2.26, color: NATO_DK }),
       P.box(0.7, 0.4, 0.5, { x: -0.7, y: 3.05, z: 0.2, color: NATO_DK }),                             // air conditioner
-      P.cyl(0.14, 0.18, 3.6, { y: 4.6, z: -1.8, color: STEEL }, 10),                                  // the raised mast
       ...pair((s) => P.cyl(0.006, 0.006, 2.6, { x: s * 1.1, y: 4.1, z: -2.0, color: STEEL }, 4)),     // whip antennas
       ...pair((s) => P.box(0.06, 0.06, 0.4, { x: s * 1.3, y: 1.12, z: 2.3, color: STEEL })),
     ]), 1.0, 0.3),
-    spin: { geo: merge([P.box(0.3, 0.3, 0.3, { color: NATO_DK }), ...logPeriodic(STEEL).map((g2) => g2)]), at: [0, 6.5, -1.8], rate: 0.25 },
+    deploy: { geo: merge([P.cyl(0.14, 0.18, 3.6, { y: 1.8, color: STEEL }, 10)]), at: [0, 2.85, -1.8] }, // the telescopic mast…
+    spin: { geo: merge([P.box(0.3, 0.3, 0.3, { color: NATO_DK }), ...logPeriodic(STEEL).map((g2) => g2)]), at: [0, 3.65, 0], rate: 0.25, onDeploy: true }, // …its antenna on top
     marks: merge([P.box(0.02, 0.3, 0.5, { x: 1.31, y: 2.1, z: -0.6 })]),
   };
 });
@@ -1292,14 +1321,23 @@ export const buildPactR330 = vehicle(() => ({
     P.box(2.3, 0.2, 0.14, { y: 1.0, z: 3.5, color: STEEL }),
     P.box(2.4, 2.0, 3.8, { y: 2.2, z: -1.1, color: PACT }),                                             // the KUNG
     P.box(0.6, 1.2, 0.04, { x: -0.5, y: 2.0, z: -3.01, color: PACT_DK }),
-    ...pair((s) => P.cyl(0.12, 0.15, 3.0, { x: s * 0.8, y: 4.7, z: -2.2, color: STEEL }, 10)),          // the two masts
     ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.25, z: -1.4, color: PACT_DK })),
-    P.box(0.12, 0.12, 1.2, { y: 0.75, z: -3.6, color: STEEL }),                                          // the generator trailer behind
-    P.box(1.5, 0.9, 1.6, { y: 1.15, z: -4.8, color: PACT_DK }),
-    ...pair((s) => P.cyl(0.38, 0.38, 0.22, { x: s * 0.85, y: 0.38, z: -4.8, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
-    // the two antennas on the mast heads, one pointing each way across the front
-    ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 6.3, -2.2))).flat(),
   ]), 1.0, 0.4),
+  trailer: { // the generator trailer, hitched behind
+    geo: grime(merge([
+      P.box(0.12, 0.12, 1.2, { y: 0.75, z: -0.6, color: STEEL }),
+      P.box(1.5, 0.9, 1.6, { y: 1.15, z: -1.8, color: PACT_DK }),
+      ...pair((s) => P.cyl(0.38, 0.38, 0.22, { x: s * 0.85, y: 0.38, z: -1.8, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
+    ]), 1, 0.4),
+    hitch: -3.0,
+  },
+  deploy: { // the two telescopic masts and their antennas, one pointing each way across the front
+    geo: merge([
+      ...pair((s) => P.cyl(0.12, 0.15, 3.0, { x: s * 0.8, y: 1.5, color: STEEL }, 10)),
+      ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 3.1, 0))).flat(),
+    ]),
+    at: [0, 3.2, -2.2],
+  },
   marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.21, y: 2.2, z: -0.5 })]),
 }));
 
@@ -1311,12 +1349,18 @@ export const buildPactR330 = vehicle(() => ({
 export const buildNatoM577 = vehicle(() => ({
   ...m113Hull([
     P.box(0.9, 0.55, 0.6, { x: 0.5, y: 2.66, z: 1.7, color: NATO_DK }),                                // generator on the roof's front
-    P.box(2.6, 2.0, 2.4, { y: 1.0, z: -3.7, color: 0x56583e }),                                         // the tent extension…
-    P.box(2.7, 0.08, 2.5, { y: 2.02, z: -3.7, color: 0x4f5238 }),                                       // …its roof
-    ...pair((s) => P.cyl(0.03, 0.03, 2.0, { x: s * 1.3, y: 1.0, z: -4.9, color: STEEL }, 5)),           // tent poles
     ...[[-1.1, -1.8], [0.9, -2.1], [-0.2, 0.6]].map(([x, z]) => P.cyl(0.006, 0.006, 3.0, { x, y: 4.0, z, color: STEEL }, 4)), // whip antennas
     P.box(0.5, 0.3, 0.5, { x: -0.7, y: 2.53, z: -1.2, color: NATO_DK }),                                // roof stowage
   ], { roof: 2.5 }),
+  deploy: { // the tent extension pitched off the back once it is set up
+    geo: merge([
+      P.box(2.6, 2.0, 2.4, { y: 1.0, z: -1.25, color: 0x56583e }),
+      P.box(2.7, 0.08, 2.5, { y: 2.02, z: -1.25, color: 0x4f5238 }),
+      ...pair((s) => P.cyl(0.03, 0.03, 2.0, { x: s * 1.3, y: 1.0, z: -2.45, color: STEEL }, 5)),
+    ]),
+    at: [0, 0, -2.45],
+    unfold: true,
+  },
   marks: merge([P.box(0.02, 0.35, 0.5, { x: 1.38, y: 1.7, z: -0.8 })]),
 }));
 
@@ -1335,10 +1379,12 @@ export const buildPactBTR60PU = vehicle(() => ({
     ...pair((s) => P.box(0.4, 0.5, 0.04, { x: s * 0.45, y: 1.85, z: 2.64, rx: -0.5, color: PACT_DK })), // their shutters, raised
     ...pair((s) => P.box(0.06, 0.3, 4.6, { x: s * 1.36, y: 1.6, z: -0.6, color: PACT_DK })),           // the side rails
     P.box(1.6, 0.5, 1.6, { y: 2.35, z: -1.6, color: PACT }),                                            // radio equipment boxes
-    P.cyl(0.25, 0.25, 2.2, { x: 0.7, y: 2.3, z: 0.2, rz: Math.PI / 2, color: 0x5a5a3c }, 10),          // camouflage net roll
-    P.cyl(0.07, 0.09, 2.6, { x: -0.7, y: 3.4, z: -2.6, color: STEEL }, 8),                             // the antenna mast…
-    P.box(1.6, 0.06, 0.06, { x: -0.7, y: 4.7, z: -2.6, color: STEEL }),                                // …and its cross-bar
+    P.cyl(0.25, 0.25, 1.6, { x: 0.25, y: 2.3, z: 0.2, rz: Math.PI / 2, color: 0x5a5a3c }, 10),         // camouflage net roll
     ...[[0.9, 0.6], [0.6, -3.0], [-1.0, 1.0]].map(([x, z]) => P.cyl(0.006, 0.006, 2.8, { x, y: 3.5, z, color: STEEL }, 4)),
   ]), 1.0, 0.4),
+  deploy: { // the antenna mast and its cross-bar, raised once it is set up
+    geo: merge([P.cyl(0.07, 0.09, 2.6, { y: 1.3, color: STEEL }, 8), P.box(1.6, 0.06, 0.06, { y: 2.6, color: STEEL })]),
+    at: [-0.7, 2.1, -2.6],
+  },
   marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.34, y: 1.5, z: -1.0 })]),
 }));

@@ -4,7 +4,6 @@
 //   • the other side's forward observers inside it lose their fire-direction bonus
 //   • the other side's radars inside it (air search, counter-battery) go blind
 // A jammer transmitting is easy to find by direction-finding: while it works, the enemy sees it.
-const STILL = 2.5;       // metres it may shuffle and still count as set up
 export const JAM = { delay: 8, miss: 25 }; // seconds a jammed support call is late; metres it may land off
 
 export class Jamming {
@@ -19,12 +18,8 @@ export class Jamming {
       const J = s.stats.jammer;
       if (!J) continue;
       for (const u of s.units) {
-        let r = this.list.get(u);
-        if (!r) this.list.set(u, (r = { at: null, still: 0, faction: s.faction, radius: J.radius }));
-        const p = u.pos;
-        if (!u.alive || !r.at || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > STILL * STILL) { r.at = { x: p.x, z: p.z }; r.still = 0; }
-        else r.still += dt;
-        u.jamming = u.alive && r.still >= J.deploy;
+        if (!this.list.has(u)) this.list.set(u, { faction: s.faction, radius: J.radius });
+        u.jamming = s.setUpFully(u); // set up (UnitStack)
         if (u.jamming) u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + 1.5); // direction-found while it transmits
       }
     }
