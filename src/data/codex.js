@@ -35,6 +35,14 @@ export const CODEX = {
     nato: 'Long-range reconnaissance patrols — LRRP teams trained to slip behind the lines and watch the roads the Soviet echelons would use.',
     pact: 'Divisional razvedka: the reconnaissance troops who were to find NATO\'s defences before the regiments ran into them.',
   },
+  towedAA: {
+    use: 'Cheap air defence you can hide. Put the pair where helicopters will come in low — behind a hedgerow, in a CEV\'s vehicle position — and leave them still. Without an air search radar of yours nearby they see aircraft only at two-thirds of the range of the self-propelled guns.',
+    strong: 'Helicopters at close range, infantry and trucks in the open, being cheap and hard to spot',
+    weak: 'Moving (the crew pushes it at walking pace), armour, any fire on the open mount',
+    counter: 'Keep helicopters high and away from hedgerows; when tracer comes out of nowhere, shell the spot or send a recon vehicle.',
+    nato: 'The M167 put the M163\'s Vulcan on a light carriage for airborne and light divisions — towed by a jeep or a truck, flown in by helicopter.',
+    pact: 'The ZU-23-2 was everywhere: regimental air defence, on trucks, on ships. Its two barrels fire 2,000 rounds a minute between them.',
+  },
   cev: {
     use: 'Two jobs. Its blade digs vehicle positions (T): park a tank or an IFV in one and it is hull down — the berm takes the rounds aimed at its hull. Its demolition weapon goes for bunkers, held houses and trenches first and brings buildings down.',
     strong: 'Bunkers, strongpoints, houses, trenches; digging your armour in',

@@ -696,7 +696,9 @@ export class UnitStack {
   engageAir(u, dt) {
     const aa = u.stats.antiAir;
     const air = this.services.air;
-    const h = air?.nearestThreat(this.faction, u.pos, aa.range);
+    // no radar of its own: the gunner's eyes, unless an air search radar of ours covers this spot
+    const reach = aa.optical && !air?.radarCovers?.(this.faction, u.pos) ? aa.range * aa.optical : aa.range;
+    const h = air?.nearestThreat(this.faction, u.pos, reach);
     u.airTarget = h;
     if (!h) return false;
     const dx = h.pos.x - u.pos.x;
@@ -727,7 +729,7 @@ export class UnitStack {
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
       this.services.audio?.weapon(this.faction, this.weaponSound, _p);
-      const k = Math.min(1, dist / aa.range);
+      const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
       u.recoil = 1;
     }

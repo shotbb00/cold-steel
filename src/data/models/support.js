@@ -2,9 +2,9 @@
 // a short description — hull outline, running gear or wheels, a turret / launcher that
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
-//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV
+//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -804,3 +804,91 @@ export const buildPactIMR = vehicle(() => {
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.76, y: 1.2, z: -0.8 })]),
   };
 });
+
+
+// ---------------------------------------------------------------- towed AA guns (with their gunner)
+
+/** A seated gunner facing +z (helmet and kit in the side's colours), for the open gun mounts. */
+const gunner = ({ x = 0, y = 0, z = 0, cloth, helmet, skin = 0xb38f74 }) => [
+  P.box(0.36, 0.5, 0.26, { x, y: y + 0.52, z, rx: 0.12, color: cloth, ...C }),                     // trunk, leaning in
+  P.sphere(0.11, { x, y: y + 0.9, z: z + 0.06, color: skin }, 10, 8),                               // head
+  P.sphere(0.135, { x, y: y + 0.97, z: z + 0.05, sy: 0.75, color: helmet }, 10, 6),                 // helmet
+  ...pair((s) => P.box(0.12, 0.13, 0.42, { x: x + s * 0.1, y: y + 0.27, z: z + 0.22, color: cloth, ...C })),  // thighs, seated
+  ...pair((s) => P.box(0.11, 0.42, 0.12, { x: x + s * 0.1, y: y + 0.03, z: z + 0.42, color: cloth, ...C })),  // shins
+  ...pair((s) => P.box(0.09, 0.09, 0.4, { x: x + s * 0.2, y: y + 0.6, z: z + 0.25, rx: 0.3, color: cloth, ...C })), // arms to the handwheels
+];
+
+/** M167 towed Vulcan: the six-barrel 20 mm on a two-wheeled carriage, levelling jacks down,
+ *  the gunner in his seat behind the gun with the range-only radar dish beside him. */
+export const buildNatoM167 = vehicle(() => ({
+  hull: grime(merge([
+    P.box(0.9, 0.32, 2.2, { y: 0.55, color: NATO, ...C }),                                           // carriage
+    ...pair((s) => P.cyl(0.33, 0.33, 0.22, { x: s * 0.72, y: 0.33, z: -0.25, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 16)), // wheels
+    ...pair((s) => P.cyl(0.14, 0.14, 0.24, { x: s * 0.72, y: 0.33, z: -0.25, rz: Math.PI / 2, color: NATO_DK }, 10)),
+    P.box(0.14, 0.12, 1.3, { y: 0.48, z: 1.65, rx: 0.12, color: NATO_DK }),                           // tow bar…
+    P.cyl(0.07, 0.07, 0.1, { y: 0.4, z: 2.3, color: STEEL }, 8),                                      // …and its lunette
+    ...[[-0.5, 1.0], [0.5, 1.0], [-0.5, -1.05], [0.5, -1.05]].map(([x, z]) => P.box(0.1, 0.55, 0.1, { x, y: 0.28, z, color: STEEL })), // jacks
+    ...[[-0.5, 1.0], [0.5, 1.0], [-0.5, -1.05], [0.5, -1.05]].map(([x, z]) => P.box(0.22, 0.03, 0.22, { x, y: 0.02, z, color: STEEL })),
+  ]), 1, 0.3),
+  turret: {
+    geo: grime(merge([
+      P.cyl(0.5, 0.52, 0.16, { color: NATO, ...C }, 18),                                              // mount ring
+      P.box(0.4, 0.08, 0.36, { y: 0.32, z: -0.5, color: NATO_DK }),                                   // seat…
+      P.box(0.4, 0.4, 0.06, { y: 0.52, z: -0.7, rx: -0.15, color: NATO_DK }),                         // …and its back
+      ...gunner({ y: 0.36, z: -0.52, cloth: 0x4b5331, helmet: 0x4d5733 }),
+      P.box(0.5, 0.5, 0.62, { x: 0.52, y: 0.42, z: 0.0, color: NATO_DK }),                            // linked-ammunition drum
+      P.cyl(0.18, 0.18, 0.05, { x: -0.55, y: 0.8, z: -0.2, rx: Math.PI / 2 - 0.3, color: STEEL }, 14), // VPS-2 range-only radar dish
+      P.box(0.1, 0.4, 0.1, { x: -0.55, y: 0.55, z: -0.2, color: STEEL }),
+    ]), 0.8, 0, 0.3),
+    at: [0, 0.72, 0],
+  },
+  gun: {
+    geo: merge([
+      P.box(0.3, 0.3, 0.8, { z: 0.25, color: NATO_DK }),                                              // gun housing
+      ...[0, 1, 2, 3, 4, 5].map((k) => P.cyl(0.02, 0.02, 1.45, { x: Math.cos(k * Math.PI / 3) * 0.075, y: Math.sin(k * Math.PI / 3) * 0.075, z: 1.35, rx: Math.PI / 2, color: STEEL }, 6)),
+      P.cyl(0.11, 0.11, 0.06, { z: 1.9, rx: Math.PI / 2, color: STEEL }, 12),                         // muzzle clamp
+      P.cyl(0.11, 0.11, 0.06, { z: 1.2, rx: Math.PI / 2, color: STEEL }, 12),                         // mid clamp
+      P.box(0.12, 0.16, 0.24, { x: 0.18, y: 0.18, z: -0.05, color: GLASS }),                          // the gyro lead sight
+    ]),
+    at: [0, 0.55, 0.15],
+  },
+  muzzle: [0, 0, 2.0],
+  recoil: 0.04,
+  marks: merge([P.box(0.02, 0.2, 0.4, { x: 0.455, y: 0.6, z: 0.4 })]),
+}));
+
+/** ZU-23-2: twin 23 mm 2A14 cannons on their light carriage, the wheels swung up off the ground
+ *  and the three jacks down, ammunition boxes either side of the cradle, the gunner on the left. */
+export const buildPactZU23 = vehicle(() => ({
+  hull: grime(merge([
+    P.box(1.0, 0.22, 1.5, { y: 0.42, color: PACT }),                                                 // carriage
+    ...pair((s) => P.box(0.12, 0.12, 1.1, { x: s * 0.55, y: 0.36, z: 0.2, ry: s * 0.5, color: PACT_DK })), // trails
+    ...pair((s) => P.cyl(0.34, 0.34, 0.2, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 16)), // wheels, lifted
+    ...pair((s) => P.cyl(0.13, 0.13, 0.22, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: PACT_DK }, 10)),
+    ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.box(0.1, 0.45, 0.1, { x, y: 0.22, z, color: STEEL })), // jacks
+    ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.cyl(0.13, 0.13, 0.03, { x, y: 0.02, z, color: STEEL }, 10)),
+  ]), 1, 0.3),
+  turret: {
+    geo: grime(merge([
+      P.cyl(0.62, 0.62, 0.12, { color: PACT }, 18),                                                   // the traversing platform
+      P.box(0.36, 0.07, 0.34, { x: -0.48, y: 0.3, z: -0.45, color: PACT_DK }),                       // gunner's seat
+      ...gunner({ x: -0.48, y: 0.33, z: -0.47, cloth: 0x6f6a4a, helmet: 0x4a5634 }),
+      ...pair((s) => P.cyl(0.11, 0.11, 0.03, { x: -0.48 + s * 0.25, y: 0.62, z: -0.05, rz: Math.PI / 2, color: STEEL }, 12)), // traverse / elevation handwheels
+      P.box(0.12, 0.5, 0.12, { x: 0.35, y: 0.3, z: -0.1, color: PACT_DK }),                          // the cradle's upright
+    ]), 0.8, 0, 0.3),
+    at: [0, 0.54, 0],
+  },
+  gun: {
+    geo: merge([
+      P.box(0.62, 0.24, 0.9, { z: 0.15, color: PACT_DK }),                                            // cradle with both receivers
+      ...pair((s) => P.box(0.2, 0.32, 0.44, { x: s * 0.44, y: 0.04, z: 0.1, color: PACT })),          // 50-round boxes
+      ...pair((s) => P.cyl(0.035, 0.03, 2.0, { x: s * 0.16, z: 1.5, rx: Math.PI / 2, color: STEEL }, 8)), // barrels
+      ...pair((s) => P.cyl(0.05, 0.05, 0.14, { x: s * 0.16, z: 2.55, rx: Math.PI / 2, color: STEEL }, 8)), // flash hiders
+      P.box(0.1, 0.18, 0.14, { x: -0.3, y: 0.22, z: -0.1, color: GLASS }),                           // ZAP-23 sight
+    ]),
+    at: [0.05, 0.42, 0.05],
+  },
+  muzzle: [0, 0, 2.6],
+  recoil: 0.05,
+  marks: merge([P.box(0.02, 0.16, 0.3, { x: 0.505, y: 0.48, z: 0.2 })]),
+}));

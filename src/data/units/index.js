@@ -8,6 +8,7 @@ import tank from './tank.ts';
 import artillery from './artillery.ts';
 import crew from './crew.ts';
 import aa from './aa.ts';
+import towedAA from './towedAA.ts';
 import mortar from './mortar.ts';
 import ifv from './ifv.ts';
 import scouts from './scouts.ts';
@@ -40,6 +41,7 @@ export const UNIT_TYPES = {
   [ifv.id]: ifv,
   [mortar.id]: mortar,
   [aa.id]: aa,
+  [towedAA.id]: towedAA,
   [reconVehicle.id]: reconVehicle,
   [tankDestroyer.id]: tankDestroyer,
   [heavyTank.id]: heavyTank,
