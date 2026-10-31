@@ -53,7 +53,9 @@ const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
 // row: squeeze through (collisions off for `ghostT` s, the last resort)
 const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3, ghostT: 1.6, ghostTVehicle: 3.5 };
-const COLUMN = { gap: 1.3, trail: 120 }; // single file: m between men (× spacing), m of trail kept
+// single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
+// m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
+const COLUMN = { gap: 1.3, trail: 120, narrow: 4, wide: 6, after: 10 };
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -350,7 +352,7 @@ export class UnitStack {
         let n = 0;
         for (const u of this.units) if (u.alive && !u.possessed) { lag += Math.hypot(u.pos.x - u.dest.x, u.pos.z - u.dest.z); n++; }
         lag = n ? lag / n : 0;
-        const k = clamp(1.4 - lag / (4 + this.footprint * 0.3), 0.15, 1);
+        const k = clamp(1.4 - lag / (8 + this.footprint * 0.3), 0.15, 1);
         const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : 1) * k;
         this.anchor.addScaledVector(_v, Math.min(d, speed * dt) / d);
         if (!this.faceTarget) this.turnToward(Math.atan2(_v.x, _v.z), dt);
@@ -370,16 +372,19 @@ export class UnitStack {
     const t = (this.trail ??= []);
     const last = t[0];
     if (!last || Math.hypot(last.x - a.x, last.z - a.z) > 6) t.length = 0; // a jump (into a building, out of one): start again
-    if (!t.length || Math.hypot(t[0].x - a.x, t[0].z - a.z) >= 1) {
+    const step = !t.length || Math.hypot(t[0].x - a.x, t[0].z - a.z) >= 1;
+    if (step) {
       t.unshift({ x: a.x, z: a.z });
       if (t.length > COLUMN.trail) t.pop();
     }
-    // too narrow for the formation (with some give, so it doesn't flicker): single file while moving
+    // really narrow (a hedge along the road isn't): single file while moving, and back into the
+    // formation only once it's open for a while — every change strings the men out again
     const nav = this.world.nav;
     const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
-    const half = this.formationHalf ??= Math.max(...this.units.map((u) => Math.abs(u.offset.x))) * LOOSENESS + this.stats.radius;
     if (!this.moveTarget || this.units.length < 2) this.column = false;
-    else if (this.column ? room > half + 2 : room < half) this.column = !this.column;
+    else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
+    else if (room <= COLUMN.wide) this.wideFor = 0;
+    else if (step && ++this.wideFor > COLUMN.after) this.column = false;
   }
 
   /**
