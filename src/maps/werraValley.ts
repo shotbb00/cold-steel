@@ -2,7 +2,8 @@
 // along the inner-German border, between wooded bluffs. Three ways across, and nothing else —
 // the battle is about the bridges: west and east road bridges (Philippsthal, Heringen) and the
 // big centre bridge at Vacha. Engineers can blow them; bridge layers can add a crossing.
-// Villages sit at each bridgehead on both banks; Vacha bridge itself is the centre point; a
+// Villages sit at each bridgehead on both banks; Vacha bridge is the centre point, wide enough to be
+// held from either bridgehead (soldiers on the deck are hard to command); a
 // wooded hill on each side overlooks the valley. NATO holds the south bank (+z), the Pact the
 // north. Point-mirrored, so neither side gets the better ground.
 // Same shape as fuldaGap.js, plus `river` (world/River.js: routing, water, bridges).
@@ -65,7 +66,7 @@ const points: ControlPointDef[] = [
   { id: 'C', name: 'Heimboldshausen', x: 0, z: 58, owner: null, sector: 'centre' },
   { id: 'D', name: 'Heringen', x: SIDE_X, z: riverZ(SIDE_X) + 52, owner: null, sector: 'east' },
   { id: 'E', name: 'Seulingswald', x: -100, z: 165, owner: null, sector: 'west' },
-  { id: 'F', name: 'Vacha bridge', x: 0, z: 0, owner: null, sector: 'centre', radius: 18 },
+  { id: 'F', name: 'Vacha bridge', x: 0, z: 0, owner: null, sector: 'centre', radius: 32 }, // reaches both bridgeheads: held from a bank, not only from the deck
   { id: 'G', name: 'Öchsen', x: 100, z: -165, owner: null, sector: 'east' },
   { id: 'H', name: 'Dippach', x: -SIDE_X, z: riverZ(-SIDE_X) - 52, owner: null, sector: 'west' },
   { id: 'I', name: 'Vacha', x: 0, z: -58, owner: null, sector: 'centre' },

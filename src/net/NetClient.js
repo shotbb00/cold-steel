@@ -316,7 +316,7 @@ export class NetClient {
       case 'fire': g.fire.light(e[1], e[2]); break;
       case 'span': {
         const river = g.world.river;
-        if (river) { river.lay(e[1], g.terrain, g.scene); g.bus.emit('terrain:changed'); }
+        if (river) { river.lay(e[1], g.terrain, g.scene, e[2] ?? null); g.bus.emit('terrain:changed'); }
         for (const s of g.world.stacks) {
           if (s.stats.bridgeLayer && Math.abs(s.centroid.x - e[1]) < 25) Object.assign(s.units[0], { dropped: true, laying: false }); // its bridge is down
         }

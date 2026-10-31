@@ -386,7 +386,7 @@ export class CommandSystem {
       if (t.kind === 'smoke') return t.decal.place(p.x, p.z, 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
-        return t.decal.place(p.x, river ? river.path(p.x) : p.z, 6);
+        return t.decal.place(p.x, river ? river.path(p.x, p.z) : p.z, 6);
       }
       if (t.kind === 'engineer') {
         const bridge = this.game.map.bridgeAt?.(p.x, p.z);

@@ -85,11 +85,12 @@ export class Construction {
     if (kind === 'demolish' && (!bridge || bridge.blown)) return null;
     const river = this.game.world.river;
     if (kind === 'span') {
-      if (!river || Math.abs(z - river.path(x)) > river.halfWidth + 25) return null; // not at the river
+      if (!river || Math.abs(z - river.path(x, z)) > river.halfWidth + 25) return null; // not at the river
       const sid = stack?.id ?? stackId;
       for (const old of this.sites.filter((s) => s.kind === 'span' && s.stackId === sid)) this.cancel(old); // only the last order counts
-      if (river.crossings.some((c) => !c.blown && Math.abs(c.x - x) < 14)) return null;   // a crossing already there
-      z = river.path(x);
+      const channel = river.channelAt(x, z);
+      if (river.crossings.some((c) => !c.blown && c.channel === channel && Math.abs(c.x - x) < 14)) return null;   // a crossing already there
+      z = river.path(x, z);
       yaw = 0;
     }
     const ghost = new THREE.Mesh(new THREE.BoxGeometry(def.length, def.action ? 0.25 : 1, def.width), ghostMat);
@@ -277,7 +278,7 @@ export class Construction {
       if (!u?.alive) return;
       u.dropped = true;
       u.laying = false;
-      game.layBridge(site.x);
+      game.layBridge(site.x, site.z);
     }
   }
 

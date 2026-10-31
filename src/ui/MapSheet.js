@@ -166,14 +166,14 @@ export class MapSheet {
 
     // the river
     const river = map.river;
-    if (river?.path) {
+    for (const path of river?.channels ?? []) {
       g.strokeStyle = WATER;
       g.lineWidth = Math.max(3, (river.halfWidth * 2 / (2 * bx)) * size);
       g.lineCap = 'round';
       g.beginPath();
       for (let x = -bx; x <= bx; x += bx / 60) {
         const px = sx(x);
-        const pz = sz(river.path(x));
+        const pz = sz(path(x));
         if (x === -bx) g.moveTo(px, pz); else g.lineTo(px, pz);
       }
       g.stroke();

@@ -300,12 +300,12 @@ export class GameEngine {
     this.announce(`The ${c.name} has been blown!`);
   }
 
-  /** A bridge layer's bridge goes down across the river at x: a new crossing for everyone. */
-  layBridge(x) {
+  /** A bridge layer's bridge goes down across the river at x (the channel nearest z): a new crossing for everyone. */
+  layBridge(x, z = null) {
     const river = this.world.river;
     if (!river) return;
-    const c = this.quietly(() => river.lay(x, this.terrain, this.scene));
-    this.netEvent('span', Math.round(x * 10) / 10);
+    const c = this.quietly(() => river.lay(x, this.terrain, this.scene, z));
+    this.netEvent('span', Math.round(x * 10) / 10, Math.round(c.z * 10) / 10);
     this.bus.emit('terrain:changed');
     this.audio.play('stomp', { x, y: river.level + 1, z: c.z }, { volume: 1 });
     this.announce('A bridge has been laid across the river.');

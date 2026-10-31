@@ -925,10 +925,11 @@ export const buildNatoFAAR = vehicle(() => ({
   hull: grime(merge([
     // front unit: low hull, the open cab with its windscreen frame and canvas top
     stationHull([[0.35, [[0, 0.55], [0.95, 0.55], [0.98, 1.15], [0, 1.15]]], [2.3, [[0, 0.6], [0.92, 0.6], [0.92, 1.05], [0, 1.08]]]], { color: NATO, ...C }),
-    P.box(1.8, 0.05, 1.1, { y: 1.9, z: 1.3, color: 0x4f5238 }),                                     // canvas top
-    ...pair((s) => P.box(0.05, 0.8, 0.05, { x: s * 0.88, y: 1.5, z: 1.85, color: NATO_DK })),
-    P.box(1.75, 0.5, 0.04, { y: 1.45, z: 1.85, rx: -0.15, color: GLASS }),                          // windscreen
-    ...pair((s) => P.box(0.4, 0.3, 0.4, { x: s * 0.45, y: 1.2, z: 0.8, color: NATO_DK })),          // seats
+    // the cab, closed in: hard top, doors with their windows, the windscreen
+    P.box(1.86, 0.8, 1.3, { y: 1.52, z: 1.2, color: NATO, ...C }),
+    P.box(1.94, 0.06, 1.38, { y: 1.95, z: 1.2, color: NATO_DK }),
+    P.box(1.7, 0.42, 0.04, { y: 1.62, z: 1.86, rx: -0.12, color: GLASS }),
+    ...pair((s) => P.box(0.03, 0.36, 0.7, { x: s * 0.94, y: 1.64, z: 1.25, color: GLASS })),
     // the articulation joint, rear unit with its shelter, and the antenna mast
     P.cyl(0.18, 0.18, 0.4, { y: 0.8, z: 0.15, rx: Math.PI / 2, color: STEEL }, 10),
     stationHull([[-2.4, [[0, 0.6], [0.92, 0.6], [0.92, 1.1], [0, 1.1]]], [-0.05, [[0, 0.55], [0.95, 0.55], [0.95, 1.12], [0, 1.12]]]], { color: NATO, ...C }),

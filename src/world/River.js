@@ -10,7 +10,10 @@
 //   blow(c)         a bridge goes: the span drops into the river (terrain dug out, mesh broken)
 //   lay(x)          a bridge layer puts a steel treadway bridge across at x: a new crossing
 //   build(scene)    the water surface and the bridges
-// Crossings: { id, name, x, kind: 'bridge' | 'ford', width } — the river decides where across.
+// Crossings: { id, name, x, kind: 'bridge' | 'ford', width, channel } — the river decides where across.
+// Several channels (`paths`: rivers side by side, splitting the land) share one river object:
+// every question about a point is answered for the channel nearest to it, and plan() takes the
+// separating channel nearest the start first (the stack plans again once it is over).
 import * as THREE from 'three';
 import { smoothstep } from '../core/math.js';
 
@@ -18,17 +21,28 @@ const BANK = 0.9;           // floodplain height above the water
 const APPROACH = 9;         // metres beyond the banks where a crossing's ends are
 
 /** @param {any} o  options, untyped until this file moves to TypeScript */
-export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, valley = 70, crossings = [] }) {
+export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, depth = 2.4, valley = 70, crossings = [] }) {
   const deck = level + BANK + 0.25;
+  /** The channel nearest (x, z) (without z: the first). */
+  const nearest = (x, z) => {
+    if (paths.length === 1 || z == null) return 0;
+    let best = 0;
+    for (let i = 1; i < paths.length; i++) if (Math.abs(z - paths[i](x)) < Math.abs(z - paths[best](x))) best = i;
+    return best;
+  };
   const river = {
-    path,
+    channels: paths,
+    channelAt: nearest,
+    /** The water's centre line at x — of the channel nearest to (x, z). */
+    path: (x, z) => paths[nearest(x, z)](x),
     halfWidth,
     level,
-    crossings: crossings.map((c, i) => ({ id: i, blown: false, ...c, z: path(c.x) })),
+    crossings: crossings.map((c, i) => ({ id: i, blown: false, channel: 0, ...c, z: paths[c.channel ?? 0](c.x) })),
     water: { level, deep: 0.95 },
 
     carve(x, z, h) {
-      const dz = Math.abs(z - path(x));
+      const ci = nearest(x, z);
+      const dz = Math.abs(z - paths[ci](x));
       // the floodplain: ground near the river comes down to just above the water
       const plain = level + BANK;
       const v = 1 - smoothstep(halfWidth + 6, valley, dz);
@@ -36,7 +50,7 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
       // the channel, shallower at fords
       let bed = level - depth;
       for (const c of this.crossings) {
-        if (c.kind !== 'ford') continue;
+        if (c.kind !== 'ford' || c.channel !== ci) continue;
         const k = 1 - smoothstep(c.width * 0.5, c.width * 0.5 + 10, Math.abs(x - c.x));
         bed += (level - (c.depth ?? 0.6) - bed) * k;
       }
@@ -54,7 +68,7 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
     },
 
     side(x, z) {
-      return Math.sign(z - path(x)) || 1;
+      return Math.sign(z - this.path(x, z)) || 1;
     },
 
     /** The surface at (x, z): the ground, or the water where the ground is below it. */
@@ -69,25 +83,33 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
 
     /** A point on dry ground near (x, z): an order into the river goes to the nearer bank. */
     dry(p) {
-      const dz = p.z - path(p.x);
+      const pz = this.path(p.x, p.z);
+      const dz = p.z - pz;
       if (Math.abs(dz) > halfWidth + 2 || this.bridgeAt(p.x, p.z)) return p; // dry land, or a bridge deck
-      return { x: p.x, z: path(p.x) + Math.sign(dz || 1) * (halfWidth + 4) };
+      return { x: p.x, z: pz + Math.sign(dz || 1) * (halfWidth + 4) };
     },
 
     /** The best way from a to b over the river (or null when they're on the same bank). */
     plan(a, b) {
+      const sideOf = (p, ch) => Math.sign(p.z - paths[ch](p.x)) || 1;
       const on = this.bridgeAt(a.x, a.z);
       if (on && !on.blown) { // already on a bridge: along the deck to the end facing the goal, then on
-        const sb = this.side(b.x, b.z);
+        const sb = sideOf(b, on.channel);
         const exit = { x: on.x, z: on.z + sb * (halfWidth + 12) };
         return { crossing: on, entry: { x: on.x, z: a.z }, exit, cost: 0, target: b, entered: true };
       }
-      const sa = this.side(a.x, a.z);
-      const sb = this.side(b.x, b.z);
-      if (sa === sb) return null;
+      // the channel to cross first: of those between a and b, the one nearest a
+      let ch = -1;
+      for (let i = 0; i < paths.length; i++) {
+        if (sideOf(a, i) === sideOf(b, i)) continue;
+        if (ch < 0 || Math.abs(a.z - paths[i](a.x)) < Math.abs(a.z - paths[ch](a.x))) ch = i;
+      }
+      if (ch < 0) return null;
+      const sa = sideOf(a, ch);
+      const sb = sideOf(b, ch);
       let best = null;
       for (const c of this.crossings) {
-        if (c.blown) continue;
+        if (c.blown || c.channel !== ch) continue;
         const reach = halfWidth + (c.kind === 'bridge' ? 12 : APPROACH);
         const entry = { x: c.x, z: c.z + sa * reach };
         const exit = { x: c.x, z: c.z + sb * reach };
@@ -107,21 +129,21 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
     // ---------------------------------------------------------------- looks
 
     build(scene, terrain) {
-      // the water: one flat sheet along the river (the banks cover it everywhere else)
-      const zs = [];
-      for (let x = -520; x <= 520; x += 20) zs.push(path(x));
-      const z0 = Math.min(...zs) - halfWidth - 20;
-      const z1 = Math.max(...zs) + halfWidth + 20;
-      const water = new THREE.Mesh(
-        new THREE.PlaneGeometry(1100, z1 - z0, 1, 1),
-        new THREE.MeshStandardMaterial({ color: 0x3e4f52, roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.88 }),
-      );
-      water.rotation.x = -Math.PI / 2;
-      water.position.set(0, level, (z0 + z1) / 2);
-      water.receiveShadow = true;
-      water.userData.noAO = true;
-      scene.add(water);
-      this.waterMesh = water;
+      // the water: a flat sheet along each channel (the banks cover it everywhere else)
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x3e4f52, roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.88 });
+      for (const p of paths) {
+        const zs = [];
+        for (let x = -520; x <= 520; x += 20) zs.push(p(x));
+        const z0 = Math.min(...zs) - halfWidth - 20;
+        const z1 = Math.max(...zs) + halfWidth + 20;
+        const water = new THREE.Mesh(new THREE.PlaneGeometry(1100, z1 - z0, 1, 1), waterMat);
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(0, level, (z0 + z1) / 2);
+        water.receiveShadow = true;
+        water.userData.noAO = true;
+        scene.add(water);
+        this.waterMesh ??= water;
+      }
       const stone = new THREE.MeshStandardMaterial({ color: 0x8a857a, roughness: 0.95 });
       const dark = new THREE.MeshStandardMaterial({ color: 0x2c2b28, roughness: 1 });
       for (const c of this.crossings) {
@@ -187,9 +209,10 @@ export function createRiver({ path, halfWidth = 12, level = 0, depth = 2.4, vall
      * walk over it like any bridge), a steel treadway span on top, and a new crossing in the list
      * — routes plan over it, engineers can blow it. Returns the crossing.
      */
-    lay(x, terrain, scene) {
+    lay(x, terrain, scene, z = null) {
       const width = 4.4;
-      const c = { id: this.crossings.length, name: 'assault bridge', kind: 'bridge', x, z: path(x), width, blown: false, laid: true };
+      const channel = nearest(x, z);
+      const c = { id: this.crossings.length, name: 'assault bridge', kind: 'bridge', x, z: paths[channel](x), channel, width, blown: false, laid: true };
       this.crossings.push(c);
       const along = halfWidth + 7;
       terrain.dig(x, c.z, along + width, -1, (px, pz) => {
