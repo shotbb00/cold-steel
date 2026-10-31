@@ -45,27 +45,36 @@ export function weaponReach(stack) {
 /** Flat on XZ; theta 0 points along +z (yaw 0), as GroundDecal.place rotates. */
 const flat = (g) => g.rotateX(-Math.PI / 2).rotateY(-Math.PI / 2);
 
+// Every shape is draped over the terrain at its vertices (GroundDecal), so they sit close enough
+// together to follow hills: a straight edge between far-apart vertices runs under a rise.
+const STEP = 3;      // m between vertices along a ring
+const RADIAL = 8;    // m between rings of vertices across a disc
+
 function ringGeometry(r) {
-  return flat(new THREE.RingGeometry(r - BAND, r + BAND, Math.min(256, Math.max(64, Math.round(r * 1.4))), 1));
+  return flat(new THREE.RingGeometry(r - BAND, r + BAND, Math.min(1440, Math.max(64, Math.round((r * Math.PI * 2) / STEP))), 1));
 }
 
 /** A filled disc (or, with `arc`, a sector centred on +z) of radius r. */
 function discGeometry(r, arc = Math.PI * 2) {
-  const segs = Math.min(128, Math.max(24, Math.round((r * arc) / 6)));
-  return flat(new THREE.CircleGeometry(r, segs, -arc / 2, arc));
+  const segs = Math.min(360, Math.max(24, Math.round((r * arc) / (RADIAL * 1.5))));
+  return flat(new THREE.RingGeometry(0.01, r, segs, Math.max(2, Math.ceil(r / RADIAL)), -arc / 2, arc));
 }
 
 /** The sector's outline: its arc and both straight edges. */
 function sectorEdge(r, arc) {
-  const segs = Math.min(128, Math.max(24, Math.round((r * arc) / 6)));
+  const segs = Math.min(720, Math.max(24, Math.round((r * arc) / STEP)));
   const arcGeo = new THREE.RingGeometry(r - BAND * 2, r + BAND * 2, segs, 1, -arc / 2, arc);
   const pos = [...arcGeo.attributes.position.array];
   const idx = [...arcGeo.index.array];
-  for (const a of [-arc / 2, arc / 2]) { // the two radial edges as thin quads
-    const base = pos.length / 3;
+  for (const a of [-arc / 2, arc / 2]) { // the two radial edges as strips of short quads
     const c = Math.cos(a), sn = Math.sin(a), nx = -sn * BAND * 2, ny = c * BAND * 2;
-    pos.push(nx, ny, 0, -nx, -ny, 0, c * r + nx, sn * r + ny, 0, c * r - nx, sn * r - ny, 0);
-    idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+    const n = Math.max(2, Math.ceil(r / STEP));
+    const base = pos.length / 3;
+    for (let i = 0; i <= n; i++) {
+      const d = (r * i) / n;
+      pos.push(c * d + nx, sn * d + ny, 0, c * d - nx, sn * d - ny, 0);
+      if (i < n) { const k = base + i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
