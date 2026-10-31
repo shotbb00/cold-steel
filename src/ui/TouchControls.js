@@ -257,6 +257,12 @@ export class TouchControls {
     });
     this.game.bus.on('order', () => this.setPanel(false)); // (buying a unit doesn't: the reinforcements stay open for the next)
     document.getElementById('topbar').append(pause);
+    // multiplayer: no Enter key on a phone, so a button opens the chat line
+    if (this.game.chat?.box) {
+      const chat = btn('tb-pause tb-chat', icon('chat'), 'Chat');
+      chat.addEventListener('click', () => (this.game.chat.box.isOpen ? this.game.chat.box.close() : this.game.chat.box.open()));
+      document.getElementById('topbar').append(chat);
+    }
     this.tb = { control, clear, cancel, orders, left, right, place };
     this.setPanel(false);
   }

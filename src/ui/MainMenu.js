@@ -65,7 +65,7 @@ const RULES_KEY = 'coldsteel.rules';
 export function loadRules() {
   try { return rulesFrom(JSON.parse(localStorage.getItem(RULES_KEY) ?? 'null')); } catch { return rulesFrom(null); }
 }
-function rulesPicker(rules, economy, onChange = () => {}) {
+export function rulesPicker(rules, economy, onChange = () => {}) {
   const box = el('div', 'conditions rules');
   const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault and gas for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(

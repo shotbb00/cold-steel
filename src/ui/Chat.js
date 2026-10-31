@@ -52,6 +52,8 @@ export class ChatBox {
       if (e.key === 'Escape' && !inline) { e.preventDefault(); this.close(); }
     });
     this.input.addEventListener('keyup', (e) => e.stopPropagation());
+    // tapped away with nothing typed (a phone has no Esc): close
+    this.input.addEventListener('blur', () => { if (!inline && !this.input.value.trim()) setTimeout(() => this.close(), 150); });
     link.on('chat', (m) => this.add(m.from ?? this.peer, m.text, 'them'));
   }
 

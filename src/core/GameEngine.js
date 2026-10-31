@@ -87,7 +87,7 @@ export class GameEngine {
     this.playerFaction = playerFaction;
     this.coop = !!(net && coop);
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
-    this.rules = rulesFrom(net || campaign ? null : rules); // battle rules (data/rules.js): single player only
+    this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -247,7 +247,7 @@ export class GameEngine {
     });
     stack.ai = new StackAI(stack, this.world);
     // difficulty (data/rules.js): the AI side shoots better or worse
-    const aim = !this.net && faction !== this.playerFaction ? DIFFICULTY[this.rules.difficulty]?.aim ?? 1 : 1;
+    const aim = !this.isHuman(faction) ? DIFFICULTY[this.rules.difficulty]?.aim ?? 1 : 1;
     if (aim !== 1) for (const u of stack.units) u.skill *= aim;
     if (this.coop && faction === this.playerFaction && !stack.owner) stack.owner = this.currentOwner ?? 'host';
     // unseen until the fog of war has looked: new enemy stacks don't flash up on the map

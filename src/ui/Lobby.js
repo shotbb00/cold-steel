@@ -6,7 +6,7 @@
 // same side against the AI; a mode's `multiplayer` is true for both, 'coop' for co-op only).
 // Each player has a name (settings.playerName); once connected both see who's in, the guest
 // marks themselves ready and the host's Start waits for that, and the two can chat (ui/Chat.js).
-// Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, name }
+// Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, rules, name }
 // (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
 // start { … } (host). A version mismatch gets refuse { reason }.
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
@@ -14,7 +14,8 @@ import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { NET_VERSION } from '../net/protocol.js';
 import { hostGame, joinGame, createInvite, acceptInvite, acceptReply, cleanCode, CODE_LEN } from '../net/Link.js';
-import { conditionsPicker } from './MainMenu.js';
+import { conditionsPicker, rulesPicker, loadRules } from './MainMenu.js';
+import { DIFFICULTY } from '../data/rules.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { settings } from '../core/Settings.js';
 import { ChatBox } from './Chat.js';
@@ -55,7 +56,7 @@ export class Lobby {
     this.onStart = onStart;
     this.onPreview = onPreview;
     const mode = Object.values(MODES).find((m) => m.multiplayer);
-    this.choice = { mode: mode?.id ?? 'frontline', map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', coop: false };
+    this.choice = { mode: mode?.id ?? 'frontline', map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', coop: false, rules: loadRules() };
     this.role = 'host';
     this.link = null;
     this.hosting = null;
@@ -143,11 +144,11 @@ export class Lobby {
         if (only && !coop) continue;
         const b = el('button', this.choice.coop === coop ? 'on' : '', label);
         b.type = 'button';
-        b.addEventListener('click', () => { this.choice.coop = coop; setTogether(); this.renderSides(); this.sendLobby(); });
+        b.addEventListener('click', () => { this.choice.coop = coop; setTogether(); this.renderSides(); this.renderRules(); this.sendLobby(); });
         together.append(b);
       }
     };
-    const modes = this.chips(Object.values(MODES).filter((m) => m.multiplayer), this.choice.mode, (m) => { this.choice.mode = m.id; setTogether(); this.renderSides(); this.sendLobby(); });
+    const modes = this.chips(Object.values(MODES).filter((m) => m.multiplayer), this.choice.mode, (m) => { this.choice.mode = m.id; setTogether(); this.renderSides(); this.renderRules(); this.sendLobby(); });
     q('What kind of battle', modes, together);
     setTogether();
     q('Where', this.chips(Object.values(MAPS), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
@@ -155,6 +156,17 @@ export class Lobby {
     q('Which side', this.sidesBox);
     this.renderSides();
     q('Time and weather', conditionsPicker(this.choice, () => this.sendLobby()));
+    this.rulesBox = el('div', 'rules-box');
+    q('Battle rules', this.rulesBox);
+    this.renderRules();
+  }
+
+  /** The same battle rules as single player (the economy rows for point-capture modes). */
+  renderRules() {
+    if (!this.rulesBox) return;
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.sendLobby()));
+    // versus: nobody plays the AI, so its difficulty doesn't count
+    if (!this.choice.coop) this.rulesBox.querySelector('.cond-row')?.remove();
   }
 
   renderSides() {
@@ -316,7 +328,8 @@ export class Lobby {
       const side = info ? sideName(info.coop ? info.side : enemyOf(info.side)) + (info.coop ? ' together with the host' : '') : '…';
       const modeName = info ? MODES[info.mode]?.name ?? info.mode : '…';
       const when = info ? `${TIMES[info.time]?.name ?? 'Day'}, ${(WEATHER[info.weather]?.name ?? 'Overcast').toLowerCase()}` : '…';
-      r.append(el('p', 'mp-wait', `The host picks the mode, map, sides and conditions.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>.`));
+      const rules = info?.rules ? ` · ${info.coop ? `${DIFFICULTY[info.rules.difficulty]?.label ?? 'Regular'} enemy · ` : ''}${info.rules.air === false ? 'no air support' : 'air support'}` : '';
+      r.append(el('p', 'mp-wait', `The host picks the mode, map, sides, conditions and rules.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
       r.append(this.status(this.peerReady ? 'Ready — waiting for the host to start the battle…' : 'Press Ready when you are, then the host can start.'));
       const row = el('div', 'deploy-row mp-row');
       row.append(button(this.peerReady ? 'Not ready' : 'Ready', 'deploy', () => {
@@ -408,7 +421,7 @@ export class Lobby {
     } else {
       link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
-      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
+      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
     this.render();

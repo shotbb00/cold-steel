@@ -7,6 +7,7 @@
 
 :root {
   --ally: #6fa8ff;   /* NATO blue */
+  --partner: #4fd6a0; /* co-op: your partner's stacks (src/ui/Minimap.js PARTNER too) */
   --enemy: #ff5a48;  /* Warsaw Pact red */
   --gold: #e0b45a;   /* command / selection amber */
   --panel: rgba(16, 18, 14, 0.78);
@@ -376,9 +377,11 @@ body:not(.night) .night-only { display: none; }
 .fl-status[hidden] { display: none; }
 .fl-point.locked { opacity: 0.35; }
 
-/* co-op: your partner's stacks */
-.stack-label.partner { border-color: rgba(184, 216, 154, 0.5); opacity: 0.85; }
-.stack-label.partner .sl-name::after { content: ' · partner'; color: #b8d89a; font-weight: 400; }
+/* co-op: your partner's stacks, in their own colour */
+.stack-label.partner { border-color: rgba(79, 214, 160, 0.45); border-left-color: var(--partner); }
+.stack-label.partner .sl-name { color: var(--partner); }
+.stack-label.partner .sl-bar i { background: var(--partner); }
+.stack-label.partner .sl-name::after { content: ' · partner'; color: var(--partner); font-weight: 400; opacity: 0.8; }
 
 /* occupied-house badges (src/ui/BuildingMarkers.js) */
 .bld-mark {
@@ -475,6 +478,9 @@ body:not(.night) .night-only { display: none; }
 .chat.inline .chat-form input { border-color: var(--line); }
 .chat.inline .chat-form input:focus-visible { border-color: var(--gold); }
 @media (max-width: 760px) { #hud > .chat { bottom: 220px; } }
+/* a phone: the keyboard covers the lower half, so the open chat goes up top */
+body.touch #hud > .chat.open { bottom: auto; top: 64px; }
+body.touch #topbar .tb-chat { order: 4; }
 
 /* boot camp card (src/ui/Tutorial.js) */
 #tutorial {

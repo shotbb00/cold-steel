@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CameraMode } from '../core/CameraManager.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 
+const PARTNER = '#4fd6a0'; // co-op: your partner's stacks (css --partner)
 const WIDTH = 180;
 const INTERVAL = 0.2;
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
@@ -260,7 +261,7 @@ export class Minimap {
       if (!mine && s.visible === false) continue;
       const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
       const size = s.kind === 'vehicle' ? 4 : 3;
-      c.fillStyle = mine ? (game.mine(s) ? this.ally : '#b8d89a') : this.foe; // co-op partner: pale green
+      c.fillStyle = mine ? (game.mine(s) ? this.ally : PARTNER) : this.foe; // co-op partner: their own colour
       if (s.kind === 'infantry') {
         c.beginPath();
         c.arc(mx, my, size, 0, Math.PI * 2);
