@@ -23,6 +23,7 @@ const ACTIONS = [
     tip: (g) => `Engineers: click a minefield or wire to lift it${g.map.bridgeAt ? ', or a bridge to blow it (8 s fuse)' : ''}`,
     when: (sel) => sel.some((s) => s.stats.engineer),
   },
+  { cmd: 'engineer', label: 'Line charge', icon: 'mines', key: 'engineer', tip: 'Fire the rocket-towed hose: it blows a lane through minefields and wire', when: (sel) => sel.some((s) => s.stats.lineCharge && (s.units[0].lineCharges ?? s.stats.lineCharge.count) > 0), count: (sel) => sel.reduce((a, s) => a + (s.stats.lineCharge ? s.units[0].lineCharges ?? s.stats.lineCharge.count : 0), 0) },
   { cmd: 'bridge', label: 'Lay bridge', icon: 'bridge', key: 'engineer', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
   { cmd: 'smoke', label: 'Smoke', icon: 'smoke', key: 'smoke', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
   { cmd: 'flare', label: 'Flare', icon: 'flare', key: 'flare', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },

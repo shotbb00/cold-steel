@@ -16,6 +16,13 @@
 //   revetment – a vehicle position: a pit the length of a tank, a ramp out at the back and a
 //              spoil berm in front. A vehicle in it sits a metre lower, so the berm takes the
 //              rounds aimed at its hull while its gun still clears it (hull down).
+// Mine clearing vehicles:
+//   plough      (stats.minePlough) driving through an enemy minefield lifts its mines as it goes
+//               (and rarely sets one off) and leaves a lane: whoever keeps to its track is safe;
+//               the field is gone when the last mine is lifted
+//   line charge (stats.lineCharge: { count, range }) a rocket drags an explosive hose out to the
+//               aimed point and the whole strip goes up: every minefield and coil of wire it
+//               crosses is gone, and anyone standing in it is hurt (Orders 'lineCharge')
 // Bridge layers (stats.bridgeLayer) have one job of their own:
 //   span     – drive to the near bank at the clicked spot and lay a bridge over (game.layBridge)
 // Engineers also find enemy minefields within 16 m, and set them off only a quarter as often.
@@ -38,6 +45,8 @@ export const STRUCTURES = {
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
+const LANE = 2.2;           // m either side of a plough's track that is safe
+const LINE = { flight: 1.6, step: 6, half: 3.5 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
 const REVETMENT = { depth: 1.0, berm: 0.75 }; // m: the vehicle sits this much lower; the berm stands this high
 
 const STEEL = 0x55575a;
@@ -111,6 +120,10 @@ export class Construction {
     for (const s of this.game.world.stacks) for (const u of s.units) { u.working = false; u.slow = 1; }
     this.updateObstacles(dt);
     this.updateRevetments();
+    if (this.lineCharges?.length) {
+      for (const c of this.lineCharges.filter((c) => this.game.time >= c.at)) this.blowLineCharge(c);
+      this.lineCharges = this.lineCharges.filter((c) => this.game.time < c.at);
+    }
     for (let i = this.fuses.length - 1; i >= 0; i--) {
       if (this.game.time < this.fuses[i].at) continue;
       this.game.blowBridge(this.fuses[i].bridge);
@@ -427,6 +440,58 @@ export class Construction {
     ob.site.signs?.removeFromParent();
   }
 
+  /**
+   * A line charge from `stack` at (x, z): the rocket flies out (LINE.flight s), then the hose
+   * detonates along the strip from just in front of the launcher to the aimed point.
+   */
+  fireLineCharge(stack, x, z) {
+    const game = this.game;
+    const u = stack.units[0];
+    const lc = stack.stats.lineCharge;
+    if (!u?.alive || !lc) return false;
+    u.lineCharges ??= lc.count;
+    if (u.lineCharges <= 0) return game.tell(stack.faction, `${stack.name} has no line charges left`) ?? false;
+    const d = Math.hypot(x - u.pos.x, z - u.pos.z);
+    if (d > lc.range || d < 25) return game.tell(stack.faction, `A line charge reaches 25–${lc.range} m`) ?? false;
+    u.lineCharges--;
+    const from = { x: u.pos.x + ((x - u.pos.x) / d) * 8, z: u.pos.z + ((z - u.pos.z) / d) * 8 };
+    const y = game.terrain.heightAt(u.pos.x, u.pos.z) + 2.2;
+    const dir = { x: (x - u.pos.x) / d, y: 0.25, z: (z - u.pos.z) / d };
+    game.projectiles.spawn({
+      origin: { x: u.pos.x, y, z: u.pos.z }, dir, speed: d / LINE.flight, damage: 0, faction: stack.faction, color: stack.boltColor,
+      size: 1.2, source: stack, life: LINE.flight, tracer: true, trail: true,
+    });
+    game.audio.play('rocket', { x: u.pos.x, y, z: u.pos.z }, { volume: 0.9 });
+    (this.lineCharges ??= []).push({ at: game.time + LINE.flight, from, to: { x, z }, stack });
+    return true;
+  }
+
+  /** The hose goes up: explosions along the strip, obstacles in it gone, whoever stands in it hurt. */
+  blowLineCharge(c) {
+    const game = this.game;
+    const { from, to } = c;
+    const len = Math.hypot(to.x - from.x, to.z - from.z);
+    const n = Math.max(2, Math.round(len / LINE.step));
+    const field = { faction: c.stack.faction, name: c.stack.name, kind: 'Line charge' };
+    const hit = new Set();
+    for (let i = 0; i <= n; i++) {
+      const x = from.x + ((to.x - from.x) * i) / n;
+      const z = from.z + ((to.z - from.z) * i) / n;
+      const pos = { x, y: game.terrain.heightAt(x, z), z };
+      game.effects.explosion(pos, 1.1, { ground: true });
+      if (i % 3 === 0) game.audio.play('explosion.big', pos, { volume: 0.8, throttle: 0.02 });
+      for (const ob of [...this.obstacles]) {
+        if (this.within({ ...ob, hx: ob.hx + LINE.half, hz: ob.hz + LINE.half }, x, z)) this.removeObstacle(ob);
+      }
+      for (const o of game.world.neighbors(pos, LINE.half + 1, [])) {
+        if (hit.has(o)) continue;
+        hit.add(o);
+        o.receiveDamage(o.stack.usesCover ? 260 : 140, field, 0.4, null, 0.6);
+      }
+    }
+    game.tell(c.stack.faction, `${c.stack.name}: line charge fired — lane open`);
+  }
+
   /** Wire slows enemy infantry (every frame); mines get a chance to go off a few times a second. */
   updateObstacles(dt) {
     if (!this.obstacles.length) return;
@@ -450,7 +515,18 @@ export class Construction {
           if (ob.kind === 'wire') {
             if (s.usesCover) u.slow = 0.25;
             else { this.game.effects.dust(u.pos, 1.5); this.removeObstacle(ob); break; } // flattened
+          } else if (ob.kind === 'mines' && roll && u.moving && s.stats.minePlough) {
+            // the plough lifts them out of its path and leaves a lane; one in a while goes off under the blade
+            if (!ob.revealed) { ob.revealed = true; this.showObstacle(ob); this.game.netEvent('revealed', ob.site.id); }
+            if (!ob.lane) this.game.tell(s.faction, `${s.name}: ploughing a lane — follow its track`);
+            (ob.lane ??= []).push({ x: u.pos.x, z: u.pos.z });
+            if (Math.random() < 0.02) this.detonate(ob, u);
+            else if (Math.random() < 0.25 && --ob.charges <= 0) {
+              this.removeObstacle(ob);
+              this.game.tell(s.faction, `${s.name}: minefield ploughed clear`);
+            }
           } else if (ob.kind === 'mines' && roll && u.moving) {
+            if (ob.lane?.some((q) => (q.x - u.pos.x) ** 2 + (q.z - u.pos.z) ** 2 < LANE * LANE)) continue; // in the ploughed lane
             if (Math.random() < (s.usesCover ? 0.09 : 0.22) * (s.stats.engineer ? 0.25 : 1)) this.detonate(ob, u);
           }
         }

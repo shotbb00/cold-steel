@@ -12,6 +12,7 @@
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 //   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
+//   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
 import { STRUCTURES } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -69,6 +70,11 @@ export class Orders {
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
         for (const s of mine(cmd.s)) s.ai.attack(target);
+        return null;
+      }
+      case 'lineCharge': {
+        const s = own(cmd.s);
+        if (s?.stats.lineCharge) g.construction.fireLineCharge(s, cmd.x, cmd.z);
         return null;
       }
       case 'build': {

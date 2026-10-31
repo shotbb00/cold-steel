@@ -215,6 +215,8 @@ export class CommandSystem {
       if (!layers.length) return this.game.bus.emit('toast', 'Select a bridge layer that still carries its bridge');
       this.startTargeting({ kind: 'engineer', stack: layers[0], layer: true });
     } else if (cmd === 'engineer') {
+      const lc = [...this.selected].find((st) => st.alive && st.stats.lineCharge && (st.units[0].lineCharges ?? st.stats.lineCharge.count) > 0);
+      if (lc) return this.startTargeting({ kind: 'engineer', stack: lc, lineCharge: true }); // X: the line charge
       const eng = [...this.selected].filter((st) => st.alive && st.stats.engineer);
       if (!eng.length && [...this.selected].some((st) => st.stats.bridgeLayer)) return this.runCommand('bridge'); // X for both
       if (eng.length !== 1) return this.game.bus.emit('toast', 'Select one engineer stack');
@@ -274,7 +276,8 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      t.hint = t.layer ? `Bridge layer: ${click} the river where the bridge should go — ${cancel}`
+      t.hint = t.lineCharge ? `Line charge: ${click} where the lane should end (25–${t.stack.stats.lineCharge.range} m) — ${cancel}`
+        : t.layer ? `Bridge layer: ${click} the river where the bridge should go — ${cancel}`
         : `Engineers: ${click} mines or wire to clear them${this.game.map.bridgeAt ? ', or a bridge to blow it' : ''} — ${cancel}`;
     } else if (t.kind === 'smoke') {
       const geo = new THREE.RingGeometry(0.92, 1, 48);
@@ -331,6 +334,12 @@ export class CommandSystem {
       this.game.bus.emit('order', { kind: 'build' });
     } else if (t.kind === 'engineer') {
       if (!t.stack.alive) return this.cancelTargeting();
+      if (t.lineCharge) {
+        this.game.orders.issue({ t: 'lineCharge', s: t.stack.id, x: p.x, z: p.z });
+        this.addMarker(p, 'attack');
+        this.game.bus.emit('order', { kind: 'build' });
+        return this.cancelTargeting();
+      }
       if (t.layer) {
         this.game.orders.issue({ t: 'build', s: t.stack.id, k: 'span', x: p.x, z: p.z, yaw: 0 });
         this.addMarker(p, 'hold');

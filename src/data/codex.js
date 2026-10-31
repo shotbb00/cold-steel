@@ -75,6 +75,14 @@ export const CODEX = {
     nato: 'Army snipers carried the M21, an accurised M14 with an Adjustable Ranging Telescope, until the bolt-action M24 replaced it from 1988.',
     pact: 'Every Soviet motor-rifle platoon had a designated marksman with the SVD — a semi-automatic rifle built for exactly this job.',
   },
+  mineClear: {
+    use: 'Opening a way through minefields and wire. NATO\'s M60 ploughs its own lane — just drive it through the field (it is still a tank). The Pact\'s UR-77 fires a line charge (X): aim where the lane should end, 25–110 m away, and the whole strip goes up, mines, wire and anyone in it.',
+    strong: 'Minefields and wire in seconds; the M60 fights as well',
+    weak: 'The UR-77 is thin-skinned and has two charges; the plough is slow and sometimes sets a mine off',
+    counter: 'Cover your minefields with anti-tank weapons: the clearing vehicle comes first, kill it in the field.',
+    nato: 'US tank battalions fitted mine ploughs and rollers to some M60s to breach Soviet minefields without waiting for the engineers.',
+    pact: 'The UR-77 Meteorit on the 2S1 chassis carried two UZP-77 line charges: rockets that tow 90 m of explosive hose over the field.',
+  },
   cbRadar: {
     use: 'Park it behind your lines facing the enemy and wait: it watches a sector of about 90° in front of it. Every enemy gun, mortar or rocket launcher that fires from inside that sector within 500 m is plotted — it shows on your map for 25 seconds, the radio says where, and your own artillery and mortars take it before anything else.',
     strong: 'Making the enemy\'s artillery pay for every barrage; showing you where it is',

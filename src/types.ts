@@ -73,6 +73,8 @@ export interface UnitStats {
   holdFire?: boolean;
   marksman?: boolean;
   vsStructure?: number;
+  minePlough?: boolean; // lifts enemy mines it drives over (Construction)
+  lineCharge?: { count: number; range: number }; // a rocket line charge that blows a lane
   cbRadar?: { range: number; arc: number; deploy: number }; // a counter-battery radar (systems/CounterBattery.js)
   airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
   demolition?: boolean; // goes for bunkers, held houses and trenches first

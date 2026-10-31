@@ -29,6 +29,7 @@ import sam from './sam.ts';
 import recovery from './recovery.ts';
 import ambulance from './ambulance.ts';
 import bridgeLayer from './bridgeLayer.ts';
+import mineClear from './mineClear.ts';
 import airAssault from './airAssault.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 
@@ -60,6 +61,7 @@ export const UNIT_TYPES = {
   [recovery.id]: recovery,
   [ambulance.id]: ambulance,
   [bridgeLayer.id]: bridgeLayer,
+  [mineClear.id]: mineClear,
   [airAssault.id]: airAssault,
   [crew.id]: crew,
   [bunker.id]: bunker,

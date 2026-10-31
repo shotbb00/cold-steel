@@ -3,9 +3,9 @@
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
 //         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
-//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder
+//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder · M60A3 with mine plough
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -1119,3 +1119,87 @@ export const buildPactARK1 = vehicle(() => ({
   ], 1.7),
   marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.465, y: 1.3, z: 0.6 })]),
 }));
+
+
+// ---------------------------------------------------------------- mine clearing
+
+/** M60A3 with a track-width mine plough: the cast turret and its 105 mm gun with the bore evacuator,
+ *  and in front of each track a plough unit of tines that lifts the mines to the side. */
+export const buildNatoPlough = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 4.9, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 3, trackWidth: 0.6, wheelColor: NATO_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.3, 1.45, 0.5], [-3.0, 1.55, 0.45], [2.4, 1.6, 0.45], [3.3, 1.1, 0.6], [3.5, 0.98, 0.8]],
+        { belly: 1.15, fender: 1.72, fenderY: 1.1, chamfer: 0.05 }, { color: NATO, ...C }),
+      // the plough: two blades ahead of the tracks, their tines raking into the ground, the frame and lift arms
+      ...pair((s) => P.box(0.85, 0.55, 0.12, { x: s * 1.45, y: 0.35, z: 4.15, ry: s * 0.3, rx: 0.35, color: NATO_DK })),
+      ...pair((s) => [0, 1, 2, 3, 4].map((k) => P.box(0.06, 0.4, 0.08, { x: s * (1.1 + k * 0.17), y: 0.12, z: 4.3 + k * 0.05 * s * s, rx: 0.7, color: STEEL }))).flat(),
+      ...pair((s) => P.box(0.14, 0.14, 1.2, { x: s * 1.45, y: 0.6, z: 3.55, rx: 0.25, color: STEEL })),
+      P.box(2.6, 0.14, 0.14, { y: 0.75, z: 3.65, color: STEEL }),
+      ...pair((s) => P.cyl(0.07, 0.07, 0.9, { x: s * 0.8, y: 1.05, z: 3.4, rx: Math.PI / 2 - 0.6, color: STEEL }, 8)),
+      ...pair((s) => P.box(0.06, 0.55, 6.6, { x: s * 1.75, y: 0.85, z: 0.0, color: NATO, ...C })),
+    ]), 1.2, 0.3),
+    turret: {
+      geo: grime(merge([
+        planProfile([[-0.55, 1.65], [0.55, 1.65], [1.2, 0.7], [1.25, -1.1], [0.9, -1.5], [-0.9, -1.5], [-1.25, -1.1], [-1.2, 0.7]], 0.75, { color: NATO, ...C }),
+        P.cyl(0.42, 0.45, 0.32, { x: 0.55, y: 0.9, z: -0.3, color: NATO_DK }, 14),
+        P.box(0.1, 0.1, 0.55, { x: 0.55, y: 1.1, z: -0.1, color: STEEL }),
+        P.box(0.5, 0.35, 0.4, { x: -0.6, y: 0.85, z: 0.3, color: NATO_DK }),                            // the AN/VSG-2 thermal sight box
+        P.box(1.8, 0.35, 0.55, { y: 0.45, z: -1.7, color: 0x4d5236 }),                                  // bustle rack
+        ...pair((s) => P.box(0.18, 0.2, 0.35, { x: s * 1.15, y: 0.55, z: 0.75, ry: s * 0.4, color: NATO_DK })), // smoke dischargers
+      ]), 0.8, 0, 0.4),
+      at: [0, 1.62, 0.1],
+    },
+    gun: {
+      geo: merge([
+        P.box(0.6, 0.45, 0.3, { z: 0.1, color: NATO, ...C }),
+        P.cyl(0.075, 0.07, 4.0, { z: 2.2, rx: Math.PI / 2, color: NATO_DK }, 12),
+        P.cyl(0.11, 0.11, 0.5, { z: 2.6, rx: Math.PI / 2, color: NATO_DK }, 12),                       // bore evacuator
+      ]),
+      at: [0, 0.4, 1.55],
+    },
+    muzzle: [0, 0, 4.2],
+    marks: merge([P.box(0.02, 0.3, 0.6, { x: 1.77, y: 1.3, z: -1.2 })]),
+  };
+});
+
+/** UR-77 Meteorit: the 2S1 chassis, its armoured launcher box at the back raised for firing, the
+ *  two line-charge hose containers and the PKT in the commander's hatch. */
+export const buildPactUR77 = vehicle(() => {
+  const g = tracked({ halfWidth: 1.4, length: 5.3, wheels: 7, wheelR: 0.3, sprocket: 1, rollers: 0, trackWidth: 0.4, wheelColor: PACT_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      stationHull([
+        [-3.4, [[0, 0.5], [1.05, 0.5], [1.05, 1.0], [1.48, 1.0], [1.48, 1.62], [1.4, 1.68], [0, 1.68]]],
+        [2.2, [[0, 0.45], [1.05, 0.45], [1.05, 1.0], [1.48, 1.0], [1.48, 1.62], [1.4, 1.68], [0, 1.68]]],
+        [3.2, [[0, 0.6], [1.05, 0.6], [1.05, 1.0], [1.45, 1.0], [1.45, 1.15], [1.4, 1.18], [0, 1.2]]],
+        [3.45, [[0, 0.85], [1.0, 0.85], [1.0, 0.98], [1.4, 0.98], [1.4, 1.02], [1.36, 1.04], [0, 1.05]]],
+      ], { color: PACT }),
+      ...pair((s) => P.box(0.45, 0.2, 0.04, { x: s * 0.6, y: 1.5, z: 2.3, rx: 0.4, color: GLASS })),   // driver's and commander's vision blocks
+      P.cyl(0.32, 0.35, 0.2, { x: 0.6, y: 1.78, z: 1.6, color: PACT_DK }, 12),                          // commander's cupola…
+      P.box(0.08, 0.1, 0.6, { x: 0.6, y: 1.95, z: 1.85, color: STEEL }),                                 // …and the PKT
+      ...pair((s) => P.cyl(0.07, 0.07, 0.1, { x: s * 1.15, y: 1.2, z: 3.25, rx: Math.PI / 2 - 0.6, color: STEEL }, 10)),
+      ...pair((s) => P.box(0.06, 0.05, 6.8, { x: s * 1.49, y: 1.0, z: -0.1, color: PACT_DK })),
+    ]), 1.1, 0.3),
+    turret: {
+      geo: merge([P.box(2.4, 0.2, 2.6, { y: 0.1, color: PACT_DK })]),                                   // the launcher's base on the roof
+      at: [0, 1.68, -1.6],
+    },
+    gun: { // the armoured box with the two hose containers and the rocket ramps, raised to fire
+      geo: merge([
+        P.box(2.5, 0.7, 2.8, { y: 0.35, z: 0.9, color: PACT }),
+        ...pair((s) => P.box(0.9, 0.5, 2.5, { x: s * 0.62, y: 0.82, z: 0.9, color: PACT_DK })),           // hose containers
+        ...pair((s) => P.box(0.2, 0.2, 1.2, { x: s * 0.62, y: 1.15, z: 2.2, color: STEEL })),            // rocket ramps
+        ...pair((s) => P.cyl(0.1, 0.1, 0.8, { x: s * 0.62, y: 1.3, z: 2.4, rx: Math.PI / 2, color: 0x8a8a7a }, 8)), // the rockets
+      ]),
+      at: [0, 0.2, -1.3],
+      pitch: 0.22,
+    },
+    muzzle: [0.62, 1.3, 2.9],
+    marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.49, y: 1.3, z: 0.6 })]),
+  };
+});
