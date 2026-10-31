@@ -813,3 +813,6 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
   #touch-bar button > span { display: none; } /* icons only: one row */
   body.touch #touch-bar button { width: 40px; padding: 0; justify-content: center; }
 }
+
+#touch-bar .tb-place { border-color: rgba(143, 233, 255, 0.7); color: #bff4ff; }
+#touch-bar .tb-place .ico { stroke: #bff4ff; }

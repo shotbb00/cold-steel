@@ -27,6 +27,7 @@ const LINE = {
   turnLeft: '<path d="M9 13a9 9 0 1 1 1.5 10"/><path d="M8 5v8h8"/>',
   turnRight: '<path d="M23 13a9 9 0 1 0-1.5 10"/><path d="M24 5v8h-8"/>',
   close: '<path d="M8 8l16 16M24 8L8 24"/>',
+  place: '<path d="M6 17l6 6L26 9"/>',
   withdraw: '<path d="M27 9H11v13"/><path d="M5 16l6 6 6-6"/><path d="M4 28h24"/>',
 };
 

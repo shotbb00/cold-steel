@@ -326,7 +326,28 @@ export class CommandSystem {
         : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;
     }
     scene.add(t.ghost);
+    if (touch) { // on a touch screen: tap where it goes (it stays there while you pan or turn it), then Place
+      t.ghost.visible = false;
+      const turns = t.kind === 'build' || t.kind === 'air';
+      t.hint = `${t.hint.split(':')[0]}: tap where it goes${turns ? ', the arrows turn it' : ''}, then Place — ${cancel}`;
+    }
     this.targeting = t;
+  }
+
+  /** Touch: put the blueprint at the tapped point (it stays there until the next tap or Place). */
+  pinTargeting(x, y) {
+    const t = this.targeting;
+    const p = t && this.pickGround(x, y, this._p);
+    if (!p) return;
+    t.pin = p.clone();
+    t.ghost.visible = true;
+    this.updateTargeting();
+  }
+
+  /** Touch: the Place button — confirm the blueprint where it was put. */
+  confirmPinned() {
+    const t = this.targeting;
+    if (t?.pin) this.confirmTargeting(0, 0, t.pin);
   }
 
   cancelTargeting() {
@@ -336,9 +357,9 @@ export class CommandSystem {
     this.targeting = null;
   }
 
-  confirmTargeting(x, y) {
+  confirmTargeting(x, y, at = null) {
     const t = this.targeting;
-    const p = this.pickGround(x, y, this._p);
+    const p = at ? this._p.copy(at) : this.pickGround(x, y, this._p);
     if (!p) return;
     if (t.kind === 'build') {
       if (!t.stack.alive) return this.cancelTargeting();
@@ -382,7 +403,8 @@ export class CommandSystem {
     if (!t) return;
     if (!this.active) return this.cancelTargeting();
     const m = this.game.input.mouse;
-    const p = this.pickGround(m.x, m.y, this._p);
+    // a finger is not a cursor: on touch the blueprint stays where it was tapped
+    const p = this.game.input.touch ? (t.pin ? this._p.copy(t.pin) : null) : this.pickGround(m.x, m.y, this._p);
     if (!p) return;
     if (t.kind === 'build') {
       t.ghost.position.set(p.x, p.y + 0.4, p.z);
