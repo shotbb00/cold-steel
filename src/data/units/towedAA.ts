@@ -1,6 +1,6 @@
 // Towed anti-aircraft guns, pairs — NATO M167 Vulcan, Pact ZU-23-2. Cheap, small and low: hard to
-// spot while they sit still, easy to dig in (a CEV's vehicle position takes one), and the crew can
-// only push them a short way at walking pace. No search radar: the gunner sees a helicopter at
+// spot while they sit still, easy to dig in (a CEV's vehicle position takes one). They move behind
+// their trucks and need 8 s from stopping to being unhitched and laid before they can fire. No search radar: the gunner sees a helicopter at
 // about two-thirds of the self-propelled guns' range — a friendly air search radar gives them the
 // whole reach. Against ground targets they shred infantry and trucks; anything heavier, or a few
 // rifle hits on the exposed crew, finishes them.
@@ -21,8 +21,9 @@ export default {
   stats: {
     hp: 320,
     armor: 0,             // an open mount: every hit counts
-    speed: 1.2,           // pushed by its crew
-    turnRate: 0.6,
+    speed: 6,             // behind its truck
+    towed: { deploy: 8 }, // s from stopping to ready to fire
+    turnRate: 0.7,
     turretRate: 1.8,      // hand-cranked
     radius: 1.3,
     height: 1.6,

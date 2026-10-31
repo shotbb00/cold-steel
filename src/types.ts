@@ -73,6 +73,7 @@ export interface UnitStats {
   holdFire?: boolean;
   marksman?: boolean;
   vsStructure?: number;
+  towed?: { deploy: number }; // a towed gun: hitched to its truck while moving, set up before it fires
   minePlough?: boolean; // lifts enemy mines it drives over (Construction)
   lineCharge?: { count: number; range: number }; // a rocket line charge that blows a lane
   commandPost?: { deploy: number; lead: number; safe: number }; // reinforcements arrive here (modes/shared.js makeBuyer)

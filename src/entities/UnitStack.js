@@ -602,6 +602,12 @@ export class UnitStack {
 
   updateWeapon(u, dt) {
     const s = u.stats;
+    // a towed gun: hitched to its truck while it moves, and it takes `towed.deploy` s from
+    // stopping to being unhitched and laid — no shooting until then (the renderer shows the truck)
+    if (s.towed) {
+      u.towing = !u.setUp || this.world.time - u.setUp.at < s.towed.deploy;
+      if (u.towing) { u.target = null; u.airTarget = null; return; }
+    }
     u.cooldown -= dt * u.fireRateMult;
     u.retarget -= dt;
     if (u.reloadT > 0) {

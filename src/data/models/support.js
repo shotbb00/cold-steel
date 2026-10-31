@@ -29,6 +29,7 @@ const C = { camo: 1 };
  *   marks: geometry painted in the faction's marking colour
  *   load: geometry carried on the hull that can be put down (a bridge layer's bridge): hidden
  *         once the unit has `dropped` it
+ *   tow: geometry of the vehicle towing it, shown while the unit's `towing` is set (towed guns)
  *   spin: { geo, at, rate, onTurret, always } — turns about its own up axis while the unit's
  *         `spinning` is set, or all the time (`always`): a search radar antenna
  */
@@ -64,6 +65,9 @@ export function vehicle(describe) {
       meshAdder(spin)(d.spin.geo, mats.body);
     }
     if (d.spin?.onTurret) turret.add(spin); // a radar on the turret turns with it
+    const tow = new THREE.Group();
+    hull.add(tow);
+    if (d.tow) meshAdder(tow)(d.tow, mats.body);
     const muzzle = new THREE.Object3D();
     muzzle.position.set(...(d.muzzle ?? [0, 0, 1]));
     (d.gun ? gun : turret).add(muzzle);
@@ -81,6 +85,8 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
+        tow.visible = !!u.towing && u.alive;
+        if (u.towing && d.turret) turret.rotation.y = 0; // travel lock: the gun points the way it goes
         if (d.spin && (u.spinning || d.spin.always) && u.alive) spin.rotation.y += dt * (d.spin.rate ?? 1.5);
         load.visible = !u.dropped && !u.laying; // laid, or being laid
       },
@@ -818,6 +824,30 @@ export const buildPactIMR = vehicle(() => {
 });
 
 
+/** A small cargo truck seen from its tail at the origin (z = 0) forward along +z: for towing guns. */
+function towTruck({ color, dark, length = 5.4, width = 2.2, bonnet = 'flat' }) {
+  const half = width / 2;
+  const cabZ = length - 1.9;
+  return [
+    ...pair((s) => P.box(0.14, 0.2, length - 0.3, { x: s * 0.4, y: 0.75, z: length / 2, color: STEEL })),              // chassis rails
+    P.box(width, 0.08, length - 2.3, { y: 1.1, z: (length - 2.3) / 2 + 0.1, color: dark }),                              // the cargo bed…
+    ...pair((s) => P.box(0.05, 0.45, length - 2.3, { x: s * half, y: 1.35, z: (length - 2.3) / 2 + 0.1, color }), ),     // …its sides
+    P.box(width, 0.45, 0.05, { y: 1.35, z: 0.12, color }),
+    ...[0.5, 1.4, 2.3].map((z) => P.box(width, 0.04, 0.04, { y: 2.1, z, color: dark })),                              // canvas bows
+    P.box(width, 0.9, length - 2.4, { y: 1.95, z: (length - 2.4) / 2 + 0.15, color: 0x5a5c42 }),                       // the canvas tilt
+    P.box(width - 0.1, 1.05, 1.15, { y: 1.75, z: cabZ + 0.3, color }),                                                  // cab
+    P.box(width - 0.3, 0.45, 0.04, { y: 2.0, z: cabZ + 0.89, rx: -0.12, color: GLASS }),
+    ...pair((s) => P.box(0.03, 0.4, 0.55, { x: s * (half - 0.04), y: 1.95, z: cabZ + 0.35, color: GLASS })),
+    bonnet === 'round'
+      ? loft([[0, 1.25, cabZ + 0.9, 0.7, 0.42, 3], [0, 1.25, cabZ + 1.5, 0.62, 0.36, 3], [0, 1.15, cabZ + 1.85, 0.55, 0.3, 3]], { color }, 12)
+      : P.box(1.25, 0.6, 1.0, { y: 1.35, z: cabZ + 1.4, color }),
+    ...pair((s) => P.box(0.45, 0.06, 1.1, { x: s * (half - 0.2), y: 1.12, z: cabZ + 1.3, color: dark })),            // front wings
+    P.box(width, 0.16, 0.12, { y: 0.82, z: length - 0.05, color: STEEL }),                                              // bumper on the rails
+    ...[cabZ + 1.3, 1.6, 0.6].flatMap((z) => pair((s) => P.cyl(0.45, 0.45, 0.28, { x: s * (half - 0.2), y: 0.45, z, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14))),
+    P.box(0.12, 0.12, 0.5, { y: 0.6, z: -0.15, color: STEEL }),                                                         // the towing hook
+  ];
+}
+
 // ---------------------------------------------------------------- towed AA guns (with their gunner)
 
 /** A seated gunner facing +z (helmet and kit in the side's colours), for the open gun mounts. */
@@ -866,6 +896,7 @@ export const buildNatoM167 = vehicle(() => ({
   },
   muzzle: [0, 0, 2.0],
   recoil: 0.04,
+  tow: grime(merge(towTruck({ color: NATO, dark: NATO_DK, length: 6.4, width: 2.4 }).map((g) => g.translate(0, 0, 2.55))), 1, 0.3), // an M35 2½-ton on the lunette
   marks: merge([P.box(0.02, 0.2, 0.4, { x: 0.455, y: 0.6, z: 0.4 })]),
 }));
 
@@ -903,6 +934,7 @@ export const buildPactZU23 = vehicle(() => ({
   },
   muzzle: [0, 0, 2.6],
   recoil: 0.05,
+  tow: grime(merge(towTruck({ color: PACT, dark: PACT_DK, length: 5.65, width: 2.3, bonnet: 'round' }).map((g) => g.translate(0, 0, 1.5))), 1, 0.4), // a GAZ-66 on the trail eye
   marks: merge([P.box(0.02, 0.16, 0.3, { x: 0.505, y: 0.48, z: 0.2 })]),
 }));
 
@@ -1138,7 +1170,10 @@ export const buildNatoPlough = vehicle(() => {
         { belly: 1.15, fender: 1.72, fenderY: 1.1, chamfer: 0.05 }, { color: NATO, ...C }),
       // the plough: two blades ahead of the tracks, their tines raking into the ground, the frame and lift arms
       ...pair((s) => P.box(0.85, 0.55, 0.12, { x: s * 1.45, y: 0.35, z: 4.15, ry: s * 0.3, rx: 0.35, color: NATO_DK })),
-      ...pair((s) => [0, 1, 2, 3, 4].map((k) => P.box(0.06, 0.4, 0.08, { x: s * (1.1 + k * 0.17), y: 0.12, z: 4.3 + k * 0.05 * s * s, rx: 0.7, color: STEEL }))).flat(),
+      // the tines: the blade's toothed bottom edge, raking forward into the ground
+      ...pair((s) => [-0.34, -0.17, 0, 0.17, 0.34].map((t) => P.box(0.07, 0.32, 0.09, {
+        x: s * 1.45 + t * Math.cos(s * 0.3), y: 0.1, z: 4.2 - t * Math.sin(s * 0.3) + 0.06, ry: s * 0.3, rx: 0.75, color: STEEL,
+      }))).flat(),
       ...pair((s) => P.box(0.14, 0.14, 1.2, { x: s * 1.45, y: 0.6, z: 3.55, rx: 0.25, color: STEEL })),
       P.box(2.6, 0.14, 0.14, { y: 0.75, z: 3.65, color: STEEL }),
       ...pair((s) => P.cyl(0.07, 0.07, 0.9, { x: s * 0.8, y: 1.05, z: 3.4, rx: Math.PI / 2 - 0.6, color: STEEL }, 8)),
