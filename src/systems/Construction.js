@@ -45,6 +45,7 @@ export const STRUCTURES = {
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
+const PLAN_REACH = 25;      // m from a move order within which vehicles take free vehicle positions
 const LANE = 2.2;           // m either side of a plough's track that is safe
 const LINE = { flight: 1.6, step: 6, half: 3.5, men: 300, vehicles: 450 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
 const REVETMENT = { depth: 1.0, berm: 0.75 }; // m: the vehicle sits this much lower; the berm stands this high
@@ -347,6 +348,35 @@ export class Construction {
     const [fx, fz] = this.local(site, 0, 3.9);
     site.berm = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: site.def.length + 0.4, thickness: 1.2, height: REVETMENT.berm, spots: false });
     this.revetments = [...(this.revetments ?? []), site];
+  }
+
+  /**
+   * A move order for vehicles near `dest`: the side's free vehicle positions within PLAN_REACH,
+   * nearest first, one per vehicle — Map unit → { x, z, yaw, dirX, dirZ } (null: none near).
+   * The vehicle drives into the pit and faces over the berm (SoldierAI, UnitStack).
+   */
+  planRevetments(stack, dest) {
+    if (stack.usesCover || !this.revetments?.length) return null;
+    const taken = new Set();
+    for (const s of this.game.world.stacks) {
+      if (s === stack || s.usesCover) continue;
+      for (const u of s.units) {
+        if (u.alive && u.hullDown) taken.add(u.hullDown);
+        const p = s.ai?.plannedSpots?.get(u);
+        if (u.alive && p?.site) taken.add(p.site);
+      }
+    }
+    const free = this.revetments
+      .filter((r) => r.faction === stack.faction && !taken.has(r) && Math.hypot(r.x - dest.x, r.z - dest.z) < PLAN_REACH)
+      .sort((a, b) => Math.hypot(a.x - dest.x, a.z - dest.z) - Math.hypot(b.x - dest.x, b.z - dest.z));
+    if (!free.length) return null;
+    const plan = new Map();
+    for (const u of stack.units) {
+      if (!u.alive || !free.length) continue;
+      const r = free.shift();
+      plan.set(u, { site: r, x: r.x, z: r.z, yaw: r.yaw, dirX: Math.sin(r.yaw), dirZ: Math.cos(r.yaw) });
+    }
+    return plan;
   }
 
   /** Vehicles standing in a vehicle position are hull down (their rounds clear their own berm). */

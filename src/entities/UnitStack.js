@@ -367,8 +367,8 @@ export class UnitStack {
     } else {
       // hull turns toward travel; the turret tracks the target (or sweeps) on its own
       if (u.moving) u.yaw += clamp(angleDelta(u.yaw, u.moveYaw), -s.turnRate * dt, s.turnRate * dt);
-      else if (this.holdFacing != null && this.ai.state === AIState.DEFEND) {
-        u.yaw += clamp(angleDelta(u.yaw, this.holdFacing), -s.turnRate * dt * 0.6, s.turnRate * dt * 0.6); // turn on the spot to face the order
+      else if ((this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
+        u.yaw += clamp(angleDelta(u.yaw, this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing), -s.turnRate * dt * 0.6, s.turnRate * dt * 0.6); // turn on the spot to face the order
       }
       const aim = u.airTarget ? u.airYaw : u.target ? u.aimYaw : u.alertT > 0 ? u.alertYaw : u.yaw + scan;
       u.turretYaw += clamp(angleDelta(u.turretYaw, aim), -s.turretRate * dt, s.turretRate * dt);

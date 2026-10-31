@@ -43,7 +43,9 @@ export function thinkSoldier(u, stack, world, interval) {
   // Tanks and guns don't hide: they hold their place in the formation and let the
   // turret do the work.
   if (!stack.usesCover) {
-    stack.slotPosition(u, u.dest);
+    const pos = ai.plannedSpots?.get(u); // a dug-in vehicle position the order gave it
+    if (pos) u.dest.set(pos.x, stack.world.terrain.heightAt(pos.x, pos.z), pos.z);
+    else stack.slotPosition(u, u.dest);
     return;
   }
 

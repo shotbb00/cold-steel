@@ -283,6 +283,11 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
+      if (t.layer) { // a blueprint of the bridge itself, the way works are placed
+        const river = this.game.world.river;
+        t.ghost = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.4, river ? river.spanLength : 30),
+          new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0.35, depthWrite: false }));
+      }
       t.hint = t.lineCharge ? `Line charge: ${click} where the lane should end (25–${t.stack.stats.lineCharge.range} m) — ${cancel}`
         : t.layer ? `Bridge layer: ${click} the river where the bridge should go — ${cancel}`
         : `Engineers: ${click} mines or wire to clear them${this.game.map.bridgeAt ? ', or a bridge to blow it' : ''} — ${cancel}`;
@@ -386,7 +391,13 @@ export class CommandSystem {
       if (t.kind === 'smoke') return t.decal.place(p.x, p.z, 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
-        return t.decal.place(p.x, river ? river.path(p.x, p.z) : p.z, 6);
+        if (!river) return;
+        const z = river.path(p.x, p.z);
+        const ch = river.channelAt(p.x, p.z);
+        const ok = Math.abs(p.z - z) <= river.halfWidth + 25 && !river.crossings.some((c) => !c.blown && c.channel === ch && Math.abs(c.x - p.x) < 14);
+        t.ghost.position.set(p.x, river.deck + 0.2, z);
+        t.ghost.material.color.set(ok ? 0x8fe9ff : 0xff6a55);
+        return;
       }
       if (t.kind === 'engineer') {
         const bridge = this.game.map.bridgeAt?.(p.x, p.z);
@@ -619,7 +630,8 @@ export class CommandSystem {
     const pv = this.preview;
     const hide = () => { pv.spots = []; pv.key = ''; this.drawPreview(); };
     const inf = [...this.selected].filter((s) => s.alive && s.usesCover && this.game.mine(s));
-    if (!this.active || this.targeting || this.drag || !inf.length) return hide();
+    const dug = this.game.construction.revetments?.length && [...this.selected].some((s) => s.alive && !s.usesCover && this.game.mine(s)); // vehicles: dug-in positions to show
+    if (!this.active || this.targeting || this.drag || (!inf.length && !dug)) return hide();
     const m = this.game.input.mouse;
     let point = null;
     let face = null;
@@ -644,7 +656,7 @@ export class CommandSystem {
       const men = inf.reduce((a, s) => a + s.units.filter((u) => u.alive).length, 0);
       pv.spots = building
         ? this.game.buildings.pickWindows(building, men, face, this.faction)
-        : this.groupDests(all, point, dir).filter(([s]) => s.usesCover).flatMap(([s, x, z]) => [...(planCover(this.game.world, s, { x, z }, face)?.values() ?? [])]);
+        : this.groupDests(all, point, dir).flatMap(([s, x, z]) => [...((s.usesCover ? planCover(this.game.world, s, { x, z }, face) : this.game.construction.planRevetments(s, { x, z }))?.values() ?? [])]);
     }
     this.drawPreview();
   }

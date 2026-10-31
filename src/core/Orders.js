@@ -63,7 +63,7 @@ export class Orders {
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
-          const plan = s.moveTarget && planCover(g.world, s, s.moveTarget, face);
+          const plan = s.moveTarget && (s.usesCover ? planCover(g.world, s, s.moveTarget, face) : g.construction.planRevetments(s, s.moveTarget)); // cover, or dug-in vehicle positions
           if (plan) { s.ai.plannedSpots = plan; s.ai.holdOnArrival = true; }
         }
         return null;
