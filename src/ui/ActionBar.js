@@ -29,6 +29,7 @@ const ACTIONS = [
   { cmd: 'flare', label: 'Flare', icon: 'flare', key: 'flare', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
+  { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 

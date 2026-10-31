@@ -46,7 +46,7 @@ const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
 const LANE = 2.2;           // m either side of a plough's track that is safe
-const LINE = { flight: 1.6, step: 6, half: 3.5 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
+const LINE = { flight: 1.6, step: 6, half: 3.5, men: 300, vehicles: 450 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
 const REVETMENT = { depth: 1.0, berm: 0.75 }; // m: the vehicle sits this much lower; the berm stands this high
 
 const STEEL = 0x55575a;
@@ -486,7 +486,8 @@ export class Construction {
       for (const o of game.world.neighbors(pos, LINE.half + 1, [])) {
         if (hit.has(o)) continue;
         hit.add(o);
-        o.receiveDamage(o.stack.usesCover ? 260 : 140, field, 0.4, null, 0.6);
+        if (o.stack.usesCover) o.receiveDamage(LINE.men, field, 1);
+        else o.receiveDamage(LINE.vehicles, field, 0.5, null, 1); // a tank: tracks and belly plate
       }
     }
     game.tell(c.stack.faction, `${c.stack.name}: line charge fired — lane open`);

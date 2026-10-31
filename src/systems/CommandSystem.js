@@ -152,6 +152,7 @@ export class CommandSystem {
       return;
     }
     if (keys.is(code, 'hold')) this.runCommand('hold');
+    else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
@@ -205,6 +206,12 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd === 'withdraw') {
+      const sel = [...this.selected].filter((s) => s.alive && !s.stats.structure && s.type.id !== 'crew');
+      if (!sel.length) return this.game.bus.emit('toast', 'Select the stacks to send back');
+      this.game.orders.issue({ t: 'withdraw', s: ids(sel) });
+      this.select([]);
+      this.game.bus.emit('order', { kind: 'move' });
     } else if (cmd === 'cancelJob') {
       const sel = [...this.selected].filter((s) => s.alive);
       if (!sel.length) return this.game.bus.emit('toast', 'Select the stack whose order to cancel');

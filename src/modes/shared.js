@@ -50,7 +50,7 @@ export function makeBuyer(game, state) {
 }
 
 /** A side's own forces: what counts toward the stack limit (not fortifications or lane waves). */
-export const forces = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure && !s.autonomous && s.type.id !== 'crew');
+export const forces = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure && !s.autonomous && !s.withdrawing && s.type.id !== 'crew'); // withdrawing: its slot is free already
 
 export const clock = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 

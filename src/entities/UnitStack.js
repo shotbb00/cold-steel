@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const WITHDRAWN = 30;      // m from its base where a withdrawing stack leaves the field
 const SET_UP_SLACK = 2.5;  // m a unit may shuffle and still count as set up (u.setUp)
 const RADAR_BONUS = 1.2; // air defence under a friendly air search radar reaches this much further (AirStrike.radarCovers)
 const LEAD_RANGE = 45;      // metres
@@ -253,6 +254,7 @@ export class UnitStack {
   // ------------------------------------------------------------------ per frame
 
   update(dt, t) {
+    if (this.withdrawing && this.alive) this.checkWithdrawn();
     if (this.alive) {
       this.updateAnchor(dt);
       for (const u of this.units) {
@@ -1184,6 +1186,12 @@ export class UnitStack {
   }
 
   /** Is this platoon's leader still alive? */
+  /** Withdrawing (Orders 'withdraw'): once it is back at its base it leaves the battle. */
+  checkWithdrawn() {
+    const base = this.services.game?.map.bases?.[this.faction];
+    if (base && dist2DSq(this.centroid, base) < WITHDRAWN * WITHDRAWN) this.retireNow = true; // the engine takes it off after this frame's updates
+  }
+
   /** A forward command post that has stood set up long enough to work (data/units/commandPost.ts). */
   get postReady() {
     const cp = this.stats.commandPost;

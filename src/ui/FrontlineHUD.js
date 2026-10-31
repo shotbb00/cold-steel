@@ -4,6 +4,7 @@
 // opens the reinforcement window (ui/ReinforceWindow.js, also C).
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { ReinforceWindow } from './ReinforceWindow.js';
+import { forces } from '../modes/shared.js';
 import { icon } from './Icons.js';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
@@ -84,7 +85,7 @@ export class FrontlineHUD {
     }
     const myCp = Math.floor(cp[this.me]);
     this.cpText.textContent = `${myCp} CP`;
-    const stacks = this.game.world.stacksOf(this.me).filter((s) => !s.stats.structure && !s.autonomous).length;
+    const stacks = forces(this.game, this.me).length; // what counts toward the limit (bailed-out crews don't)
     const full = stacks >= this.state.maxStacks;
     this.stacksText.textContent = `${stacks}/${this.state.maxStacks} stacks`;
     const g = this.game;

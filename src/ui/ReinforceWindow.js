@@ -4,6 +4,7 @@
 // (it arrives at your base); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
 // one lands under "Other". The battle doesn't pause.
 import { UNIT_TYPES } from '../data/units/index.js';
+import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
 
 const SECTIONS = [
@@ -103,7 +104,7 @@ export class ReinforceWindow {
     const me = g.playerFaction;
     const cp = Math.floor(this.state.cp[me]);
     const mine = g.world.stacksOf(me).filter((s) => g.mine(s));
-    const count = g.world.stacksOf(me).filter((s) => !s.stats.structure && !s.autonomous).length;
+    const count = forces(g, me).length;
     const full = count >= this.state.maxStacks;
     this.cp.textContent = `${cp} CP`;
     this.stacks.textContent = `${count} / ${this.state.maxStacks} stacks`;

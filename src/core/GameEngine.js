@@ -424,6 +424,16 @@ export class GameEngine {
     return true;
   }
 
+  /** A withdrawn stack reaches its base: off the field, and half its price back for what is left of it. */
+  retire(stack) {
+    const alive = stack.units.filter((u) => u.alive);
+    const health = alive.reduce((a, u) => a + u.hp / u.maxHp, 0) / stack.units.length;
+    const back = Math.round(stack.type.cost * 0.5 * health);
+    this.removeStack(stack);
+    if (this.modeState?.cp) this.refund(stack.faction, back);
+    this.tell(stack.faction, `${stack.name} withdrawn${this.modeState?.cp ? ` — ${back} CP back` : ''}`);
+  }
+
   refund(faction, cost) {
     const cp = this.modeState?.cp;
     if (cp) cp[faction] += cost;
@@ -519,6 +529,7 @@ export class GameEngine {
 
     for (const s of world.stacks) s.ai.update(dt);
     for (const s of world.stacks) s.update(dt, t);
+    for (const s of world.stacks.filter((s) => s.retireNow)) this.retire(s); // withdrawn stacks home at their base
     world.separate(dt);
     this.construction.update(dt);
     this.air.update(dt);

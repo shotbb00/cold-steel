@@ -13,6 +13,7 @@
 //   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
+//   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
 import { STRUCTURES } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -39,7 +40,7 @@ export class Orders {
     const g = this.game;
     const own = (id) => {
       const s = g.world.stackById(id);
-      return s && s.alive && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null;
+      return s && s.alive && !s.withdrawing && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null; // a withdrawing stack takes no more orders
     };
     g.currentOwner = owner;
     try {
@@ -70,6 +71,16 @@ export class Orders {
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
         for (const s of mine(cmd.s)) s.ai.attack(target);
+        return null;
+      }
+      case 'withdraw': {
+        const base = g.map.bases?.[faction];
+        if (!base) return null;
+        for (const s of mine(cmd.s)) {
+          if (s.stats.structure || s.type.id === 'crew') continue;
+          s.withdrawing = true;
+          s.ai.moveTo({ x: base.x, z: base.z }, { hold: true, ordered: true });
+        }
         return null;
       }
       case 'lineCharge': {

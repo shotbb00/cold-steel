@@ -746,8 +746,9 @@ export const buildNatoCEV = vehicle(() => {
         P.cyl(0.42, 0.45, 0.32, { x: 0.55, y: 0.9, z: -0.3, color: NATO_DK }, 14),                       // M19 cupola…
         P.box(0.1, 0.1, 0.55, { x: 0.55, y: 1.1, z: -0.1, color: STEEL }),                               // …and its .50
         // the A-frame boom: hinged at the turret's cheeks, laid back over the roof and bustle
-        ...pair((s) => P.box(0.16, 0.16, 3.6, { x: s * 0.85, y: 0.95, z: -0.55, rx: 0.1, color: NATO_DK })),
-        P.box(1.9, 0.16, 0.16, { y: 0.77, z: -2.3, color: NATO_DK }),
+        ...pair((s) => P.box(0.16, 0.16, 3.6, { x: s * 0.85, y: 0.86, z: -0.55, rx: 0.07, color: NATO_DK })),
+        ...pair((s) => P.box(0.22, 0.1, 0.3, { x: s * 0.85, y: 0.78, z: -0.6, color: STEEL })),              // its rests on the roof
+        P.box(1.9, 0.16, 0.16, { y: 0.74, z: -2.3, color: NATO_DK }),
         ...pair((s) => P.box(0.26, 0.3, 0.3, { x: s * 0.95, y: 0.55, z: 1.2, color: STEEL })),
         P.cyl(0.02, 0.02, 3.2, { y: 1.05, z: -0.6, rx: Math.PI / 2 + 0.1, color: STEEL }, 5),
         P.box(1.6, 0.3, 0.5, { y: 0.45, z: -1.8, color: 0x4d5236 }),                                    // bustle rack
@@ -1100,7 +1101,7 @@ export const buildNatoFirefinder = vehicle(() => ({
     P.box(0.4, 0.9, 0.4, { y: 1.4, z: -3.6, color: NATO_DK }),
     P.box(3.0, 2.2, 0.25, { y: 2.85, z: -3.5, rx: -0.38, color: NATO_DK }),                          // the phased array…
     ...[-1.2, -0.6, 0, 0.6, 1.2].map((x) => P.box(0.05, 2.1, 0.04, { x, y: 2.86, z: -3.36, rx: -0.38, color: STEEL })), // …its rows of elements
-    ...[-0.7, 0, 0.7].map((y) => P.box(2.9, 0.05, 0.04, { y: 2.85 + y * Math.cos(0.38), z: -3.36 + y * Math.sin(0.38), rx: -0.38, color: STEEL })),
+    ...[-0.7, 0, 0.7].map((y) => P.box(2.9, 0.05, 0.04, { y: 2.85 + y * Math.cos(0.38), z: -3.36 - y * Math.sin(0.38), rx: -0.38, color: STEEL })),
   ]), 1.0, 0.3),
   marks: merge([P.box(0.02, 0.35, 0.5, { x: 1.08, y: 2.1, z: -0.6 })]),
 }));
@@ -1115,7 +1116,7 @@ export const buildPactARK1 = vehicle(() => ({
     P.box(0.5, 0.8, 0.5, { y: 2.4, z: -0.9, color: PACT_DK }),                                          // antenna mast
     P.box(3.1, 1.7, 0.2, { y: 3.45, z: -0.85, rx: -0.3, color: PACT_DK }),                              // the antenna…
     ...[-1.2, -0.6, 0, 0.6, 1.2].map((x) => P.box(0.05, 1.6, 0.04, { x, y: 3.45, z: -0.73, rx: -0.3, color: STEEL })),
-    P.box(3.0, 0.08, 0.06, { y: 4.25, z: -0.62, rx: -0.3, color: STEEL }),
+    P.box(3.0, 0.08, 0.06, { y: 3.45 + 0.82 * Math.cos(0.3), z: -0.85 - 0.82 * Math.sin(0.3) + 0.1, rx: -0.3, color: STEEL }),
   ], 1.7),
   marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.465, y: 1.3, z: 0.6 })]),
 }));
@@ -1186,20 +1187,24 @@ export const buildPactUR77 = vehicle(() => {
       ...pair((s) => P.box(0.06, 0.05, 6.8, { x: s * 1.49, y: 1.0, z: -0.1, color: PACT_DK })),
     ]), 1.1, 0.3),
     turret: {
-      geo: merge([P.box(2.4, 0.2, 2.6, { y: 0.1, color: PACT_DK })]),                                   // the launcher's base on the roof
+      geo: merge([
+        P.box(2.4, 0.2, 2.6, { y: 0.1, color: PACT_DK }),                                                 // the launcher's base on the roof
+        ...pair((s) => P.cyl(0.07, 0.07, 0.75, { x: s * 0.9, y: 0.45, z: 1.35, rx: -0.5, color: STEEL }, 8)), // the lifting rams
+      ]),
       at: [0, 1.68, -1.6],
     },
     gun: { // the armoured box with the two hose containers and the rocket ramps, raised to fire
-      geo: merge([
-        P.box(2.5, 0.7, 2.8, { y: 0.35, z: 0.9, color: PACT }),
-        ...pair((s) => P.box(0.9, 0.5, 2.5, { x: s * 0.62, y: 0.82, z: 0.9, color: PACT_DK })),           // hose containers
-        ...pair((s) => P.box(0.2, 0.2, 1.2, { x: s * 0.62, y: 1.15, z: 2.2, color: STEEL })),            // rocket ramps
-        ...pair((s) => P.cyl(0.1, 0.1, 0.8, { x: s * 0.62, y: 1.3, z: 2.4, rx: Math.PI / 2, color: 0x8a8a7a }, 8)), // the rockets
+      geo: merge([ // hinged at its rear end (the gun group's origin)
+        P.box(2.5, 0.7, 2.8, { y: 0.35, z: 1.4, color: PACT }),
+        ...pair((s) => P.box(0.9, 0.5, 2.5, { x: s * 0.62, y: 0.82, z: 1.4, color: PACT_DK })),           // hose containers
+        ...pair((s) => P.box(0.2, 0.2, 1.2, { x: s * 0.62, y: 1.15, z: 2.7, color: STEEL })),            // rocket ramps
+        ...pair((s) => P.cyl(0.1, 0.1, 0.8, { x: s * 0.62, y: 1.3, z: 2.9, rx: Math.PI / 2, color: 0x8a8a7a }, 8)), // the rockets
+        ...pair((s) => P.cyl(0.09, 0.09, 0.3, { x: s * 1.0, y: 0.05, z: 0.05, rz: Math.PI / 2, color: STEEL }, 8)), // hinge pins
       ]),
       at: [0, 0.2, -1.3],
       pitch: 0.22,
     },
-    muzzle: [0.62, 1.3, 2.9],
+    muzzle: [0.62, 1.3, 3.4],
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.49, y: 1.3, z: 0.6 })]),
   };
 });
