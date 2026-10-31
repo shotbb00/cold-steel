@@ -302,7 +302,7 @@ export class UnitStack {
     if (!goal || this.crossing?.entered) return goal; // on the bridge: straight over
     let r = this.route;
     if (!r || Math.hypot(r.to.x - goal.x, r.to.z - goal.z) > 3) {
-      r = this.route = { to: goal.clone(), pts: findPath(this.world, this.anchor, goal, this.stats.radius + 0.6, this.climb) ?? [] };
+      r = this.route = { to: { x: goal.x, z: goal.z }, pts: findPath(this.world, this.anchor, goal, this.stats.radius + 0.6, this.climb) ?? [] };
     }
     while (r.pts.length && Math.hypot(r.pts[0].x - this.anchor.x, r.pts[0].z - this.anchor.z) < 1.5) r.pts.shift();
     return r.pts[0] ? _route.set(r.pts[0].x, 0, r.pts[0].z) : goal;
