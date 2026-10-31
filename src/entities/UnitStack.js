@@ -30,11 +30,13 @@ import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
+import { findPath } from '../world/Nav.js';
 
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
 const PACK = 0.5;          // packing up takes this share of the set-up time
+const NO_PROGRESS = 3;     // s without getting nearer before a unit plans its own way round
 const PARKED = 1.5;        // m: a parked vehicle ignores its slot drifting less than this
 const REVERSE = { angle: 2.3, within: 14, speed: 0.5 }; // vehicles back up to points just behind them, at half speed
 const WITHDRAWN = 30;      // m from its base where a withdrawing stack leaves the field
@@ -50,6 +52,7 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // between it and where it's going, it heads for the obstacle's nearer end (or past a trunk) at
 // once instead of walking into it, and turns back onto its line once that is clear.
 // checkStuck's sidestep stays as the fallback for dead ends.
+const VAULT = { height: 1.2, speed: 0.45 }; // m: men climb over walls lower than this, slowly
 const LOOK = { every: 0.2, ahead: 1.6, min: 3, max: 8, clear: 0.8, passed: 2 };
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -67,6 +70,7 @@ const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
+const _route = new THREE.Vector3();
 
 let nextId = 1;
 
@@ -293,11 +297,22 @@ export class UnitStack {
     return p.entered ? p.exit : p.entry;
   }
 
+  /** The next corner on the way to `goal` round walls, buildings and deep water (Nav), or the goal itself. */
+  pathTo(goal) {
+    if (!goal || this.crossing?.entered) return goal; // on the bridge: straight over
+    let r = this.route;
+    if (!r || Math.hypot(r.to.x - goal.x, r.to.z - goal.z) > 3) {
+      r = this.route = { to: goal.clone(), pts: findPath(this.world, this.anchor, goal, this.stats.radius + 0.6, this.climb) ?? [] };
+    }
+    while (r.pts.length && Math.hypot(r.pts[0].x - this.anchor.x, r.pts[0].z - this.anchor.z) < 1.5) r.pts.shift();
+    return r.pts[0] ? _route.set(r.pts[0].x, 0, r.pts[0].z) : goal;
+  }
+
   updateAnchor(dt) {
     const s = this.stats;
     if (this.moveTarget && this.deploySeconds && this.units.some((u) => u.alive && (u.deployK ?? 0) > 0)) return; // still packing up
     if (this.moveTarget) {
-      const goal = this.routeTarget();
+      const goal = this.pathTo(this.routeTarget());
       _v.subVectors(goal, this.anchor);
       _v.y = 0;
       const d = _v.length();
@@ -369,8 +384,11 @@ export class UnitStack {
       if (off && u.deployK > 0) maxSpeed = 0;
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
-    _v.set(u.dest.x - u.pos.x, 0, u.dest.z - u.pos.z);
-    const d = _v.length();
+    if (u.climbY > 0.2) maxSpeed *= VAULT.speed;            // over a wall
+    const wp = this.routeStep(u, dt); // stuck earlier: its own way round (checkStuck)
+    const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
+    _v.set((wp ?? u.dest).x - u.pos.x, 0, (wp ?? u.dest).z - u.pos.z);
+    const d = wp ? Math.max(_v.length(), Math.min(dDest, 6)) : _v.length(); // (no slowing down at a corner)
     u.wantsMove = d > 1.5;
     _w.set(0, 0, 0);
     if (d > 0.2 + u.radius * 0.3) _w.copy(_v).multiplyScalar(Math.min(maxSpeed, d * 1.8) / d);
@@ -380,7 +398,7 @@ export class UnitStack {
       const sp = Math.max(Math.hypot(_w.x, _w.z), maxSpeed * 0.8);
       _w.multiplyScalar(0.25).add(_p.set(u.detourX * sp, 0, u.detourZ * sp));
     }
-    if (!(u.ghostT > 0) && !(u.detourT > 0) && !((u.lookOffT -= dt) > 0)) this.lookAhead(u, _w, d, dt); // a sidestep in progress has the say
+    if (!wp && !(u.ghostT > 0) && !(u.detourT > 0) && !((u.lookOffT -= dt) > 0)) this.lookAhead(u, _w, d, dt); // a sidestep in progress has the say
     this.separate(u, _w);
     // a vehicle goes where its hull points, never sideways — except while it works itself free of
     // something it got stuck on (the sidestep, the climb-through): then it may shuffle, hull following
@@ -400,7 +418,7 @@ export class UnitStack {
     const px = u.pos.x;
     const pz = u.pos.z;
     this.moveBody(u, dt);
-    this.checkStuck(u, dt, d, this.usesCover ? Math.min(maxSpeed, d * 1.8) : Math.hypot(_w.x, _w.z), Math.hypot(u.pos.x - px, u.pos.z - pz) / dt);
+    this.checkStuck(u, dt, dDest, this.usesCover ? Math.min(maxSpeed, d * 1.8) : Math.hypot(_w.x, _w.z), Math.hypot(u.pos.x - px, u.pos.z - pz) / dt);
     u.atCover = !!u.coverSpot && dist2DSq(u.pos, u.coverSpot) < 0.8;
 
     this.updateWeapon(u, dt);
@@ -436,6 +454,17 @@ export class UnitStack {
    */
   checkStuck(u, dt, distToDest, wantSpeed, speed) {
     if (u.ghostT > 0) u.ghostT -= dt;
+    // no nearer for a while (pressed into a corner, sliding back and forth along a wall, or a
+    // vehicle turning this way and that, none of which the speed check below sees): find the way round
+    if (distToDest < 2) { u.route = null; u.bestD = Infinity; }
+    else if (distToDest < (u.bestD ?? Infinity) - 1) { u.bestD = distToDest; u.progT = 0; }
+    else if ((u.progT = (u.progT ?? 0) + dt) > NO_PROGRESS && !u.route && !this.crossing) {
+      u.progT = 0;
+      u.bestD = distToDest;
+      u.route = findPath(this.world, u.pos, u.dest, u.radius + 0.2, this.climb);
+      if (u.route?.length) { u.routeT = 20; u.detourT = 0; return; }
+      u.route = null;
+    }
     if (distToDest < 2 || wantSpeed < 0.3) {
       u.stuckT = 0;
       u.stuckN = 0;
@@ -457,9 +486,18 @@ export class UnitStack {
     u.detourT = 0.5 + Math.min(u.stuckN, 4) * 0.35;
     u.avoid = null;    // the look-ahead's way round didn't work here: let the sidestep try
     u.lookOffT = 2;
-    if (u.stuckN >= 3) {
+    if (u.stuckN >= (this.usesCover ? 2 : 3)) { // men: through a window, over the rubble
       u.ghostT = this.usesCover ? 1.6 : 3.5; // a vehicle needs the time to turn as well
     }
+  }
+
+  /** The next corner of a stuck unit's own route (or null: none, or done). */
+  routeStep(u, dt) {
+    const r = u.route;
+    if (!r) return null;
+    while (r.length && Math.hypot(r[0].x - u.pos.x, r[0].z - u.pos.z) < u.radius + 1) r.shift();
+    if (!r.length || (u.routeT -= dt) <= 0) { u.route = null; return null; }
+    return r[0];
   }
 
   /**
@@ -489,7 +527,8 @@ export class UnitStack {
         _a.set(u.pos.x - dz * side * u.radius * 0.9, y, u.pos.z + dx * side * u.radius * 0.9);
         _b.set(_a.x + dx * reach, y, _a.z + dz * reach);
         const t = this.world.cover.segmentHit(_a, _b, passed); // (cover right at the goal, the wall of a cover spot, is short of nothing)
-        if (t >= 0 && t * reach < goalD - 0.4) { hit = this.world.cover.lastHit; break; } // in the way, short of the goal
+        const low = t >= 0 && this.climb && this.world.cover._height(this.world.cover.lastHit) < this.climb; // men go over it
+        if (t >= 0 && !low && t * reach < goalD - 0.4) { hit = this.world.cover.lastHit; break; } // in the way, short of the goal
       }
       if (!hit) u.avoid = null;
       else if (hit !== u.avoid?.c) u.avoid = this.detour(u, hit, goal); // null: no open way round, leave it to checkStuck
@@ -580,7 +619,7 @@ export class UnitStack {
     const pz = u.pos.z;
     u.pos.x += u.vel.x * dt;
     u.pos.z += u.vel.z * dt;
-    if (!(u.ghostT > 0)) this.world.cover.resolveCircle(u.pos, u.radius * 0.85); // ghostT: climbing over
+    if (!(u.ghostT > 0)) this.world.cover.resolveCircle(u.pos, u.radius * 0.85, this.climb); // ghostT: climbing through
     this.world.clampToBounds(u.pos);
     this.onDeck(u.pos, true); // nobody pushed off the side of a bridge
     const w = this.world.river?.water;
@@ -593,7 +632,10 @@ export class UnitStack {
         u.vel.multiplyScalar(0.3);
       }
     }
-    u.pos.y = this.world.terrain.heightAt(u.pos.x, u.pos.z);
+    // climbing a low wall: up on it while over it
+    const up = this.climb ? this.world.cover.climbHeight(u.pos.x, u.pos.z, u.radius * 0.6, this.climb) : 0;
+    u.climbY = (u.climbY ?? 0) + (up - (u.climbY ?? 0)) * Math.min(1, dt * 10);
+    u.pos.y = this.world.terrain.heightAt(u.pos.x, u.pos.z) + u.climbY;
     const speed = Math.hypot(u.vel.x, u.vel.z);
     u.moving = speed > 0.5;
     // where and since when it has stayed put (the idle shuffle of a metre or two doesn't count)
@@ -1252,6 +1294,11 @@ export class UnitStack {
   }
 
   /** A forward command post that has stood set up long enough to work (data/units/commandPost.ts). */
+  /** Cover lower than this doesn't stop this stack: infantry climbs it (0: vehicles, stopped by all). */
+  get climb() {
+    return this.usesCover ? VAULT.height : 0;
+  }
+
   /** Seconds a radar / jammer / command post takes to set up (null: it doesn't). */
   get deploySeconds() {
     const s = this.stats;

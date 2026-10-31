@@ -219,16 +219,34 @@ export class CoverMap {
     return Math.hypot(ex, ez);
   }
 
-  pointBlocked(x, z, margin = 0) {
+  /** Height of collider c above the ground it stands on. */
+  _height(c) {
+    return c.top - c.y - 0.6;
+  }
+
+  /** `climb`: cover lower than this doesn't count (infantry vaults it). */
+  pointBlocked(x, z, margin = 0, climb = 0) {
     for (const c of this._query(this.colGrid, x, z, margin, this._colList)) {
+      if (climb && this._height(c) < climb) continue;
       if (this._distTo(c, x, z) < margin) return true;
     }
     return false;
   }
 
-  /** Push a circle (unit footprint) out of any cover it overlaps. Mutates pos. */
-  resolveCircle(pos, radius) {
+  /** How high the cover lower than `climb` under a circle reaches above the ground (0: none). */
+  climbHeight(x, z, radius, climb) {
+    let h = 0;
+    for (const c of this._query(this.colGrid, x, z, radius, this._colList)) {
+      const ch = this._height(c);
+      if (ch < climb && ch > h && this._distTo(c, x, z) < radius) h = ch;
+    }
+    return h;
+  }
+
+  /** Push a circle (unit footprint) out of any cover it overlaps (`climb`: but over cover lower than that). Mutates pos. */
+  resolveCircle(pos, radius, climb = 0) {
     for (const c of this._query(this.colGrid, pos.x, pos.z, radius, this._colList)) {
+      if (climb && this._height(c) < climb) continue;
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       if (c.type === 'cyl') {
