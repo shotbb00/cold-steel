@@ -2,6 +2,7 @@
 // the targeting hint, the tactical selection panel, the end banner and — while you control a unit — its health, weapon state (ammo / reload / beam
 // charge) and leadership bonus. Markup lives in index.html; modes may add their own HUD.
 import { requestReplay, toMenu } from '../core/replay.js';
+import { rejoinAfterBattle } from './Lobby.js';
 import { renderReport } from './AfterAction.js';
 import { ActionBar } from './ActionBar.js';
 import { settings } from '../core/Settings.js';
@@ -41,7 +42,11 @@ export class HUD {
     });
     this.actions = new ActionBar(game);
     this.el.banner.querySelector('[data-act="again"]').addEventListener('click', () => requestReplay());
-    this.el.banner.querySelector('[data-act="menu"]').addEventListener('click', () => { game.net?.link.close(); toMenu(game.campaign ? 'campaign' : null); });
+    this.el.banner.querySelector('[data-act="menu"]').addEventListener('click', () => {
+      if (game.net) rejoinAfterBattle(); // both players back in the lobby, connected again
+      game.net?.link.close();
+      toMenu(game.campaign ? 'campaign' : game.net ? 'multi' : null);
+    });
 
     document.body.classList.toggle('night', !!game.conditions?.night);
     // multiplayer is fought from the command view: no direct-control button or hints
@@ -197,6 +202,7 @@ export class HUD {
     if (report) b.querySelector('.banner-buttons').before(renderReport(report, this.game.playerFaction));
     b.querySelector('[data-act="again"]').hidden = !!this.game.net || !!this.game.campaign; // multiplayer / campaign: via the menu
     if (this.game.campaign) b.querySelector('[data-act="menu"]').textContent = 'Continue campaign';
+    if (this.game.net) b.querySelector('[data-act="menu"]').textContent = 'Back to the lobby';
     b.hidden = false;
     // the report takes the screen: the battle HUD (score bar, minimap, radio log …) steps aside
     document.getElementById('hud')?.classList.add('over');

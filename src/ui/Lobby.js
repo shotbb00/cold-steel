@@ -20,6 +20,19 @@ import { TIMES, WEATHER } from '../core/Conditions.js';
 import { settings } from '../core/Settings.js';
 import { ChatBox } from './Chat.js';
 
+// After a battle both players come back here connected again: the battle's start remembers
+// who hosted and the join code (sessionStorage, SESSION); leaving the after-action report sets
+// `again` (rejoinAfterBattle), and the reloaded lobby hosts that code again / keeps trying to join it.
+const SESSION = 'coldsteel.mp.session';
+const loadSession = () => { try { return JSON.parse(sessionStorage.getItem(SESSION) ?? 'null'); } catch { return null; } };
+const saveSession = (s) => { try { sessionStorage.setItem(SESSION, JSON.stringify(s)); } catch { /* storage blocked */ } };
+
+/** Leaving a multiplayer battle's report: the lobby reconnects the two players on its own. */
+export function rejoinAfterBattle() {
+  const s = loadSession();
+  if (s?.code) saveSession({ ...s, again: true });
+}
+
 /** This player's name as the other one sees it. */
 export const myName = () => (settings.get('playerName') || '').trim() || 'Commander';
 
@@ -62,6 +75,55 @@ export class Lobby {
     this.hosting = null;
     this.root = el('div', 'lobby');
     this.render();
+    this.resume();
+  }
+
+  /** Back from a battle together: host the same code again, or join it as soon as it's there. */
+  resume() {
+    const s = loadSession();
+    if (!s?.again || !s.code) return;
+    saveSession({ ...s, again: false });
+    if (s.role === 'host') {
+      if (s.choice) Object.assign(this.choice, s.choice);
+      this.role = 'host';
+      this.render();
+      this.host(s.code);
+    } else {
+      this.role = 'join';
+      this.render();
+      this.rejoin(s.code);
+    }
+  }
+
+  /** Keep trying the host's code (they may still be on the report) for a few minutes. */
+  async rejoin(code) {
+    if (this.busy) return;
+    this.busy = true;
+    this.cancelRejoin = false;
+    const until = Date.now() + 180000;
+    const wait = () => {
+      this.status(`Waiting for the host to come back to the lobby (game ${code})… <button type="button" class="mp-btn mp-cancel">Cancel</button>`);
+      this.statusEl.querySelector('.mp-cancel').addEventListener('click', () => { this.cancelRejoin = true; this.status(''); });
+    };
+    wait();
+    try {
+      while (!this.cancelRejoin && Date.now() < until) {
+        try {
+          const link = await joinGame(code);
+          if (this.cancelRejoin) { link.close(); return; }
+          this.code = code;
+          this.connected(link, 'join');
+          return;
+        } catch {
+          if (this.cancelRejoin) return;
+          wait();
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+      }
+      if (!this.cancelRejoin) this.status('The host did not come back. Ask them for a new code.', 'bad');
+    } finally {
+      this.busy = false;
+    }
   }
 
   // ------------------------------------------------------------------ layout
@@ -355,13 +417,15 @@ export class Lobby {
 
   // ------------------------------------------------------------------ connecting
 
-  async host() {
+  async host(code = null) {
     if (this.busy) return;
     this.busy = true;
     if (this.hostBtn) this.hostBtn.hidden = true;
     this.status('Getting a join code…');
     this.hosting = hostGame({
+      code,
       onCode: (code) => {
+        this.code = code;
         this.status(`<span class="mp-label">Your join code</span><span class="mp-code">${code}</span>
           <span class="mp-btns"><button type="button" class="mp-btn mp-copy">Copy</button><button type="button" class="mp-btn mp-cancel">Cancel</button></span>
           <span class="mp-hint">Send it to your friend — they pick <b>Join a game</b> and type it in. Waiting for them…</span>`);
@@ -393,6 +457,7 @@ export class Lobby {
     this.status(`Connecting to game ${c}…`);
     try {
       this.connected(await joinGame(c), 'join');
+      this.code = c;
     } catch (e) {
       this.status(e.message, 'bad');
     } finally {
@@ -469,6 +534,8 @@ export class Lobby {
 
   begin(choice) {
     for (const k of ['hello', 'lobby', 'refuse', 'start', 'lobbyReady']) this.link.off(k);
+    // for coming back here together after the battle (manual codes have no code to come back by)
+    saveSession({ role: this.role, code: this.code ?? null, choice: this.role === 'host' ? this.choice : null });
     this.chat?.dispose();   // the battle's chat takes over (ui/Chat.js BattleChat)
     this.chat = null;
     clearInterval(this.pinger);

@@ -177,10 +177,12 @@ export class Link {
 // ------------------------------------------------------------------ join codes (PeerJS)
 
 /**
- * Host a game under a fresh join code. `onCode(code)` fires once the code is registered;
- * resolves with the Link when someone joins. `cancel()` on the returned handle stops waiting.
+ * Host a game under a fresh join code (or `code`, the one used before: back in the lobby after a
+ * battle, the guest is looking for it — it may take a few seconds to come free again).
+ * `onCode(code)` fires once the code is registered; resolves with the Link when someone joins.
+ * `cancel()` on the returned handle stops waiting.
  */
-export function hostGame({ onCode, onError }) {
+export function hostGame({ onCode, onError, code: wanted = null }) {
   let peer = null;
   let cancelled = false;
   let stopWaiting = null;
@@ -192,9 +194,11 @@ export function hostGame({ onCode, onError }) {
     },
     link: (async () => {
       const Peer = await loadPeerJs();
-      for (let attempt = 0; attempt < 4; attempt++) {
+      for (let attempt = 0; attempt < (wanted ? 14 : 4); attempt++) {
         if (cancelled) throw new Error('cancelled');
-        const code = randomCode();
+        const again = wanted && attempt < 10;
+        if (again && attempt) await new Promise((r) => setTimeout(r, 2000)); // the old one still registered
+        const code = again ? wanted : randomCode();
         try {
           const link = await new Promise((resolve, reject) => {
             stopWaiting = reject;
