@@ -874,7 +874,8 @@ export const buildNatoM167 = vehicle(() => ({
 export const buildPactZU23 = vehicle(() => ({
   hull: grime(merge([
     P.box(1.0, 0.22, 1.5, { y: 0.42, color: PACT }),                                                 // carriage
-    ...pair((s) => P.box(0.12, 0.12, 1.1, { x: s * 0.55, y: 0.36, z: 0.2, ry: s * 0.5, color: PACT_DK })), // trails
+    // the three outrigger legs from the carriage out to their jacks
+    ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.box(0.12, 0.12, Math.hypot(x, z) + 0.06, { x: x / 2, y: 0.36, z: z / 2, ry: Math.atan2(x, z), color: PACT_DK })),
     ...pair((s) => P.cyl(0.34, 0.34, 0.2, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 16)), // wheels, lifted
     ...pair((s) => P.cyl(0.13, 0.13, 0.22, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: PACT_DK }, 10)),
     ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.box(0.1, 0.45, 0.1, { x, y: 0.22, z, color: STEEL })), // jacks
