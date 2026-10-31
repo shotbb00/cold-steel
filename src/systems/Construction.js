@@ -51,7 +51,8 @@ const mulberry = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; le
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
-const PLAN_REACH = 25;      // m from a move order within which vehicles take free vehicle positions
+const PLAN_ON = 5;          // m: a move order this close to a vehicle position is an order into it…
+const PLAN_REACH = 25;      // …and the rest of the platoon takes the free ones within this much of it
 const DIG_STEPS = 5;        // a trench / vehicle position goes down in this many steps
 const LANE = 2.2;           // m either side of a plough's track that is safe
 const LINE = { flight: 1.6, step: 6, half: 3.5, men: 300, vehicles: 450 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
@@ -486,7 +487,7 @@ export class Construction {
   }
 
   /**
-   * A move order for vehicles near `dest`: the side's free vehicle positions within PLAN_REACH,
+   * A move order for vehicles onto a vehicle position (within PLAN_ON of `dest`): the side's free ones within PLAN_REACH,
    * nearest first, one per vehicle — Map unit → { x, z, yaw, dirX, dirZ } (null: none near).
    * The vehicle drives into the pit and faces over the berm (SoldierAI, UnitStack).
    */
@@ -501,6 +502,8 @@ export class Construction {
         if (u.alive && p?.site) taken.add(p.site);
       }
     }
+    // only an order onto a position: parking next to one stays parking
+    if (!this.revetments.some((r) => r.faction === stack.faction && Math.hypot(r.x - dest.x, r.z - dest.z) < PLAN_ON)) return null;
     const free = this.revetments
       .filter((r) => r.faction === stack.faction && !taken.has(r) && Math.hypot(r.x - dest.x, r.z - dest.z) < PLAN_REACH)
       .sort((a, b) => Math.hypot(a.x - dest.x, a.z - dest.z) - Math.hypot(b.x - dest.x, b.z - dest.z));

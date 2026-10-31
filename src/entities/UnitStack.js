@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const REVERSE = { angle: 2.3, within: 14, speed: 0.5 }; // vehicles back up to points just behind them, at half speed
 const WITHDRAWN = 30;      // m from its base where a withdrawing stack leaves the field
 const SET_UP_SLACK = 2.5;  // m a unit may shuffle and still count as set up (u.setUp)
 const RADAR_BONUS = 1.2; // air defence under a friendly air search radar reaches this much further (AirStrike.radarCovers)
@@ -117,6 +118,7 @@ export class UnitStack {
       );
       const u = new Unit(this, i, offset);
       this.slotPosition(u, u.pos);
+      this.world.cover?.resolveCircle(u.pos, u.radius * 0.85); // never born inside a wall or a hedge
       u.dest.copy(u.pos);
       this.units.push(u);
     }
@@ -314,6 +316,27 @@ export class UnitStack {
     this.anchor.y = this.world.terrain.heightAt(this.anchor.x, this.anchor.z);
   }
 
+  /**
+   * Turn the wanted velocity w (seek + look-ahead + separation) into how a vehicle moves: the
+   * hull turns toward it at its turn rate and the vehicle drives along the hull, slower the further
+   * off it points; well off to the side it pivots first; a short way to a point behind it, it backs.
+   */
+  driveAlongHull(u, w, d, dt) {
+    const want = Math.hypot(w.x, w.z);
+    if (want < 0.05) { w.set(0, 0, 0); return; }
+    const s = u.stats;
+    const heading = Math.atan2(w.x, w.z);
+    let diff = angleDelta(u.yaw, heading);
+    const back = Math.abs(diff) > REVERSE.angle && d < REVERSE.within; // just behind: reverse into it
+    if (back) diff = angleDelta(u.yaw, heading + Math.PI);
+    u.yaw += clamp(diff, -s.turnRate * dt, s.turnRate * dt);
+    const along = Math.cos(diff);
+    // well off the line: turn on the spot first
+    const speed = along > 0.3 ? want * along * along : 0;
+    const dir = back ? -1 : 1;
+    w.set(Math.sin(u.yaw) * speed * dir * (back ? REVERSE.speed : 1), 0, Math.cos(u.yaw) * speed * dir * (back ? REVERSE.speed : 1));
+  }
+
   updateUnit(u, dt) {
     const s = this.stats;
     const world = this.world;
@@ -345,11 +368,22 @@ export class UnitStack {
     }
     if (!(u.ghostT > 0) && !(u.detourT > 0) && !((u.lookOffT -= dt) > 0)) this.lookAhead(u, _w, d, dt); // a sidestep in progress has the say
     this.separate(u, _w);
+    // a vehicle goes where its hull points, never sideways — except while it works itself free of
+    // something it got stuck on (the sidestep, the climb-through): then it may shuffle, hull following
+    const freeing = !this.usesCover && (u.detourT > 0 || u.ghostT > 0);
+    if (freeing) {
+      const want = Math.hypot(_w.x, _w.z);
+      if (want > 0.3) u.yaw += clamp(angleDelta(u.yaw, Math.atan2(_w.x, _w.z)), -s.turnRate * dt, s.turnRate * dt);
+    } else if (!this.usesCover) this.driveAlongHull(u, _w, d, dt);
     u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
+    if (!this.usesCover && !freeing) { // …and only along the hull: no skating sideways while the old heading blends out
+      const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), along = u.vel.x * fx + u.vel.z * fz;
+      u.vel.set(fx * along, 0, fz * along);
+    }
     const px = u.pos.x;
     const pz = u.pos.z;
     this.moveBody(u, dt);
-    this.checkStuck(u, dt, d, Math.min(maxSpeed, d * 1.8), Math.hypot(u.pos.x - px, u.pos.z - pz) / dt);
+    this.checkStuck(u, dt, d, this.usesCover ? Math.min(maxSpeed, d * 1.8) : Math.hypot(_w.x, _w.z), Math.hypot(u.pos.x - px, u.pos.z - pz) / dt);
     u.atCover = !!u.coverSpot && dist2DSq(u.pos, u.coverSpot) < 0.8;
 
     this.updateWeapon(u, dt);
@@ -366,8 +400,7 @@ export class UnitStack {
       u.yaw += angleDelta(u.yaw, desired) * Math.min(1, dt * (u.target || u.alertT > 0 ? 7 : 1.5));
     } else {
       // hull turns toward travel; the turret tracks the target (or sweeps) on its own
-      if (u.moving) u.yaw += clamp(angleDelta(u.yaw, u.moveYaw), -s.turnRate * dt, s.turnRate * dt);
-      else if ((this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
+      if (u.wantsMove) { /* the hull is steered in driveAlongHull */ } else if ((this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
         u.yaw += clamp(angleDelta(u.yaw, this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing), -s.turnRate * dt * 0.6, s.turnRate * dt * 0.6); // turn on the spot to face the order
       }
       const aim = u.airTarget ? u.airYaw : u.target ? u.aimYaw : u.alertT > 0 ? u.alertYaw : u.yaw + scan;
@@ -407,7 +440,9 @@ export class UnitStack {
     u.detourT = 0.5 + Math.min(u.stuckN, 4) * 0.35;
     u.avoid = null;    // the look-ahead's way round didn't work here: let the sidestep try
     u.lookOffT = 2;
-    if (u.stuckN >= 3) u.ghostT = 1.6;
+    if (u.stuckN >= 3) {
+      u.ghostT = this.usesCover ? 1.6 : 3.5; // a vehicle needs the time to turn as well
+    }
   }
 
   /**
