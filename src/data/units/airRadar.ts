@@ -51,6 +51,7 @@ export default {
   models: { nato: buildNatoFAAR, pact: buildPactP19 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
+  tracks: 'tracks.light',
   variants: {
     nato: { name: 'AN/MPQ-49 FAAR', weapon: 'unarmed', text: 'The Forward Area Alerting Radar on a Gama Goat. Parked, it warns of every helicopter coming in and guides your Vulcans and Chaparrals onto it.' },
     pact: { name: 'P-19 Danube', weapon: 'unarmed', text: 'A search radar on a ZiL-131. Once its antenna turns, no NATO helicopter arrives unannounced, and the regiment\'s ZU-23s and Strelas see it coming.' },

@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const SET_UP_SLACK = 2.5;  // m a unit may shuffle and still count as set up (u.setUp)
 const RADAR_BONUS = 1.2; // air defence under a friendly air search radar reaches this much further (AirStrike.radarCovers)
 const LEAD_RANGE = 45;      // metres
 const LED = { nerve: 0.6, rally: 1.5, react: 0.75 };
@@ -541,6 +542,8 @@ export class UnitStack {
     u.pos.y = this.world.terrain.heightAt(u.pos.x, u.pos.z);
     const speed = Math.hypot(u.vel.x, u.vel.z);
     u.moving = speed > 0.5;
+    // where and since when it has stayed put (the idle shuffle of a metre or two doesn't count)
+    if (!u.setUp || (u.pos.x - u.setUp.x) ** 2 + (u.pos.z - u.setUp.z) ** 2 > SET_UP_SLACK * SET_UP_SLACK) u.setUp = { x: u.pos.x, z: u.pos.z, at: this.world.time };
     u.gait += (Math.min(1, speed / (s.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
     u.walkPhase += dt * speed * (Math.PI / (s.stride ?? 1.1));
     if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
@@ -1173,13 +1176,21 @@ export class UnitStack {
     this.ledT = (this.ledT ?? 0) - dt;
     if (this.ledT <= 0) {
       this.ledT = 1;
-      this.led = this.world.stacksOf(this.faction).some((o) => o.officerAlive && dist2DSq(o.centroid, this.centroid) < LEAD_RANGE * LEAD_RANGE);
+      this.led = this.world.stacksOf(this.faction).some((o) => (o.officerAlive && dist2DSq(o.centroid, this.centroid) < LEAD_RANGE * LEAD_RANGE)
+        || (o.postReady && dist2DSq(o.centroid, this.centroid) < o.stats.commandPost.lead ** 2)); // a command post steadies those around it
     }
     const rate = (0.01 + (calm ? 0.03 : 0) + (this.ai.state === AIState.RETREAT ? 0.02 : 0) + 0.012 * this.rank) * (this.led ? LED.rally : 1);
     this.morale = Math.min(1, this.morale + rate * dt);
   }
 
   /** Is this platoon's leader still alive? */
+  /** A forward command post that has stood set up long enough to work (data/units/commandPost.ts). */
+  get postReady() {
+    const cp = this.stats.commandPost;
+    const u = this.units[0];
+    return !!cp && !!u?.alive && !!u.setUp && this.world.time - u.setUp.at >= cp.deploy;
+  }
+
   get officerAlive() {
     return this.hadOfficer && !!this.units[0]?.alive;
   }

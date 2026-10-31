@@ -75,6 +75,14 @@ export const CODEX = {
     nato: 'Army snipers carried the M21, an accurised M14 with an Adjustable Ranging Telescope, until the bolt-action M24 replaced it from 1988.',
     pact: 'Every Soviet motor-rifle platoon had a designated marksman with the SVD — a semi-automatic rifle built for exactly this job.',
   },
+  commandPost: {
+    use: 'Move it up behind your front and park it: after fifteen seconds it is set up, and the reinforcements you buy arrive behind it instead of at your base — as long as no enemy is within 80 m of it. Stacks within 60 m hold their nerve as if their officer were with them.',
+    strong: 'Getting reinforcements into the fight in seconds instead of minutes; steadying a position',
+    weak: 'No weapon, and a juicy target: lose it and everything walks from home again',
+    counter: 'Find it — the reinforcements coming out of nowhere point to it — and destroy it, or just get near it: under fire it can\'t take arrivals.',
+    nato: 'The M577 carried the battalion and brigade tactical operations centres: map boards, radios and a tent extension pitched off the back.',
+    pact: 'Soviet regiments ran their battles from command vehicles like the BTR-60PU, with their extra radios and masts.',
+  },
   jammer: {
     use: 'Park it close behind the front with its mast up: after ten seconds it jams the enemy\'s radio nets within 160 m. Air strikes and gas they call in there come 8 s late and up to 25 m off target, their forward observers there lose their bonus, their radars go blind. Put it where you are about to attack, or over your own positions before their barrage.',
     strong: 'Spoiling the enemy\'s support — air, gas, artillery corrections, radars',

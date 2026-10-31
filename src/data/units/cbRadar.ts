@@ -54,6 +54,7 @@ export default {
   models: { nato: buildNatoFirefinder, pact: buildPactARK1 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
+  tracks: 'tracks.light',
   variants: {
     nato: { name: 'AN/TPQ-37 Firefinder', weapon: 'unarmed', text: 'A phased-array radar that sees shells in flight and plots the gun that fired them. Park it facing the enemy: every battery that opens fire in its sector is handed to your guns.' },
     pact: { name: 'ARK-1 Rys', weapon: 'unarmed', text: 'An artillery reconnaissance radar on the MT-LBu. It watches the sky in front of it and gives the regiment\'s guns the NATO batteries\' positions.' },

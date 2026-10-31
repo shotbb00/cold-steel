@@ -3,9 +3,9 @@
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
 //         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
-//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder · M60A3 with mine plough · AN/MLQ-34 TACJAM
+//         AN/MPQ-49 FAAR on the M561 · ADATS on the M113A2 · AN/TPQ-37 Firefinder · M60A3 with mine plough · AN/MLQ-34 TACJAM · M577 command post
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit · R-330 jammer
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit · R-330 jammer · BTR-60PU command post
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -1259,4 +1259,44 @@ export const buildPactR330 = vehicle(() => ({
     ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 6.3, -2.2))).flat(),
   ]), 1.0, 0.4),
   marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.21, y: 2.2, z: -0.5 })]),
+}));
+
+
+// ---------------------------------------------------------------- forward command posts
+
+/** M577 command post carrier: the M113 with its tall rear compartment, the generator on the front,
+ *  the tent extension pitched off the back and the whip antennas. */
+export const buildNatoM577 = vehicle(() => ({
+  ...m113Hull([
+    P.box(0.9, 0.55, 0.6, { x: 0.5, y: 2.66, z: 1.7, color: NATO_DK }),                                // generator on the roof's front
+    P.box(2.6, 2.0, 2.4, { y: 1.0, z: -3.7, color: 0x56583e }),                                         // the tent extension…
+    P.box(2.7, 0.08, 2.5, { y: 2.02, z: -3.7, color: 0x4f5238 }),                                       // …its roof
+    ...pair((s) => P.cyl(0.03, 0.03, 2.0, { x: s * 1.3, y: 1.0, z: -4.9, color: STEEL }, 5)),           // tent poles
+    ...[[-1.1, -1.8], [0.9, -2.1], [-0.2, 0.6]].map(([x, z]) => P.cyl(0.006, 0.006, 3.0, { x, y: 4.0, z, color: STEEL }, 4)), // whip antennas
+    P.box(0.5, 0.3, 0.5, { x: -0.7, y: 2.53, z: -1.2, color: NATO_DK }),                                // roof stowage
+  ], { roof: 2.5 }),
+  marks: merge([P.box(0.02, 0.35, 0.5, { x: 1.38, y: 1.7, z: -0.8 })]),
+}));
+
+/** BTR-60PU command post: the boat-shaped 8×8 hull, the extra radio equipment boxes, the folding
+ *  antenna mast and its whips, a camouflage-net roll. */
+export const buildPactBTR60PU = vehicle(() => ({
+  wheels: wheeled([2.1, 0.75, -0.75, -2.1], 1.2, 0.55),
+  hull: grime(merge([
+    stationHull([
+      [-3.7, [[0, 0.75], [0.9, 0.75], [1.3, 1.25], [1.2, 1.95], [0.95, 2.05], [0, 2.06]]],
+      [2.4, [[0, 0.6], [0.95, 0.6], [1.4, 1.2], [1.32, 2.0], [1.05, 2.12], [0, 2.14]]],
+      [3.3, [[0, 0.75], [0.85, 0.75], [1.25, 1.15], [1.18, 1.62], [0.9, 1.72], [0, 1.74]]],
+      [3.85, [[0, 1.05], [0.6, 1.05], [0.9, 1.2], [0.85, 1.38], [0.6, 1.42], [0, 1.43]]],
+    ], { color: PACT }),
+    ...pair((s) => P.box(0.35, 0.14, 0.04, { x: s * 0.45, y: 1.8, z: 2.62, rx: 0.5, color: GLASS })),   // the front vision ports
+    ...pair((s) => P.box(0.4, 0.5, 0.04, { x: s * 0.45, y: 1.85, z: 2.64, rx: -0.5, color: PACT_DK })), // their shutters, raised
+    ...pair((s) => P.box(0.06, 0.3, 4.6, { x: s * 1.36, y: 1.6, z: -0.6, color: PACT_DK })),           // the side rails
+    P.box(1.6, 0.5, 1.6, { y: 2.35, z: -1.6, color: PACT }),                                            // radio equipment boxes
+    P.cyl(0.25, 0.25, 2.2, { x: 0.7, y: 2.3, z: 0.2, rz: Math.PI / 2, color: 0x5a5a3c }, 10),          // camouflage net roll
+    P.cyl(0.07, 0.09, 2.6, { x: -0.7, y: 3.4, z: -2.6, color: STEEL }, 8),                             // the antenna mast…
+    P.box(1.6, 0.06, 0.06, { x: -0.7, y: 4.7, z: -2.6, color: STEEL }),                                // …and its cross-bar
+    ...[[0.9, 0.6], [0.6, -3.0], [-1.0, 1.0]].map(([x, z]) => P.cyl(0.006, 0.006, 2.8, { x, y: 3.5, z, color: STEEL }, 4)),
+  ]), 1.0, 0.4),
+  marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.34, y: 1.5, z: -1.0 })]),
 }));

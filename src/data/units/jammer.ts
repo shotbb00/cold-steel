@@ -51,6 +51,7 @@ export default {
   models: { nato: buildNatoTACJAM, pact: buildPactR330 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
+  tracks: 'tracks.light',
   variants: {
     nato: { name: 'AN/MLQ-34 TACJAM', weapon: 'unarmed', text: 'A tactical jammer on a tracked carrier. Parked with its mast up, it smothers the Pact radio nets around it: their air strikes come late and wide, their observers and radars go deaf and blind.' },
     pact: { name: 'R-330 jammer', weapon: 'unarmed', text: 'A radio-electronic combat station on a Ural. It turns NATO\'s helicopters and artillery calls into guesswork — and every NATO direction-finder knows where it is.' },
