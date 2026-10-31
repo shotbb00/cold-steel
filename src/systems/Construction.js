@@ -483,6 +483,11 @@ export class Construction {
     site.mesh = this.addMesh(this.partsFor(site));
     const [fx, fz] = this.local(site, 0, 3.9);
     site.berm = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: site.def.length + 0.4, thickness: 1.2, height: REVETMENT.berm, spots: false });
+    // infantry can man it too: firing spots along the inside of the berm (taken while a vehicle sits in it)
+    const [sx, sz] = this.local(site, 0, 2.7);
+    const first = cover.spots.length;
+    cover.addTrenchSpots({ x: sx, z: sz, yaw: site.yaw, length: site.def.length - 0.8, collider: site.berm, spacing: 1.2 });
+    site.spots = cover.spots.slice(first);
     this.revetments = [...(this.revetments ?? []), site];
   }
 
@@ -534,6 +539,15 @@ export class Construction {
           if (Math.abs(lx) < r.def.length / 2 && lz > -3 && lz < 3.2) { u.hullDown = r; break; }
         }
       }
+    }
+    // a vehicle in it: its infantry spots are taken
+    for (const r of list) {
+      const tank = this.game.world.stacks.find((s) => !s.usesCover && s.units.some((u) => u.alive && u.hullDown === r))?.units.find((u) => u.hullDown === r);
+      for (const sp of r.spots ?? []) {
+        if (tank) { if (!sp.occupant || sp.occupant === r.tankHold) sp.occupant = tank; }
+        else if (sp.occupant && !sp.occupant.stack?.usesCover) sp.occupant = null;
+      }
+      r.tankHold = tank ?? null;
     }
   }
 

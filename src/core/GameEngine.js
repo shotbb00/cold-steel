@@ -250,6 +250,12 @@ export class GameEngine {
     const aim = !this.net && faction !== this.playerFaction ? DIFFICULTY[this.rules.difficulty]?.aim ?? 1 : 1;
     if (aim !== 1) for (const u of stack.units) u.skill *= aim;
     if (this.coop && faction === this.playerFaction && !stack.owner) stack.owner = this.currentOwner ?? 'host';
+    // unseen until the fog of war has looked: new enemy stacks don't flash up on the map
+    if (!stack.stats.structure && this.visibility?.enabled !== false) {
+      const own = faction === this.playerFaction;
+      for (const u of stack.units) { u.spotted = false; u.visible = own; }
+      stack.visible = own;
+    }
     this.world.addStack(stack);
     this.transport?.setup(stack);
     this.net?.onSpawn?.(stack);

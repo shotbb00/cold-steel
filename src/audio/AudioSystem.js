@@ -104,7 +104,7 @@ export class AudioSystem {
     bus.on('selection', () => this.play('click', null, { volume: 0.4, throttle: 0.05 }));
     bus.on('order', () => this.play('order', null, { volume: 0.5 }));
     bus.on('view', () => this.play('whoosh', null, { volume: 0.35 }));
-    bus.on('wave', ({ faction }) => this.play(`${faction}.horn`, null, { volume: 0.6 }));
+    bus.on('wave', ({ faction, bought }) => { if (!bought || faction === game.playerFaction) this.play(`${faction}.horn`, null, { volume: 0.6 }); }); // the enemy's purchases are none of our business
     bus.on('built', () => { if (!game.net?.isClient) this.play('order', null, { volume: 0.3 }); }); // a client gets the host's
   }
 
