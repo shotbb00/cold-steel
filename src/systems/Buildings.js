@@ -101,7 +101,10 @@ export class Buildings {
       if (s.entered && s.garrison !== s.entered) this.exit(s);
       const b = s.garrison;
       if (!b || s.entered || b.collapsed || !s.usesCover) continue;
-      if (Math.hypot(s.anchor.x - b.x, s.anchor.z - b.z) < Math.max(b.w, b.d) / 2 + 7) this.enter(s, b);
+      // at the door — or as near as it got (a yard wall or a hedge round the house) and stopped there
+      const d = Math.hypot(s.anchor.x - b.x, s.anchor.z - b.z);
+      const near = Math.max(b.w, b.d) / 2 + 7;
+      if (d < near || (!s.moveTarget && d < near + 6)) this.enter(s, b);
     }
   }
 

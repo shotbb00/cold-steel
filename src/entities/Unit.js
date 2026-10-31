@@ -40,11 +40,10 @@ export class Unit {
     this.thinkT = Math.random() * 0.5;
     this.coverSearchT = 0;
     this.stuckT = 0;       // seconds of trying to move without getting anywhere
-    this.stuckN = 0;       // detours tried in a row
-    this.detourT = 0;      // seconds left on a sidestep around an obstacle
+    this.stuckN = 0;       // stuck spells in a row
     this.detourX = 0;
     this.detourZ = 0;
-    this.ghostT = 0;       // seconds of climbing over cover (collisions off) after repeated detours
+    this.ghostT = 0;       // seconds of squeezing through (collisions off) after being stuck a while
     this.wander = new THREE.Vector2();
     this.wanderT = 0;
 

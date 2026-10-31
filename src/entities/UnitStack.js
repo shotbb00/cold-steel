@@ -9,9 +9,10 @@
 // unused for now). `stats.tracer` is the share of rounds drawn as tracers.
 // A unit the player has taken over (u.possessed) is driven by systems/PlayerControl.js; the
 // stack only keeps its body state (reload, posture, timers) ticking.
-// Rivers (world/River.js, maps with `river`): deep water stops everyone, shallow water slows;
-// a stack whose goal is over the river steers its anchor to the best crossing, over it in a
-// narrow column, and on (`this.crossing`).
+// Movement (world/Nav.js): the anchor follows a route round cover and deep water (bridges are
+// open ground), each member walks to its slot — straight when the way is open, else by a route
+// of its own; men climb low walls. Where it's too narrow for the formation (a bridge, a gate, a
+// lane) the stack goes in single file along the anchor's trail (`this.column`).
 //
 // Veterancy: kills earn experience (systems/BattleStats.js → gainXp); ranks 1–3 (Veteran,
 // Hardened, Elite) aim faster and truer, shrug off losses and steady themselves sooner.
@@ -30,7 +31,7 @@ import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
-import { findPath } from '../world/Nav.js';
+import { CLIMB, LOCAL } from '../world/Nav.js';
 
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
@@ -48,14 +49,11 @@ const LEADERLESS = { react: 1.25 };
 const OFFICER_DOWN = 0.25;  // morale lost on top when the platoon leader falls
 // Ambush: a unit nobody has spotted yet fires its first volley with this much more punch
 const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
-// Look-ahead: a moving unit probes the way in front of it; when a wall, hedge or tree stands
-// between it and where it's going, it heads for the obstacle's nearer end (or past a trunk) at
-// once instead of walking into it, and turns back onto its line once that is clear.
-// checkStuck's sidestep stays as the fallback for dead ends.
-const VAULT = { height: 1.2, speed: 0.45 }; // m: men climb over walls lower than this, slowly
-const LOOK = { every: 0.2, ahead: 1.6, min: 3, max: 8, clear: 0.8, passed: 2 };
-const _a = new THREE.Vector3();
-const _b = new THREE.Vector3();
+const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
+// stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
+// row: squeeze through (collisions off for `ghostT` s, the last resort)
+const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3, ghostT: 1.6, ghostTVehicle: 3.5 };
+const COLUMN = { gap: 1.3, trail: 120 }; // single file: m between men (× spacing), m of trail kept
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -70,7 +68,6 @@ const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
-const _route = new THREE.Vector3();
 
 let nextId = 1;
 
@@ -207,13 +204,55 @@ export class UnitStack {
 
   /** A member's loose formation position around the anchor, on the ground. */
   slotPosition(u, out) {
+    if (this.column) return this.columnSlot(u, out);
     const c = Math.cos(this.facing);
     const s = Math.sin(this.facing);
     const wx = this.usesCover ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
     const wy = this.usesCover ? u.wander.y : 0;
-    const ox = this.crossing ? 0 : u.offset.x * LOOSENESS + wx; // over a bridge: single file
-    const oy = (u.offset.y * LOOSENESS + wy) * (this.crossing ? 1.6 : 1) - (this.crossing ? Math.abs(u.offset.x) * 1.5 : 0);
+    const ox = u.offset.x * LOOSENESS + wx;
+    const oy = u.offset.y * LOOSENESS + wy;
     out.set(this.anchor.x + ox * c + oy * s, 0, this.anchor.z - ox * s + oy * c);
+    this.fitSlot(u, out);
+    this.onDeck(out);
+    out.y = this.world.terrain.heightAt(out.x, out.z);
+    return out;
+  }
+
+  /** A slot behind a wall or in a hedge comes in toward the anchor until it is open ground in sight of it. */
+  fitSlot(u, out) {
+    const nav = this.world.nav;
+    const a = this.anchor;
+    if (!nav || nav.visible(a, out, this.usesCover, u.radius)) return;
+    const x = out.x - a.x;
+    const z = out.z - a.z;
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 5; i++) {
+      const m = (lo + hi) / 2;
+      _p.set(a.x + x * m, 0, a.z + z * m);
+      if (nav.visible(a, _p, this.usesCover, u.radius)) lo = m; else hi = m;
+    }
+    out.set(a.x + x * lo, 0, a.z + z * lo);
+  }
+
+  /** Single file: each man his place along the way the anchor came, the first right behind it. */
+  columnSlot(u, out) {
+    let rank = 0;
+    for (const o of this.units) { if (o === u) break; if (o.alive) rank++; }
+    let back = rank * this.type.formation.spacing * COLUMN.gap;
+    let px = this.anchor.x;
+    let pz = this.anchor.z;
+    for (const q of this.trail) {
+      if (back <= 0) break;
+      const l = Math.hypot(q.x - px, q.z - pz);
+      if (l < 1e-6) continue;
+      if (l >= back) { px += ((q.x - px) * back) / l; pz += ((q.z - pz) * back) / l; back = 0; break; }
+      back -= l;
+      px = q.x;
+      pz = q.z;
+    }
+    // the trail is shorter than the column: on straight back from where it began
+    out.set(px - Math.sin(this.facing) * back, 0, pz - Math.cos(this.facing) * back);
     this.onDeck(out);
     out.y = this.world.terrain.heightAt(out.x, out.z);
     return out;
@@ -225,10 +264,8 @@ export class UnitStack {
    */
   onDeck(p, body = false) {
     const river = this.world.river;
-    if (!river || this.usesCover && !body && !this.crossing) return;
-    // the bridge it is on (its own crossing, or whichever deck it stands beside — the stack's
-    // crossing ends when its anchor is over, with the last of the column still on the bridge)
-    const c = this.crossing?.crossing ?? river.bridgeAt(p.x, p.z);
+    if (!river || this.usesCover && !body && !this.column) return;
+    const c = river.bridgeAt(p.x, p.z); // whichever deck it is on or beside
     if (!c || c.blown || Math.abs(p.z - c.z) > river.halfWidth + (body ? 1 : 6)) return;
     if (Math.abs(p.x - c.x) > c.width / 2 + 4) return; // only beside the deck: never a jump
     const room = Math.max(0, c.width / 2 - this.stats.radius * 0.8);
@@ -278,52 +315,42 @@ export class UnitStack {
     // (the renderer is updated by GameEngine after the simulation step)
   }
 
-  /** Where the anchor heads now: the move target, or a crossing on the way to it. */
+  /**
+   * Where the anchor heads now: the next corner of its route to the move target (planned again
+   * when the target moves or the ground changes), or the target itself. `last`: it is the end.
+   */
   routeTarget() {
     const t = this.moveTarget;
-    const river = this.world.river;
-    if (!river || !t) { this.crossing = null; return t; }
-    const c = this.crossing;
-    if (c && (c.target !== t || c.crossing.blown)) this.crossing = null; // new order, or the bridge went
-    if (!this.crossing) {
-      const plan = river.plan(this.anchor, t);
-      if (!plan) return t;
-      this.crossing = plan;
-    }
-    const p = this.crossing;
-    const at = (q) => Math.hypot(q.x - this.anchor.x, q.z - this.anchor.z) < 4;
-    if (!p.entered && at(p.entry)) p.entered = true;
-    if (p.entered && at(p.exit)) { this.crossing = null; return t; }
-    return p.entered ? p.exit : p.entry;
-  }
-
-  /** The next corner on the way to `goal` round walls, buildings and deep water (Nav), or the goal itself. */
-  pathTo(goal) {
-    if (!goal || this.crossing?.entered) return goal; // on the bridge: straight over
+    const nav = this.world.nav;
+    if (!nav) return { x: t.x, z: t.z, last: true };
     let r = this.route;
-    if (!r || Math.hypot(r.to.x - goal.x, r.to.z - goal.z) > 3) {
-      r = this.route = { to: { x: goal.x, z: goal.z }, pts: findPath(this.world, this.anchor, goal, this.stats.radius + 0.6, this.climb) ?? [] };
+    if (!r || r.version !== nav.version || Math.hypot(r.to.x - t.x, r.to.z - t.z) > 2) {
+      const p = nav.path(this.anchor, t, this.usesCover, this.stats.radius);
+      r = this.route = { to: { x: t.x, z: t.z }, version: nav.version, pts: p?.pts ?? [{ x: t.x, z: t.z }], i: 0 };
     }
-    while (r.pts.length && Math.hypot(r.pts[0].x - this.anchor.x, r.pts[0].z - this.anchor.z) < 1.5) r.pts.shift();
-    return r.pts[0] ? _route.set(r.pts[0].x, 0, r.pts[0].z) : goal;
+    while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < 1.5) r.i++;
+    const p = r.pts[r.i];
+    return { x: p.x, z: p.z, last: r.i === r.pts.length - 1 };
   }
 
   updateAnchor(dt) {
     const s = this.stats;
     if (this.moveTarget && this.deploySeconds && this.units.some((u) => u.alive && (u.deployK ?? 0) > 0)) return; // still packing up
     if (this.moveTarget) {
-      const goal = this.pathTo(this.routeTarget());
-      _v.subVectors(goal, this.anchor);
-      _v.y = 0;
+      const goal = this.routeTarget();
+      _v.set(goal.x - this.anchor.x, 0, goal.z - this.anchor.z);
       const d = _v.length();
-      if (d < 0.6 && goal === this.moveTarget) {
+      if (d < 0.6 && goal.last) {
         this.moveTarget = null;
-      } else if (d < 0.6) {
-        // reached a crossing waypoint: next frame heads for the next one
-      } else {
-        // Don't outrun the troops: slow down while they lag behind the anchor.
-        const lag = Math.hypot(this.centroid.x - this.anchor.x, this.centroid.z - this.anchor.z);
-        const k = clamp(1.4 - lag / (8 + this.footprint * 0.3), 0.15, 1);
+        this.route = null;
+      } else if (d >= 0.6) {
+        // Don't outrun the troops: slow down while they are behind their places (a column
+        // strung out over a bridge is in its places, not behind)
+        let lag = 0;
+        let n = 0;
+        for (const u of this.units) if (u.alive && !u.possessed) { lag += Math.hypot(u.pos.x - u.dest.x, u.pos.z - u.dest.z); n++; }
+        lag = n ? lag / n : 0;
+        const k = clamp(1.4 - lag / (4 + this.footprint * 0.3), 0.15, 1);
         const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : 1) * k;
         this.anchor.addScaledVector(_v, Math.min(d, speed * dt) / d);
         if (!this.faceTarget) this.turnToward(Math.atan2(_v.x, _v.z), dt);
@@ -334,6 +361,25 @@ export class UnitStack {
       if (_v.x * _v.x + _v.z * _v.z > 1) this.turnToward(Math.atan2(_v.x, _v.z), dt);
     }
     this.anchor.y = this.world.terrain.heightAt(this.anchor.x, this.anchor.z);
+    this.updateTrail();
+  }
+
+  /** The way the anchor came (newest first), for single file — and whether it's narrow here. */
+  updateTrail() {
+    const a = this.anchor;
+    const t = (this.trail ??= []);
+    const last = t[0];
+    if (!last || Math.hypot(last.x - a.x, last.z - a.z) > 6) t.length = 0; // a jump (into a building, out of one): start again
+    if (!t.length || Math.hypot(t[0].x - a.x, t[0].z - a.z) >= 1) {
+      t.unshift({ x: a.x, z: a.z });
+      if (t.length > COLUMN.trail) t.pop();
+    }
+    // too narrow for the formation (with some give, so it doesn't flicker): single file while moving
+    const nav = this.world.nav;
+    const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
+    const half = this.formationHalf ??= Math.max(...this.units.map((u) => Math.abs(u.offset.x))) * LOOSENESS + this.stats.radius;
+    if (!this.moveTarget || this.units.length < 2) this.column = false;
+    else if (this.column ? room > half + 2 : room < half) this.column = !this.column;
   }
 
   /**
@@ -384,30 +430,23 @@ export class UnitStack {
       if (off && u.deployK > 0) maxSpeed = 0;
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
-    if (u.climbY > 0.2) maxSpeed *= VAULT.speed;            // over a wall
-    const wp = this.routeStep(u, dt); // stuck earlier: its own way round (checkStuck)
+    if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
+    const way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
     const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
-    _v.set((wp ?? u.dest).x - u.pos.x, 0, (wp ?? u.dest).z - u.pos.z);
-    const d = wp ? Math.max(_v.length(), Math.min(dDest, 6)) : _v.length(); // (no slowing down at a corner)
-    u.wantsMove = d > 1.5;
+    _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
+    const d = way === u.dest ? _v.length() : Math.max(_v.length(), Math.min(dDest, 6)); // (no slowing down at a corner)
+    u.wantsMove = dDest > 1.5;
     _w.set(0, 0, 0);
     if (d > 0.2 + u.radius * 0.3) _w.copy(_v).multiplyScalar(Math.min(maxSpeed, d * 1.8) / d);
-    if (u.detourT > 0) {
-      // sidestepping around whatever blocked us, still leaning a little toward the goal
-      u.detourT -= dt;
-      const sp = Math.max(Math.hypot(_w.x, _w.z), maxSpeed * 0.8);
-      _w.multiplyScalar(0.25).add(_p.set(u.detourX * sp, 0, u.detourZ * sp));
-    }
-    if (!wp && !(u.ghostT > 0) && !(u.detourT > 0) && !((u.lookOffT -= dt) > 0)) this.lookAhead(u, _w, d, dt); // a sidestep in progress has the say
     this.separate(u, _w);
-    // a vehicle goes where its hull points, never sideways — except while it works itself free of
-    // something it got stuck on (the sidestep, the climb-through): then it may shuffle, hull following
-    const freeing = !this.usesCover && (u.detourT > 0 || u.ghostT > 0);
+    // a vehicle goes where its hull points, never sideways — except while it squeezes free of
+    // something it got stuck on: then it may shuffle, hull following
+    const freeing = !this.usesCover && u.ghostT > 0;
     if (freeing) {
       const want = Math.hypot(_w.x, _w.z);
       if (want > 0.3) u.yaw += clamp(angleDelta(u.yaw, Math.atan2(_w.x, _w.z)), -s.turnRate * dt, s.turnRate * dt);
     } else if (!this.usesCover) {
-      if (!this.moveTarget && d < PARKED) _w.set(0, 0, 0); // arrived: a small correction isn't worth turning the hull for
+      if (!this.moveTarget && dDest < PARKED) _w.set(0, 0, 0); // arrived: a small correction isn't worth turning the hull for
       this.driveAlongHull(u, _w, d, dt);
     }
     u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
@@ -415,10 +454,8 @@ export class UnitStack {
       const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), along = u.vel.x * fx + u.vel.z * fz;
       u.vel.set(fx * along, 0, fz * along);
     }
-    const px = u.pos.x;
-    const pz = u.pos.z;
     this.moveBody(u, dt);
-    this.checkStuck(u, dt, dDest, this.usesCover ? Math.min(maxSpeed, d * 1.8) : Math.hypot(_w.x, _w.z), Math.hypot(u.pos.x - px, u.pos.z - pz) / dt);
+    this.checkStuck(u, dt, dDest, Math.min(maxSpeed, d * 1.8));
     u.atCover = !!u.coverSpot && dist2DSq(u.pos, u.coverSpot) < 0.8;
 
     this.updateWeapon(u, dt);
@@ -448,143 +485,51 @@ export class UnitStack {
   }
 
   /**
-   * No pathfinding, so walls and ruins can trap a unit pressing toward a point behind them.
-   * When it keeps trying to move but barely gets anywhere, it sidesteps (alternating sides,
-   * longer each time); after a few failed detours it climbs over (collisions off briefly).
+   * The next point on u's way to its place (u.dest): the place itself when the walk there is
+   * open, else the next corner of a route of its own (planned again when the place moves off
+   * it, the ground changes, or it got stuck).
    */
-  checkStuck(u, dt, distToDest, wantSpeed, speed) {
-    if (u.ghostT > 0) u.ghostT -= dt;
-    // no nearer for a while (pressed into a corner, sliding back and forth along a wall, or a
-    // vehicle turning this way and that, none of which the speed check below sees): find the way round
-    if (distToDest < 2) { u.route = null; u.bestD = Infinity; }
-    else if (distToDest < (u.bestD ?? Infinity) - 1) { u.bestD = distToDest; u.progT = 0; }
-    else if ((u.progT = (u.progT ?? 0) + dt) > NO_PROGRESS && !u.route && !this.crossing) {
-      u.progT = 0;
-      u.bestD = distToDest;
-      u.route = findPath(this.world, u.pos, u.dest, u.radius + 0.2, this.climb);
-      if (u.route?.length) { u.routeT = 20; u.detourT = 0; return; }
-      u.route = null;
+  steerTo(u, dt) {
+    const nav = this.world.nav;
+    const dest = u.dest;
+    if (!nav || u.ghostT > 0) return dest;
+    if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
+      u.navT = 0.3 + Math.random() * 0.2;
+      if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.usesCover, u.radius)) u.path = null;
+      else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > 2) {
+        const p = nav.path(u.pos, dest, this.usesCover, u.radius, LOCAL);
+        u.path = p && { to: { x: dest.x, z: dest.z }, version: nav.version, pts: p.pts, i: 0, reached: p.reached };
+      }
     }
+    const p = u.path;
+    if (!p) return dest;
+    while (p.i < p.pts.length - 1 && Math.hypot(p.pts[p.i].x - u.pos.x, p.pts[p.i].z - u.pos.z) < u.radius + 0.8) p.i++;
+    return p.i === p.pts.length - 1 && p.reached ? dest : p.pts[p.i]; // (no way there: as near as it gets)
+  }
+
+  /**
+   * Trying to move but getting nowhere (a crowd, a corner the route cut too fine): plan again;
+   * after STUCK.ghost such spells in a row, squeeze through (collisions off for a moment).
+   */
+  checkStuck(u, dt, distToDest, wantSpeed) {
+    if (u.ghostT > 0) u.ghostT -= dt;
     if (distToDest < 2 || wantSpeed < 0.3) {
       u.stuckT = 0;
       u.stuckN = 0;
+      u.stuckAt = null;
       return;
     }
-    if (speed < wantSpeed * 0.3) u.stuckT += dt;
-    else {
-      u.stuckT = Math.max(0, u.stuckT - dt);
-      if (u.detourT <= 0 && speed > wantSpeed * 0.6) u.stuckN = Math.max(0, u.stuckN - dt * 0.3);
-    }
-    if (u.stuckT < 0.7) return;
+    const v = !this.usesCover;
+    if (!u.stuckAt) u.stuckAt = { x: u.pos.x, z: u.pos.z };
+    if ((u.stuckT += dt) < (v ? STUCK.everyVehicle : STUCK.every)) return;
+    const moved = Math.hypot(u.pos.x - u.stuckAt.x, u.pos.z - u.stuckAt.z);
     u.stuckT = 0;
+    u.stuckAt = { x: u.pos.x, z: u.pos.z };
+    if (moved > STUCK.moved) { u.stuckN = 0; return; }
     u.stuckN++;
-    const side = (u.stuckN % 2 ? 1 : -1) * (u.index % 2 ? 1 : -1);
-    const dx = (u.dest.x - u.pos.x) / distToDest;
-    const dz = (u.dest.z - u.pos.z) / distToDest;
-    u.detourX = -dz * side;
-    u.detourZ = dx * side;
-    u.detourT = 0.5 + Math.min(u.stuckN, 4) * 0.35;
-    u.avoid = null;    // the look-ahead's way round didn't work here: let the sidestep try
-    u.lookOffT = 2;
-    if (u.stuckN >= (this.usesCover ? 2 : 3)) { // men: through a window, over the rubble
-      u.ghostT = this.usesCover ? 1.6 : 3.5; // a vehicle needs the time to turn as well
-    }
-  }
-
-  /** The next corner of a stuck unit's own route (or null: none, or done). */
-  routeStep(u, dt) {
-    const r = u.route;
-    if (!r) return null;
-    while (r.length && Math.hypot(r[0].x - u.pos.x, r[0].z - u.pos.z) < u.radius + 1) r.shift();
-    if (!r.length || (u.routeT -= dt) <= 0) { u.route = null; return null; }
-    return r[0];
-  }
-
-  /**
-   * Bend the wanted velocity `w` around cover ahead. Every LOOK.every seconds three rays (the
-   * middle and both shoulders) go out a speed-scaled distance toward the destination; if one
-   * hits short of it, the unit heads for the way round that obstacle (detour()) until the
-   * straight line is free again.
-   */
-  lookAhead(u, w, distToDest, dt) {
-    const speed = Math.hypot(w.x, w.z);
-    u.avoidT = (u.avoidT ?? 0) - dt;
-    if (speed < 0.5) { u.avoid = null; return; }
-    if (u.avoidT <= 0) {
-      u.avoidT = LOOK.every;
-      const reach = Math.min(Math.max(speed * LOOK.ahead, LOOK.min), LOOK.max) + u.radius;
-      const dx = (u.dest.x - u.pos.x) / (distToDest || 1);
-      const dz = (u.dest.z - u.pos.z) / (distToDest || 1);
-      // where the unit is really going: its slot only leads it by a few metres while the stack
-      // moves, so the stack's goal decides whether cover ahead is in the way or where it's headed
-      const goal = this.moveTarget ?? u.dest;
-      const goalD = Math.max(distToDest, Math.hypot(goal.x - u.pos.x, goal.z - u.pos.z));
-      const y = u.pos.y + 0.6; // at knee height: the rays are 3D, low walls stand on high ground too
-      let hit = null;
-      u.passedT = (u.passedT ?? 0) - LOOK.every;
-      const passed = u.passedT > 0 ? u.passed : null; // just went round it: it's behind us now
-      for (const side of [0, -1, 1]) {
-        _a.set(u.pos.x - dz * side * u.radius * 0.9, y, u.pos.z + dx * side * u.radius * 0.9);
-        _b.set(_a.x + dx * reach, y, _a.z + dz * reach);
-        const t = this.world.cover.segmentHit(_a, _b, passed); // (cover right at the goal, the wall of a cover spot, is short of nothing)
-        const low = t >= 0 && this.climb && this.world.cover._height(this.world.cover.lastHit) < this.climb; // men go over it
-        if (t >= 0 && !low && t * reach < goalD - 0.4) { hit = this.world.cover.lastHit; break; } // in the way, short of the goal
-      }
-      if (!hit) u.avoid = null;
-      else if (hit !== u.avoid?.c) u.avoid = this.detour(u, hit, goal); // null: no open way round, leave it to checkStuck
-    }
-    const a = u.avoid;
-    if (!a) return;
-    const ex = a.x - u.pos.x;
-    const ez = a.z - u.pos.z;
-    const d = Math.hypot(ex, ez);
-    if (d < 1) { // round it: back to the straight line, and that obstacle is behind us
-      u.passed = a.c;
-      u.passedT = LOOK.passed;
-      u.avoid = null;
-      return;
-    }
-    w.x = (ex / d) * speed;
-    w.z = (ez / d) * speed;
-  }
-
-  /**
-   * The way round collider `c` toward `goal`: a wall or hedge's nearer end (the one that makes
-   * the shorter path, unless that spot is itself blocked), a body's width clear of it; a tree or
-   * post: past whichever side lies toward the goal.
-   */
-  detour(u, c, goal = u.dest) {
-    const m = u.radius + LOOK.clear;
-    const ends = [];
-    if (c.type === 'cyl') {
-      const dx = goal.x - u.pos.x;
-      const dz = goal.z - u.pos.z;
-      const l = Math.hypot(dx, dz) || 1;
-      for (const s of [1, -1]) ends.push({ x: c.x - (dz / l) * s * (c.r + m), z: c.z + (dx / l) * s * (c.r + m) });
-    } else {
-      const long = c.hx >= c.hz;
-      const ax = long ? c.cos : c.sin;   // the long side's direction in the world
-      const az = long ? -c.sin : c.cos;
-      const half = (long ? c.hx : c.hz) + m;
-      // past the end and a step onto the goal's side of the wall, so the way on is clear
-      const nx = az;
-      const nz = -ax;
-      const toward = Math.sign((goal.x - c.x) * nx + (goal.z - c.z) * nz) || 1;
-      const off = (long ? c.hz : c.hx) + m;
-      for (const s of [1, -1]) ends.push({ x: c.x + ax * half * s + nx * toward * off, z: c.z + az * half * s + nz * toward * off });
-    }
-    const cost = (e) => Math.hypot(e.x - u.pos.x, e.z - u.pos.z) + Math.hypot(goal.x - e.x, goal.z - e.z)
-      + (this.world.cover.pointBlocked(e.x, e.z, u.radius) ? 1000 : 0);
-    ends.sort((p, q) => cost(p) - cost(q));
-    // only a way round that is itself open: in a tangle of walls and trees no end may be, and then
-    // checkStuck's sidestep does better than dithering between detours
-    const y = u.pos.y + 0.6;
-    for (const e of ends) {
-      _a.set(u.pos.x, y, u.pos.z);
-      _b.set(e.x, y, e.z);
-      if (this.world.cover.segmentHit(_a, _b, c) < 0 && !this.world.cover.pointBlocked(e.x, e.z, u.radius)) return { c, x: e.x, z: e.z };
-    }
-    return null;
+    u.path = null;
+    u.navT = 0;
+    if (u.stuckN >= (v ? STUCK.ghostVehicle : STUCK.ghost)) u.ghostT = v ? STUCK.ghostTVehicle : STUCK.ghostT;
   }
 
   /** Push away from neighbours, scaled by both bodies' sizes. */
@@ -1296,7 +1241,7 @@ export class UnitStack {
   /** A forward command post that has stood set up long enough to work (data/units/commandPost.ts). */
   /** Cover lower than this doesn't stop this stack: infantry climbs it (0: vehicles, stopped by all). */
   get climb() {
-    return this.usesCover ? VAULT.height : 0;
+    return this.usesCover ? CLIMB : 0;
   }
 
   /** Seconds a radar / jammer / command post takes to set up (null: it doesn't). */

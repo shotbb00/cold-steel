@@ -4,21 +4,18 @@
 //                   bridge as a raised stone causeway (the deck units walk on is real terrain)
 //   water           { level, deep }: deeper than `deep` (m) stops anyone (UnitStack.moveBody);
 //                   shallower water slows (a wading man, a tank pushing through a ford)
-//   plan(a, b)      a route from a to b over the best crossing still standing (UnitStack
-//                   steers its anchor to the near end, across, and on), or null if no need
 //   bridgeAt(x, z)  the bridge here, for engineers' demolition charges
 //   blow(c)         a bridge goes: the span drops into the river (terrain dug out, mesh broken)
 //   lay(x)          a bridge layer puts a steel treadway bridge across at x: a new crossing
 //   build(scene)    the water surface and the bridges
 // Crossings: { id, name, x, kind: 'bridge' | 'ford', width, channel } — the river decides where across.
 // Several channels (`paths`: rivers side by side, splitting the land) share one river object:
-// every question about a point is answered for the channel nearest to it, and plan() takes the
-// separating channel nearest the start first (the stack plans again once it is over).
+// every question about a point is answered for the channel nearest to it. Routes over the river
+// are world/Nav.js's: bridges are raised terrain, so the way over is open ground.
 import * as THREE from 'three';
 import { smoothstep } from '../core/math.js';
 
 const BANK = 0.9;           // floodplain height above the water
-const APPROACH = 9;         // metres beyond the banks where a crossing's ends are
 
 /** @param {any} o  options, untyped until this file moves to TypeScript */
 export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, depth = 2.4, valley = 70, crossings = [] }) {
@@ -87,36 +84,6 @@ export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, d
       const dz = p.z - pz;
       if (Math.abs(dz) > halfWidth + 2 || this.bridgeAt(p.x, p.z)) return p; // dry land, or a bridge deck
       return { x: p.x, z: pz + Math.sign(dz || 1) * (halfWidth + 4) };
-    },
-
-    /** The best way from a to b over the river (or null when they're on the same bank). */
-    plan(a, b) {
-      const sideOf = (p, ch) => Math.sign(p.z - paths[ch](p.x)) || 1;
-      const on = this.bridgeAt(a.x, a.z);
-      if (on && !on.blown) { // already on a bridge: along the deck to the end facing the goal, then on
-        const sb = sideOf(b, on.channel);
-        const exit = { x: on.x, z: on.z + sb * (halfWidth + 12) };
-        return { crossing: on, entry: { x: on.x, z: a.z }, exit, cost: 0, target: b, entered: true };
-      }
-      // the channel to cross first: of those between a and b, the one nearest a
-      let ch = -1;
-      for (let i = 0; i < paths.length; i++) {
-        if (sideOf(a, i) === sideOf(b, i)) continue;
-        if (ch < 0 || Math.abs(a.z - paths[i](a.x)) < Math.abs(a.z - paths[ch](a.x))) ch = i;
-      }
-      if (ch < 0) return null;
-      const sa = sideOf(a, ch);
-      const sb = sideOf(b, ch);
-      let best = null;
-      for (const c of this.crossings) {
-        if (c.blown || c.channel !== ch) continue;
-        const reach = halfWidth + (c.kind === 'bridge' ? 12 : APPROACH);
-        const entry = { x: c.x, z: c.z + sa * reach };
-        const exit = { x: c.x, z: c.z + sb * reach };
-        const cost = Math.hypot(entry.x - a.x, entry.z - a.z) + reach * 2 + Math.hypot(b.x - exit.x, b.z - exit.z) + (c.kind === 'ford' ? 40 : 0);
-        if (!best || cost < best.cost) best = { crossing: c, entry, exit, cost, target: b };
-      }
-      return best;
     },
 
     bridgeAt(x, z) {

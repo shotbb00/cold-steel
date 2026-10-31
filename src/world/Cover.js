@@ -120,6 +120,7 @@ export class CoverMap {
     const c = { type: 'box', x, z, y: ground - 0.6, top: ground + height, cos, sin, hx, hz, r: Math.hypot(hx, hz), spots: 0 };
     this.colliders.push(c);
     this._insert(this.colGrid, c, x, z, c.r);
+    this.onAdd?.(c); // (the nav grid, once there is one)
     if (spots) {
       const n = Math.max(1, Math.floor(length / SPOT_SPACING));
       for (let i = 0; i < n; i++) {
@@ -140,6 +141,7 @@ export class CoverMap {
     const c = { type: 'cyl', x, z, y: ground - 0.6, top: ground + height, r: radius, spots: 0 };
     this.colliders.push(c);
     this._insert(this.colGrid, c, x, z, radius);
+    this.onAdd?.(c);
     if (spots) {
       const ring = radius + SPOT_OFFSET;
       const n = Math.max(4, Math.round((Math.PI * 2 * ring) / SPOT_SPACING));

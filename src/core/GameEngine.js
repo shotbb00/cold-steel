@@ -10,6 +10,7 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
 import { requestReplay } from './replay.js';
@@ -130,7 +131,10 @@ export class GameEngine {
     if (!this.cover.finalized) this.cover.finalize(map.bounds);
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
-    this.world.river = map.river ?? null; // routing over the crossings, water that stops and slows
+    this.world.river = map.river ?? null; // water that stops and slows
+    this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
+    this.cover.onAdd = (c) => this.world.nav.addCollider(c);
+    this.bus.on('terrain:changed', () => this.world.nav.water()); // a bridge blown or laid
     this.world.conditions = this.conditions;
     this.effects = new EffectsSystem(this.scene, this.bus);
     this.projectiles = new ProjectileSystem(this.scene, this.world, this.effects);
