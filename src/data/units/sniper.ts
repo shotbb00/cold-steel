@@ -28,6 +28,8 @@ export default {
     stats: {
       holdFire: false,
       marksman: true,
+      sight: 300,   // through the scope, and men crouched in cover or prone hide less from it
+      scope: 0.6,
       quietShot: 0.35,
       range: 320,
       fireCooldown: 5,

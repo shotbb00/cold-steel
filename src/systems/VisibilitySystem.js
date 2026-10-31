@@ -90,9 +90,12 @@ export class VisibilitySystem {
     const cond = this.game.conditions;
     const lit = this.game.flares?.lit(u.pos.x, u.pos.z) ?? false;
     const inBuilding = u.atCover && u.coverSpot?.interior;
-    const conceal = (inBuilding ? 0.45 : u.prone > 0.7 ? 0.45 : u.crouch > 0.6 && u.atCover ? 0.6 : 1) * (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1);
+    const posture = inBuilding ? 0.45 : u.prone > 0.7 ? 0.45 : u.crouch > 0.6 && u.atCover ? 0.6 : 1;
+    const rest = (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1);
     for (const o of spotters) {
       const os = o.stats;
+      // a sniper's scope (stats.scope: the share of that cover it sees past) finds men lying low
+      const conceal = (os.scope ? 1 - (1 - posture) * (1 - os.scope) : posture) * rest;
       const base = (os.sight ?? 100) * (os.binoculars && !o.moving ? 1.25 : 1);
       let r = (base * (cond ? cond.sightFor(os, o.faction, lit) : 1) + u.height * 4) * conceal * (o.masked > 0 ? MASKED.sight : 1);
       if (this.overwatch && o.pos.y > u.pos.y) r *= 1 + Math.min(0.5, (o.pos.y - u.pos.y) / 50); // looking down from a height

@@ -701,7 +701,7 @@ export class UnitStack {
       wantProne = 0;
     } else if (inCover) {
       if (u.coverSpot.height < 1.15 || u.wounded) wantProne = 1; else wantCrouch = 1;
-    } else if (pinned || u.wounded || u.suppression > 0.6 || s.stance === 'prone' || (u.target && !s.indirect && distToTarget > s.range * 0.55)) {
+    } else if (pinned || u.wounded || u.suppression > 0.6 || s.stance === 'prone' || (u.target && !s.indirect && !s.marksman && distToTarget > s.range * 0.55)) { // (a sniper kneels to shoot: lying flat, the ground in between takes his rounds)
       wantProne = 1;
     } else if (reloading || u.suppression > 0.3 || u.target) {
       wantCrouch = 0.85;

@@ -35,9 +35,11 @@ export function makeBuyer(game, state) {
     const toward = -Math.sign(base.z);
     const entry = base.entries ? base.entries[Math.floor(Math.random() * base.entries.length)] : 0;
     let pos = { x: base.x + entry + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
-    // a forward command post that is set up and not under fire takes the new arrivals (the one furthest forward)
+    // a forward command post that is set up and not under fire takes the new arrivals (the one furthest
+    // forward) — in co-op only the buyer's own: each player brings their troops in at their post
+    const buyer = game.currentOwner ?? 'host';
     const post = game.world.stacksOf(faction)
-      .filter((s) => s.postReady && !game.world.stacks.some((e) => e.faction !== faction && e.alive && !e.stats.structure
+      .filter((s) => s.postReady && (!game.coop || faction !== game.playerFaction || s.owner === buyer) && !game.world.stacks.some((e) => e.faction !== faction && e.alive && !e.stats.structure
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
     if (post && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };

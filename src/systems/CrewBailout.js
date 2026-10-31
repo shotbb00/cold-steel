@@ -14,7 +14,10 @@ export class CrewBailout {
     // tumble out on the side away from where the vehicle was facing
     const back = s.radius + 1.5;
     const pos = { x: unit.pos.x - Math.sin(unit.yaw) * back, z: unit.pos.z - Math.cos(unit.yaw) * back };
+    const was = this.game.currentOwner;
+    this.game.currentOwner = stack.owner ?? was; // co-op: the crew stays with the player whose vehicle it was
     const crew = this.game.spawnStack('crew', stack.faction, pos, unit.yaw + Math.PI, `${stack.name} crew`, { count });
+    this.game.currentOwner = was;
     crew.morale = 0.5;
     crew.barkAny('bail');
     crew.ai.retreat();

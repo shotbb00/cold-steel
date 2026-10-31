@@ -71,6 +71,7 @@ export interface UnitStats {
   binoculars?: boolean;
   stealth?: number;
   holdFire?: boolean;
+  scope?: number;        // spotting: share of cover / prone concealment seen past (a sniper's scope)
   marksman?: boolean;
   vsStructure?: number;
   towed?: { deploy: number }; // a towed gun: hitched to its truck while moving, set up before it fires
