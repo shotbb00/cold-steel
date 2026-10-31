@@ -120,6 +120,13 @@ const loopSound = (type) => type.rotorSound ?? type.engineSound;
 
 const WRECK = new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 1 });
 
+/** Compass direction from `a` to `b`, in words ('from the north-east'): +z is north on our maps. */
+function bearing(a, b) {
+  const names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  const k = Math.round(((Math.atan2(b.x - a.x, b.z - a.z) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8;
+  return `from the ${names[k]}`;
+}
+
 class Sortie {
   constructor(game, faction, x, z, yaw, id, kind = 'heli', owner = null) {
     this.game = game;
@@ -637,6 +644,51 @@ export class AirStrike {
     return true;
   }
 
+  /** Is (x, z) under one of `faction`'s working air search radars (data/units/airRadar.ts)? */
+  radarCovers(faction, pos) {
+    for (const r of this.radars ?? []) {
+      if (r.faction !== faction || !r.on) continue;
+      if ((r.u.pos.x - pos.x) ** 2 + (r.u.pos.z - pos.z) ** 2 < r.cover * r.cover) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Air search radars: one works once it has stood still for `deploy` seconds (the antenna turns);
+   * it reports every enemy aircraft that comes inside `detect` to its side, once per sortie.
+   */
+  updateRadars(dt) {
+    const game = this.game;
+    this.radarT = (this.radarT ?? 0) - dt;
+    if (this.radarT <= 0 || !this.radars) {
+      this.radarT = 1;
+      const prev = new Map((this.radars ?? []).map((r) => [r.u, r]));
+      this.radars = [];
+      for (const s of game.world.stacks) {
+        const R = s.stats.airRadar;
+        if (!R || !s.alive) continue;
+        for (const u of s.units) if (u.alive) this.radars.push(prev.get(u) ?? { u, faction: s.faction, cover: R.cover, detect: R.detect, deploy: R.deploy, still: 0, on: false });
+      }
+    }
+    for (const r of this.radars) {
+      // set up = stayed put (the idle shuffle of a metre or so doesn't count as moving off)
+      const p = r.u.pos;
+      if (!r.at || !r.u.alive || (p.x - r.at.x) ** 2 + (p.z - r.at.z) ** 2 > 2.5 * 2.5) { r.at = { x: p.x, z: p.z }; r.still = 0; }
+      else r.still += dt;
+      r.on = r.u.alive && r.still >= r.deploy;
+      r.u.spinning = r.on;
+      if (!r.on) continue;
+      for (const s of this.sorties) {
+        if (s.faction === r.faction || !s.airborne || s.warned?.[r.faction]) continue;
+        if ((s.pos.x - r.u.pos.x) ** 2 + (s.pos.z - r.u.pos.z) ** 2 > r.detect * r.detect) continue;
+        (s.warned ??= {})[r.faction] = true;
+        const name = s.type?.name ?? 'aircraft';
+        game.tell(r.faction, `Radar: enemy ${name} inbound — ${bearing(r.u.pos, s.pos)}`);
+        game.bus.emit('radar:contact', { faction: r.faction, x: s.pos.x, z: s.pos.z });
+      }
+    }
+  }
+
   /** The nearest airborne enemy aircraft (of `faction`'s enemies) within `range` of `pos`. */
   nearestThreat(faction, pos, range) {
     let best = null;
@@ -655,6 +707,7 @@ export class AirStrike {
   }
 
   update(dt) {
+    this.updateRadars(dt);
     for (let i = this.sorties.length - 1; i >= 0; i--) {
       const s = this.sorties[i];
       s.update(dt);

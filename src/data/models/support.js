@@ -2,9 +2,10 @@
 // a short description — hull outline, running gear or wheels, a turret / launcher that
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
-//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan
+//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV · M167 towed Vulcan ·
+//         AN/MPQ-49 FAAR on the M561
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
@@ -28,6 +29,7 @@ const C = { camo: 1 };
  *   marks: geometry painted in the faction's marking colour
  *   load: geometry carried on the hull that can be put down (a bridge layer's bridge): hidden
  *         once the unit has `dropped` it
+ *   spin: { geo, at, rate } — turns about its own up axis while the unit's `spinning` is set (an antenna)
  */
 export function vehicle(describe) {
   let d = null;
@@ -54,6 +56,12 @@ export function vehicle(describe) {
       gun.position.set(...d.gun.at);
       meshAdder(gun)(d.gun.geo, mats.body);
     }
+    const spin = new THREE.Group();
+    hull.add(spin);
+    if (d.spin) {
+      spin.position.set(...d.spin.at);
+      meshAdder(spin)(d.spin.geo, mats.body);
+    }
     const muzzle = new THREE.Object3D();
     muzzle.position.set(...(d.muzzle ?? [0, 0, 1]));
     (d.gun ? gun : turret).add(muzzle);
@@ -71,6 +79,7 @@ export function vehicle(describe) {
           gun.position.z = gz - u.recoil * (d.recoil ?? 0.2);
         }
         wheels?.update(distanceDriven(u));
+        if (d.spin && u.spinning) spin.rotation.y += dt * (d.spin.rate ?? 1.5);
         load.visible = !u.dropped && !u.laying; // laid, or being laid
       },
       die(time) {
@@ -891,4 +900,81 @@ export const buildPactZU23 = vehicle(() => ({
   muzzle: [0, 0, 2.6],
   recoil: 0.05,
   marks: merge([P.box(0.02, 0.16, 0.3, { x: 0.505, y: 0.48, z: 0.2 })]),
+}));
+
+
+// ---------------------------------------------------------------- air search radars
+
+/** The FAAR antenna: a flat rectangular array on its pedestal, the IFF bar on top. */
+const faarAntenna = (color, dark) => merge([
+  P.cyl(0.16, 0.2, 0.5, { y: 0.25, color: dark }, 10),
+  P.box(2.2, 0.75, 0.12, { y: 0.9, z: 0.1, rx: -0.2, color }),
+  ...[-0.8, -0.4, 0, 0.4, 0.8].map((x) => P.box(0.04, 0.7, 0.03, { x, y: 0.9, z: 0.18, rx: -0.2, color: dark })),
+  P.box(2.0, 0.12, 0.1, { y: 1.38, z: 0.15, color: dark }),
+  P.box(0.3, 0.3, 0.4, { y: 0.55, z: -0.25, color: dark }),
+]);
+
+/** AN/MPQ-49 Forward Area Alerting Radar on an M561 Gama Goat: the articulated 6×6 — open cab
+ *  and front unit, the rear unit with the radar shelter — the antenna on its mast at the back. */
+export const buildNatoFAAR = vehicle(() => ({
+  wheels: wheeled([1.45, 0.0, -1.45], 0.95, 0.38),
+  hull: grime(merge([
+    // front unit: low hull, the open cab with its windscreen frame and canvas top
+    stationHull([[0.35, [[0, 0.55], [0.95, 0.55], [0.98, 1.15], [0, 1.15]]], [2.3, [[0, 0.6], [0.92, 0.6], [0.92, 1.05], [0, 1.08]]]], { color: NATO, ...C }),
+    P.box(1.8, 0.05, 1.1, { y: 1.9, z: 1.3, color: 0x4f5238 }),                                     // canvas top
+    ...pair((s) => P.box(0.05, 0.8, 0.05, { x: s * 0.88, y: 1.5, z: 1.85, color: NATO_DK })),
+    P.box(1.75, 0.5, 0.04, { y: 1.45, z: 1.85, rx: -0.15, color: GLASS }),                          // windscreen
+    ...pair((s) => P.box(0.4, 0.3, 0.4, { x: s * 0.45, y: 1.2, z: 0.8, color: NATO_DK })),          // seats
+    // the articulation joint, rear unit with its shelter, and the antenna mast
+    P.cyl(0.18, 0.18, 0.4, { y: 0.8, z: 0.15, rx: Math.PI / 2, color: STEEL }, 10),
+    stationHull([[-2.4, [[0, 0.6], [0.92, 0.6], [0.92, 1.1], [0, 1.1]]], [-0.05, [[0, 0.55], [0.95, 0.55], [0.95, 1.12], [0, 1.12]]]], { color: NATO, ...C }),
+    P.box(1.7, 1.0, 1.9, { y: 1.62, z: -1.3, color: NATO, ...C }),                                  // radar and plotting shelter
+    P.box(0.5, 0.8, 0.03, { x: 0.86, y: 1.6, z: -1.0, color: NATO_DK }),                            // its door
+    P.cyl(0.08, 0.1, 1.2, { y: 2.7, z: -1.9, color: STEEL }, 8),                                    // the mast
+    P.box(0.5, 0.3, 0.5, { x: -0.6, y: 2.25, z: -0.6, color: NATO_DK }),                            // generator
+    P.cyl(0.4, 0.4, 1.4, { x: -0.65, y: 2.25, z: -1.6, rx: Math.PI / 2, color: 0x56583e }, 10),     // cable reels
+  ]), 1.0, 0.3),
+  spin: { geo: faarAntenna(NATO, NATO_DK), at: [0, 3.25, -1.9], rate: 1.6 },
+  marks: merge([P.box(0.02, 0.3, 0.45, { x: 0.96, y: 0.85, z: 1.3 })]),
+}));
+
+/** P-19 'Danube' (1RL134) on a ZiL-131: the rounded-bonnet 6×6 cab, the van body with the
+ *  operators' cabin, and on its roof the two stacked Yagi arrays turning together. */
+export const buildPactP19 = vehicle(() => ({
+  wheels: wheeled([2.1, -0.95, -2.2], 1.0, 0.5),
+  hull: grime(merge([
+    ...pair((s) => P.box(0.16, 0.22, 6.6, { x: s * 0.45, y: 0.9, z: -0.1, color: STEEL })),
+    // ZiL-131: rounded bonnet and wings, the cab
+    loft([[0, 1.1, 2.4, 0.78, 0.4, 3], [0, 1.2, 3.0, 0.74, 0.38, 3], [0, 1.15, 3.45, 0.66, 0.32, 3]], { color: PACT }, 12),
+    P.box(1.2, 0.42, 0.04, { y: 1.15, z: 3.5, color: 0x1e1e1c }),                                    // grille
+    stationHull([[1.25, [[0, 1.15], [1.1, 1.15], [1.1, 2.2], [0.98, 2.38], [0, 2.4]]], [2.45, [[0, 1.15], [1.1, 1.15], [1.1, 2.15], [0.98, 2.32], [0, 2.34]]]], { color: PACT }),
+    ...pair((s) => P.box(0.84, 0.44, 0.03, { x: s * 0.5, y: 1.98, z: 2.46, rx: -0.1, color: GLASS })),
+    ...pair((s) => P.box(0.03, 0.4, 0.62, { x: s * 1.11, y: 1.95, z: 1.95, color: GLASS })),
+    ...pair((s) => P.box(0.5, 0.06, 1.4, { x: s * 0.98, y: 1.35, z: 2.55, color: PACT_DK })),          // wings
+    ...pair((s) => P.cyl(0.1, 0.1, 0.1, { x: s * 0.82, y: 1.45, z: 3.3, rx: Math.PI / 2, color: GLASS }, 10)),
+    P.box(2.3, 0.18, 0.14, { y: 0.92, z: 3.62, color: STEEL }),
+    // the van body (KUNG) with door, ladder and air conditioner
+    P.box(2.3, 1.85, 3.6, { y: 2.08, z: -1.15, color: PACT }),
+    P.box(0.6, 1.2, 0.04, { x: 0.5, y: 1.9, z: -2.96, color: PACT_DK }),
+    ...[0, 1, 2, 3].map((k) => P.box(0.4, 0.03, 0.05, { x: 0.5, y: 0.75 + k * 0.25, z: -3.05, color: STEEL })),
+    P.box(0.5, 0.35, 0.5, { x: -0.6, y: 3.15, z: 0.3, color: PACT_DK }),
+    ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.2, z: -1.45, color: PACT_DK })),
+    P.cyl(0.14, 0.17, 0.35, { y: 3.18, z: -1.5, color: STEEL }, 10),                                 // the antenna turntable
+  ]), 1.0, 0.4),
+  spin: {
+    geo: merge([
+      P.cyl(0.08, 0.08, 1.4, { y: 0.7, color: STEEL }, 8),
+      ...[0.55, 1.25].flatMap((y) => [
+        P.box(3.0, 0.08, 0.08, { y, color: STEEL }),                                                // the array's boom
+        ...[-1.3, -0.78, -0.26, 0.26, 0.78, 1.3].flatMap((x) => [
+          P.box(0.03, 0.03, 0.8, { x, y, z: 0.35, color: STEEL }),                                  // Yagi director rods
+          P.box(0.05, 0.25, 0.05, { x, y, z: -0.05, color: PACT_DK }),
+        ]),
+      ]),
+      P.box(3.1, 0.75, 0.04, { y: 0.9, z: -0.15, color: PACT_DK }),                                 // reflector screen
+    ]),
+    at: [0, 3.35, -1.5],
+    rate: 1.2,
+  },
+  marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.16, y: 2.1, z: -0.5 })]),
 }));

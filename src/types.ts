@@ -72,7 +72,8 @@ export interface UnitStats {
   stealth?: number;
   holdFire?: boolean;
   marksman?: boolean;
-  vsStructure?: number; // damage multiplier against fortifications
+  vsStructure?: number;
+  airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
   demolition?: boolean; // goes for bunkers, held houses and trenches first
   dozer?: boolean;      // digs vehicle positions (Construction 'revetment')   // a sniper: officers, crews and observers first, never vehicles
   quietShot?: number;   // share of the usual time a shot keeps the shooter revealed

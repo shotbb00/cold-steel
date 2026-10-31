@@ -44,7 +44,7 @@ import { STRUCTURES } from '../systems/Construction.js';
 
 const THINK = 4;
 const BUILD_ORDER = [
-  'rifles', 'scouts', 'mgTeam', 'atTeam', 'engineers', 'mortar', 'ifv', 'observers', 'sniper', 'artillery', 'rifles', 'tank', 'cev', 'manpads', 'towedAA',
+  'rifles', 'scouts', 'mgTeam', 'atTeam', 'engineers', 'mortar', 'ifv', 'observers', 'sniper', 'artillery', 'rifles', 'tank', 'cev', 'manpads', 'towedAA', 'airRadar',
   'reconVehicle', 'aa', 'mgTeam', 'tankDestroyer', 'ifv', 'spMortar', 'ambulance', 'atTeam', 'heavyTank', 'rifles', 'recovery',
   'rockets', 'sam', 'tank',
 ];

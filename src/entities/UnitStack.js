@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const RADAR_BONUS = 1.2; // air defence under a friendly air search radar reaches this much further (AirStrike.radarCovers)
 const LEAD_RANGE = 45;      // metres
 const LED = { nerve: 0.6, rally: 1.5, react: 0.75 };
 const LEADERLESS = { react: 1.25 };
@@ -697,7 +698,8 @@ export class UnitStack {
     const aa = u.stats.antiAir;
     const air = this.services.air;
     // no radar of its own: the gunner's eyes, unless an air search radar of ours covers this spot
-    const reach = aa.optical && !air?.radarCovers?.(this.faction, u.pos) ? aa.range * aa.optical : aa.range;
+    const covered = air?.radarCovers?.(this.faction, u.pos);
+    const reach = aa.range * (covered ? RADAR_BONUS : aa.optical ?? 1);
     const h = air?.nearestThreat(this.faction, u.pos, reach);
     u.airTarget = h;
     if (!h) return false;
@@ -748,7 +750,7 @@ export class UnitStack {
     u.missilesLeft ??= aa.count;
     if (u.missilesLeft <= 0 && now >= (u.missileReload ?? 0)) u.missilesLeft = aa.count;
     const air = this.services.air;
-    const h = air?.nearestThreat(this.faction, u.pos, aa.range);
+    const h = air?.nearestThreat(this.faction, u.pos, aa.range * (air?.radarCovers?.(this.faction, u.pos) ? RADAR_BONUS : 1));
     u.airTarget = u.missilesLeft > 0 || !this.usesCover ? h : null;
     if (!u.airTarget) { u.lockT = 0; return false; }
     const dx = h.pos.x - u.pos.x;
@@ -860,6 +862,7 @@ export class UnitStack {
       if (e === u.target) score -= 3;
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
+      if (e.stack.stats.airRadar) score -= 25;     // the radar first: it is the enemy's air defence's eyes
       if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches
       if (s.marksman) {
         if (!e.stack.usesCover) continue;      // a rifle bullet off armour gives him away for nothing

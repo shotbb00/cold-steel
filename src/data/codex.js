@@ -35,6 +35,14 @@ export const CODEX = {
     nato: 'Long-range reconnaissance patrols — LRRP teams trained to slip behind the lines and watch the roads the Soviet echelons would use.',
     pact: 'Divisional razvedka: the reconnaissance troops who were to find NATO\'s defences before the regiments ran into them.',
   },
+  airRadar: {
+    use: 'Park it behind your air defence and leave it: after ten seconds its antenna turns, and every enemy aircraft that comes on station within 900 m is called out on the radio with its bearing. Towed AA guns within 380 m get their full reach, and all other air defence there reaches a fifth further.',
+    strong: 'Warning, making cheap guns deadly, a whole sector\'s air defence',
+    weak: 'Everything: it has no weapon and thin skin, and it is useless on the move',
+    counter: 'Find it and kill it before the helicopters go in — enemy gunners go for it first, so should yours.',
+    nato: 'The AN/MPQ-49 FAAR gave Chaparral and Vulcan batteries early warning: its plotters passed tracks to the guns by radio.',
+    pact: 'The P-19 was the regiment\'s air surveillance radar, feeding target data to the ZSU and Strela batteries.',
+  },
   towedAA: {
     use: 'Cheap air defence you can hide. Put the pair where helicopters will come in low — behind a hedgerow, in a CEV\'s vehicle position — and leave them still. Without an air search radar of yours nearby they see aircraft only at two-thirds of the range of the self-propelled guns.',
     strong: 'Helicopters at close range, infantry and trucks in the open, being cheap and hard to spot',
