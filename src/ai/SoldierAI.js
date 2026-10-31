@@ -44,7 +44,12 @@ export function thinkSoldier(u, stack, world, interval) {
   // turret do the work.
   if (!stack.usesCover) {
     const pos = ai.plannedSpots?.get(u); // a dug-in vehicle position the order gave it
-    if (pos) u.dest.set(pos.x, stack.world.terrain.heightAt(pos.x, pos.z), pos.z);
+    const doz = u.dozing;                // a combat engineer vehicle digging: back and forth over the pit
+    if (doz) {
+      const k = Math.sin(stack.world.time * 0.45 + u.phase) * 3;
+      u.dest.set(doz.x + Math.sin(doz.yaw) * k, 0, doz.z + Math.cos(doz.yaw) * k);
+      u.dest.y = stack.world.terrain.heightAt(u.dest.x, u.dest.z);
+    } else if (pos) u.dest.set(pos.x, stack.world.terrain.heightAt(pos.x, pos.z), pos.z);
     else stack.slotPosition(u, u.dest);
     return;
   }

@@ -26,6 +26,10 @@
 // Bridge layers (stats.bridgeLayer) have one job of their own:
 //   span     – drive to the near bank at the clicked spot and lay a bridge over (game.layBridge)
 // Engineers also find enemy minefields within 16 m, and set them off only a quarter as often.
+// Work you can watch: from the moment a job is laid out, the structure's own parts are drawn as far
+// as the work has got (bags row by row, coil after coil, the field's patches — those only for its
+// owner); trenches and vehicle positions are dug down in steps; the workers throw up dirt; a
+// dozer pushes back and forth over its pit; demolition charges appear on the bridge one by one.
 // Orientation: `yaw` turns the structure like Object3D.rotation.y; its "front" (parapet side)
 // faces local +z, i.e. world (sin yaw, cos yaw).
 import * as THREE from 'three';
@@ -42,10 +46,13 @@ export const STRUCTURES = {
   revetment: { id: 'revetment', name: 'Vehicle position', cost: 25, work: 22, length: 4.6, width: 8, dozer: true },
   span: { id: 'span', name: 'Bridge', cost: 0, work: 20, length: 5, width: 26, action: true, layer: true },
 };
+/** A seeded random (the work in progress and the finished structure use the same parts). */
+const mulberry = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
 const PLAN_REACH = 25;      // m from a move order within which vehicles take free vehicle positions
+const DIG_STEPS = 5;        // a trench / vehicle position goes down in this many steps
 const LANE = 2.2;           // m either side of a plough's track that is safe
 const LINE = { flight: 1.6, step: 6, half: 3.5, men: 300, vehicles: 450 }; // line charge: rocket flight (s), blasts every 6 m, strip half-width
 const REVETMENT = { depth: 1.0, berm: 0.75 }; // m: the vehicle sits this much lower; the berm stands this high
@@ -104,6 +111,7 @@ export class Construction {
     if ((bridge || kind === 'span') && from && river) site.home = river.side(from.centroid.x, from.centroid.z); // the bank they set out from
     if (kind === 'span') ghost.visible = false; // the laying animation shows the work instead
     this.sites.push(site);
+    this.startWork(site);
     this.game.netEvent('site', site.id, kind, x, z, yaw, faction, site.stackId);
     if (stack) {
       // stand just behind the work so the squad isn't silhouetted in front of it
@@ -119,7 +127,7 @@ export class Construction {
   }
 
   update(dt) {
-    for (const s of this.game.world.stacks) for (const u of s.units) { u.working = false; u.slow = 1; }
+    for (const s of this.game.world.stacks) for (const u of s.units) { u.working = false; u.slow = 1; u.dozing = null; }
     this.updateObstacles(dt);
     this.updateRevetments();
     if (this.lineCharges?.length) {
@@ -128,6 +136,7 @@ export class Construction {
     }
     for (let i = this.fuses.length - 1; i >= 0; i--) {
       if (this.game.time < this.fuses[i].at) continue;
+      this.fuses[i].charges?.removeFromParent();
       this.game.blowBridge(this.fuses[i].bridge);
       this.fuses.splice(i, 1);
     }
@@ -148,7 +157,7 @@ export class Construction {
         }
         if (site.def.dozer) { // the blade: the engineer vehicle itself, at the spot and not driving off
           const u = s.stats.dozer && s.units[0];
-          if (u?.alive && !u.possessed && Math.hypot(u.pos.x - site.x, u.pos.z - site.z) < REACH) workers += 1;
+          if (u?.alive && !u.possessed && Math.hypot(u.pos.x - site.x, u.pos.z - site.z) < REACH) { workers += 1; u.dozing = site; } // SoldierAI drives it to and fro
           continue;
         }
         if (!s.usesCover) continue;
@@ -162,15 +171,156 @@ export class Construction {
         }
       }
       site.progress += (workers * dt) / site.def.work;
+      if (workers > 0) this.workEffects(site, dt);
       this.showProgress(site);
       if (site.progress >= 1) this.finish(site);
     }
   }
 
   showProgress(site) {
-    site.ghost.scale.y = 0.15 + Math.min(1, site.progress) * 0.85;
-    site.ghost.material.opacity = 0.2 + site.progress * 0.2;
+    const k = Math.min(1, site.progress);
+    site.ghost.scale.y = 0.15 + k * 0.85;
+    site.ghost.material.opacity = 0.28 - k * 0.18; // the blueprint fades as the real thing grows
     if (site.kind === 'span' && site.progress > 0) this.layingAnimation(site);
+    // the parts so far: a share of the triangles, in the order they are laid
+    const w = site.work;
+    if (w?.mesh) {
+      const idx = w.mesh.geometry.index;
+      const total = idx ? idx.count : w.mesh.geometry.attributes.position.count;
+      w.mesh.geometry.setDrawRange(0, Math.floor((total * k) / 3) * 3);
+    }
+    // the ground goes down in steps
+    if (w?.dig) {
+      const step = Math.floor(k * DIG_STEPS) / DIG_STEPS;
+      if (step > w.dug) { this.digShare(site, step - w.dug); w.dug = step; }
+    }
+  }
+
+  /** The parts of a job that show while it is being worked (and what is dug). */
+  startWork(site) {
+    if (site.def.layer || site.kind === 'clear') return;
+    const parts = site.kind === 'demolish' ? this.chargeParts(site) : this.partsFor(site);
+    site.work = { dug: 0, dig: site.kind === 'trench' || site.kind === 'revetment', mesh: null, dust: 0 };
+    if (!parts.length) return;
+    const mesh = this.addMesh(parts);
+    mesh.geometry.setDrawRange(0, 0);
+    mesh.visible = site.kind !== 'mines' || site.faction === this.game.playerFaction; // a minefield's owner alone sees it laid
+    site.work.mesh = mesh;
+  }
+
+  /** Clear away the work-in-progress parts (the finished structure replaces them). */
+  endWork(site) {
+    const m = site.work?.mesh;
+    if (!m) return;
+    m.removeFromParent();
+    m.geometry.dispose();
+    site.work.mesh = null;
+  }
+
+  /** Dirt thrown up where the job is worked, and the sound of it. */
+  workEffects(site, dt) {
+    const w = site.work;
+    if (!w) return;
+    w.dust -= dt;
+    if (w.dust > 0) return;
+    w.dust = 0.6 + Math.random() * 0.6;
+    const [x, z] = this.local(site, (Math.random() - 0.5) * site.def.length * 0.8, (Math.random() - 0.5) * Math.min(site.def.width, 3));
+    const pos = { x, y: this.game.terrain.heightAt(x, z), z };
+    this.game.effects.dust(pos, site.def.dozer ? 2.2 : 0.8);
+    this.game.audio?.play(site.def.dozer ? 'stomp' : 'impact.ground', pos, { volume: site.def.dozer ? 0.35 : 0.18, throttle: 0.4 });
+  }
+
+  /** What a structure is made of (no side effects: the job in progress draws these too). */
+  partsFor(site) {
+    const parts = [];
+    const terrain = this.game.terrain;
+    if (site.kind === 'sandbags') this.bagRows(site, 0, site.def.length, 3, parts);
+    else if (site.kind === 'trench') {
+      const L = site.def.length;
+      this.bagRows(site, 1.6, L, 2, parts, -0.05);    // parapet in front, just outside the cut
+      for (let i = 0; i < 4; i++) {                   // spoil mound behind
+        const [x, z] = this.local(site, -L / 2 + (i + 0.5) * (L / 4), -1.75);
+        parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: L / 7, sy: 0.35, sz: 0.6, color: EARTH }, 10, 6));
+      }
+    } else if (site.kind === 'revetment') {
+      const halfX = site.def.length / 2 - 0.3;
+      for (let i = 0; i < 3; i++) {                   // the spoil berm in front, and some to the sides
+        const [x, z] = this.local(site, -1.6 + i * 1.6, 3.9);
+        parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 1.4, sy: REVETMENT.berm, sz: 0.9, color: EARTH }, 10, 6));
+      }
+      for (const sx of [-1, 1]) {
+        const [x, z] = this.local(site, sx * (halfX + 1.1), 0.8);
+        parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 0.6, sy: REVETMENT.berm * 0.7, sz: 2.6, color: EARTH }, 10, 6));
+      }
+    } else if (site.kind === 'wire') {
+      const L = site.def.length;
+      for (let i = 0; i <= 4; i++) {                  // the pickets first, then coil after coil
+        const [x, z] = this.local(site, -L / 2 + (i * L) / 4, 0);
+        parts.push(P.box(0.05, 1.1, 0.05, { x, y: terrain.heightAt(x, z) + 0.5, z, color: RUST }));
+      }
+      const coils = Math.round(L / 0.55);
+      const r = mulberry(site.id * 977 + 13);
+      for (let i = 0; i < coils; i++) {
+        const lx = -L / 2 + (i + 0.5) * (L / coils);
+        const [x, z] = this.local(site, lx, (r() - 0.5) * 0.08);
+        const y = terrain.heightAt(x, z) + 0.45;
+        parts.push(P.torus(0.45, 0.012, { x, y, z, ry: site.yaw + Math.PI / 2 + 0.15, rz: (r() - 0.5) * 0.2, color: STEEL }, 14));
+      }
+    } else if (site.kind === 'mines') {
+      const r = mulberry(site.id * 631 + 7);
+      for (let i = 0; i < 16; i++) {
+        const [x, z] = this.local(site, (r() - 0.5) * site.def.length, (r() - 0.5) * site.def.width);
+        parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z) - 0.02, z, sx: 0.35, sy: 0.05, sz: 0.35, color: 0x3c3024 }, 6, 3));
+      }
+    }
+    return parts;
+  }
+
+  /** Demolition charges on the bridge deck, one pack after another. */
+  chargeParts(site) {
+    const c = site.bridge;
+    if (!c) return [];
+    const river = this.game.world.river;
+    const parts = [];
+    for (let i = 0; i < 8; i++) {
+      const z = c.z + (i - 3.5) * (river.halfWidth / 4.5);
+      for (const side of [-1, 1]) {
+        const x = c.x + side * (c.width / 2 - 0.5);
+        parts.push(P.box(0.35, 0.22, 0.25, { x, y: river.deck + 0.13, z, color: 0x4a4a32 }));
+        parts.push(P.box(0.05, 0.05, 0.8, { x: x - side * 0.25, y: river.deck + 0.05, z, color: 0x8a2a1a }));   // the det cord
+      }
+    }
+    return parts;
+  }
+
+  /** Dig `share` of a trench's or a vehicle position's full depth. */
+  digShare(site, share) {
+    if (share <= 0) return;
+    const c = Math.cos(site.yaw);
+    const s = Math.sin(site.yaw);
+    const terrain = this.game.terrain;
+    if (site.kind === 'trench') {
+      const halfL = site.def.length / 2;
+      const halfW = 0.9;
+      terrain.dig(site.x, site.z, halfL + 2, 1.3 * share, (x, z) => {
+        const dx = x - site.x;
+        const dz = z - site.z;
+        const lx = dx * c - dz * s;
+        const lz = dx * s + dz * c;
+        return smoothstep(halfW + 0.5, halfW - 0.2, Math.abs(lz)) * smoothstep(halfL + 0.5, halfL - 0.3, Math.abs(lx));
+      });
+    } else {
+      const halfX = site.def.length / 2 - 0.3;
+      terrain.dig(site.x, site.z, 6, REVETMENT.depth * share, (x, z) => {
+        const dx = x - site.x;
+        const dz = z - site.z;
+        const lx = dx * c - dz * s;
+        const lz = dx * s + dz * c;
+        const ramp = smoothstep(-4.6, -2.2, lz);                 // the way in and out, from the back
+        return smoothstep(halfX + 0.5, halfX - 0.2, Math.abs(lx)) * smoothstep(3.4, 2.8, lz) * ramp;
+      });
+    }
+    this.game.bus.emit('terrain:changed');
   }
 
   /**
@@ -215,6 +365,8 @@ export class Construction {
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
     site.anim?.pivot.removeFromParent(); // the laid bridge takes its place
+    if (site.kind !== 'demolish') this.endWork(site); // the charges stay until the bridge goes
+    else site.charges = site.work?.mesh;
     this.complete(site);
   }
 
@@ -225,6 +377,7 @@ export class Construction {
     this.sites.splice(i, 1);
     site.ghost.removeFromParent();
     site.ghost.geometry.dispose();
+    this.endWork(site);
     if (site.anim) { // called off half-laid: the bridge goes back on the vehicle
       site.anim.pivot.removeFromParent();
       const layer = this.game.world.stackById(site.stackId)?.units[0];
@@ -272,7 +425,7 @@ export class Construction {
       const s = site.stack;
       const side = site.home ?? (s?.alive ? river.side(s.centroid.x, s.centroid.z) : 1); // back the way they came
       if (s?.alive) s.ai.moveTo({ x: c.x, z: c.z + side * (river.halfWidth + 22) }, { hold: true, ordered: game.isHuman(s.faction) });
-      this.fuses.push({ bridge: c, at: game.time + FUSE });
+      this.fuses.push({ bridge: c, at: game.time + FUSE, charges: site.charges });
       game.tell(site.faction, `Charges set on the ${c.name} — clear the bridge, ${FUSE} seconds!`);
     } else if (site.kind === 'span') {
       const u = site.stack?.units[0];
@@ -315,9 +468,7 @@ export class Construction {
   }
 
   buildSandbags(site) {
-    const parts = [];
-    this.bagRows(site, 0, site.def.length, 3, parts);
-    site.mesh = this.addMesh(parts);
+    site.mesh = this.addMesh(this.partsFor(site));
     this.game.cover.addStructureBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 0.6, height: 0.95 });
   }
 
@@ -327,24 +478,8 @@ export class Construction {
     const halfX = site.def.length / 2 - 0.3;
     const c = Math.cos(site.yaw);
     const s = Math.sin(site.yaw);
-    terrain.dig(site.x, site.z, 6, REVETMENT.depth, (x, z) => {
-      const dx = x - site.x;
-      const dz = z - site.z;
-      const lx = dx * c - dz * s;
-      const lz = dx * s + dz * c;
-      const ramp = smoothstep(-4.6, -2.2, lz);                 // the way in and out, from the back
-      return smoothstep(halfX + 0.5, halfX - 0.2, Math.abs(lx)) * smoothstep(3.4, 2.8, lz) * ramp;
-    });
-    const parts = [];
-    for (let i = 0; i < 3; i++) {                     // the spoil berm in front, and some to the sides
-      const [x, z] = this.local(site, -1.6 + i * 1.6, 3.9);
-      parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 1.4, sy: REVETMENT.berm, sz: 0.9, color: EARTH }, 10, 6));
-    }
-    for (const sx of [-1, 1]) {
-      const [x, z] = this.local(site, sx * (halfX + 1.1), 0.8);
-      parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 0.6, sy: REVETMENT.berm * 0.7, sz: 2.6, color: EARTH }, 10, 6));
-    }
-    site.mesh = this.addMesh(parts);
+    this.digShare(site, 1 - (site.work?.dug ?? 0)); // what the work hasn't dug yet
+    site.mesh = this.addMesh(this.partsFor(site));
     const [fx, fz] = this.local(site, 0, 3.9);
     site.berm = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: site.def.length + 0.4, thickness: 1.2, height: REVETMENT.berm, spots: false });
     this.revetments = [...(this.revetments ?? []), site];
@@ -401,21 +536,7 @@ export class Construction {
 
   /** Concertina wire: a row of coils on pickets. */
   buildWire(site) {
-    const parts = [];
-    const L = site.def.length;
-    const terrain = this.game.terrain;
-    const coils = Math.round(L / 0.55);
-    for (let i = 0; i < coils; i++) {
-      const lx = -L / 2 + (i + 0.5) * (L / coils);
-      const [x, z] = this.local(site, lx, (Math.random() - 0.5) * 0.08);
-      const y = terrain.heightAt(x, z) + 0.45;
-      parts.push(P.torus(0.45, 0.012, { x, y, z, ry: site.yaw + Math.PI / 2 + 0.15, rz: (Math.random() - 0.5) * 0.2, color: STEEL }, 14));
-    }
-    for (let i = 0; i <= 4; i++) {
-      const [x, z] = this.local(site, -L / 2 + (i * L) / 4, 0);
-      parts.push(P.box(0.05, 1.1, 0.05, { x, y: terrain.heightAt(x, z) + 0.5, z, color: RUST }));
-    }
-    site.mesh = this.addMesh(parts);
+    site.mesh = this.addMesh(this.partsFor(site));
     this.addObstacle(site);
   }
 
@@ -424,12 +545,7 @@ export class Construction {
     const terrain = this.game.terrain;
     const L = site.def.length;
     const W = site.def.width;
-    const soil = [];
-    for (let i = 0; i < 16; i++) {
-      const [x, z] = this.local(site, (Math.random() - 0.5) * L, (Math.random() - 0.5) * W);
-      soil.push(P.sphere(1, { x, y: terrain.heightAt(x, z) - 0.02, z, sx: 0.35, sy: 0.05, sz: 0.35, color: 0x3c3024 }, 6, 3));
-    }
-    site.mesh = this.addMesh(soil);
+    site.mesh = this.addMesh(this.partsFor(site));
     const signs = [];
     for (const [lx, lz] of [[-L / 2, -W / 2], [L / 2, -W / 2], [-L / 2, W / 2], [L / 2, W / 2], [0, -W / 2], [0, W / 2]]) {
       const [x, z] = this.local(site, lx, lz);
@@ -599,20 +715,8 @@ export class Construction {
     const halfW = 0.9;
     const c = Math.cos(site.yaw);
     const s = Math.sin(site.yaw);
-    terrain.dig(site.x, site.z, halfL + 2, 1.3, (x, z) => {
-      const dx = x - site.x;
-      const dz = z - site.z;
-      const lx = dx * c - dz * s;
-      const lz = dx * s + dz * c;
-      return smoothstep(halfW + 0.5, halfW - 0.2, Math.abs(lz)) * smoothstep(halfL + 0.5, halfL - 0.3, Math.abs(lx));
-    });
-    const parts = [];
-    this.bagRows(site, 1.6, L, 2, parts, -0.05);    // parapet in front, just outside the cut
-    for (let i = 0; i < 4; i++) {                   // spoil mound behind
-      const [x, z] = this.local(site, -halfL + (i + 0.5) * (L / 4), -1.75);
-      parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: L / 7, sy: 0.35, sz: 0.6, color: EARTH }, 10, 6));
-    }
-    site.mesh = this.addMesh(parts);
+    this.digShare(site, 1 - (site.work?.dug ?? 0)); // what the work hasn't dug yet
+    site.mesh = this.addMesh(this.partsFor(site));
     const [fx, fz] = this.local(site, 0, 1.6);
     const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: L, thickness: 0.6, height: 0.55, spots: false });
     const [bx, bz] = this.local(site, 0, -1.75);
