@@ -147,6 +147,11 @@ body.tactical #command-panel { display: block; }
   pointer-events: auto;
 }
 #banner[hidden] { display: none; }
+/* centred when it fits, from the top when it doesn't: justify-content: center pushes a too-tall
+   report above the top edge, where no scrolling reaches (Android) */
+#banner { justify-content: flex-start; }
+#banner > :first-child { margin-top: auto; }
+#banner > :last-child { margin-bottom: auto; }
 #banner h1 { margin: 0; font-size: 72px; letter-spacing: 0.2em; text-transform: uppercase; }
 #banner.victory h1 { color: var(--ally); }
 #banner.defeat h1 { color: var(--enemy); }

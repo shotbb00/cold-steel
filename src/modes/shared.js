@@ -29,7 +29,7 @@ export function makeBuyer(game, state) {
       game.tell(faction, 'Stack limit reached');
       return null;
     }
-    state.cp[faction] -= type.cost;
+    game.spend(faction, type.cost); // (through game.spend: the battle report counts what was spent)
     counter[typeId] = (counter[typeId] ?? 0) + 1;
     const base = map.bases[faction];
     const toward = -Math.sign(base.z);
