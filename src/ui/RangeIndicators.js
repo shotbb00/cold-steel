@@ -15,18 +15,21 @@ import { CameraMode } from '../core/CameraManager.js';
 const MAX_SHOWN = 10;
 const BAND = 0.2;            // half-width of the drawn lines, metres
 
+// not hidden by the ground: the shapes lie on it at every vertex, but between vertices a rise in
+// the terrain would cover them and leave holes
 const mat = (color, opacity) => new THREE.MeshBasicMaterial({
-  color, transparent: true, opacity, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+  color, transparent: true, opacity, depthWrite: false, depthTest: false, toneMapped: false, side: THREE.DoubleSide,
 });
 const RING = mat(0xffffff, 0.2);
 const MISSILE_RING = mat(0xffd9a0, 0.1);
 const AIR_RING = mat(0x9fd2ff, 0.22);       // reach against aircraft
 const AIR_FAINT = mat(0x9fd2ff, 0.09);
-const RADAR_RING = mat(0x7ff0ff, 0.22);     // an air search radar's cover…
+const RADAR_FILL = mat(0x7ff0ff, 0.045);    // an air search radar's cover…
+const RADAR_RING = mat(0x7ff0ff, 0.22);
 const RADAR_FAINT = mat(0x7ff0ff, 0.08);    // …and its warning range
-const CB_FILL = mat(0xffc46a, 0.04);        // counter-battery sector
+const CB_FILL = mat(0xffc46a, 0.045);        // counter-battery sector
 const CB_EDGE = mat(0xffc46a, 0.25);
-const JAM_FILL = mat(0xc49bff, 0.025);       // jammed area
+const JAM_FILL = mat(0xc49bff, 0.05);       // jammed area
 const JAM_EDGE = mat(0xc49bff, 0.25);
 const POST_RING = mat(0x9fe08a, 0.22);      // a command post's steadying radius
 
@@ -56,7 +59,7 @@ function ringGeometry(r) {
 
 /** A filled disc (or, with `arc`, a sector centred on +z) of radius r. */
 function discGeometry(r, arc = Math.PI * 2) {
-  const segs = Math.min(360, Math.max(24, Math.round((r * arc) / (RADIAL * 1.5))));
+  const segs = Math.min(720, Math.max(24, Math.round((r * arc) / RADIAL)));
   return flat(new THREE.RingGeometry(0.01, r, segs, Math.max(2, Math.ceil(r / RADIAL)), -arc / 2, arc));
 }
 
@@ -91,7 +94,7 @@ function areas(stack) {
     if (aa.optical) { out.push([ringGeometry(aa.range * aa.optical), AIR_RING]); out.push([ringGeometry(aa.range), AIR_FAINT]); }
     else out.push([ringGeometry(aa.range), AIR_RING]);
   }
-  if (s.airRadar) { out.push([ringGeometry(s.airRadar.cover), RADAR_RING]); out.push([ringGeometry(s.airRadar.detect), RADAR_FAINT]); }
+  if (s.airRadar) { out.push([discGeometry(s.airRadar.cover), RADAR_FILL]); out.push([ringGeometry(s.airRadar.cover), RADAR_RING]); out.push([ringGeometry(s.airRadar.detect), RADAR_FAINT]); }
   if (s.cbRadar) { out.push([discGeometry(s.cbRadar.range, s.cbRadar.arc), CB_FILL, true]); out.push([sectorEdge(s.cbRadar.range, s.cbRadar.arc), CB_EDGE, true]); }
   if (s.jammer) { out.push([discGeometry(s.jammer.radius), JAM_FILL]); out.push([ringGeometry(s.jammer.radius), JAM_EDGE]); }
   if (s.commandPost) out.push([ringGeometry(s.commandPost.lead), POST_RING]);

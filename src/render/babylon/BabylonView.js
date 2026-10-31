@@ -533,6 +533,7 @@ export class BabylonView {
     m.backFaceCulling = tm.side === 0;                 // THREE.FrontSide
     m.sideOrientation = tm.side === 1 ? Material.ClockWiseSideOrientation : Material.CounterClockWiseSideOrientation; // BackSide flips
     m.disableDepthWrite = tm.depthWrite === false;
+    if (tm.depthTest === false) m.depthFunction = 519; // Constants.ALWAYS: drawn over whatever is in front (ground overlays)
     m.maxSimultaneousLights = 8; // hemisphere, sun, rim, two explosion flashes, two flares
     m.environmentIntensity = ENV;
 

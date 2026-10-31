@@ -34,6 +34,7 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
+const PARKED = 1.5;        // m: a parked vehicle ignores its slot drifting less than this
 const REVERSE = { angle: 2.3, within: 14, speed: 0.5 }; // vehicles back up to points just behind them, at half speed
 const WITHDRAWN = 30;      // m from its base where a withdrawing stack leaves the field
 const SET_UP_SLACK = 2.5;  // m a unit may shuffle and still count as set up (u.setUp)
@@ -203,8 +204,10 @@ export class UnitStack {
   slotPosition(u, out) {
     const c = Math.cos(this.facing);
     const s = Math.sin(this.facing);
-    const ox = this.crossing ? 0 : u.offset.x * LOOSENESS + u.wander.x; // over a bridge: single file
-    const oy = (u.offset.y * LOOSENESS + u.wander.y) * (this.crossing ? 1.6 : 1) - (this.crossing ? Math.abs(u.offset.x) * 1.5 : 0);
+    const wx = this.usesCover ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
+    const wy = this.usesCover ? u.wander.y : 0;
+    const ox = this.crossing ? 0 : u.offset.x * LOOSENESS + wx; // over a bridge: single file
+    const oy = (u.offset.y * LOOSENESS + wy) * (this.crossing ? 1.6 : 1) - (this.crossing ? Math.abs(u.offset.x) * 1.5 : 0);
     out.set(this.anchor.x + ox * c + oy * s, 0, this.anchor.z - ox * s + oy * c);
     this.onDeck(out);
     out.y = this.world.terrain.heightAt(out.x, out.z);
@@ -374,7 +377,10 @@ export class UnitStack {
     if (freeing) {
       const want = Math.hypot(_w.x, _w.z);
       if (want > 0.3) u.yaw += clamp(angleDelta(u.yaw, Math.atan2(_w.x, _w.z)), -s.turnRate * dt, s.turnRate * dt);
-    } else if (!this.usesCover) this.driveAlongHull(u, _w, d, dt);
+    } else if (!this.usesCover) {
+      if (!this.moveTarget && d < PARKED) _w.set(0, 0, 0); // arrived: a small correction isn't worth turning the hull for
+      this.driveAlongHull(u, _w, d, dt);
+    }
     u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
     if (!this.usesCover && !freeing) { // …and only along the hull: no skating sideways while the old heading blends out
       const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), along = u.vel.x * fx + u.vel.z * fz;
