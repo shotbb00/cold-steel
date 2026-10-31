@@ -15,6 +15,7 @@ const ACTIONS = [
   { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: STRUCTURES.sandbags.cost, tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: STRUCTURES.trench.cost, tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: STRUCTURES.wire.cost, tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:revetment', label: 'Dig in', icon: 'trench', key: 'trench', cost: STRUCTURES.revetment.cost, tip: 'The blade digs a vehicle position: any vehicle in it is hull down behind the berm', when: (sel) => one(sel, (s) => s.stats.dozer) },
   { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: STRUCTURES.mines.cost, tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
   {
     cmd: 'engineer', icon: 'engineer', key: 'engineer',

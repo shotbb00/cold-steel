@@ -858,6 +858,7 @@ export class UnitStack {
       if (e === u.target) score -= 3;
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
+      if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches
       if (s.marksman) {
         if (!e.stack.usesCover) continue;      // a rifle bullet off armour gives him away for nothing
         if (e.officer) score -= 150;           // the platoon leader first
@@ -1053,7 +1054,7 @@ export class UnitStack {
       pierce: s.pierce ?? 0,
       vsArmor: s.vsArmor ?? 1,
       suppress: (s.suppressPower ?? 1) * (ambush ? AMBUSH.suppress : 1),
-      ignore: u.coverSpot?.collider ?? null, // shoot over / around our own cover
+      ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
       tracer: Math.random() < (s.tracer ?? 1),
       trail: !!s.trail,
     });
@@ -1085,6 +1086,7 @@ export class UnitStack {
       return;
     }
     if (this.stats.structure) dir = null; // concrete all round: no weak sides
+    if (this.stats.structure && source?.stats?.vsStructure) amount *= source.stats.vsStructure; // demolition charges are made for concrete
     if (this.usesCover) {
       // Infantry: a solid hit is usually decisive — down, or wounded if lucky. Wounded men
       // don't survive a second one. Small grazes (splash edges, beam spill) just wear on them.

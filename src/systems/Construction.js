@@ -12,6 +12,10 @@
 // Engineer jobs (only stacks with stats.engineer work on them; engineers also build ×3):
 //   clear    – lift every mine and cut every coil of wire within ~9 m of the spot
 //   demolish – charges on a bridge (map.bridgeAt); when done the bridge goes up (game.blowBridge)
+// Combat engineer vehicles (stats.dozer) dig with their blade:
+//   revetment – a vehicle position: a pit the length of a tank, a ramp out at the back and a
+//              spoil berm in front. A vehicle in it sits a metre lower, so the berm takes the
+//              rounds aimed at its hull while its gun still clears it (hull down).
 // Bridge layers (stats.bridgeLayer) have one job of their own:
 //   span     – drive to the near bank at the clicked spot and lay a bridge over (game.layBridge)
 // Engineers also find enemy minefields within 16 m, and set them off only a quarter as often.
@@ -28,11 +32,13 @@ export const STRUCTURES = {
   mines: { id: 'mines', name: 'Minefield', cost: 40, work: 70, length: 14, width: 9, mines: 8 },
   clear: { id: 'clear', name: 'Clearing', cost: 0, work: 40, length: 12, width: 12, action: true, engineers: true },
   demolish: { id: 'demolish', name: 'Demolition charges', cost: 30, work: 55, length: 8, width: 7, action: true, engineers: true },
+  revetment: { id: 'revetment', name: 'Vehicle position', cost: 25, work: 22, length: 4.6, width: 8, dozer: true },
   span: { id: 'span', name: 'Bridge', cost: 0, work: 20, length: 5, width: 26, action: true, layer: true },
 };
 const CLEAR_RADIUS = 9;
 const FUSE = 8;             // seconds from the charges being set to the bridge going up
 const DETECT = 16;          // metres: engineers spot enemy mines this close
+const REVETMENT = { depth: 1.0, berm: 0.75 }; // m: the vehicle sits this much lower; the berm stands this high
 
 const STEEL = 0x55575a;
 const RUST = 0x5a3c2a;
@@ -91,7 +97,7 @@ export class Construction {
     if (stack) {
       // stand just behind the work so the squad isn't silhouetted in front of it
       // (a clearing or demolition job covers a wide patch but is worked from its middle: close in)
-      const back = def.action ? 3 : def.width / 2 + 2;
+      const back = def.dozer ? 0 : def.action ? 3 : def.width / 2 + 2; // a dozer works the pit from inside it
       const to = def.layer // a bridge layer pulls up at the near bank, facing across
         ? { x, z: z + river.side(stack.anchor.x, stack.anchor.z) * (river.halfWidth + 9) }
         : { x: x - Math.sin(yaw) * back, z: z - Math.cos(yaw) * back };
@@ -104,6 +110,7 @@ export class Construction {
   update(dt) {
     for (const s of this.game.world.stacks) for (const u of s.units) { u.working = false; u.slow = 1; }
     this.updateObstacles(dt);
+    this.updateRevetments();
     for (let i = this.fuses.length - 1; i >= 0; i--) {
       if (this.game.time < this.fuses[i].at) continue;
       this.game.blowBridge(this.fuses[i].bridge);
@@ -122,6 +129,11 @@ export class Construction {
         if (site.def.layer) { // only its own bridge layer, parked on the bank
           const u = s === site.stack && s.units[0];
           if (u?.alive && !u.dropped && Math.hypot(u.pos.x - site.x, u.pos.z - site.z) < this.game.world.river.halfWidth + 14 && !u.moving) workers += 1;
+          continue;
+        }
+        if (site.def.dozer) { // the blade: the engineer vehicle itself, at the spot and not driving off
+          const u = s.stats.dozer && s.units[0];
+          if (u?.alive && !u.possessed && Math.hypot(u.pos.x - site.x, u.pos.z - site.z) < REACH) workers += 1;
           continue;
         }
         if (!s.usesCover) continue;
@@ -220,6 +232,7 @@ export class Construction {
       return this.finishJob(site);
     }
     if (site.kind === 'trench') this.buildTrench(site);
+    else if (site.kind === 'revetment') this.buildRevetment(site);
     else if (site.kind === 'wire') this.buildWire(site);
     else if (site.kind === 'mines') this.buildMines(site);
     else this.buildSandbags(site);
@@ -291,6 +304,55 @@ export class Construction {
     this.bagRows(site, 0, site.def.length, 3, parts);
     site.mesh = this.addMesh(parts);
     this.game.cover.addStructureBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 0.6, height: 0.95 });
+  }
+
+  /** A vehicle position: the pit (ramped at the back), the spoil berm in front, and its cover. */
+  buildRevetment(site) {
+    const { terrain, cover } = this.game;
+    const halfX = site.def.length / 2 - 0.3;
+    const c = Math.cos(site.yaw);
+    const s = Math.sin(site.yaw);
+    terrain.dig(site.x, site.z, 6, REVETMENT.depth, (x, z) => {
+      const dx = x - site.x;
+      const dz = z - site.z;
+      const lx = dx * c - dz * s;
+      const lz = dx * s + dz * c;
+      const ramp = smoothstep(-4.6, -2.2, lz);                 // the way in and out, from the back
+      return smoothstep(halfX + 0.5, halfX - 0.2, Math.abs(lx)) * smoothstep(3.4, 2.8, lz) * ramp;
+    });
+    const parts = [];
+    for (let i = 0; i < 3; i++) {                     // the spoil berm in front, and some to the sides
+      const [x, z] = this.local(site, -1.6 + i * 1.6, 3.9);
+      parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 1.4, sy: REVETMENT.berm, sz: 0.9, color: EARTH }, 10, 6));
+    }
+    for (const sx of [-1, 1]) {
+      const [x, z] = this.local(site, sx * (halfX + 1.1), 0.8);
+      parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 0.6, sy: REVETMENT.berm * 0.7, sz: 2.6, color: EARTH }, 10, 6));
+    }
+    site.mesh = this.addMesh(parts);
+    const [fx, fz] = this.local(site, 0, 3.9);
+    site.berm = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: site.def.length + 0.4, thickness: 1.2, height: REVETMENT.berm, spots: false });
+    this.revetments = [...(this.revetments ?? []), site];
+  }
+
+  /** Vehicles standing in a vehicle position are hull down (their rounds clear their own berm). */
+  updateRevetments() {
+    const list = this.revetments;
+    if (!list?.length) return;
+    for (const s of this.game.world.stacks) {
+      if (s.usesCover) continue;
+      for (const u of s.units) {
+        u.hullDown = null;
+        if (!u.alive || u.moving) continue;
+        for (const r of list) {
+          const dx = u.pos.x - r.x;
+          const dz = u.pos.z - r.z;
+          const lx = dx * Math.cos(r.yaw) - dz * Math.sin(r.yaw);
+          const lz = dx * Math.sin(r.yaw) + dz * Math.cos(r.yaw);
+          if (Math.abs(lx) < r.def.length / 2 && lz > -3 && lz < 3.2) { u.hullDown = r; break; }
+        }
+      }
+    }
   }
 
   /** Concertina wire: a row of coils on pickets. */

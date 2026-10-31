@@ -2,13 +2,13 @@
 // a short description — hull outline, running gear or wheels, a turret / launcher that
 // traverses, a weapon or launcher that elevates — and vehicle() turns it into a RigRenderer rig.
 //   NATO  M113 family: M901 ITV (TOW "hammerhead"), M106 mortar carrier, M113 ambulance,
-//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB
+//         M48 Chaparral (on the M730 carrier) · M270 MLRS · M88 recovery vehicle · M60 AVLB · M728 CEV
 //   Pact  BRDM-2 (KPVT turret) and 9P148 (Konkurs launcher) · BM-21 Grad on the Ural-375 ·
-//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20
+//         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
 import * as THREE from 'three';
-import { P, merge, pair, grime } from '../units/geometry.js';
+import { P, merge, pair, grime, loft } from '../units/geometry.js';
 import { sideProfile, planProfile, stationHull, trackedHull, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
 
 const NATO = 0x4b5a35;
@@ -703,5 +703,104 @@ export const buildPactMTU = vehicle(() => {
     ]), 1.2, 0.3),
     load: grime(scissors({ y: 2.05, length: 9.8, width: 3.4, color: PACT, dark: PACT_DK }), 1.2, 0.3),
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.67, y: 1.3, z: -0.8 })]),
+  };
+});
+
+
+// ---------------------------------------------------------------- NATO: M728 CEV
+
+/** M728 combat engineer vehicle: an M60A1 with the short 165 mm demolition gun, the A-frame boom
+ *  laid back over the turret, the M9 dozer blade on the front. */
+export const buildNatoCEV = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 4.9, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 3, trackWidth: 0.6, wheelColor: NATO_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.3, 1.45, 0.5], [-3.0, 1.55, 0.45], [2.4, 1.6, 0.45], [3.3, 1.1, 0.6], [3.5, 0.98, 0.8]],
+        { belly: 1.15, fender: 1.72, fenderY: 1.1, chamfer: 0.05 }, { color: NATO, ...C }),
+      // the dozer blade on its push arms and lift rams
+      loft([[0, 0.25, 3.95, 1.85, 0.06, 6], [0, 0.65, 3.85, 1.85, 0.09, 6], [0, 1.05, 3.92, 1.85, 0.07, 6]], { color: NATO_DK }, 4),
+      ...pair((s) => P.box(0.16, 0.16, 1.4, { x: s * 1.5, y: 0.55, z: 3.2, rx: 0.12, color: STEEL })),
+      ...pair((s) => P.cyl(0.07, 0.07, 1.0, { x: s * 0.9, y: 1.05, z: 3.4, rx: Math.PI / 2 - 0.7, color: STEEL }, 8)),
+      ...pair((s) => P.box(0.2, 0.14, 0.1, { x: s * 1.45, y: 1.3, z: 3.42, color: STEEL })),            // headlight guards
+      P.cyl(0.32, 0.32, 1.2, { y: 1.35, z: -3.25, rz: Math.PI / 2, color: NATO_DK }, 12),               // the boom winch at the rear
+      ...pair((s) => P.box(0.06, 0.55, 6.6, { x: s * 1.75, y: 0.85, z: 0.0, color: NATO, ...C })),     // side skirts
+      P.box(1.0, 0.35, 0.8, { x: -1.0, y: 1.75, z: -2.4, color: 0x4d5236 }),                           // stowage on the deck
+    ]), 1.2, 0.3),
+    turret: {
+      geo: grime(merge([
+        // the cast M60A1 turret: long narrow nose, flat sides, bustle
+        planProfile([[-0.55, 1.65], [0.55, 1.65], [1.2, 0.7], [1.25, -1.1], [0.9, -1.5], [-0.9, -1.5], [-1.25, -1.1], [-1.2, 0.7]], 0.75, { color: NATO, ...C }),
+        P.cyl(0.42, 0.45, 0.32, { x: 0.55, y: 0.9, z: -0.3, color: NATO_DK }, 14),                       // M19 cupola…
+        P.box(0.1, 0.1, 0.55, { x: 0.55, y: 1.1, z: -0.1, color: STEEL }),                               // …and its .50
+        // the A-frame boom: hinged at the turret's cheeks, laid back over the roof and bustle
+        ...pair((s) => P.box(0.16, 0.16, 3.6, { x: s * 0.85, y: 0.95, z: -0.55, rx: 0.1, color: NATO_DK })),
+        P.box(1.9, 0.16, 0.16, { y: 0.77, z: -2.3, color: NATO_DK }),
+        ...pair((s) => P.box(0.26, 0.3, 0.3, { x: s * 0.95, y: 0.55, z: 1.2, color: STEEL })),
+        P.cyl(0.02, 0.02, 3.2, { y: 1.05, z: -0.6, rx: Math.PI / 2 + 0.1, color: STEEL }, 5),
+        P.box(1.6, 0.3, 0.5, { y: 0.45, z: -1.8, color: 0x4d5236 }),                                    // bustle rack
+      ]), 0.8, 0, 0.4),
+      at: [0, 1.62, 0.1],
+    },
+    gun: {
+      geo: merge([
+        P.box(0.6, 0.5, 0.35, { z: 0.1, color: NATO, ...C }),                                           // mantlet
+        P.cyl(0.13, 0.13, 1.35, { z: 0.85, rx: Math.PI / 2, color: NATO_DK }, 14),                     // the stubby M135 barrel
+        P.cyl(0.155, 0.155, 0.14, { z: 1.55, rx: Math.PI / 2, color: STEEL }, 14),                     // muzzle ring
+      ]),
+      at: [0, 0.4, 1.55],
+    },
+    muzzle: [0, 0, 1.65],
+    recoil: 0.35,
+    marks: merge([P.box(0.02, 0.3, 0.6, { x: 1.77, y: 1.3, z: -1.2 })]),
+  };
+});
+
+// ---------------------------------------------------------------- Pact: IMR-2
+
+/** IMR-2 obstacle-clearing vehicle: a T-72 hull, the V-plough blade in front, and on the turret
+ *  ring the armoured operator's cab and the telescopic crane jib with its grab. */
+export const buildPactIMR = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 4.9, wheels: 6, wheelR: 0.36, sprocket: -1, rollers: 3, trackWidth: 0.58, wheelColor: PACT_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.4, 1.3, 0.5], [-3.1, 1.38, 0.45], [2.3, 1.42, 0.45], [3.3, 1.02, 0.6], [3.5, 0.94, 0.8]],
+        { belly: 1.15, fender: 1.74, fenderY: 1.08, chamfer: 0.05 }, { color: PACT }),
+      // the universal blade: two halves in a V (it ploughs a lane or pushes as a dozer)
+      ...pair((s) => P.box(1.95, 0.95, 0.14, { x: s * 0.92, y: 0.62, z: 3.55, ry: s * 0.32, rx: 0.15, color: PACT_DK })), // apex forward
+      ...pair((s) => P.box(0.14, 0.14, 1.5, { x: s * 1.35, y: 0.62, z: 3.05, rx: 0.15, color: STEEL })),
+      ...pair((s) => P.cyl(0.07, 0.07, 1.0, { x: s * 0.7, y: 1.05, z: 3.25, rx: Math.PI / 2 - 0.6, color: STEEL }, 8)),
+      ...pair((s) => P.cyl(0.3, 0.3, 1.0, { x: s * 0.72, y: 1.7, z: -3.25, rz: Math.PI / 2, color: PACT_DK }, 16)), // fuel drums
+      ...pair((s) => P.box(0.04, 0.44, 6.4, { x: s * 1.72, y: 0.88, z: -0.2, color: 0x1f201c, surf: 'rubber' })),  // rubber skirts
+      P.box(1.6, 0.35, 0.9, { x: 0.3, y: 1.6, z: -2.2, color: 0x4d5236 }),                             // stowage
+    ]), 1.2, 0.3),
+    turret: {
+      geo: grime(merge([
+        P.cyl(0.85, 0.9, 0.3, { color: PACT }, 16),                                                   // the rotating platform
+        // the operator's armoured cab on the left, its vision slots and searchlight
+        stationHull([[-0.2, [[0, 0.15], [0.55, 0.15], [0.55, 1.05], [0.45, 1.15], [0, 1.15]]], [1.0, [[0, 0.15], [0.55, 0.15], [0.55, 0.85], [0.45, 0.95], [0, 0.95]]]], { color: PACT }),
+        ...[-0.25, 0, 0.25].map((x) => P.box(0.14, 0.07, 0.03, { x: x - 0.0, y: 0.82, z: 1.0, rx: 0.5, color: GLASS })),
+        P.cyl(0.09, 0.09, 0.12, { x: 0.35, y: 1.2, z: 0.6, rx: Math.PI / 2, color: STEEL }, 10),
+        P.box(0.55, 0.5, 0.6, { x: 0.55, y: 0.45, z: -0.4, color: PACT_DK }),                           // crane slewing gear
+      ]), 0.8, 0, 0.4),
+      at: [-0.45, 1.45, 0.2],
+    },
+    gun: { // the jib: two telescoping box sections and the grab hanging from its end
+      geo: merge([
+        P.box(0.34, 0.34, 3.2, { z: 1.4, color: PACT_DK }),
+        P.box(0.24, 0.24, 1.6, { z: 3.3, color: PACT }),
+        P.box(0.18, 0.18, 0.5, { y: -0.15, z: 4.1, rx: 1.2, color: STEEL }),
+        ...pair((s) => P.box(0.06, 0.45, 0.14, { x: s * 0.12, y: -0.5, z: 4.25, rz: s * 0.25, color: STEEL })), // the grab's jaws
+        P.cyl(0.08, 0.08, 1.1, { y: -0.25, z: 0.7, rx: Math.PI / 2 - 0.35, color: STEEL }, 8),       // luffing ram
+      ]),
+      at: [0.55, 0.75, -0.2],
+      pitch: 0.12,
+    },
+    muzzle: [0, -0.6, 4.3],
+    recoil: 0,
+    marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.76, y: 1.2, z: -0.8 })]),
   };
 });

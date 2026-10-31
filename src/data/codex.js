@@ -35,6 +35,14 @@ export const CODEX = {
     nato: 'Long-range reconnaissance patrols — LRRP teams trained to slip behind the lines and watch the roads the Soviet echelons would use.',
     pact: 'Divisional razvedka: the reconnaissance troops who were to find NATO\'s defences before the regiments ran into them.',
   },
+  cev: {
+    use: 'Two jobs. Its blade digs vehicle positions (T): park a tank or an IFV in one and it is hull down — the berm takes the rounds aimed at its hull. Its demolition weapon goes for bunkers, held houses and trenches first and brings buildings down.',
+    strong: 'Bunkers, strongpoints, houses, trenches; digging your armour in',
+    weak: 'Tanks and missiles at range (it is a slow, short-range gun); the Pact IMR-2 must get right up to its target',
+    counter: 'Kill it before it gets in range: anti-tank teams, tank destroyers. A hull-down tank is hit by artillery from above, or from the flank.',
+    nato: 'The M728 put a 165 mm demolition gun, an A-frame boom and the M9 dozer blade on the M60A1 — the engineers\' answer to pillboxes and roadblocks.',
+    pact: 'The IMR-2 on the T-72 chassis cleared obstacles and rubble with its telescopic crane and its blade; the engineers blew what it could not move.',
+  },
   sniper: {
     use: 'Kill the enemy\'s leaders from far away. Put them on high ground or in a hedgerow 250–300 m from the enemy: the marksman picks off the platoon leader first, then mortar and MG crews and observers, and the platoon left without its officer wavers.',
     strong: 'Range, choosing the target, staying hidden while he shoots',

@@ -16,6 +16,7 @@ import engineers from './engineers.ts';
 import reconVehicle from './reconVehicle.ts';
 import tankDestroyer from './tankDestroyer.ts';
 import heavyTank from './heavyTank.ts';
+import cev from './cev.ts';
 import rockets from './rockets.ts';
 import spMortar from './spMortar.ts';
 import observers from './observers.ts';
@@ -42,6 +43,7 @@ export const UNIT_TYPES = {
   [reconVehicle.id]: reconVehicle,
   [tankDestroyer.id]: tankDestroyer,
   [heavyTank.id]: heavyTank,
+  [cev.id]: cev,
   [rockets.id]: rockets,
   [spMortar.id]: spMortar,
   [observers.id]: observers,

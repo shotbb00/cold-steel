@@ -189,7 +189,10 @@ export class CommandSystem {
     } else if (cmd === 'control') {
       this.game.toggleView();
     } else if (cmd.startsWith('build:')) {
-      const builders = [...this.selected].filter((st) => st.alive && st.usesCover);
+      const sel = [...this.selected].filter((st) => st.alive);
+      const dozer = sel.length === 1 && sel[0].stats.dozer;
+      if (dozer) return this.startTargeting({ kind: 'build', structure: 'revetment', stack: sel[0] }); // its blade digs one thing (T)
+      const builders = sel.filter((st) => st.usesCover);
       if (builders.length !== 1) return this.game.bus.emit('toast', 'Select one infantry stack to build with');
       this.startTargeting({ kind: 'build', structure: cmd.slice(6), stack: builders[0] });
     } else if (cmd === 'leave') {

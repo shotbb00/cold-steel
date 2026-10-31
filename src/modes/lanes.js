@@ -32,7 +32,7 @@ const WAVE_EVERY = 50;
 const FIRST_WAVE = 25;
 const MAX_WAVES_PER_LANE = 3;   // waves alive in one lane before the next is held back
 const THINK = 1;
-const ARMY_ORDER = ['rifles', 'atTeam', 'tank', 'mortar', 'rifles', 'mgTeam', 'tank', 'tankDestroyer', 'atTeam', 'ifv', 'artillery', 'rifles', 'heavyTank', 'recovery', 'tank', 'rockets', 'aa', 'manpads'];
+const ARMY_ORDER = ['rifles', 'atTeam', 'tank', 'mortar', 'rifles', 'mgTeam', 'cev', 'tank', 'tankDestroyer', 'atTeam', 'ifv', 'artillery', 'rifles', 'heavyTank', 'recovery', 'tank', 'rockets', 'aa', 'manpads'];
 const LANE_NAMES = (x) => (x < -20 ? 'West' : x > 20 ? 'East' : 'Centre');
 
 export default {

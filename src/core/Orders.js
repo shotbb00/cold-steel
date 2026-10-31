@@ -74,7 +74,7 @@ export class Orders {
       case 'build': {
         const s = own(cmd.s);
         const def = STRUCTURES[cmd.k];
-        if (!s || !def || (def.layer ? !s.stats.bridgeLayer : !s.usesCover)) return null;
+        if (!s || !def || (def.layer ? !s.stats.bridgeLayer : def.dozer ? !s.stats.dozer : !s.usesCover)) return null;
         if (def.engineers && !s.stats.engineer) return g.tell(faction, 'Only engineers can do that');
         if (def.layer && s.units[0]?.dropped) return g.tell(faction, `${s.name} has already laid its bridge`);
         if (cmd.k === 'demolish' && !g.map.bridgeAt?.(cmd.x, cmd.z)) return g.tell(faction, 'No bridge there to blow');
