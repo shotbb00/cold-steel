@@ -130,7 +130,7 @@ export function buildBwAlphaJet(mats) {
       ...pair((s) => P.box(0.4, 0.62, 0.04, { x: s * 0.62, y: 1.65, z: 2.62, color: HOLE })),
       ...pair((s) => P.cyl(0.2, 0.2, 0.04, { x: s * 0.55, y: 1.72, z: -3.62, rx: Math.PI / 2, color: HOLE }, 10)),
       // the swept shoulder wing with anhedral, the tailplane, the fin
-      ...pair((s) => surface([[s * 0.1, 2.2, 0.45, 1.3, 0.13], [s * 0.5, 2.2, 0.4, 1.25, 0.12], [s * 2.5, 2.08, -0.7, 0.9, 0.08], [s * 4.55, 1.93, -1.8, 0.55, 0.05]], { color: LW, ...C })),
+      ...pair((s) => surface([[s * 0.3, 2.2, 0.45, 1.3, 0.13], [s * 2.5, 2.08, -0.7, 0.9, 0.08], [s * 4.55, 1.93, -1.8, 0.55, 0.05]], { color: LW, ...C })),
       surface([[-2.1, 1.85, -5.6, 0.35, 0.03], [0, 2.0, -4.6, 0.75, 0.06], [2.1, 1.85, -5.6, 0.35, 0.03]], { color: LW, ...C }),
       fin([[1.95, -3.75, 1.2, 0.09], [2.3, -3.9, 1.1, 0.08], [3.4, -4.7, 0.8, 0.06], [4.1, -5.3, 0.5, 0.04], [4.2, -5.4, 0.3, 0.03]], { color: LW, ...C }),
       // the 27 mm Mauser pod under the belly on its pylon, the barrel out front
@@ -226,9 +226,9 @@ export function buildNvaSu22(mats) {
       // the all-moving tailplane, the tall swept fin and the ventral fin
       surface([[-2.7, 1.9, -8.6, 0.4, 0.04], [0, 2.0, -7.4, 1.0, 0.08], [2.7, 1.9, -8.6, 0.4, 0.04]], { color: NVA, ...C }),
       fin([[2.6, -5.8, 1.6, 0.1], [4.0, -7.0, 1.1, 0.08], [5.0, -8.0, 0.65, 0.05], [5.1, -8.15, 0.35, 0.03]], { color: NVA, ...C }),
-      fin([[1.25, -7.0, 0.8, 0.05], [0.6, -7.6, 0.5, 0.04]], { color: NVA, ...C }),
+      fin([[1.6, -7.0, 0.8, 0.05], [1.25, -7.15, 0.75, 0.05], [0.6, -7.6, 0.5, 0.04]], { color: NVA, ...C }), // the ventral fin, its root inside the fuselage
       // the NR-30s in the wing roots, the pylons with UB-32 pods
-      ...pair((s) => P.cyl(0.035, 0.04, 0.6, { x: s * 0.75, y: 1.55, z: 2.95, rx: Math.PI / 2, color: STEEL }, 6)),
+      ...pair((s) => P.cyl(0.035, 0.04, 0.6, { x: s * 0.62, y: 1.65, z: 2.85, rx: Math.PI / 2, color: STEEL }, 6)),
       ...pair((s) => [1.5, 3.0].map((x) => P.box(0.1, 0.3, 1.1, { x: s * x, y: 1.5, z: -0.6 - (x - 1.5) * 0.6, color: NVA_DK }))).flat(),
       ...pair((s) => [1.5, 3.0].flatMap((x) => rocketPod(s * x, 1.12, -1.6 - (x - 1.5) * 0.6, 0.6 - (x - 1.5) * 0.6, 0.25, 0x5a5e52))).flat(),
     ]),
@@ -238,5 +238,5 @@ export function buildNvaSu22(mats) {
   const add = meshAdder(root);
   add(SU22.body, mats.body);
   add(SU22.marks, mats.glow, false);
-  return { root, gun: point(root, 0.75, 1.55, 3.3), pods: [point(root, -1.5, 1.12, 0.6), point(root, 1.5, 1.12, 0.6)], jet: true };
+  return { root, gun: point(root, 0.62, 1.65, 3.15), pods: [point(root, -1.5, 1.12, 0.6), point(root, 1.5, 1.12, 0.6)], jet: true };
 }
