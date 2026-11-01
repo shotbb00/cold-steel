@@ -3,6 +3,7 @@
 // station within 900 m is reported on the radio with its bearing, towed AA guns within 380 m get
 // their full reach instead of what the gunner can see, and every other air defence unit there
 // reaches a fifth further. The enemy's gunners go for it first.
+import { buildBwHawkRadar, buildNvaP40 } from '../models/armyAir.js';
 import { buildNatoFAAR, buildPactP19 } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -48,11 +49,13 @@ export default {
   },
 
   camera: { distance: 12, height: 5, shoulder: 2 },
-  models: { nato: buildNatoFAAR, pact: buildPactP19 },
+  models: { nato: buildNatoFAAR, pact: buildPactP19, bw: buildBwHawkRadar, nva: buildNvaP40 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'HAWK PAR', weapon: 'pulse acquisition radar', text: 'The HAWK battery’s search radar on its trailer: every air defence unit near it sees and reaches further.' },
+    nva: { name: 'P-40', weapon: 'long-range search radar', text: 'The big search radar on its tracked chassis: it sees the NATO helicopters coming long before they show over the ridge.' },
     nato: { name: 'AN/MPQ-49 FAAR', weapon: 'unarmed', text: 'The Forward Area Alerting Radar on a Gama Goat. Parked, it warns of every helicopter coming in and guides your Vulcans and Chaparrals onto it.' },
     pact: { name: 'P-19 Danube', weapon: 'unarmed', text: 'A search radar on a ZiL-131. Once its antenna turns, no NATO helicopter arrives unannounced, and the regiment\'s ZU-23s and Strelas see it coming.' },
   },

@@ -3,6 +3,7 @@
 // fired at a tank is one fewer for a helicopter), out to 520 m in the air and 480 m on the
 // ground, then a long reload. The Tunguska also carries two twin 30 mm cannons for anything on
 // the ground within 160 m; the ADATS has only its missiles. Expensive, and a target for both.
+import { buildBwRoland, buildNvaOsa } from '../models/armyAir.js';
 import { buildNatoADATS, buildPactTunguska } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -51,6 +52,8 @@ export default {
     antiAir: { missile: true, shared: true, range: 520, count: 8, reload: 40, pk: 0.7, hits: 6, speed: 380, sound: 'sam' },
   },
   factionStats: {
+    bw: { atgm: null, range: 1, antiAir: { missile: true, range: 580, count: 4, reload: 24, pk: 0.72, hits: 6, speed: 420, sound: 'sam' } },
+    nva: { atgm: null, range: 1, antiAir: { missile: true, range: 620, count: 6, reload: 30, pk: 0.65, hits: 6, speed: 400, sound: 'sam' } },
     pact: { // 2 × twin 30 mm 2A38 against anything on the ground near it
       gunRange: 160, fireCooldown: 0.07, damage: 100, splash: 0.9, pierce: 0.2, vsArmor: 0.18, boltSpeed: 700, boltSize: 0.9,
       tracer: 0.5, spread: 0.022, magSize: 40, reloadTime: 3, weaponSound: 'aa',
@@ -58,11 +61,13 @@ export default {
   },
 
   camera: { distance: 12, height: 5, shoulder: 2 },
-  models: { nato: buildNatoADATS, pact: buildPactTunguska },
+  models: { nato: buildNatoADATS, pact: buildPactTunguska, bw: buildBwRoland, nva: buildNvaOsa },
   weaponSound: 'sam',
   engine: 'engine.diesel',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Flarakpanzer Roland', weapon: '4 × Roland 2 missiles', text: 'Radar-guided missiles on the Marder: it moves with the tanks and keeps the sky over them clear. Nothing for ground targets.' },
+    nva: { name: '9K33 Osa', weapon: '6 × 9M33 missiles', text: 'Radar, missiles and an amphibious 6×6 in one: the division’s mobile air defence. Nothing for ground targets.' },
     nato: { name: 'ADATS', weapon: '8 × MIM-146 missiles', text: 'Air Defence Anti-Tank System: laser beam-riding missiles that kill helicopters and tanks alike. Eight in the rack — spend them wisely.' },
     pact: { name: '2S6 Tunguska', weapon: '2 × twin 30 mm 2A38, 8 × 9M311 missiles', text: 'Radar, cannons and missiles in one turret. Missiles for whatever flies or rolls at range, the cannons for everything close.' },
   },

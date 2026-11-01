@@ -4,6 +4,7 @@
 // range. Against ground targets the rapid-fire cannon shreds infantry in the open but does
 // little to tanks, and the thin hull doesn't survive much in return. Keep them behind the line,
 // under your assault's path.
+import { buildBwGepard, buildNvaZSU57 } from '../models/armyAir.js';
 import { buildNatoM163 } from '../models/natoM163.js';
 import { buildPactShilka } from '../models/pactShilka.js';
 import type { UnitType } from '../../types.ts';
@@ -64,11 +65,13 @@ export default {
   },
 
   camera: { distance: 11, height: 4.5, shoulder: 2 },
-  models: { nato: buildNatoM163, pact: buildPactShilka },
+  models: { nato: buildNatoM163, pact: buildPactShilka, bw: buildBwGepard, nva: buildNvaZSU57 },
   weaponSound: 'aa',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Flakpanzer Gepard', weapon: '2 × 35 mm Oerlikon KDA', text: 'Search and tracking radar on a Leopard 1 hull: two 35 mm cannons that tear helicopters apart well before they reach the line.' },
+    nva: { name: 'ZSU-57-2', weapon: '2 × 57 mm S-68', text: 'The old twin 57 mm on its open turret, still in the reserve regiments: no radar, heavy shells, and a crew that sees what it shoots at.' },
     nato: { name: 'M163 VADS', weapon: '20 mm M61 Vulcan, range-only radar', text: 'A gatling on an M113. Its radar finds enemy helicopters out to about 320 m and the Vulcan tears into them; against infantry in the open it is murderous. Keep it out of tank range.' },
     pact: { name: 'ZSU-23-4 Shilka', weapon: '4 × 23 mm 2A7, Gun Dish radar', text: 'Four radar-directed cannons that make any helicopter run a gamble — and turn any infantry caught in the open to mince. Thin armour: a tank round finishes it.' },
   },

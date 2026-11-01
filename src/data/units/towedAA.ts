@@ -4,6 +4,7 @@
 // about two-thirds of the self-propelled guns' range — a friendly air search radar gives them the
 // whole reach. Against ground targets they shred infantry and trucks; anything heavier, or a few
 // rifle hits on the exposed crew, finishes them.
+import { buildBwFlaMK20, buildNvaS60 } from '../models/armyAir.js';
 import { buildNatoM167, buildPactZU23 } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -66,9 +67,11 @@ export default {
   },
 
   camera: { distance: 8, height: 3.5, shoulder: 1.5 },
-  models: { nato: buildNatoM167, pact: buildPactZU23 },
+  models: { nato: buildNatoM167, pact: buildPactZU23, bw: buildBwFlaMK20, nva: buildNvaS60 },
   weaponSound: 'aa',
   variants: {
+    bw: { name: 'Fla-MK 20 mm', weapon: 'twin 20 mm Rh 202', text: 'The twin 20 mm on its carriage behind a Unimog: quick to unhitch, a curtain of shells over a bridge or a crossroads.' },
+    nva: { name: 'S-60', weapon: '57 mm AZP', text: 'The 57 mm on its four-wheeled carriage behind a Ural: slow-firing but hard-hitting, against helicopters and light vehicles alike.' },
     nato: { name: 'M167 Vulcan', weapon: '20 mm M61 Vulcan, range-only radar', text: 'The Vulcan on a two-wheeled carriage. Cheap, small and easy to hide or dig in, but slow to move and the crew sits in the open.' },
     pact: { name: 'ZU-23-2', weapon: '2 × 23 mm 2A14', text: 'Two 23 mm cannons on a light carriage: the gun every motor-rifle regiment had. Murderous against helicopters that come too close, and against infantry in the open.' },
   },

@@ -1,6 +1,7 @@
 // SAM vehicles, pairs — NATO M48 Chaparral (Sidewinder derivative on an M730), Pact 9K35
 // Strela-10 (on an MT-LB). Missiles at any enemy aircraft within 600 m: four on the rails,
 // reloaded from inside. No gun at all — they need the line in front of them.
+import { buildBwHawk, buildNvaStrela1 } from '../models/armyAir.js';
 import { buildNatoChaparral, buildPactStrela } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -48,11 +49,17 @@ export default {
   },
 
   camera: { distance: 11, height: 4.6, shoulder: 2 },
-  models: { nato: buildNatoChaparral, pact: buildPactStrela },
+  factionStats: {
+    bw: { towed: { deploy: 20 }, antiAir: { missile: true, range: 760, count: 3, reload: 30, pk: 0.72, hits: 6, speed: 380, sound: 'sam' } },
+    nva: { antiAir: { missile: true, range: 480, count: 4, reload: 18, pk: 0.5, hits: 6, speed: 280, sound: 'sam' } },
+  },
+  models: { nato: buildNatoChaparral, pact: buildPactStrela, bw: buildBwHawk, nva: buildNvaStrela1 },
   weaponSound: 'sam',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Improved HAWK', weapon: '3 × MIM-23 missiles', text: 'The Luftwaffe’s HAWK battery: three big radar-guided missiles that reach further than anything else on the field. Towed — slow to set up, slow to move.' },
+    nva: { name: '9K31 Strela-1', weapon: '4 × 9M31 missiles', text: 'Four heat-seeking missiles in boxes on a BRDM-2: the regiment’s umbrella against low-flying helicopters.' },
     nato: { name: 'M48 Chaparral', weapon: '4 × MIM-72 missiles', text: 'Heat-seeking missiles out to 600 m: no helicopter or jet makes a run over its sector unchallenged. No gun — keep it behind the line.' },
     pact: { name: '9K35 Strela-10', weapon: '4 × 9M37 missiles', text: 'The regiment\'s missile umbrella on an MT-LB. Four ready rounds and more inside; helpless against anything on the ground.' },
   },
