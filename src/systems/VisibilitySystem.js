@@ -13,8 +13,8 @@
 // through trees shortens the range — the more forest along the line, the closer a target has
 // to be (WOODS_CUT at full density). Sampled from a grid built once.
 // Units only shoot spotted enemies, so hidden, prone troops create real lulls.
-// For the player: hidden enemies aren't drawn, labelled or orderable (`visible`); their
-// gunfire can still be heard.
+// For the player: hidden enemies aren't drawn, labelled or orderable (`visible`), nor are
+// spotted ones standing in the fog of war; their gunfire can still be heard.
 import { MASKED } from './Gas.js';
 
 const INTERVAL = 0.25;
@@ -73,7 +73,9 @@ export class VisibilitySystem {
         if (!u.alive) continue; // a body stays where (and as) it was last seen
         // fortifications are on everyone's maps
         u.spotted = !this.enabled || s.stats.structure || this.isSeen(u, spotters, terrain);
-        u.visible = s.faction === this.player || u.spotted;
+        // drawn only where your fog of war is clear (render/FogOfWar.js): spotted by a shot's flash,
+        // a radar, a tall hull past the edge of view — your troops may fire at it, you don't see it
+        u.visible = s.faction === this.player || (u.spotted && (!this.enabled || s.stats.structure || (this.game.fow?.at(u.pos.x, u.pos.z) ?? 1) > 0.3));
         if (u.visible) any = true;
       }
       s.visible = s.faction === this.player || any;
