@@ -145,8 +145,9 @@ export function sprite(view, o) {
     }
     mat.alphaMode = tm.blending === 2 ? Engine.ALPHA_ADD : Engine.ALPHA_COMBINE;
     view.spriteMaterials.set(tm, mat);
+    mat.source = tm;
   }
-  mesh.material = mat;
+  mesh.material = view.hold(mat);
   mesh.applyFog = tm.fog !== false;
   return {
     mesh,

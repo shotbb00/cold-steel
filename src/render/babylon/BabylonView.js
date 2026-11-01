@@ -101,7 +101,6 @@ export class BabylonView {
     this.meshes = new Map();     // Three object → { mesh, versions }
     this.geometries = new WeakMap();
     this.materials = new WeakMap();
-    this.materialList = [];      // [Three material, Babylon material] — for the sights (sight.js)
     this.textures = new WeakMap();
     this.lights = new Map();
     this.extras = new Map();     // Three object → a native counterpart (particles, sprites, lines, points)
@@ -240,7 +239,13 @@ export class BabylonView {
     }
     for (const [o, rec] of this.extras) {
       if (rec.frame === this.frame) continue;
-      if (!o.parent) { rec.mesh.dispose(false, false); this.extras.delete(o); continue; }
+      if (!o.parent) {
+        const m = rec.mesh.material;
+        rec.mesh.dispose(false, false);
+        if (m?.users) this.release(m); // sprites share theirs; the rest are the scene's for good
+        this.extras.delete(o);
+        continue;
+      }
       if (rec.mesh.isEnabled()) rec.mesh.setEnabled(false);
     }
     this.sky?.update(time, tCam);
@@ -390,7 +395,8 @@ export class BabylonView {
     if (o.isInstancedMesh) this.syncInstances(o, rec);
     if (o.material !== rec.tm) {               // swapped (a wreck turns black)
       rec.tm = o.material;
-      rec.material = this.material(Array.isArray(o.material) ? o.material[0] : o.material);
+      this.release(rec.material);
+      rec.material = this.hold(this.material(Array.isArray(o.material) ? o.material[0] : o.material));
       mesh.material = rec.material;
     }
     this.syncMaterial(o.material, rec.material);
@@ -408,7 +414,7 @@ export class BabylonView {
     const mesh = new Mesh(o.name || `m${o.id}`, this.scene);
     mesh.rotationQuaternion = new Quaternion();
     this.applyGeometry(mesh, geo);
-    const material = this.material(tm);
+    const material = this.hold(this.material(tm));
     mesh.material = material;
     mesh.useVertexColors = !!tm.vertexColors;
     mesh.hasVertexAlpha = false;
@@ -424,6 +430,7 @@ export class BabylonView {
 
   dropMesh(o, rec) {
     rec.mesh.dispose(false, false); // shared materials and textures stay for the others
+    this.release(rec.material);
     this.meshes.delete(o);
   }
 
@@ -558,9 +565,23 @@ export class BabylonView {
     if (tm.userData?.terrain) new TerrainPlugin(m);
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
-    this.materialList.push([tm, m]);
+    m.source = tm;
     this.syncMaterial(tm, m);
     return m;
+  }
+
+  /** One more mesh draws with `m`. Effects (flares, flashes, decals) bring new Three materials all
+   *  battle long, so a material goes with its last mesh, or a long match runs the tab out of memory. */
+  hold(m) {
+    m.users = (m.users ?? 0) + 1;
+    return m;
+  }
+
+  release(m) {
+    if (--m.users > 0) return;
+    this.materials.delete(m.source);
+    this.spriteMaterials.delete(m.source);
+    m.dispose(false, false); // textures are shared
   }
 
   /** The things the game changes on its materials at run time: colour, emissive, opacity. */
