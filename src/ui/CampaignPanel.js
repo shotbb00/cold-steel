@@ -191,6 +191,8 @@ export class CampaignPanel {
     card.append(el('h3', '', esc(b.name)));
     card.append(el('p', '', `${esc(MAPS[b.map]?.name ?? b.map)} · ${esc(TIMES[b.time]?.name ?? b.time)} · ${esc(WEATHER[b.weather]?.name ?? b.weather)}`));
     card.append(el('p', '', `${enemyAttacks ? 'Holding' : 'Attacking'}: ${ours.map((x) => esc(x.name)).join(', ')}`));
+    const help = battleChoice(c).campaign.forces[c.side].filter((u) => u.cid === 'attached');
+    if (help.length) card.append(el('p', '', `Supporting: ${help.map((u) => esc(u.name)).join(', ')}`));
     card.append(el('p', 'cp-hint', enemyAttacks
       ? 'They come at us here. You have two minutes to dig in before the assault. Lose, and the battalion falls back down the road.'
       : 'We go in here. Take their lines one after another before time runs out. Win, and the sector is ours.'));

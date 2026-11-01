@@ -297,6 +297,24 @@ export function intel(c, b) {
   return { scouted, rows: Object.entries(kinds).map(([k, n]) => [k, scouted ? (n ? `${n} stack${n > 1 ? 's' : ''}` : 'none') : guess(n)]) };
 }
 
+const GUNS = new Set(['artillery', 'rockets']);
+const FLAK = new Set(['aa', 'sam', 'towedAA']);
+/**
+ * Support from next door: a battalion of `f` in a sector next to battle `b`, not in it itself,
+ * lends a battery if it has guns and an air-defence section if it has some (two of each at most).
+ */
+function neighbourSupport(c, b, f) {
+  const ids = [...b.att, ...b.def];
+  const out = [];
+  for (const x of f === c.side ? c.battalions : c.enemy) {
+    if (ids.includes(x.id) || !neighbours(b.sector).includes(x.at) || (x.strength ?? 1) < 0.4) continue;
+    const has = (set) => (x.stacks ? x.stacks.some((u) => set.has(u.type)) : KINDS[x.kind].some((t) => set.has(t)));
+    if (has(GUNS) && out.filter((u) => u.type === 'artillery').length < 2) out.push({ type: 'artillery', cid: 'attached', name: `${x.name} · guns` });
+    if (has(FLAK) && out.filter((u) => u.type === 'aa').length < 2) out.push({ type: 'aa', cid: 'attached', name: `${x.name} · air defence` });
+  }
+  return out;
+}
+
 /** The enemy's stacks in battle `b`: each battalion's kind at its strength, a little more as the war goes on. */
 export function enemyForce(c, b) {
   const out = [];
@@ -307,7 +325,7 @@ export function enemyForce(c, b) {
   }
   out.push(...['rifles', 'tank', 'ifv', 'atTeam'].slice(0, Math.min(4, Math.floor(c.turn / 6))));
   if (b.event === 'reserves') out.push('tank', 'ifv', 'rifles');
-  return out.map((type) => ({ type }));
+  return [...out.map((type) => ({ type })), ...neighbourSupport(c, b, enemyOf(c.side))];
 }
 
 /** What the coming battle needs to start: the menu hands this to main.js start(). */
@@ -321,7 +339,7 @@ export function battleChoice(c) {
       // cut off: fewer command points; from the second turn no aircraft and shaken men (modes/breakthrough.js)
       cut: { [c.side]: Math.max(0, ...ours.map((x) => cutLevel(c, x))), [enemyOf(c.side)]: Math.max(0, ...sides(c, b).theirs.map((x) => cutLevel(c, x))) },
       forces: {
-        [c.side]: [...ours.flatMap((x) => x.stacks.map((u) => ({ ...u }))), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : [])],
+        [c.side]: [...ours.flatMap((x) => x.stacks.map((u) => ({ ...u }))), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : []), ...neighbourSupport(c, b, c.side)],
         [enemyOf(c.side)]: enemyForce(c, b),
       },
     },
