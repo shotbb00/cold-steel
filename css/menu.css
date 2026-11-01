@@ -475,3 +475,7 @@
 }
 .cp-hint { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0; }
 @media (max-width: 600px) { .cp-map { overflow-x: auto; } .cp-map svg { min-width: 620px; } } /* the road map keeps readable names on a phone: it scrolls sideways */
+.cp-sec.cut circle { stroke-dasharray: 3 3; }
+.cp-legend .cut::before { background: transparent; border: 2px dashed var(--muted); width: 7px; height: 7px; border-radius: 50%; }
+.cp-bname small em { color: var(--enemy); font-style: normal; font-weight: 600; }
+.cp-event.cut { border-left-color: var(--enemy); background: rgba(255, 90, 72, 0.08); }

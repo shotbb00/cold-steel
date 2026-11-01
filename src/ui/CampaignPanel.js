@@ -14,7 +14,7 @@ import { unitCost } from '../data/doctrine.js';
 import { armiesPicker } from './MainMenu.js';
 import {
   loadCampaign, newCampaign, clearCampaign, battleChoice, orderMove, endTurn, autoResolve, sides, intel, sighted,
-  refill, refillCost, recruit, recruitable, sectorsOf, neighbours, hour, day, power,
+  refill, refillCost, recruit, recruitable, sectorsOf, neighbours, hour, day, power, supplied, cutLevel,
   SECTORS, ROADS, EVENTS, TIMETABLE, MAX_STACKS,
 } from '../campaign/Campaign.js';
 
@@ -132,9 +132,10 @@ export class CampaignPanel {
       svg += `<g class="cp-order${c.owner[b.order] === me ? '' : ' attack'}"><line x1="${A.x}" y1="${A.y}" x2="${x}" y2="${y}"/><path d="M${h(11, 0.5)}L${x},${y}L${h(11, -0.5)}"/></g>`;
     }
     const known = sighted(c);
+    const sup = { nato: supplied(c, 'nato'), pact: supplied(c, 'pact') };
     for (const [id, s] of Object.entries(SECTORS)) {
       const ours = c.owner[id] === me;
-      const cls = ['cp-sec', ours ? 'ours' : 'theirs', s.depot ? 'depot' : '', reach.has(id) ? 'reach' : '', battleAt.has(id) ? 'battle' : '', sel?.at === id ? 'here' : ''].filter(Boolean).join(' ');
+      const cls = ['cp-sec', ours ? 'ours' : 'theirs', s.depot ? 'depot' : '', reach.has(id) ? 'reach' : '', battleAt.has(id) ? 'battle' : '', sel?.at === id ? 'here' : '', sup[c.owner[id]].has(id) ? '' : 'cut'].filter(Boolean).join(' ');
       let g = `<g class="${cls}" data-id="${id}"><circle cx="${s.x}" cy="${s.y}" r="${s.depot ? 13 : 11}"/>`;
       if (s.objective) g += `<rect class="obj" x="${s.x - 5}" y="${s.y - 5}" width="10" height="10" transform="rotate(45 ${s.x} ${s.y})"/>`;
       g += `<text x="${s.x}" y="${s.y - 19}" text-anchor="middle">${esc(s.name)}</text>`;
@@ -152,7 +153,7 @@ export class CampaignPanel {
     }
     const wrap = el('div', 'cp-map');
     wrap.innerHTML = `<svg viewBox="20 30 700 390" role="img" aria-label="Campaign map">${svg}</svg>
-      <div class="cp-legend"><span class="ours">${esc(FACTIONS[me].name)}</span><span class="theirs">${esc(FACTIONS[enemyOf(me)].name)}</span><span class="obj">Objective</span><span class="foe">Enemy battalion</span></div>`;
+      <div class="cp-legend"><span class="ours">${esc(FACTIONS[me].name)}</span><span class="theirs">${esc(FACTIONS[enemyOf(me)].name)}</span><span class="obj">Objective</span><span class="cut">Cut off</span><span class="foe">Enemy battalion</span></div>`;
     wrap.querySelectorAll('.cp-sec').forEach((g) => g.addEventListener('click', (ev) => {
       const id = g.dataset.id;
       const bn = ev.target.closest('.cp-bn')?.dataset.bn;
@@ -172,7 +173,8 @@ export class CampaignPanel {
     c.battalions.forEach((b, i) => {
       const men = b.stacks.reduce((a, u) => a + u.men, 0);
       const full = b.stacks.reduce((a, u) => a + UNIT_TYPES[u.type].formation.count, 0);
-      const what = !b.order ? `holds ${esc(SECTORS[b.at].name)}` : c.owner[b.order] === c.side ? `moves to ${esc(SECTORS[b.order].name)}` : `<b>attacks ${esc(SECTORS[b.order].name)}</b>`;
+      const cut = cutLevel(c, b);
+      const what = (cut ? `<em>cut off${cut > 1 ? ` · ${cut} turns` : ''}</em> · ` : '') + (!b.order ? `holds ${esc(SECTORS[b.at].name)}` : c.owner[b.order] === c.side ? `moves to ${esc(SECTORS[b.order].name)}` : `<b>attacks ${esc(SECTORS[b.order].name)}</b>`);
       const row = btn(`<span class="cp-num">${i + 1}</span><span class="cp-bname">${esc(b.name)}<small>${what}</small></span><span class="cp-men">${men} / ${full}</span>`, `cp-order-row${b.id === this.sel ? ' on' : ''}`, () => { this.sel = b.id; this.render(); });
       list.append(row);
     });
@@ -236,6 +238,10 @@ export class CampaignPanel {
     const b = c.battalions.find((x) => x.id === this.sel);
     if (!b) return box;
     box.append(el('h3', 'menu-sub', `${esc(b.name)} · ${esc(SECTORS[b.at].name)} · ${b.stacks.length} / ${MAX_STACKS} stacks · strength ${Math.round(power(b))}`));
+    const cut = cutLevel(c, b);
+    if (cut) box.append(el('p', 'cp-event cut', esc(cut >= 3 ? 'Cut off for three turns or more: a man in ten lost every turn, and at half strength it surrenders unless it attacks. Break out, or open the road to it.'
+      : cut === 2 ? 'Cut off for a second turn: no refills, no aircraft in its battles, and its men are shaken. Break out, or open the road to it.'
+        : 'Cut off: the road to our depots is closed. No refills or recruits, wounded stay away, and its battles start with less command points.')));
     const list = el('div', 'cp-units');
     for (const u of b.stacks) {
       const T = UNIT_TYPES[u.type];
@@ -245,7 +251,7 @@ export class CampaignPanel {
       row.append(el('span', 'cp-name', `${rank}${esc(u.name)}`), el('span', 'cp-men', `${u.men} / ${T.formation.count}${hurt}`));
       const cost = refillCost(c, u);
       const r = btn(cost ? `Refill ${cost}` : 'Full', 'mp-btn', () => { if (refill(c, b.id, u.cid)) this.render(); });
-      r.disabled = !cost || cost > c.points;
+      r.disabled = !cost || cost > c.points || !!cut;
       row.append(r);
       list.append(row);
     }
@@ -255,7 +261,7 @@ export class CampaignPanel {
     for (const T of recruitable(c)) {
       const cost = unitCost(T, c.armies[c.side]);
       const r = btn(`${esc(T.variants?.[c.armies[c.side]]?.name ?? T.shortName)}<small>${cost}</small>`, 'mp-btn', () => { if (recruit(c, b.id, T.id)) this.render(); });
-      r.disabled = cost > c.points || b.stacks.length >= MAX_STACKS;
+      r.disabled = cost > c.points || b.stacks.length >= MAX_STACKS || !!cut;
       rec.append(r);
     }
     box.append(rec);

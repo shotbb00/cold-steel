@@ -11,6 +11,13 @@
 //     enemy's are a kind and a strength (0..1) that its battles wear down and rest builds up,
 //     and a fresh one arrives from its depots every few turns.
 //   • Wounded: four in ten of a stack's losses come back after its next battle or a quiet turn.
+//   • Supply: a sector is supplied if a road runs from it through its side's ground to one of its
+//     depots (supplied()). A battalion outside it is cut off (cutLevel(), counted in turns):
+//     1 — no refills or recruits, wounded stay away, 40 % less command points in its battles;
+//     2 — no air support or barrages there either, and its men start shaken;
+//     3 and on — a man in ten lost each turn, experience stops growing, and at half strength it
+//     surrenders unless it attacked that turn (a breakout). The enemy lives by the same rule,
+//     and its planning looks for cuts and breakouts.
 //   • Intel: with scouts or a recon vehicle in a battalion the briefing counts the enemy.
 //   • War length (the player's pick): endless, until one side has no battalions left, or the
 //     eight-day timetable — the Pact must take Fulda and Bad Hersfeld, NATO hold them (or take
@@ -160,6 +167,17 @@ function raiseEnemy(c, at) {
 // ------------------------------------------------------------------ the picture
 
 export const sectorsOf = (c, f) => Object.keys(SECTORS).filter((id) => c.owner[id] === f);
+
+/** The sectors `f` can reach by road from one of its depots through its own ground (`owner`: a what-if map). */
+export function supplied(c, f, owner = c.owner) {
+  const q = Object.keys(SECTORS).filter((id) => SECTORS[id].depot && owner[id] === f);
+  const seen = new Set(q);
+  while (q.length) for (const n of neighbours(q.pop())) if (owner[n] === f && !seen.has(n)) { seen.add(n); q.push(n); }
+  return seen;
+}
+
+/** How long battalion `b` has been cut off, counting this turn (0: supplied). */
+export const cutLevel = (c, b) => (supplied(c, b.faction).has(b.at) ? 0 : (b.cut ?? 0) + 1);
 export const hour = (c) => (c.turn % 2 ? (c.turn % 4 === 1 ? 'dawn' : 'day') : (c.turn % 4 === 2 ? 'dusk' : 'night'));
 export const day = (c) => Math.ceil(c.turn / 2);
 const forcesAt = (c, id, f) => (f === c.side ? c.battalions : c.enemy).filter((b) => b.at === id);
@@ -195,17 +213,24 @@ function enemyOrders(c) {
   const foe = enemyOf(c.side);
   const bold = foe === 'pact' ? 0.8 : 1.1; // the Pact attacks on a timetable; NATO trades ground for time
   const value = (id) => (SECTORS[id].objective === foe ? 3 : SECTORS[id].depot ? 2 : 1);
+  const ours = supplied(c, c.side);
   for (const e of c.enemy) {
     e.order = null;
-    if (e.strength < 0.45) continue; // worn out: rest
+    const cut = cutLevel(c, e);
+    if (e.strength < 0.45 && !cut) continue; // worn out: rest (a pocket tries to break out regardless)
     let best = null;
     let score = 0;
     for (const n of neighbours(e.at)) {
       if (c.owner[n] === foe) continue;
       const def = forcesAt(c, n, c.side).reduce((a, b) => a + power(b), 0) * DEFENDER;
       const odds = def ? power(e) / def : 9;
-      if (odds < bold) continue;
-      const s = value(n) * Math.min(odds, 3) + Math.random();
+      if (odds < (cut ? 0.5 : bold)) continue;
+      // what taking it would do: reopen our road (a breakout) or cut theirs (a pocket)
+      const after = { ...c.owner, [n]: foe };
+      const opens = cut && supplied(c, foe, after).has(e.at) ? 4 : 0;
+      const theirs = supplied(c, c.side, after);
+      const cuts = c.battalions.filter((b) => ours.has(b.at) && !theirs.has(b.at)).length * 2;
+      const s = (value(n) + opens + cuts) * Math.min(odds, 3) + Math.random();
       if (s > score) { score = s; best = n; }
     }
     e.order = best;
@@ -226,6 +251,7 @@ export function endTurn(c) {
   // then the attacks, grouped by target
   const targets = new Map();
   for (const b of all) if (b.order) (targets.get(b.order) ?? targets.set(b.order, []).get(b.order)).push(b);
+  c.attacked = [...targets.values()].flat().map((b) => b.id); // a pocket that attacked this turn is breaking out
   for (const [id, movers] of targets) {
     const owner = c.owner[id];
     const def = forcesAt(c, id, owner);
@@ -290,6 +316,8 @@ export function battleChoice(c) {
     mode: 'breakthrough', map: b.map, side: c.side, time: b.time, weather: b.weather, armies: c.armies,
     campaign: {
       attacker: b.attacker, sector: b.name, event: b.event ?? 'quiet',
+      // cut off: fewer command points; from the second turn no aircraft and shaken men (modes/breakthrough.js)
+      cut: { [c.side]: Math.max(0, ...ours.map((x) => cutLevel(c, x))), [enemyOf(c.side)]: Math.max(0, ...sides(c, b).theirs.map((x) => cutLevel(c, x))) },
       forces: {
         [c.side]: [...ours.flatMap((x) => x.stacks.map((u) => ({ ...u }))), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : [])],
         [enemyOf(c.side)]: enemyForce(c, b),
@@ -313,13 +341,14 @@ export function recordBattle(c, { won, survivors, enemyLeft }) {
   let wounded = 0;
   for (const x of ours) {
     const before = x.stacks.length;
+    const starving = cutLevel(c, x) >= 3; // cut off long enough: experience stops growing
     x.stacks = x.stacks.filter((u) => alive.has(u.cid)).map((u) => {
       const s = alive.get(u.cid);
       const full = UNIT_TYPES[u.type].formation.count;
       const returning = Math.min(u.wounded ?? 0, full - s.men);
       const hurt = Math.round(Math.max(0, u.men - s.men) * WOUNDED_SHARE);
       wounded += hurt;
-      return { ...u, men: s.men + returning, wounded: hurt, xp: s.xp, rank: s.rank };
+      return { ...u, men: s.men + returning, wounded: hurt, xp: starving ? u.xp : s.xp, rank: starving ? u.rank : s.rank };
     });
     lost += before - x.stacks.length;
   }
@@ -407,11 +436,26 @@ export function autoResolve(c) {
 function closeTurn(c) {
   const gain = REPLACEMENTS + PER_SECTOR * sectorsOf(c, c.side).length;
   c.points += gain;
-  for (const x of c.battalions) {
-    if (c.fought.includes(x.id)) continue;
-    for (const u of x.stacks) { u.men = Math.min(UNIT_TYPES[u.type].formation.count, u.men + (u.wounded ?? 0)); u.wounded = 0; }
+  for (const x of [...c.battalions]) {
+    const cut = (x.cut = cutLevel(c, x));
+    if (!cut && !c.fought.includes(x.id)) {
+      for (const u of x.stacks) { u.men = Math.min(UNIT_TYPES[u.type].formation.count, u.men + (u.wounded ?? 0)); u.wounded = 0; }
+    }
+    const men = () => x.stacks.reduce((a, u) => a + u.men, 0);
+    if (cut === 1) x.cutMen = men(); // half of this and it gives up
+    if (cut < 3) continue;
+    for (const u of x.stacks) for (let k = u.men; k > 0; k--) if (Math.random() < 0.1) u.men--; // the pocket withers: a man in ten
+    x.stacks = x.stacks.filter((u) => u.men > 1);
+    if (!x.stacks.length || (men() < (x.cutMen ?? 0) / 2 && !c.attacked?.includes(x.id))) destroy(c, x, 'surrendered, cut off and out of strength');
   }
-  for (const e of c.enemy) if (!c.fought.includes(e.id)) e.strength = Math.min(1, e.strength + REST);
+  for (const e of [...c.enemy]) {
+    const cut = (e.cut = cutLevel(c, e));
+    if (!cut && !c.fought.includes(e.id)) e.strength = Math.min(1, e.strength + REST);
+    if (cut < 3) continue;
+    e.strength *= 0.9;
+    if (e.strength < 0.5 && !c.attacked?.includes(e.id)) destroy(c, e, 'surrendered in its pocket');
+  }
+  c.attacked = [];
   const foe = enemyOf(c.side);
   if (c.turn % ECHELON === 0 && c.enemy.length < ENEMY_MAX[foe]) {
     const depot = Object.keys(SECTORS).find((id) => SECTORS[id].depot && c.owner[id] === foe && !c.enemy.some((e) => e.at === id));
@@ -448,8 +492,9 @@ export function refillCost(c, u) {
 }
 
 export function refill(c, bid, cid) {
-  const u = c.battalions.find((x) => x.id === bid)?.stacks.find((s) => s.cid === cid);
-  if (!u) return false;
+  const x = c.battalions.find((b) => b.id === bid);
+  const u = x?.stacks.find((s) => s.cid === cid);
+  if (!u || cutLevel(c, x)) return false; // nothing gets through to a pocket
   const cost = refillCost(c, u);
   if (!cost || c.points < cost) return false;
   c.points -= cost;
@@ -466,7 +511,7 @@ export function recruit(c, bid, type) {
   const x = c.battalions.find((b) => b.id === bid);
   const T = UNIT_TYPES[type];
   const cost = T && unitCost(T, c.armies[c.side]);
-  if (!x || !T || c.points < cost || x.stacks.length >= MAX_STACKS) return false;
+  if (!x || !T || c.points < cost || x.stacks.length >= MAX_STACKS || cutLevel(c, x)) return false;
   c.points -= cost;
   x.stacks.push(stack(type, stackName(c, type, x.stacks.filter((u) => u.type === type).length + 1)));
   saveCampaign(c);

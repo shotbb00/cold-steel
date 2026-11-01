@@ -85,6 +85,14 @@ export default {
     state.start = { [att]: fieldStrength(game, att), [def]: fieldStrength(game, def) }; // the campaign: what's left of each side
     state.strength[def] = fieldStrength(game, def);
 
+    // cut off (campaign/Campaign.js cutLevel): fewer command points; then no aircraft and shaken men
+    for (const [f, cut] of Object.entries(camp?.cut ?? {})) {
+      if (cut >= 1) state.cp[f] *= 0.6;
+      if (cut >= 2) {
+        game.air.limit[f] = 0;
+        for (const s of game.world.stacksOf(f)) s.morale *= 0.75;
+      }
+    }
     // campaign events (campaign/Campaign.js EVENTS): who may call in aircraft
     if (camp?.event === 'airCover') game.air.limit[enemyOf(game.playerFaction)] = 0;
     if (camp?.event === 'enemyAir') game.air.limit[game.playerFaction] = 0;
