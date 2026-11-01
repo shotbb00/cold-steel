@@ -20,6 +20,7 @@ export default {
 
   stats: {
     ...rifles.stats,
+    grenades: 3,
     engineer: true,       // builds ×3, clears obstacles, demolishes, finds mines
     range: 75,
     aggroRange: 70,

@@ -22,6 +22,7 @@ export default {
   stats: {
     nightSight: { nato: 0.7, pact: 0.6 },
     ...rifles.stats,
+    grenades: 1,
     speed: 3.5,
     sight: 135,
     fov: 2.2,

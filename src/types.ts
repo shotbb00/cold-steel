@@ -71,6 +71,7 @@ export interface UnitStats {
   binoculars?: boolean;
   stealth?: number;
   holdFire?: boolean;
+  grenades?: number;     // hand grenades per man (UnitStack GRENADE)
   scope?: number;        // spotting: share of cover / prone concealment seen past (a sniper's scope)
   marksman?: boolean;
   vsStructure?: number;

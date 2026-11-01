@@ -20,6 +20,7 @@ export default {
 
   stats: {
     ...rifles.stats,
+    grenades: 1,
     sight: 70,
     range: 130,
     aggroRange: 120,

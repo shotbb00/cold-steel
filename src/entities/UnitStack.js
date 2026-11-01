@@ -49,6 +49,10 @@ const LEADERLESS = { react: 1.25 };
 const OFFICER_DOWN = 0.25;  // morale lost on top when the platoon leader falls
 // Ambush: a unit nobody has spotted yet fires its first volley with this much more punch
 const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
+// Hand grenades (stats.grenades per man): at an enemy `min`–`range` m off who is in cover, a house,
+// a trench or a bunker, or bunched with others; one throw per man every `every` s, back to full
+// after `refill` s without a target
+const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
 // row: squeeze through (collisions off for `ghostT` s, the last resort)
@@ -725,6 +729,10 @@ export class UnitStack {
             this.startReload(u);
           }
         }
+      } else if (u.cooldown <= 0 && this.grenadeAt(u, distToTarget)) {
+        this.throwGrenade(u);
+        u.cooldown = 2.5;
+        u.peekT = 0.6; // up over the cover to throw
       } else if (u.cooldown <= 0) {
         // Aim before the shot (or burst): longer at range, under fire, and for marksmen.
         const aim = (s.aimTime ?? 0.3) * (0.6 + Math.random() * 0.8) * (1 + distToTarget / s.range) * (1 + u.suppression) * (1 - 0.1 * this.rank);
@@ -736,6 +744,8 @@ export class UnitStack {
       u.burstLeft = 0;
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
+    if (u.target) u.calmT = 0;
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill) u.grenades = s.grenades ?? 0; // grenades from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -958,6 +968,49 @@ export class UnitStack {
       if (score < bestScore) { bestScore = score; best = e; }
     }
     return best;
+  }
+
+  /** A grenade instead of a shot? The target close, and dug in, in a house or a bunker, or bunched up. */
+  grenadeAt(u, d) {
+    const s = u.stats;
+    const t = u.target;
+    if (!s.grenades || s.indirect || s.marksman || d > GRENADE.range || d < GRENADE.min) return false;
+    if (!t.stack.usesCover && !t.stack.stats.structure) return false; // not against armour
+    u.grenades ??= s.grenades;
+    if (u.grenades <= 0 || this.world.time < (u.nextGrenade ?? 0)) return false;
+    if (t.atCover || t.window || t.stack.dugIn || t.stack.stats.structure) return true;
+    let near = 0;
+    for (const o of this.world.neighbors(t.pos, 4, _near)) if (o.faction === t.faction && o.alive) near++;
+    return near >= 2;
+  }
+
+  /** Throw a hand grenade at u's target: a high lob that bursts where it lands (or on the wall it hits). */
+  throwGrenade(u) {
+    const t = u.target;
+    u.grenades--;
+    u.nextGrenade = this.world.time + GRENADE.every;
+    _p.set(u.pos.x, u.pos.y + 1.6, u.pos.z);
+    const d0 = Math.hypot(t.pos.x - u.pos.x, t.pos.z - u.pos.z);
+    const miss = 0.8 + d0 * 0.06; // thrown by hand, by a man under fire
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * miss * (1 + u.suppression);
+    const tx = t.pos.x + Math.cos(a) * r;
+    const tz = t.pos.z + Math.sin(a) * r;
+    const ty = t.pos.y + 0.3;
+    const dx = tx - _p.x;
+    const dz = tz - _p.z;
+    const d = Math.max(1, Math.hypot(dx, dz));
+    const th = 0.85;
+    const g = GRENADE.gravity;
+    const v = Math.sqrt((g * d * d) / Math.max(1, 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - (ty - _p.y))));
+    const flight = d / (v * Math.cos(th));
+    _w.set((dx / d) * Math.cos(th), Math.sin(th), (dz / d) * Math.cos(th));
+    this.services.projectiles.spawn({
+      origin: _p, dir: _w, speed: v, damage: GRENADE.damage * u.damageMult, faction: this.faction,
+      color: this.boltColor, size: 0.3, source: this, life: flight + 1, splash: GRENADE.splash, pierce: 0,
+      vsArmor: 0.05, suppress: 3, gravity: g, target: _v.set(tx, ty, tz), crater: 0.15, tracer: false,
+    });
+    VisibilitySystem.revealShooter(u);
   }
 
   /**

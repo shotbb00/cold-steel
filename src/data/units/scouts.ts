@@ -21,6 +21,7 @@ export default {
   stats: {
     nightSight: { nato: 0.7, pact: 0.65 }, // night-vision goggles
     ...rifles.stats,
+    grenades: 1,
     speed: 3.7,
     sight: 150,
     fov: 2.4,
