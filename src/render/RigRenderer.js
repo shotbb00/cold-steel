@@ -16,14 +16,18 @@ const DEAD_GLOW = new THREE.MeshStandardMaterial({ color: 0x1a1612, roughness: 1
 const COOK_OFF = { chance: 0.6, pops: [4, 11], first: [2, 6], gap: [0.6, 4], big: 0.35, hurt: 5 };
 const rnd = ([a, b]) => a + Math.random() * (b - a);
 
-function materialsFor(faction, glowColor) {
-  if (!materialCache.has(faction)) {
-    materialCache.set(faction, {
-      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
+// camouflage per army (parts with camo 1): MERDC for the US Army, the Bundeswehr's NATO three-tone
+// of 1984 (bronze green, leather brown, tar black); the Pact armies paint plain green
+const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] };
+
+function materialsFor(army, glowColor) {
+  if (!materialCache.has(army)) {
+    materialCache.set(army, {
+      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: ARMY_CAMO[army] ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
     });
   }
-  return materialCache.get(faction);
+  return materialCache.get(army);
 }
 
 const _p = new THREE.Vector3();
@@ -35,7 +39,7 @@ export class RigRenderer {
     // specialists (the first type.specialist.count members) may have a model of their own
     const special = stack.type.specialistModels?.[stack.army] ?? stack.type.specialistModels?.[stack.faction] ?? null;
     const specials = stack.type.specialist?.count ?? 0;
-    this.mats = materialsFor(stack.faction, stack.glowColor);
+    this.mats = materialsFor(stack.army ?? stack.faction, stack.glowColor);
     this.rigs = stack.units.map((u) => {
       const rig = (special && u.index < specials ? special : build)(this.mats);
       rig.root.position.copy(u.pos);

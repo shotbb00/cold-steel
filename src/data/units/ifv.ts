@@ -5,6 +5,7 @@
 // reload. Armour stops small arms and splinters, not tank rounds.
 import { buildNatoBradley } from '../models/natoBradley.js';
 import { buildPactBMP2 } from '../models/pactBMP2.js';
+import { buildBwMarder, buildNvaBMP1 } from '../models/armyArmour.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -61,11 +62,17 @@ export default {
   },
 
   camera: { distance: 12, height: 5, shoulder: 2.2 },
-  models: { nato: buildNatoBradley, pact: buildPactBMP2 },
+  models: { nato: buildNatoBradley, pact: buildPactBMP2, bw: buildBwMarder, nva: buildNvaBMP1 },
+  factionStats: {
+    bw: { armor: 0.48, nightSight: 0.85 },   // Marder 1A3: the add-on armour, a thermal sight for the Milan
+    nva: { armor: 0.34, nightSight: 0.5 },   // BMP-1: thin, low, the Malyutka slow and wire-steered
+  },
   weaponSound: 'autocannon',
   engine: { nato: 'engine.diesel', pact: 'engine.dieselSmall' },
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Marder 1A3', weapon: '20 mm Rh 202 · Milan', text: 'The Panzergrenadiers’ own vehicle: armoured enough to fight alongside the Leopards, the Milan for tanks, the 20 mm for everything else. U unloads the squad.' },
+    nva: { name: 'BMP-1', weapon: '73 mm 2A28 · 9M14 Malyutka', text: 'Low and fast, a short 73 mm gun and a wire-guided missile on a rail. Its armour stops rifle fire and little else. U unloads the squad.' },
     nato: { name: 'M2 Bradley', weapon: '25 mm M242 Bushmaster · TOW', text: 'Carries a squad into the fight and stays to support it: the Bushmaster shreds infantry and light vehicles, the TOW kills tanks at 300 m. U unloads the squad.' },
     pact: { name: 'BMP-2', weapon: '30 mm 2A42 · 9M113 Konkurs', text: 'Fast, low and hard-hitting, its 30 mm cannon fires high into buildings and tree lines. Thin armour: keep it out of the tanks’ sights. U unloads the squad.' },
   },

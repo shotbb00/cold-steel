@@ -4,6 +4,7 @@
 // tanks may leave a surviving crew.
 import { buildNatoAbrams } from '../models/natoAbrams.js';
 import { buildPactT72 } from '../models/pactT72.js';
+import { buildBwLeopard1, buildNvaT55 } from '../models/armyArmour.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -57,11 +58,17 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },
-  models: { nato: buildNatoAbrams, pact: buildPactT72 },
+  models: { nato: buildNatoAbrams, pact: buildPactT72, bw: buildBwLeopard1, nva: buildNvaT55 },
+  factionStats: {
+    bw: { armor: 0.55, hp: 1250, damage: 380, speed: 6.2, nightSight: 0.9 },   // Leopard 1A5: mobility and a good gun over armour
+    nva: { armor: 0.6, hp: 1250, damage: 330, nightSight: 0.55 },              // T-55AM2: old, many, the BDD helps a little
+  },
   weaponSound: 'cannon',
   engine: { nato: 'engine.turbine', pact: 'engine.diesel' }, // AGT1500 gas turbine vs V-84 diesel
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Leopard 1A5', weapon: '105 mm L7A3', text: 'Fast and accurate, with a new thermal sight and the EMES 18 fire control — but its armour stops little more than autocannon. Shoot first, then move.' },
+    nva: { name: 'T-55AM2', weapon: '100 mm D-10T', text: 'The old workhorse, modernised: brow armour on the turret, a laser rangefinder. Outgunned by every NATO tank — use it in numbers and from cover.' },
     nato: { name: 'M1 Abrams', weapon: '120 mm smoothbore', text: 'Gas-turbine main battle tank with composite armour. Fast, accurate at long range, thin at the rear.' },
     pact: { name: 'T-72B', weapon: '125 mm smoothbore', text: 'Low, tough and numerous, with reactive armour bricks. Its ammunition sits under the turret — a penetration often ends in a cook-off.' },
   },

@@ -2,6 +2,8 @@
 // 125 mm). Tougher and harder-hitting than the line tanks, faster than they look, and well over
 // the price: the hammer of an offensive, not a picket.
 import { buildNatoM1IP, buildPactT80 } from '../models/heavyTanks.js';
+import { buildBwLeopard2 } from '../models/armyArmour.js';
+import { buildNvaT72M1 } from '../models/pactT72.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -55,11 +57,17 @@ export default {
   },
 
   camera: { distance: 13.5, height: 5.6, shoulder: 2.4 },
-  models: { nato: buildNatoM1IP, pact: buildPactT80 },
+  models: { nato: buildNatoM1IP, pact: buildPactT80, bw: buildBwLeopard2, nva: buildNvaT72M1 },
+  factionStats: {
+    bw: { armor: 0.8, damage: 470, nightSight: 0.95 },  // Leopard 2A4: the 120 mm Rh-120 and the best fire control of its day
+    nva: { armor: 0.7, damage: 420, nightSight: 0.6 },  // T-72M1: the export T-72, no reactive armour
+  },
   weaponSound: 'cannon',
   engine: 'engine.turbine',       // both: AGT1500 and GTD-1000
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Leopard 2A4', weapon: '120 mm Rh-120', text: 'The Bundeswehr’s heavy tank: thick composite armour, a 120 mm smoothbore and thermal sights. It finds you first and kills you from 2 km.' },
+    nva: { name: 'T-72M1', weapon: '125 mm 2A46', text: 'The NVA’s best: the export T-72 with a welded plate over the glacis instead of reactive armour. Its 125 mm hits as hard as any.' },
     nato: { name: 'M1IP Abrams', weapon: '105 mm M68A1', text: 'The improved Abrams: a longer turret with thicker composite armour. Takes a hit that would stop anything else and answers it.' },
     pact: { name: 'T-80B', weapon: '125 mm 2A46-2', text: 'The gas-turbine tank of the Group of Soviet Forces in Germany: fast, low and hard to kill from the front. The spearhead of the operational manoeuvre group.' },
   },

@@ -5,6 +5,8 @@
 // searchlight, snorkel and stowage boxes. 125 mm gun with thermal sleeve and fume extractor.
 // Six big road wheels a side that turn as it drives, three return rollers, rear sprocket.
 // Red stars on the turret. See render/RigRenderer.js for the contract.
+// buildNvaT72M1: the export T-72M1 the NVA drove — no reactive armour, a 16 mm plate welded over
+// the upper glacis instead, white tactical numbers on the turret sides rather than stars.
 import * as THREE from 'three';
 import { P, part, merge, pair, grime } from '../units/geometry.js';
 import { stationHull, castTurret, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
@@ -28,9 +30,9 @@ function turretDome() {
   ], { color: GREEN });
 }
 
-let GEO = null;
-function geometry() {
-  if (GEO) return GEO;
+const GEO = {};
+function geometry(m1 = false) {
+  if (GEO[m1]) return GEO[m1];
   const gear = runningGear({ halfWidth: 1.38, length: 4.9, wheels: 6, wheelR: 0.39, sprocket: -1, rollers: 3, trackWidth: 0.58, wheelColor: 0x3a4428 });
   // Kontakt-1 bricks on the upper glacis: (2.35, 1.42) → (3.45, 0.97)
   const glacis = [];
@@ -52,7 +54,7 @@ function geometry() {
   }
   const skirts = [];
   for (let i = 0; i < 6; i++) skirts.push(...pair((s) => P.box(0.04, 0.44, 1.08, { x: s * 1.72, y: 0.9, z: -2.9 + i * 1.1, rz: s * 0.05, color: RUBBER, surf: 'rubber' })));
-  GEO = {
+  GEO[m1] = {
     gear,
     wheel: roadWheelGeometry(0.39, 0.5, 0x3a4428),
     hull: grime(merge([
@@ -81,7 +83,7 @@ function geometry() {
       ...pair((s) => P.cyl(0.025, 0.025, 4.0, { x: s * 1.2, y: 1.2, z: -0.3, rx: Math.PI / 2, color: STEEL }, 6)),
       ...pair((s) => P.box(0.6, 0.06, 0.8, { x: s * 1.45, y: 1.0, z: 3.25, rx: 0.4, color: GREEN })), // front mudguards
       ...skirts,
-      ...glacis,
+      ...(m1 ? [P.box(2.2, 0.06, 1.1, { y: 1.24, z: 2.9, rx: ga, color: GREEN })] : glacis), // the M1's appliqué plate
       P.box(2.5, 0.12, 0.25, { y: 0.92, z: 3.4, color: GREEN_DK }),                           // dozer blade folded under the nose
       ...pair((s) => P.cyl(0.3, 0.3, 1.05, { x: s * 0.72, y: 1.7, z: -3.15, rz: Math.PI / 2, color: GREEN_DK }, 16)), // fuel drums…
       ...pair((s) => [-0.3, 0.3].map((d) => P.cyl(0.31, 0.31, 0.04, { x: s * 0.72 + d, y: 1.7, z: -3.15, rz: Math.PI / 2, color: GREEN_DK }, 16))).flat(), // …and their rolling hoops
@@ -93,7 +95,7 @@ function geometry() {
     ]), 1.25, 0.3),
     turret: grime(merge([
       turretDome(),
-      ...era,
+      ...(m1 ? [] : era),
       P.cyl(0.36, 0.4, 0.28, { x: 0.58, y: 0.92, z: -0.35, color: GREEN }, 14),                // commander's cupola (right)
       P.cyl(0.3, 0.3, 0.05, { x: 0.58, y: 1.08, z: -0.35, color: GREEN_DK }, 14),
       ...[0, 1, 2, 3, 4].map((k) => P.box(0.09, 0.06, 0.03, { x: 0.58 + Math.sin(k * 0.6 - 1.2) * 0.37, y: 1.0, z: -0.35 + Math.cos(k * 0.6 - 1.2) * 0.37, ry: k * 0.6 - 1.2, color: GLASS })), // cupola periscopes
@@ -111,9 +113,9 @@ function geometry() {
       P.box(0.8, 0.5, 0.4, { y: 0.42, z: 1.7, color: GREEN }),                                // mantlet
       P.box(0.66, 0.4, 0.25, { y: 0.44, z: 1.95, color: 0x4d5236 }),                           // canvas mantlet cover
     ]), 0.9, 0.0, 0.4),
-    marks: merge([
-      ...pair((s) => P.cyl(0.18, 0.18, 0.02, { x: s * 1.59, y: 0.38, z: -0.45, rz: Math.PI / 2 }, 5)),
-    ]),
+    marks: merge(m1
+      ? pair((s) => P.box(0.02, 0.24, 0.62, { x: s * 1.6, y: 0.4, z: -0.5, ry: s * -0.25 }))                    // number plates
+      : pair((s) => P.cyl(0.18, 0.18, 0.02, { x: s * 1.59, y: 0.38, z: -0.45, rz: Math.PI / 2 }, 5))),
     gun: merge([
       P.cyl(0.1, 0.13, 5.6, { z: 2.8, rx: Math.PI / 2, color: GREEN }, 14),
       ...[0.7, 1.4, 3.3, 4.1, 4.8].map((z) => P.cyl(0.15, 0.15, 0.6, { z, rx: Math.PI / 2, color: GREEN_DK }, 14)), // thermal sleeve
@@ -121,11 +123,14 @@ function geometry() {
       P.cyl(0.18, 0.18, 0.55, { z: 2.35, rx: Math.PI / 2, color: GREEN }, 14),               // fume extractor
     ]).scale(1, 1, 0.72), // the 2A46's real length out of the mantlet (~4 m)
   };
-  return GEO;
+  return GEO[m1];
 }
 
-export function buildPactT72(mats) {
-  const g = geometry();
+export const buildPactT72 = (mats) => build(mats, false);
+export const buildNvaT72M1 = (mats) => build(mats, true);
+
+function build(mats, m1) {
+  const g = geometry(m1);
   const root = new THREE.Group();
   const hull = new THREE.Group();
   root.add(hull);

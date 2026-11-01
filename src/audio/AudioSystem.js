@@ -448,7 +448,7 @@ export class AudioSystem {
 
   assign({ u, s, d }) {
     const e = s.type.engine;
-    const key = typeof e === 'string' ? e : e[s.faction];
+    const key = typeof e === 'string' ? e : e[s.army] ?? e[s.faction];
     this.channels.push({
       u, s, d,
       engine: this.loop(key, u.pos, 0, MACHINE_REF),
