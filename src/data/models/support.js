@@ -8,6 +8,7 @@
 //         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit · R-330 jammer · BTR-60PU command post
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
+import { truck } from './truck.js';
 import * as THREE from 'three';
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
 import { sideProfile, planProfile, stationHull, trackedHull, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
@@ -47,6 +48,7 @@ export function vehicle(describe) {
     root.add(hull);
     meshAdder(hull)(d.hull, mats.body);
     if (d.marks) meshAdder(hull)(d.marks, mats.glow, false);
+    if (d.wheels?.axles) meshAdder(hull)(d.wheels.axles, mats.body);
     const load = new THREE.Group();
     hull.add(load);
     if (d.load) meshAdder(load)(d.load, mats.body);
@@ -71,6 +73,7 @@ export function vehicle(describe) {
     }
     if (d.spin?.onTurret) turret.add(spin); // a radar on the turret turns with it
     const tow = new THREE.Group();
+    tow.name = 'tow'; // (tools/float_check.py checks it on its own: it isn't joined to the gun but by the hook)
     hull.add(tow);
     if (d.tow) { tow.position.z = d.tow.hitch; meshAdder(tow)(d.tow.geo, mats.body); }
     const trailer = new THREE.Group();
@@ -133,6 +136,12 @@ export const wheeled = (axles, halfWidth, r) => ({
   geo: roadWheelGeometry(r, 0.34, 0x3a3f30, 0, 0.4),
   list: axles.flatMap((z) => [-1, 1].map((s) => ({ x: s * halfWidth, y: r, z }))),
   r,
+  // the axles and their differentials between the wheels (static, on the hull)
+  axles: merge(axles.flatMap((z) => [
+    P.cyl(0.075, 0.075, halfWidth * 2 - 0.2, { y: r, z, rz: Math.PI / 2, color: STEEL }, 8),
+    P.sphere(0.17, { y: r, z, sy: 0.8, color: STEEL }, 10, 6),
+    ...pair((s) => P.box(0.14, Math.max(0.15, 0.95 - r), 0.14, { x: s * 0.44, y: r + Math.max(0.15, 0.95 - r) / 2, z, color: STEEL })), // the springs up to both rails
+  ])),
 });
 
 /** A red cross on a white square, facing +x (rotate for other faces). */
@@ -171,7 +180,7 @@ export const m113Hull = (extra = [], { color = NATO, roof = 1.85 } = {}) => {
       // headlights in their brush guards, tow hooks, fender lips
       ...pair((s) => P.box(0.2, 0.14, 0.1, { x: s * 1.0, y: 1.17, z: 2.47, color: STEEL })),
       ...pair((s) => P.box(0.14, 0.09, 0.02, { x: s * 1.0, y: 1.17, z: 2.53, color: GLASS })),
-      ...pair((s) => P.box(0.26, 0.2, 0.03, { x: s * 1.0, y: 1.2, z: 2.6, color: STEEL })),
+      ...pair((s) => P.box(0.26, 0.2, 0.03, { x: s * 1.0, y: 1.2, z: 2.55, color: STEEL })),
       ...pair((s) => P.box(0.1, 0.1, 0.14, { x: s * 0.6, y: 0.82, z: 2.53, color: STEEL })),
       ...pair((s) => P.box(0.06, 0.05, 4.9, { x: s * 1.37, y: 1.0, z: 0.0, color: NATO_DK })),
       ...extra,
@@ -436,6 +445,7 @@ export const buildPactGrad = vehicle(() => ({
   hull: grime(merge([
     // Ural-375D: chassis rails, the long bonnet with its grille, the cab, round-topped fenders
     ...pair((s) => P.box(0.16, 0.25, 6.9, { x: s * 0.45, y: 0.95, z: 0.1, color: STEEL })),
+    P.box(1.1, 0.14, 6.9, { y: 1.12, z: 0.1, color: STEEL }),                                                // the subframe the cab and body sit on
     stationHull([
       [2.42, [[0, 1.15], [0.7, 1.15], [0.72, 1.7], [0.62, 1.84], [0, 1.86]]],
       [3.42, [[0, 1.15], [0.66, 1.15], [0.68, 1.66], [0.58, 1.78], [0, 1.8]]],
@@ -851,26 +861,8 @@ export const buildPactIMR = vehicle(() => {
 
 /** A small cargo truck seen from its tail at the origin (z = 0) forward along +z: for towing guns. */
 export function towTruck({ color, dark, length = 5.4, width = 2.2, bonnet = 'flat' }) {
-  const half = width / 2;
-  const cabZ = length - 1.9;
-  return [
-    ...pair((s) => P.box(0.14, 0.2, length - 0.3, { x: s * 0.4, y: 0.75, z: length / 2, color: STEEL })),              // chassis rails
-    P.box(width, 0.08, length - 2.3, { y: 1.1, z: (length - 2.3) / 2 + 0.1, color: dark }),                              // the cargo bed…
-    ...pair((s) => P.box(0.05, 0.45, length - 2.3, { x: s * half, y: 1.35, z: (length - 2.3) / 2 + 0.1, color }), ),     // …its sides
-    P.box(width, 0.45, 0.05, { y: 1.35, z: 0.12, color }),
-    ...[0.5, 1.4, 2.3].map((z) => P.box(width, 0.04, 0.04, { y: 2.1, z, color: dark })),                              // canvas bows
-    P.box(width, 0.9, length - 2.4, { y: 1.95, z: (length - 2.4) / 2 + 0.15, color: 0x5a5c42 }),                       // the canvas tilt
-    P.box(width - 0.1, 1.05, 1.15, { y: 1.75, z: cabZ + 0.3, color }),                                                  // cab
-    P.box(width - 0.3, 0.45, 0.04, { y: 2.0, z: cabZ + 0.89, rx: -0.12, color: GLASS }),
-    ...pair((s) => P.box(0.03, 0.4, 0.55, { x: s * (half - 0.04), y: 1.95, z: cabZ + 0.35, color: GLASS })),
-    bonnet === 'round'
-      ? loft([[0, 1.25, cabZ + 0.9, 0.7, 0.42, 3], [0, 1.25, cabZ + 1.5, 0.62, 0.36, 3], [0, 1.15, cabZ + 1.85, 0.55, 0.3, 3]], { color }, 12)
-      : P.box(1.25, 0.6, 1.0, { y: 1.35, z: cabZ + 1.4, color }),
-    ...pair((s) => P.box(0.45, 0.06, 1.1, { x: s * (half - 0.2), y: 1.12, z: cabZ + 1.3, color: dark })),            // front wings
-    P.box(width, 0.16, 0.12, { y: 0.82, z: length - 0.05, color: STEEL }),                                              // bumper on the rails
-    ...[cabZ + 1.3, 1.6, 0.6].flatMap((z) => pair((s) => P.cyl(0.45, 0.45, 0.28, { x: s * (half - 0.2), y: 0.45, z, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14))),
-    P.box(0.12, 0.12, 0.5, { y: 0.6, z: -0.15, color: STEEL }),                                                         // the towing hook
-  ];
+  // (models/truck.js: the one lorry everything tows with, from the tail at z = 0 to the bumper)
+  return truck({ color, dark, length, width, bonnet: bonnet === 'round' ? 'round' : 'square', body: 'cargo', r: 0.45 });
 }
 
 // ---------------------------------------------------------------- towed AA guns (with their gunner)
@@ -1006,6 +998,7 @@ export const buildPactP19 = vehicle(() => ({
   wheels: wheeled([2.1, -0.95, -2.2], 1.0, 0.5),
   hull: grime(merge([
     ...pair((s) => P.box(0.16, 0.22, 7.0, { x: s * 0.45, y: 0.9, z: 0.1, color: STEEL })),           // chassis rails, out to the bumper
+    P.box(1.1, 0.14, 7.0, { y: 1.06, z: 0.1, color: STEEL }),                                                // the subframe the cab and body sit on
     // ZiL-131: rounded bonnet and wings, the cab
     loft([[0, 1.1, 2.4, 0.78, 0.4, 3], [0, 1.2, 3.0, 0.74, 0.38, 3], [0, 1.15, 3.45, 0.66, 0.32, 3]], { color: PACT }, 12),
     P.box(1.2, 0.42, 0.04, { y: 1.15, z: 3.5, color: 0x1e1e1c }),                                    // grille
@@ -1140,6 +1133,7 @@ export const buildNatoFirefinder = vehicle(() => ({
   wheels: wheeled([1.95, -0.55, -1.65], 0.95, 0.5),
   hull: grime(merge([
     ...pair((s) => P.box(0.15, 0.22, 6.2, { x: s * 0.42, y: 0.88, z: 0.25, color: STEEL })),         // chassis rails, out to the bumper
+    P.box(1.1, 0.14, 6.2, { y: 1.03, z: 0.25, color: STEEL }),                                                // the subframe the cab and body sit on
     // M35: flat-topped bonnet, the cab with its canvas top, wide front fenders
     stationHull([[2.15, [[0, 1.05], [0.62, 1.05], [0.62, 1.62], [0, 1.64]]], [3.3, [[0, 1.05], [0.6, 1.05], [0.6, 1.55], [0, 1.57]]]], { color: NATO, ...C }),
     P.box(1.15, 0.5, 0.04, { y: 1.3, z: 3.33, color: 0x1e1e1c }),                                    // grille
@@ -1313,6 +1307,7 @@ export const buildPactR330 = vehicle(() => ({
   wheels: wheeled([2.0, -0.7, -1.95], 1.0, 0.55),
   hull: grime(merge([
     ...pair((s) => P.box(0.16, 0.25, 6.6, { x: s * 0.45, y: 0.95, z: 0.1, color: STEEL })),
+    P.box(1.1, 0.14, 6.6, { y: 1.12, z: 0.1, color: STEEL }),                                                // the subframe the cab and body sit on
     stationHull([[2.35, [[0, 1.15], [0.72, 1.15], [0.74, 1.72], [0.64, 1.86], [0, 1.88]]], [3.35, [[0, 1.15], [0.68, 1.15], [0.7, 1.68], [0.6, 1.8], [0, 1.82]]]], { color: PACT }),
     P.box(1.2, 0.5, 0.04, { y: 1.42, z: 3.37, color: 0x1e1e1c }),
     stationHull([[1.0, [[0, 1.2], [1.15, 1.2], [1.15, 2.32], [1.04, 2.52], [0, 2.54]]], [2.35, [[0, 1.2], [1.15, 1.2], [1.15, 2.28], [1.04, 2.46], [0, 2.48]]]], { color: PACT }),

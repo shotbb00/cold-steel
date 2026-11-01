@@ -114,7 +114,7 @@ function geometry(m1 = false) {
       P.box(0.66, 0.4, 0.25, { y: 0.44, z: 1.95, color: 0x4d5236 }),                           // canvas mantlet cover
     ]), 0.9, 0.0, 0.4),
     marks: merge(m1
-      ? pair((s) => P.box(0.02, 0.24, 0.62, { x: s * 1.6, y: 0.4, z: -0.5, ry: s * -0.25 }))                    // number plates
+      ? pair((s) => P.box(0.02, 0.26, 0.62, { x: s * 1.75, y: 0.95, z: 0.6 }))                                  // the tactical numbers on the side skirts (on the hull)
       : pair((s) => P.cyl(0.18, 0.18, 0.02, { x: s * 1.59, y: 0.38, z: -0.45, rz: Math.PI / 2 }, 5))),
     gun: merge([
       P.cyl(0.1, 0.13, 5.6, { z: 2.8, rx: Math.PI / 2, color: GREEN }, 14),
@@ -141,7 +141,7 @@ function build(mats, m1) {
   hull.add(turret);
   const addT = meshAdder(turret);
   addT(g.turret, mats.body);
-  addT(g.marks, mats.glow, false);
+  (m1 ? meshAdder(hull) : addT)(g.marks, mats.glow, false); // the M1's numbers are on the hull, the stars on the turret
   const gun = new THREE.Group();
   gun.position.set(0, 0.44, 1.8);
   turret.add(gun);

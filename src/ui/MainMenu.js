@@ -469,8 +469,8 @@ export class MainMenu {
     const wrap = el('div', 'units');
     const list = el('div', 'unit-list');
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden);
-    const labels = []; // the army's own names on the list (shortName for the US and Soviet armies)
-    const label = (t) => (this.unit.army === DEFAULT_ARMY[this.unit.faction] ? t.shortName : forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName);
+    const labels = []; // the army's own names on the list
+    const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name
     for (const t of types) {
       const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
       labels.push([b, t]);

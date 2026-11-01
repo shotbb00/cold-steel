@@ -102,8 +102,8 @@ export const buildBwLeopard2 = vehicle(() => {
         P.cyl(0.14, 0.14, 0.42, { x: 0.85, y: 1.22, z: 0.0, color: BW_DK }, 10),                         // PERI R17…
         P.box(0.26, 0.2, 0.28, { x: 0.85, y: 1.5, z: 0.0, color: BW_DK }),                               // …its head
         P.cyl(0.3, 0.3, 0.05, { x: -0.7, y: 0.88, z: -0.6, color: BW_DK }, 14),                          // loader's hatch…
-        P.box(0.07, 0.08, 0.35, { x: -0.7, y: 1.05, z: -0.35, color: STEEL }),                           // …and its MG3
-        P.cyl(0.02, 0.02, 0.7, { x: -0.7, y: 1.05, z: 0.15, rx: Math.PI / 2, color: STEEL }, 6),
+        P.box(0.07, 0.08, 0.35, { x: -0.7, y: 0.95, z: -0.35, color: STEEL }),                           // …and its MG3
+        P.cyl(0.02, 0.02, 0.7, { x: -0.7, y: 0.95, z: 0.15, rx: Math.PI / 2, color: STEEL }, 6),
         ...pair((s) => smoke(s * 1.7, 0.4, -1.4, 4, s * 1.4)).flat(),
         ...pair((s) => smoke(s * 1.75, 0.4, -1.7, 4, s * 1.4)).flat(),
         P.box(3.0, 0.06, 0.8, { y: 0.5, z: -2.7, color: STEEL }),                                        // bustle basket
@@ -124,7 +124,7 @@ export const buildBwLeopard2 = vehicle(() => {
     },
     muzzle: [0, 0, 4.15],
     recoil: 0.42,
-    marks: merge([...pair((s) => P.box(0.02, 0.34, 0.34, { x: s * 1.95, y: 1.2, z: 1.0 }))]),
+    marks: merge([...pair((s) => P.box(0.02, 0.34, 0.34, { x: s * 1.92, y: 1.2, z: 1.0 }))]),
   };
 });
 
@@ -147,10 +147,10 @@ export const buildBwMarder = vehicle(() => {
     turret: {
       geo: grime(merge([
         planProfile([[-0.5, 0.75], [0.5, 0.75], [0.8, 0.3], [0.8, -0.7], [-0.8, -0.7], [-0.8, 0.3]], 0.42, { color: BW, ...C }),
-        P.box(0.3, 0.3, 0.6, { x: 0.0, y: 0.6, z: 0.1, color: BW_DK }),                                  // the cannon's housing on the roof
+        P.box(0.3, 0.3, 0.6, { x: 0.0, y: 0.55, z: 0.1, color: BW_DK }),                                 // the cannon's housing on the roof
         // Milan on its bracket on the right
         P.cyl(0.07, 0.07, 1.2, { x: 0.75, y: 0.75, z: 0.2, rx: Math.PI / 2, color: 0x56603e }, 10),
-        P.box(0.16, 0.2, 0.2, { x: 0.62, y: 0.68, z: -0.15, color: BW_DK }),
+        P.box(0.16, 0.3, 0.2, { x: 0.62, y: 0.55, z: -0.15, color: BW_DK }),                             // its bracket on the roof
         ...pair((s) => smoke(s * 0.82, 0.18, 0.5, 3, s * 0.6)).flat(),
         P.cyl(0.24, 0.24, 0.05, { x: -0.45, y: 0.44, z: -0.35, color: BW_DK }, 12),                      // commander's hatch
       ]), 0.6, 0, 0.4),
@@ -166,7 +166,7 @@ export const buildBwMarder = vehicle(() => {
     },
     muzzle: [0, 0, 2.0],
     recoil: 0.08,
-    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * 1.8, y: 1.45, z: 1.3 }))]),
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * 1.79, y: 1.45, z: 0.6 }))]),
   };
 });
 
@@ -197,8 +197,8 @@ export const buildNvaT55 = vehicle(() => {
         P.box(0.4, 0.22, 0.3, { y: 0.92, z: 1.0, color: NVA_DK }),                                        // KTD-2 laser rangefinder over the gun
         P.cyl(0.33, 0.36, 0.22, { x: -0.55, y: 0.92, z: -0.25, color: NVA }, 14),                        // commander's cupola
         P.cyl(0.3, 0.3, 0.05, { x: 0.55, y: 0.92, z: -0.3, color: NVA_DK }, 14),                         // loader's hatch…
-        P.box(0.12, 0.14, 0.4, { x: 0.55, y: 1.06, z: -0.1, color: STEEL }),                             // …and the DShK
-        P.cyl(0.025, 0.025, 1.0, { x: 0.55, y: 1.08, z: 0.5, rx: Math.PI / 2, color: STEEL }, 6),
+        P.box(0.12, 0.14, 0.4, { x: 0.55, y: 1.0, z: -0.1, color: STEEL }),                              // …and the DShK
+        P.cyl(0.025, 0.025, 1.0, { x: 0.55, y: 1.02, z: 0.5, rx: Math.PI / 2, color: STEEL }, 6),
         P.cyl(0.15, 0.15, 0.28, { x: 0.65, y: 0.62, z: 1.05, rx: Math.PI / 2, color: STEEL }, 12),       // IR searchlight
         ...pair((s) => smoke(s * 1.1, 0.5, 0.8, 4, s * 0.8)).flat(),                                      // 902B smoke launchers
         P.box(1.2, 0.3, 0.45, { y: 0.3, z: -1.45, color: NVA_DK }),                                     // rear stowage

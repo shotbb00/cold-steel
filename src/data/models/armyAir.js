@@ -79,21 +79,21 @@ export const buildBwHawk = vehicle(() => ({
     P.box(1.6, 0.3, 3.6, { y: 0.6, color: BW, ...C }),
     ...pair((s) => tyre(s * 0.85, 0.45, -1.0, 0.42, 0.25)),
     ...pair((s) => tyre(s * 0.85, 0.45, 0.4, 0.42, 0.25)),
-    ...[[-1, -1.6], [1, -1.6], [-1, 1.6], [1, 1.6]].map(([x, z]) => P.box(0.1, 0.5, 0.1, { x: x * 0.95, y: 0.3, z, color: STEEL })),
+    ...[[-1, -1.6], [1, -1.6], [-1, 1.6], [1, 1.6]].map(([x, z]) => P.box(0.1, 0.5, 0.1, { x: x * 0.72, y: 0.3, z, color: STEEL })),
   ]), 1, 0.3),
   turret: { geo: grime(merge([P.cyl(0.5, 0.55, 0.4, { y: 0.2, color: BW_DK }, 14)]), 0.6, 0, 0.3), at: [0, 0.75, 0] },
   gun: { // three missiles side by side on the beam
     geo: merge([
       P.box(2.2, 0.15, 0.4, { color: STEEL }),
       ...[-0.75, 0, 0.75].flatMap((x) => [
-        P.cyl(0.18, 0.18, 4.6, { x, y: 0.3, z: 0.4, rx: Math.PI / 2, color: WHITE }, 12),
-        P.cone(0.18, 0.6, { x, y: 0.3, z: 2.95, rx: Math.PI / 2, color: WHITE }, 12),
-        ...[0, 1, 2, 3].map((k) => P.box(0.02, 0.55, 0.5, { x: x + Math.sin(k * 1.57) * 0.2, y: 0.3 + Math.cos(k * 1.57) * 0.2, z: -1.6, rz: k * 1.57, color: WHITE })), // fins
+        P.cyl(0.18, 0.18, 4.6, { x, y: 0.25, z: 0.4, rx: Math.PI / 2, color: WHITE }, 12),
+        P.cone(0.18, 0.6, { x, y: 0.25, z: 2.95, rx: Math.PI / 2, color: WHITE }, 12),
+        ...[0, 1, 2, 3].map((k) => P.box(0.02, 0.55, 0.5, { x: x + Math.sin(k * 1.57) * 0.2, y: 0.25 + Math.cos(k * 1.57) * 0.2, z: -1.6, rz: k * 1.57, color: WHITE })), // fins
       ]),
     ]),
-    at: [0, 0.55, 0],
+    at: [0, 0.45, 0],
   },
-  muzzle: [0, 0.3, 3.2],
+  muzzle: [0, 0.25, 3.2],
   recoil: 0,
   tow: { geo: grime(merge(towTruck({ color: BW, dark: BW_DK, length: 6.6, width: 2.4 })), 1, 0.3), hitch: 2.1 },
   marks: merge([P.box(0.02, 0.25, 0.4, { x: 0.81, y: 0.65, z: 0.8 })]),
@@ -110,7 +110,7 @@ export const buildBwRoland = vehicle(() => ({
     at: [0, 1.92, -0.2],
   },
   gun: { // a launch arm each side, two missile tubes on each
-    geo: merge([...pair((s) => merge([0, 1].map((j) => P.cyl(0.12, 0.12, 2.4, { x: s * 1.25, y: j * 0.28, z: 0.3, rx: Math.PI / 2, color: 0x56603e }, 10))))]),
+    geo: merge([...pair((s) => merge([...[0, 1].map((j) => P.cyl(0.14, 0.14, 2.4, { x: s * 1.25, y: j * 0.28, z: 0.3, rx: Math.PI / 2, color: 0x56603e }, 10)), P.box(0.4, 0.16, 0.6, { x: s * 1.05, y: 0.14, color: BW_DK })]))]), // a launch arm each side, two tubes on it
     at: [0, 0.6, 0],
   },
   spin: {
@@ -129,14 +129,15 @@ export const buildBwFlaMK20 = vehicle(() => ({
   hull: grime(merge([
     P.box(0.9, 0.2, 1.3, { y: 0.4, color: BW, ...C }),
     ...pair((s) => tyre(s * 0.75, 0.4, -0.2, 0.36, 0.2)),
-    ...[[0, 0.9], [-0.55, -0.7], [0.55, -0.7]].map(([x, z]) => P.box(0.1, 0.4, 0.1, { x, y: 0.2, z, color: STEEL })),
+    P.cyl(0.05, 0.05, 1.5, { y: 0.4, z: -0.2, rz: Math.PI / 2, color: STEEL }, 8),                   // the axle
+    ...[[0, 0.6], [-0.38, -0.6], [0.38, -0.6]].map(([x, z]) => P.box(0.1, 0.4, 0.1, { x, y: 0.2, z, color: STEEL })), // the jacks under the carriage
   ]), 1, 0.3),
   turret: {
     geo: grime(merge([
       P.cyl(0.55, 0.55, 0.1, { color: BW }, 16),
-      P.box(0.34, 0.07, 0.32, { x: -0.42, y: 0.28, z: -0.42, color: BW_DK }),
-      P.box(0.36, 0.5, 0.26, { x: -0.42, y: 0.58, z: -0.42, rx: 0.12, color: 0x5a5c3b }),            // the gunner
-      P.sphere(0.135, { x: -0.42, y: 1.0, z: -0.38, sy: 0.75, color: 0x4e5236 }, 10, 6),
+      P.box(0.34, 0.07, 0.32, { x: -0.36, y: 0.08, z: -0.36, color: BW_DK }),                         // the seat on the platform
+      P.box(0.36, 0.5, 0.26, { x: -0.36, y: 0.36, z: -0.36, rx: 0.12, color: 0x5a5c3b }),            // the gunner
+      P.sphere(0.135, { x: -0.36, y: 0.72, z: -0.32, sy: 0.75, color: 0x4e5236 }, 10, 6),
     ]), 0.8, 0, 0.3),
     at: [0, 0.5, 0],
   },
@@ -205,7 +206,7 @@ const brdm = () => ({
   wheels: wheeled([-1.45, 1.35], 1.05, 0.5),
   hull: grime(merge([
     trackedHull([[-2.85, 1.55, 0.6], [-2.55, 1.85, 0.5], [1.0, 1.85, 0.5], [2.0, 1.55, 0.6], [2.85, 1.05, 0.85]], { belly: 0.95, fender: 1.2, fenderY: 1.0, chamfer: 0.15 }, { color: NVA }),
-    P.box(1.4, 0.2, 0.05, { y: 1.65, z: 2.05, rx: 0.7, color: 0x1a1d1c }),                            // the windscreen hatches
+    ...pair((s) => P.box(0.62, 0.05, 0.42, { x: s * 0.36, y: 1.5, z: 2.25, rx: 0.53, color: 0x1a1d1c })), // the windscreen hatches, lying on the sloped nose
   ]), 1.1, 0.3),
 });
 
@@ -213,7 +214,7 @@ export const buildNvaStrela1 = vehicle(() => ({
   ...brdm(),
   turret: { geo: grime(merge([P.cyl(0.55, 0.6, 0.3, { y: 0.15, color: NVA }, 14), P.box(0.4, 0.3, 0.4, { y: 0.45, z: 0.2, color: NVA_DK })]), 0.6, 0, 0.3), at: [0, 1.85, -0.4] },
   gun: { // four missile containers, two a side
-    geo: merge([...pair((s) => merge([0, 1].map((j) => P.box(0.22, 0.22, 1.9, { x: s * (0.45 + j * 0.25), y: 0.1, z: 0.25, color: 0x56603e }))))]),
+    geo: merge([P.box(1.8, 0.08, 0.3, { y: 0.0, z: 0.25, color: NVA_DK }), ...pair((s) => merge([0, 1].map((j) => P.box(0.22, 0.22, 1.9, { x: s * (0.45 + j * 0.25), y: 0.12, z: 0.25, color: 0x56603e }))))]), // the beam, two boxes a side
     at: [0, 0.5, 0],
   },
   muzzle: [0.55, 0.1, 1.2],
@@ -232,17 +233,17 @@ export const buildNvaOsa = vehicle(() => ({
     geo: grime(merge([
       P.cyl(0.9, 1.0, 0.5, { y: 0.25, color: NVA }, 16),
       P.cyl(0.45, 0.45, 0.25, { y: 0.9, z: 0.6, rx: Math.PI / 2, color: NVA_DK }, 14),                // the tracking radar dish
-      P.cyl(0.08, 0.1, 0.7, { y: 1.0, z: -0.3, color: STEEL }, 8),
+      P.cyl(0.08, 0.1, 0.7, { y: 0.85, z: -0.3, color: STEEL }, 8),
     ]), 0.8, 0, 0.4),
     at: [0, 2.1, -0.6],
   },
   gun: { // three missiles on a rail each side
-    geo: merge([...pair((s) => merge([0, 1, 2].map((j) => P.cyl(0.1, 0.1, 2.9, { x: s * (0.95 + j * 0.0), y: -0.05 + j * 0.24, z: 0.4, rx: Math.PI / 2, color: WHITE }, 10))))]),
+    geo: merge([...pair((s) => merge([0, 1, 2].map((j) => P.cyl(0.12, 0.12, 2.9, { x: s * 0.95, y: -0.05 + j * 0.24, z: 0.4, rx: Math.PI / 2, color: WHITE }, 10))))]),
     at: [0, 0.6, 0],
   },
   spin: {
     geo: merge([P.box(1.8, 0.45, 0.1, { y: 0.25, color: NVA_DK })]),
-    at: [0, 1.3, -0.3],
+    at: [0, 1.15, -0.3],
     rate: 2.0,
     onTurret: true,
     always: true,

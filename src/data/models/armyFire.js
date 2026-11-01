@@ -12,6 +12,7 @@
 //                the reload pack behind it.
 //   Panzermörser Bundeswehr: the M113 with the 120 mm Tampella firing through the open roof.
 //   2B11         NVA: the 120 mm mortar on its wheeled carriage behind a GAZ-66.
+import { truckUnit } from './truck.js';
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
 import { planProfile, trackedHull, castTurret } from './vehicleCommon.js';
 import { vehicle, tracked, wheeled, towTruck, m113Hull } from './support.js';
@@ -86,7 +87,7 @@ export const buildBwJaguar = vehicle(() => {
     ]), 1.1, 0.3),
     turret: {
       geo: grime(merge([
-        P.cyl(0.3, 0.32, 0.18, { color: BW }, 14),                                                    // the launcher's pedestal
+        P.cyl(0.3, 0.32, 0.45, { y: 0.2, color: BW }, 14),                                            // the launcher's pedestal
         P.box(0.22, 0.32, 0.3, { x: 0.25, y: 0.3, color: BW_DK }),                                    // the sight
       ]), 0.5, 0, 0.3),
       at: [0, 1.7, 0.2],
@@ -104,10 +105,10 @@ const ural = () => grime(merge(towTruck({ color: NVA, dark: NVA_DK, length: 7.4,
 export const buildNvaRapira = vehicle(() => ({
   hull: grime(merge([
     // the split trail spread back, the shield, the two road wheels, the spades dug in
-    ...pair((s) => P.box(0.12, 0.12, 3.0, { x: s * 0.6, y: 0.25, z: -1.6, ry: s * -0.18, color: NVA_DK })),
-    ...pair((s) => P.box(0.3, 0.25, 0.06, { x: s * 0.88, y: 0.12, z: -3.05, color: STEEL })),
+    ...pair((s) => P.box(0.12, 0.12, 3.0, { x: s * 0.6, y: 0.42, z: -1.6, ry: s * -0.18, color: NVA_DK })),
+    ...pair((s) => P.box(0.3, 0.5, 0.06, { x: s * 0.88, y: 0.25, z: -3.05, color: STEEL })),           // the spades at the trail ends
     ...pair((s) => tyre(s * 1.0, 0.45, -0.15, 0.45, 0.28)),
-    P.box(1.4, 0.2, 0.5, { y: 0.55, z: -0.15, color: NVA }),                                           // axle and cradle base
+    P.box(2.0, 0.2, 0.5, { y: 0.55, z: -0.15, color: NVA }),                                           // axle and cradle base
   ]), 1, 0.3),
   turret: {
     geo: grime(merge([
@@ -148,7 +149,7 @@ export const buildBwM109G = vehicle(() => {
         // the big square turret set back on the hull, the overhanging bustle
         planProfile([[-1.4, 1.2], [1.4, 1.2], [1.45, -2.0], [-1.45, -2.0]], 1.15, { color: BW, ...C }),
         P.cyl(0.32, 0.34, 0.2, { x: 0.8, y: 1.2, z: -0.4, color: BW }, 14),                            // commander's cupola
-        P.box(0.12, 0.12, 0.4, { x: 0.8, y: 1.4, z: -0.2, color: STEEL }),
+        P.box(0.12, 0.12, 0.4, { x: 0.8, y: 1.35, z: -0.2, color: STEEL }),
         P.box(1.0, 0.8, 0.4, { y: 0.55, z: 1.3, color: BW }),                                          // mantlet
       ]), 0.9, 0, 0.4),
       at: [0, 1.45, -0.9],
@@ -188,7 +189,7 @@ export const buildNvaD30 = vehicle(() => ({
       P.box(0.45, 0.4, 1.4, { color: NVA_DK }),                                                          // recoil gear over the barrel
       P.cyl(0.075, 0.09, 4.9, { z: 2.6, rx: Math.PI / 2, color: NVA }, 12),
       P.cyl(0.16, 0.14, 0.5, { z: 5.0, rx: Math.PI / 2, color: STEEL }, 12),                            // the big muzzle brake
-      P.box(0.3, 0.06, 0.2, { y: 0.3, z: 5.1, color: STEEL }),                                          // its towing eye
+      P.box(0.3, 0.06, 0.2, { y: 0.14, z: 5.1, color: STEEL }),                                         // its towing eye
     ]).scale(1, 1, 0.8),
     at: [0, 0.75, 0.2],
     pitch: 0.4,
@@ -209,42 +210,46 @@ const tubes = (cols, rows, w, h, len, color) => {
   return parts;
 };
 
-export const buildBwLARS = vehicle(() => ({
-  wheels: wheeled([-2.2, -1.0, 2.6], 1.05, 0.55),
-  hull: grime(merge([
-    ...pair((s) => P.box(0.15, 0.25, 6.6, { x: s * 0.45, y: 0.85, z: 0.0, color: STEEL })),               // the MAN chassis
-    P.box(2.4, 1.25, 1.6, { y: 1.85, z: 2.5, color: BW, ...C }),                                        // cab
-    P.box(2.1, 0.5, 0.04, { y: 2.2, z: 3.31, rx: -0.1, color: GLASS }),
-    P.box(2.4, 0.3, 0.5, { y: 1.1, z: 3.25, color: BW_DK }),
-    P.box(2.3, 0.15, 3.6, { y: 1.05, z: -1.2, color: BW_DK }),                                          // the launcher's platform
-  ]), 1.2, 0.3),
-  turret: { geo: grime(merge([P.box(1.0, 0.4, 1.0, { y: 0.2, color: BW_DK })]), 0.6, 0, 0.3), at: [0, 1.15, -1.3] },
-  gun: { // two 18-tube launchers side by side
-    geo: merge([...pair((s) => merge(tubes(3, 6, 0.55, 0.75, 2.6, BW).map((g) => g.translate(s * 0.5, 0, 0))))]),
-    at: [0, 0.75, 0.3],
-    pitch: 0.55,
-  },
-  muzzle: [0, 0, 1.35],
-  recoil: 0.04,
-  marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * 1.21, y: 1.9, z: 2.5 }))]),
-}));
+export const buildBwLARS = vehicle(() => {
+  const t = truckUnit({ length: 7.0, width: 2.5, color: BW, dark: BW_DK, camo: 1, bonnet: 'cabover', body: 'flat', r: 0.55, axles: [6.0, 2.0, 0.8] });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([
+      ...t.parts,
+      P.box(1.3, 0.3, 1.3, { y: L.deck + 0.25, z: L.rear + 1.6, color: BW_DK }),                         // the launcher's turntable base
+      ...pair((s) => P.box(0.3, 0.6, 0.3, { x: s * 1.05, y: L.deck - 0.2, z: L.rear + 0.4, color: STEEL })), // the rear jacks
+    ]), 1.2, 0.3),
+    turret: { geo: grime(merge([P.box(1.0, 0.4, 1.0, { y: 0.2, color: BW_DK })]), 0.6, 0, 0.3), at: [0, L.deck + 0.4, L.rear + 1.6] },
+    gun: { // two 18-tube launchers side by side, on their cradle
+      geo: merge([P.box(1.3, 0.15, 0.5, { y: -0.4, color: STEEL }), ...pair((s) => merge(tubes(3, 6, 0.55, 0.75, 2.6, BW).map((g) => g.translate(s * 0.5, 0, 0))))]),
+      at: [0, 0.75, 0.3],
+      pitch: 0.55,
+    },
+    muzzle: [0, 0, 1.35],
+    recoil: 0.04,
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.5, z: L.cabFront - 0.4 }))]),
+  };
+});
 
-export const buildNvaRM70 = vehicle(() => ({
-  wheels: wheeled([-2.4, -1.25, 1.35, 2.5], 1.05, 0.55),
-  hull: grime(merge([
-    ...pair((s) => P.box(0.15, 0.25, 7.6, { x: s * 0.45, y: 0.85, z: 0.0, color: STEEL })),               // the Tatra 813's backbone
-    // the armoured cab: sloped plates, slit windows
-    loft([[0, 1.2, 2.6, 1.2, 0.05, 2], [0, 1.25, 2.9, 1.2, 0.75, 3], [0, 1.25, 3.5, 1.1, 0.7, 3], [0, 1.2, 3.75, 0.9, 0.45, 3]], { color: NVA }, 12),
-    P.box(1.8, 0.14, 0.04, { y: 1.95, z: 3.55, rx: -0.5, color: GLASS }),
-    P.box(2.4, 1.0, 1.0, { y: 1.6, z: 1.7, color: NVA_DK }),                                            // the 40-round reload pack behind it
-    P.box(2.3, 0.15, 3.6, { y: 1.05, z: -1.6, color: NVA_DK }),
-  ]), 1.2, 0.3),
-  turret: { geo: grime(merge([P.box(1.1, 0.4, 1.1, { y: 0.2, color: NVA_DK })]), 0.6, 0, 0.3), at: [0, 1.15, -1.7] },
-  gun: { geo: merge(tubes(10, 4, 1.9, 0.6, 3.0, NVA)), at: [0, 0.7, 0.3], pitch: 0.55 },
-  muzzle: [0, 0, 1.55],
-  recoil: 0.04,
-  marks: merge([...pair((s) => P.box(0.02, 0.22, 0.55, { x: s * 1.21, y: 1.6, z: 1.7 }))]),
-}));
+export const buildNvaRM70 = vehicle(() => {
+  const t = truckUnit({ length: 8.8, width: 2.5, color: NVA, dark: NVA_DK, bonnet: 'cabover', body: 'flat', r: 0.6, axles: [7.6, 6.3, 1.9, 0.7], armour: true, cabLen: 1.8 });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.6),
+    hull: grime(merge([
+      ...t.parts,
+      P.box(2.4, 1.0, 1.1, { y: L.deck + 0.55, z: L.cabRear - 0.7, color: NVA_DK }),                    // the 40-round reload pack behind the cab
+      P.box(1.4, 0.3, 1.4, { y: L.deck + 0.25, z: L.rear + 1.7, color: NVA_DK }),                        // the launcher's turntable base
+      ...pair((s) => P.box(0.3, 0.6, 0.3, { x: s * 1.05, y: L.deck - 0.2, z: L.rear + 0.4, color: STEEL })),
+    ]), 1.2, 0.3),
+    turret: { geo: grime(merge([P.box(1.1, 0.4, 1.1, { y: 0.2, color: NVA_DK })]), 0.6, 0, 0.3), at: [0, L.deck + 0.4, L.rear + 1.7] },
+    gun: { geo: merge([P.box(1.4, 0.15, 0.5, { y: -0.35, color: STEEL }), ...tubes(10, 4, 1.9, 0.6, 3.0, NVA)]), at: [0, 0.7, 0.3], pitch: 0.55 },
+    muzzle: [0, 0, 1.55],
+    recoil: 0.04,
+    marks: merge([...pair((s) => P.box(0.02, 0.22, 0.55, { x: s * (L.hw - 0.03), y: L.deck + 0.5, z: L.cabFront - 0.7 }))]),
+  };
+});
 
 // ---------------------------------------------------------------- mortars
 
