@@ -166,7 +166,7 @@ export default {
       if (c?.battles?.length) {
         const foe = enemyOf(game.playerFaction);
         const enemyLeft = Math.min(1, fieldStrength(game, foe) / (game.modeState.start?.[foe] || 1));
-        const { gain } = recordBattle(c, { won: mine.victory, survivors, enemyLeft });
+        const { gain } = recordBattle(c, { won: mine.victory, survivors, enemyLeft, scars: game.scars() });
         mine.subtitle += ` ${survivors.length} stacks come back${gain ? `; ${gain} replacement points` : ''}.`;
       }
     }

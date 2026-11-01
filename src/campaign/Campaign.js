@@ -19,6 +19,8 @@
 //     surrenders unless it attacked that turn (a breakout). The enemy lives by the same rule,
 //     and its planning looks for cuts and breakouts.
 //   • Intel: with scouts or a recon vehicle in a battalion the briefing counts the enemy.
+//   • Map damage: each sector remembers what its last battle left (c.scars: craters, standing
+//     defences, ruins, bridges — GameEngine.scars), and its next battle starts from that.
 //   • War length (the player's pick): endless, until one side has no battalions left, or the
 //     eight-day timetable — the Pact must take Fulda and Bad Hersfeld, NATO hold them (or take
 //     Eisenach) until the last turn.
@@ -315,7 +317,7 @@ export function battleChoice(c) {
   return {
     mode: 'breakthrough', map: b.map, side: c.side, time: b.time, weather: b.weather, armies: c.armies,
     campaign: {
-      attacker: b.attacker, sector: b.name, event: b.event ?? 'quiet',
+      attacker: b.attacker, sector: b.name, event: b.event ?? 'quiet', scars: c.scars?.[b.sector] ?? null,
       // cut off: fewer command points; from the second turn no aircraft and shaken men (modes/breakthrough.js)
       cut: { [c.side]: Math.max(0, ...ours.map((x) => cutLevel(c, x))), [enemyOf(c.side)]: Math.max(0, ...sides(c, b).theirs.map((x) => cutLevel(c, x))) },
       forces: {
@@ -332,9 +334,10 @@ export function battleChoice(c) {
  * After battle c.battles[0]: `won` (ours), `survivors` (our stacks: cid, men, xp, rank), `enemyLeft`
  * (the share of the enemy's strength still standing). Returns { gain } when it closed the turn.
  */
-export function recordBattle(c, { won, survivors, enemyLeft }) {
+export function recordBattle(c, { won, survivors, enemyLeft, scars = null }) {
   const b = c.battles.shift();
   if (!b) return {};
+  if (scars) (c.scars ??= {})[b.sector] = { ...scars, blasts: scars.blasts.slice(-400) }; // the oldest craters fade first
   const { ours, theirs } = sides(c, b);
   const alive = new Map(survivors.filter((s) => s.cid).map((s) => [s.cid, s]));
   let lost = 0;

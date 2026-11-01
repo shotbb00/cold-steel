@@ -145,7 +145,10 @@ export class GameEngine {
     this.world.conditions = this.conditions;
     this.effects = new EffectsSystem(this.scene, this.bus);
     this.projectiles = new ProjectileSystem(this.scene, this.world, this.effects);
-    this.projectiles.onCrater = (point, r, crater) => this.blastTerrain(point, r, crater); // (host only: projectiles call it when not cosmetic)
+    this.projectiles.onCrater = (point, r, crater) => { // (host only: projectiles call it when not cosmetic)
+      this.blastTerrain(point, r, crater);
+      this.blasts?.push([Math.round(point.x * 10) / 10, Math.round(point.z * 10) / 10, r, crater]); // the campaign keeps the sector's scars
+    };
     this.smoke = new SmokeSystem(this);
     this.projectiles.smoke = this.smoke;
     this.flares = new Flares(this);       // night: illumination rounds
@@ -202,6 +205,7 @@ export class GameEngine {
     this.paused = false;
 
     this.bindControls();
+    if (campaign) { this.blasts = []; if (campaign.scars) this.replayScars(campaign.scars); } // the sector as the last battle left it
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
@@ -337,6 +341,50 @@ export class GameEngine {
     for (const f of this.cover.forests ?? []) f.fell(point.x, point.z, r * 0.9, (d) => { const yes = Math.random() < 0.65 * (1 - d / (r * 0.9)); felled.push(yes ? 1 : 0); return yes; });
     if (crater >= CRATER_COVER) this.cover.addCraterSpots(point.x, point.z, r * 0.45 + 1, this.terrain.heightAt(point.x, point.z) + crater);
     if (felled.includes(1) || crater >= CRATER_COVER) this.netEvent('terrain', Math.round(point.x * 10) / 10, Math.round(point.z * 10) / 10, r, crater, felled.join(''));
+  }
+
+  /**
+   * The campaign's memory of a sector (campaign/Campaign.js scars): what this battle leaves behind —
+   * its craters (with the ones from before), the defences still standing, the collapsed houses,
+   * the blown bridges and the ones laid.
+   */
+  scars() {
+    const river = this.world.river;
+    return {
+      blasts: this.blasts ?? [],
+      works: this.construction.structures.filter((s) => !s.def.action).map((s) => [s.kind, Math.round(s.x * 10) / 10, Math.round(s.z * 10) / 10, Math.round(s.yaw * 100) / 100, s.faction]),
+      ruins: this.buildings.list.filter((b) => b.collapsed).map((b) => b.index),
+      blown: river ? river.crossings.filter((c) => c.blown && !c.laid).map((c) => c.id) : [],
+      laid: river ? river.crossings.filter((c) => c.laid && !c.blown).map((c) => [Math.round(c.x * 10) / 10, Math.round(c.z * 10) / 10]) : [],
+    };
+  }
+
+  /** Put the sector back the way scars() found it, before anyone deploys: the same calls that made it. */
+  replayScars({ blasts = [], works = [], ruins = [], blown = [], laid = [] }) {
+    const t = this.terrain;
+    const river = this.world.river;
+    this.quietly(() => {
+      for (const [x, z, r, crater] of blasts) {
+        const cr = r * 0.45;
+        t.dig(x, z, cr + 1, crater, (px, pz) => Math.max(0, 1 - Math.hypot(px - x, pz - z) / cr) ** 1.5, 0.9);
+        t.scorch(x, z, r * 0.7 + 1, 0.3);
+        for (const f of this.cover.forests ?? []) f.fell(x, z, r * 0.9, (d) => Math.random() < 0.65 * (1 - d / (r * 0.9)));
+        if (crater >= CRATER_COVER) this.cover.addCraterSpots(x, z, cr + 1, t.heightAt(x, z) + crater);
+      }
+      for (const i of ruins) { const b = this.buildings.list[i]; if (b) this.buildings.collapseVisual(b); }
+      if (river) {
+        for (const id of blown) { const c = river.crossings.find((k) => k.id === id); if (c) river.blow(c, t, this.scene); }
+        for (const [x, z] of laid) river.lay(x, t, this.scene, z);
+      }
+    });
+    for (const [kind, x, z, yaw, faction] of works) {
+      const site = this.construction.place(kind, x, z, yaw, faction, null, { force: true });
+      if (!site) continue;
+      site.quiet = true;
+      this.construction.finish(site);
+    }
+    this.blasts = [...blasts]; // this battle adds to them
+    if (blown.length || laid.length) this.bus.emit('terrain:changed');
   }
 
   /** A bridge layer's bridge goes down across the river at x (the channel nearest z): a new crossing for everyone. */
