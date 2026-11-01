@@ -2,6 +2,7 @@
 // (five Konkurs on a BRDM-2). Out to 360 m, a missile every ten seconds, each one able to kill
 // a tank; a machine gun for infantry that comes too close. Paper armour: keep them back, hull
 // down behind a crest, and let the tanks come to them.
+import { buildBwJaguar, buildNvaRapira } from '../models/armyFire.js';
 import { buildNatoITV, buildPactKonkurs } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -58,11 +59,16 @@ export default {
   },
 
   camera: { distance: 11, height: 4.6, shoulder: 2 },
-  models: { nato: buildNatoITV, pact: buildPactKonkurs },
+  factionStats: {
+    nva: { towed: { deploy: 14 } }, // towed: unhitched and laid before it fires
+  },
+  models: { nato: buildNatoITV, pact: buildPactKonkurs, bw: buildBwJaguar, nva: buildNvaRapira },
   weaponSound: 'mg',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Jaguar 1', weapon: 'HOT missiles', text: 'The Jagdpanzer: a low casemate with the HOT launcher on its roof. It waits hull-down at the edge of a wood and kills tanks before they know where it is.' },
+    nva: { name: 'MT-12 Rapira', weapon: '100 mm smoothbore', text: 'The towed anti-tank gun: a long 100 mm on a split trail behind a Ural. Slow to set up, deadly once in place, helpless while hitched.' },
     nato: { name: 'M901 ITV', weapon: 'Twin TOW launcher, 10 missiles', text: 'An M113 with the TOW hammerhead: a missile every ten seconds out to 360 m. Hide it behind a crest and every tank that shows itself is in trouble.' },
     pact: { name: '9P148 Konkurs', weapon: '5 × 9M113 Konkurs, 10 missiles', text: 'A BRDM-2 with a raised launcher of five Konkurs. Fast to set up, deadly at range — and dead to anything that shoots back.' },
   },

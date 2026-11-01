@@ -1,6 +1,7 @@
 // Self-propelled mortars, pairs — NATO M106 (4.2 in mortar in an M113), Pact 2S9 Nona (120 mm
 // gun-mortar in a turret). Indirect fire 35–230 m like the mortar team, but armoured, mobile
 // and ready to fire the moment it stops; smoke (K) and illumination (L) rounds too.
+import { buildBwPanzermoerser, buildNvaMortar120 } from '../models/armyFire.js';
 import { buildNatoM106, buildPactNona } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -61,15 +62,18 @@ export default {
   },
   // per-side differences on top of `stats`
   factionStats: {
+    nva: { towed: { deploy: 10 } }, // towed: unhitched and laid before it fires
     pact: { damage: 175, splash: 5.5, muzzleKind: 'artillery', armor: 0.3, range: 250 },
   },
 
   camera: { distance: 11, height: 4.6, shoulder: 2 },
-  models: { nato: buildNatoM106, pact: buildPactNona },
+  models: { nato: buildNatoM106, pact: buildPactNona, bw: buildBwPanzermoerser, nva: buildNvaMortar120 },
   weaponSound: 'mortar',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Panzermörser', weapon: '120 mm Tampella on M113', text: 'The heavy mortar on its M113: it fires through the open roof and drives off before the reply lands.' },
+    nva: { name: 'Granatwerfer 120 mm', weapon: '120 mm mortar, towed', text: 'The regiment’s heavy mortar on its carriage behind a GAZ-66: unhitched in moments, big bombs on anything the observers see.' },
     nato: { name: 'M106 Mortar Carrier', weapon: 'M30 4.2 in (107 mm) mortar', text: 'The battalion\'s mortar on tracks: fires the moment it stops, smoke (K) and illumination (L) on call, and drives off before the counter-fire lands.' },
     pact: { name: '2S9 Nona', weapon: '120 mm 2A51 gun-mortar', text: 'An airborne gun-mortar in a turret: heavy bombs on anything spotted 35–250 m out, smoke and illumination too.' },
   },

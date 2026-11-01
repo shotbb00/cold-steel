@@ -2,6 +2,7 @@
 // (forty 122 mm on a Ural truck). Indirect, 90–450 m: it ripples its whole load onto a spotted
 // cluster in a few seconds — a wide, scattered carpet that wrecks infantry in the open and
 // rattles everything else — then needs most of a minute to reload. The launch gives it away.
+import { buildBwLARS, buildNvaRM70 } from '../models/armyFire.js';
 import { buildNatoMLRS, buildPactGrad } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -65,11 +66,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2 },
-  models: { nato: buildNatoMLRS, pact: buildPactGrad },
+  models: { nato: buildNatoMLRS, pact: buildPactGrad, bw: buildBwLARS, nva: buildNvaRM70 },
   weaponSound: 'mlrs',
   engine: 'engine.diesel',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'LARS 2', weapon: '36 × 110 mm rockets', text: 'The light artillery rocket system: two launchers on a MAN truck, a ripple of 36 rockets onto one area, then away before the counter-fire comes.' },
+    nva: { name: 'RM-70', weapon: '40 × 122 mm rockets', text: 'The Czechoslovak Grad on the Tatra 813: an armoured cab and a second load of 40 rockets behind it, reloaded in minutes.' },
     nato: { name: 'M270 MLRS', weapon: '12 × 227 mm rockets', text: 'Twelve rockets in under six seconds onto anything spotted 90–450 m out. Devastating on a massed assault — then a long reload, and every gun on the map knows where it is.' },
     pact: { name: 'BM-21 Grad', weapon: '40 × 122 mm rockets (20 per salvo)', text: 'A rolling carpet of rockets over a whole position, from a truck. Thin-skinned and slow to reload — fire, then move.' },
   },

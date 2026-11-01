@@ -129,7 +129,7 @@ export const tracked = (o) => {
 };
 
 /** Wheels of a wheeled vehicle (4×4, 6×6) as spinning instances. */
-const wheeled = (axles, halfWidth, r) => ({
+export const wheeled = (axles, halfWidth, r) => ({
   geo: roadWheelGeometry(r, 0.34, 0x3a3f30, 0, 0.4),
   list: axles.flatMap((z) => [-1, 1].map((s) => ({ x: s * halfWidth, y: r, z }))),
   r,
@@ -144,7 +144,7 @@ const cross = (o) => [
 
 // ---------------------------------------------------------------- NATO: the M113 family
 
-const m113Hull = (extra = [], { color = NATO, roof = 1.85 } = {}) => {
+export const m113Hull = (extra = [], { color = NATO, roof = 1.85 } = {}) => {
   const g = tracked({ halfWidth: 1.15, length: 3.9, wheels: 5, wheelR: 0.3, sprocket: 1, rollers: 0, trackWidth: 0.38, wheelColor: NATO_DK });
   return {
     wheels: g.wheels,
@@ -850,7 +850,7 @@ export const buildPactIMR = vehicle(() => {
 
 
 /** A small cargo truck seen from its tail at the origin (z = 0) forward along +z: for towing guns. */
-function towTruck({ color, dark, length = 5.4, width = 2.2, bonnet = 'flat' }) {
+export function towTruck({ color, dark, length = 5.4, width = 2.2, bonnet = 'flat' }) {
   const half = width / 2;
   const cabZ = length - 1.9;
   return [

@@ -2,6 +2,7 @@
 // thermal sights on the Bradley) and a little hard to spot; they find the enemy for the guns
 // and the helicopters, and fight light things. The M3 keeps two TOWs for a tank that finds it
 // first; the BRDM-2 has only its 14.5 mm KPVT and its speed.
+import { buildBwLuchs, buildNvaBTR70 } from '../models/armyFire.js';
 import { buildNatoM3, buildPactBRDM } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -62,11 +63,13 @@ export default {
   },
 
   camera: { distance: 11, height: 4.6, shoulder: 2 },
-  models: { nato: buildNatoM3, pact: buildPactBRDM },
+  models: { nato: buildNatoM3, pact: buildPactBRDM, bw: buildBwLuchs, nva: buildNvaBTR70 },
   weaponSound: 'autocannon',
   engine: { nato: 'engine.diesel', pact: 'engine.dieselSmall' },
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Spähpanzer Luchs', weapon: '20 mm Rh 202', text: 'The 8×8 scout car: almost silent, amphibious, as fast backwards as forwards. It sees far, reports, and is gone before the enemy answers.' },
+    nva: { name: 'SPW-70 Aufklärer', weapon: '14.5 mm KPVT', text: 'The BTR-70 in the reconnaissance battalion: eight wheels, a heavy machine gun, room for a scout section. Fast on roads, thin everywhere.' },
     nato: { name: 'M3 Bradley CFV', weapon: '25 mm M242 · 2 TOW', text: 'The cavalry\'s eyes: thermal sights out to 130 m, fast and quiet. Find the enemy, call the guns, keep the TOWs for the tank that finds you.' },
     pact: { name: 'BRDM-2', weapon: '14.5 mm KPVT', text: 'A quick four-wheeled scout car: sees far, runs faster, and its heavy machine gun shreds infantry and trucks. Never let it meet a tank.' },
   },

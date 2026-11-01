@@ -3,6 +3,7 @@
 // minRange and range, preferring clustered and dug-in targets. Shells fly real arcs, scatter
 // more with distance, whistle on the way down, burst with wide splash and leave craters.
 // Slow and thin-skinned: keep it well back.
+import { buildBwM109G, buildNvaD30 } from '../models/armyFire.js';
 import { buildNatoM109 } from '../models/natoM109.js';
 import { buildPact2S1 } from '../models/pact2S1.js';
 import type { UnitType } from '../../types.ts';
@@ -60,11 +61,16 @@ export default {
   },
 
   camera: { distance: 12, height: 5, shoulder: 2 },
-  models: { nato: buildNatoM109, pact: buildPact2S1 },
+  factionStats: {
+    nva: { towed: { deploy: 22 } }, // towed: unhitched and laid before it fires
+  },
+  models: { nato: buildNatoM109, pact: buildPact2S1, bw: buildBwM109G, nva: buildNvaD30 },
   weaponSound: 'arty',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'M109A3G', weapon: '155 mm L39', text: 'The Bundeswehr’s M109 with the longer German barrel: further, harder, the same armoured box around the gun.' },
+    nva: { name: 'D-30', weapon: '122 mm howitzer', text: 'The towed 122 mm on its three-legged carriage: it turns all the way round on its pedestal. Unhitching and laying it takes time — then it fires all day.' },
     nato: { name: 'M109 Howitzer', weapon: '155 mm howitzer', text: 'Self-propelled artillery: shells anything spotted 45–300 m out, no line of sight needed. Keep it far back.' },
     pact: { name: '2S1 Gvozdika', weapon: '122 mm howitzer', text: 'The light SP gun of a Soviet division. Lobs shells onto spotted clusters and dug-in positions.' },
   },
