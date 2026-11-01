@@ -8,7 +8,7 @@
 //         2S9 Nona · MT-LB family: 9K35 Strela-10, ambulance · BREM-1 recovery vehicle · MTU-20 · IMR-2 · ZU-23-2 · P-19 radar on the ZiL-131 · 2S6 Tunguska · ARK-1 Rys · UR-77 Meteorit · R-330 jammer · BTR-60PU command post
 // The three family hulls (M113, MT-LB, BRDM-2) are built from their cross-sections
 // (stationHull) with their common fittings, so every variant on them shares the detail.
-import { truck } from './truck.js';
+import { truck, truckUnit } from './truck.js';
 import * as THREE from 'three';
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
 import { sideProfile, planProfile, stationHull, trackedHull, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
@@ -440,67 +440,44 @@ export const buildPactKonkurs = vehicle(() => ({
 
 // ---------------------------------------------------------------- Pact: BM-21 Grad
 
-export const buildPactGrad = vehicle(() => ({
-  wheels: wheeled([2.0, -0.7, -1.95], 1.0, 0.55),
-  hull: grime(merge([
-    // Ural-375D: chassis rails, the long bonnet with its grille, the cab, round-topped fenders
-    ...pair((s) => P.box(0.16, 0.25, 6.9, { x: s * 0.45, y: 0.95, z: 0.1, color: STEEL })),
-    P.box(1.1, 0.14, 6.9, { y: 1.12, z: 0.1, color: STEEL }),                                                // the subframe the cab and body sit on
-    stationHull([
-      [2.42, [[0, 1.15], [0.7, 1.15], [0.72, 1.7], [0.62, 1.84], [0, 1.86]]],
-      [3.42, [[0, 1.15], [0.66, 1.15], [0.68, 1.66], [0.58, 1.78], [0, 1.8]]],
-    ], { color: PACT }),
-    P.box(1.2, 0.5, 0.04, { y: 1.42, z: 3.44, color: 0x1e1e1c }),                                      // grille
-    ...[-0.45, -0.27, -0.09, 0.09, 0.27, 0.45].map((x) => P.box(0.04, 0.48, 0.03, { x, y: 1.42, z: 3.465, color: PACT_DK })),
-    stationHull([
-      [1.0, [[0, 1.2], [1.15, 1.2], [1.15, 2.32], [1.04, 2.52], [0, 2.54]]],
-      [2.42, [[0, 1.2], [1.15, 1.2], [1.15, 2.28], [1.04, 2.46], [0, 2.48]]],
-    ], { color: PACT }),
-    ...pair((s) => P.box(0.86, 0.46, 0.03, { x: s * 0.5, y: 2.06, z: 2.44, rx: -0.08, color: GLASS })),  // two-piece windscreen
-    ...pair((s) => P.box(0.03, 0.42, 0.7, { x: s * 1.16, y: 2.05, z: 1.95, color: GLASS })),            // door windows
-    ...pair((s) => P.box(0.02, 0.05, 0.25, { x: s * 1.17, y: 1.65, z: 1.55, color: STEEL })),           // door handles
-    // front fenders over the wheels, headlights on them, bumper, tow hooks
-    ...pair((s) => P.box(0.48, 0.06, 1.3, { x: s * 0.98, y: 1.42, z: 2.35, color: PACT_DK })),
-    ...pair((s) => P.box(0.48, 0.06, 0.45, { x: s * 0.98, y: 1.25, z: 3.1, rx: 0.5, color: PACT_DK })),
-    ...pair((s) => P.box(0.48, 0.4, 0.06, { x: s * 0.98, y: 1.22, z: 1.68, color: PACT_DK })),
-    ...pair((s) => P.cyl(0.11, 0.11, 0.12, { x: s * 0.95, y: 1.6, z: 2.92, rx: Math.PI / 2, color: PACT_DK }, 12)),
-    ...pair((s) => P.cyl(0.09, 0.09, 0.02, { x: s * 0.95, y: 1.6, z: 2.99, rx: Math.PI / 2, color: GLASS }, 12)),
-    P.box(2.3, 0.2, 0.14, { y: 1.0, z: 3.6, color: STEEL }),
-    ...pair((s) => P.box(0.1, 0.12, 0.16, { x: s * 0.6, y: 0.88, z: 3.64, color: STEEL })),
-    // spare wheel behind the cab, fuel tanks, rear fenders over the tandem axles, rear lights
-    P.cyl(0.55, 0.55, 0.3, { y: 1.75, z: 0.72, rx: Math.PI / 2, color: 0x1e1e1c, surf: 'rubber' }, 16),
-    P.cyl(0.3, 0.3, 0.32, { y: 1.75, z: 0.72, rx: Math.PI / 2, color: PACT_DK }, 12),
-    ...pair((s) => P.cyl(0.22, 0.22, 0.9, { x: s * 0.85, y: 0.95, z: 0.55, rx: Math.PI / 2, color: PACT_DK }, 12)),
-    ...pair((s) => P.box(0.46, 0.05, 2.15, { x: s * 1.0, y: 1.25, z: -1.32, color: PACT_DK })),
-    ...pair((s) => P.box(0.46, 0.35, 0.05, { x: s * 1.0, y: 1.08, z: -2.42, color: PACT_DK })),
-    ...pair((s) => P.box(0.12, 0.08, 0.04, { x: s * 0.9, y: 1.05, z: -3.38, color: 0x5a1a14 })),
-    // the launcher's turntable bed
-    P.box(2.0, 0.22, 3.4, { y: 1.15, z: -1.3, color: PACT_DK }),
-  ]), 1.0, 0.4),
-  turret: {
-    geo: merge([
-      P.cyl(0.8, 0.85, 0.25, { y: 0.12, color: PACT_DK }, 16),
-      ...pair((s) => P.box(0.1, 0.5, 0.6, { x: s * 0.55, y: 0.45, z: 0.0, color: PACT_DK })),            // trunnion brackets
-    ]),
-    at: [0, 1.25, -1.3],
-  },
-  gun: { // the 40-tube pack: four rows of ten 122 mm tubes in their frame
-    geo: merge([
-      ...Array.from({ length: 10 }, (_, i) => Array.from({ length: 4 }, (_, j) => P.cyl(0.075, 0.075, 3.0, { x: -0.9 + i * 0.2, y: 0.2 + j * 0.2, z: 0.5, rx: Math.PI / 2, color: PACT }, 8))).flat(),
-      ...Array.from({ length: 10 }, (_, i) => Array.from({ length: 4 }, (_, j) => P.cyl(0.055, 0.055, 0.02, { x: -0.9 + i * 0.2, y: 0.2 + j * 0.2, z: 2.0, rx: Math.PI / 2, color: 0x141414 }, 8))).flat(),
-      ...[-0.85, 0.5, 1.85].flatMap((z) => [
-        P.box(2.2, 0.05, 0.12, { y: 0.07, z, color: STEEL }), P.box(2.2, 0.05, 0.12, { y: 0.88, z, color: STEEL }),
-        ...pair((s) => P.box(0.05, 0.85, 0.12, { x: s * 1.08, y: 0.48, z, color: STEEL })),
+export const buildPactGrad = vehicle(() => {
+  // the Ural-375D chassis, the launcher on its turntable over the tandem axles
+  const t = truckUnit({ length: 7.35, width: 2.5, color: PACT, dark: PACT_DK, bonnet: 'round', body: 'flat', r: 0.55, axles: [5.675, 2.975, 1.725] });
+  const L = t.layout, tz = L.rear + 2.4;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([
+      ...t.parts,
+      P.cyl(0.55, 0.55, 0.3, { y: L.deck + 0.55, z: L.cabRear - 0.3, rx: Math.PI / 2, color: 0x1e1e1c, surf: 'rubber' }, 16), // the spare wheel behind the cab
+      P.cyl(0.3, 0.3, 0.32, { y: L.deck + 0.55, z: L.cabRear - 0.3, rx: Math.PI / 2, color: PACT_DK }, 12),
+      P.box(1.7, 0.3, 1.7, { y: L.deck + 0.15, z: tz, color: PACT_DK }),                                  // the turntable's base
+      ...pair((s) => P.box(0.3, 0.6, 0.3, { x: s * 1.05, y: L.deck - 0.2, z: L.rear + 0.4, color: STEEL })), // the rear jacks
+    ]), 1.0, 0.4),
+    turret: {
+      geo: merge([
+        P.cyl(0.8, 0.85, 0.25, { y: 0.12, color: PACT_DK }, 16),
+        ...pair((s) => P.box(0.1, 0.5, 0.6, { x: s * 0.55, y: 0.45, color: PACT_DK })),                 // trunnion brackets
       ]),
-      P.box(0.5, 0.25, 2.6, { y: -0.1, z: 0.5, color: PACT_DK }),                                       // cradle
-    ]),
-    at: [0, 0.45, 0],
-    pitch: 0.6,
-  },
-  muzzle: [0, 0.5, 2.1],
-  recoil: 0.03,
-  marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.165, y: 1.75, z: 1.4 })]),
-}));
+      at: [0, L.deck + 0.3, tz],
+    },
+    gun: { // the 40-tube pack: four rows of ten 122 mm tubes in their frame
+      geo: merge([
+        ...Array.from({ length: 10 }, (_, i) => Array.from({ length: 4 }, (_, j) => P.cyl(0.075, 0.075, 3.0, { x: -0.9 + i * 0.2, y: 0.2 + j * 0.2, z: 0.5, rx: Math.PI / 2, color: PACT }, 8))).flat(),
+        ...Array.from({ length: 10 }, (_, i) => Array.from({ length: 4 }, (_, j) => P.cyl(0.055, 0.055, 0.02, { x: -0.9 + i * 0.2, y: 0.2 + j * 0.2, z: 2.0, rx: Math.PI / 2, color: 0x141414 }, 8))).flat(),
+        ...[-0.85, 0.5, 1.85].flatMap((z) => [
+          P.box(2.1, 0.05, 0.12, { y: 0.1, z, color: STEEL }), P.box(2.1, 0.05, 0.12, { y: 0.9, z, color: STEEL }),
+          ...pair((s) => P.box(0.05, 0.85, 0.12, { x: s * 1.0, y: 0.5, z, color: STEEL })),
+        ]),
+        P.box(0.5, 0.25, 2.6, { y: 0.0, z: 0.5, color: PACT_DK }),                                       // cradle
+      ]),
+      at: [0, 0.45, 0],
+      pitch: 0.6,
+    },
+    muzzle: [0, 0.5, 2.1],
+    recoil: 0.03,
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.55, z: L.cabFront - 0.55 }))]),
+  };
+});
 
 // ---------------------------------------------------------------- Pact: 2S9 Nona
 
@@ -1303,38 +1280,35 @@ export const buildNatoTACJAM = vehicle(() => {
 
 /** R-330 jamming station on a Ural-4320: the cab, the KUNG van, two telescopic masts with their
  *  log-periodic antennas, the generator trailer hitched behind. */
-export const buildPactR330 = vehicle(() => ({
-  wheels: wheeled([2.0, -0.7, -1.95], 1.0, 0.55),
-  hull: grime(merge([
-    ...pair((s) => P.box(0.16, 0.25, 6.6, { x: s * 0.45, y: 0.95, z: 0.1, color: STEEL })),
-    P.box(1.1, 0.14, 6.6, { y: 1.12, z: 0.1, color: STEEL }),                                                // the subframe the cab and body sit on
-    stationHull([[2.35, [[0, 1.15], [0.72, 1.15], [0.74, 1.72], [0.64, 1.86], [0, 1.88]]], [3.35, [[0, 1.15], [0.68, 1.15], [0.7, 1.68], [0.6, 1.8], [0, 1.82]]]], { color: PACT }),
-    P.box(1.2, 0.5, 0.04, { y: 1.42, z: 3.37, color: 0x1e1e1c }),
-    stationHull([[1.0, [[0, 1.2], [1.15, 1.2], [1.15, 2.32], [1.04, 2.52], [0, 2.54]]], [2.35, [[0, 1.2], [1.15, 1.2], [1.15, 2.28], [1.04, 2.46], [0, 2.48]]]], { color: PACT }),
-    ...pair((s) => P.box(0.86, 0.46, 0.03, { x: s * 0.5, y: 2.06, z: 2.37, rx: -0.08, color: GLASS })),
-    ...pair((s) => P.box(0.48, 0.06, 1.3, { x: s * 0.98, y: 1.42, z: 2.3, color: PACT_DK })),
-    P.box(2.3, 0.2, 0.14, { y: 1.0, z: 3.5, color: STEEL }),
-    P.box(2.4, 2.0, 3.8, { y: 2.2, z: -1.1, color: PACT }),                                             // the KUNG
-    P.box(0.6, 1.2, 0.04, { x: -0.5, y: 2.0, z: -3.01, color: PACT_DK }),
-    ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.25, z: -1.4, color: PACT_DK })),
-  ]), 1.0, 0.4),
-  trailer: { // the generator trailer, hitched behind
-    geo: grime(merge([
-      P.box(0.12, 0.12, 1.2, { y: 0.75, z: -0.6, color: STEEL }),
-      P.box(1.5, 0.9, 1.6, { y: 1.15, z: -1.8, color: PACT_DK }),
-      ...pair((s) => P.cyl(0.38, 0.38, 0.22, { x: s * 0.85, y: 0.38, z: -1.8, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
-    ]), 1, 0.4),
-    hitch: -3.0,
-  },
-  deploy: { // the two telescopic masts and their antennas, one pointing each way across the front
-    geo: merge([
-      ...pair((s) => P.cyl(0.12, 0.15, 3.0, { x: s * 0.8, y: 1.5, color: STEEL }, 10)),
-      ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 3.1, 0))).flat(),
-    ]),
-    at: [0, 3.2, -2.2],
-  },
-  marks: merge([P.box(0.02, 0.35, 0.35, { x: 1.21, y: 2.2, z: -0.5 })]),
-}));
+export const buildPactR330 = vehicle(() => {
+  const t = truckUnit({ length: 7.2, width: 2.5, color: PACT, dark: PACT_DK, bonnet: 'round', body: 'box', r: 0.55, axles: [5.6, 2.9, 1.65], bodyH: 2.0 });
+  const L = t.layout, mz = L.rear + 1.0;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([
+      ...t.parts,
+      ...pair((s) => P.cyl(0.16, 0.18, 0.3, { x: s * 0.8, y: L.top + 0.15, z: mz, color: STEEL }, 10)),   // the masts' feet on the KUNG's roof
+      P.box(0.9, 0.45, 0.9, { y: L.top + 0.22, z: L.bodyFront - 0.7, color: PACT_DK }),                    // the air conditioner
+      ...pair((s) => P.box(0.04, 0.5, 1.2, { x: s * (L.hw + 0.02), y: L.deck + 1.2, z: mz + 1.4, color: PACT_DK })), // cable boxes on the walls
+    ]), 1.0, 0.4),
+    trailer: { // the generator trailer, hitched behind
+      geo: grime(merge([
+        P.box(0.12, 0.12, 1.2, { y: 0.85, z: -0.6, color: STEEL }),
+        P.box(1.5, 0.9, 1.6, { y: 1.15, z: -1.8, color: PACT_DK }),
+        ...pair((s) => P.cyl(0.38, 0.38, 0.22, { x: s * 0.85, y: 0.38, z: -1.8, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14)),
+      ]), 1, 0.4),
+      hitch: L.rear,
+    },
+    deploy: { // the two telescopic masts and their antennas, one pointing each way across the front
+      geo: merge([
+        ...pair((s) => P.cyl(0.12, 0.15, 3.0, { x: s * 0.8, y: 1.5, color: STEEL }, 10)),
+        ...pair((s) => logPeriodic(STEEL, 6, 1.5).map((g2) => g2.clone().rotateY(s * 0.6).translate(s * 0.8, 3.0, 0))).flat(),
+      ]),
+      at: [0, L.top + 0.3, mz],
+    },
+    marks: merge([...pair((s) => P.box(0.02, 0.35, 0.35, { x: s * (L.hw + 0.03), y: L.deck + 1.2, z: L.bodyFront - 0.6 }))]),
+  };
+});
 
 
 // ---------------------------------------------------------------- forward command posts
