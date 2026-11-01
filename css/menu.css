@@ -230,7 +230,7 @@
 .cp-sec.depot circle { stroke-width: 5; }
 .cp-sec .obj { fill: var(--gold); pointer-events: none; }
 .cp-sec text { fill: var(--text); font-size: 15.5px; pointer-events: none; paint-order: stroke; stroke: rgba(10, 12, 9, 0.85); stroke-width: 3px; }
-.cp-sec.reach circle { stroke-dasharray: 5 3; filter: drop-shadow(0 0 4px rgba(224, 180, 90, 0.8)); }
+.cp-sec.reach circle { stroke: var(--gold); stroke-width: 3; filter: drop-shadow(0 0 4px rgba(224, 180, 90, 0.8)); } /* where the selected battalion can go: solid gold (dashes mean cut off) */
 .cp-sec.reach:hover circle { fill: #4a3c1c; }
 .cp-sec.here circle { stroke: var(--gold); }
 .cp-sec.battle circle { stroke: var(--gold); stroke-width: 4; animation: cp-pulse 1.4s ease-in-out infinite; }
