@@ -71,6 +71,7 @@ import { Jamming } from '../systems/Jamming.js';
 import { Fire } from '../systems/Fire.js';
 
 /** Which renderer draws the battle: Babylon.js (default), or ?renderer=three for the original. */
+const CRATER_COVER = 0.4; // m: a crater this deep (artillery, rockets) shelters men lying in it
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
 
 export class GameEngine {
@@ -134,10 +135,12 @@ export class GameEngine {
     this.world.river = map.river ?? null; // water that stops and slows
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
+    this.cover.onRemove = (c) => this.world.nav.removeCollider(c); // (a tree that came down)
     this.bus.on('terrain:changed', () => this.world.nav.water()); // a bridge blown or laid
     this.world.conditions = this.conditions;
     this.effects = new EffectsSystem(this.scene, this.bus);
     this.projectiles = new ProjectileSystem(this.scene, this.world, this.effects);
+    this.projectiles.onCrater = (point, r, crater) => this.blastTerrain(point, r, crater); // (host only: projectiles call it when not cosmetic)
     this.smoke = new SmokeSystem(this);
     this.projectiles.smoke = this.smoke;
     this.flares = new Flares(this);       // night: illumination rounds
@@ -315,6 +318,18 @@ export class GameEngine {
     this.netEvent('bridge', c.id);
     this.bus.emit('terrain:changed');
     this.announce(`The ${c.name} has been blown!`);
+  }
+
+  /**
+   * A heavy blast (a shell or rocket that digs a crater) at `point`, splash radius `r`: trees round
+   * it come down (logs to hide behind), and a deep enough crater is cover for infantry. The host
+   * decides; a multiplayer guest gets the same ('terrain' event with the felled trees' dice).
+   */
+  blastTerrain(point, r, crater) {
+    const felled = [];
+    for (const f of this.cover.forests ?? []) f.fell(point.x, point.z, r * 0.9, (d) => { const yes = Math.random() < 0.65 * (1 - d / (r * 0.9)); felled.push(yes ? 1 : 0); return yes; });
+    if (crater >= CRATER_COVER) this.cover.addCraterSpots(point.x, point.z, r * 0.45 + 1, this.terrain.heightAt(point.x, point.z) + crater);
+    if (felled.includes(1) || crater >= CRATER_COVER) this.netEvent('terrain', Math.round(point.x * 10) / 10, Math.round(point.z * 10) / 10, r, crater, felled.join(''));
   }
 
   /** A bridge layer's bridge goes down across the river at x (the channel nearest z): a new crossing for everyone. */

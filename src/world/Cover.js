@@ -184,6 +184,47 @@ export class CoverMap {
     this.spots = keep;
   }
 
+  /** Take collider `c` away (and its cover spots): a tree that has come down. */
+  remove(c) {
+    const i = this.colliders.indexOf(c);
+    if (i < 0) return;
+    this.colliders.splice(i, 1);
+    const cell = this.cell;
+    for (let ix = Math.floor((c.x - c.r) / cell); ix <= Math.floor((c.x + c.r) / cell); ix++) {
+      for (let iz = Math.floor((c.z - c.r) / cell); iz <= Math.floor((c.z + c.r) / cell); iz++) {
+        const list = this.colGrid.get(this._key(ix, iz));
+        const j = list ? list.indexOf(c) : -1;
+        if (j >= 0) list.splice(j, 1);
+      }
+    }
+    const gone = this.spots.filter((s) => s.collider === c);
+    if (gone.length) {
+      for (const s of gone) {
+        if (s.occupant) { s.occupant.coverSpot = null; s.occupant = null; }
+        const list = this.spotGrid.get(this._key(Math.floor(s.x / cell), Math.floor(s.z / cell)));
+        const j = list ? list.indexOf(s) : -1;
+        if (j >= 0) list.splice(j, 1);
+      }
+      this.spots = this.spots.filter((s) => s.collider !== c);
+    }
+    this.onRemove?.(c);
+  }
+
+  /**
+   * Cover in a shell crater: positions round its middle that shelter from every side, as deep as
+   * the crater (`rim`: the height of its lip). Returns how many it added.
+   */
+  addCraterSpots(x, z, radius, rim) {
+    const start = this.spots.length;
+    const lip = { top: rim + 0.35, spots: 0, crater: true };
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2 + Math.random();
+      this._addSpot(x + Math.cos(a) * radius * 0.45, z + Math.sin(a) * radius * 0.45, -Math.cos(a), -Math.sin(a), lip, true);
+    }
+    this.finalizeFrom(start);
+    return this.spots.length - start;
+  }
+
   /** A wall-like structure built during the battle (sandbags). */
   addStructureBox(opts) {
     const start = this.spots.length;

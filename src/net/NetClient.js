@@ -317,6 +317,13 @@ export class NetClient {
         if (ob) g.construction.removeObstacle(ob);
         break;
       }
+      case 'terrain': { // a heavy blast: the host's felled trees (one digit each, in order) and crater cover
+        const [, x, z, r, crater, dice] = e;
+        let i = 0;
+        for (const f of g.cover.forests ?? []) f.fell(x, z, r * 0.9, () => dice[i++] === '1');
+        if (crater >= 0.4) g.cover.addCraterSpots(x, z, r * 0.45 + 1, g.terrain.heightAt(x, z) + crater);
+        break;
+      }
       case 'collapse': {
         const b = g.buildings.list[e[1]];
         if (b) g.buildings.collapseVisual(b);

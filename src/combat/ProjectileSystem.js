@@ -275,6 +275,7 @@ export class ProjectileSystem {
     if (b.crater && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) {
       const cr = r * 0.45;
       this.world.terrain.dig(point.x, point.z, cr + 1, b.crater, (x, z) => Math.max(0, 1 - Math.hypot(x - point.x, z - point.z) / cr) ** 1.5, 0.9);
+      if (!this.cosmetic && b.crater >= 0.3) this.onCrater?.(point, r, b.crater); // trees down, crater cover (GameEngine.blastTerrain)
     }
     const onGround = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
     if (onGround && size >= 0.8) this.world.terrain.scorch(point.x, point.z, r * 0.7 + 1, 0.45); // the blast leaves a black mark

@@ -253,6 +253,7 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
   cards.userData.noAO = true;
   let ks = 0;
   let kl = 0;
+  const register = []; // every tree: where, how tall, its instances, its trunk collider (for felling)
 
   let k = 0;
   for (let tries = 0; k < count && tries < count * 30; tries++) {
@@ -273,8 +274,11 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
     const leafy = rand() < broadleaf;
     _m.compose(_p.set(x, y - 0.2, z), _q, _s.set(w, H * (leafy ? 0.75 : 0.7), w));
     trunks.setMatrixAt(k, _m);
+    const tree = { x, z, y, H, w, yaw, k, leafy, crown: leafy ? kl : ks, collider: null, down: false };
+    register.push(tree);
     if (leafy) {
       const R = H * (0.55 + rand() * 0.2) * w;
+      tree.R = R;
       _m.compose(_p.set(x, y - 0.2, z), _q, _s.set(R, H, R));
       leaves.setMatrixAt(kl, _m);
       // oak, beech and birch turning: rust, gold and a few still green
@@ -293,18 +297,60 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
       spruceCards.setColorAt(ks, _c);
       spruces.setColorAt(ks++, _c);
     }
-    if (inLane) cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 });
+    if (inLane) tree.collider = cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 });
     k++;
   }
   trunks.count = k;
   spruces.count = spruceCards.count = ks;
   leaves.count = cards.count = kl;
   scene.add(trunks, spruces, detail(spruceCards, 'foliage'), leaves, detail(cards, 'foliage')); // leaf cards: off on Very low
-  return {
+  const api = {
     update(dt, t) {
       time.value = t;
     },
+    /**
+     * A heavy blast at (x, z): trees within `r` m may come down, falling away from it — the
+     * crown on the ground, the trunk a log that men take cover behind and climb over.
+     * `roll(tree)` decides each one (the host's dice, the same on a multiplayer guest).
+     */
+    fell(x, z, r, roll = (d) => Math.random() < 0.65 * (1 - d / r)) {
+      let n = 0;
+      for (const t of register) {
+        if (t.down) continue;
+        const d = Math.hypot(t.x - x, t.z - z);
+        if (d > r || !roll(d)) continue;
+        t.down = true;
+        n++;
+        const dx = (t.x - x) / (d || 1);
+        const dz = (t.z - z) / (d || 1);
+        // lying along (dx, dz): turn the upright tree 88° about the horizontal axis across that way
+        _q.setFromAxisAngle(_p.set(dz, 0, -dx).normalize(), 1.54).multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, t.yaw));
+        const base = _p.set(t.x, t.y - 0.05, t.z);
+        _m.compose(base, _q, _s.set(t.w, t.H * (t.leafy ? 0.75 : 0.7), t.w));
+        trunks.setMatrixAt(t.k, _m);
+        trunks.instanceMatrix.needsUpdate = true;
+        if (t.leafy) {
+          _m.compose(base, _q, _s.set(t.R, t.H, t.R));
+          leaves.setMatrixAt(t.crown, _m);
+          cards.setMatrixAt(t.crown, _m);
+          leaves.instanceMatrix.needsUpdate = cards.instanceMatrix.needsUpdate = true;
+        } else {
+          _m.compose(base, _q, _s.set(t.H * 0.42 * t.w, t.H, t.H * 0.42 * t.w));
+          spruces.setMatrixAt(t.crown, _m);
+          spruceCards.setMatrixAt(t.crown, _m);
+          spruces.instanceMatrix.needsUpdate = spruceCards.instanceMatrix.needsUpdate = true;
+        }
+        if (t.collider) {
+          cover.remove(t.collider);
+          const L = t.H * 0.6;
+          t.collider = cover.addStructureBox({ x: t.x + dx * L * 0.5, z: t.z + dz * L * 0.5, yaw: Math.atan2(-dz, dx), length: L, thickness: 0.7 * t.w, height: 0.85 });
+        }
+      }
+      return n;
+    },
   };
+  (cover.forests ??= []).push(api); // (GameEngine.blastTerrain fells through it)
+  return api;
 }
 
 /** @param {any} o  options, untyped until this file moves to TypeScript */

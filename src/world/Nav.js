@@ -71,6 +71,23 @@ export class NavGrid {
     this.dirty = true;
   }
 
+  /** Collider `c` is gone (already out of the cover map): its area seeded again from the rest. */
+  removeCollider(c) {
+    const r = c.r + SEED;
+    const [i0, j0] = this.cellOf(c.x - r, c.z - r);
+    const [i1, j1] = this.cellOf(c.x + r, c.z + r);
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const k = j * this.nx + i;
+        this.seedAll[k] = Infinity;
+        this.seedTall[k] = Infinity;
+      }
+    }
+    const cover = this.world.cover;
+    for (const o of cover._query(cover.colGrid, c.x, c.z, r + SEED + 8, [])) this.seed(o);
+    this.dirty = true;
+  }
+
   /** Deep water from the terrain (again: a bridge blown or laid). */
   water() {
     const d = this.dWater;

@@ -7,6 +7,8 @@
 // High explosive wears a building down — tank rounds, shells, mortar bombs, rockets
 // (ProjectileSystem.detonate calls blast) — until it collapses: the walls come down to a low
 // rubble pile (still low cover), and whoever was inside is likely hurt or killed.
+const BURN = { time: 150, smoke: 0.8 }; // s a collapsed house burns; its smoke cloud × the house's size
+
 export class Buildings {
   constructor(game, list = []) {
     this.game = game;
@@ -195,6 +197,10 @@ export class Buildings {
       }
     }
     game.netEvent('collapse', b.index);
+    // the ruin burns for a few minutes: flames and a smoke column nobody sees through
+    const y = game.terrain.heightAt(b.x, b.z);
+    game.effects.burn({ x: b.x, y: y + 1, z: b.z }, BURN.time, Math.max(b.w, b.d) / 6);
+    game.smoke?.add(b.x, b.z, { radius: Math.max(b.w, b.d) * BURN.smoke, duration: BURN.time });
     game.bus.emit('building:collapsed', b);
     game.announce(`The ${b.name} collapses!`);
   }
