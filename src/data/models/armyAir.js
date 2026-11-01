@@ -205,8 +205,8 @@ export const buildNvaZSU57 = vehicle(() => {
 const brdm = () => ({
   wheels: wheeled([-1.45, 1.35], 1.05, 0.5),
   hull: grime(merge([
-    trackedHull([[-2.85, 1.55, 0.6], [-2.55, 1.85, 0.5], [1.0, 1.85, 0.5], [2.0, 1.55, 0.6], [2.85, 1.05, 0.85]], { belly: 0.95, fender: 1.2, fenderY: 1.0, chamfer: 0.15 }, { color: NVA }),
-    ...pair((s) => P.box(0.62, 0.05, 0.42, { x: s * 0.36, y: 1.5, z: 2.25, rx: 0.53, color: 0x1a1d1c })), // the windscreen hatches, lying on the sloped nose
+    trackedHull([[-2.85, 1.55, 0.6], [-2.55, 1.85, 0.5], [1.45, 1.85, 0.5], [2.0, 1.3, 0.6], [2.85, 1.05, 0.85]], { belly: 0.95, fender: 1.2, fenderY: 1.0, chamfer: 0.15 }, { color: NVA }),
+    ...pair((s) => P.box(0.62, 0.05, 0.6, { x: s * 0.36, y: 1.6, z: 1.75, rx: 0.79, color: 0x1a1d1c })), // the windscreen hatches, lying on the steep front plate
   ]), 1.1, 0.3),
 });
 
@@ -281,27 +281,59 @@ export const buildNvaS60 = vehicle(() => ({
   marks: merge([P.box(0.02, 0.2, 0.4, { x: 0.86, y: 0.7, z: 0.4 })]),
 }));
 
+/** P-40 "Long Track" on the AT-T heavy tractor: the driver's cab ahead, the tall operators' cabin,
+ *  and on its roof the big truncated parabolic reflector with the feed horn out on its struts. */
 export const buildNvaP40 = vehicle(() => {
-  const g = tracked({ halfWidth: 1.4, length: 5.0, wheels: 7, wheelR: 0.33, sprocket: 1, rollers: 0, trackWidth: 0.45, wheelColor: NVA_DK });
+  const g = tracked({ halfWidth: 1.45, length: 6.2, wheels: 6, wheelR: 0.42, sprocket: 1, rollers: 2, trackWidth: 0.5, wheelColor: NVA_DK });
+  const top = 1.35, roof = 3.55;
+  // the reflector: vertical slats along a parabola (focus F ahead of the dish), ribs behind them
+  const W = 6.4, H = 2.6, F = 2.2, N = 16, dw = W / N, y0 = 0.7;
+  const slats = Array.from({ length: N }, (_, i) => {
+    const x = -W / 2 + dw * (i + 0.5), z = (x * x) / (4 * F), ry = -Math.atan(x / (2 * F));
+    return [
+      P.box(dw * 1.08, H, 0.05, { x, y: y0 + H / 2, z, ry, color: NVA_DK }),
+      ...[0.15, 0.5, 0.85].map((k) => P.box(dw * 1.08, 0.08, 0.08, { x, y: y0 + H * k, z: z - 0.06, ry, color: STEEL })),
+    ];
+  }).flat();
+  const fy = y0 + H / 2, strut = Math.hypot(F, H / 2 - 0.15), a = Math.atan2(H / 2 - 0.15, F);
   return {
     wheels: g.wheels,
     hull: grime(merge([
       ...g.parts,
-      trackedHull([[-3.2, 1.3, 0.5], [-3.0, 1.35, 0.45], [2.4, 1.35, 0.45], [3.2, 1.0, 0.6]], { belly: 1.15, fender: 1.65, fenderY: 1.1, chamfer: 0.05 }, { color: NVA }),
-      P.box(2.9, 1.5, 4.4, { y: 2.1, z: -0.4, color: NVA }),                                            // the operators' cabin
-      P.cyl(0.18, 0.2, 0.4, { y: 3.05, z: -0.4, color: STEEL }, 10),
+      trackedHull([[-4.0, top - 0.05, 0.55], [-3.8, top, 0.45], [3.2, top, 0.45], [3.9, 1.05, 0.6], [4.05, 0.85, 0.8]], { belly: 1.2, fender: 1.7, fenderY: 1.12, chamfer: 0.05 }, { color: NVA }),
+      // the driver's cab: sloped windscreen, side windows, the headlights on its front corners
+      planProfile([[-1.35, 3.2], [1.35, 3.2], [1.35, 2.2], [-1.35, 2.2]], 0.95, { y: top, color: NVA }),
+      P.box(2.7, 0.06, 0.6, { y: top + 1.0, z: 2.95, color: NVA }),
+      ...pair((s) => P.box(1.1, 0.42, 0.04, { x: s * 0.62, y: top + 0.65, z: 3.22, rx: -0.15, color: 0x1a1d1c })),
+      ...pair((s) => P.box(0.04, 0.4, 0.6, { x: s * 1.37, y: top + 0.62, z: 2.75, color: 0x1a1d1c })),
+      ...pair((s) => P.cyl(0.11, 0.11, 0.1, { x: s * 1.2, y: top + 0.25, z: 3.25, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
+      // the operators' cabin: doors, ladder, air conditioners and cable boxes
+      P.box(3.0, roof - top, 6.0, { y: (roof + top) / 2, z: -0.8, color: NVA }),
+      P.box(3.08, 0.08, 6.08, { y: roof, z: -0.8, color: NVA_DK }),
+      ...pair((s) => P.box(0.04, 1.6, 0.8, { x: s * 1.51, y: top + 0.95, z: 1.4, color: NVA_DK })),
+      ...pair((s) => P.box(0.06, 0.05, 0.2, { x: s * 1.54, y: top + 0.95, z: 1.1, color: STEEL })),
+      ...pair((s) => P.box(0.04, 0.5, 1.4, { x: s * 1.51, y: top + 1.6, z: -2.2, color: 0x1a1d1c })), // shuttered windows
+      ...pair((s) => P.box(0.06, 2.1, 0.06, { x: s * 0.25, y: top + 1.05, z: -3.83, color: STEEL })),   // the ladder up the back
+      ...Array.from({ length: 6 }, (_, k) => P.box(0.5, 0.04, 0.06, { y: top + 0.25 + k * 0.35, z: -3.83, color: STEEL })),
+      ...pair((s) => P.box(0.9, 0.5, 0.7, { x: s * 0.85, y: roof + 0.29, z: -3.2, color: NVA_DK })),     // air conditioners on the roof
+      ...pair((s) => P.box(0.3, 0.5, 1.6, { x: s * 1.67, y: 1.37, z: -2.4, color: NVA_DK })),            // stowage on the track guards
+      P.cyl(0.32, 0.34, 0.25, { y: roof + 0.16, z: -0.6, color: STEEL }, 16),                           // the antenna's turntable
+      P.cyl(0.06, 0.06, 0.9, { x: -1.1, y: roof + 0.45, z: 2.0, color: STEEL }, 6),                     // the exhaust stack
     ]), 1.1, 0.3),
-    spin: { // two big Yagi arrays back to back
+    spin: {
       geo: merge([
-        P.cyl(0.08, 0.08, 1.4, { y: 0.7, color: STEEL }, 8),
-        ...[0.7, 1.4].flatMap((y) => [P.box(4.2, 0.1, 0.1, { y, color: STEEL }), ...[-1.8, -1.2, -0.6, 0, 0.6, 1.2, 1.8].map((x) => P.box(0.03, 0.03, 1.0, { x, y, z: 0.45, color: STEEL }))]),
-        P.box(4.3, 1.0, 0.05, { y: 1.05, z: -0.1, color: NVA_DK }),
+        P.cyl(0.3, 0.36, y0, { y: y0 / 2, color: STEEL }, 12),                                         // the pedestal
+        ...slats,
+        P.box(0.5, 0.3, 0.6, { y: y0 + 0.05, z: 0.1, color: STEEL }),                                  // the cradle the dish hangs in
+        P.box(0.08, 0.08, strut, { y: y0 + 0.15 + (H / 2 - 0.15) / 2, z: F / 2, rx: -a, color: STEEL }), // the feed's struts
+        P.box(0.08, 0.08, strut, { y: y0 + H - 0.15 - (H / 2 - 0.15) / 2, z: F / 2, rx: a, color: STEEL }),
+        P.box(0.45, 0.55, 0.5, { y: fy, z: F, color: NVA_DK }),                                       // the feed horn at the focus
       ]),
-      at: [0, 3.25, -0.4],
+      at: [0, roof + 0.28, -0.6],
       rate: 0.9,
       onDeploy: true,
     },
     muzzle: [0, 3, 0],
-    marks: merge([...pair((s) => P.box(0.02, 0.22, 0.55, { x: s * 1.46, y: 2.1, z: 1.0 }))]),
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.55, { x: s * 1.53, y: top + 1.5, z: 0.4 }))]),
   };
 });
