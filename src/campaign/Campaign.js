@@ -400,10 +400,14 @@ export function recordBattle(c, { won, survivors, enemyLeft, scars = null }) {
   const ourAttack = b.attacker === c.side;
   c.log.unshift(`${stamp(c)} — ${b.name}: ${attackerWon ? (ourAttack ? 'our attack broke through' : 'the enemy broke through') : (ourAttack ? 'our attack was thrown back' : 'we held')}.${men ? ` ${men[0].toUpperCase()}${men.slice(1)}.` : ''}`);
   // a soldier writes home about it (campaign/Letters.js reads the old single battalion's shape)
-  const shim = { side: c.side, turn: c.turn, writer: c.writer, letter: c.letter, battalion: c.battalions.flatMap((x) => x.stacks) };
+  const shim = {
+    side: c.side, turn: c.turn, writer: c.writer, letter: c.letter, letterUsed: c.letterUsed, battalion: c.battalions.flatMap((x) => x.stacks),
+    army: c.armies[c.side], day: day(c), cut: Math.max(0, ...ours.filter((x) => c.battalions.includes(x)).map((x) => cutLevel(c, x))),
+  };
   writeLetter(shim, b, { attackerWon, lost, wounded });
   c.letter = shim.letter;
   c.writer = shim.writer;
+  c.letterUsed = shim.letterUsed;
   pruneBattles(c);
   const out = c.battles.length || c.over ? {} : closeTurn(c);
   checkEnd(c);
