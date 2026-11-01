@@ -280,7 +280,8 @@ export class ProjectileSystem {
     const onGround = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
     if (onGround && size >= 0.8) this.world.terrain.scorch(point.x, point.z, r * 0.7 + 1, 0.45); // the blast leaves a black mark
     if (onGround && !this.cosmetic) this.fire?.ignite(point.x, point.z, 0.18 * size); // dry grass may catch
-    this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, { volume: 0.75, throttle: 0.05 });
+    // small HE (autocannon rounds) pops quieter and runs together: a burst of them mustn't flood the mix
+    this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, size < 0.8 ? { volume: 0.5, throttle: 0.12 } : { volume: 0.75, throttle: 0.05 });
     if (this.cameraManager && this.audio && size > 0.9) { // the ground shakes under the camera
       const d = this.audio.distanceTo(point);
       const reach = 35 * size;

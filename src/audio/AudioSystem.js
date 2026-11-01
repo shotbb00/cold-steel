@@ -22,9 +22,9 @@ import { keys } from '../core/Keys.js';
 
 const MAX_VOICES = 40;     // simultaneous one-shots; beyond this the least audible one is cut
 const MAX_PER_KEY = 5;     // instances of one sound starting within FRESH s (an MG burst, a barrage)
-const DEFER = 0.15;        // seconds a sound may wait for its turn (the throttle) before it's dropped
+const DEFER = 0.03;        // seconds a sound may wait for its turn (the throttle) before it's dropped: a late shot sounds like lag, a dropped one in a burst isn't missed
 const FRESH = 0.35;        // seconds: a voice's attack; older ones are tails left to ring
-const BUDGET = 8;          // new one-shots per control tick (bursts beyond that are dropped)
+const BUDGET = 5;          // new one-shots per control tick (bursts beyond that are dropped)
 const FAR = 110;           // metres beyond which shots switch to their '.far' version
 // How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
 // fades within a few hundred metres, a howitzer is heard across the whole map.
@@ -322,7 +322,9 @@ export class AudioSystem {
     this.lastLoud = this.game.world.time;
     this.intensity += SHOT_WEIGHT[kind] ?? 1;
     const volume = { cannon: 0.85, arty: 0.85, mlrs: 0.85, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
-    this.play(`${faction}.${kind}`, pos, { volume, throttle: kind === 'cannon' ? 0.06 : 0.02, room: indoors ? 0.5 : 0 });
+    // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
+    const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
+    this.play(`${faction}.${kind}`, pos, { volume, throttle: (kind === 'cannon' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });
   }
 
   // ---------------------------------------------------------------- loops
