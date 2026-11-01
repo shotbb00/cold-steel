@@ -6,7 +6,8 @@
 // Command view (on the battlefield itself):
 //   tap               your stack: select it (tap it again quickly: take direct control).
 //                     Anywhere else with stacks selected: order them there — at an enemy, an
-//                     attack; on a house, garrison it. In a targeting mode (smoke, air support,
+//                     attack; on a house, garrison it — and the selection lets go (tap the
+//                     stack again for its next order). In a targeting mode (smoke, air support,
 //                     building) the tap places it.
 //   drag              pan: the ground follows the finger
 //   hold, then drag   with stacks selected: move there and face the way you drag (the men's
@@ -255,7 +256,12 @@ export class TouchControls {
       const b = e.target.closest('button');
       if (b && !b.matches('.tb-orders, .rf-open, .tb-turn, .tb-place')) setTimeout(() => this.setPanel(false), 0);
     });
-    this.game.bus.on('order', () => this.setPanel(false)); // (buying a unit doesn't: the reinforcements stay open for the next)
+    this.game.bus.on('order', () => {
+      this.setPanel(false); // (buying a unit doesn't: the reinforcements stay open for the next)
+      // a finger has no right button: with the stack still selected, the next tap (meant to pick
+      // another stack or just look) would order it again — so an order given by touch lets go of it
+      if (document.body.classList.contains('touch')) setTimeout(() => this.game.commands.select([]), 0);
+    });
     document.getElementById('topbar').append(pause);
     // multiplayer: no Enter key on a phone, so a button opens the chat line
     if (this.game.chat?.box) {
