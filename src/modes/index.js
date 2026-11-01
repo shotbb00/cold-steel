@@ -7,11 +7,13 @@ import rearguard from './rearguard.js';
 import recon from './recon.js';
 import lanes from './lanes.js';
 import infantry from './infantry.js';
+import hill from './hill.js';
 import bootcamp from './bootcamp.js';
 
 export const MODES = {
   [frontline.id]: frontline,
   [infantry.id]: infantry,
+  [hill.id]: hill,
   [breakthrough.id]: breakthrough,
   [rearguard.id]: rearguard,
   [recon.id]: recon,

@@ -4,8 +4,10 @@
 //   • Each side has front strength. Holding fewer points than the enemy bleeds it, and every
 //     unit lost costs a share of its price. Reach zero and the front collapses.
 //   • Only infantry captures; armour and guns support. Defenders that hold still dig in.
-// Variants (modes/infantry.js) reuse it with `allow(type)`: which unit types may fight — the
-// opening forces are filtered and only those can be bought — and `air: false` for no air support.
+// Variants (modes/infantry.js, hill.js) reuse it with `allow(type)`: which unit types may fight — the
+// opening forces are filtered and only those can be bought — `air: false` for no air support,
+// `pointsFor(map)` (which control points), `strength` (front strength) and `lossShare` (what a
+// lost unit costs the front: 0 = only the points count).
 // Multiplayer: the host runs the mode for both sides (no AI director — the other side is a
 // person); the client only builds the points and the HUD and shows the host's numbers.
 import { ControlPoints } from '../systems/ControlPoints.js';
@@ -41,13 +43,14 @@ export default {
       }
     }
     const foe = enemyOf(game.playerFaction);
-    const points = new ControlPoints(game, map.points);
+    const points = new ControlPoints(game, this.pointsFor?.(map) ?? map.points);
     const R = game.rules;
+    const strength = this.strength ?? R.strength ?? START_STRENGTH;
     const state = {
       points,
       cp: { [game.playerFaction]: R.startCp ?? START_CP, [foe]: R.startCp ?? START_CP },
-      strength: { [game.playerFaction]: R.strength ?? START_STRENGTH, [foe]: R.strength ?? START_STRENGTH },
-      maxStrength: R.strength ?? START_STRENGTH,
+      strength: { [game.playerFaction]: strength, [foe]: strength },
+      maxStrength: strength,
       maxStacks: R.maxStacks ?? map.maxStacks ?? MAX_STACKS,
       allow: this.allow ?? null,
       income: { [game.playerFaction]: R.income ?? 1, [foe]: (R.income ?? 1) * (DIFFICULTY[R.difficulty]?.income ?? 1) },
@@ -61,10 +64,10 @@ export default {
 
     game.bus.on('unit:death', ({ stack }) => {
       const cost = stack.type.cost ?? 150;
-      state.strength[stack.faction] -= (cost / stack.units.length) * LOSS_SHARE;
+      state.strength[stack.faction] -= (cost / stack.units.length) * (this.lossShare ?? LOSS_SHARE);
     });
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
-    game.bus.emit('toast', 'Hold your points, take theirs. Call in reinforcements with command points.');
+    game.bus.emit('toast', this.hint ?? 'Hold your points, take theirs. Call in reinforcements with command points.');
   },
 
   /** Multiplayer client: points and HUD only; the numbers arrive from the host. */
@@ -73,10 +76,10 @@ export default {
     const me = game.playerFaction;
     const foe = enemyOf(me);
     const state = {
-      points: new ControlPoints(game, map.points),
+      points: new ControlPoints(game, this.pointsFor?.(map) ?? map.points),
       cp: { [me]: START_CP, [foe]: START_CP },
-      strength: { [me]: START_STRENGTH, [foe]: START_STRENGTH },
-      maxStrength: START_STRENGTH,
+      strength: { [me]: this.strength ?? START_STRENGTH, [foe]: this.strength ?? START_STRENGTH },
+      maxStrength: this.strength ?? START_STRENGTH,
       maxStacks: map.maxStacks ?? MAX_STACKS,
       allow: this.allow ?? null,
     };
@@ -84,7 +87,7 @@ export default {
     game.modeState = state;
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
-    game.bus.emit('toast', 'Hold your points, take theirs. Call in reinforcements with command points.');
+    game.bus.emit('toast', this.hint ?? 'Hold your points, take theirs. Call in reinforcements with command points.');
   },
 
   /** May unit type `id` fight in this mode? */
