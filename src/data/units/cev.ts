@@ -3,6 +3,7 @@
 // weapon is for concrete and brick: bunkers, strongpoints, held houses and trenches come first
 // (`demolition`), and its blast brings houses down. NATO's M728 fires a 165 mm demolition round
 // from 140 m; the Pact's IMR-2 has no gun — its crane sets charges, so it must drive right up.
+import { buildBwPionier, buildNvaIMR } from '../models/armySupport.js';
 import tank from './tank.ts';
 import { buildNatoCEV, buildPactIMR } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
@@ -49,11 +50,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },
-  models: { nato: buildNatoCEV, pact: buildPactIMR },
+  models: { nato: buildNatoCEV, pact: buildPactIMR, bw: buildBwPionier, nva: buildNvaIMR },
   weaponSound: 'cannon',
   engine: 'engine.diesel',
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Pionierpanzer 1', weapon: 'MG3 · demolition charges', text: 'The engineer tank on the Leopard 1: dozer blade, crane and auger. It digs vehicle positions, clears rubble and blasts bunkers with its crew’s charges.' },
+    nva: { name: 'IMR', weapon: 'PKT · demolition charges', text: 'The engineer tank on the T-55: the crane arm with its grab and the dozer blade clear the way for the tanks.' },
     nato: { name: 'M728 CEV', weapon: '165 mm demolition gun, dozer blade', text: 'An M60 with a short 165 mm gun that throws a 30 kg demolition round. It flattens bunkers and houses from 140 m, and its blade digs your tanks in.' },
     pact: { name: 'IMR-2', weapon: 'crane with demolition charges, plough blade', text: 'A T-72 hull with a crane and a blade. It clears and digs, and razes bunkers and houses by setting charges — so it has to reach them.' },
   },

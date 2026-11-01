@@ -3,6 +3,7 @@
 // shell, bomb and rocket fired from inside that sector within 500 m back to the gun: the gun shows
 // on the map for 25 seconds, the radio calls out where, and your own mortars and artillery take
 // it before anything else (systems/CounterBattery.js). The enemy's guns must keep moving — or die.
+import { buildBwArtRadar, buildNvaSNAR10 } from '../models/armySupport.js';
 import { buildNatoFirefinder, buildPactARK1 } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -51,11 +52,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2 },
-  models: { nato: buildNatoFirefinder, pact: buildPactARK1 },
+  models: { nato: buildNatoFirefinder, pact: buildPactARK1, bw: buildBwArtRadar, nva: buildNvaSNAR10 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Artillerieortungsradar', weapon: 'battery-locating radar', text: 'The artillery-locating radar on a MAN truck: every shell the enemy fires near it gives away where the gun stands.' },
+    nva: { name: 'SNAR-10', weapon: 'battlefield radar', text: 'The battlefield radar on its MT-LB: it tracks the shells back to the guns that fired them.' },
     nato: { name: 'AN/TPQ-37 Firefinder', weapon: 'unarmed', text: 'A phased-array radar that sees shells in flight and plots the gun that fired them. Park it facing the enemy: every battery that opens fire in its sector is handed to your guns.' },
     pact: { name: 'ARK-1 Rys', weapon: 'unarmed', text: 'An artillery reconnaissance radar on the MT-LBu. It watches the sky in front of it and gives the regiment\'s guns the NATO batteries\' positions.' },
   },

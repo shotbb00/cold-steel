@@ -3,6 +3,7 @@
 // as it drives through a field (now and then one goes off under the blade), and it is still a
 // tank with a 105 mm gun. The UR-77 is a lightly armoured launcher: two rocket-towed line charges
 // that blow an 80 m lane through mines and wire (X, aimed) — and through anyone standing in it.
+import { buildBwMinenpflug, buildNvaKMT5 } from '../models/armySupport.js';
 import tank from './tank.ts';
 import { buildNatoPlough, buildPactUR77 } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
@@ -38,11 +39,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },
-  models: { nato: buildNatoPlough, pact: buildPactUR77 },
+  models: { nato: buildNatoPlough, pact: buildPactUR77, bw: buildBwMinenpflug, nva: buildNvaKMT5 },
   weaponSound: 'cannon',
   engine: 'engine.diesel',
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Leopard 1 Minenpflug', weapon: '105 mm L7A3 · mine plough', text: 'A Leopard 1 pushing a track-width plough: it lifts the mines out of its path and leaves a cleared lane behind it — and still fights as a tank.' },
+    nva: { name: 'T-55 KMT-5', weapon: '100 mm D-10T · mine rollers', text: 'A T-55 pushing heavy rollers ahead of its tracks: they set off the mines before the tank reaches them, lane after lane.' },
     nato: { name: 'M60A3 with mine plough', weapon: '105 mm M68, track-width mine plough', text: 'A fighting tank that ploughs its own lane: drive it through a minefield and the plough lifts the mines out of its way.' },
     pact: { name: 'UR-77 Meteorit', weapon: '2 line charges, PKT', text: 'Two rockets that drag 90 m of explosive hose across a minefield and blow it: a lane through mines and wire in seconds.' },
   },

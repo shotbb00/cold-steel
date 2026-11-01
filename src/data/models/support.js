@@ -136,7 +136,7 @@ export const wheeled = (axles, halfWidth, r) => ({
 });
 
 /** A red cross on a white square, facing +x (rotate for other faces). */
-const cross = (o) => [
+export const cross = (o) => [
   P.box(0.03, 0.8, 0.8, { ...o, color: WHITE }),
   P.box(0.04, 0.55, 0.16, { ...o, color: RED }),
   P.box(0.04, 0.16, 0.55, { ...o, color: RED }),
@@ -699,7 +699,7 @@ export const buildNatoM3 = vehicle(() => {
  * The folded scissors bridge a bridge layer carries: two treadway halves lying one on the
  * other along the hull, the hinge at the front, girders along the sides.
  */
-const scissors = ({ y, length, width, color, dark }) => merge([
+export const scissors = ({ y, length, width, color, dark }) => merge([
   ...[0, 1].map((k) => P.box(width, 0.24, length, { y: y + k * 0.26, color: k ? color : dark, ...C })),
   ...pair((s) => P.box(0.12, 0.5, length, { x: s * (width / 2 - 0.06), y: y + 0.13, color: dark })),
   P.box(0.3, 0.5, width * 0.18, { y: y + 0.13, z: length / 2 + 0.1, color: STEEL }),                  // the hinge

@@ -3,6 +3,7 @@
 // strikes and gas called in there come 8 s late and up to 25 m off the mark, forward observers
 // there lose their fire-direction bonus, radars there go blind. But a transmitter is easy to find:
 // while it jams, the enemy sees it on the map.
+import { buildBwFuchsEW, buildNvaR378 } from '../models/armySupport.js';
 import { buildNatoTACJAM, buildPactR330 } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -48,11 +49,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2 },
-  models: { nato: buildNatoTACJAM, pact: buildPactR330 },
+  models: { nato: buildNatoTACJAM, pact: buildPactR330, bw: buildBwFuchsEW, nva: buildNvaR378 },
   weaponSound: 'rifle',
   engine: 'engine.dieselSmall',
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Fuchs EloKa', weapon: 'radio jammer', text: 'The Fuchs as an electronic warfare vehicle: set up, it drowns the enemy’s radios — their support powers come late and land wide.' },
+    nva: { name: 'R-378 jammer', weapon: 'radio jammer', text: 'The jammer on a Ural with its two big arrays: set up, NATO’s calls for fire come late and land wide.' },
     nato: { name: 'AN/MLQ-34 TACJAM', weapon: 'unarmed', text: 'A tactical jammer on a tracked carrier. Parked with its mast up, it smothers the Pact radio nets around it: their air strikes come late and wide, their observers and radars go deaf and blind.' },
     pact: { name: 'R-330 jammer', weapon: 'unarmed', text: 'A radio-electronic combat station on a Ural. It turns NATO\'s helicopters and artillery calls into guesswork — and every NATO direction-finder knows where it is.' },
   },

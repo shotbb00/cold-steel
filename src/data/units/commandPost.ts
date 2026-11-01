@@ -3,6 +3,7 @@
 // furthest forward, as long as no enemy is within 80 m of it — modes/shared.js makeBuyer), and
 // stacks within 60 m of it are steadied as if their officer were with them. Lose it and the
 // reinforcements walk from home again.
+import { buildBwFuchsCP, buildNvaMTLBu } from '../models/armySupport.js';
 import { buildNatoM577, buildPactBTR60PU } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -48,11 +49,13 @@ export default {
   },
 
   camera: { distance: 12, height: 5, shoulder: 2 },
-  models: { nato: buildNatoM577, pact: buildPactBTR60PU },
+  models: { nato: buildNatoM577, pact: buildPactBTR60PU, bw: buildBwFuchsCP, nva: buildNvaMTLBu },
   weaponSound: 'rifle',
   engine: { nato: 'engine.dieselSmall', pact: 'engine.diesel' },
   tracks: 'tracks.light',
   variants: {
+    bw: { name: 'Fuchs Führungsfahrzeug', weapon: 'radios · mast', text: 'The Fuchs as a forward command post: once its mast is up, reinforcements arrive here and the stacks round it hold steadier.' },
+    nva: { name: 'MT-LBu', weapon: 'radios · mast', text: 'The command MT-LB: a raised cabin full of radios. Set up, it brings the reinforcements forward and steadies the line.' },
     nato: { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion\'s tactical operations centre on an M113. Set it up behind the front: your reinforcements report there, and the troops around it hold their nerve.' },
     pact: { name: 'BTR-60PU', weapon: 'unarmed', text: 'A regimental command post on the BTR-60. Once its antennas are up, the reinforcements come forward to it instead of to the rear.' },
   },

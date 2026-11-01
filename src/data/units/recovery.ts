@@ -2,6 +2,7 @@
 // and repairs them (`repair`: hit points back a few tens a second; tracks blown by mines
 // mended after a few seconds' work). On its own it drives to the nearest damaged vehicle close
 // by (systems/Support.js). Built on a tank hull: tough, but armed only with a machine gun.
+import { buildBwBergepanzer, buildNvaT55Recovery } from '../models/armySupport.js';
 import { buildNatoM88, buildPactBREM } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -55,11 +56,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },
-  models: { nato: buildNatoM88, pact: buildPactBREM },
+  models: { nato: buildNatoM88, pact: buildPactBREM, bw: buildBwBergepanzer, nva: buildNvaT55Recovery },
   weaponSound: 'mg',
   engine: 'engine.diesel',
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Bergepanzer 2', weapon: 'crane · winch · MG3', text: 'The Leopard 1 recovery tank: it mends tracks and guns in the field, and hauls knocked-out vehicles back into running order.' },
+    nva: { name: 'T-55 Bergepanzer', weapon: 'crane · winch · PKT', text: 'A turretless T-55 with a jib and a spade: it gets damaged tanks moving again behind the line.' },
     nato: { name: 'M88 Recovery Vehicle', weapon: '.50 cal M2, A-frame boom, winch', text: 'Brings damaged tanks back into the fight: park it alongside and the hit points come back; mine-blown tracks are mended in seconds. Left alone it goes looking for work nearby.' },
     pact: { name: 'BREM-1', weapon: 'PKT, crane, dozer blade', text: 'A T-72 hull with a crane: repairs damaged vehicles alongside and gets immobilised ones moving again. Tough, but not a fighter.' },
   },

@@ -3,6 +3,7 @@
 // seconds (systems/Construction.js 'span', world/River.js lay()). The bridge is a crossing like
 // any other: everyone can use it, routes plan over it, engineers can blow it. Unarmed; only on
 // maps with a river (`needsRiver`).
+import { buildBwBiber, buildNvaBLG60 } from '../models/armySupport.js';
 import { buildNatoAVLB, buildPactMTU } from '../models/support.js';
 import type { UnitType } from '../../types.ts';
 
@@ -52,11 +53,13 @@ export default {
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },
-  models: { nato: buildNatoAVLB, pact: buildPactMTU },
+  models: { nato: buildNatoAVLB, pact: buildPactMTU, bw: buildBwBiber, nva: buildNvaBLG60 },
   weaponSound: 'rifle',
   engine: 'engine.diesel',
   tracks: 'tracks.heavy',
   variants: {
+    bw: { name: 'Biber', weapon: '22 m sliding bridge', text: 'The Leopard 1 bridge layer: it pushes its bridge out flat across the gap, low enough to stay out of sight while it lays.' },
+    nva: { name: 'BLG-60', weapon: 'scissors bridge', text: 'The East German and Polish scissors bridge on the T-55: up, over and down across the river in minutes.' },
     nato: { name: 'M60 AVLB', weapon: 'Unarmed · 18 m scissors bridge', text: 'An M60 hull carrying a folding bridge. Drive it to the river bank and it unfolds a crossing in seconds: a new way over where the enemy isn\'t waiting. One bridge per vehicle.' },
     pact: { name: 'MTU-20', weapon: 'Unarmed · 20 m bridge', text: 'A T-55 chassis with a bridge on its back. It lays a crossing over the river from the bank in moments, for the tanks behind it. One bridge per vehicle.' },
   },
