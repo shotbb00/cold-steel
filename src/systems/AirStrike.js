@@ -18,7 +18,7 @@
 import { JAM } from './Jamming.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT } from '../data/air.ts';
-import { FACTIONS, enemyOf } from '../data/factions.js';
+import { FACTIONS, enemyOf, forArmy } from '../data/factions.js';
 import { paintMaterial } from '../render/paint.js';
 import { dist2DSq } from '../core/math.js';
 
@@ -91,10 +91,13 @@ const _a = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const materials = {};
 
-function materialsFor(kind, faction) {
-  const key = `${kind}.${faction}`;
+/** The machine `army` of `faction` flies for support power `kind` (data/air.ts: an army's own, else the side's). */
+export const airType = (kind, faction, army) => forArmy(KINDS[kind].aircraft, army, faction);
+
+function materialsFor(kind, faction, army) {
+  const key = `${kind}.${army ?? faction}`;
   if (!materials[key]) {
-    const type = KINDS[kind].aircraft[faction];
+    const type = airType(kind, faction, army);
     materials[key] = {
       body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.2, roughness: 0.65 }), { ...type.paint, wear: 0.2, surfaces: true }),
       glow: new THREE.MeshStandardMaterial({ color: FACTIONS[faction].marking, roughness: 0.7 }),
@@ -104,8 +107,8 @@ function materialsFor(kind, faction) {
 }
 
 /** An aircraft model with its paint, as the sorties and the multiplayer client's copies use it. */
-export function buildAircraft(kind, faction) {
-  const rig = KINDS[kind].aircraft[faction].model(materialsFor(kind, faction));
+export function buildAircraft(kind, faction, army) {
+  const rig = airType(kind, faction, army).model(materialsFor(kind, faction, army));
   rig.root.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
   return rig;
 }
@@ -136,7 +139,8 @@ class Sortie {
     this.owner = owner;       // co-op: whose squad an air assault brings
     this.p = KINDS[kind];
     this.faction = faction;
-    this.type = this.p.aircraft[faction];
+    this.army = game.armyOf(faction);
+    this.type = airType(kind, faction, this.army);
     this.target = new THREE.Vector3(x, game.terrain.heightAt(x, z), z);
     this.yaw = yaw;
     this.dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
@@ -185,7 +189,7 @@ class Sortie {
   }
 
   spawn() {
-    const rig = buildAircraft(this.kind, this.faction);
+    const rig = buildAircraft(this.kind, this.faction, this.army);
     this.rig = rig;
     this.game.scene.add(rig.root);
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
@@ -501,7 +505,8 @@ export class SortieView {
     this.id = id;
     this.kind = kind;
     this.faction = faction;
-    this.type = KINDS[kind].aircraft[faction];
+    this.army = game.armyOf(faction);
+    this.type = airType(kind, faction, this.army);
     this.state = 'inbound';
     this.target = new THREE.Vector3(x, game.terrain.heightAt(x, z), z);
     this.pos = new THREE.Vector3();
@@ -517,7 +522,7 @@ export class SortieView {
 
   show(s, dt) {
     if (!this.rig) {
-      this.rig = buildAircraft(this.kind, this.faction);
+      this.rig = buildAircraft(this.kind, this.faction, this.army);
       this.game.scene.add(this.rig.root);
       this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     }
@@ -621,7 +626,7 @@ export class AirStrike {
   call(faction, x, z, yaw = null, kind = 'heli') {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
-    const name = p.aircraft[faction].name;
+    const name = forArmy(p.aircraft, game.armyOf(faction), faction).name;
     if (this.limit[faction] === 0) {
       game.tell(faction, 'No air support left');
       return false;

@@ -1,7 +1,8 @@
 // Mi-24 Hind attack helicopter in Soviet two-tone camouflage (green and sand, render/paint.js):
 // the bulky fuselage with its troop cabin, the stepped "double bubble" canopies, the four-barrel
 // 12.7 mm Yak-B gun turret under the nose, the drooping stub wings with two UB-32 rocket pods a
-// side and anti-tank rails at the tips, twin engine intakes, retracted gear, the tail boom with
+// side and anti-tank missiles at the tips (the Soviet Mi-24V: two 9M114 Shturm tubes a side; the NVA's
+// Mi-24D: the 9M17 Falanga rails, a squarer glazed nose for the gunner), twin engine intakes, retracted gear, the tail boom with
 // its swept fin and tail rotor on the left, and the five-bladed main rotor. Red stars.
 // Contract: see natoCobra.js.
 import * as THREE from 'three';
@@ -17,10 +18,10 @@ const HOLE = 0x141414;
 const DARK = 0x323a26;
 const C = { camo: 1 };
 
-let GEO = null;
-function geometry() {
-  if (GEO) return GEO;
-  GEO = {
+const GEO = {};
+function geometry(v) {
+  if (GEO[v]) return GEO[v];
+  GEO[v] = {
     body: merge([
       // the bulky fuselage: narrow nose, deep troop cabin, the boom rising to the swept fin
       body([
@@ -46,7 +47,14 @@ function geometry() {
       ...pair((s) => surface([[s * 0.9, 1.85, 0.2, 0.85, 0.12], [s * 3.3, 1.3, 0.1, 0.55, 0.07]], { color: GREEN, ...C })),
       ...pair((s) => [1.6, 2.5].flatMap((x) => rocketPod(s * x, 1.72 - (x - 0.9) * 0.23 - 0.32, -0.7, 0.95, 0.24, DARK))).flat(),
       ...pair((s) => P.box(0.1, 0.5, 1.2, { x: s * 3.32, y: 1.2, z: 0.15, color: STEEL })),
-      ...pair((s) => [-0.12, 0.12].flatMap((dy) => missile(s * 3.45, 1.2 + dy, -0.6, 0.9, 0.07, 0x5a5e52))).flat(),
+      ...(v === 'D'
+        ? pair((s) => [-0.12, 0.12].flatMap((dy) => missile(s * 3.45, 1.2 + dy, -0.6, 0.9, 0.07, 0x5a5e52))).flat()
+        : pair((s) => [-0.13, 0.13].flatMap((dy) => [
+          P.cyl(0.075, 0.075, 1.9, { x: s * 3.45, y: 1.2 + dy, z: 0.15, rx: Math.PI / 2, color: 0x56603e }, 10), // the Shturm tubes
+          P.cyl(0.06, 0.06, 0.02, { x: s * 3.45, y: 1.2 + dy, z: 1.105, rx: Math.PI / 2, color: HOLE }, 10),
+        ])).flat()),
+      ...(v === 'D' ? [P.box(0.5, 0.35, 0.04, { y: 1.7, z: 4.98, rx: -0.5, color: GLASS }), P.box(0.04, 0.4, 0.5, { x: -0.48, y: 1.95, z: 4.2, color: 0x2c3526 })] : []), // the D's flat bomb-aimer pane, the frame
+
       // the Yak-B turret under the nose, its four barrels; the retracted gear's fairings
       P.sphere(0.32, { y: 1.02, z: 4.6, sy: 0.85, color: DARK }, 12, 8),
       ...[[-0.04, -0.04], [0.04, -0.04], [-0.04, 0.04], [0.04, 0.04]].map(([x, y]) => P.cyl(0.025, 0.025, 1.0, { x, y: 0.98 + y, z: 5.15, rx: Math.PI / 2, color: STEEL }, 5)),
@@ -57,11 +65,14 @@ function geometry() {
     rotor: merge([...blades(5, 8.6, 0.58, BLADE, 0.5), P.cyl(0.35, 0.35, 0.25, { color: STEEL }, 10)]),
     tailRotor: merge([...[0, 1, 2].map((k) => P.box(0.04, 3.2, 0.26, { color: BLADE, surf: 'paint', rx: (k / 3) * Math.PI })), P.cyl(0.12, 0.12, 0.12, { rz: Math.PI / 2, color: STEEL }, 8)]),
   };
-  return GEO;
+  return GEO[v];
 }
 
-export function buildPactHind(mats) {
-  const g = geometry();
+export const buildPactHind = (mats) => build(mats, 'V');
+export const buildNvaHind = (mats) => build(mats, 'D');
+
+function build(mats, v) {
+  const g = geometry(v);
   const root = new THREE.Group();
   const add = meshAdder(root);
   add(g.body, mats.body);

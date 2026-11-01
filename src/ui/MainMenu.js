@@ -10,7 +10,7 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
-import { KINDS } from '../systems/AirStrike.js';
+import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
 import { takeMenuTab } from '../core/replay.js';
@@ -145,9 +145,9 @@ const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone'
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport' }; // support powers in the units list
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
-function aircraftRows(kind, faction) {
+function aircraftRows(kind, faction, army) {
   const p = KINDS[kind];
-  const a = p.aircraft[faction];
+  const a = airType(kind, faction, army);
   const rows = [
     ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift' }[kind]) ?? p.key}`],
     ['Cost', `${p.cost} CP · ready again after ${p.cooldown} s`],
@@ -523,9 +523,9 @@ export class MainMenu {
     this.showUnit();
   }
 
-  showAircraft(kind, faction) {
-    const a = KINDS[kind].aircraft[faction];
-    this.preview.showAircraft(kind, faction);
+  showAircraft(kind, faction, army) {
+    const a = airType(kind, faction, army);
+    this.preview.showAircraft(kind, faction, army);
     if (!AIRCRAFT_POSES.includes(this.unit.pose)) this.unit.pose = 'hover';
     this.preview.setPose(this.unit.pose);
     this.poses.replaceChildren();
@@ -541,14 +541,14 @@ export class MainMenu {
     }
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', a.name));
     if (a.weapon) this.info.append(el('p', 'unit-weapon', a.weapon));
     if (a.text) this.info.append(el('p', 'unit-text', a.text));
     const dl = el('dl', 'stats');
-    for (const [k, val] of aircraftRows(kind, faction)) dl.append(el('dt', '', k), el('dd', '', String(val)));
+    for (const [k, val] of aircraftRows(kind, faction, army)) dl.append(el('dt', '', k), el('dd', '', String(val)));
     this.info.append(dl);
-    this.codex(`air:${kind}`, faction);
+    this.codex(`air:${kind}`, faction, army);
   }
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
@@ -576,7 +576,7 @@ export class MainMenu {
 
   showUnit() {
     const { id, faction, army } = this.unit;
-    if (id.startsWith('air:')) return this.showAircraft(id.slice(4), faction);
+    if (id.startsWith('air:')) return this.showAircraft(id.slice(4), faction, army);
     const type = UNIT_TYPES[id];
     this.preview.show(id, faction, army);
     this.preview.setPose(this.unit.pose);

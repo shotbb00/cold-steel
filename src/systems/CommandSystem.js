@@ -9,7 +9,7 @@
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
 import * as THREE from 'three';
 import { STRUCTURES } from './Construction.js';
-import { KINDS } from './AirStrike.js';
+import { KINDS, airType } from './AirStrike.js';
 import { GAS } from './Gas.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
@@ -244,7 +244,7 @@ export class CommandSystem {
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       const air = cmd.slice(4) || 'heli';
       if (!this.game.air.ready(this.faction, air)) {
-        return this.game.bus.emit('toast', `${KINDS[air].aircraft[this.faction].name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
+        return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
     } else if (cmd === 'gas') {

@@ -190,9 +190,12 @@ export function buildNatoUH60(mats) {
 
 // ---------------------------------------------------------------- Mi-8
 
-let MI8 = null;
-export function buildPactMi8(mats) {
-  MI8 ??= {
+// the NVA's Mi-8T: the older engines (the tail rotor on the right), UB-16 pods instead of UB-32s
+const MI8 = {};
+export const buildPactMi8 = (mats) => mi8(mats, false);
+export const buildNvaMi8 = (mats) => mi8(mats, true);
+function mi8(mats, t) {
+  MI8[t] ??= {
     body: merge([
       // the glazed nose, then the big rounded pod; the boom up to the fin
       body([[5.55, 1.72, 0.3, 0.3, 2], [5.2, 1.76, 0.85, 0.82, 2], [4.6, 1.82, 1.12, 1.08, 2.1], [4.3, 1.85, 1.18, 1.14, 2.2]], { color: GLASS }),
@@ -213,7 +216,7 @@ export function buildPactMi8(mats) {
       ...pair((s) => body([[0.9, 1.2, 0.18, 0.2], [0.6, 1.2, 0.38, 0.42], [-1.1, 1.2, 0.38, 0.42], [-1.4, 1.2, 0.18, 0.2]], { x: s * 1.45, color: HIP })),
       ...pair((s) => surface([[s * 1.2, 1.45, 0.4, 0.3, 0.05], [s * 2.6, 1.25, 0.4, 0.25, 0.04]], { color: HIP })),
       ...pair((s) => limb([s * 1.2, 0.9, 0.4], [s * 2.6, 1.2, 0.4], [[0, 0.04, 0.04], [1, 0.04, 0.04]], { color: STEEL })),
-      ...pair((s) => rocketPod(s * 2.45, 0.95, -0.4, 1.3, 0.25, 0x5a5e52)).flat(),
+      ...pair((s) => rocketPod(s * 2.45, 0.95 + (t ? 0.05 : 0), -0.4, 1.3, t ? 0.2 : 0.25, 0x5a5e52)).flat(),
       // tricycle gear: the twin nose wheels, the main legs out on their struts
       ...[-0.2, 0.2].map((x) => P.cyl(0.3, 0.3, 0.18, { x, y: 0.3, z: 3.9, rz: Math.PI / 2, color: TYRE, surf: 'rubber' }, 12)),
       limb([0, 0.85, 3.9], [0, 0.3, 3.9], [[0, 0.07, 0.07], [1, 0.06, 0.06]], { color: STEEL }),
@@ -233,15 +236,16 @@ export function buildPactMi8(mats) {
   };
   const root = new THREE.Group();
   const add = meshAdder(root);
-  add(MI8.body, mats.body);
-  add(MI8.marks, mats.glow, false);
+  const g = MI8[t];
+  add(g.body, mats.body);
+  add(g.marks, mats.glow, false);
   const rotor = new THREE.Group();
   rotor.position.set(0, 4.05, 1.0);
-  meshAdder(rotor)(MI8.rotor, mats.body);
+  meshAdder(rotor)(g.rotor, mats.body);
   root.add(rotor);
   const tailRotor = new THREE.Group();
-  tailRotor.position.set(-0.3, 3.8, -9.6);
-  meshAdder(tailRotor)(MI8.tailRotor, mats.body, false);
+  tailRotor.position.set(t ? 0.3 : -0.3, 3.8, -9.6);
+  meshAdder(tailRotor)(g.tailRotor, mats.body, false);
   root.add(tailRotor);
   return {
     root, rotor, tailRotor, rotorRadius: 10.6, blades: 5,

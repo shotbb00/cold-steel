@@ -9,7 +9,7 @@ import { getUnitType } from '../data/units/index.js';
 import { FACTIONS, DEFAULT_ARMY } from '../data/factions.js';
 import { StackRenderer } from '../render/StackRenderer.js';
 import { RigRenderer } from '../render/RigRenderer.js';
-import { buildAircraft, KINDS } from '../systems/AirStrike.js';
+import { buildAircraft, airType } from '../systems/AirStrike.js';
 
 export const INFANTRY_POSES = ['idle', 'aim', 'kneel', 'prone', 'walk', 'run', 'reload'];
 export const VEHICLE_POSES = ['idle', 'traverse', 'drive', 'fire'];
@@ -138,10 +138,10 @@ export class UnitPreview {
   }
 
   /** Show an aircraft of support power `kind` ('heli', 'jet', 'lift') for `faction`, in the air. */
-  showAircraft(kind, faction) {
+  showAircraft(kind, faction, army) {
     this.clear();
-    const rig = buildAircraft(kind, faction);
-    this.aircraft = { rig, kind, type: KINDS[kind].aircraft[faction] };
+    const rig = buildAircraft(kind, faction, army);
+    this.aircraft = { rig, kind, type: airType(kind, faction, army) };
     this.scene.add(rig.root);
     const jet = kind === 'jet';
     this.orbit.target.set(0, jet ? 3.2 : 3, 0);

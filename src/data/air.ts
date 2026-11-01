@@ -4,8 +4,9 @@
 //   rockets – salvo size, damage, blast radius, armour effect
 //   hp      – how many hits from ground fire it takes (each hit is 1)
 import { buildNatoCobra } from './models/natoCobra.js';
-import { buildPactHind } from './models/pactHind.js';
-import { buildNatoA10, buildPactSu25, buildNatoUH60, buildPactMi8 } from './models/aircraft.js';
+import { buildPactHind, buildNvaHind } from './models/pactHind.js';
+import { buildNatoA10, buildPactSu25, buildNatoUH60, buildPactMi8, buildNvaMi8 } from './models/aircraft.js';
+import { buildBwPAH1, buildBwAlphaJet, buildBwUH1D, buildNvaSu22 } from './models/armyAircraft.js';
 import { MERDC } from '../render/paint.js';
 import type { Aircraft, PerFaction } from '../types.ts';
 
@@ -33,6 +34,29 @@ export const AIRCRAFT = {
     gun: { rate: 14, damage: 115, splash: 0.6, vsArmor: 0.18, pierce: 0.2, speed: 640, tracer: 0.4, size: 0.8, sound: 'heli.yakb' },
     rockets: { count: 20, interval: 0.11, damage: 200, splash: 3.2, vsArmor: 0.6, pierce: 0.35, speed: 230 },
     hp: 11,              // the "flying tank": armoured cockpit and tub
+  },
+  bw: {
+    name: 'PAH-1',
+    weapon: 'HOT anti-tank missiles',
+    text: 'The Heeresflieger’s tank hunter: a BO-105 with six HOT missiles, fired one after another down the strafe line. No gun — every shot is a missile, deadly to armour, wasted on infantry.',
+    model: buildBwPAH1,
+    paint: { colors: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] as [number, number, number, number], scale: 0.6 },
+    rotorSound: 'rotor.uh60',
+    rotorSpeed: 32,
+    gun: { rate: 0.9, damage: 900, splash: 2.2, vsArmor: 1, pierce: 0.8, speed: 260, tracer: 0, size: 1.2, sound: 'jet.missile' },
+    hp: 6,
+  },
+  nva: {
+    name: 'Mi-24D',
+    weapon: '12.7 mm Yak-B · S-5 rockets · Falanga',
+    text: 'The NVA’s Hind: the same armoured tub and rocket salvo as the Soviet machine, with the older Falanga rails at the wingtips.',
+    model: buildNvaHind,
+    paint: { colors: [0x4f5a36, 0x7a5d3c, 0x3c4529, 0x6b5a3a] as [number, number, number, number], scale: 0.6 },
+    rotorSound: 'rotor.hind',
+    rotorSpeed: 22,
+    gun: { rate: 14, damage: 115, splash: 0.6, vsArmor: 0.18, pierce: 0.2, speed: 640, tracer: 0.4, size: 0.8, sound: 'heli.yakb' },
+    rockets: { count: 20, interval: 0.11, damage: 200, splash: 3.2, vsArmor: 0.6, pierce: 0.35, speed: 230 },
+    hp: 11,
   },
 } satisfies PerFaction<Aircraft>;
 
@@ -63,6 +87,28 @@ export const JETS = {
     rockets: { count: 16, interval: 0.06, damage: 220, splash: 3.6, vsArmor: 0.6, pierce: 0.35, speed: 300, sound: 'heli.rocket' }, // S-8 salvo
     hp: 8,
   },
+  bw: {
+    name: 'Alpha Jet A',
+    weapon: '27 mm Mauser BK-27 · rockets',
+    text: 'The Luftwaffe’s close-support jet: a rocket ripple, then the belly gun pod walked through the target. Small, quick and hard to track.',
+    model: buildBwAlphaJet,
+    paint: { colors: [0x4e5440, 0x5c6150, 0x3f4436, 0x60645a], scale: 0.7 },
+    engineSound: 'jet',
+    gun: { rate: 28, damage: 180, splash: 1.5, vsArmor: 0.55, pierce: 0.45, speed: 900, tracer: 0.35, size: 0.95, sound: 'jet.gsh30' },
+    rockets: { count: 12, interval: 0.07, damage: 210, splash: 3.4, vsArmor: 0.55, pierce: 0.35, speed: 300, sound: 'heli.rocket' },
+    hp: 6,
+  },
+  nva: {
+    name: 'Su-22M4',
+    weapon: '2 × 30 mm NR-30 · S-5 rockets',
+    text: 'The NVA’s swing-wing fighter-bomber: wings swept back for the run, a heavy salvo from four UB-32 pods, then the two wing-root cannon.',
+    model: buildNvaSu22,
+    paint: { colors: [0x4f5a36, 0x7a5d3c, 0x3c4529, 0x6b5a3a] as [number, number, number, number], scale: 0.7 },
+    engineSound: 'jet',
+    gun: { rate: 18, damage: 200, splash: 1.6, vsArmor: 0.5, pierce: 0.4, speed: 900, tracer: 0.35, size: 0.95, sound: 'jet.gsh30' },
+    rockets: { count: 24, interval: 0.05, damage: 190, splash: 3.2, vsArmor: 0.5, pierce: 0.3, speed: 300, sound: 'heli.rocket' },
+    hp: 7,
+  },
 } satisfies PerFaction<Aircraft>;
 
 // Air assault (P): a transport helicopter flies a squad in, lands it on the spot, and leaves.
@@ -90,6 +136,31 @@ export const LIFT = {
     rotorSpeed: 20,
     gun: { rate: 10, damage: 95, splash: 0, vsArmor: 0.05, pierce: 0, speed: 600, tracer: 0.5, size: 0.7, sound: 'pact.mg' },
     rockets: { count: 8, interval: 0.15, damage: 200, splash: 3.2, vsArmor: 0.6, pierce: 0.35, speed: 230, sound: 'heli.rocket' }, // prep the LZ
+    squad: 'airAssault',
+    hp: 8,
+  },
+  bw: {
+    name: 'UH-1D',
+    weapon: 'MG3 door gun · 8 men',
+    text: 'The Heer’s Huey: flies a section in wherever you point, the door gunner on anyone near the landing zone. Lighter than a Black Hawk, it takes fewer hits.',
+    model: buildBwUH1D,
+    paint: { colors: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] as [number, number, number, number], scale: 0.6 },
+    rotorSound: 'rotor.cobra',
+    rotorSpeed: 30,
+    gun: { rate: 12, damage: 90, splash: 0, vsArmor: 0.05, pierce: 0, speed: 600, tracer: 0.5, size: 0.7, sound: 'nato.mg' },
+    squad: 'airAssault',
+    hp: 5,
+  },
+  nva: {
+    name: 'Mi-8T',
+    weapon: 'Nose PK · UB-16 rockets · 8 men',
+    text: 'The NVA’s Hip: rockets on the landing zone, then the Fallschirmjäger out of the clamshell doors.',
+    model: buildNvaMi8,
+    paint: { colors: [0x4f5a36, 0x7a5d3c, 0x3c4529, 0x6b5a3a] as [number, number, number, number], scale: 0.6 },
+    rotorSound: 'rotor.mi8',
+    rotorSpeed: 20,
+    gun: { rate: 10, damage: 95, splash: 0, vsArmor: 0.05, pierce: 0, speed: 600, tracer: 0.5, size: 0.7, sound: 'pact.mg' },
+    rockets: { count: 6, interval: 0.15, damage: 200, splash: 3.2, vsArmor: 0.6, pierce: 0.35, speed: 230, sound: 'heli.rocket' },
     squad: 'airAssault',
     hp: 8,
   },
