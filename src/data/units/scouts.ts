@@ -5,6 +5,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -35,9 +37,12 @@ export default {
     stance: 'prone',
   },
 
-  models: { nato: () => buildNatoSoldier({ scout: true }), pact: () => buildPactSoldier({ scout: true }) },
+  models: { nato: () => buildNatoSoldier({ scout: true }), pact: () => buildPactSoldier({ scout: true }),
+    bw: () => buildBwSoldier({ scout: true }), nva: () => buildNvaSoldier({ scout: true }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Fernspäher Team', weapon: 'G3, binoculars', text: 'Long-range patrol: two men dug in far forward who watch and report. What they see, the guns and helicopters can hit.' },
+    nva: { name: 'Aufklärer Team', weapon: 'MPi-KMS-72, binoculars', text: 'The divisional reconnaissance: they find the NATO line before the regiments run into it.' },
     nato: { name: 'LRRP Scout Team', weapon: 'M16A2, binoculars', text: 'Two men who see everything and are seen by nobody. Push them forward into a hedgerow: what they spot, your mortars, guns and Cobras can hit.' },
     pact: { name: 'Razvedka Team', weapon: 'AKS-74, binoculars', text: 'Divisional reconnaissance: they find the NATO positions before the regiments run into them. Keep them alive and keep them still.' },
   },

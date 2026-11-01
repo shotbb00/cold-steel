@@ -5,6 +5,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -45,9 +47,12 @@ export default {
     playerFireInterval: 1,
   },
 
-  models: { nato: () => buildNatoSoldier({ weapon: 'at' }), pact: () => buildPactSoldier({ weapon: 'at' }) },
+  models: { nato: () => buildNatoSoldier({ weapon: 'at' }), pact: () => buildPactSoldier({ weapon: 'at' }),
+    bw: () => buildBwSoldier({ weapon: 'at' }), nva: () => buildNvaSoldier({ weapon: 'at' }) },
   weaponSound: 'rocket',
   variants: {
+    bw: { name: 'Panzerfaust Team', weapon: 'Panzerfaust 44 "Lanze"', text: 'The Lanze: a light rocket launcher every squad carries. Short reach, but a side shot at a T-72 in a village street ends it.' },
+    nva: { name: 'RPG-7 Team', weapon: 'RPG-7, 85 mm', text: 'The RPG-7, East German issue: light, everywhere, deadly from the flank. Keep tanks away from their hedges.' },
     nato: { name: 'Anti-Tank Team', weapon: 'Carl Gustaf M2, 84 mm', text: 'Three men and a recoilless rifle. Slow to aim, one shot per reload, but a hit in the flank stops a T-72.' },
     pact: { name: 'RPG Team', weapon: 'RPG-7, 85 mm', text: 'The RPG-7: light, everywhere, deadly from the side. Keep tanks out of their reach or keep them busy.' },
   },

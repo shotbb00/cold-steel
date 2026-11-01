@@ -6,6 +6,8 @@
 import scouts from './scouts.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -46,10 +48,14 @@ export default {
     },
   },
 
-  models: { nato: () => buildNatoSoldier({ scout: true }), pact: () => buildPactSoldier({ scout: true }) },
-  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'sniper', scout: true }), pact: () => buildPactSoldier({ weapon: 'sniper', scout: true }) },
+  models: { nato: () => buildNatoSoldier({ scout: true }), pact: () => buildPactSoldier({ scout: true }),
+    bw: () => buildBwSoldier({ scout: true }), nva: () => buildNvaSoldier({ scout: true }) },
+  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'sniper', scout: true }), pact: () => buildPactSoldier({ weapon: 'sniper', scout: true }),
+    bw: () => buildBwSoldier({ weapon: 'sniper', scout: true }), nva: () => buildNvaSoldier({ weapon: 'sniper', scout: true }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Scharfschützentrupp', weapon: 'G3SG/1, G3, binoculars', text: 'A marksman with the scoped G3 and his spotter: the platoon leader first, then the crews and the radio men.' },
+    nva: { name: 'Scharfschützen', weapon: 'SWD, MPi-KM, binoculars', text: 'The East German company sniper with the SWD: officers, gunners and observers fall before anyone sees him.' },
     nato: { name: 'Sniper Team', weapon: 'M21 sniper rifle, M16A2, binoculars', text: 'A marksman with an M21 and his spotter. From 300 m he takes the platoon leader first, then the crews; the platoon he leaves behind wavers.' },
     pact: { name: 'Snaiperskaya Para', weapon: 'SVD Dragunov, AK-74, binoculars', text: 'The company sniper and an observer. The SVD reaches across the field; officers, gunners and radio men fall before the others know where the shots come from.' },
   },

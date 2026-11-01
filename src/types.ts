@@ -4,7 +4,8 @@
 // silently in battle. Engine-side objects (stacks, the game) stay loosely typed for now.
 
 export type Faction = 'nato' | 'pact';
-export type PerFaction<T> = Record<Faction, T>;
+// per side, and optionally per army of a side (data/factions.js ARMIES: bw, nva — us and sov use the side's entry)
+export type PerFaction<T> = Record<Faction, T> & Partial<Record<'bw' | 'nva', T>>;
 
 /** A model builder (data/models): materials in, a rig for render/RigRenderer or StackRenderer out. */
 export type ModelBuilder = (mats?: any) => any;

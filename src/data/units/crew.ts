@@ -4,6 +4,8 @@
 import vanguard from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -32,6 +34,12 @@ export default {
   models: {
     nato: () => buildNatoSoldier({ weapon: 'smg', crew: true }),
     pact: () => buildPactSoldier({ weapon: 'smg', crew: true }),
+    bw: () => buildBwSoldier({ weapon: 'smg', crew: true }),
+    nva: () => buildNvaSoldier({ weapon: 'smg', crew: true }),
+  },
+  variants: {
+    bw: { name: 'Panzerbesatzung', weapon: 'MP2 (Uzi)', text: 'The crew of a knocked-out vehicle, running for the rear. Get them home and they fight again.' },
+    nva: { name: 'Panzerbesatzung', weapon: 'MPi-KMS-72', text: 'The crew of a knocked-out vehicle, making for the rear.' },
   },
   weaponSound: 'rifle',
 } satisfies UnitType;

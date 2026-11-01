@@ -5,6 +5,8 @@
 import vanguard from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -43,10 +45,14 @@ export default {
     },
   },
 
-  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier() },
-  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'mg' }), pact: () => buildPactSoldier({ weapon: 'mg' }) },
+  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
+    bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
+  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'mg' }), pact: () => buildPactSoldier({ weapon: 'mg' }),
+    bw: () => buildBwSoldier({ weapon: 'mg' }), nva: () => buildNvaSoldier({ weapon: 'mg' }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'MG3 Team', weapon: 'MG3, 7.62 mm', text: 'The MG42\'s successor: 1,200 rounds a minute. Set up behind a hedge it closes a whole field.' },
+    nva: { name: 'PK Machine-Gun Team', weapon: 'PK, 7.62x54R', text: 'The company\'s PK in East German hands: long bursts that keep NATO heads down while the riflemen close in.' },
     nato: { name: 'M60 Machine-Gun Team', weapon: 'M60, 7.62 mm', text: 'A gunner and two riflemen. Once the gun is set up, its long bursts pin whole squads to the ground.' },
     pact: { name: 'PKM Machine-Gun Team', weapon: 'PKM, 7.62x54R', text: 'The PKM covers every Soviet advance. Suppress it or flank it — walking into it is not an option.' },
   },

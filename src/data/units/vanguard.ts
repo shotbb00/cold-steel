@@ -4,6 +4,8 @@
 // supply their own. (File name kept from the prototype; the id is 'rifles'.)
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -51,10 +53,13 @@ export default {
     muzzle: { x: 0.2, y: 1.31, z: 0.94 },
   },
 
-  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier() },
+  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
+    bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
   weaponSound: 'rifle',
   // shown in the main menu's unit preview
   variants: {
+    bw: { name: 'Panzergrenadier Squad', weapon: 'G3 rifles, MG3', text: 'West German mechanised infantry: they ride the Marder into battle and fight beside it. Steady, well drilled, and at their best in a prepared position.' },
+    nva: { name: 'Mot.-Schützen Squad', weapon: 'MPi-KM rifles', text: 'The East German motor riflemen: drilled hard, well equipped, and expected to go first through the gap their artillery has made.' },
     nato: { name: 'Rifle Squad', weapon: 'M16A2 rifles', text: 'The backbone of the line: nine men with single aimed shots. They hold ground, dig in and take points.' },
     pact: { name: 'Motor Rifle Section', weapon: 'AK-74 rifles', text: 'Soviet motor riflemen, the mass of every assault wave. Dangerous in numbers, brittle once pinned.' },
   },

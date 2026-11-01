@@ -5,6 +5,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -27,10 +29,14 @@ export default {
     },
   },
 
-  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier() },
-  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'manpads' }), pact: () => buildPactSoldier({ weapon: 'manpads' }) },
+  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
+    bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
+  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'manpads' }), pact: () => buildPactSoldier({ weapon: 'manpads' }),
+    bw: () => buildBwSoldier({ weapon: 'manpads' }), nva: () => buildNvaSoldier({ weapon: 'manpads' }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Fliegerfaust Team', weapon: 'Fliegerfaust 1 (Redeye), G3', text: 'Heat-seeking missiles against helicopters and low jets. Hide them where the enemy\'s air will come over.' },
+    nva: { name: 'Fla-Raketen Team', weapon: 'Strela-2M, MPi-KM', text: 'The Strela chases the hot engine of anything that flies low over the line.' },
     nato: { name: 'Stinger Team', weapon: 'FIM-92 Stinger, M16A2', text: 'Fire-and-forget missiles at any enemy helicopter or jet within 420 m. Three shots, then a long reload: hide them under the path the enemy\'s air will take.' },
     pact: { name: 'Strela Team', weapon: '9K32 Strela-2, AK-74', text: 'The Strela chases the hot engine of anything that flies low over the line. Cheap, everywhere, and the reason NATO pilots fly scared.' },
   },

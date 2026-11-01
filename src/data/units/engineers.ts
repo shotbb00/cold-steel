@@ -5,6 +5,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -28,9 +30,12 @@ export default {
     breakMorale: 0.22,
   },
 
-  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier() },
+  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
+    bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Pionier Squad', weapon: 'G3, mine detector, explosives', text: 'Bundeswehr Pioniere: they dig in, lay and lift mines, cut wire and blow what the enemy needs to cross.' },
+    nva: { name: 'Pionier Squad', weapon: 'MPi-KM, mine probes, explosives', text: 'NVA Pioniere clear lanes through minefields and wire for the assault, and blow the bridges behind a retreat.' },
     nato: { name: 'Combat Engineer Squad', weapon: 'M16A2, mine detector, demolition charges', text: 'Dig in three times as fast, find and lift enemy mines, cut wire, and drop a bridge in the enemy\'s face. Keep them out of the firefight.' },
     pact: { name: 'Sapper Section', weapon: 'AK-74, mine probes, explosive charges', text: 'Sappers clear the way for the assault — lanes through the minefields, gaps in the wire — and blow what the enemy needs to cross.' },
   },

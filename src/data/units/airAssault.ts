@@ -5,6 +5,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -21,9 +23,12 @@ export default {
 
   stats: { ...rifles.stats, speed: 3.5, breakMorale: 0.14, aimTime: 0.8 },
 
-  models: { nato: () => buildNatoSoldier({ airAssault: true }), pact: () => buildPactSoldier({ airAssault: true }) },
+  models: { nato: () => buildNatoSoldier({ airAssault: true }), pact: () => buildPactSoldier({ airAssault: true }),
+    bw: () => buildBwSoldier({ airAssault: true }), nva: () => buildNvaSoldier({ airAssault: true }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Fallschirmjäger Squad', weapon: 'G3 · by helicopter (P)', text: 'West German paratroopers landed by helicopter wherever you point: on the objective, behind the enemy, on a bridge.' },
+    nva: { name: 'Fallschirmjäger (FJB-40)', weapon: 'MPi-KMS-72 · by Mi-8 (P)', text: 'The NVA\'s own airborne battalion, dropped where NATO isn\'t looking. Hard men, few of them.' },
     nato: { name: 'Air Assault Squad', weapon: 'M16A2 · by UH-60 (P)', text: 'The 101st: a Black Hawk lands eight men wherever you point (P) — on the objective, behind the enemy, on a bridge. Lose the helicopter before it lands and you lose them too.' },
     pact: { name: 'VDV Section', weapon: 'AKS-74 · by Mi-8 (P)', text: 'Soviet airborne troops landed by a Hip, rockets clearing the landing zone first. Hard men, dropped where the enemy isn\'t looking.' },
   },

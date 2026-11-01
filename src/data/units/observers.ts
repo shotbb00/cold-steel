@@ -6,6 +6,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -37,9 +39,12 @@ export default {
     stance: 'prone',
   },
 
-  models: { nato: () => buildNatoSoldier({ scout: true, radio: true }), pact: () => buildPactSoldier({ scout: true, radio: true }) },
+  models: { nato: () => buildNatoSoldier({ scout: true, radio: true }), pact: () => buildPactSoldier({ scout: true, radio: true }),
+    bw: () => buildBwSoldier({ scout: true, radio: true }), nva: () => buildNvaSoldier({ scout: true, radio: true }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Artilleriebeobachter', weapon: 'G3, SEM 35, binoculars', text: 'Forward observers: put them where they can see, and every gun and rocket you own lands on the target.' },
+    nva: { name: 'Artilleriebeobachter', weapon: 'MPi-KM, R-107, binoculars', text: 'The battery\'s eyes in the front line. Within their sight the guns hit; without them they plough the fields.' },
     nato: { name: 'FIST Team', weapon: 'M16A2, PRC-77, binoculars', text: 'Fire support team: put them where they can see the target and every mortar, howitzer and rocket you own lands on it, not near it.' },
     pact: { name: 'Artillery Observers', weapon: 'AKS-74, R-107, binoculars', text: 'The battery commander\'s eyes. Within their sight the guns are accurate; without them, they plough the fields.' },
   },

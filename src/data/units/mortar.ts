@@ -6,6 +6,8 @@
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
+import { buildBwSoldier } from '../models/bwSoldier.js';
+import { buildNvaSoldier } from '../models/nvaSoldier.js';
 import type { UnitType } from '../../types.ts';
 
 export default {
@@ -54,10 +56,14 @@ export default {
     },
   },
 
-  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier() },
-  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'mortar' }), pact: () => buildPactSoldier({ weapon: 'mortar' }) },
+  models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
+    bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
+  specialistModels: { nato: () => buildNatoSoldier({ weapon: 'mortar' }), pact: () => buildPactSoldier({ weapon: 'mortar' }),
+    bw: () => buildBwSoldier({ weapon: 'mortar' }), nva: () => buildNvaSoldier({ weapon: 'mortar' }) },
   weaponSound: 'rifle',
   variants: {
+    bw: { name: 'Mörser Team', weapon: 'Mörser 120 mm (Tampella)', text: 'The heavy company mortar: big bombs on anything your side can see, and smoke when you need to cross open ground.' },
+    nva: { name: 'Granatwerfer Team', weapon: 'Granatwerfer 82 mm', text: 'The battalion mortar: shells spotted positions and screens the attack with smoke. Keep it behind the line.' },
     nato: { name: 'Mortar Team', weapon: 'M29A1, 81 mm', text: 'Company fire support. Drops bombs on anything your side can see 40–180 m out, no line of sight needed — and lays smoke (K) when you need to cross open ground.' },
     pact: { name: 'Mortar Team', weapon: '2B14 Podnos, 82 mm', text: 'The battalion mortar: shells spotted positions and screens the assault with smoke. Fragile up close — keep it behind the line.' },
   },
