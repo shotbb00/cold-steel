@@ -31,9 +31,9 @@ const _p = new THREE.Vector3();
 export class RigRenderer {
   constructor(stack, scene) {
     this.stack = stack;
-    const build = stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0];
+    const build = stack.type.models[stack.army] ?? stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0];
     // specialists (the first type.specialist.count members) may have a model of their own
-    const special = stack.type.specialistModels?.[stack.faction] ?? null;
+    const special = stack.type.specialistModels?.[stack.army] ?? stack.type.specialistModels?.[stack.faction] ?? null;
     const specials = stack.type.specialist?.count ?? 0;
     this.mats = materialsFor(stack.faction, stack.glowColor);
     this.rigs = stack.units.map((u) => {

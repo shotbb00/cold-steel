@@ -71,12 +71,16 @@ export function setLodDistance(d, camera = LOD_CAMERA) {
   if (camera) LOD_CAMERA = camera;
 }
 
-/** The faction's model for a unit type (falls back to the type's first model); `low`: the light stand-in. */
-export function modelFor(type, faction, specialist = false, low = false) {
+/**
+ * The model for a unit type as `army` of `faction` fields it (the army's own, else the side's,
+ * else the type's first model); `low`: the light stand-in.
+ */
+export function modelFor(type, faction, specialist = false, low = false, army = null) {
   const models = specialist && type.specialistModels ? type.specialistModels : type.models;
-  const key = `${type.id}:${faction}:${specialist && type.specialistModels ? 's' : 'b'}${low ? ':low' : ''}`;
+  const own = army && models[army] ? army : faction;
+  const key = `${type.id}:${own}:${specialist && type.specialistModels ? 's' : 'b'}${low ? ':low' : ''}`;
   if (!modelCache.has(key)) {
-    const build = models[faction] ?? Object.values(models)[0];
+    const build = models[own] ?? Object.values(models)[0];
     lod.low = low;
     try {
       modelCache.set(key, build());
@@ -130,8 +134,9 @@ export class StackRenderer {
     const nSpec = type.specialistModels ? Math.min(type.specialist?.count ?? 0, n) : 0;
     const all = stack.units.map((u) => u.index);
     const make = (...a) => this.make(...a);
-    this.variants = [new Variant(modelFor(type, stack.faction), modelFor(type, stack.faction, false, true), all.slice(nSpec), scene, make)];
-    if (nSpec) this.variants.push(new Variant(modelFor(type, stack.faction, true), modelFor(type, stack.faction, true, true), all.slice(0, nSpec), scene, make));
+    const army = stack.army;
+    this.variants = [new Variant(modelFor(type, stack.faction, false, false, army), modelFor(type, stack.faction, false, true, army), all.slice(nSpec), scene, make)];
+    if (nSpec) this.variants.push(new Variant(modelFor(type, stack.faction, true, false, army), modelFor(type, stack.faction, true, true, army), all.slice(0, nSpec), scene, make));
     this.variantOf = all.map((i) => this.variants[i < nSpec ? 1 : 0]);
     this.meshes = this.variants.flatMap((v) => v.meshes);
     // smoothed pose state per soldier

@@ -18,17 +18,17 @@ import './core/Keys.js';   // fills every key hint in the page (data-key) and ke
 document.title = GAME.title;
 const screen = document.getElementById('loading');
 
-function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null }) {
+function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null, armies = null }) {
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
-  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules });
+  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
-  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules });
+  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
   window.game = game; // handy for poking at the simulation from the dev console
 }
 
 const params = new URLSearchParams(location.search);
 const replay = takeReplay();
-if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather') });
+if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather'), armies: { nato: params.get('nato'), pact: params.get('pact') } });
 else if (replay) start(replay);
 else {
   const music = new MenuMusic(); // the menu's own synth tune, until a battle is deployed

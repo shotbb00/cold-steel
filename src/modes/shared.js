@@ -43,7 +43,7 @@ export function makeBuyer(game, state) {
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
     if (post && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
-    const name = `${faction === 'pact' ? 'Guards ' : ''}${type.shortName} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
+    const name = `${game.armyOf(faction) === 'sov' ? 'Guards ' : ''}${type.shortName} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
     const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, name);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
     game.tell(faction, `${type.shortName} called in — arriving at ${post ? post.name : 'base'}`);

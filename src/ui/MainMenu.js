@@ -7,7 +7,7 @@ import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { FACTIONS } from '../data/factions.js';
+import { FACTIONS, ARMIES, armiesFrom } from '../data/factions.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS } from '../systems/AirStrike.js';
@@ -33,6 +33,30 @@ const TIPS = [
   'Engineers clear wire and mines. The enemy uses them too.',
   'Wounded men in a campaign come back after the next battle; the dead do not.',
 ];
+
+/** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
+export function armiesPicker(choice, onChange = () => {}) {
+  choice.armies = armiesFrom(choice.armies);
+  const box = el('div', 'conditions armies');
+  for (const f of ['nato', 'pact']) {
+    const row = el('div', 'cond-row');
+    row.append(el('span', 'cond-label', FACTIONS[f].name));
+    const seg = el('div', 'seg');
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f)) {
+      const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        for (const o of seg.children) o.classList.toggle('on', o === b);
+        choice.armies[f] = a.id;
+        onChange();
+      });
+      seg.append(b);
+    }
+    row.append(seg);
+    box.append(row);
+  }
+  return box;
+}
 
 /** Two rows of segmented buttons: time of day and weather (core/Conditions.js). */
 export function conditionsPicker(choice, onChange = () => {}) {
@@ -271,9 +295,9 @@ export class MainMenu {
     p.append(el('h2', '', 'Single player'));
     p.append(el('p', 'mp-lead', 'Against the AI. Command from above, or take direct control of any of your squads and vehicles.'));
 
-    const q = (title, body) => {
+    const q = (title, ...body) => {
       const sec = el('section', 'setup-q');
-      sec.append(el('h3', '', title), body);
+      sec.append(el('h3', '', title), ...body);
       p.append(sec);
       return sec;
     };
@@ -338,7 +362,7 @@ export class MainMenu {
       });
       sides.append(b);
     }
-    q('Which side', sides);
+    q('Which side', sides, armiesPicker(c));
 
     // conditions and rules: one sentence, the controls folded away until asked for
     const more = el('div', 'setup-more');

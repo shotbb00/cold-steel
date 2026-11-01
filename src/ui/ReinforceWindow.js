@@ -6,6 +6,7 @@
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
+import { forArmy, artKey } from '../data/factions.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
@@ -17,13 +18,14 @@ const SECTIONS = [
 ];
 
 /** The first sentence of the unit's description, for the card. */
-const blurb = (type, faction) => (type.variants?.[faction]?.text ?? '').split(/(?<=\.)\s/)[0];
+const blurb = (type, faction, army) => (forArmy(type.variants, army, faction)?.text ?? '').split(/(?<=\.)\s/)[0];
 
 export class ReinforceWindow {
   constructor(game, state) {
     this.game = game;
     this.state = state;
     const me = game.playerFaction;
+    const army = game.armyOf(me);
     const root = (this.root = document.createElement('div'));
     root.id = 'reinforce-window';
     root.hidden = true;
@@ -55,8 +57,8 @@ export class ReinforceWindow {
         card.type = 'button';
         card.tabIndex = -1;
         card.className = 'rw-card';
-        card.innerHTML = `${silhouette(type.id, me, 'rw-sil')}<span class="rw-name">${type.variants?.[me]?.name ?? type.name}</span><span class="rw-cost">${type.cost}</span>
-          <span class="rw-text">${blurb(type, me)}</span><span class="rw-have"></span><span class="rw-why"></span>`;
+        card.innerHTML = `${silhouette(type.id, artKey(type, army, me), 'rw-sil')}<span class="rw-name">${forArmy(type.variants, army, me)?.name ?? type.name}</span><span class="rw-cost">${type.cost}</span>
+          <span class="rw-text">${blurb(type, me, army)}</span><span class="rw-have"></span><span class="rw-why"></span>`;
         card.addEventListener('click', () => game.bus.emit('ui:reinforce', type.id));
         sec.querySelector('.rw-cards').append(card);
         this.cards.push({ card, type, have: card.querySelector('.rw-have'), why: card.querySelector('.rw-why') });
@@ -64,7 +66,7 @@ export class ReinforceWindow {
       body.append(sec);
     }
     this.show(tabs.firstElementChild, body.firstElementChild);
-    const nameOf = (id) => UNIT_TYPES[id]?.variants?.[me]?.name ?? UNIT_TYPES[id]?.name ?? id;
+    const nameOf = (id) => forArmy(UNIT_TYPES[id]?.variants, army, me)?.name ?? UNIT_TYPES[id]?.name ?? id;
     game.bus.on('ui:reinforce', (id) => {
       this.last = id;
       this.again.textContent = `Buy again: ${nameOf(id)}`;

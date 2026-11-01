@@ -23,7 +23,7 @@
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
 import { MASKED } from '../systems/Gas.js';
-import { FACTIONS, enemyOf } from '../data/factions.js';
+import { FACTIONS, enemyOf, DEFAULT_ARMY } from '../data/factions.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
@@ -95,7 +95,9 @@ export class UnitStack {
     if (this.id >= nextId) nextId = this.id + 1;
     this.type = type;
     this.kind = type.kind ?? 'infantry';
-    this.stats = type.factionStats?.[faction] ? { ...type.stats, ...type.factionStats[faction] } : type.stats; // per-side differences
+    this.army = services.world?.armies?.[faction] ?? DEFAULT_ARMY[faction]; // US Army / Bundeswehr, Soviet Army / NVA
+    const fs = type.factionStats;
+    this.stats = fs?.[faction] || fs?.[this.army] ? { ...type.stats, ...fs[faction], ...fs[this.army] } : type.stats; // per-side (and per-army) differences
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
     this.name = name ?? `${type.shortName} ${this.id}`;

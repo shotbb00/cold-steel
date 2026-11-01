@@ -22,7 +22,7 @@ import { InputHandler } from './InputHandler.js';
 import { CameraManager, CameraMode } from './CameraManager.js';
 import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
-import { PLAYER_FACTION, FACTIONS, enemyOf } from '../data/factions.js';
+import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { getUnitType } from '../data/units/index.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
@@ -79,7 +79,7 @@ export class GameEngine {
    * `net`: { role: 'host' | 'client', link } for a multiplayer battle;
    * `conditions`: { time, weather } (core/Conditions.js).
    */
-  constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null }) {
+  constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
     this.mode = mode;
     // the size the picture is drawn at: the container, not innerWidth/innerHeight — on an iPhone
@@ -90,6 +90,7 @@ export class GameEngine {
     this.coop = !!(net && coop);
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
+    this.armies = armiesFrom(armies); // which army each side fields (data/factions.js ARMIES)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -133,6 +134,7 @@ export class GameEngine {
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
     this.world.river = map.river ?? null; // water that stops and slows
+    this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
     this.cover.onRemove = (c) => this.world.nav.removeCollider(c); // (a tree that came down)
@@ -341,6 +343,11 @@ export class GameEngine {
     this.bus.emit('terrain:changed');
     this.audio.play('stomp', { x, y: river.level + 1, z: c.z }, { volume: 1 });
     this.announce('A bridge has been laid across the river.');
+  }
+
+  /** The army `faction` fields this battle ('us', 'bw', 'sov', 'nva'). */
+  armyOf(faction) {
+    return this.armies[faction];
   }
 
   /** May this machine's player command stack `s`? (Co-op: only their own.) */

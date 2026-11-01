@@ -9,6 +9,7 @@ import { settings } from '../core/Settings.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { ACTIONS, keys, keyName } from '../core/Keys.js';
 import { silhouette } from './Icons.js';
+import { artKey } from '../data/factions.js';
 
 // the key card: every bound key by where it works, and what the mouse does
 const MOUSE = {
@@ -152,7 +153,7 @@ export class HUD {
       top.className = 'sel-top';
       top.append(span('sel-name', s.name), span('sel-type', `${s.type.shortName} · ${s.aliveCount}/${s.units.length}`));
       box.replaceChildren(top, span('sel-state', `${s.ai.state} · ${s.moraleWord}`), bar(s));
-      box.insertAdjacentHTML('afterbegin', silhouette(s.type.id, s.faction, 'sel-sil'));
+      box.insertAdjacentHTML('afterbegin', silhouette(s.type.id, artKey(s.type, s.army, s.faction), 'sel-sil'));
       return;
     }
     box.className = 'many';

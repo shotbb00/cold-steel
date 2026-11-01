@@ -14,7 +14,7 @@ import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { NET_VERSION } from '../net/protocol.js';
 import { hostGame, joinGame, createInvite, acceptInvite, acceptReply, cleanCode, CODE_LEN } from '../net/Link.js';
-import { conditionsPicker, rulesPicker, loadRules } from './MainMenu.js';
+import { conditionsPicker, rulesPicker, loadRules, armiesPicker } from './MainMenu.js';
 import { DIFFICULTY } from '../data/rules.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { settings } from '../core/Settings.js';
@@ -215,7 +215,7 @@ export class Lobby {
     setTogether();
     q('Where', this.chips(Object.values(MAPS), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
     this.sidesBox = el('div', 'side-pick');
-    q('Which side', this.sidesBox);
+    q('Which side', this.sidesBox, armiesPicker(this.choice, () => this.sendLobby()));
     this.renderSides();
     q('Time and weather', conditionsPicker(this.choice, () => this.sendLobby()));
     this.rulesBox = el('div', 'rules-box');
@@ -486,7 +486,7 @@ export class Lobby {
     } else {
       link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
-      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
+      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
     this.render();
