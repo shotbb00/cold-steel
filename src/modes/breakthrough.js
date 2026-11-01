@@ -82,6 +82,7 @@ export default {
     deploy(game, att, camp?.forces?.[att] ?? ATTACK_FORCE, front.length ? front : [map.bases[att]], { back: 40, spread: 30 });
     deploy(game, def, camp?.forces?.[def] ?? DEFENCE_FORCE, [...pointsOf(active), ...pointsOf(active + 1)], { back: 12, spread: 18 });
     state.strength[att] = state.maxStrength = Math.max(fieldStrength(game, att), fieldStrength(game, def)) * 1.2;
+    state.start = { [att]: fieldStrength(game, att), [def]: fieldStrength(game, def) }; // the campaign: what's left of each side
     state.strength[def] = fieldStrength(game, def);
 
     // campaign events (campaign/Campaign.js EVENTS): who may call in aircraft
@@ -154,9 +155,11 @@ export default {
         cid: s.cid ?? null, type: s.type.id, name: s.name, men: s.aliveCount, xp: s.xp, rank: s.rank,
       }));
       const c = loadCampaign();
-      if (c?.next) {
-        const { gain } = recordBattle(c, { won: mine.victory, survivors });
-        mine.subtitle += ` ${survivors.length} stacks come back; ${gain} replacement points.`;
+      if (c?.battles?.length) {
+        const foe = enemyOf(game.playerFaction);
+        const enemyLeft = Math.min(1, fieldStrength(game, foe) / (game.modeState.start?.[foe] || 1));
+        const { gain } = recordBattle(c, { won: mine.victory, survivors, enemyLeft });
+        mine.subtitle += ` ${survivors.length} stacks come back${gain ? `; ${gain} replacement points` : ''}.`;
       }
     }
     game.end(mine);

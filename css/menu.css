@@ -214,23 +214,46 @@
 /* campaign (src/ui/CampaignPanel.js) */
 .cp-grid { display: grid; grid-template-columns: minmax(0, 460px) minmax(240px, 1fr); gap: 22px; align-items: start; }
 .cp-map svg { width: 100%; height: auto; display: block; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
-.cp-sector rect { stroke: rgba(0, 0, 0, 0.5); stroke-width: 1; }
-.cp-sector.ours rect { fill: rgba(111, 168, 255, 0.22); }
-.cp-sector.theirs rect { fill: rgba(255, 90, 72, 0.2); }
-.campaign .pact-side .cp-sector.ours rect { fill: rgba(255, 90, 72, 0.22); }
-.cp-sector.river rect { stroke: #6f9ab0; stroke-width: 2; stroke-dasharray: 4 3; }
-.cp-sector text { fill: var(--text); font-size: 11.5px; pointer-events: none; }
-.cp-sector.target rect { stroke: var(--gold); stroke-width: 3; animation: cp-pulse 1.4s ease-in-out infinite; }
-.cp-sector.pick { cursor: pointer; }
-.cp-sector.pick rect { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 5 3; }
-.cp-sector.pick:hover rect { fill: rgba(224, 180, 90, 0.3); }
-.cp-front { stroke: var(--gold); stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(224, 180, 90, 0.7)); }
 @keyframes cp-pulse { 50% { stroke-opacity: 0.35; } }
 .cp-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .cp-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
 .cp-legend .ours::before { background: rgba(111, 168, 255, 0.6); }
 .cp-legend .theirs::before { background: rgba(255, 90, 72, 0.6); }
-.cp-legend .river::before { border: 2px dashed #6f9ab0; width: 7px; height: 7px; }
+.cp-legend { flex-wrap: wrap; }
+.cp-legend .obj::before { background: var(--gold); transform: rotate(45deg) scale(0.8); }
+.cp-legend .foe::before { background: transparent; border: 2px solid var(--enemy); width: 7px; height: 7px; }
+.cp-road { stroke: rgba(200, 205, 185, 0.32); stroke-width: 2.5; }
+.cp-sec { cursor: pointer; }
+.cp-sec circle { stroke-width: 2.5; fill: #0d100c; }
+.cp-sec.ours circle { stroke: var(--ally); fill: #18263a; }
+.cp-sec.theirs circle { stroke: var(--enemy); fill: #3a1916; }
+.cp-sec.depot circle { stroke-width: 5; }
+.cp-sec .obj { fill: var(--gold); pointer-events: none; }
+.cp-sec text { fill: var(--text); font-size: 15.5px; pointer-events: none; paint-order: stroke; stroke: rgba(10, 12, 9, 0.85); stroke-width: 3px; }
+.cp-sec.reach circle { stroke-dasharray: 5 3; filter: drop-shadow(0 0 4px rgba(224, 180, 90, 0.8)); }
+.cp-sec.reach:hover circle { fill: #4a3c1c; }
+.cp-sec.here circle { stroke: var(--gold); }
+.cp-sec.battle circle { stroke: var(--gold); stroke-width: 4; animation: cp-pulse 1.4s ease-in-out infinite; }
+.cp-bn rect { fill: var(--ally); stroke: rgba(10, 12, 9, 0.8); stroke-width: 1.5; }
+.cp-bn text { fill: #0b0d0a; font-size: 15px; font-weight: 700; stroke: none; }
+.cp-bn.sel rect { fill: var(--gold); stroke: #fff; stroke-width: 2; }
+.cp-foe rect { fill: rgba(255, 90, 72, 0.25); stroke: var(--enemy); stroke-width: 1.5; }
+.cp-foe .bar { fill: var(--enemy); stroke: none; }
+.cp-order line, .cp-order path { stroke: var(--ally); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 4; }
+.cp-order path { stroke-dasharray: none; }
+.cp-order.attack line, .cp-order.attack path { stroke: var(--gold); stroke-width: 4; }
+.cp-orders { display: grid; gap: 4px; width: 100%; }
+.cp-order-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; text-align: left; background: rgba(200, 210, 180, 0.05); border: 1px solid var(--line); color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; }
+.cp-order-row.on { border-color: var(--gold); background: rgba(224, 180, 90, 0.12); }
+.cp-num { display: inline-grid; place-items: center; width: 20px; height: 20px; background: var(--ally); color: #0b0d0a; font-weight: 700; font-size: 12px; flex: none; }
+.cp-order-row.on .cp-num { background: var(--gold); }
+.cp-bname { flex: 1; min-width: 0; display: grid; }
+.cp-bname small { color: var(--muted); font-size: 12px; }
+.cp-bname small b { color: var(--gold); font-weight: 600; }
+.cp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.cp-actions .deploy { margin-top: 0; }
+.cp-length { margin-bottom: 4px; }
+.cp-battalion .rw-tabs { margin-top: 18px; }
 .cp-battle { padding: 16px 18px; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--gold); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .cp-battle h3 { margin: 0; font-size: 24px; letter-spacing: 0.04em; }
 .cp-battle h3 small { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.16em; margin-left: 6px; }
@@ -295,13 +318,6 @@
 .bc-steps li::marker { color: var(--gold); font-variant-numeric: tabular-nums; }
 
 /* campaign: battle marks, the coming attack, briefing event and intel */
-.cp-mark circle { stroke-width: 1.5; fill: rgba(10, 12, 9, 0.75); }
-.cp-mark path { stroke-width: 1.6; stroke-linecap: round; }
-.cp-mark.won circle, .cp-mark.won path { stroke: var(--ally); }
-.cp-mark.lost circle, .cp-mark.lost path { stroke: var(--enemy); }
-.cp-arrow path { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-.cp-arrow.ours path { stroke: var(--ally); }
-.cp-arrow.theirs path { stroke: var(--enemy); }
 .cp-event { margin: 10px 0 0; padding: 7px 10px; border-left: 3px solid var(--gold); background: rgba(224, 180, 90, 0.08); font-size: 13.5px; }
 .cp-intel { margin-top: 12px; }
 .cp-intel dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 6px 0 0; font-size: 13.5px; }
@@ -457,3 +473,5 @@
   .bc-chapter { grid-template-columns: 30px 1fr; }
   .bc-chapter button { grid-column: 1 / -1; }
 }
+.cp-hint { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0; }
+@media (max-width: 600px) { .cp-map { overflow-x: auto; } .cp-map svg { min-width: 620px; } } /* the road map keeps readable names on a phone: it scrolls sideways */
