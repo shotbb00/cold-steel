@@ -7,8 +7,9 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
-import { STRUCTURES } from './Construction.js';
+import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
 import { GAS } from './Gas.js';
 import { CameraMode } from '../core/CameraManager.js';
@@ -161,6 +162,7 @@ export class CommandSystem {
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
     else if (keys.is(code, 'gas')) this.runCommand('gas');
+    else if (keys.is(code, 'barrage')) this.runCommand('barrage');
     else if (keys.is(code, 'cancelJob')) this.runCommand('cancelJob');
     else if (keys.is(code, 'smoke')) this.runCommand('smoke');
     else if (keys.is(code, 'unload')) this.runCommand('unload');
@@ -251,6 +253,16 @@ export class CommandSystem {
       if (this.game.air.limit[this.faction] === 0) return this.game.bus.emit('toast', 'No support in this battle');
       if (!this.game.gas.ready(this.faction)) return this.game.bus.emit('toast', `Gas not ready (${Math.ceil(this.game.gas.cooldownLeft(this.faction))} s)`);
       this.startTargeting({ kind: 'smoke', gas: true });
+    } else if (cmd === 'barrage') {
+      const g = this.game;
+      if (doctrine(g, this.faction, 'mass')) {
+        if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
+        if (!g.barrage.ready(this.faction)) return g.bus.emit('toast', `Barrage not ready (${Math.ceil(g.barrage.cooldownLeft(this.faction))} s)`);
+        return this.startTargeting({ kind: 'smoke', barrage: true });
+      }
+      const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect && armyDoctrine(s.army, 'walze'));
+      if (!guns.length) return g.bus.emit('toast', doctrine(g, this.faction, 'walze') ? 'Select artillery for the Feuerwalze' : 'Your army has no barrage');
+      this.startTargeting({ kind: 'smoke', walze: true, stacks: guns });
     }
   }
 
@@ -277,7 +289,7 @@ export class CommandSystem {
       // face the enemy by default
       const base = this.game.world.bases[this.enemy];
       t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
-      t.hint = `${def.name} (${def.cost} CP): ${click} to place — ${turn('it')}, ${cancel}`;
+      t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place — ${turn('it')}, ${cancel}`;
     } else if (t.kind === 'engineer') {
       const geo = new THREE.RingGeometry(0.9, 1, 48);
       geo.rotateX(-Math.PI / 2);
@@ -297,7 +309,10 @@ export class CommandSystem {
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
       if (t.gas) t.decal.mesh.material.color.set(0xd8d27a);
-      t.hint = t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells should fall — ${cancel}`
+      if (t.barrage || t.walze) t.decal.mesh.material.color.set(0xe0904a);
+      t.hint = t.barrage ? `Barrage (${doctrine(this.game, this.faction, 'mass').cost} CP): ${click} the middle of the sector — ${cancel}`
+        : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
+        : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells should fall — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
@@ -384,6 +399,12 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
       this.addMarker(at, 'attack');
       this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke' && t.barrage) {
+      if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.walze) {
+      this.game.orders.issue({ t: 'walze', s: ids(t.stacks), x: p.x, z: p.z });
+      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.gas) {
       if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
@@ -410,7 +431,7 @@ export class CommandSystem {
       t.ghost.position.set(p.x, p.y + 0.4, p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
-      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, 10);
+      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? doctrine(this.game, this.faction, 'mass').radius : 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;

@@ -145,6 +145,9 @@ export interface UnitType {
   cost: number;
   /** not offered anywhere (fortifications, crews) */
   hidden?: boolean;
+  /** only these armies field it (the NVA's Kampfgruppe); uncapped: outside the stack limit */
+  armies?: string[];
+  uncapped?: boolean;
   /** only arrives by helicopter (air assault) */
   airOnly?: boolean;
   /** only offered on maps with a river */

@@ -205,6 +205,8 @@
 .conditions { display: flex; flex-direction: column; gap: 8px; }
 .cond-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .cond-label { width: 70px; color: var(--muted); font-size: 13px; }
+.army-perks { margin: -2px 0 6px 84px; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12px; line-height: 1.4; color: var(--muted); max-width: 456px; }
+.army-perks b { color: var(--text, #e8e4d8); font-weight: 600; }
 .rules .cond-label { width: 110px; cursor: help; }
 
 .mp-together { margin-top: 10px; }
@@ -264,6 +266,7 @@
 @media (max-width: 560px) {
   .rules .cond-row { flex-direction: column; align-items: flex-start; gap: 6px; }
   .rules .cond-label { width: auto; }
+  .army-perks { margin-left: 0; }
 }
 
 /* the encyclopedia entry under a unit's stats (src/data/codex.js) */

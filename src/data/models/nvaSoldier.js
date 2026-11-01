@@ -13,6 +13,8 @@ import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, he
 
 const STRICH = 0x6c6c55;   // Strichtarn: grey-olive ground
 const STRICH_DK = 0x56563f;
+const KDA = 0x62655f;      // Kampfgruppen der Arbeiterklasse: stone-grey drill
+const KDA_DK = 0x4c4f4a;
 const LEATHER = 0x2e2117;
 const BOOTS = 0x151515;
 const STEEL = 0x262626;
@@ -128,24 +130,26 @@ function strichtarn(geo) {
   return geo;
 }
 
-export function buildNvaSoldier({ weapon: kind = 'rifle', crew = false, scout = false, radio = false, airAssault = false } = {}) {
+export function buildNvaSoldier({ weapon: kind = 'rifle', crew = false, scout = false, radio = false, airAssault = false, militia = false } = {}) {
   const w = weapon(kind);
-  const gear = !(crew || scout);
+  const gear = !(crew || scout || militia);
+  const cloth = militia ? KDA : STRICH;     // the Kampfgruppen's stone-grey (no Strichtarn: its speckle keys on STRICH)
+  const clothDk = militia ? KDA_DK : STRICH_DK;
   const torso = [
-    ...trunk({ upper: STRICH, lower: STRICH, cut: 1.02 }),
-    ...pair((s) => P.box(0.1, 0.11, 0.02, { x: s * 0.095, y: 1.38, z: 0.137, color: STRICH })),
-    ...pair((s) => P.box(0.11, 0.03, 0.024, { x: s * 0.095, y: 1.445, z: 0.14, color: STRICH_DK })),
-    loft([[0, 1.535, -0.01, 0.12, 0.1, 2], [0, 1.585, -0.02, 0.112, 0.095, 2]], { color: STRICH_DK }, 12),       // collar
+    ...trunk({ upper: cloth, lower: cloth, cut: 1.02 }),
+    ...pair((s) => P.box(0.1, 0.11, 0.02, { x: s * 0.095, y: 1.38, z: 0.137, color: cloth })),
+    ...pair((s) => P.box(0.11, 0.03, 0.024, { x: s * 0.095, y: 1.445, z: 0.14, color: clothDk })),
+    loft([[0, 1.535, -0.01, 0.12, 0.1, 2], [0, 1.585, -0.02, 0.112, 0.095, 2]], { color: clothDk }, 12),       // collar
     loft([[0, 1.04, 0, 0.192, 0.134, 3], [0, 1.085, 0, 0.188, 0.13, 3]], { color: LEATHER }, 12),                // leather belt
     P.box(0.05, 0.045, 0.012, { y: 1.06, z: 0.136, color: 0x707060 }),
     ...(gear ? [
       loft([[0.11, 1.02, 0.148, 0.065, 0.032, 4], [0.11, 1.16, 0.152, 0.067, 0.034, 4]], { color: RIG }, 8),       // three-magazine pouch
       P.box(0.13, 0.035, 0.07, { x: 0.11, y: 1.17, z: 0.154, rx: 0.15, color: RIG }),
-      P.box(0.075, 0.18, 0.15, { x: -0.21, y: 1.0, z: 0.02, color: STRICH_DK }),                                 // gas-mask bag
+      P.box(0.075, 0.18, 0.15, { x: -0.21, y: 1.0, z: 0.02, color: clothDk }),                                 // gas-mask bag
       P.cyl(0.042, 0.045, 0.14, { x: 0.19, y: 1.0, z: -0.1, color: 0x3d4430 }, 10),                              // canteen
       ...pair((s) => loft([[0.1, 1.09, 0.14], [0.11, 1.3, 0.15], [0.1, 1.48, 0.12], [0.08, 1.55, 0.02]]
         .map(([x, y, z]) => [s * x, y, z, 0.018, 0.006, 2]), { color: LEATHER }, 6)),                             // the straps
-      loft([[0, 1.24, -0.2, 0.14, 0.06, 4], [0, 1.38, -0.215, 0.145, 0.068, 4.5], [0, 1.47, -0.2, 0.13, 0.06, 4]], { color: STRICH_DK }, 12), // Sturmgepäck
+      loft([[0, 1.24, -0.2, 0.14, 0.06, 4], [0, 1.38, -0.215, 0.145, 0.068, 4.5], [0, 1.47, -0.2, 0.13, 0.06, 4]], { color: clothDk }, 12), // Sturmgepäck
       P.box(0.11, 0.2, 0.03, { x: -0.06, y: 1.08, z: -0.18, color: 0x3a3a2b }),                                   // spade
     ] : []),
     ...(radio ? [
@@ -153,10 +157,10 @@ export function buildNvaSoldier({ weapon: kind = 'rifle', crew = false, scout = 
       P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: gear ? -0.31 : -0.23, rx: -0.12, color: STEEL }, 4),
     ] : []),
     ...head(),
-    ...(scout ? [
-      loft([[0, 1.77, -0.008, 0.1, 0.11, 2.4], [0, 1.83, -0.01, 0.1, 0.11, 2.4], [0, 1.865, -0.012, 0.085, 0.095, 2.4], [0, 1.875, -0.012, 0.02, 0.02, 2]], { color: STRICH }, 12),
-      P.box(0.15, 0.01, 0.07, { y: 1.785, z: 0.125, rx: 0.12, color: STRICH_DK }),
-      ...binoculars(STEEL),
+    ...(scout || militia ? [
+      loft([[0, 1.77, -0.008, 0.1, 0.11, 2.4], [0, 1.83, -0.01, 0.1, 0.11, 2.4], [0, 1.865, -0.012, 0.085, 0.095, 2.4], [0, 1.875, -0.012, 0.02, 0.02, 2]], { color: cloth }, 12),
+      P.box(0.15, 0.01, 0.07, { y: 1.785, z: 0.125, rx: 0.12, color: clothDk }),
+      ...(scout ? binoculars(STEEL) : []),
     ] : airAssault ? [
       loft([[0.01, 1.795, -0.005, 0.1, 0.11, 2.2], [0.03, 1.83, -0.01, 0.125, 0.13, 2.2], [0.045, 1.855, -0.01, 0.1, 0.11, 2.2], [0.05, 1.86, -0.01, 0.02, 0.02, 2]], { color: 0x9a3a24 }, 12), // orange-red beret
     ] : crew ? [
@@ -168,12 +172,12 @@ export function buildNvaSoldier({ weapon: kind = 'rifle', crew = false, scout = 
       ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.075, y: 1.65, z: 0.035, rz: s * -0.25, color: LEATHER })),
     ]),
   ];
-  const arms = [...armsHold({ sleeve: STRICH, cuff: STRICH_DK, band: FACTIONS.pact.marking }), ...w.parts];
+  const arms = [...armsHold({ sleeve: cloth, cuff: clothDk, band: FACTIONS.pact.marking }), ...w.parts];
   const thigh = merge([
-    thighPart({ color: STRICH }),
-    P.box(0.04, 0.14, 0.15, { x: 0.098, y: -0.24, color: STRICH_DK }),
+    thighPart({ color: cloth }),
+    P.box(0.04, 0.14, 0.15, { x: 0.098, y: -0.24, color: clothDk }),
   ]);
-  const shin = grime(merge(shinPart({ color: STRICH, boot: BOOTS, bootTop: 0.26 })), -0.3, -0.5);
+  const shin = grime(merge(shinPart({ color: cloth, boot: BOOTS, bootTop: 0.26 })), -0.3, -0.5);
   return {
     torso: finish(strichtarn(merge(torso))),
     arms: finish(strichtarn(merge(arms))),

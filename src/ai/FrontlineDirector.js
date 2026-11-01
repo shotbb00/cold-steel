@@ -40,7 +40,8 @@
 import { AIState } from './StackAI.js';
 import { getUnitType } from '../data/units/index.js';
 import { enemyOf } from '../data/factions.js';
-import { STRUCTURES } from '../systems/Construction.js';
+import { unitCost, doctrine } from '../data/doctrine.js';
+import { STRUCTURES, structureCost } from '../systems/Construction.js';
 
 const THINK = 4;
 const BUILD_ORDER = [
@@ -138,14 +139,16 @@ export class FrontlineDirector {
   // ---------------------------------------------------------------- economy & defence
 
   buy() {
-    const mine = this.myStacks();
+    const kampf = doctrine(this.game, this.faction, 'kampf') && getUnitType('kampfgruppe'); // the NVA raises militia outside the cap
+    if (kampf && this.myStacks().filter((s) => s.type.id === 'kampfgruppe').length < 4 && this.state.cp[this.faction] >= kampf.cost * 3) this.state.buy(this.faction, 'kampfgruppe');
+    const mine = this.myStacks().filter((s) => !s.type.uncapped);
     if (mine.length >= this.state.maxStacks) return;
     for (let tries = 0; tries < BUILD_ORDER.length; tries++) {
       const id = BUILD_ORDER[this.buildIndex % BUILD_ORDER.length];
       const barred = this.state.allow && !this.state.allow(getUnitType(id)); // e.g. infantry only
       const capped = barred || (CAPS[id] !== undefined && mine.filter((s) => s.type.id === id).length >= CAPS[id]);
       if (capped) { this.buildIndex++; continue; }
-      if (this.state.cp[this.faction] >= getUnitType(id).cost) {
+      if (this.state.cp[this.faction] >= unitCost(getUnitType(id), this.game.armyOf(this.faction))) {
         this.state.buy(this.faction, id);
         this.buildIndex++;
       }
@@ -236,9 +239,10 @@ export class FrontlineDirector {
     const yaw = Math.atan2(foeBase.x - s.anchor.x, foeBase.z - s.anchor.z);
     const x = s.anchor.x + Math.sin(yaw) * ahead + Math.cos(yaw) * side + (Math.random() - 0.5) * 4;
     const z = s.anchor.z + Math.cos(yaw) * ahead - Math.sin(yaw) * side;
-    if (!this.game.spend(this.faction, STRUCTURES[kind].cost)) return;
+    const cost = structureCost(this.game, this.faction, STRUCTURES[kind]);
+    if (!this.game.spend(this.faction, cost)) return;
     if (!this.game.construction.place(kind, x, z, yaw, this.faction, s)) {
-      this.game.refund(this.faction, STRUCTURES[kind].cost);
+      this.game.refund(this.faction, cost);
       s.fortifications = done + 1; // bad ground; don't keep trying here
     }
   }
@@ -286,6 +290,8 @@ export class FrontlineDirector {
         });
         if (!gathered && this.now - op.since < 70) return;
         this.game.air.call(this.faction, t.x, t.z); // a strafing run ahead of the assault (if affordable and ready)
+        if (doctrine(this.game, this.faction, 'mass') && this.game.barrage.ready(this.faction) && this.state.cp[this.faction] > 300) this.game.barrage.call(this.faction, t.x, t.z); // the Soviet preparatory barrage
+        for (const s of this.myStacks()) if (s.stats.indirect && !s.barrage) s.startBarrage(t.x, t.z); // the NVA's Feuerwalze (others: nothing)
         if (this.state.cp[this.faction] > 450) {
           const lz = this.offsetTowardBase(t, 35);
           this.game.air.call(this.faction, lz.x, lz.z, null, 'lift'); // and a squad landed right behind it

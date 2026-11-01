@@ -3,6 +3,7 @@
 // for, how many you have out, and why it can't be bought when it can't. Click to call one in
 // (it arrives at your base); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
 // one lands under "Other". The battle doesn't pause.
+import { unitCost } from '../data/doctrine.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
@@ -39,7 +40,7 @@ export class ReinforceWindow {
     const tabs = root.querySelector('.rw-tabs');
     this.again = root.querySelector('.rw-again');
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
-    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
+    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
     this.cards = [];
     for (const [cat, title] of SECTIONS) {
       const list = types.filter((t) => (SECTIONS.some(([c]) => c === t.category) ? t.category : 'other') === cat);
@@ -57,7 +58,7 @@ export class ReinforceWindow {
         card.type = 'button';
         card.tabIndex = -1;
         card.className = 'rw-card';
-        card.innerHTML = `${silhouette(type.id, artKey(type, army, me), 'rw-sil')}<span class="rw-name">${forArmy(type.variants, army, me)?.name ?? type.name}</span><span class="rw-cost">${type.cost}</span>
+        card.innerHTML = `${silhouette(type.id, artKey(type, army, me), 'rw-sil')}<span class="rw-name">${forArmy(type.variants, army, me)?.name ?? type.name}</span><span class="rw-cost">${unitCost(type, army)}</span>
           <span class="rw-text">${blurb(type, me, army)}</span><span class="rw-have"></span><span class="rw-why"></span>`;
         card.addEventListener('click', () => game.bus.emit('ui:reinforce', type.id));
         sec.querySelector('.rw-cards').append(card);
@@ -112,10 +113,13 @@ export class ReinforceWindow {
     this.stacks.textContent = `${count} / ${this.state.maxStacks} stacks`;
     this.stacks.classList.toggle('full', full);
     const lastType = this.last && this.cards.find((c) => c.type.id === this.last)?.type;
-    if (lastType) this.again.disabled = full || cp < lastType.cost;
+    const army = g.armyOf(me);
+    if (lastType) this.again.disabled = full || cp < unitCost(lastType, army);
     for (const { card, type, have, why } of this.cards) {
-      card.disabled = full || cp < type.cost;
-      why.textContent = full ? 'Stack limit reached' : cp < type.cost ? `Need ${type.cost - cp} more CP` : '';
+      const cost = unitCost(type, army);
+      const capped = full && !type.uncapped;
+      card.disabled = capped || cp < cost;
+      why.textContent = capped ? 'Stack limit reached' : cp < cost ? `Need ${cost - cp} more CP` : '';
       const n = mine.filter((s) => s.type.id === type.id).length;
       have.textContent = n ? `${n} in the field` : '';
     }

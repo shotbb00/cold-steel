@@ -10,6 +10,9 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { Barrage } from '../systems/Barrage.js';
+import { Doctrine } from '../systems/Doctrine.js';
+import { unitCost } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
@@ -94,7 +97,7 @@ export class GameEngine {
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
-    this.systems = []; // extra per-frame systems added by game modes
+    this.systems = [new Doctrine(this)]; // extra per-frame systems (game modes add theirs); the armies' doctrine
     this.ended = false;
     this.time = 0;
 
@@ -175,6 +178,7 @@ export class GameEngine {
     this.air = new AirStrike(this);
     this.support = new Support(this);
     this.gas = new Gas(this);             // chemical fire missions (a support power)
+    this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
     this.fire = new Fire(this);           // grass and forest fires
@@ -199,6 +203,7 @@ export class GameEngine {
 
     this.bindControls();
     mode.setup(this);
+    if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
     // the AI side starts with and earns twice as much to make up for it
@@ -476,7 +481,7 @@ export class GameEngine {
   retire(stack) {
     const alive = stack.units.filter((u) => u.alive);
     const health = alive.reduce((a, u) => a + u.hp / u.maxHp, 0) / stack.units.length;
-    const back = Math.round(stack.type.cost * 0.5 * health);
+    const back = Math.round(unitCost(stack.type, stack.army) * 0.5 * health);
     this.removeStack(stack);
     if (this.modeState?.cp) this.refund(stack.faction, back, stack.owner);
     this.tell(stack.faction, `${stack.name} withdrawn${this.modeState?.cp ? ` — ${back} CP back` : ''}`);
@@ -587,6 +592,7 @@ export class GameEngine {
     this.smoke.update(dt);
     this.flares.update(dt);
     this.gas.update(dt);
+    this.barrage.update(dt);
     this.fire.update(dt);
     this.counterBattery.update(dt);
     this.jamming.update(dt);
@@ -636,6 +642,7 @@ export class GameEngine {
     this.smoke.update(dt);
     this.flares.update(dt);
     this.gas.update(dt);
+    this.barrage.update(dt);
     this.fire.update(dt);
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);

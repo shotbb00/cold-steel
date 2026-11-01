@@ -102,7 +102,7 @@ export class Unit {
   }
 
   suppress(amount) {
-    this.suppression = Math.min(1.5, this.suppression + amount);
+    this.suppression = Math.min(1.5, this.suppression + amount * (this.stack.doc?.supp ?? 1)); // the army's doctrine (systems/Doctrine.js)
   }
 
   /** A shot came from `from` (near miss or hit): look that way for a while. */

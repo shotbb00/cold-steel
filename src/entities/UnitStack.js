@@ -32,6 +32,8 @@ import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL } from '../world/Nav.js';
+import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
+import { RECON } from '../systems/Doctrine.js';
 
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
@@ -98,6 +100,10 @@ export class UnitStack {
     this.army = services.world?.armies?.[faction] ?? DEFAULT_ARMY[faction]; // US Army / Bundeswehr, Soviet Army / NVA
     const fs = type.factionStats;
     this.stats = fs?.[faction] || fs?.[this.army] ? { ...type.stats, ...fs[faction], ...fs[this.army] } : type.stats; // per-side (and per-army) differences
+    const cav = RECON.has(type.id) && armyDoctrine(this.army, 'cavalry'); // the US Army's Cavalry screen sees further
+    if (cav) this.stats = { ...this.stats, sight: (this.stats.sight ?? 100) * cav.sight };
+    const walze = ARTILLERY.has(type.id) && armyDoctrine(this.army, 'walze'); // the NVA's Feuerwalze reloads faster
+    if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
     this.name = name ?? `${type.shortName} ${this.id}`;
@@ -438,7 +444,7 @@ export class UnitStack {
 
     // --- locomotion: seek destination, keep personal space, slide around cover
     const mud = this.world.conditions?.mud;
-    let maxSpeed = s.speed * u.speedMul * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
+    let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
     // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
@@ -620,7 +626,7 @@ export class UnitStack {
   /** Body upkeep for a player-driven unit: reload, posture, timers. */
   updateBody(u, dt) {
     const s = u.stats;
-    u.cooldown -= dt * u.fireRateMult;
+    u.cooldown -= dt * u.fireRateMult * (this.doc?.fire ?? 1);
     if (u.reloadT > 0) {
       u.reloadT -= dt;
       if (u.reloadT <= 0) u.mag = s.magSize;
@@ -674,7 +680,7 @@ export class UnitStack {
       u.towing = !u.setUp || this.world.time - u.setUp.at < s.towed.deploy;
       if (u.towing) { u.target = null; u.airTarget = null; return; }
     }
-    u.cooldown -= dt * u.fireRateMult;
+    u.cooldown -= dt * u.fireRateMult * (this.doc?.fire ?? 1);
     u.retarget -= dt;
     if (u.reloadT > 0) {
       u.reloadT -= dt;
@@ -687,7 +693,7 @@ export class UnitStack {
     }
     if (u.retarget <= 0) {
       u.retarget = (0.4 + Math.random() * 0.3 + u.suppression * 0.3) * (this.led ? LED.react : this.hadOfficer ? LEADERLESS.react : 1);
-      u.target = this.smokeMission(u) ?? this.pickTarget(u);
+      u.target = this.smokeMission(u) ?? this.barrageMission(u) ?? this.pickTarget(u);
     }
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
@@ -1107,6 +1113,30 @@ export class UnitStack {
     return o.target;
   }
 
+  /**
+   * The NVA's Feuerwalze (data/doctrine.js 'walze'): the guns fire on a stand-in target that
+   * systems/Doctrine.js walks forward `step` m every `every` s, toward the enemy, `steps` times.
+   */
+  startBarrage(x, z) {
+    const w = armyDoctrine(this.army, 'walze');
+    if (!w || !this.stats.indirect) return;
+    const d = Math.hypot(x - this.centroid.x, z - this.centroid.z);
+    if (d > this.stats.range) return this.services.tell(this.faction, `${this.name}: out of range (${this.stats.range} m)`);
+    const foe = this.world.bases[enemyOf(this.faction)] ?? { x, z: z + 1 };
+    const yaw = Math.atan2(foe.x - x, foe.z - z);
+    this.ai.halt();
+    this.barrage = {
+      yaw, t: 0, left: w.steps, step: w.step, every: w.every,
+      target: { pos: { x, y: this.world.terrain.heightAt(x, z), z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' } },
+    };
+    for (const u of this.units) u.retarget = 0;
+    this.services.tell(this.faction, `${this.name}: Feuerwalze — the barrage walks forward`);
+  }
+
+  barrageMission(u) {
+    return this.barrage && u.stats.indirect ? this.barrage.target : null;
+  }
+
   /** A part knocked out by a hit from `facing` (1 head-on, -1 from behind). */
   hitPart(u, facing) {
     if (Math.random() > PARTS.chance) return;
@@ -1171,7 +1201,8 @@ export class UnitStack {
       * (u.wounded ? 1.3 : 1)
       * (u.masked > 0 ? MASKED.spread : 1)    // fogged gas-mask lenses (systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
-      * (this.deployed(u) ? 1 : 3);           // an MG fired from the hip sprays
+      * (this.deployed(u) ? 1 : 3)            // an MG fired from the hip sprays
+      / (this.doc?.aim ?? 1);                 // the army's doctrine (systems/Doctrine.js)
     this.shoot(u, _v, spread);
   }
 
@@ -1233,6 +1264,7 @@ export class UnitStack {
    */
   damageUnit(u, amount, source, pierce = 0, dir = null, vsArmor = 1) {
     if (!u.alive) return;
+    if (this.markedUntil > this.world.time) amount *= this.markDamage; // spotted by the US Army's Cavalry screen
     if (u.invulnerable) {
       // a fortification that can't be attacked yet (modes/lanes.js): the round just spalls off
       u.flash = 0.06;

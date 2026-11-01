@@ -33,6 +33,7 @@ import mineClear from './mineClear.ts';
 import jammer from './jammer.ts';
 import commandPost from './commandPost.ts';
 import airAssault from './airAssault.ts';
+import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 
 export const UNIT_TYPES = {
@@ -67,6 +68,7 @@ export const UNIT_TYPES = {
   [jammer.id]: jammer,
   [commandPost.id]: commandPost,
   [airAssault.id]: airAssault,
+  [kampfgruppe.id]: kampfgruppe,
   [crew.id]: crew,
   [bunker.id]: bunker,
   [strongpoint.id]: strongpoint,

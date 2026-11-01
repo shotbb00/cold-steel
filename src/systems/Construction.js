@@ -35,6 +35,8 @@
 import * as THREE from 'three';
 import { P, merge } from '../data/units/geometry.js';
 import { smoothstep } from '../core/math.js';
+import { enemyOf } from '../data/factions.js';
+import { doctrine } from '../data/doctrine.js';
 
 export const STRUCTURES = {
   sandbags: { id: 'sandbags', name: 'Sandbags', cost: 15, work: 60, length: 4.5, width: 0.8 },
@@ -46,6 +48,9 @@ export const STRUCTURES = {
   revetment: { id: 'revetment', name: 'Vehicle position', cost: 25, work: 22, length: 4.6, width: 8, dozer: true },
   span: { id: 'span', name: 'Bridge', cost: 0, work: 20, length: 5, width: 26, action: true, layer: true },
 };
+/** What `def` costs `faction`: the Bundeswehr's Sperrverband builds cheaper (data/doctrine.js). */
+export const structureCost = (game, faction, def) => Math.round(def.cost * (doctrine(game, faction, 'sperr')?.cost ?? 1));
+
 /** A seeded random (the work in progress and the finished structure use the same parts). */
 const mulberry = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const CLEAR_RADIUS = 9;
@@ -163,7 +168,7 @@ export class Construction {
         }
         if (!s.usesCover) continue;
         if (site.def.engineers && !s.stats.engineer) continue; // engineer jobs
-        const rate = s.stats.engineer ? 3 : 1;
+        const rate = s.stats.engineer ? 3 * (doctrine(this.game, s.faction, 'sperr')?.build ?? 1) : 1;
         for (const u of s.units) {
           if (!u.alive || u.possessed || u.target || u.reloadT > 0) continue;
           if ((u.pos.x - site.x) ** 2 + (u.pos.z - site.z) ** 2 > REACH * REACH) continue;
@@ -385,7 +390,7 @@ export class Construction {
       if (layer) layer.laying = false;
     }
     if (!this.game.net?.isClient) {
-      if (refund) this.game.refund(site.faction, site.def.cost);
+      if (refund) this.game.refund(site.faction, structureCost(this.game, site.faction, site.def));
       this.game.netEvent('unsite', site.id);
     }
     return true;
@@ -408,7 +413,30 @@ export class Construction {
     this.structures.push(site);
     this.game.netEvent('built', site.id);
     this.game.bus.emit('built', site);
-    this.game.tell(site.faction, `${site.def.name} finished`);
+    if (!site.quiet) this.game.tell(site.faction, `${site.def.name} finished`);
+  }
+
+  /** The Bundeswehr's Sperrverband: a dug-in line of trenches and wire waits ahead of its base. */
+  predig() {
+    const { world } = this.game;
+    for (const f of Object.keys(world.bases)) {
+      const a = world.bases[f], b = world.bases[enemyOf(f)];
+      if (!a || !b || !doctrine(this.game, f, 'sperr')) continue;
+      const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+      const ahead = Math.min(90, Math.hypot(b.x - a.x, b.z - a.z) * 0.3);
+      for (const [kind, fwd, side] of [['trench', 0, -14], ['trench', 0, 0], ['trench', 0, 14], ['wire', 16, -9], ['wire', 16, 9]]) {
+        for (let k = 0; k < 4; k++) { // bad ground (a house, the river): a little further on
+          let x = a.x + Math.sin(yaw) * (ahead + fwd + k * 6) + Math.cos(yaw) * side;
+          let z = a.z + Math.cos(yaw) * (ahead + fwd + k * 6) - Math.sin(yaw) * side;
+          if (world.river) ({ x, z } = world.river.dry({ x, z }));
+          const site = this.place(kind, x, z, yaw, f);
+          if (!site) continue;
+          site.quiet = true;
+          this.finish(site);
+          break;
+        }
+      }
+    }
   }
 
   /** An engineer job is done (the host does the work; a multiplayer client gets the results). */

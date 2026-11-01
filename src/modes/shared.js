@@ -6,6 +6,7 @@
 //   clientSetup(game, extra) the multiplayer client's side of a points-based mode: points and
 //                            HUD only — the numbers come from the host
 //   clock(s)                 m:ss
+import { unitCost } from '../data/doctrine.js';
 import { forArmy } from '../data/factions.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
@@ -21,16 +22,17 @@ export function makeBuyer(game, state) {
   return (faction, typeId) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
-    if (!type || type.hidden || type.airOnly || (state.allow && !state.allow(type))) return null;
-    if (state.cp[game.wallet(faction)] < type.cost) {
-      game.tell(faction, `Not enough command points for ${type.shortName} (${type.cost})`);
+    if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type))) return null;
+    const cost = unitCost(type, game.armyOf(faction));
+    if (state.cp[game.wallet(faction)] < cost) {
+      game.tell(faction, `Not enough command points for ${type.shortName} (${cost})`);
       return null;
     }
-    if (forces(game, faction).length >= state.maxStacks) {
+    if (!type.uncapped && forces(game, faction).length >= state.maxStacks) {
       game.tell(faction, 'Stack limit reached');
       return null;
     }
-    game.spend(faction, type.cost); // (through game.spend: the battle report counts what was spent)
+    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
     counter[typeId] = (counter[typeId] ?? 0) + 1;
     const base = map.bases[faction];
     const toward = -Math.sign(base.z);
@@ -55,7 +57,7 @@ export function makeBuyer(game, state) {
 }
 
 /** A side's own forces: what counts toward the stack limit (not fortifications or lane waves). */
-export const forces = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure && !s.autonomous && !s.withdrawing && s.type.id !== 'crew'); // withdrawing: its slot is free already
+export const forces = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure && !s.autonomous && !s.withdrawing && s.type.id !== 'crew' && !s.type.uncapped); // (the NVA's Kampfgruppen are outside the cap) // withdrawing: its slot is free already
 
 export const clock = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 

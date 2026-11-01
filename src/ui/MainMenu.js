@@ -8,6 +8,7 @@ import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
+import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
@@ -42,18 +43,27 @@ export function armiesPicker(choice, onChange = () => {}) {
     const row = el('div', 'cond-row');
     row.append(el('span', 'cond-label', FACTIONS[f].name));
     const seg = el('div', 'seg');
+    const perks = el('ul', 'army-perks');
+    const showPerks = () => perks.replaceChildren(...(DOCTRINE[choice.armies[f]] ?? []).map((d) => {
+      const li = el('li', '', `<b></b> `);
+      li.firstChild.textContent = d.name;
+      li.append(d.text);
+      return li;
+    }));
     for (const a of Object.values(ARMIES).filter((a) => a.faction === f)) {
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of seg.children) o.classList.toggle('on', o === b);
         choice.armies[f] = a.id;
+        showPerks();
         onChange();
       });
       seg.append(b);
     }
+    showPerks();
     row.append(seg);
-    box.append(row);
+    box.append(row, perks);
   }
   return box;
 }
@@ -168,7 +178,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const vehicle = type.kind !== 'infantry';
   const rows = [
     [vehicle ? 'Vehicles' : 'Men', type.formation.count],
-    ['Cost', `${type.cost} CP`],
+    ['Cost', `${unitCost(type, army)} CP`],
     ['Speed', `${Math.round(s.speed * 3.6)} km/h`],
     ['Sight', `${s.sight} m`],
     ['Range', (sp ?? s).range <= 1 ? (s.antiAir ? 'no ground weapon' : 'unarmed') : `${(sp ?? s).minRange ? `${(sp ?? s).minRange}–` : ''}${s.gunRange ?? (sp ?? s).range} m`],
@@ -474,6 +484,7 @@ export class MainMenu {
     for (const t of types) {
       const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
       labels.push([b, t]);
+      b.hidden = !!t.armies && !t.armies.includes(this.unit.army); // an army's own unit (the NVA's Kampfgruppe)
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
@@ -504,7 +515,7 @@ export class MainMenu {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;
         this.unit.army = a.id;
-        for (const [lb, t] of labels) lb.textContent = label(t);
+        for (const [lb, t] of labels) { lb.textContent = label(t); lb.hidden = !!t.armies && !t.armies.includes(a.id); }
         this.showUnit();
       });
       sideToggle.append(b);

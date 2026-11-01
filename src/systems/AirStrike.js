@@ -16,6 +16,7 @@
 // side has a cooldown per kind. Used by the player (CommandSystem targeting) and the enemy
 // director (before assaults, against dug-in troops).
 import { JAM } from './Jamming.js';
+import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT } from '../data/air.ts';
 import { FACTIONS, enemyOf, forArmy } from '../data/factions.js';
@@ -599,6 +600,7 @@ export class AirStrike {
     this.sorties = [];
     this.missiles = [];
     this.readyAt = {};
+    this.span = {};    // the same keys: how long the last call's recharge was (the action bar's ring)
     this.nextId = 1;
     this.limit = {};   // modes can ration air support per side: { faction: calls left }
   }
@@ -614,6 +616,16 @@ export class AirStrike {
 
   cooldownLeft(faction, kind = 'heli') {
     return Math.max(0, (this.readyAt[this.key(faction, kind)] ?? 0) - this.game.time);
+  }
+
+  /** What support `kind` costs `faction` right now and how long it then takes to recharge: the US
+   *  Army's AirLand Battle makes both cheaper while its troops are in contact (data/doctrine.js). */
+  terms(faction, kind = 'heli') {
+    const p = KINDS[kind] ?? KINDS.heli;
+    const al = doctrine(this.game, faction, 'airland');
+    const w = this.game.world;
+    const on = al && w.stacksOf(faction).some((s) => w.time - s.lastHitTime < al.contact || s.units.some((u) => u.alive && u.target));
+    return on ? { cost: Math.round(p.cost * al.cost), cooldown: p.cooldown * al.cooldown, airland: true } : { cost: p.cost, cooldown: p.cooldown };
   }
 
   /** The default heading: straight in from the side's own base toward (x, z). */
@@ -635,11 +647,13 @@ export class AirStrike {
       game.tell(faction, `${name} not ready (${Math.ceil(this.cooldownLeft(faction, kind))} s)`);
       return false;
     }
-    if (!game.spend(faction, p.cost)) {
-      game.tell(faction, `Not enough command points for the ${p.label.toLowerCase()} (${p.cost})`);
+    const terms = this.terms(faction, kind);
+    if (!game.spend(faction, terms.cost)) {
+      game.tell(faction, `Not enough command points for the ${p.label.toLowerCase()} (${terms.cost})`);
       return false;
     }
-    this.readyAt[this.key(faction, kind)] = game.time + p.cooldown;
+    this.readyAt[this.key(faction, kind)] = game.time + terms.cooldown;
+    this.span[this.key(faction, kind)] = terms.cooldown;
     if (this.limit[faction] > 0) this.limit[faction]--;
     const jam = game.jamming?.jammed(faction, x, z);
     if (jam) { // the request gets through garbled: late, and not quite where it was asked for

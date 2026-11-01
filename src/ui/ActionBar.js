@@ -5,18 +5,19 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { STRUCTURES } from '../systems/Construction.js';
+import { doctrine, armyDoctrine } from '../data/doctrine.js';
+import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { GAS } from '../systems/Gas.js';
 import { keyOf } from '../core/Keys.js';
 import { icon } from './Icons.js';
 
 const ACTIONS = [
-  { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: STRUCTURES.sandbags.cost, tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: STRUCTURES.trench.cost, tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: STRUCTURES.wire.cost, tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
-  { cmd: 'build:revetment', label: 'Dig in', icon: 'trench', key: 'trench', cost: STRUCTURES.revetment.cost, tip: 'The blade digs a vehicle position: any vehicle in it is hull down behind the berm', when: (sel) => one(sel, (s) => s.stats.dozer) },
-  { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: STRUCTURES.mines.cost, tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.sandbags), tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.trench), tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.wire), tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:revetment', label: 'Dig in', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.revetment), tip: 'The blade digs a vehicle position: any vehicle in it is hull down behind the berm', when: (sel) => one(sel, (s) => s.stats.dozer) },
+  { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.mines), tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
   {
     cmd: 'engineer', icon: 'engineer', key: 'engineer',
     label: (g) => (g.map.bridgeAt ? 'Clear / blow' : 'Clear'),
@@ -27,6 +28,7 @@ const ACTIONS = [
   { cmd: 'bridge', label: 'Lay bridge', icon: 'bridge', key: 'engineer', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
   { cmd: 'smoke', label: 'Smoke', icon: 'smoke', key: 'smoke', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
   { cmd: 'flare', label: 'Flare', icon: 'flare', key: 'flare', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
+  { cmd: 'barrage', label: 'Feuerwalze', icon: 'flare', key: 'barrage', tip: 'Creeping barrage: click where it starts — the shells walk forward ahead of your advance', when: (sel) => sel.some((s) => s.stats.indirect && armyDoctrine(s.army, 'walze')) },
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
   { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
@@ -39,6 +41,7 @@ const SUPPORT = [
   ['air:jet', 'jet', 'jet', 'Jet', 'Ground-attack jet: one fast, devastating gun run'],
   ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
   ['gas', 'gas', 'gas', 'Gas', 'Chemical shells: infantry there mask up, aim worse and see less'],
+  ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
 ];
 
 function one(sel, test) {
@@ -88,14 +91,17 @@ export class ActionBar {
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
       const gas = cmd === 'gas';
-      const kind = gas ? null : cmd.slice(4) || 'heli';
-      const left = Math.ceil(gas ? g.gas.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
-      const total = gas ? GAS.cooldown : KINDS[kind].cooldown;
-      const text = left > 0 ? `${left} s` : String(gas ? GAS.cost : KINDS[kind].cost);
+      const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? false : null; // the Soviet Army's only
+      const kind = gas || mass !== null ? null : cmd.slice(4) || 'heli';
+      const left = Math.ceil(gas ? g.gas.cooldownLeft(me) : mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
+      const total = gas ? GAS.cooldown : mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
+      const terms = kind ? g.air.terms(me, kind) : null;
+      const text = left > 0 ? `${left} s` : String(gas ? GAS.cost : mass !== null ? mass.cost ?? '' : terms.cost);
+      b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
-      b.hidden = off;
+      b.hidden = off || mass === false;
     }
   }
 
@@ -114,9 +120,10 @@ export class ActionBar {
       b.className = 'act';
       b.dataset.cmd = a.cmd;
       const label = value(a.label, g);
-      b.title = `${label}${a.cost ? ` (${a.cost} CP)` : ''} — ${value(a.tip, g)}`;
+      const cost = value(a.cost, g);
+      b.title = `${label}${cost ? ` (${cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${a.cost ? `<small>${a.cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`;
+      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`;
       return b;
     }));
     this.el.hidden = !shown.length;
