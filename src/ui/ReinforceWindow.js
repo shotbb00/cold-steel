@@ -21,6 +21,31 @@ const SECTIONS = [
 /** The first sentence of the unit's description, for the card. */
 const blurb = (type, faction, army) => (forArmy(type.variants, army, faction)?.text ?? '').split(/(?<=\.)\s/)[0];
 
+/**
+ * How hard a unit hits infantry, armour and aircraft, 0 (nothing) to 3, from its own weapons
+ * (the main one and the specialist's): splash, indirect fire, long bursts and quick fire are
+ * for men; anti-tank punch (vsArmor and pierce) or missiles for armour; anti-air for aircraft.
+ */
+export function damageVs(type) {
+  const ws = [type.stats, type.specialist?.stats].filter((w) => w && (w.damage > 0 || w.antiAir || w.atgm));
+  const best = (f) => ws.reduce((a, w) => Math.max(a, f(w)), 0);
+  const va = (w) => w.vsArmor ?? 1;
+  return {
+    inf: best((w) => !(w.damage > 0) ? 0 : w.splash >= 3 || w.indirect || (w.burst ?? 1) >= 3 || (w.fireCooldown <= 0.5 && va(w) < 0.9) ? 3 : va(w) >= 0.9 ? 1 : 2),
+    armour: best((w) => w.atgm || (va(w) >= 0.9 && (w.pierce ?? 0) >= 0.5) ? 3 : !(w.damage > 0) ? 0 : va(w) >= 0.4 ? 2 : 1),
+    air: best((w) => (w.antiAir ? 3 : 0)),
+  };
+}
+const GRADE = [['\u2013', 'none'], ['\u2193', 'low'], ['\u2192', 'medium'], ['\u2191', 'high']];
+/** The card's row of three: infantry, armour, air — a dash, or an arrow down / level / up. */
+const damageRow = (type) => {
+  const d = damageVs(type);
+  return `<span class="rw-dmg">${[['inf', 'Inf'], ['armour', 'Arm'], ['air', 'Air']].map(([k, label]) => {
+    const [mark, word] = GRADE[d[k]];
+    return `<span class="g${d[k]}" title="${label === 'Inf' ? 'Infantry' : label === 'Arm' ? 'Armour' : 'Aircraft'}: ${word}">${label}<b>${mark}</b></span>`;
+  }).join('')}</span>`;
+};
+
 export class ReinforceWindow {
   constructor(game, state) {
     this.game = game;
@@ -59,7 +84,7 @@ export class ReinforceWindow {
         card.tabIndex = -1;
         card.className = 'rw-card';
         card.innerHTML = `${silhouette(type.id, artKey(type, army, me), 'rw-sil')}<span class="rw-name">${forArmy(type.variants, army, me)?.name ?? type.name}</span><span class="rw-cost">${unitCost(type, army)}</span>
-          <span class="rw-text">${blurb(type, me, army)}</span><span class="rw-have"></span><span class="rw-why"></span>`;
+          <span class="rw-text">${blurb(type, me, army)}</span>${damageRow(type)}<span class="rw-have"></span><span class="rw-why"></span>`;
         card.addEventListener('click', () => game.bus.emit('ui:reinforce', type.id));
         sec.querySelector('.rw-cards').append(card);
         this.cards.push({ card, type, have: card.querySelector('.rw-have'), why: card.querySelector('.rw-why') });
