@@ -52,6 +52,10 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // Hand grenades (stats.grenades per man): at an enemy `min`–`range` m off who is in cover, a house,
 // a trench or a bunker, or bunched with others; one throw per man every `every` s, back to full
 // after `refill` s without a target
+// Vehicle damage: an anti-armour hit that doesn't kill knocks out a part `chance` of the time —
+// which one by where it struck (front: the gun, sides: the tracks, rear: the engine). Tracks the
+// crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
+const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
 const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
@@ -198,6 +202,12 @@ export class UnitStack {
 
   get moraleWord() {
     if (this.ai?.state === AIState.RETREAT) return 'Broken';
+    if (!this.usesCover) { // a machine: what is knocked out
+      const hurt = (k) => this.units.some((u) => u.alive && (k === 'tracks' ? u.speedMul === 0 : u[k]));
+      if (hurt('gunOut')) return 'Gun out';
+      if (hurt('tracks')) return 'Tracks hit';
+      if (hurt('engineHit')) return 'Engine hit';
+    }
     if (!this.stats.breakMorale) return 'Resolute'; // machines don't break
     if (this.dugIn) return 'Dug in';
     return this.morale > 0.66 ? 'Steady' : this.morale > 0.4 ? 'Shaken' : 'Wavering';
@@ -439,6 +449,11 @@ export class UnitStack {
       if (off && u.deployK > 0) maxSpeed = 0;
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
+    if (u.engineHit) maxSpeed *= PARTS.engine;
+    if (u.speedMul === 0 && !this.usesCover && this.world.time - this.lastHitTime > PARTS.calm && (u.fixT = (u.fixT ?? 0) + dt) > PARTS.fix) {
+      u.speedMul = 0.95; // the crew got the track back on
+      this.services.tell(this.faction, `${this.name}: tracks mended`);
+    }
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
     const way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
     const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
@@ -675,6 +690,7 @@ export class UnitStack {
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
     if (!this.usesCover) {
+      if (u.gunOut) { u.target = null; u.airTarget = null; return; }
       if (s.antiAir && (s.antiAir.missile ? this.engageAirMissile(u, dt) : this.engageAir(u, dt))) return; // aircraft first
       this.updateHeavyWeapon(u);
       return;
@@ -1089,6 +1105,25 @@ export class UnitStack {
     return o.target;
   }
 
+  /** A part knocked out by a hit from `facing` (1 head-on, -1 from behind). */
+  hitPart(u, facing) {
+    if (Math.random() > PARTS.chance) return;
+    const r = Math.random();
+    const part = facing > 0.5 ? (r < 0.6 ? 'gun' : 'tracks') : facing > -0.5 ? (r < 0.65 ? 'tracks' : r < 0.85 ? 'gun' : 'engine') : (r < 0.6 ? 'engine' : 'tracks');
+    if (part === 'gun' && !u.gunOut && (this.stats.weapon || this.stats.antiAir)) {
+      u.gunOut = true;
+      u.target = null;
+      this.services.tell(this.faction, `${this.name}: the gun is knocked out — a recovery vehicle can mend it`);
+    } else if (part === 'tracks' && u.speedMul !== 0 && this.stats.speed > 0) {
+      u.speedMul = 0;
+      u.fixT = 0;
+      this.services.tell(this.faction, `${this.name}: tracks hit — the crew is on it`);
+    } else if (part === 'engine' && !u.engineHit && this.stats.speed > 0) {
+      u.engineHit = true;
+      this.services.tell(this.faction, `${this.name}: engine hit — crawling`);
+    }
+  }
+
   /** Vehicle smoke grenade launchers: a screen between `u` and the threat (dir: incoming shot). */
   popSmoke(u, dir = null) {
     if (this.smokeLeft <= 0 || this.world.time < (this.smokeReadyAt ?? 0)) return false;
@@ -1220,12 +1255,16 @@ export class UnitStack {
     } else {
       // Armour: rifles barely scratch it; directional plating (front 1x, side 0.7x, rear 0.35x).
       let armor = this.stats.armor;
+      let facing = 1;
       if (dir) {
         const len = Math.hypot(dir.x, dir.z) || 1;
-        const facing = -(dir.x * Math.sin(u.yaw) + dir.z * Math.cos(u.yaw)) / len; // 1 = hit head-on
+        facing = -(dir.x * Math.sin(u.yaw) + dir.z * Math.cos(u.yaw)) / len; // 1 = hit head-on
         armor *= facing > 0.5 ? 1 : facing > -0.5 ? 0.7 : 0.35;
       }
-      u.hp -= amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
+      const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
+      u.hp -= dealt;
+      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure) this.hitPart(u, facing);
+      if (u.hp <= 0) u.recoverable = Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);
     }

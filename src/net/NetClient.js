@@ -170,7 +170,13 @@ export class NetClient {
         if (u.alive) this.kill(s, u);
         continue;
       }
-      if (!u.alive) continue; // (no coming back)
+      if (!u.alive) { // back: a knocked-out vehicle a recovery vehicle got running again (systems/Support.js)
+        if (s.usesCover) continue;
+        u.alive = true;
+        u.deathTime = 0;
+        s.aliveCount++;
+        s.renderer.done = false;
+      }
       const st = u.stats;
       const da = sa.d;
       const db = sb.n > i ? sb.d : da;

@@ -31,8 +31,14 @@ export class Support {
       for (const o of world.stacksOf(s.faction)) {
         if (o === s || !o.alive || o.stats.structure || o.usesCover === repair) continue;
         for (const u of o.units) {
-          if (!u.alive || !this.needs(u, repair) || !s.units.some((m) => m.alive && dist2DSq(m.pos, u.pos) < job.range * job.range)) continue;
+          if (!(u.alive || (repair && u.recoverable && o.alive)) || !this.needs(u, repair) || !s.units.some((m) => m.alive && dist2DSq(m.pos, u.pos) < job.range * job.range)) continue;
           working = true;
+          if (!u.alive) { // a knocked-out vehicle of a platoon still in the fight: hauled back into running order
+            if ((u.reviveT = (u.reviveT ?? 0) + step) < job.mend * 2) continue;
+            this.revive(o, u);
+            this.game.tell(s.faction, `${s.name}: ${o.name} has a vehicle back in service`);
+            continue;
+          }
           u.hp = Math.min(u.maxHp, u.hp + job.rate * step);
           if (!u.wounded) u.woundedBarked = false;
           if (repair && u.speedMul === 0) {
@@ -43,6 +49,12 @@ export class Support {
               this.game.tell(s.faction, `${s.name}: ${o.name} is moving again`);
             }
           }
+          if (repair && (u.gunOut || u.engineHit) && (u.partT = (u.partT ?? 0) + step) >= job.mend) {
+            u.gunOut = false;
+            u.engineHit = false;
+            u.partT = 0;
+            this.game.tell(s.faction, `${s.name}: ${o.name} is fully repaired`);
+          }
         }
       }
       s.working = working;
@@ -50,8 +62,20 @@ export class Support {
     }
   }
 
+  /** A knocked-out vehicle running again: a third of its strength, its tracks still to be mended. */
+  revive(stack, u) {
+    u.alive = true;
+    u.recoverable = false;
+    u.reviveT = 0;
+    u.hp = u.maxHp * 0.3;
+    u.speedMul = 0;
+    u.deathTime = 0;
+    stack.aliveCount++;
+    stack.renderer.done = false;
+  }
+
   needs(u, repair) {
-    return repair ? u.hp < u.maxHp || u.speedMul === 0 : u.hp < u.maxHp;
+    return repair ? !u.alive || u.hp < u.maxHp || u.speedMul === 0 || u.gunOut || u.engineHit : u.hp < u.maxHp;
   }
 
   /** Idle and unordered: drive over to the nearest friendly that needs us, away from the fighting. */
@@ -67,7 +91,7 @@ export class Support {
       if (o === s || !o.alive || o.stats.structure || o.usesCover === repair) continue;
       if (this.game.time - o.lastHitTime < 6) continue; // still under fire: wait for it to pull back
       for (const u of o.units) {
-        if (!u.alive || !(repair ? u.hp < u.maxHp * 0.8 || u.speedMul === 0 : u.wounded)) continue;
+        if (!(u.alive || (repair && u.recoverable && o.alive)) || !(repair ? !u.alive || u.hp < u.maxHp * 0.8 || u.speedMul === 0 || u.gunOut || u.engineHit : u.wounded)) continue;
         const d = dist2DSq(u.pos, s.centroid);
         if (d < bestD && d > job.range * job.range * 0.5) { bestD = d; best = u; }
       }
