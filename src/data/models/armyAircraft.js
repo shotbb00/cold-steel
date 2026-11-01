@@ -130,9 +130,9 @@ export function buildBwAlphaJet(mats) {
       ...pair((s) => P.box(0.4, 0.62, 0.04, { x: s * 0.62, y: 1.65, z: 2.62, color: HOLE })),
       ...pair((s) => P.cyl(0.2, 0.2, 0.04, { x: s * 0.55, y: 1.72, z: -3.62, rx: Math.PI / 2, color: HOLE }, 10)),
       // the swept shoulder wing with anhedral, the tailplane, the fin
-      ...pair((s) => surface([[s * 0.5, 2.25, 0.4, 1.25, 0.12], [s * 2.5, 2.1, -0.7, 0.9, 0.08], [s * 4.55, 1.95, -1.8, 0.55, 0.05]], { color: LW, ...C })),
+      ...pair((s) => surface([[s * 0.1, 2.2, 0.45, 1.3, 0.13], [s * 0.5, 2.2, 0.4, 1.25, 0.12], [s * 2.5, 2.08, -0.7, 0.9, 0.08], [s * 4.55, 1.93, -1.8, 0.55, 0.05]], { color: LW, ...C })),
       surface([[-2.1, 1.85, -5.6, 0.35, 0.03], [0, 2.0, -4.6, 0.75, 0.06], [2.1, 1.85, -5.6, 0.35, 0.03]], { color: LW, ...C }),
-      fin([[2.3, -3.8, 1.1, 0.08], [3.4, -4.7, 0.8, 0.06], [4.1, -5.3, 0.5, 0.04], [4.2, -5.4, 0.3, 0.03]], { color: LW, ...C }),
+      fin([[1.95, -3.75, 1.2, 0.09], [2.3, -3.9, 1.1, 0.08], [3.4, -4.7, 0.8, 0.06], [4.1, -5.3, 0.5, 0.04], [4.2, -5.4, 0.3, 0.03]], { color: LW, ...C }),
       // the 27 mm Mauser pod under the belly on its pylon, the barrel out front
       P.box(0.12, 0.25, 1.2, { y: 1.12, z: 0.3, color: 0x3a3f32 }),
       body([[1.8, 0.95, 0.06, 0.06], [1.5, 0.95, 0.18, 0.18], [-1.0, 0.98, 0.2, 0.2], [-1.6, 1.0, 0.1, 0.1]], { color: 0x3a3f32 }),
@@ -156,13 +156,16 @@ export function buildBwUH1D(mats) {
   HUEY ??= {
     body: merge([
       // the cabin: the rounded nose, the boxy body, the boom rising to the fin
+      body([[3.42, 1.38, 0.3, 0.42, 2], [3.05, 1.42, 0.82, 0.77, 2.4], [2.62, 1.45, 0.93, 0.84, 2.8]], { color: GLASS }),       // the glazed nose
+      P.box(0.06, 0.85, 0.06, { y: 1.75, z: 3.12, rx: -0.55, color: BW }),                                  // the windscreens' centre post
+      P.box(1.7, 0.06, 0.06, { y: 1.42, z: 3.18, color: BW }),                                              // the frame under them
       body([
-        [3.35, 1.35, 0.3, 0.4, 2], [3.0, 1.4, 0.8, 0.75, 2.4], [2.2, 1.45, 0.95, 0.85, 3], [0.0, 1.45, 0.98, 0.88, 3.4],
+        [3.3, 1.12, 0.3, 0.15, 2], [3.0, 1.02, 0.6, 0.38, 2.4], [2.6, 1.0, 0.8, 0.42, 2.8]], { color: BW, ...C }), // the nose's lower skin
+      body([
+        [2.7, 1.45, 0.95, 0.85, 3], [2.2, 1.45, 0.96, 0.86, 3], [0.0, 1.45, 0.98, 0.88, 3.4],
         [-1.5, 1.5, 0.95, 0.85, 3.4], [-2.2, 1.75, 0.6, 0.55], [-2.8, 1.95, 0.32, 0.32], [-8.0, 2.1, 0.18, 0.2], [-8.6, 2.15, 0.14, 0.16],
       ], { color: BW, ...C }),
       // the windscreens, chin windows, the cockpit doors and the cabin's big sliding doors
-      ...pair((s) => P.box(0.8, 0.66, 0.04, { x: s * 0.42, y: 1.8, z: 2.98, rx: -0.6, ry: s * 0.3, color: GLASS })),
-      ...pair((s) => P.box(0.5, 0.32, 0.04, { x: s * 0.42, y: 0.98, z: 3.12, rx: 0.55, color: GLASS })),
       ...pair((s) => P.box(0.04, 0.55, 0.8, { x: s * 0.97, y: 1.75, z: 2.05, color: GLASS })),
       ...pair((s) => P.box(0.04, 0.45, 0.6, { x: s * 0.99, y: 1.8, z: 0.3, color: GLASS })),
       ...pair((s) => P.box(0.03, 0.05, 2.0, { x: s * 1.0, y: 2.2, z: 0.4, color: STEEL })),               // the door rails
@@ -182,12 +185,13 @@ export function buildBwUH1D(mats) {
       ...pair((s) => limb([s * 1.25, 0.06, 2.3], [s * 1.25, 0.35, 2.7], [[0, 0.045, 0.045], [1, 0.04, 0.04]], { color: STEEL })),
       ...pair((s) => [1.2, -1.1].map((z) => limb([s * 0.7, 0.75, z], [s * 1.25, 0.06, z], [[0, 0.05, 0.05], [1, 0.045, 0.045]], { color: STEEL }))).flat(),
       // the MG3 on its pintle in the right door
+      P.box(0.3, 0.06, 0.06, { x: 1.03, y: 1.08, z: 0.9, color: STEEL }),                                  // the pintle's arm out of the door
       P.cyl(0.025, 0.025, 0.6, { x: 1.15, y: 1.35, z: 0.9, color: STEEL }, 5),
       P.box(0.08, 0.12, 1.1, { x: 1.15, y: 1.7, z: 1.1, color: STEEL }),
       ...pair((s) => balken(s * 0.3, 2.04, -4.0, 0.6)).flat(),
       P.box(0.5, 0.18, 0.02, { y: 1.25, z: 3.2, rx: 0.3, color: WHITE }),                                  // the nose number
     ]),
-    rotor: merge([...blades(2, 7.3, 0.53, BLADE, 0.4), P.box(1.6, 0.04, 0.06, { y: 0.18, ry: Math.PI / 2, color: STEEL }), P.cyl(0.25, 0.25, 0.25, { color: STEEL }, 10)]),
+    rotor: merge([...blades(2, 7.3, 0.53, BLADE, 0.4), P.box(1.6, 0.04, 0.06, { y: 0.1, ry: Math.PI / 2, color: STEEL }), P.cyl(0.25, 0.25, 0.25, { color: STEEL }, 10)]),
     tailRotor: merge([P.box(0.04, 2.6, 0.2, { color: BLADE, surf: 'paint' }), P.cyl(0.08, 0.08, 0.1, { rz: Math.PI / 2, color: STEEL }, 8)]),
   };
   const r = heli(HUEY, mats, { rotorAt: [0, 3.45, 0.2], tailAt: [-0.3, 3.2, -8.8] });

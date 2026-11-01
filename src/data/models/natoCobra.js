@@ -42,6 +42,7 @@ function geometry() {
       // stub wings: 2.75 in rocket pods inboard, TOW launchers (2 × 2 tubes) outboard
       ...pair((s) => surface([[s * 0.45, 1.45, 0.1, 0.42, 0.06], [s * 1.6, 1.38, 0.05, 0.32, 0.04]], { color: OD })),
       ...pair((s) => rocketPod(s * 0.95, 1.12, -0.55, 0.95, 0.19, OD_DK)).flat(),
+      ...pair((s) => P.box(0.08, 0.16, 0.6, { x: s * 0.95, y: 1.33, z: 0.2, color: OD_DK })),               // the pods' pylons
       ...pair((s) => [-0.09, 0.09].flatMap((dx) => [-0.09, 0.09].map((dy) => P.cyl(0.075, 0.075, 1.25, { x: s * 1.45 + dx, y: 1.2 + dy, z: 0.15, rx: Math.PI / 2, color: OD_DK }, 8)))).flat(),
       // the M197 in the chin turret
       P.sphere(0.26, { y: 1.05, z: 3.2, sy: 0.85, color: OD_DK }, 12, 8),

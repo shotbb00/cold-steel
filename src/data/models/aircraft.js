@@ -115,6 +115,7 @@ export function buildPactSu25(mats) {
       ...[-4.6, -2.8, 2.8, 4.6].map((x) => P.box(0.1, 0.25, 1.1, { x, y: 0.22, z: 0.3 - Math.abs(x) * 0.25, color: 0x3a4428 })),
       ...[-4.6, -2.8, 2.8, 4.6].flatMap((x) => rocketPod(x, -0.12, -0.9 - Math.abs(x) * 0.25, 1.4 - Math.abs(x) * 0.25, 0.25, 0x5a5e52)),
       ...pair((s) => missile(s * 6.2, 0.12, -2.4, -0.6, 0.065, 0x9a9a90)).flat(),
+      ...pair((s) => P.box(0.06, 0.26, 1.4, { x: s * 6.2, y: 0.3, z: -1.5, color: 0x3a4428 })),            // their launch rails
       // GSh-30-2 in its fairing under the left of the nose
       body([[6.3, -0.42, 0.06, 0.06], [5.9, -0.45, 0.12, 0.1], [4.6, -0.42, 0.14, 0.1]], { x: -0.32, color: 0x3a4428 }),
       ...[-0.04, 0.04].map((dx) => P.cyl(0.03, 0.03, 0.5, { x: -0.32 + dx, y: -0.45, z: 6.5, rx: Math.PI / 2, color: STEEL }, 5)),
@@ -155,7 +156,7 @@ export function buildNatoUH60(mats) {
       // tail pylon, stabilator, tailwheel
       fin([[2.2, -8.8, 0.55, 0.14], [3.2, -9.2, 0.45, 0.12], [3.7, -9.45, 0.3, 0.08]], { color: OD }),
       surface([[-2.2, 1.95, -8.6, 0.42, 0.05], [0, 1.95, -8.6, 0.45, 0.06], [2.2, 1.95, -8.6, 0.42, 0.05]], { color: OD }),
-      limb([0, 2.2, -7.5], [0, 0.95, -7.7], [[0, 0.06, 0.06], [1, 0.05, 0.05]], { color: STEEL }),
+      limb([0, 2.2, -7.5], [0, 0.22, -7.7], [[0, 0.06, 0.06], [1, 0.05, 0.05]], { color: STEEL }),
       P.cyl(0.2, 0.2, 0.12, { y: 0.2, z: -7.7, rz: Math.PI / 2, color: TYRE, surf: 'rubber' }, 12),
       // fixed main gear on its struts, the door guns, the step and antennas
       ...pair((s) => limb([s * 0.85, 0.95, 2.1], [s * 1.3, 0.35, 2.0], [[0, 0.06, 0.06], [1, 0.05, 0.05]], { color: STEEL })),
@@ -220,6 +221,7 @@ function mi8(mats, t) {
       // tricycle gear: the twin nose wheels, the main legs out on their struts
       ...[-0.2, 0.2].map((x) => P.cyl(0.3, 0.3, 0.18, { x, y: 0.3, z: 3.9, rz: Math.PI / 2, color: TYRE, surf: 'rubber' }, 12)),
       limb([0, 0.85, 3.9], [0, 0.3, 3.9], [[0, 0.07, 0.07], [1, 0.06, 0.06]], { color: STEEL }),
+      P.cyl(0.045, 0.045, 0.45, { y: 0.3, z: 3.9, rz: Math.PI / 2, color: STEEL }, 8),                         // the nose wheels' axle
       ...pair((s) => limb([s * 1.0, 1.0, -0.6], [s * 1.75, 0.4, -0.6], [[0, 0.07, 0.07], [1, 0.06, 0.06]], { color: STEEL })),
       ...pair((s) => limb([s * 1.2, 1.3, 0.2], [s * 1.75, 0.45, -0.6], [[0, 0.05, 0.05], [1, 0.05, 0.05]], { color: STEEL })),
       ...pair((s) => P.cyl(0.4, 0.4, 0.25, { x: s * 1.8, y: 0.4, z: -0.6, rz: Math.PI / 2, color: TYRE, surf: 'rubber' }, 14)),

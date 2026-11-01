@@ -41,12 +41,20 @@ JS = r'''async ({ only, tol }) => {
     });
     return [...boxes.values()];
   };
+  // every vehicle model per key, and (as 'air:<kind>') every aircraft per side and army (data/air.ts)
+  const builds = [];
   for (const type of Object.values(UNIT_TYPES)) {
     if (type.kind === 'infantry' || !type.models || type.stats?.structure) continue;
-    if (only.length && !only.includes(type.id)) continue;
-    for (const key of Object.keys(type.models)) {
+    for (const key of Object.keys(type.models)) builds.push([type.id, key, type.models[key]]);
+  }
+  const air = await import('/src/data/air.ts');
+  for (const [kind, table] of [['heli', air.AIRCRAFT], ['jet', air.JETS], ['lift', air.LIFT]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
+  for (const [id, key, build] of builds) {
+    {
+      if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:'))) continue;
+      const type = { id };
       let rig;
-      try { rig = type.models[key](mats); } catch (e) { out.push({ unit: type.id, key, error: String(e).slice(0, 120) }); continue; }
+      try { rig = build(mats); } catch (e) { out.push({ unit: type.id, key, error: String(e).slice(0, 120) }); continue; }
       const root = rig.root;
       root.traverse((o) => { o.visible = true; });
       // everything at its working pose: masts up, antennas out (u.deployK 1), the load on

@@ -18,7 +18,7 @@ export const fin = (sections, o = {}) => loft(sections.map(([y, z, c, t, x = 0])
 export function blades(n, r, chord, color, root = 0.45) {
   const parts = [];
   for (let k = 0; k < n; k++) {
-    const g = loft([[root, 0, 0, chord * 0.42, 0.03, 3], [root + 0.6, 0, 0, chord * 0.5, 0.035, 3], [r - 0.5, 0, 0, chord * 0.5, 0.03, 3], [r, 0, -chord * 0.08, chord * 0.32, 0.02, 3]], { color, surf: 'paint' }, 8);
+    const g = loft([[root * 0.4, 0, 0, chord * 0.3, 0.03, 3], [root, 0, 0, chord * 0.42, 0.03, 3], [root + 0.6, 0, 0, chord * 0.5, 0.035, 3], [r - 0.5, 0, 0, chord * 0.5, 0.03, 3], [r, 0, -chord * 0.08, chord * 0.32, 0.02, 3]], { color, surf: 'paint' }, 8);
     parts.push(g.rotateY((k / n) * Math.PI * 2));
   }
   return parts;
