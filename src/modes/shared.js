@@ -6,6 +6,7 @@
 //   clientSetup(game, extra) the multiplayer client's side of a points-based mode: points and
 //                            HUD only — the numbers come from the host
 //   clock(s)                 m:ss
+import { forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf } from '../data/factions.js';
@@ -43,7 +44,9 @@ export function makeBuyer(game, state) {
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
     if (post && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
-    const name = `${game.armyOf(faction) === 'sov' ? 'Guards ' : ''}${type.shortName} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
+    const army = game.armyOf(faction);
+    const label = army === DEFAULT_ARMY[faction] ? type.shortName : forArmy(type.variants, army, faction)?.name ?? type.shortName; // the Bundeswehr's and the NVA's own names
+    const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
     const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, name);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
     game.tell(faction, `${type.shortName} called in — arriving at ${post ? post.name : 'base'}`);

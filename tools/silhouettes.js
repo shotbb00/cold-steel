@@ -46,8 +46,11 @@ window.silhouettes = () => {
   const out = {};
   for (const type of Object.values(UNIT_TYPES)) {
     if (!type.models || type.stats?.structure) continue; // bunkers and the HQ are never on a card
-    for (const faction of ['nato', 'pact']) {
-      preview.show(type.id, faction);
+    // each side's, and each army's own where it has a model of its own (Icons.js artKey)
+    for (const [faction, army] of [['nato', 'us'], ['pact', 'sov'], ['nato', 'bw'], ['pact', 'nva']]) {
+      const key = army === 'us' || army === 'sov' ? faction : army;
+      if (key === army && !type.models[army]) continue;
+      preview.show(type.id, faction, army);
       const units = preview.stack.units;
       // infantry: the men one behind the other along their line of march, so the side view
       // shows them in file; each faces straight ahead
@@ -56,7 +59,7 @@ window.silhouettes = () => {
       Object.assign(preview.orbit, { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 }); // from the left: the front faces right
       preview.fit = preview.vehicle ? { w: 4.6, h: 2.4 } : { w: 2.2, h: 1.1 };
       for (let i = 0; i < 3; i++) preview.frame(); // let the poses settle
-      out[`${type.id}-${faction}`] = trim(preview.canvas);
+      out[`${type.id}-${key}`] = trim(preview.canvas);
     }
   }
   return out;

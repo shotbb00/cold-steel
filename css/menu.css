@@ -87,7 +87,7 @@
 /* unit preview */
 .units { display: grid; grid-template-columns: 190px minmax(0, 1fr) 300px; gap: 16px; height: calc(100vh - 140px); min-height: 460px; }
 .unit-left { display: flex; flex-direction: column; gap: 12px; }
-.faction-seg { display: flex; }
+.faction-seg { display: grid; grid-template-columns: 1fr 1fr; } /* the four armies, two a side */
 .faction-seg button { flex: 1; text-align: center; padding: 8px 6px; font-size: 12.5px; }
 .unit-list { display: flex; flex-direction: column; gap: 4px; }
 .unit-list button {

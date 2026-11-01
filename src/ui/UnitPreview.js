@@ -6,7 +6,7 @@
 // Drag to orbit, wheel to zoom; it turns slowly on its own when left alone.
 import * as THREE from 'three';
 import { getUnitType } from '../data/units/index.js';
-import { FACTIONS } from '../data/factions.js';
+import { FACTIONS, DEFAULT_ARMY } from '../data/factions.js';
 import { StackRenderer } from '../render/StackRenderer.js';
 import { RigRenderer } from '../render/RigRenderer.js';
 import { buildAircraft, KINDS } from '../systems/AirStrike.js';
@@ -115,13 +115,13 @@ export class UnitPreview {
     this.camera.updateProjectionMatrix();
   }
 
-  /** Show `typeId` as fielded by `faction`. */
-  show(typeId, faction) {
+  /** Show `typeId` as fielded by `faction` (and its `army`: data/factions.js ARMIES). */
+  show(typeId, faction, army = DEFAULT_ARMY[faction]) {
     this.clear();
     const type = getUnitType(typeId);
     const vehicle = type.kind !== 'infantry';
     const stack = {
-      type, faction, kind: type.kind, stats: type.stats, units: [],
+      type, faction, army, kind: type.kind, stats: { ...type.stats, ...type.factionStats?.[faction], ...type.factionStats?.[army] }, units: [],
       glowColor: new THREE.Color(FACTIONS[faction].marking),
       services: { effects: { dust() {}, explosion() {}, burn() {} }, audio: null },
       world: { terrain: FLAT },

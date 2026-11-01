@@ -7,7 +7,7 @@ import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { FACTIONS, ARMIES, armiesFrom } from '../data/factions.js';
+import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS } from '../systems/AirStrike.js';
@@ -161,8 +161,9 @@ function aircraftRows(kind, faction) {
 }
 
 /** Rows for the stats card. */
-function statRows(type, faction) {
-  const s = type.factionStats?.[faction] ? { ...type.stats, ...type.factionStats[faction] } : type.stats; // the side's own numbers (UnitStack does the same)
+function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
+  const fs = type.factionStats;
+  const s = fs?.[faction] || fs?.[army] ? { ...type.stats, ...fs[faction], ...fs[army] } : type.stats; // the side's (and army's) own numbers (UnitStack does the same)
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
@@ -223,7 +224,7 @@ export class MainMenu {
     this.root = root;
     this.onDeploy = onDeploy;
     this.choice = { mode: DEFAULT_MODE, map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', rules: loadRules() };
-    this.unit = { id: 'rifles', faction: 'nato', pose: 'idle' };
+    this.unit = { id: 'rifles', faction: 'nato', army: 'us', pose: 'idle' };
     this.build();
     this.open(takeMenuTab() ?? 'battle');
   }
@@ -468,8 +469,11 @@ export class MainMenu {
     const wrap = el('div', 'units');
     const list = el('div', 'unit-list');
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden);
+    const labels = []; // the army's own names on the list (shortName for the US and Soviet armies)
+    const label = (t) => (this.unit.army === DEFAULT_ARMY[this.unit.faction] ? t.shortName : forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName);
     for (const t of types) {
-      const b = el('button', t.id === this.unit.id ? 'on' : '', t.shortName);
+      const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
+      labels.push([b, t]);
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
@@ -493,12 +497,14 @@ export class MainMenu {
       list.append(b);
     }
     const sideToggle = el('div', 'seg faction-seg');
-    for (const f of ['nato', 'pact']) {
-      const b = el('button', `${f}${f === this.unit.faction ? ' on' : ''}`, FACTIONS[f].name);
+    for (const a of Object.values(ARMIES)) { // every army's own roster
+      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
-        this.unit.faction = f;
+        this.unit.faction = a.faction;
+        this.unit.army = a.id;
+        for (const [lb, t] of labels) lb.textContent = label(t);
         this.showUnit();
       });
       sideToggle.append(b);
@@ -546,7 +552,7 @@ export class MainMenu {
   }
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
-  codex(id, faction) {
+  codex(id, faction, army = DEFAULT_ARMY[faction]) {
     const c = CODEX[id];
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
@@ -558,20 +564,21 @@ export class MainMenu {
       row.lastChild.textContent = text(body);
       box.append(row);
     }
-    if (c[faction]) {
+    const history = army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
+    if (history) {
       const h = el('div', 'codex-row codex-history');
       h.append(el('h4', '', 'History'), el('p', '', ''));
-      h.lastChild.textContent = c[faction];
+      h.lastChild.textContent = history;
       box.append(h);
     }
     this.info.append(box);
   }
 
   showUnit() {
-    const { id, faction } = this.unit;
+    const { id, faction, army } = this.unit;
     if (id.startsWith('air:')) return this.showAircraft(id.slice(4), faction);
     const type = UNIT_TYPES[id];
-    this.preview.show(id, faction);
+    this.preview.show(id, faction, army);
     this.preview.setPose(this.unit.pose);
     const poses = type.kind === 'infantry' ? INFANTRY_POSES : VEHICLE_POSES;
     this.poses.replaceChildren();
@@ -585,16 +592,16 @@ export class MainMenu {
       });
       this.poses.append(b);
     }
-    const v = type.variants?.[faction] ?? { name: type.name, weapon: '', text: '' };
+    const v = forArmy(type.variants, army, faction) ?? { name: type.name, weapon: '', text: '' };
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', v.name));
     if (v.weapon) this.info.append(el('p', 'unit-weapon', v.weapon));
     if (v.text) this.info.append(el('p', 'unit-text', v.text));
     const dl = el('dl', 'stats');
-    for (const [k, val] of statRows(type, faction)) dl.append(el('dt', '', k), el('dd', '', String(val)));
+    for (const [k, val] of statRows(type, faction, army)) dl.append(el('dt', '', k), el('dd', '', String(val)));
     this.info.append(dl);
-    this.codex(id, faction);
+    this.codex(id, faction, army);
   }
 }
