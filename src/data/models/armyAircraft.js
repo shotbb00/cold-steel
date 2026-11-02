@@ -220,12 +220,11 @@ export function buildNvaSu22(mats) {
       body([[4.6, 2.6, 0.32, 0.25], [0.0, 2.75, 0.35, 0.3], [-4.5, 2.65, 0.3, 0.2]], { color: NVA, ...C }),
       P.cyl(0.45, 0.45, 0.04, { y: 2.0, z: -9.42, rx: Math.PI / 2, color: HOLE }, 14),
       // the fixed gloves and the outer panels swept back to 63°, the fences on them
-      ...pair((s) => surface([[s * 0.7, 1.75, 0.8, 2.2, 0.18], [s * 2.0, 1.7, -0.6, 1.3, 0.12]], { color: NVA, ...C })),
-      ...pair((s) => surface([[s * 1.95, 1.7, -0.6, 1.1, 0.1], [s * 5.0, 1.6, -3.4, 0.55, 0.05]], { color: NVA, ...C })),
+      ...pair((s) => surface([[s * 0.5, 1.78, 0.6, 2.5, 0.2], [s * 2.0, 1.7, -0.75, 1.35, 0.12], [s * 5.0, 1.6, -3.2, 0.6, 0.05]], { color: NVA, ...C })),
       ...pair((s) => P.box(0.03, 0.12, 1.3, { x: s * 1.7, y: 1.8, z: -0.4, color: NVA_DK })),
       // the all-moving tailplane, the tall swept fin and the ventral fin
       surface([[-2.7, 1.9, -8.6, 0.4, 0.04], [0, 2.0, -7.4, 1.0, 0.08], [2.7, 1.9, -8.6, 0.4, 0.04]], { color: NVA, ...C }),
-      fin([[2.6, -5.8, 1.6, 0.1], [4.0, -7.0, 1.1, 0.08], [5.0, -8.0, 0.65, 0.05], [5.1, -8.15, 0.35, 0.03]], { color: NVA, ...C }),
+      fin([[2.3, -5.6, 1.9, 0.12], [2.7, -5.85, 1.75, 0.1], [4.0, -7.0, 1.1, 0.08], [5.0, -8.0, 0.65, 0.05], [5.1, -8.15, 0.35, 0.03]], { color: NVA, ...C }),
       fin([[1.6, -7.0, 0.8, 0.05], [1.25, -7.15, 0.75, 0.05], [0.6, -7.6, 0.5, 0.04]], { color: NVA, ...C }), // the ventral fin, its root inside the fuselage
       // the NR-30s in the wing roots, the pylons with UB-32 pods
       ...pair((s) => P.cyl(0.035, 0.04, 0.6, { x: s * 0.62, y: 1.65, z: 2.85, rx: Math.PI / 2, color: STEEL }, 6)),

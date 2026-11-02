@@ -11,9 +11,10 @@ import { P, loft, merge } from '../units/geometry.js';
 
 export const body = (sections, { x = 0, ...o } = {}, radial = 14) => loft(sections.map(([z, y, w, d, e = 2.3]) => [x, y, z, w, d, e]), o, radial);
 
-export const surface = (sections, o = {}) => loft(sections.map(([x, y, z, c, t]) => [x, y, z, c, t, 1.7]), o, 10);
+// (wings and fins keep every section lying fore and aft, however swept: their roots and tips stay square to the airflow)
+export const surface = (sections, o = {}) => loft(sections.map(([x, y, z, c, t]) => [x, y, z, c, t, 1.7]), { ...o, axes: [[0, 0, 1], [0, 1, 0]] }, 10);
 
-export const fin = (sections, o = {}) => loft(sections.map(([y, z, c, t, x = 0]) => [x, y, z, t, c, 1.7]), o, 10);
+export const fin = (sections, o = {}) => loft(sections.map(([y, z, c, t, x = 0]) => [x, y, z, t, c, 1.7]), { ...o, axes: [[1, 0, 0], [0, 0, 1]] }, 10);
 
 export function blades(n, r, chord, color, root = 0.45) {
   const parts = [];

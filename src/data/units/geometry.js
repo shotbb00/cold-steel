@@ -108,7 +108,9 @@ export const P = {
  * along a path with half-width `w` (across, along world x where it can) and half-depth `d`,
  * and a superellipse exponent `e` (2 = ellipse, 3–4 = a rounded box; default 2.4). Ends are
  * closed. Smooth normals — bodies, limbs, helmets, magazines. `o` are part() options, plus
- * `warp(v)` to bend the vertices (THREE.Vector3, changed in place) before the normals are made.
+ * `warp(v)` to bend the vertices (THREE.Vector3, changed in place) before the normals are made,
+ * and `axes` [across, deep] to hold every section square to those two directions instead of
+ * turning it to face along the path (swept wings and fins: models/airKit.js).
  */
 export function loft(sections, o = {}, radial = 10) {
   radial = seg(radial, 5);
@@ -128,6 +130,7 @@ export function loft(sections, o = {}, radial = 10) {
     if (Math.abs(t.x) > 0.9) ax.set(0, 0, -Math.sign(t.x));      // running sideways: across is z
     ax.addScaledVector(t, -ax.dot(t)).normalize();
     az.crossVectors(ax, t);
+    if (o.axes) { ax.fromArray(o.axes[0]); az.fromArray(o.axes[1]); }
     c.set(x, y, z);
     for (let k = 0; k < radial; k++) {
       const ang = (k / radial) * Math.PI * 2;
