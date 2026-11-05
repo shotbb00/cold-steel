@@ -1,16 +1,16 @@
 // Strategic AI for a bot faction in Frontline mode. It plays defensively and in phases, so a
 // battle breathes: long quiet stretches of sporadic shots between deliberate offensives.
 //
-//   build       regroup and reinforce (≈1.5–2.5 min). Garrisons dig in on its exposed points
-//               (the most exposed doubled); now and then a scout or MG team is sent forward to
+//   build       regroup and reinforce (≈1.5–2.5 min). Garrisons dig in on its threatened points
+//               (the most threatened doubled); now and then a scout or MG team is sent forward to
 //               an overwatch spot to probe — that's where single shots ring out.
 //   plan        pick the target: among the nearest points it doesn't own, in a sector where it
-//               isn't already attacking, the one you hold most weakly. Attack only with 30 %
-//               local superiority, otherwise keep building.
+//               isn't already attacking, the one you hold most weakly. It wants 30 % local
+//               superiority at first, less and less the longer it has gone without an assault.
 //   stage       move the strike group to a flank — off the direct line, on the side where
 //               you are weaker — and gather there.
-//   assault     go in from that angle: infantry takes and digs into the point, armour hunts
-//               whatever defends it.
+//   assault     go in from that angle: infantry runs for the point and digs in on it, armour
+//               fights whatever defends it, fresh squads follow in waves.
 //   consolidate hold the prize for a while, then back to build. A failed assault (heavy
 //               losses or too long) pulls back to the staging area instead.
 // Offensives are separate *operations*: with a big enough army it runs two or three at once in
@@ -34,6 +34,12 @@
 // and dug-in positions near its front get shelled now and then. It buys reinforcements from
 // command points along a build order (with caps on armour and guns).
 // Strength = remaining health fraction × unit cost, summed per stack.
+// Who does what: only infantry takes points, so the army is sorted by job. ASSAULT squads take
+// them (and most of them stay free for that: an attacking side garrisons only what is threatened,
+// at most a third of its line); ESCORT vehicles fight whoever defends the objective; everything
+// else (guns, radars, ambulances…) stands behind the line (support()) and never counts as attack
+// strength. An assault needs squads to go in, they run for the point even under fire, and it
+// presses on with second waves until the point falls or the group is spent.
 // Options (other modes): attack (launch offensives), buy (spend CP), expand (claim neutral
 // points), targetable(point) (which points it may go for), firstAssault (s). Locked points
 // (point.locked) are never targeted.
@@ -63,6 +69,19 @@ const BREACH_WAIT = 60;             // seconds the assault waits for its enginee
 // what a settled garrison builds, in order: [kind, metres ahead, metres to the side]
 const FORT = [['sandbags', 3.5, 0], ['trench', 1, 0], ['wire', 14, 0], ['mines', 30, 0], ['wire', 16, 11], ['mines', 34, -14]];
 const RECOVER_AGAIN = 150;          // seconds before a stack that was pulled out goes again
+const ASSAULT = new Set(['rifles', 'atTeam', 'kampfgruppe', 'airAssault']); // squads that go in and take a point
+const LINE = new Set([...ASSAULT, 'mgTeam']);                 // infantry that can hold one too
+const ESCORT = new Set(['tank', 'heavyTank', 'ifv', 'tankDestroyer', 'reconVehicle', 'cev', 'mineClear']); // goes with an assault
+const OWN_ROLE = new Set(['scouts', 'sniper', 'crew']);       // have jobs of their own: not sent behind the line
+const fighter = (s) => LINE.has(s.type.id) || ESCORT.has(s.type.id);
+const GARRISON_SHARE = 0.34;        // of the line an attacking side leaves sitting on points
+const THREATENED = 150;             // m: an enemy this near a point of ours is worth a garrison
+const MIN_ASSAULT = 2;              // squads an assault needs: without them it can't take anything
+const NERVE = { start: 1.3, least: 0.7, per: 180 }; // local superiority it wants; loses 0.3 per `per` s without an assault
+const WAVE_EVERY = 50;              // seconds between second waves into a running assault
+const ASSAULT_TIME = 170;           // seconds an assault gets to reach the point…
+const ASSAULT_MAX = 320;            // …and in all, while men are on it
+const HELP_TIME = 90;               // seconds a stack sent to a threatened point stays tied to it
 
 /** Share of a stack's living men (or vehicles) under half health. */
 const hurtShare = (s) => {
@@ -86,6 +105,7 @@ export class FrontlineDirector {
     this.ops = [];           // running operations: { phase, since, plan: { target, stage, group, startStrength } }
     this.nextOffensive = this.opts.firstAssault * this.tempo;
     this.nextProbe = 50;
+    this.lastAssault = 0;
   }
 
   get points() {
@@ -108,6 +128,7 @@ export class FrontlineDirector {
     if (this.opts.expand) this.expand();
     this.garrison();
     this.respond();
+    this.support();
     if (this.opts.attack) this.offensive();
     else this.probe();
   }
@@ -122,7 +143,8 @@ export class FrontlineDirector {
   }
 
   free(s) {
-    return !this.roles.has(s) && s.ai.state !== AIState.RETREAT;
+    const r = this.roles.get(s);
+    return (!r || r.role === 'support') && s.ai.state !== AIState.RETREAT;
   }
 
   setPhase(op, phase) {
@@ -143,6 +165,14 @@ export class FrontlineDirector {
     if (kampf && this.myStacks().filter((s) => s.type.id === 'kampfgruppe').length < 4 && this.state.cp[this.faction] >= kampf.cost * 3) this.state.buy(this.faction, 'kampfgruppe');
     const mine = this.myStacks().filter((s) => !s.type.uncapped);
     if (mine.length >= this.state.maxStacks) return;
+    // every other purchase is a rifle squad while the army is short of men to take points with
+    const squads = mine.filter((s) => ASSAULT.has(s.type.id)).length;
+    this.riflesNext = !this.riflesNext;
+    if (this.riflesNext && squads < 4 + Math.ceil(this.points.length / 2) && (!this.state.allow || this.state.allow(getUnitType('rifles')))) {
+      if (this.state.cp[this.faction] >= unitCost(getUnitType('rifles'), this.game.armyOf(this.faction))) this.state.buy(this.faction, 'rifles');
+      else this.riflesNext = false; // saving up: it's still the rifles' turn next time
+      return;
+    }
     for (let tries = 0; tries < BUILD_ORDER.length; tries++) {
       const id = BUILD_ORDER[this.buildIndex % BUILD_ORDER.length];
       const barred = this.state.allow && !this.state.allow(getUnitType(id)); // e.g. infantry only
@@ -190,7 +220,7 @@ export class FrontlineDirector {
       .sort((a, b) => fromUs(a) - fromUs(b));
     for (const p of open) {
       if (claimed.size >= MAX_EXPANDERS) return;
-      const s = this.nearestFree(p, (st) => st.usesCover && st.type.id !== 'scouts');
+      const s = this.nearestFree(p, (st) => LINE.has(st.type.id));
       if (!s) return;
       this.roles.set(s, { role: 'expand', point: p, until: this.now + 150 });
       s.ai.moveTo(this.jitter(p, 5), { hold: true, ordered: false });
@@ -206,23 +236,36 @@ export class FrontlineDirector {
   }
 
   garrison() {
-    // only exposed points get a garrison (rear ones would tie the whole army down)
-    const owned = this.points.filter((p) => p.owner === this.faction && this.frontness(p) < 240).sort((a, b) => this.frontness(a) - this.frontness(b));
+    // only exposed points get a garrison (rear ones would tie the whole army down). A side that
+    // also attacks keeps most of its line free for that: only what the enemy is near, within a budget
+    const attacking = this.opts.attack;
+    const foes = this.game.world.stacksOf(enemyOf(this.faction));
+    const enemyNear = (p) => Math.min(...foes.map((f) => Math.hypot(f.centroid.x - p.x, f.centroid.z - p.z)), Infinity);
+    const rank = attacking ? enemyNear : (p) => this.frontness(p);
+    const owned = this.points.filter((p) => p.owner === this.faction && this.frontness(p) < 240).sort((a, b) => rank(a) - rank(b));
+    let budget = attacking ? Math.max(1, Math.floor(this.myStacks().filter((st) => LINE.has(st.type.id)).length * GARRISON_SHARE)) : Infinity;
+    const wanted = new Map();
     owned.forEach((p, i) => {
-      const want = i === 0 ? 2 : 1;
+      if (budget <= 0 || (attacking && i > 0 && !p.contested && enemyNear(p) > THREATENED)) return;
+      const want = Math.min(budget, i === 0 && (!attacking || enemyNear(p) < 100) ? 2 : 1);
+      budget -= want;
+      wanted.set(p, want);
       const have = [...this.roles].filter(([, r]) => r.role === 'garrison' && r.point === p).length;
       for (let k = have; k < want; k++) {
-        const s = this.nearestFree(p, (st) => st.usesCover);
+        const s = this.nearestFree(p, (st) => LINE.has(st.type.id));
         if (!s) return;
         this.roles.set(s, { role: 'garrison', point: p });
         s.ai.moveTo(this.offsetTowardFront(p, 5 + k * 9), { hold: true, ordered: false });
       }
     });
-    // re-dig garrisons that wandered off; release ones whose point is gone
+    // re-dig garrisons that wandered off; release ones whose point is gone or no longer needs them
+    const kept = new Map();
     for (const [s, r] of this.roles) {
       if (r.role === 'probe' && this.now > r.until) { this.roles.delete(s); continue; }
       if (r.role !== 'garrison') continue;
       if (r.point.owner !== this.faction && !r.point.contested) { this.roles.delete(s); continue; }
+      kept.set(r.point, (kept.get(r.point) ?? 0) + 1);
+      if (attacking && !r.point.contested && kept.get(r.point) > (wanted.get(r.point) ?? 0)) { this.roles.delete(s); continue; }
       if (s.ai.state === AIState.IDLE) s.ai.moveTo(this.offsetTowardFront(r.point, 6), { hold: true, ordered: false });
       else this.fortify(s);
     }
@@ -248,15 +291,34 @@ export class FrontlineDirector {
   }
 
   respond() {
+    for (const [s, r] of this.roles) {
+      if (r.role === 'strike' && !r.op && (this.now > r.until || r.point.owner !== this.faction || Math.abs(r.point.progress) >= 1)) this.roles.delete(s);
+    }
     for (const p of this.points) {
-      if (p.owner !== this.faction || !p.contested) continue;
+      if (p.owner !== this.faction || (!p.contested && Math.abs(p.progress) >= 1)) continue; // (an empty point being taken isn't "contested")
       if ([...this.roles].some(([, r]) => r.role === 'strike' && r.point === p)) continue; // help is on the way
-      const helper = this.nearestFree(p, () => true);
+      const helper = this.nearestFree(p, fighter);
       if (!helper) continue;
       const foe = this.game.world.nearestEnemyGroup(p, this.faction, p.radius * 3);
-      this.roles.set(helper, { role: 'strike', point: p });
+      this.roles.set(helper, { role: 'strike', point: p, until: this.now + HELP_TIME });
       if (foe) helper.ai.attack(foe, { ordered: false });
       else helper.ai.moveTo(p, { ordered: false, hold: helper.usesCover });
+    }
+  }
+
+  /** Guns, radars, ambulances and the like stand behind the line, where their reach covers it. */
+  support() {
+    const owned = this.points.filter((p) => p.owner === this.faction);
+    if (!owned.length) return;
+    const front = owned.reduce((a, b) => (this.frontness(b) < this.frontness(a) ? b : a));
+    for (const s of this.myStacks()) {
+      if (fighter(s) || OWN_ROLE.has(s.type.id) || s.stats.observer || s.stats.structure || s.autonomous || !this.free(s)) continue;
+      const r = this.roles.get(s);
+      if (r && this.now < r.until) continue;
+      this.roles.set(s, { role: 'support', point: front, until: this.now + 60 });
+      const stand = s.stats.indirect ? Math.max(50, Math.min(140, s.unitStats(0).range * 0.45)) : 90;
+      const spot = this.offsetTowardBase(front, stand);
+      if (Math.hypot(s.anchor.x - spot.x, s.anchor.z - spot.z) > 60) s.ai.moveTo(this.jitter(spot, 15), { hold: s.usesCover, ordered: false });
     }
   }
 
@@ -313,28 +375,28 @@ export class FrontlineDirector {
           op.breach = null;
         }
         this.game.bus.emit('toast', `Enemy assault on ${t.name}!`);
-        for (const s of group) {
-          if (this.baseOfFire(s)) continue; // stays on the line, shooting the defenders down
-          if (s.usesCover) s.ai.moveTo(this.jitter(t, 6), { hold: true, ordered: false }); // take it and dig in
-          else {
-            const foe = this.game.world.nearestEnemyGroup(t, this.faction, 100);
-            if (foe) s.ai.attack(foe, { ordered: false });
-            else s.ai.moveTo(this.offsetTowardBase(t, 25), { ordered: false });
-          }
-        }
+        for (const s of group) if (!this.baseOfFire(s)) this.goIn(s, t); // (the MGs stay on the line, shooting the defenders down)
+        this.lastAssault = this.now;
+        plan.startStrength = group.reduce((a, s) => a + strength(s), 0); // measured from who actually goes in
+        op.nextWave = this.now + WAVE_EVERY;
         this.setPhase(op, 'assault');
         return;
       }
       case 'assault': {
         const left = group.reduce((a, s) => a + strength(s), 0);
+        const taking = group.some((s) => s.usesCover && s.units.some((u) => u.alive && Math.hypot(u.pos.x - t.x, u.pos.z - t.z) < t.radius));
+        const time = this.now - op.since;
         if (t.owner === this.faction) {
           this.setPhase(op, 'consolidate');
-        } else if (left < plan.startStrength * 0.4 || this.now - op.since > 170 || !group.length) {
+        } else if (!group.length || time > ASSAULT_MAX || (!taking && (left < plan.startStrength * 0.4 || time > ASSAULT_TIME))) {
           // failed: fall back to the staging area under smoke and regroup
           this.coverWithdrawal(group, t);
           for (const s of group) s.ai.moveTo(this.jitter(plan.stage, 10), { hold: s.usesCover, ordered: false });
           this.endOp(op);
+        } else {
+          this.keepGoing(op, group, t);
         }
+        this.lastAssault = this.now;
         return;
       }
       case 'consolidate':
@@ -345,6 +407,33 @@ export class FrontlineDirector {
         }
         return;
     }
+  }
+
+  /** Into the objective: squads run for the point and dig in on it, vehicles fight whoever defends it. */
+  goIn(s, t) {
+    if (s.usesCover) {
+      s.ai.moveTo(this.jitter(t, 5), { hold: true, ordered: true }); // (ordered: they get up and sprint under fire)
+      return;
+    }
+    const foe = this.game.world.nearestEnemyGroup(t, this.faction, 70);
+    if (foe) s.ai.attack(foe, { ordered: true });
+    else s.ai.moveTo(this.offsetTowardBase(t, 18), { ordered: false });
+  }
+
+  /** The assault presses on: whoever stopped short goes again, and fresh squads follow in waves. */
+  keepGoing(op, group, t) {
+    for (const s of group) {
+      if (this.baseOfFire(s) || s.stats.engineer || s.ai.state === AIState.RETREAT || s.ai.state === AIState.MOVE) continue;
+      if (s.usesCover ? Math.hypot(s.anchor.x - t.x, s.anchor.z - t.z) > t.radius - 4 : s.ai.state !== AIState.ATTACK) this.goIn(s, t);
+    }
+    if (this.now < op.nextWave) return;
+    op.nextWave = this.now + WAVE_EVERY;
+    const wave = this.nearestFree(t, (s) => ASSAULT.has(s.type.id));
+    if (!wave) return;
+    this.roles.set(wave, { role: 'strike', point: t, op });
+    op.plan.group.push(wave);
+    op.plan.startStrength += strength(wave);
+    this.goIn(wave, t);
   }
 
   endOp(op) {
@@ -363,8 +452,8 @@ export class FrontlineDirector {
     const theirStacks = this.game.world.stacksOf(foe);
     const near = (p, r) => theirStacks.filter((s) => Math.hypot(s.centroid.x - p.x, s.centroid.z - p.z) < r).reduce((a, s) => a + strength(s), 0);
     const owned = this.points.filter((p) => p.owner === this.faction);
-    if (!owned.length) return null;
-    const frontierDist = (p) => Math.min(...owned.map((q) => Math.hypot(q.x - p.x, q.z - p.z)));
+    const from = owned.length ? owned : [this.game.world.bases[this.faction]]; // holding nothing (King of the Hill): from home
+    const frontierDist = (p) => Math.min(...from.map((q) => Math.hypot(q.x - p.x, q.z - p.z)));
 
     // the nearest few points we don't own in free sectors; pick the most weakly held
     const candidates = this.points.filter((p) => p.owner !== this.faction && this.canTarget(p) && !busySectors.includes(p.sector ?? 'all'))
@@ -374,19 +463,27 @@ export class FrontlineDirector {
       .sort((a, b) => a.defence - b.defence);
     const { p: target, defence } = candidates[0] ?? {};
     if (!target) return null;
-    const front = owned.sort((a, b) => Math.hypot(a.x - target.x, a.z - target.z) - Math.hypot(b.x - target.x, b.z - target.z))[0];
+    const front = [...from].sort((a, b) => Math.hypot(a.x - target.x, a.z - target.z) - Math.hypot(b.x - target.x, b.z - target.z))[0];
 
-    const free = this.myStacks().filter((s) => this.free(s))
+    // the group: squads to take it first (no squads, no assault), then whoever fights nearest
+    const free = this.myStacks().filter((s) => this.free(s) && fighter(s))
       .sort((a, b) => Math.hypot(a.centroid.x - target.x, a.centroid.z - target.z) - Math.hypot(b.centroid.x - target.x, b.centroid.z - target.z));
+    const squads = free.filter((s) => ASSAULT.has(s.type.id));
+    if (squads.length < MIN_ASSAULT) return null;
     const total = free.reduce((a, s) => a + strength(s), 0);
-    const group = [];
-    let ours = 0;
+    // the longer since its last assault, the less superiority it waits for and the more it commits
+    // (two thirds of what's free at first, the rest for other axes; with one objective, everything)
+    const nerve = Math.max(NERVE.least, NERVE.start - ((this.now - this.lastAssault) / NERVE.per) * 0.3);
+    const share = this.points.length <= 2 ? 1 : 0.67 + (NERVE.start - nerve) * 0.55;
+    const group = squads.slice(0, MIN_ASSAULT);
+    let ours = group.reduce((a, s) => a + strength(s), 0);
     for (const s of free) {
-      if (ours >= defence * 1.5 + 200 || (group.length >= 2 && ours + strength(s) > total * 0.67)) break;
+      if (group.includes(s)) continue;
+      if (ours >= defence * 1.5 + 200 || ours + strength(s) > total * share) break;
       group.push(s);
       ours += strength(s);
     }
-    if (group.length < 2 || ours < defence * 1.3) return null;
+    if (ours < defence * nerve) return null;
 
     // stage on a flank: perpendicular to the front→target line, on the weaker side
     const dx = target.x - front.x;
@@ -416,9 +513,7 @@ export class FrontlineDirector {
     const target = this.points.filter((p) => p.owner !== this.faction)
       .sort((a, b) => Math.hypot(a.x - (front?.x ?? 0), a.z - (front?.z ?? 0)) - Math.hypot(b.x - (front?.x ?? 0), b.z - (front?.z ?? 0)))[0];
     if (!front || !target) return;
-    const scout = this.nearestFree(front, (s) => s.type.id === 'scouts')
-      ?? this.nearestFree(front, (s) => s.type.id === 'atTeam' || s.type.id === 'mgTeam')
-      ?? this.nearestFree(front, (s) => s.usesCover);
+    const scout = this.nearestFree(front, (s) => s.type.id === 'scouts') ?? this.nearestFree(front, (s) => s.type.id === 'mgTeam');
     if (!scout) return;
     const k = 0.35 + Math.random() * 0.2;
     const spot = { x: front.x + (target.x - front.x) * k + (Math.random() - 0.5) * 40, z: front.z + (target.z - front.z) * k };
@@ -576,6 +671,7 @@ export class FrontlineDirector {
       if (r?.role === 'recover' || s.stats.heal || s.stats.repair || s.stats.structure || s.ai.state === AIState.RETREAT) continue;
       if (this.now - (s.recoveredAt ?? -Infinity) < RECOVER_AGAIN || hurtShare(s) < 0.5) continue;
       if (r?.role === 'garrison' && r.point.contested && s.hpRatio > 0.25) continue;
+      if (r?.op?.phase === 'assault' && s.hpRatio > 0.25) continue; // nobody walks out of an assault with a scratch
       const fixer = mine.find((o) => o.alive && (s.usesCover ? o.stats.heal : o.stats.repair));
       const to = fixer ? this.jitter(fixer.centroid, 6) : this.offsetTowardBase(s.centroid, 60);
       this.roles.set(s, { role: 'recover', until: this.now + (fixer ? 120 : 50) });
