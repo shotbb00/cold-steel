@@ -680,7 +680,7 @@ export class FrontlineDirector {
     }
   }
 
-  /** Send the helicopter (or gas) at a spotted, entrenched enemy position near our front. */
+  /** Send the helicopter at a spotted, entrenched enemy position near our front (and fighters up when enemy aircraft come). */
   harass() {
     const air = this.game.air;
     // the jets: a gun run on spotted enemy armour near our front
@@ -693,9 +693,13 @@ export class FrontlineDirector {
         if (air.call(this.faction, t.centroid.x, t.centroid.z, null, 'jet')) return true;
       }
     }
-    const gas = this.game.gas;
-    const gasNow = gas.ready(this.faction) && this.state.cp[this.faction] >= 320 && Math.random() < 0.4;
-    if (!gasNow && (!air.ready(this.faction) || this.state.cp[this.faction] < 260)) return false;
+    // enemy strike aircraft over the field: fighters up over our nearest point
+    const raid = air.sorties.find((s) => s.faction !== this.faction && s.airborne && s.kind !== 'cap');
+    if (raid && air.ready(this.faction, 'cap') && this.state.cp[this.faction] >= 260) {
+      const near = this.points.filter((p) => p.owner === this.faction).sort((a, b) => Math.hypot(a.x - raid.target.x, a.z - raid.target.z) - Math.hypot(b.x - raid.target.x, b.z - raid.target.z))[0];
+      if (near && air.call(this.faction, near.x, near.z, null, 'cap')) return true;
+    }
+    if (!air.ready(this.faction) || this.state.cp[this.faction] < 260) return false;
     const front = this.points.filter((p) => p.owner === this.faction).sort((a, b) => this.frontness(a) - this.frontness(b))[0];
     if (!front) return false;
     const targets = this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => s.usesCover
@@ -704,7 +708,6 @@ export class FrontlineDirector {
       && (s.dugIn || s.ai.state === AIState.DEFEND));
     if (!targets.length) return false;
     const t = targets[Math.floor(Math.random() * targets.length)];
-    if (gasNow) return gas.call(this.faction, t.centroid.x, t.centroid.z); // dug-in infantry: gas them out of their holes
     return air.call(this.faction, t.centroid.x, t.centroid.z);
   }
 

@@ -2,7 +2,7 @@
 // short exercise near your base on the Fulda Gap, taught one thing at a time by a card on the
 // left (ui/Tutorial.js):
 //   basics   the camera, selecting, moving and facing, a first contact, taking a point
-//   fire     mortar smoke, artillery and forward observers, helicopters and gas
+//   fire     mortar smoke, artillery and forward observers, helicopters, jets and recon
 //   fortify  trenches, wire and mines, calling off a job, houses, engineers clearing a minefield
 //   armour   reinforcements, vehicle smoke, mechanised infantry, repairs
 //   tactics  direct control, officers, the ambush
@@ -195,10 +195,10 @@ const AIR = {
   tasks: [['Call a helicopter or a jet onto the machine gun', (g, c) => g.air.sorties.some((s) => s.faction === g.playerFaction) || g.air.sorties.length > c.sorties]],
 };
 
-const GAS = {
-  title: 'Gas',
-  touch: 'The last support power is <b>gas</b>: tap <b>Gas</b> in Orders, then the ground. The shells land nine seconds later and lay a low cloud that drifts with the wind for a couple of minutes. Infantry near it — on <b>both</b> sides — mask up: they aim worse and see less until they are out of it a while. Vehicles are sealed. Never gas ground your own men must cross.',
-  text: 'The last support power is <b>gas</b>: press <kbd data-key="gas"></kbd> (or the Gas button), then click the ground. The shells land nine seconds later and lay a low cloud that drifts with the wind for a couple of minutes. Infantry near it — on <b>both</b> sides — mask up: they aim worse and see less until they are out of it a while. Vehicles are sealed. Never gas ground your own men must cross.',
+const RECON = {
+  title: 'Recon flight',
+  touch: 'You cannot hit what you cannot see. Tap <b>Recon</b> in Orders, then the ground: a fast jet makes one low photo run along the line, and every enemy near its track shows on your map for thirty seconds — your guns fire on them first. <b>Fighters</b> beside it put a patrol over a spot that shoots down enemy aircraft coming near.',
+  text: 'You cannot hit what you cannot see. Press <kbd data-key="recon"></kbd> (or the Recon button), then click the ground: a fast jet makes one low photo run along the line (<kbd data-key="turnLeft"></kbd> / <kbd data-key="turnRight"></kbd> turn it), and every enemy near its track shows on your map for thirty seconds — your guns fire on them first. <kbd data-key="cap"></kbd> (Fighters) puts a patrol over a spot instead: it shoots down enemy aircraft that come near.',
   start(game, ctx) {
     game.air.limit[game.playerFaction] = undefined;
     game.modeState.cp[game.playerFaction] += 200;
@@ -206,8 +206,8 @@ const GAS = {
     game.tutorial.show(ctx.at);
   },
   tasks: [
-    ['Fire a gas mission at the machine gun', (g) => (g.gas.readyAt[g.playerFaction] ?? 0) > 0],
-    ['Watch the gunners mask up', (g) => g.world.stacksOf(enemyOf(g.playerFaction)).some((s) => s.units.some((u) => u.masked > 0))],
+    ['Send a recon flight over the machine gun', (g) => (g.air.readyAt[g.air.key(g.playerFaction, 'recon')] ?? 0) > 0],
+    ['See what it photographed', (g) => g.world.stacksOf(enemyOf(g.playerFaction)).some((s) => s.units.some((u) => u.locatedUntil > g.time))],
   ],
 };
 
@@ -395,7 +395,7 @@ const AMBUSH = {
 export const CHAPTERS = [
   { id: 'basics', title: 'Basics', blurb: 'The camera, selecting and moving, facing and cover, a first firefight, taking ground.', steps: [CAMERA, SELECT, MOVE, FACE, CONTACT, POINT],
     outro: 'That is the core of command. Next: <b>Fire support</b> — what to do about a machine gun you can\'t walk up to.' },
-  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, gas.', steps: [SMOKE, SPOTTING, AIR, GAS],
+  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, recon flights.', steps: [SMOKE, SPOTTING, AIR, RECON],
     outro: 'Fire support wins fights before your men walk into them. Next: <b>Digging in</b> — making ground hard to take.' },
   { id: 'fortify', title: 'Digging in', blurb: 'Trenches, wire and mines, calling off a job, fighting from houses, engineers clearing a minefield.', steps: [TRENCH, OBSTACLES, CANCEL, HOUSE, ENGINEERS],
     outro: 'A dug-in squad behind wire costs the enemy dearly. Next: <b>Armour and transport</b>.' },

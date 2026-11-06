@@ -11,7 +11,6 @@ import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
-import { GAS } from './Gas.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
@@ -169,7 +168,8 @@ export class CommandSystem {
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
-    else if (keys.is(code, 'gas')) this.runCommand('gas');
+    else if (keys.is(code, 'cap')) this.runCommand('air:cap');
+    else if (keys.is(code, 'recon')) this.runCommand('air:recon');
     else if (keys.is(code, 'barrage')) this.runCommand('barrage');
     else if (keys.is(code, 'cancelJob')) this.runCommand('cancelJob');
     else if (keys.is(code, 'smoke')) this.runCommand('smoke');
@@ -264,10 +264,6 @@ export class CommandSystem {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
-    } else if (cmd === 'gas') {
-      if (this.game.air.limit[this.faction] === 0) return this.game.bus.emit('toast', 'No support in this battle');
-      if (!this.game.gas.ready(this.faction)) return this.game.bus.emit('toast', `Gas not ready (${Math.ceil(this.game.gas.cooldownLeft(this.faction))} s)`);
-      this.startTargeting({ kind: 'smoke', gas: true });
     } else if (cmd === 'barrage') {
       const g = this.game;
       if (doctrine(g, this.faction, 'mass')) {
@@ -323,11 +319,9 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      if (t.gas) t.decal.mesh.material.color.set(0xd8d27a);
       if (t.barrage || t.walze) t.decal.mesh.material.color.set(0xe0904a);
       t.hint = t.barrage ? `Barrage (${doctrine(this.game, this.faction, 'mass').cost} CP): ${click} the middle of the sector — ${cancel}`
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
-        : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells should fall — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
@@ -353,6 +347,8 @@ export class CommandSystem {
       t.ghost = t.decal.mesh;
       t.hint = t.air === 'lift'
         ? `Air assault (${p.cost} CP): ${click} the landing zone — ${turn('the approach')}, ${cancel}`
+        : t.air === 'cap' ? `${p.label} (${p.cost} CP): ${click} where the fighters should circle — ${cancel}`
+        : t.air === 'recon' ? `${p.label} (${p.cost} CP): ${click} the middle of the photo run — ${turn('the run')}, ${cancel}`
         : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;
     }
     scene.add(t.ghost);
@@ -471,9 +467,6 @@ export class CommandSystem {
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.walze) {
       this.game.orders.issue({ t: 'walze', s: ids(t.stacks), x: p.x, z: p.z });
-      this.addMarker(p, 'attack');
-    } else if (t.kind === 'smoke' && t.gas) {
-      if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke') {
       this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });

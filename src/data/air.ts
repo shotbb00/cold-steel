@@ -111,6 +111,12 @@ export const JETS = {
   },
 } satisfies PerFaction<Aircraft>;
 
+// Fighter patrol (I) and recon flight (O), systems/AirStrike.js: each army's own type by name;
+// they fly the strike jets' models for now (ponytail: own fighter and recon models later)
+const renamed = (names: PerFaction<string>) => Object.fromEntries(Object.entries(JETS).map(([k, a]) => [k, { ...a, name: names[k as keyof typeof names] }])) as PerFaction<Aircraft>;
+export const FIGHTERS = renamed({ nato: 'F-15C Eagle', pact: 'MiG-23MLD', bw: 'F-4F Phantom II', nva: 'MiG-21bis' });
+export const RECON = renamed({ nato: 'RF-4C Phantom II', pact: 'MiG-25RB', bw: 'RF-4E Phantom II', nva: 'Su-22M4R' });
+
 // Air assault (P): a transport helicopter flies a squad in, lands it on the spot, and leaves.
 // Shot down before it touches down, the squad goes with it.
 export const LIFT = {

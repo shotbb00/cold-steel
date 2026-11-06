@@ -11,7 +11,6 @@
 //   { t: 'fireMission', s: [ids], x, z }         (shells on the spot, from binoculars in direct control)
 //   { t: 'flare', s: [ids], x, z }             { t: 'buy', u: unitTypeId, e?: road (base entry index), k?: squad kit (data/kits.js) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
-//   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
 //   { t: 'walze', s: [ids], x, z }               (the NVA's creeping barrage: its artillery, UnitStack.startBarrage)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
@@ -211,8 +210,6 @@ export class Orders {
         else if (far) g.tell(faction, 'New men only reach squads near the base or a set-up command post');
         return null;
       }
-      case 'gas':
-        return g.gas.call(faction, cmd.x, cmd.z);
       case 'barrage':
         return g.barrage.call(faction, cmd.x, cmd.z);
       case 'walze':

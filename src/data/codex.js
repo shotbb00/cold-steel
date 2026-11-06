@@ -84,8 +84,8 @@ export const CODEX = {
     pact: 'Soviet regiments ran their battles from command vehicles like the BTR-60PU, with their extra radios and masts.',
   },
   jammer: {
-    use: 'Park it close behind the front with its mast up: after ten seconds it jams the enemy\'s radio nets within 160 m. Air strikes and gas they call in there come 8 s late and up to 25 m off target, their forward observers there lose their bonus, their radars go blind. Put it where you are about to attack, or over your own positions before their barrage.',
-    strong: 'Spoiling the enemy\'s support — air, gas, artillery corrections, radars',
+    use: 'Park it close behind the front with its mast up: after ten seconds it jams the enemy\'s radio nets within 160 m. Air strikes they call in there come 8 s late and up to 25 m off target, their forward observers there lose their bonus, their radars go blind. Put it where you are about to attack, or over your own positions before their barrage.',
+    strong: 'Spoiling the enemy\'s support — air, artillery corrections, radars',
     weak: 'No weapon; while it jams, the enemy sees it on the map',
     counter: 'It gives itself away: shell it, send a helicopter at it (from outside its circle), or hunt it with recon.',
     nato: 'The AN/MLQ-34 TACJAM on the M1015 carrier was the US Army\'s divisional communications jammer of the 1980s.',

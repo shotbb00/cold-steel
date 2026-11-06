@@ -33,7 +33,8 @@ export const ACTIONS = [
   { id: 'heli', label: 'Helicopter', ctx: 'command', key: 'KeyY' },
   { id: 'jet', label: 'Jet gun run', ctx: 'command', key: 'KeyJ' },
   { id: 'lift', label: 'Air assault', ctx: 'command', key: 'KeyP' },
-  { id: 'gas', label: 'Gas fire mission', ctx: 'command', key: 'KeyI' },
+  { id: 'cap', label: 'Fighter patrol', ctx: 'command', key: 'KeyI' },
+  { id: 'recon', label: 'Recon flight', ctx: 'command', key: 'KeyO' },
   { id: 'barrage', label: 'Barrage (Soviet preparatory barrage / NVA Feuerwalze)', ctx: 'command', key: 'KeyZ' },
   { id: 'turnLeft', label: 'Turn left (placing, air runs)', ctx: 'command', key: 'KeyQ', targeting: true },
   { id: 'turnRight', label: 'Turn right (placing, air runs)', ctx: 'command', key: 'KeyE', targeting: true },
@@ -54,7 +55,7 @@ export const ACTIONS = [
   { id: 'mute', label: 'Mute', ctx: 'both', key: 'KeyM' },
   { id: 'chat', label: 'Chat (multiplayer)', ctx: 'both', key: 'Enter', alt: 'NumpadEnter' },
   { id: 'bloom', label: 'Bloom on / off', ctx: 'both', key: 'KeyB' },
-  { id: 'ao', label: 'Ambient occlusion on / off', ctx: 'both', key: 'KeyO' },
+  { id: 'ao', label: 'Ambient occlusion on / off', ctx: 'both', key: 'F8' },
 ];
 const BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));
 

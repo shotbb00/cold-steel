@@ -2,14 +2,13 @@
 //   actions         what the selection can do, as icon tiles with the key in the corner —
 //                   stop (anything that moves), sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
 //                   (engineers), lay a bridge, smoke, flare (night), unload, cancel a job, leave a building
-//   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
+//   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
 import { refillCost } from '../core/Orders.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
-import { GAS } from '../systems/Gas.js';
 import { keyOf } from '../core/Keys.js';
 import { icon } from './Icons.js';
 
@@ -44,7 +43,8 @@ const SUPPORT = [
   ['air', 'heli', 'heli', 'Helicopter', 'Attack helicopter: rockets and the chin gun along a line'],
   ['air:jet', 'jet', 'jet', 'Jet', 'Ground-attack jet: one fast, devastating gun run'],
   ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
-  ['gas', 'gas', 'gas', 'Gas', 'Chemical shells: infantry there mask up, aim worse and see less'],
+  ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
+  ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
 ];
 
@@ -94,13 +94,12 @@ export class ActionBar {
     const me = g.playerFaction;
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
-      const gas = cmd === 'gas';
       const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? false : null; // the Soviet Army's only
-      const kind = gas || mass !== null ? null : cmd.slice(4) || 'heli';
-      const left = Math.ceil(gas ? g.gas.cooldownLeft(me) : mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
-      const total = gas ? GAS.cooldown : mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
+      const kind = mass !== null ? null : cmd.slice(4) || 'heli';
+      const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
+      const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const text = left > 0 ? `${left} s` : String(gas ? GAS.cost : mass !== null ? mass.cost ?? '' : terms.cost);
+      const text = left > 0 ? `${left} s` : String(mass !== null ? mass.cost ?? '' : terms.cost);
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);

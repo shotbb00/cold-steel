@@ -9,6 +9,12 @@
 //   lift – air assault (LIFT: UH-60A / Mi-8), P: flies a squad to the spot, door guns firing
 //          at anyone near the landing zone, touches down, the squad jumps out, it lifts off and
 //          goes home. Shot down before it lands, the squad dies with it.
+//   cap  – fighter patrol, I: a pair circles high over the spot for `station` s and fires its
+//          air-to-air missiles (`aam`) at enemy aircraft that come within reach (Sortie.patrol).
+//   recon – recon flight, O: one fast, low photo run along the line; every enemy within `swath`
+//          m of its track is located for `hold` s — on your map through the fog, and your guns'
+//          first choice (u.locatedUntil, as the counter-battery radar does; Sortie.photograph).
+//          (cap and recon fly the jets' models for now: ponytail — own fighter / recon models later)
 // Ground fire answers all of them: radar-directed SP anti-aircraft guns (data/units/aa.js) and
 // missile air defence (manpads.js, sam.js — systems/AirStrike missile()) are the real threat;
 // MG teams and tank machine guns add a little (visible tracers), rifles hardly at all; damaged,
@@ -18,10 +24,10 @@
 import { JAM } from './Jamming.js';
 import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
-import { AIRCRAFT, JETS, LIFT } from '../data/air.ts';
+import { AIRCRAFT, JETS, LIFT, FIGHTERS, RECON } from '../data/air.ts';
 import { FACTIONS, enemyOf, forArmy } from '../data/factions.js';
 import { paintMaterial } from '../render/paint.js';
-import { dist2DSq } from '../core/math.js';
+import { dist2DSq, angleDelta, clamp } from '../core/math.js';
 
 /** Flight and cost parameters per kind. */
 export const KINDS = {
@@ -80,6 +86,48 @@ export const KINDS = {
     runLength: 0,
     turn: 0.8,
     hover: 4.5,        // seconds on the ground
+  },
+  cap: {
+    aircraft: FIGHTERS,
+    label: 'Fighter patrol',
+    key: 'I',
+    cost: 200,
+    cooldown: 150,
+    delay: 8,
+    approach: 1400,
+    cruiseAlt: 170,
+    attackAlt: 170,
+    cruiseSpeed: 160,
+    attackSpeed: 140,
+    rocketsFrom: 0,
+    gunFrom: 0,
+    gunTo: 0,
+    runLength: 0,
+    turn: 0,
+    orbit: 380,        // m: the circle it flies round the spot
+    station: 75,       // s on station
+    aam: { count: 4, range: 1300, speed: 480, pk: 0.75, hits: 99, every: 3 }, // air-to-air missiles: a hit brings it down
+  },
+  recon: {
+    aircraft: RECON,
+    label: 'Recon flight',
+    key: 'O',
+    cost: 120,
+    cooldown: 100,
+    delay: 6,
+    approach: 1400,
+    cruiseAlt: 110,
+    attackAlt: 90,
+    cruiseSpeed: 190,
+    attackSpeed: 180,
+    rocketsFrom: 450,  // the cameras run from this far before the spot…
+    gunFrom: 0,
+    gunTo: -450,       // …to this far past it
+    runLength: 900,
+    turn: 0,
+    pitchDown: 0,
+    swath: 170,        // m either side of the track the cameras take in
+    hold: 30,          // s what they found stays located
   },
 };
 /** The helicopter run's parameters (older callers). */
@@ -195,8 +243,8 @@ class Sortie {
     this.game.scene.add(rig.root);
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
-    const what = this.kind === 'lift' ? 'inbound with the assault squad' : 'on station — starting its run';
-    this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`);
+    const what = this.kind === 'lift' ? 'inbound with the assault squad' : this.kind === 'recon' ? 'inbound — starting the photo run' : 'on station — starting its run';
+    if (this.kind !== 'cap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
   }
 
   update(dt) {
@@ -207,6 +255,7 @@ class Sortie {
     }
     if (this.state === 'done') return;
     if (this.state === 'down') return this.updateCrash(dt);
+    if (this.kind === 'cap') return this.patrol(dt);
     const p = this.p;
     const terrain = game.terrain;
     const d = this.toGo;
@@ -216,7 +265,13 @@ class Sortie {
       if (this.state === 'attack' && d < 4) this.state = 'land';
     } else {
       if (this.state === 'ingress' && d < p.rocketsFrom + 40) this.state = 'attack';
-      if (this.state === 'attack' && d < p.gunTo - 15) this.state = 'break';
+      if (this.state === 'attack' && d < p.gunTo - 15) {
+        this.state = 'break';
+        if (this.kind === 'recon') {
+          const n = this.found?.size ?? 0;
+          game.tell(this.faction, n ? `${this.type.name} recon: ${n} enemy position${n > 1 ? 's' : ''} photographed — on your map for ${p.hold} s` : `${this.type.name} recon: nothing found along the run`);
+        }
+      }
     }
 
     // flight: speed, height and attitude by phase
@@ -265,7 +320,7 @@ class Sortie {
     this.place(dt);
 
     if (this.state === 'attack' || this.state === 'land') {
-      if (this.kind === 'lift') this.coverLZ(dt, d); else this.fireWeapons(dt, d);
+      if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon') this.photograph(dt); else this.fireWeapons(dt, d);
     }
     this.fireT -= dt;
     const exposed = this.state === 'attack' || this.state === 'land' || (this.state === 'ingress' && d < p.rocketsFrom + 120);
@@ -274,6 +329,79 @@ class Sortie {
       this.groundFire();
     }
     if (this.hp < this.type.hp * 0.6) game.effects.trail(_p.copy(this.pos).addScaledVector(UP, 1.5), this.dir); // trailing smoke
+  }
+
+  /** Recon: every enemy within the cameras' swath of the track is located for a while. */
+  photograph(dt) {
+    if ((this.photoT = (this.photoT ?? 0) - dt) > 0) return;
+    this.photoT = 0.25;
+    const g = this.game;
+    const r2 = this.p.swath * this.p.swath;
+    for (const s of g.world.stacks) {
+      if (s.faction === this.faction || !s.alive) continue;
+      for (const u of s.units) {
+        if (!u.alive || (u.pos.x - this.pos.x) ** 2 + (u.pos.z - this.pos.z) ** 2 > r2) continue;
+        u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + this.p.hold);
+        (this.found ??= new Set()).add(s);
+      }
+    }
+  }
+
+  /**
+   * Fighter patrol: in to the spot, round it on a wide circle for `station` s, a missile at any
+   * enemy aircraft in reach (every few seconds while they last), then home.
+   */
+  patrol(dt) {
+    const g = this.game;
+    const p = this.p;
+    const c = this.target;
+    const dx = this.pos.x - c.x;
+    const dz = this.pos.z - c.z;
+    const r = Math.hypot(dx, dz);
+    let wantRoll = 0;
+    if (this.state === 'ingress' && r < p.orbit * 1.1) {
+      this.state = 'attack';
+      this.stationT = 0;
+      this.aamLeft = p.aam.count;
+      g.tellBoth(this.faction, `${p.label} (${this.type.name}) on station`, 'Enemy fighters overhead!');
+    }
+    if (this.state === 'attack') {
+      this.stationT += dt;
+      // round the circle: along the tangent, turned in (or out) by how far off the circle it is
+      const want = Math.atan2(dx, dz) + this.turnSign * (Math.PI / 2 + clamp(((r - p.orbit) / p.orbit) * 1.5, -0.6, 0.6));
+      const rate = (this.speed / p.orbit) * 1.6;
+      const turn = clamp(angleDelta(this.yaw, want), -rate * dt, rate * dt);
+      this.yaw += turn;
+      wantRoll = -Math.sign(turn) * 0.6;
+      if ((this.aamT = (this.aamT ?? 0) - dt) <= 0 && this.aamLeft > 0) {
+        this.aamT = 1;
+        const t = g.air.nearestThreat(this.faction, this.pos, p.aam.range);
+        if (t && t.kind !== 'cap') { // (fighters don't duel: they hunt the strike aircraft)
+          this.aamT = p.aam.every;
+          this.aamLeft--;
+          g.air.missile(_p.copy(this.pos), t, this.faction, p.aam);
+          g.tellBoth(this.faction, `${this.type.name}: missile away at an enemy ${t.type?.name ?? 'aircraft'}`, `Enemy fighter fires on our ${t.type?.name ?? 'aircraft'}!`);
+        }
+      }
+      const hurt = this.hp <= this.type.hp * 0.35;
+      if (this.stationT > p.station || hurt || (this.aamLeft <= 0 && this.aamT <= 0)) {
+        this.state = 'break';
+        const base = g.world.bases?.[this.faction] ?? { x: this.pos.x, z: this.pos.z - 1 };
+        this.yaw = Math.atan2(base.x - this.pos.x, base.z - this.pos.z); // (a hard turn for home)
+        g.tell(this.faction, hurt ? `${this.type.name} hit — leaving the patrol` : `${p.label} going home`);
+      }
+    } else if (this.state === 'break' || this.state === 'home') {
+      this.state = 'home';
+      if ((this.homeT += dt) > 9) return this.finish();
+    }
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const wantSpeed = this.state === 'attack' ? p.attackSpeed : p.cruiseSpeed;
+    this.speed += (wantSpeed - this.speed) * Math.min(1, dt * 0.6);
+    this.pos.addScaledVector(this.dir, this.speed * dt);
+    this.pos.y += (g.terrain.heightAt(this.pos.x, this.pos.z) + p.cruiseAlt - this.pos.y) * Math.min(1, dt);
+    this.pitch += (0 - this.pitch) * Math.min(1, dt * 2);
+    this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
+    this.place(dt);
   }
 
   place(dt) {
