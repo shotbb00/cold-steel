@@ -35,6 +35,8 @@ import { CLIMB, LOCAL } from '../world/Nav.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
+const TRACERS = 1.6; // every weapon's tracer share (stats.tracer) times this: the battle reads better with more of them
+
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
 // his platoon is slower than one that never had him.
@@ -1243,7 +1245,7 @@ export class UnitStack {
       vsArmor: s.vsArmor ?? 1,
       suppress: (s.suppressPower ?? 1) * (ambush ? AMBUSH.suppress : 1),
       ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
-      tracer: Math.random() < (s.tracer ?? 1),
+      tracer: Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS),
       trail: !!s.trail,
     });
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');

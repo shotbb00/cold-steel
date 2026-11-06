@@ -301,6 +301,26 @@ export class EffectsSystem {
     }
   }
 
+  /** A recovery crew at work: a welding torch's sparks and its blue-white flash. */
+  weld(pos) {
+    for (let i = 0; i < 6; i++) {
+      this.fire.spawn(pos.x, pos.y, pos.z, {
+        vx: rnd(-3, 3), vy: rnd(0.5, 4), vz: rnd(-3, 3), size: rnd(0.03, 0.06), grow: 0, life: rnd(0.2, 0.5),
+        color: SPARK, bright: 3, gravity: 9, drag: 0.4,
+      });
+    }
+    this.fire.spawn(pos.x, pos.y, pos.z, { size: 0.25, grow: 0.5, life: 0.12, color: 0xb8d8ff, bright: 4 });
+  }
+
+  /** A medic at work: a soft green glow rising off the wounded man. */
+  tend(pos) {
+    for (let i = 0; i < 3; i++) {
+      this.fire.spawn(pos.x + rnd(-0.3, 0.3), pos.y + rnd(0, 0.4), pos.z + rnd(-0.3, 0.3), {
+        vy: rnd(0.4, 0.9), size: rnd(0.08, 0.14), grow: 0.3, life: rnd(0.8, 1.3), color: 0x6dff9a, bright: 1.6, drag: 0.6,
+      });
+    }
+  }
+
   /** Dust kicked up by tracks, digging, a body hitting the ground. */
   dust(pos, size = 1) {
     this.smoke.spawn(pos.x + rnd(-0.3, 0.3) * size, pos.y + 0.2, pos.z + rnd(-0.3, 0.3) * size, {

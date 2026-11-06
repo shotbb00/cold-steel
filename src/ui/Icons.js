@@ -16,6 +16,7 @@ const FILLED = {
 };
 const LINE = {
   wire: '<path d="M1 27h30M4 27V12M28 27V12"/><ellipse cx="9" cy="18" rx="4.5" ry="7"/><ellipse cx="14" cy="18" rx="4.5" ry="7"/><ellipse cx="19" cy="18" rx="4.5" ry="7"/><ellipse cx="24" cy="18" rx="4.5" ry="7"/><path d="M7 10.5l1.5 1.5M12 10.5l1.5 1.5M17 10.5l1.5 1.5M22 10.5l1.5 1.5M10 25l1.5-1.5M15 25l1.5-1.5M20 25l1.5-1.5"/>',
+  stop: '<rect x="8" y="8" width="16" height="16" rx="1.5"/>',
   cancel: '<path d="M4 10V4h6M22 4h6v6M28 22v6h-6M10 28H4v-6"/><path d="M11 11l10 10M21 11L11 21"/>',
   control: '<circle cx="16" cy="16" r="8.5"/><path d="M16 2v8M16 22v8M2 16h8M22 16h8"/><circle cx="16" cy="16" r="1.6" class="dot"/>',
   engineer: '<path d="M25 3L12 20"/><path d="M22.5 5.5l4 3"/><ellipse cx="9" cy="24" rx="7.5" ry="3.2"/><path d="M2 30h28"/>',

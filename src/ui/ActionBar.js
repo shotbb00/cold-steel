@@ -1,6 +1,6 @@
 // The command panel's buttons (src/ui/Icons.js draws them):
 //   actions         what the selection can do, as icon tiles with the key in the corner —
-//                   sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
+//                   stop (anything that moves), sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
 //                   (engineers), lay a bridge, smoke, flare (night), unload, cancel a job, leave a building
 //   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
 //                   its price, or while it recharges a ring running round and the seconds left
@@ -13,6 +13,7 @@ import { keyOf } from '../core/Keys.js';
 import { icon } from './Icons.js';
 
 const ACTIONS = [
+  { cmd: 'hold', label: 'Stop', icon: 'stop', key: 'hold', tip: 'Stop where they are and hold the spot', when: (sel) => sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
   { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.sandbags), tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.trench), tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.wire), tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },

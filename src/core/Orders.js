@@ -56,7 +56,12 @@ export class Orders {
     const mine = (ids) => (ids ?? []).map(own).filter(Boolean);
     switch (cmd.t) {
       case 'hold':
-        for (const s of mine(cmd.s)) s.ai.defend();
+        for (const s of mine(cmd.s)) {
+          if (s.moveTarget) { s.anchor.x = s.centroid.x; s.anchor.z = s.centroid.z; } // stop here, not at the end of the formation's slide
+          s.ai.defend();
+          // vehicles halt each where it stands, not back into formation (ai/SoldierAI.js reads plannedSpots)
+          if (!s.usesCover) s.ai.plannedSpots = new Map(s.units.filter((u) => u.alive).map((u) => [u, { x: u.pos.x, z: u.pos.z }]));
+        }
         return null;
       case 'move':
         for (const [id, x, z] of cmd.m ?? []) {
