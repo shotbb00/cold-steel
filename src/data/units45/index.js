@@ -9,6 +9,7 @@ import { TYPES_1985 } from '../units/index.js';
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildUsSherman, buildSovT34, buildWhPanzerIV, buildFjStuG, buildUsM3, buildWh251, buildSovStudebaker, buildFjOpelBlitz } from '../models/ww2Armour.js';
 import { buildUsPriest, buildSovM30, buildWhWespe, buildFjLeFH18, buildUsCalliope, buildSovKatyusha, buildWhPanzerwerfer, buildFjNebelwerfer, buildUsM4Mortar, buildSovPM38, buildWh2512, buildFjGrw42Lorry } from '../models/ww2Fire.js';
+import { buildUsM16, buildSovM17, buildWhWirbelwind, buildFj251Flak, buildUsBofors, buildSov61K, buildWhFlak38, buildFjFlakvierling, buildUs90mm, buildSov52K, buildDeFlak36, buildFjOstwind, buildUsSCR584, buildSovRUS2, buildDeWuerzburg, buildUsM15, buildSovZSU37 } from '../models/ww2AirDefence.js';
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 const T = TYPES_1985;
@@ -263,6 +264,113 @@ const cbRadar = derive(T.observers, {
   },
 });
 
+// air defence: guns only (no missiles yet). Without a radar of their own the gunners see by eye
+// (`optical`: a share of the reach) unless an air search radar covers them (AirStrike.radarCovers)
+const aa = derive(T.aa, {
+  name: 'Self-propelled AA', shortName: 'SP AA',
+  stats: { nightSight: undefined, antiAir: { range: 260, optical: 0.7, rate: 12, burst: 1.4, pause: 0.9, hitNear: 0.06, hitFar: 0.012 } },
+  factionStats: {
+    nato: { armor: 0.2, hp: 600 },                    // M16: the quad .50 on an M3
+    sov: { armor: 0.2, hp: 600 },                     // M17: the same, Lend-Lease
+    pact: { armor: 0.55, hp: 1100, speed: 4.8 },      // Wirbelwind: on a Panzer IV
+    fj: { armor: 0.25, hp: 650, speed: 6 },           // a Flak 38 on a 251
+  },
+  models: { nato: buildUsM16, sov: buildSovM17, pact: buildWhWirbelwind, fj: buildFj251Flak },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'M16 MGMC', weapon: '4 × .50 cal (Maxson mount)', text: 'The "meat chopper": four heavy machine guns on a half-track. Against low aircraft and infantry in the open alike.' },
+    sov: { name: 'M17 MGMC', weapon: '4 × .50 cal', text: 'The quad .50 half-track, Lend-Lease: the Red Army’s best answer to low-flying aircraft.' },
+    pact: { name: 'Flakpanzer IV Wirbelwind', weapon: '4 × 2 cm Flak 38', text: 'Four 2 cm cannon in an open turret on a Panzer IV: keeps the Jabos off the column.' },
+    fj: { name: 'Sd.Kfz. 251/17', weapon: '2 cm Flak 38', text: 'A 2 cm Flak on the half-track’s rear deck: light, quick, the crew in the open.' },
+  },
+});
+
+const towedAA = derive(T.towedAA, {
+  name: 'Towed AA', shortName: 'Towed AA',
+  stats: { nightSight: undefined },
+  factionStats: {
+    nato: { antiAir: { range: 320, optical: 0.65, rate: 2.2, burst: 3, pause: 1, hitNear: 0.14, hitFar: 0.04 } },   // Bofors: slow, hard-hitting
+    sov: { antiAir: { range: 300, optical: 0.65, rate: 2.4, burst: 3, pause: 1, hitNear: 0.13, hitFar: 0.035 } },   // 61-K: the Bofors’ Soviet cousin
+    pact: { antiAir: { range: 240, optical: 0.65, rate: 7, burst: 1.5, pause: 1, hitNear: 0.06, hitFar: 0.012 } },  // Flak 38: one 2 cm
+    fj: { antiAir: { range: 240, optical: 0.65, rate: 14, burst: 1.5, pause: 1, hitNear: 0.06, hitFar: 0.012 } },   // Flakvierling: four
+  },
+  models: { nato: buildUsBofors, sov: buildSov61K, pact: buildWhFlak38, fj: buildFjFlakvierling },
+  variants: {
+    nato: { name: 'Bofors 40 mm', weapon: '40 mm M1', text: 'The Bofors on its four-wheeled carriage: slow clips of heavy shells that bring an aircraft down with one hit.' },
+    sov: { name: '37 mm 61-K', weapon: '37 mm 61-K', text: 'The Soviet 37 mm, the Bofors’ cousin: steady fire over the front line.' },
+    pact: { name: '2 cm Flak 38', weapon: '2 cm Flak 38', text: 'The light Flak on its cross: quick to set up, a stream of small shells.' },
+    fj: { name: '2 cm Flakvierling 38', weapon: '4 × 2 cm Flak 38', text: 'Four 2 cm barrels on one mount: a wall of shells no low aircraft flies through twice.' },
+  },
+});
+
+/** The heavy AA guns: long reach against aircraft, and against tanks (the 88 above all). */
+const sam = derive(T.sam, {
+  name: 'Heavy AA Gun', shortName: 'Heavy Flak', weaponSound: 'cannon', cost: 360,
+  stats: {
+    nightSight: undefined, towed: { deploy: 25 }, hp: 600, armor: 0.1, turretRate: 0.6,
+    antiAir: { range: 650, optical: 0.8, rate: 0.5, burst: 8, pause: 0.1, hitNear: 0.3, hitFar: 0.1 },
+    weapon: 'cannon', range: 320, aggroRange: 280, preferredRange: 250, damage: 480, pierce: 0.7, splash: 3, fireCooldown: 5, aimTime: 1,
+    antiArmor: true, boltSpeed: 720, boltSize: 1.5, tracer: 1, spread: 0.003, magSize: 40, reloadTime: 6, playerFireInterval: 5, noStabilizer: true,
+  },
+  factionStats: {},
+  models: { nato: buildUs90mm, sov: buildSov52K, pact: buildDeFlak36, fj: buildDeFlak36 },
+  variants: {
+    nato: { name: '90 mm M2', weapon: '90 mm M2 gun', text: 'The heavy AA gun on its cruciform mount: reaches far up — and its shells go through tank armour too.' },
+    sov: { name: '85 mm 52-K', weapon: '85 mm 52-K', text: 'The heavy AA gun whose barrel went into the T-34-85: deadly to aircraft and tanks alike.' },
+    pact: { name: '8.8 cm Flak 36', weapon: '8.8 cm Flak 36', text: 'The 88: built to shoot down bombers, feared most for what it does to tanks at a kilometre.' },
+    fj: { name: '8.8 cm Flak 36', weapon: '8.8 cm Flak 36', text: 'The Luftwaffe’s own 88, with the Fallschirmjäger: aircraft or tanks, it kills both.' },
+  },
+});
+
+const manpads = derive(T.manpads, {
+  name: 'AA Machine-Gun Team', shortName: 'AA MG', weaponSound: 'mg',
+  specialist: { count: 1, stats: { antiAir: { range: 220, optical: 1, rate: 9, burst: 1.5, pause: 1, hitNear: 0.05, hitFar: 0.01 } } },
+  models: men(),
+  specialistModels: men({ weapon: 'mg' }),
+  variants: {
+    nato: { name: 'AA .50 Team', weapon: 'M2 .50 cal on an AA tripod', text: 'A heavy machine gun pointed at the sky: no aircraft flies low over them unpunished.' },
+    sov: { name: 'DShK Team', weapon: 'DShK 12.7 mm on its AA mount', text: 'The heavy DShK on its tall tripod: the infantry’s own umbrella.' },
+    pact: { name: 'Fla-MG Team', weapon: 'MG 42 on the AA tripod', text: 'The MG 42 on its anti-aircraft tripod: a stream of bullets across a strafing run.' },
+    fj: { name: 'Fla-MG Team', weapon: 'MG 42 on the AA tripod', text: 'The MG 42 on its anti-aircraft tripod: a stream of bullets across a strafing run.' },
+  },
+});
+
+const airRadar = derive(T.airRadar, {
+  name: 'Air Search Radar', shortName: 'Radar',
+  stats: { nightSight: undefined, airRadar: { cover: 380, detect: 800, deploy: 15 } },
+  factionStats: {},
+  models: { nato: buildUsSCR584, sov: buildSovRUS2, pact: buildDeWuerzburg, fj: buildDeWuerzburg },
+  variants: {
+    nato: { name: 'SCR-584', weapon: 'unarmed', text: 'The gun-laying radar in its van: warns of aircraft coming and guides your AA guns onto them.' },
+    sov: { name: 'RUS-2', weapon: 'unarmed', text: 'The early-warning radar on its lorry: no aircraft arrives unannounced.' },
+    pact: { name: 'Würzburg', weapon: 'unarmed', text: 'The big dish of the Würzburg: it finds the aircraft and puts the Flak onto them.' },
+    fj: { name: 'Würzburg', weapon: 'unarmed', text: 'The big dish of the Würzburg: it finds the aircraft and puts the Flak onto them.' },
+  },
+});
+
+const gunMissile = derive(T.gunMissile, {
+  name: 'SP AA Cannon', shortName: 'AA cannon', weaponSound: 'autocannon',
+  stats: {
+    nightSight: undefined, atgm: undefined, gunRange: undefined,
+    antiAir: { range: 300, optical: 0.75, rate: 2.5, burst: 3, pause: 1, hitNear: 0.14, hitFar: 0.04 },
+    range: 160, damage: 120, splash: 1, vsArmor: 0.3, pierce: 0.25, fireCooldown: 0.4, magSize: 8, reloadTime: 3,
+  },
+  factionStats: {
+    nato: { armor: 0.2, hp: 600 },                    // M15: the 37 mm and two .50s on an M3
+    sov: { armor: 0.25, hp: 650 },                    // ZSU-37: on the SU-76 hull
+    pact: { armor: 0.55, hp: 1100, speed: 4.8 },      // Ostwind: the 3.7 cm on a Panzer IV
+    fj: { armor: 0.55, hp: 1100, speed: 4.8 },
+  },
+  models: { nato: buildUsM15, sov: buildSovZSU37, pact: buildFjOstwind, fj: buildFjOstwind },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'M15 CGMC', weapon: '37 mm M1A2, 2 × .50 cal', text: 'A 37 mm cannon and two heavy machine guns in an armoured mount on a half-track.' },
+    sov: { name: 'ZSU-37', weapon: '37 mm 61-K', text: 'The 37 mm in an open box on the SU-76 hull: keeps up with the tanks.' },
+    pact: { name: 'Flakpanzer IV Ostwind', weapon: '3.7 cm Flak 43', text: 'The 3.7 cm in an open turret on a Panzer IV: heavier shells than the Wirbelwind, fewer of them.' },
+    fj: { name: 'Flakpanzer IV Ostwind', weapon: '3.7 cm Flak 43', text: 'The 3.7 cm in an open turret on a Panzer IV: heavier shells than the Wirbelwind, fewer of them.' },
+  },
+});
+
 // the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
 const airAssault = derive(T.airAssault, {
   models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
@@ -280,6 +388,7 @@ const airAssault = derive(T.airAssault, {
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
   artillery, rockets, spMortar, observers, cbRadar,
+  aa, towedAA, sam, manpads, airRadar, gunMissile,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
@@ -287,5 +396,4 @@ export const TYPES_1945 = {
 export const ALIAS_1945 = {
   scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', 
   commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
-  aa: 'mgTeam', towedAA: 'mgTeam', manpads: 'atTeam',
 };

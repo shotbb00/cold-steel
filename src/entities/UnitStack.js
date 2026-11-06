@@ -792,6 +792,7 @@ export class UnitStack {
       return;
     }
     if (s.antiAir?.missile && this.engageAirMissile(u, dt)) u.target = null; // the launcher is busy: no rifle shots
+    else if (s.antiAir && !s.antiAir.missile && this.engageAir(u, dt)) { u.target = null; return; } // an AA machine gun on its tripod (1945): aircraft first
 
     const reloading = u.reloadT > 0;
     const inCover = u.atCover;
