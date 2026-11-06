@@ -252,7 +252,7 @@ export const buildFjStuG = (mats) => rig(once('stug', () => {
 
 // ---------------------------------------------------------------- the half-tracks
 
-function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen, faceted, mg }) {
+export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen, faceted, mg }) {
   const gear = runningGear({ halfWidth: width / 2 - 0.25, length: trackLen, wheels: faceted ? 6 : 4, wheelR: faceted ? 0.3 : 0.25, sprocket: 1, rollers: 0, trackWidth: 0.3, wheelColor: dark });
   for (const p of gear.parts) p.translate(0, 0, trackZ);
   for (const w of gear.wheels) w.z += trackZ;

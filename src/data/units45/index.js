@@ -8,6 +8,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildUsSherman, buildSovT34, buildWhPanzerIV, buildFjStuG, buildUsM3, buildWh251, buildSovStudebaker, buildFjOpelBlitz } from '../models/ww2Armour.js';
+import { buildUsPriest, buildSovM30, buildWhWespe, buildFjLeFH18, buildUsCalliope, buildSovKatyusha, buildWhPanzerwerfer, buildFjNebelwerfer, buildUsM4Mortar, buildSovPM38, buildWh2512, buildFjGrw42Lorry } from '../models/ww2Fire.js';
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 const T = TYPES_1985;
@@ -188,6 +189,80 @@ const cev = derive(T.cev, {
   },
 });
 
+const artillery = derive(T.artillery, {
+  name: 'Artillery', shortName: 'Artillery',
+  stats: { nightSight: undefined },
+  factionStats: { sov: { towed: { deploy: 18 } }, fj: { towed: { deploy: 16 } } },   // the towed guns: unhitched and laid before they fire
+  models: { nato: buildUsPriest, sov: buildSovM30, pact: buildWhWespe, fj: buildFjLeFH18 },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'M7 Priest', weapon: '105 mm M2A1 howitzer', text: 'The 105 on a Sherman chassis, keeping up with the armour; the machine gun in its "pulpit".' },
+    sov: { name: '122 mm M-30', weapon: '122 mm howitzer, towed', text: 'The divisional howitzer behind a Lend-Lease Studebaker: unhitched and laid, it fires all day.' },
+    pact: { name: 'Wespe', weapon: '10.5 cm leFH 18/2', text: 'The light field howitzer on a Panzer II hull, its crew in the open box at the back.' },
+    fj: { name: '10.5 cm leFH 18', weapon: '10.5 cm howitzer, towed', text: 'The standard German field howitzer behind an Opel Blitz: unhitched and laid before it fires.' },
+  },
+});
+
+const rockets = derive(T.rockets, {
+  name: 'Rocket Artillery', shortName: 'Rockets',
+  stats: { nightSight: undefined },
+  factionStats: {
+    nato: { armor: 0.5, hp: 1000, magSize: 12 },                                                         // Calliope: on a Sherman
+    sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14 },  // Katyusha: sixteen rails, a lorry
+    pact: { magSize: 10, damage: 130, fireCooldown: 0.6 },                                               // Panzerwerfer 42: ten tubes
+    fj: { magSize: 6, damage: 140, fireCooldown: 0.7, towed: { deploy: 12 }, armor: 0, hp: 250 },        // Nebelwerfer 41: six, towed
+  },
+  models: { nato: buildUsCalliope, sov: buildSovKatyusha, pact: buildWhPanzerwerfer, fj: buildFjNebelwerfer },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'T34 Calliope', weapon: '60 × 4.5 in rockets', text: 'Sixty rocket tubes over a Sherman’s turret: one long ripple, then a long reload.' },
+    sov: { name: 'BM-13 Katyusha', weapon: '16 × 132 mm rockets', text: '"Stalin’s organ": a ripple of rockets howling onto a whole field, from the back of a Studebaker.' },
+    pact: { name: 'Panzerwerfer 42', weapon: '10 × 15 cm rockets', text: 'The Nebelwerfer’s tubes on the armoured Maultier half-track: fire, and move before the answer comes.' },
+    fj: { name: 'Nebelwerfer 41', weapon: '6 × 15 cm rockets, towed', text: 'The "moaning minnie": six tubes on a light carriage, towed into place.' },
+  },
+});
+
+const spMortar = derive(T.spMortar, {
+  name: 'Heavy Mortars', shortName: 'Heavy mortars',
+  stats: { nightSight: undefined },
+  factionStats: {
+    sov: { towed: { deploy: 10 }, damage: 175, splash: 5.5, range: 250 },          // 120 mm PM-38: towed
+    fj: { damage: 190, splash: 6, range: 240 },                                     // 12 cm GrW 42 on a lorry
+  },
+  models: { nato: buildUsM4Mortar, sov: buildSovPM38, pact: buildWh2512, fj: buildFjGrw42Lorry },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'M4 Mortar Carrier', weapon: '81 mm M1 mortar', text: 'The battalion’s 81 in a half-track: fires from inside, moves on.' },
+    sov: { name: '120 mm PM-38', weapon: '120 mm mortar, towed', text: 'The regimental heavy mortar: so good the Germans copied it. Unhitched in moments.' },
+    pact: { name: 'Sd.Kfz. 251/2', weapon: '8 cm GrW 34', text: 'The half-track with its mortar inside: smoke and high explosive close behind the attack.' },
+    fj: { name: '12 cm GrW 42', weapon: '12 cm mortar on an Opel Blitz', text: 'The heavy mortar the Germans copied from the Soviets, carried on a lorry.' },
+  },
+});
+
+const observers = derive(T.observers, {
+  models: men({ scout: true, radio: true }),
+  variants: {
+    nato: { name: 'Forward Observers', weapon: 'M1 carbine, SCR-300, binoculars', text: 'Put them where they can see, and every gun and mortar you own lands on the target.' },
+    sov: { name: 'Artillery Observers', weapon: 'PPSh-41, RBM radio, binoculars', text: 'The battery’s eyes in the front line: within their sight the guns hit.' },
+    pact: { name: 'Artilleriebeobachter', weapon: 'MP 40, Feldfu, binoculars', text: 'Within their sight the guns are accurate; without them, they plough the fields.' },
+    fj: { name: 'Artilleriebeobachter', weapon: 'MP 40, Feldfu, binoculars', text: 'Within their sight the guns are accurate; without them, they plough the fields.' },
+  },
+});
+
+/** Sound ranging (the counter-battery radar of 1945): microphones out, every gun that fires within reach is plotted. */
+const cbRadar = derive(T.observers, {
+  id: 'cbRadar', name: 'Sound Ranging Team', shortName: 'Sound ranging', category: 'fire', cost: 200,
+  formation: { count: 3, columns: 3, spacing: 4 },
+  stats: { observer: undefined, cbRadar: { range: 450, arc: 6.3, deploy: 25 } },   // listens all round, takes longer to lay out
+  models: men({ radio: true }),
+  variants: {
+    nato: { name: 'Sound Ranging Team', weapon: 'microphones, plotting board', text: 'Three listening posts: when an enemy gun fires, its bang is timed at each and the gun is plotted on the map for your artillery. Needs 25 s to lay out.' },
+    sov: { name: 'Sound Ranging Team', weapon: 'microphones, plotting board', text: 'The listening posts: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+    pact: { name: 'Schallmesstrupp', weapon: 'microphones, plotting board', text: 'The sound-ranging troop: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+    fj: { name: 'Schallmesstrupp', weapon: 'microphones, plotting board', text: 'The sound-ranging troop: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+  },
+});
+
 // the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
 const airAssault = derive(T.airAssault, {
   models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
@@ -204,13 +279,13 @@ const airAssault = derive(T.airAssault, {
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
+  artillery, rockets, spMortar, observers, cbRadar,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
 export const ALIAS_1945 = {
-  scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', observers: 'rifles',
+  scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', 
   commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
-  artillery: 'mortar', spMortar: 'mortar', rockets: 'mortar', cbRadar: 'mortar',
   aa: 'mgTeam', towedAA: 'mgTeam', manpads: 'atTeam',
 };

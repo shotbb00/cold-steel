@@ -9,7 +9,8 @@
 //   fj   Fallschirmjäger: the rimless M38 helmet, the long jump smock with the bandolier round
 //        the neck, field grey trousers, laced jump boots
 // Weapons: rifle (M1 Garand / Mosin / Kar98k / FG 42), smg (M3 / PPSh-41 / MP 40), mg (M1919 /
-// SG-43 / MG 42), at (bazooka / PTRS anti-tank rifle / Panzerschreck), mortar, sniper; crew: the
+// SG-43 / MG 42), at (bazooka / PTRS anti-tank rifle / Panzerschreck), mortar, sniper; radio: the
+// set on the back (observers, sound ranging); crew: the
 // tankers' caps and a smg.
 import { P, merge, pair, grime, loft, limb } from '../units/geometry.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
@@ -184,7 +185,7 @@ function headgear(army, c, crew) {
 
 // ------------------------------------------------------------------ the man
 
-export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = false, scout = false } = {}) {
+export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = false, scout = false, radio = false } = {}) {
   const c = ARMY[army] ?? ARMY.us;
   const w = weapon(crew ? 'smg' : kind, army, c);
   const gear = !crew;
@@ -217,6 +218,10 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
     ...head(),
     ...headgear(army, c, crew),
     ...(scout ? binoculars(BLACK) : []),
+    ...(radio ? [ // the radio on the back (SCR-300 / RBM / Feldfu), its whip antenna
+      loft([[0, 1.18, -0.24, 0.13, 0.08, 5], [0, 1.48, -0.25, 0.13, 0.08, 5]], { color: 0x3e4030 }, 10),
+      P.cyl(0.006, 0.006, 1.3, { x: 0.09, y: 2.15, z: -0.27, rx: -0.1, color: BLACK }, 4),
+    ] : []),
   ];
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.coatDk }), ...w.parts];
   const thigh = merge([thighPart({ color: c.trousers })]);
