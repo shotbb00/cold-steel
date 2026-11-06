@@ -155,6 +155,8 @@ const el = (tag, cls, html) => {
 
 const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
+const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
+const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
 function aircraftRows(kind, faction, army) {
@@ -166,7 +168,7 @@ function aircraftRows(kind, faction, army) {
     ['Speed', `${Math.round(p.attackSpeed * 3.6)}–${Math.round(p.cruiseSpeed * 3.6)} km/h`],
     ['Toughness', `${a.hp} hits from ground fire; missiles do several at once`],
   ];
-  if (p.aam) rows.push(['Missiles', `${p.aam.count} air-to-air, ${p.aam.range} m — circles ${p.station} s`]);
+  if (p.aam) rows.push(a.guns ? ['Guns', `dives on enemy aircraft within ${p.aam.range} m, ${p.aam.count} passes — circles ${p.station} s`] : ['Missiles', `${p.aam.count} air-to-air, ${p.aam.range} m — circles ${p.station} s`]);
   if (p.swath) rows.push(['Cameras', `everything within ${p.swath} m of the run, on the map for ${p.hold} s`]);
   if (p.aam || p.swath) return rows; // (no gun or rockets fired)
   if (a.gun) rows.push(['Gun', `${a.gun.rate} rounds/s`]);
@@ -515,7 +517,7 @@ export class MainMenu {
     // the support powers' aircraft
     for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off)) { // (this war's: data/epoch.js)
       const id = `air:${kind}`;
-      const b = el('button', id === this.unit.id ? 'on air' : 'air', AIR_LABEL[kind]);
+      const b = el('button', id === this.unit.id ? 'on air' : 'air', airLabel(kind));
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
