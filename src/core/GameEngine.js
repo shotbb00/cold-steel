@@ -640,6 +640,7 @@ export class GameEngine {
     this.air.update(dt);
     this.transport.update(dt);
     this.support.update(dt);
+    this.crews.update(dt);
     this.buildings.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);

@@ -147,8 +147,7 @@ export class NetClient {
     const k = b ? Math.max(0, Math.min(1, (now - a.time) / (b.time - a.time))) : 0;
     const fresh = a.seq !== this.lastSeq;
     this.lastSeq = a.seq;
-    for (const s of g.world.stacks) {
-      if (!s.alive) continue;
+    for (const s of g.world.stacks) { // (all knocked out here, it may be back on the host: re-manned, recovered)
       const sa = a.stacks.get(s.id);
       if (sa) this.applyStack(s, sa, b?.stacks.get(s.id) ?? sa, k, fresh, dt, span);
     }
@@ -170,8 +169,7 @@ export class NetClient {
         if (u.alive) this.kill(s, u);
         continue;
       }
-      if (!u.alive) { // back: a knocked-out vehicle a recovery vehicle got running again (systems/Support.js)
-        if (s.usesCover) continue;
+      if (!u.alive) { // back: a vehicle recovered or re-manned (systems/Support.js, CrewBailout.js), or new men in a refilled squad
         u.alive = true;
         u.deathTime = 0;
         s.aliveCount++;
