@@ -38,7 +38,7 @@ function mark(kind, x, y, z, r, up = false) {
 /** The spinner and `n` blades of radius r, in the propeller's own frame (it turns about z). */
 function propeller(n, r, color = 0x1e1e1c) {
   return M([
-    P.cyl(0.02, 0.24, 0.5, { z: 0.15, rx: Math.PI / 2, color: 0x3a3c36 }, 12),
+    P.cyl(0.02, 0.24, 0.7, { z: 0.05, rx: Math.PI / 2, color: 0x3a3c36 }, 12), // (the spinner reaches back into the cowl)
     ...Array.from({ length: n }, (_, k) => P.box(0.2, r, 0.04, { color }).translate(0, r / 2, 0).rotateZ((k / n) * Math.PI * 2)),
   ]);
 }
@@ -93,8 +93,8 @@ export const buildSovIl2 = (mats) => mount('il2', mats, () => M([
   ...pair((s) => surface([[s * 0.2, 2.15, -5.1, 0.8, 0.07], [s * 2.6, 2.15, -5.4, 0.4, 0.03]], { color: 0x4f5a34, ...C })),
   fin([[2.2, -4.9, 1.0, 0.07], [3.2, -5.3, 0.75, 0.05], [3.7, -5.5, 0.4, 0.03]], { color: 0x4f5a34, ...C }),
   ...pair((s) => [3.3, 3.8, 4.3, 4.8].map((x) => P.box(0.05, 0.05, 1.3, { x: s * x, y: 1.32, z: 0.2, color: DARK }))), // RS-82 rails
-  ...pair((s) => mark('sov', s * 0.3, 3.3, -5.1, 0.35)),
-  ...pair((s) => mark('sov', s * 0.3, 2.05, -2.8, 0.32)),
+  ...pair((s) => mark('sov', s * 0.08, 3.1, -5.2, 0.35)),
+  ...pair((s) => mark('sov', s * 0.42, 2.05, -2.8, 0.32)),
 ]), { gun: [2.2, 1.45, 1.4], pods: [[-3.8, 1.25, 0.9], [3.8, 1.25, 0.9]], prop: [0, 1.95, 5.75], blades: 3, r: 1.8 });
 
 // ---------------------------------------------------------------- Yak-3
@@ -202,18 +202,18 @@ export const buildSovLi2 = (mats) => mountMulti('li2', mats, () => dakota(0x4f5a
 /** Ju 52/3m: the corrugated slab sides, three engines (one in the nose), the fixed spatted gear, the double wing flaps. */
 export const buildDeJu52 = (mats) => mountMulti('ju52', mats, () => M([
   body([[8.6, 2.6, 0.75, 0.75], [7.8, 2.6, 0.8, 0.8], [6.5, 2.7, 0.95, 1.1, 3], [2.0, 2.75, 1.05, 1.3, 3.4], [-3.0, 2.85, 0.95, 1.15, 3.2], [-7.5, 3.05, 0.45, 0.6, 2.6], [-9.4, 3.2, 0.15, 0.3]], { color: 0x5a6248, ...C }),
-  ...pair((s) => Array.from({ length: 9 }, (_, k) => P.box(0.02, 1.8, 0.04, { x: s * 1.06, y: 2.75, z: 5 - k * 0.9, color: 0x4e5640 }))).flat(), // the corrugations
+  ...pair((s) => Array.from({ length: 9 }, (_, k) => P.box(0.04, 1.5, 0.04, { x: s * (k < 2 ? 0.9 : 1.0), y: 2.75, z: 5 - k * 0.9, color: 0x4e5640 }))).flat(), // the corrugations
   body([[6.9, 3.5, 0.05, 0.05], [6.5, 3.75, 0.6, 0.35], [5.6, 3.9, 0.7, 0.35], [5.2, 3.8, 0.4, 0.2]], { color: GLASS }),
   ...pair((s) => [1, 2, 3, 4].map((k) => P.box(0.02, 0.3, 0.45, { x: s * 1.07, y: 3.05, z: 4.2 - k * 1.4, color: GLASS }))),
-  P.box(0.04, 1.5, 1.0, { x: -1.08, y: 2.6, z: -3.5, color: 0x1a1a18 }),                                         // the door
+  P.box(0.06, 1.4, 1.0, { x: -0.9, y: 2.75, z: -3.5, color: 0x1a1a18 }),                                         // the door
   P.cyl(0.62, 0.62, 0.02, { y: 2.6, z: 8.61, rx: Math.PI / 2, color: HOLE }, 16),                              // the nose engine's cowl
   ...pair((s) => surface([[s * 1.0, 2.1, 0.6, 2.4, 0.4], [s * 6.0, 2.25, 0.2, 1.9, 0.24], [s * 14.6, 2.6, -0.7, 0.85, 0.08]], { color: 0x5a6248, ...C })),
   ...pair((s) => body([[3.2, 2.0, 0.55, 0.55], [2.5, 2.0, 0.58, 0.58], [0.8, 2.05, 0.45, 0.48], [-0.4, 2.1, 0.2, 0.22]], { x: s * 4.6, color: 0x5a6248, ...C })), // the wing engines
-  ...pair((s) => [P.box(0.1, 1.3, 0.25, { x: s * 2.5, y: 1.0, z: 0.8, rz: s * 0.25, color: 0x3a3c32 }),
-    body([[1.4, 0.45, 0.05, 0.05], [1.0, 0.45, 0.22, 0.4], [0.3, 0.45, 0.2, 0.38], [0.0, 0.5, 0.05, 0.05]], { x: s * 2.7, color: 0x5a6248 })]), // the spatted legs
+  ...pair((s) => [P.box(0.12, 1.75, 0.25, { x: s * 2.6, y: 1.25, z: 0.8, rz: s * 0.1, color: 0x3a3c32 }),
+    body([[1.4, 0.55, 0.05, 0.05], [1.0, 0.55, 0.22, 0.4], [0.3, 0.55, 0.2, 0.38], [0.0, 0.6, 0.05, 0.05]], { x: s * 2.7, color: 0x5a6248 })]), // the spatted legs
   ...pair((s) => surface([[s * 0.3, 3.3, -8.0, 1.3, 0.1], [s * 4.0, 3.3, -8.4, 0.6, 0.04]], { color: 0x5a6248, ...C })),
   fin([[3.4, -7.6, 1.6, 0.1], [4.8, -8.4, 1.2, 0.08], [5.6, -8.9, 0.6, 0.05]], { color: 0x5a6248, ...C }),
-  ...pair((s) => mark('de', s * 1.1, 2.8, -5.5, 0.55)),
+  ...pair((s) => mark('de', s * 0.66, 2.95, -5.5, 0.5)),
   ...pair((s) => mark('de', s * 9.5, 2.45, -0.4, 0.8, true)),
 ]), { props: [[0, 2.6, 8.75], [-4.6, 2.0, 3.35], [4.6, 2.0, 3.35]], blades: 3, r: 1.5, door: [-1.15, 2.4, -3.5] });
 

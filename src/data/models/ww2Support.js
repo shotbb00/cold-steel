@@ -136,7 +136,7 @@ export const buildFjFamo = (mats) => {
   const g = halfTrack({ color: GELB, dark: GELB_DK, length: 8.3, width: 2.6, wheelZ: 3.0, trackZ: -1.4, trackLen: 4.0, faceted: false, mg: 'ring' });
   return vehicle(() => ({
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
-    hull: merge([g.hull, P.box(0.15, 1.4, 0.15, { y: 2.6, z: -3.6, color: STEEL }), P.box(0.12, 0.12, 2.2, { y: 3.3, z: -4.4, rx: -0.3, color: STEEL })]), // the crane at the back
+    hull: merge([g.hull, P.box(0.15, 1.45, 0.15, { y: 1.68, z: -3.6, color: STEEL }), P.box(0.12, 0.12, 2.2, { y: 2.62, z: -4.62, rx: -0.3, color: STEEL })]), // the crane at the back
     muzzle: [0, 2.5, 0],
   }))(mats);
 };
@@ -162,7 +162,7 @@ export const buildWhBrueckenleger = vehicle(() => {
     hull: grime(merge([...g.parts,
       trackedHull([[-2.95, 1.55, 0.45], [1.95, 1.62, 0.45], [2.25, 1.62, 0.6], [2.95, 1.0, 0.55]], { belly: 0.82, fender: 1.2, fenderY: 1.0, chamfer: 0.04 }, { color: GELB, ...C }),
       ...[-1, 1].flatMap((s) => balkenkreuz(s * 1.22, 1.3, -0.4, 0.24))]), 1.25, 0.3),
-    load: merge([...pair((s) => P.box(0.8, 0.25, 9.0, { x: s * 0.6, y: 1.9, z: 0.0, color: GELB_DK })), P.box(0.3, 0.6, 0.3, { y: 1.75, z: 2.5, color: STEEL })]),
+    load: merge([...pair((s) => P.box(0.8, 0.25, 9.0, { x: s * 0.6, y: 1.74, z: 0.0, color: GELB_DK })), P.box(0.3, 0.6, 0.3, { y: 1.75, z: 2.5, color: STEEL })]),
     muzzle: [0, 2, 0],
   };
 });
@@ -171,6 +171,7 @@ export const buildWhBrueckenleger = vehicle(() => {
 
 /** Mine-exploder rollers ahead of the tracks: a set of heavy discs a side on their arms. */
 const rollers = (z, x, color, discs = 5, r = 0.65) => pair((s) => [
+  P.cyl(0.08, 0.08, discs * 0.17 + 0.12, { x: s * x, y: r, z, rz: Math.PI / 2, color: STEEL }, 8), // the axle through the discs
   ...Array.from({ length: discs }, (_, k) => P.cyl(r, r, 0.1, { x: s * x + (k - (discs - 1) / 2) * 0.17, y: r, z, rz: Math.PI / 2, color }, 14)),
   P.box(0.12, 0.12, 2.0, { x: s * x, y: 0.95, z: z - 1.0, rx: 0.3, color: STEEL }),
 ]).flat();
@@ -190,7 +191,7 @@ export const buildSovPT3 = vehicle(() => {
     wheels: g.wheels,
     hull: grime(merge([...g.parts, t34Hull(), ...rollers(4.3, 1.25, 0x2e3528, 3, 0.55)]), 1.25, 0.3),
     turret: { geo: merge([P.cyl(1.0, 1.1, 0.7, { y: 0.35, color: SOV, ...C }, 16)]), at: [0, 1.62, 0.45] },
-    gun: { geo: merge([P.cyl(0.06, 0.07, 4.2, { z: 2.1, rx: Math.PI / 2, color: SOV }, 10)]), at: [0, 0.42, 1.2], pitch: 0.05 },
+    gun: { geo: merge([P.cyl(0.06, 0.07, 4.2, { z: 2.1, rx: Math.PI / 2, color: SOV }, 10)]), at: [0, 0.42, 0.85], pitch: 0.05 },
     muzzle: [0, 0, 4.2],
   };
 });
@@ -208,14 +209,15 @@ export const buildDeGoliath = vehicle(() => {
 
 export const buildUsM3Command = (mats) => {
   const g = halfTrack({ color: OD, dark: OD_DK, length: 6.2, width: 2.2, wheelZ: 2.0, trackZ: -1.6, trackLen: 2.0, faceted: false, mg: 'ring' });
-  return vehicle(() => ({ wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR }, hull: g.hull, deploy: { geo: merge(mast().parts), at: [0.6, 1.4, -2.4] }, muzzle: [0, 2, 0] }))(mats);
+  return vehicle(() => ({ wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR }, hull: g.hull, deploy: { geo: merge(mast().parts), at: [0.6, 0.97, -2.4] }, muzzle: [0, 2, 0] }))(mats);
 };
 export const buildSovRadioLorry = lorry('sov', { ...GAZ, body: 'box', bodyH: 1.7 }, { deploy: (L) => mast([0.6, L.top, L.rear + 0.4]) });
 export const buildWh2516 = (mats) => {
   const g = halfTrack({ color: GELB, dark: GELB_DK, length: 5.8, width: 2.1, wheelZ: 1.9, trackZ: -1.1, trackLen: 3.0, faceted: true, mg: 'shield' });
   return vehicle(() => ({
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
-    hull: merge([g.hull, ...pair((s) => P.box(0.05, 0.05, 2.6, { x: s * 0.9, y: 2.2, z: -1.0, color: STEEL })), ...[-2.2, 0.2].map((z) => P.box(1.85, 0.05, 0.05, { y: 2.2, z, color: STEEL }))]), // the "bedstead" antenna
+    hull: merge([g.hull, ...pair((s) => P.box(0.05, 0.05, 2.6, { x: s * 0.9, y: 2.2, z: -1.0, color: STEEL })), ...[-2.2, 0.2].map((z) => P.box(1.85, 0.05, 0.05, { y: 2.2, z, color: STEEL })),
+      ...pair((s) => [-2.2, 0.2].map((z) => P.box(0.05, 0.5, 0.05, { x: s * 0.9, y: 1.97, z, color: STEEL }))).flat()]), // the "bedstead" antenna on its posts
     deploy: { geo: merge(mast().parts), at: [0.6, 1.6, -2.4] },
     muzzle: [0, 2, 0],
   }))(mats);

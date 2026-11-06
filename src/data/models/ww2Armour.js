@@ -185,10 +185,13 @@ export const buildSovT34 = (mats) => {
 
 // ---------------------------------------------------------------- Panzer IV H
 
-export const skirts = (x, y, z0, z1, h, n, color) => {
+export const skirts = (x, y, z0, z1, h, n, color, reach = 0.35) => {
   const out = [];
   const L = (z1 - z0) / n;
-  for (let i = 0; i < n; i++) out.push(P.box(0.03, h, L * 0.97, { x, y, z: z0 + L * (i + 0.5), rz: Math.sign(x) * 0.04, color, ...C }));
+  for (let i = 0; i < n; i++) {
+    out.push(P.box(0.03, h, L * 0.97, { x, y, z: z0 + L * (i + 0.5), rz: Math.sign(x) * 0.04, color, ...C }));
+    out.push(P.box(reach, 0.05, 0.08, { x: x - Math.sign(x) * reach / 2, y: y + h / 2 - 0.03, z: z0 + L * (i + 0.5), color: STEEL })); // its hanger
+  }
   return out;
 };
 
@@ -209,7 +212,7 @@ export const buildWhPanzerIV = (mats) => rig(once('pz4', () => {
     ]), 1.25, 0.3),
     turret: grime(merge([
       castTurret([[1.15, 0.58, 0.6], [0.95, 0.78, 0.66], [-0.6, 0.85, 0.66], [-1.25, 0.78, 0.6], [-1.35, 0.6, 0.5]], { color: GELB, ...C }, 5),
-      P.cyl(0.3, 0.32, 0.25, { y: 0.84, z: -0.95, color: GELB, ...C }, 14),                                  // the cupola at the back
+      P.cyl(0.3, 0.32, 0.25, { y: 0.74, z: -0.95, color: GELB, ...C }, 14),                                  // the cupola at the back
       ...pair((s) => skirts(s * 1.08, 0.33, -1.5, 0.75, 0.66, 3, GELB)).flat(),                               // turret skirts
       P.box(2.1, 0.66, 0.03, { y: 0.33, z: -1.55, color: GELB, ...C }),
       P.box(0.75, 0.5, 0.25, { y: 0.35, z: 1.25, color: GELB, ...C }),                                        // mantlet
@@ -238,7 +241,7 @@ export const buildFjStuG = (mats) => rig(once('stug', () => {
       ], { color: GELB, ...C }),
       P.cyl(0.3, 0.32, 0.2, { x: -0.5, y: 2.05, z: -0.6, color: GELB, ...C }, 14),                           // cupola
       P.box(0.35, 0.1, 0.3, { x: 0.45, y: 2.0, z: -0.3, color: STEEL }),                                       // MG shield
-      ...pair((s) => skirts(s * 1.47, 1.15, -2.3, 1.7, 0.62, 5, GELB)).flat(),
+      ...pair((s) => skirts(s * 1.47, 0.99, -2.3, 1.7, 0.62, 5, GELB)).flat(),
       ...[-1, 1].flatMap((s) => balkenkreuz(s * 1.5, 1.15, -0.4, 0.24)),
     ]), 1.25, 0.3),
     // the gun mount: the cast "Saukopf" mantlet
@@ -276,7 +279,7 @@ export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen
       ...pair((s) => P.box(0.36, 0.04, 1.25, { x: s * (hw - 0.17), y: 0.98, z: wheelZ - 0.05, color, ...C })),       // mudguards
       ...pair((s) => P.box(0.36, 0.04, 0.4, { x: s * (hw - 0.17), y: 0.88, z: wheelZ + 0.72, rx: 0.5, color, ...C })),
       ...pair((s) => P.box(0.18, 0.06, 1.0, { x: s * (hw - 0.3), y: 0.92, z: wheelZ - 0.6, rz: s * 0.4, color: dark })), // the mudguard stays to the hull
-      P.box(0.95, 0.08, 0.1, { y: 0.55, z: wheelZ, color: STEEL }),                                                   // front axle
+      P.box((hw - 0.17) * 2, 0.08, 0.1, { y: 0.46, z: wheelZ, color: STEEL }),                                       // front axle
     ])
     : merge([
       P.box(width, 0.15, length * 0.55, { y: 0.9, z: tail + length * 0.275, color, ...C }),                         // troop floor
@@ -284,14 +287,14 @@ export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen
       P.box(width, 1.0, 0.06, { y: 1.4, z: tail, color, ...C }),
       P.box(width * 0.9, 0.85, 1.2, { y: 1.35, z: tail + length * 0.55 + 0.6, color, ...C }),                     // cab
       P.box(width * 0.85, 0.35, 0.06, { y: 1.95, z: tail + length * 0.55 + 1.2, rx: -0.3, color: dark }),        // armoured windscreen
-      P.box(1.0, 0.7, length * 0.3, { y: 1.15, z: length / 2 - length * 0.15, color, ...C }),                    // bonnet
-      ...pair((s) => P.box(0.5, 0.06, 1.1, { x: s * (hw - 0.2), y: 1.05, z: wheelZ, rx: 0.1, color: dark })),    // front wings
+      P.box(1.0, 0.7, length / 2 - (tail + length * 0.55 + 1.15), { y: 1.15, z: (length / 2 + tail + length * 0.55 + 1.15) / 2, color, ...C }), // bonnet, from the cab forward
+      ...pair((s) => P.box(hw - 0.3, 0.06, 1.1, { x: s * (0.5 + (hw - 0.3) / 2), y: 1.05, z: wheelZ, rx: 0.1, color: dark })), // front wings, from the bonnet out
       P.box(width * 0.9, 0.3, 0.15, { y: 0.75, z: length / 2, color: STEEL }),                                    // the roller bumper
     ]);
   return {
     gear,
     wheel: roadWheelGeometry(faceted ? 0.3 : 0.25, 0.28, dark),
-    hull: grime(merge([...gear.parts, body, P.box(width * 0.8, 0.12, length * 0.5, { y: 0.6, color: STEEL }),
+    hull: grime(merge([...gear.parts, body, P.box(width * 0.8, 0.12, length * 0.9, { y: 0.6, color: STEEL }),
       // the steered front wheels: road tyres, much bigger than the track's wheels (static: ponytail, they don't spin)
       ...pair((s) => P.cyl(0.46, 0.46, 0.26, { x: s * (hw - 0.17), y: 0.46, z: wheelZ, rz: Math.PI / 2, color: RUBBER, surf: 'rubber' }, 16)),
       ...pair((s) => P.cyl(0.24, 0.24, 0.28, { x: s * (hw - 0.17), y: 0.46, z: wheelZ, rz: Math.PI / 2, color: dark }, 12))]), 1.0, 0.3),
@@ -303,7 +306,7 @@ export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen
 }
 
 export const buildUsM3 = (mats) => {
-  const r = rig(once('m3', () => halfTrack({ color: OD, dark: OD_DK, length: 6.2, width: 2.2, wheelZ: 2.0, trackZ: -1.6, trackLen: 2.0, faceted: false, mg: 'ring' })), mats, { turretAt: [0, 2.05, 0.8], gunAt: [0, 0.15, 0.1], muzzle: 0.9, recoil: 0.02 });
+  const r = rig(once('m3', () => halfTrack({ color: OD, dark: OD_DK, length: 6.2, width: 2.2, wheelZ: 2.0, trackZ: -1.6, trackLen: 2.0, faceted: false, mg: 'ring' })), mats, { turretAt: [0, 1.78, 0.8], gunAt: [0, 0.15, 0.1], muzzle: 0.9, recoil: 0.02 });
   return r;
 };
 export const buildWh251 = (mats) => rig(once('251', () => halfTrack({ color: GELB, dark: GELB_DK, length: 5.8, width: 2.1, wheelZ: 1.9, trackZ: -1.1, trackLen: 3.0, faceted: true, mg: 'shield' })), mats, { turretAt: [0, 1.75, 0.6], gunAt: [0, 0.15, 0.1], muzzle: 0.7, recoil: 0.02 });

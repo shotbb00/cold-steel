@@ -67,7 +67,7 @@ export const buildSovIS2 = (mats) => rig(once('is2', () => {
     turret: grime(merge([
       castTurret([[1.6, 0.55, 0.5], [1.25, 1.05, 0.75], [0.3, 1.25, 0.85], [-0.8, 1.2, 0.8], [-1.7, 0.95, 0.6], [-2.0, 0.55, 0.4]], { color: SOV, ...C }, 2.6),
       P.cyl(0.36, 0.38, 0.25, { x: -0.5, y: 0.92, z: -0.6, color: SOV, ...C }, 14),
-      P.box(0.12, 0.14, 0.45, { x: 0.5, y: 0.98, z: -0.6, color: STEEL }),                    // the DShK on the loader's hatch
+      P.box(0.12, 0.14, 0.45, { x: 0.5, y: 0.8, z: -0.6, color: STEEL }),                     // the DShK on the loader's hatch
       P.box(0.95, 0.6, 0.4, { y: 0.4, z: 1.6, color: SOV, ...C }),
       ...pair((s) => P.box(0.012, 0.24, 0.5, { x: s * 1.26, y: 0.42, z: -0.2, color: WHITE })),
     ]), 0.9, 0.0, 0.3),
@@ -208,7 +208,7 @@ export const buildFjKettenkrad = vehicle(() => {
       stationHull([[-1.0, [[0, 0.4], [0.45, 0.4], [0.5, 0.75], [0, 0.8]]], [0.6, [[0, 0.4], [0.45, 0.4], [0.5, 0.75], [0, 0.8]]], [1.0, [[0, 0.5], [0.2, 0.5], [0.2, 0.8], [0, 0.85]]]], { color: GELB, ...C }),
       P.cyl(0.3, 0.3, 0.12, { y: 0.3, z: 1.45, rz: Math.PI / 2, color: 0x1f201c }, 14),                    // the front wheel
       ...pair((s) => P.box(0.03, 0.75, 0.05, { x: s * 0.08, y: 0.65, z: 1.35, rx: 0.35, color: STEEL })), // the forks
-      P.box(0.6, 0.03, 0.03, { y: 1.05, z: 1.15, color: STEEL }),                                         // handlebars
+      P.box(0.6, 0.03, 0.03, { y: 1.0, z: 1.27, color: STEEL }), P.box(0.04, 0.35, 0.04, { y: 0.85, z: 1.27, color: STEEL }), // handlebars on their stem
       seated(0, 0.45), seated(0, -0.55),
     ]), 1.0, 0.35),
     turret: { geo: merge([P.box(0.02, 0.02, 0.02, { color: STEEL })]), at: [0, 1.2, 0.6] },
@@ -237,7 +237,7 @@ export const buildUsHellcat = (mats) => rig(once('m18', () => {
       P.box(1.9, 0.6, 0.06, { y: 0.3, z: -1.2, color: OD, ...C }),
       P.box(1.5, 0.55, 0.06, { y: 0.28, z: 1.0, rx: 0.4, color: OD, ...C }),
       P.box(0.7, 0.5, 0.35, { y: 0.3, z: 1.15, color: OD, ...C }),
-      P.box(0.1, 0.12, 0.4, { x: -0.8, y: 0.7, z: -1.0, color: STEEL }),                 // the .50 on the ring
+      P.box(0.1, 0.12, 0.4, { x: -0.8, y: 0.6, z: -1.0, color: STEEL }),                 // the .50 on the ring
     ]), 0.9, 0.0, 0.3),
     gun: barrel(3.6, 0.055, OD, 'double'),
   };
@@ -344,7 +344,7 @@ export const buildSovISU152 = (mats) => rig(once('isu152', () => {
         [3.35, [[0, 0.5], [1.0, 0.5], [1.5, 0.9], [1.2, 1.05], [0, 1.05]]],
       ], { color: SOV, ...C }),
       P.cyl(0.33, 0.35, 0.22, { x: -0.6, y: 2.55, z: 0.3, color: SOV, ...C }, 14),
-      P.box(0.12, 0.14, 0.45, { x: 0.6, y: 2.6, z: 0.3, color: STEEL }),                             // the DShK
+      P.box(0.12, 0.14, 0.45, { x: 0.6, y: 2.5, z: 0.3, color: STEEL }),                             // the DShK
     ]), 1.25, 0.3),
     turret: merge([castTurret([[0.55, 0.42, 0.45], [0.25, 0.55, 0.55], [0.0, 0.58, 0.58]], { color: SOV, ...C }, 2.4)]),
     gun: barrel(2.9, 0.1, SOV, 'round'),                                                              // the 152 mm ML-20S, its big brake

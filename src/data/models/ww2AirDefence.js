@@ -49,7 +49,7 @@ const aaTrack = (o, mount) => {
   return vehicle(() => ({
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
     hull: g.hull,
-    turret: { geo: mount.turret, at: [0, o.faceted ? 1.5 : 1.55, -1.3] },
+    turret: { geo: mount.turret, at: [0, o.faceted ? 1.5 : 0.97, -1.3] }, // (an M3's floor: the mount stands on it)
     gun: { geo: mount.gun, at: [0, 0.55, 0.0], pitch: null },
     muzzle: [0, 0, mount.len],
     recoil: 0.03,
@@ -94,7 +94,7 @@ export const buildFjOstwind = pz4Flak(merge([P.cyl(0.045, 0.05, 2.4, { z: 1.2, r
 /** A light AA gun emplaced: its carriage (cross or four wheels), the gun on its pedestal, the seats. */
 const lightAA = ({ color, gun, len, wheels4, tow }) => vehicle(() => ({
   hull: grime(merge([
-    ...(wheels4 ? pair((s) => [-1.4, 1.4].flatMap((z) => tyre(s * 0.85, 0.45, z, 0.45, 0.2))).flat() : [...[0, Math.PI / 2].map((a) => P.box(0.18, 0.12, 2.6, { y: 0.15, ry: a, color }))]),
+    ...(wheels4 ? pair((s) => [-1.4, 1.4].flatMap((z) => tyre(s * 0.85, 0.45, z, 0.45, 0.2))).flat() : [...[0, Math.PI / 2].map((a) => P.box(0.18, 0.14, 2.6, { y: 0.35, ry: a, color }))]),
     P.box(wheels4 ? 1.6 : 0.6, 0.15, wheels4 ? 3.4 : 0.6, { y: 0.45, color }),
     P.cyl(0.25, 0.32, 0.5, { y: 0.7, color }, 12),
   ]), 1, 0.3),
