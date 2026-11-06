@@ -291,9 +291,8 @@ export class MainMenu {
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp' && epoch() === '1985') this.bootcampPanel();
-    else if ((id === 'campaign' || id === 'bootcamp') && epoch() !== '1985') {
-      // ponytail: the campaign and boot camp are 1985's for now (the 1945 campaign is phase 3)
-      this.panel.append(el('h2', '', id === 'campaign' ? 'Campaign' : 'Boot camp'), el('p', 'mp-lead', `${id === 'campaign' ? 'The campaign' : 'Boot camp'} is set in 1985 for now — switch the year under the title to 1985 to play it. 1945 has single-player and multiplayer battles.`));
+    else if (id === 'bootcamp' && epoch() !== '1985') {
+      this.panel.append(el('h2', '', 'Boot camp'), el('p', 'mp-lead', 'Boot camp is set in 1985 for now — switch the year under the title to 1985 to play it.'));
     } else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),

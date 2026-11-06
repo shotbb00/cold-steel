@@ -1554,7 +1554,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind);
+    const text = barkLine(this.faction, kind, this.army);
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

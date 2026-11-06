@@ -24,13 +24,20 @@
 //   • War length (the player's pick): endless, until one side has no battalions left, or the
 //     eight-day timetable — the Pact must take Fulda and Bad Hersfeld, NATO hold them (or take
 //     Eisenach) until the last turn.
-// Saved in localStorage ('coldsteel.campaign.2'); the old column campaign's saves are left alone.
+// 1945 (data/epoch.js): the same ground in April 1945, the other way round — the Allies attack east
+// (the US Third Army did, through Hersfeld to Eisenach), and must take Eisenach and Meiningen in the
+// eight days; the Germans hold them (or win back Fulda and Bad Hersfeld). Its own save.
+// Saved in localStorage ('coldsteel.campaign.2', 1945: 'coldsteel.campaign.1945'); the old column campaign's saves are left alone.
 import { UNIT_TYPES } from '../data/units/index.js';
 import { writeLetter } from './Letters.js';
 import { enemyOf, forArmy, armiesFrom } from '../data/factions.js';
 import { unitCost } from '../data/doctrine.js';
+import { epoch } from '../data/epoch.js';
 
-const KEY = 'coldsteel.campaign.2';
+const ww2 = () => epoch() === '1945';
+const key = () => (ww2() ? 'coldsteel.campaign.1945' : 'coldsteel.campaign.2');
+/** The side that attacks on the timetable: the Pact in 1985, the Allies (the NATO slot) in 1945. */
+export const attacker = () => (ww2() ? 'nato' : 'pact');
 export const TIMETABLE = 16;        // turns in the eight-day war
 export const MAX_STACKS = 18;       // per battalion
 const REPLACEMENTS = 300;           // replacement points a turn…
@@ -39,7 +46,7 @@ const WOUNDED_SHARE = 0.4;
 const AUTO_PENALTY = 0.85;          // resolving by the numbers: our strength counts this much
 const DEFENDER = 1.25;              // dug in: the defender's strength counts this much more
 const ECHELON = 6;                  // a fresh enemy battalion every this many turns…
-const ENEMY_MAX = { pact: 7, nato: 6 }; // …up to this many
+const ENEMY_MAX = (f) => (f === attacker() ? 7 : 6); // …up to this many (the attacker has more)
 const REST = 0.12;                  // strength an enemy battalion recovers in a quiet turn
 const RECON = ['scouts', 'reconVehicle'];
 
@@ -76,7 +83,7 @@ export const neighbours = (id) => LINKS[id] ?? [];
 export const EVENTS = {
   quiet: { weight: 5 },
   airCover: { weight: 1, text: 'Our air force holds the sky over the sector: the enemy\'s aircraft stay grounded for this battle.' },
-  enemyAir: { weight: 1, text: 'Enemy air superiority: our helicopters and jets are grounded for this battle.' },
+  enemyAir: { weight: 1, get text() { return ww2() ? 'Enemy fighters own the sky today: our aircraft stay on the ground for this battle.' : 'Enemy air superiority: our helicopters and jets are grounded for this battle.'; } },
   guns: { weight: 1, text: 'Corps artillery has a battery to spare: a battery of guns is attached to us for this battle.' },
   reserves: { weight: 1, text: 'The enemy has brought up fresh reserves: expect more armour.' },
   fog: { weight: 1, text: 'Fog has settled in the valleys.', apply: (c, b) => { b.weather = 'fog'; } },
@@ -103,9 +110,18 @@ const NAMES = {
   sov: { armour: 'Guards Tank Battalion', mech: 'Guards Motor Rifle Battalion', support: 'Guards Artillery Battalion' },
   nva: { armour: 'Panzerbataillon', mech: 'Mot.-Schützenbataillon', support: 'Artillerieabteilung' },
 };
+const NAMES_1945 = { // (army ids repeat across the wars: us, sov)
+  us: { armour: 'Tank Battalion', mech: 'Armored Infantry Battalion', support: 'Field Artillery Battalion' },
+  sov: { armour: 'Guards Tank Battalion', mech: 'Guards Rifle Battalion', support: 'Guards Artillery Battalion' },
+  wh: { armour: 'Panzer-Abteilung', mech: 'Panzergrenadier-Bataillon', support: 'Artillerie-Abteilung' },
+  fj: { armour: 'Fallschirm-Sturmgeschütz-Brigade', mech: 'Fallschirmjäger-Bataillon', support: 'Fallschirm-Artillerie-Abteilung' },
+};
 const ordinal = (n) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
-const GERMAN = new Set(['bw', 'nva']);
-const battalionName = (army, kind, n) => (GERMAN.has(army) ? `${NAMES[army][kind]} ${n}` : `${ordinal(n)} ${NAMES[army][kind]}`);
+const GERMAN = new Set(['bw', 'nva', 'wh', 'fj']);
+const battalionName = (army, kind, n) => {
+  const name = (ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  return GERMAN.has(army) ? `${name} ${n}` : `${ordinal(n)} ${name}`;
+};
 const START = { // where the battalions stand on turn 1
   nato: ['philippsthal', 'rasdorf', 'huenfeld', 'burghaun', 'heringen', 'fulda'],
   pact: ['vacha', 'dermbach', 'geisa', 'salzungen', 'kaltennordheim', 'meiningen', 'eisenach'],
@@ -118,7 +134,8 @@ const stackName = (c, type, n) => `${forArmy(UNIT_TYPES[type].variants, c.armies
 
 export function loadCampaign() {
   try {
-    const raw = localStorage.getItem(KEY);
+    syncEpoch();
+    const raw = localStorage.getItem(key());
     const c = raw ? JSON.parse(raw) : null;
     return c?.version === 2 ? c : null;
   } catch {
@@ -127,22 +144,35 @@ export function loadCampaign() {
 }
 
 export function saveCampaign(c) {
-  try { localStorage.setItem(KEY, JSON.stringify(c)); } catch { /* storage blocked: the campaign lasts this session */ }
+  try { localStorage.setItem(key(), JSON.stringify(c)); } catch { /* storage blocked: the campaign lasts this session */ }
 }
 
 export function clearCampaign() {
-  try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(key()); } catch { /* ignore */ }
 }
 
 /** A new war: `side`, `armies` ({ nato, pact }), `length` 'endless' | 'timetable'. */
+/** The map as this war has it: 1945 has no Point Alpha yet, and Meiningen is an Allied objective too. */
+function syncEpoch() {
+  SECTORS.rasdorf.name = ww2() ? 'Rasdorf' : 'Rasdorf · Point Alpha';
+  if (ww2()) SECTORS.meiningen.objective = 'nato';
+  else delete SECTORS.meiningen.objective;
+}
+
+/** The first line of the war's log. */
+const opening = (side) => (ww2()
+  ? (side === 'nato' ? 'The Allies are across the Fulda: the drive east into Thuringia begins.' : 'The enemy is across the Fulda. Hold them before Eisenach.')
+  : `The ${side === 'nato' ? 'Warsaw Pact is massing on the border' : 'NATO line is thin along the border'}.`);
+
 export function newCampaign({ side, armies, length = 'endless' }) {
+  syncEpoch();
   const foe = enemyOf(side);
   const c = {
     version: 2, side, armies: armiesFrom(armies), length,
     turn: 1, weather: pick(WEATHERS), points: 200,
     owner: Object.fromEntries(Object.entries(SECTORS).map(([id, s]) => [id, s.home])),
     battalions: [], enemy: [], battles: [], history: [], fought: [],
-    log: [`Day 1 — the war begins. The ${side === 'nato' ? 'Warsaw Pact is massing on the border' : 'NATO line is thin along the border'}.`],
+    log: [`Day 1 — the war begins. ${opening(side)}`],
     raised: 0, over: null, letter: null, writer: null,
   };
   const army = c.armies[side];
@@ -153,7 +183,7 @@ export function newCampaign({ side, armies, length = 'endless' }) {
       stacks: KINDS[kind].map((t) => { count[t] = (count[t] ?? 0) + 1; return stack(t, stackName(c, t, count[t])); }),
     });
   });
-  const n = foe === 'pact' ? 5 : 4;
+  const n = foe === attacker() ? 5 : 4;
   for (let i = 0; i < n; i++) raiseEnemy(c, START[foe][i]);
   saveCampaign(c);
   return c;
@@ -213,7 +243,7 @@ export function orderMove(c, bid, to) {
 /** The enemy plans: attack where the odds look good or the ground is empty, rest when worn. */
 function enemyOrders(c) {
   const foe = enemyOf(c.side);
-  const bold = foe === 'pact' ? 0.8 : 1.1; // the Pact attacks on a timetable; NATO trades ground for time
+  const bold = foe === attacker() ? 0.8 : 1.1; // the attacker is on a timetable; the defender trades ground for time
   const value = (id) => (SECTORS[id].objective === foe ? 3 : SECTORS[id].depot ? 2 : 1);
   const ours = supplied(c, c.side);
   for (const e of c.enemy) {
@@ -482,7 +512,7 @@ function closeTurn(c) {
   }
   c.attacked = [];
   const foe = enemyOf(c.side);
-  if (c.turn % ECHELON === 0 && c.enemy.length < ENEMY_MAX[foe]) {
+  if (c.turn % ECHELON === 0 && c.enemy.length < ENEMY_MAX(foe)) {
     const depot = Object.keys(SECTORS).find((id) => SECTORS[id].depot && c.owner[id] === foe && !c.enemy.some((e) => e.at === id));
     if (depot) { raiseEnemy(c, depot); c.log.unshift(`${stamp(c)} — fresh enemy forces have reached ${SECTORS[depot].name}.`); }
   }
@@ -501,7 +531,11 @@ function checkEnd(c) {
   if (!c.battalions.length) c.over = { won: false, text: 'The brigade has been destroyed.' };
   else if (!c.enemy.length) c.over = { won: true, text: 'The enemy has no battalions left in the field. The war on this front is won.' };
   else if (c.length === 'timetable') {
-    if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Fulda and Bad Hersfeld are in Pact hands: the road to the Rhine is open.' };
+    if (ww2()) { // April 1945: the Allies must reach Eisenach and Meiningen in time
+      if (holds('nato', ['eisenach', 'meiningen'])) c.over = { won: me === 'nato', text: 'Eisenach and Meiningen are taken: the road into Thuringia is open, and the front here is finished.' };
+      else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Fulda and Bad Hersfeld are German again: the Allied drive has been thrown back across the river.' };
+      else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Eisenach and Meiningen still hold: the Allied drive has stalled in the hills.' };
+    } else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Fulda and Bad Hersfeld are in Pact hands: the road to the Rhine is open.' };
     else if (c.owner.eisenach === 'nato') c.over = { won: me === 'nato', text: 'NATO has taken Eisenach: the offensive has collapsed.' };
     else if (c.turn > TIMETABLE) c.over = { won: me === 'nato', text: 'Eight days, and Fulda and Bad Hersfeld still hold: the reinforcements from home have arrived.' };
   }

@@ -1,7 +1,7 @@
-// Callouts soldiers shout, by faction and situation. Add a faction or a situation here;
-// UnitStack.bark(unit, kind) picks a random line.
-// Shown as floating text above the soldier (ui/Barks.js); the Pact's lines are Russian in
-// transliteration. There is no speech.
+// Callouts soldiers shout, by language and situation, the language by army (LANG: the Bundeswehr,
+// NVA, Wehrmacht and Fallschirmjäger shout German, the Soviets Russian — on whichever side they
+// fight), else by side. UnitStack.bark(unit, kind) picks a random line.
+// Shown as floating text above the soldier (ui/Barks.js); Russian in transliteration. There is no speech.
 const LINES = {
   nato: {
     contact: ['Contact front!', 'Enemy infantry!', 'Got movement, eleven o\'clock!', 'Contact! Contact!', 'Eyes on, hostiles!'],
@@ -31,10 +31,27 @@ const LINES = {
     bail: ['Pokinut\' mashinu!', 'Gorim! Vylezay!'],
     officer: ['Leytenanta ubili!', 'Komandir ranen!', 'Kto komanduyet?!'],
   },
+  de: {
+    contact: ['Feind!', 'Feindkontakt!', 'Feind voraus!', 'Achtung, Feind!', 'Bewegung, elf Uhr!'],
+    cover: ['Deckung!', 'In Deckung!', 'Runter!', 'Hinter die Mauer!'],
+    reload: ['Nachladen!', 'Magazin leer!', 'Feuerschutz!'],
+    hit: ['Getroffen!', 'Verdammt!', 'Geht schon, geht schon!'],
+    wounded: ['Sanitäter!', 'Ich bin verwundet!', 'Hilfe!', 'Mein Bein!'],
+    down: ['Mann am Boden!', 'Sanitäter! Sanitäter!', 'Er ist tot!'],
+    pinned: ['Die nageln uns fest!', 'Köpfe runter!', 'Zu viel Feuer!'],
+    retreat: ['Zurück!', 'Absetzen!', 'Rückzug, Rückzug!'],
+    flank: ['Links umgehen!', 'Umgehen!', 'Zweite Gruppe, rechts rum!'],
+    rally: ['Zu mir!', 'Sammeln!', 'Mir nach!'],
+    bail: ['Aussteigen, raus!', 'Wir brennen, raus!', 'Raus, raus, raus!'],
+    officer: ['Der Leutnant ist gefallen!', 'Leutnant getroffen!', 'Wer führt jetzt?!'],
+  },
 };
 
-/** A random line for this faction and situation, or null. */
-export function barkLine(faction, kind) {
-  const list = LINES[faction]?.[kind] ?? LINES.nato[kind];
+/** Which lines an army shouts (its language), whatever side it is on. */
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de' };
+
+/** A random line for this army (else faction) and situation, or null. */
+export function barkLine(faction, kind, army = null) {
+  const list = LINES[LANG[army] ?? faction]?.[kind] ?? LINES.nato[kind];
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }
