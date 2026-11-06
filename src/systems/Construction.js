@@ -413,6 +413,14 @@ export class Construction {
     this.structures.push(site);
     this.game.netEvent('built', site.id);
     this.game.bus.emit('built', site);
+    // its builders go on to the nearest blueprint of theirs still waiting (a line of them: one after another)
+    const crew = !this.game.net?.isClient && site.stackId != null ? this.game.world.stackById(site.stackId) : null;
+    const next = crew?.alive && this.sites.filter((o) => o.stackId === site.stackId && !o.def.action)
+      .sort((a, b) => Math.hypot(a.x - crew.anchor.x, a.z - crew.anchor.z) - Math.hypot(b.x - crew.anchor.x, b.z - crew.anchor.z))[0];
+    if (next) {
+      const back = next.def.dozer ? 0 : next.def.width / 2 + 2;
+      crew.ai.moveTo({ x: next.x - Math.sin(next.yaw) * back, z: next.z - Math.cos(next.yaw) * back }, { hold: true, ordered: this.game.isHuman(crew.faction) });
+    }
     if (!site.quiet) this.game.tell(site.faction, `${site.def.name} finished`);
   }
 

@@ -19,6 +19,7 @@ import { GroundDecal } from '../world/GroundDecal.js';
 import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
+const LINE_MAX = 16;       // pieces in one dragged line of sandbags, trench or wire
 const ROUTE_SEGMENTS = 96; // waypoint legs drawn at once (the selection's routes)
 const ARROW_SIZE = 10;     // metres long: the facing arrow drawn while right-dragging
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
@@ -112,7 +113,11 @@ export class CommandSystem {
       return;
     }
     if (this.targeting) {
-      if (button === 0) this.confirmTargeting(x, y);
+      if (button === 0 && this.targeting.kind === 'build' && !STRUCTURES[this.targeting.structure].dozer) {
+        // a blueprint: press, drag and let go for a line of them (a click is still one)
+        const p = this.pickGround(x, y, this._p);
+        if (p) this.targeting.lineFrom = p.clone();
+      } else if (button === 0) this.confirmTargeting(x, y);
       else if (button === 2) this.cancelTargeting();
       return;
     }
@@ -125,6 +130,7 @@ export class CommandSystem {
   }
 
   onMouseUp({ button, x, y }) {
+    if (button === 0 && this.targeting?.lineFrom) return this.placeLine(x, y);
     if (button === 2 && this.rdrag) {
       const r = this.rdrag;
       this.rdrag = null;
@@ -295,7 +301,7 @@ export class CommandSystem {
       // face the enemy by default
       const base = this.game.world.bases[this.enemy];
       t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
-      t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place — ${turn('it')}, ${cancel}`;
+      t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place${touch || def.dozer ? '' : ', or drag a line of them'} — ${turn('it')}, ${cancel}`;
     } else if (t.kind === 'engineer') {
       const geo = new THREE.RingGeometry(0.9, 1, 48);
       geo.rotateX(-Math.PI / 2);
@@ -371,9 +377,46 @@ export class CommandSystem {
     if (t?.pin) this.confirmTargeting(0, 0, t.pin);
   }
 
+  /**
+   * The pieces of a line of `def` from `a` to `b`: [{ x, z, yaw }] laid end to end along it, each
+   * turned so its front faces the enemy (a short drag is one piece at `a`, facing as set).
+   */
+  lineOf(def, a, b, yaw) {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    if (len < def.length * 0.6) return [{ x: a.x, z: a.z, yaw }];
+    const n = Math.min(LINE_MAX, Math.max(1, Math.round(len / (def.length * 0.95))));
+    const ux = dx / len;
+    const uz = dz / len;
+    let y = Math.atan2(-uz, ux); // the piece's length along the line
+    const foe = this.game.world.bases[this.enemy];
+    if (foe && (Math.sin(y) * (foe.x - a.x) + Math.cos(y) * (foe.z - a.z)) < 0) y += Math.PI; // its front toward them
+    const step = len / n;
+    return Array.from({ length: n }, (_, i) => ({ x: a.x + ux * step * (i + 0.5), z: a.z + uz * step * (i + 0.5), yaw: y }));
+  }
+
+  /** Let go after pressing on a blueprint: one piece, or the whole line, ordered at once. */
+  placeLine(x, y) {
+    const t = this.targeting;
+    const a = t.lineFrom;
+    t.lineFrom = null;
+    const b = this.pickGround(x, y, this._v) ?? a;
+    const pieces = this.lineOf(STRUCTURES[t.structure], a, b, t.yaw);
+    if (pieces.length === 1) return this.confirmTargeting(0, 0, a);
+    if (!t.stack.alive) return this.cancelTargeting();
+    // farthest first: each order sends the squad to its piece, so the last (nearest) is where it starts
+    const s = t.stack.anchor;
+    pieces.sort((p, q) => Math.hypot(q.x - s.x, q.z - s.z) - Math.hypot(p.x - s.x, p.z - s.z));
+    for (const p of pieces) this.game.orders.issue({ t: 'build', s: t.stack.id, k: t.structure, x: p.x, z: p.z, yaw: Math.round(p.yaw * 1000) / 1000 });
+    this.game.bus.emit('order', { kind: 'build' });
+    this.cancelTargeting();
+  }
+
   cancelTargeting() {
     const t = this.targeting;
     if (!t) return;
+    t.lineGhosts?.removeFromParent();
     t.ghost.removeFromParent();
     this.targeting = null;
   }
@@ -434,7 +477,31 @@ export class CommandSystem {
     const p = this.game.input.touch ? (t.pin ? this._p.copy(t.pin) : null) : this.pickGround(m.x, m.y, this._p);
     if (!p) return;
     if (t.kind === 'build') {
-      t.ghost.position.set(p.x, p.y + 0.4, p.z);
+      const def = STRUCTURES[t.structure];
+      const pieces = t.lineFrom ? this.lineOf(def, t.lineFrom, p, t.yaw) : null;
+      if (pieces && pieces.length > 1) {
+        // dragging a line: a blueprint for every piece, and what it all costs
+        t.ghost.visible = false;
+        if (!t.lineGhosts) { t.lineGhosts = new THREE.Group(); this.game.scene.add(t.lineGhosts); }
+        while (t.lineGhosts.children.length < pieces.length) t.lineGhosts.add(t.ghost.children[0].clone());
+        t.lineGhosts.visible = true;
+        t.lineGhosts.children.forEach((g, i) => {
+          const q = pieces[i];
+          g.visible = !!q;
+          if (!q) return;
+          g.position.set(q.x, this.game.terrain.heightAt(q.x, q.z) + 0.4, q.z);
+          g.rotation.y = q.yaw;
+          // red where it can't go (the same test the build order makes: systems/Construction.js place)
+          this.badMat ??= new THREE.MeshBasicMaterial({ color: 0xff6a5a, transparent: true, opacity: 0.35, depthWrite: false });
+          g.material = this.game.cover.pointBlocked(q.x, q.z, def.width * 0.5 + 0.4) ? this.badMat : t.ghost.children[0].material;
+        });
+        const each = structureCost(this.game, this.faction, def);
+        t.hint = `${pieces.length} × ${def.name} (${pieces.length * each} CP): let go to place the line`;
+        return;
+      }
+      if (t.lineGhosts) t.lineGhosts.visible = false;
+      t.ghost.visible = true;
+      t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
       if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? doctrine(this.game, this.faction, 'mass').radius : 10);
