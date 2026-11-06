@@ -12,6 +12,7 @@ import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
+import { KITS, takesKit } from '../data/kits.js';
 
 /**
  * state.buy(faction, typeId) for points-and-CP modes: pay, check the stack limit, and bring
@@ -23,7 +24,7 @@ export function makeBuyer(game, state) {
   const counter = {};
   state.entryFree ??= {}; // `${faction}:${road}` → battle time the road is free again
   /** `entry`: the road to arrive on (an index into the base's entries), or null: a command post, else any free road. */
-  return (faction, typeId, entry = null) => {
+  return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
     if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type))) return null;
@@ -63,8 +64,10 @@ export function makeBuyer(game, state) {
     else state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP;
     const army = game.armyOf(faction);
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
-    const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
+    const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)
+    const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}${kitted ? ` (${KITS[kitted].short})` : ''}`;
     const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, name);
+    if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
     game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);
     return stack;

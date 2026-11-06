@@ -11,6 +11,7 @@ import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
 import { forArmy, artKey } from '../data/factions.js';
 import * as THREE from 'three';
+import { KITS, takesKit } from '../data/kits.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
@@ -61,7 +62,7 @@ export class ReinforceWindow {
     root.hidden = true;
     root.innerHTML = `<div class="rw-head"><b>Reinforcements</b><span class="rw-cp"></span><span class="rw-stacks"></span>
       <button type="button" class="rw-again" tabindex="-1" hidden></button>
-      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-entry"><span>Arrive</span><div class="seg"></div></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
+      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-entry"><span>Arrive</span><div class="seg"></div></div><div class="rw-kit"><span>Rifle kit</span><div class="seg"></div></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
     document.getElementById('hud').append(root);
     this.cp = root.querySelector('.rw-cp');
     this.stacks = root.querySelector('.rw-stacks');
@@ -90,6 +91,23 @@ export class ReinforceWindow {
     });
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
+    // the kit the next rifle squads bring (data/kits.js; same price)
+    game.reinforceKit = null;
+    const kitSeg = root.querySelector('.rw-kit .seg');
+    root.querySelector('.rw-kit').hidden = !types.some(takesKit);
+    for (const [id, kit] of Object.entries(KITS)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.textContent = kit.label;
+      b.title = kit.tip;
+      b.className = id === 'standard' ? 'on' : '';
+      b.addEventListener('click', () => {
+        game.reinforceKit = id === 'standard' ? null : id;
+        for (const o of kitSeg.children) o.classList.toggle('on', o === b);
+      });
+      kitSeg.append(b);
+    }
     this.cards = [];
     for (const [cat, title] of SECTIONS) {
       const list = types.filter((t) => (SECTIONS.some(([c]) => c === t.category) ? t.category : 'other') === cat);

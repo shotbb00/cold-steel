@@ -1,7 +1,9 @@
 // Direct control. From the tactical view, select a stack and press Tab to take over one of
 // its members — a soldier or a vehicle — in third person:
 //   WASD move · Shift sprint · C crouch · Z prone (infantry) · mouse aim · LMB fire
-//   R reload · Q / E switch to another member of the same stack · Tab back to command
+//   R reload · F anti-tank rocket / guided missile · T grenade · X smoke launchers (vehicles)
+//   V binoculars (observers, scouts, recon): a click calls every gun in range on the spot
+//   Q / E switch to another member of the same stack · Tab back to command
 // The rest of the stack follows and fights around you (StackAI Follow) — no bonuses: you are one
 // more man (or vehicle) in the fight, not a buff for the others. If your unit falls you take over the
 // next living member; when the whole stack is gone you return to the tactical view.
@@ -11,6 +13,7 @@ import { enemyOf } from '../data/factions.js';
 import { angleDelta, clamp } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
 import { keys } from '../core/Keys.js';
+import { GRENADE, LAW } from '../entities/UnitStack.js';
 
 const DEFAULT_CAMERA = { distance: 6.6, height: 2.7, shoulder: 1.3 };
 const _wish = new THREE.Vector3();
@@ -58,6 +61,85 @@ export class PlayerControl {
     else if (keys.is(code, 'prevMember')) this.cycle(-1);
     else if (keys.is(code, 'nextMember')) this.cycle(1);
     else if (keys.is(code, 'sight')) this.toggleSight();
+    else if (keys.is(code, 'rocket')) this.rocket();
+    else if (keys.is(code, 'grenade')) this.grenade();
+    else if (keys.is(code, 'vehicleSmoke')) {
+      if (this.stack.usesCover || !this.stack.popSmoke(this.unit)) this.game.bus.emit('toast', this.stack.usesCover || !(this.stack.smokeLeft > 0) ? 'No smoke launchers' : 'Smoke launchers reloading');
+    } else if (keys.is(code, 'binoculars')) this.toggleBinoculars();
+  }
+
+  /** Does the unit in hand carry what this action uses? (the touch buttons) */
+  has(action) {
+    const u = this.unit;
+    const st = this.stack;
+    if (!u) return false;
+    if (action === 'rocket') return !!u.stats.atgm || (st.usesCover && u.stats.lightAT > 0);
+    if (action === 'grenade') return st.usesCover && u.stats.grenades > 0;
+    if (action === 'vehicleSmoke') return !st.usesCover && st.smokeLeft > 0;
+    if (action === 'binoculars') return !!(st.stats.binoculars || st.stats.observer);
+    return true;
+  }
+
+  /** F: the squad's light anti-tank rocket at the crosshair, or a vehicle's guided missile at the vehicle under it. */
+  rocket() {
+    const u = this.unit;
+    const st = this.stack;
+    const m = u.stats.atgm;
+    const time = this.game.world.time;
+    if (m) {
+      const t = this.aimHit;
+      if ((u.atgmLeft ??= m.count) <= 0) return this.game.bus.emit('toast', 'No missiles left');
+      if (time < (u.atgmReady ?? 0)) return this.game.bus.emit('toast', 'Missile reloading');
+      if (!t || t.stack.usesCover || u.pos.distanceTo(t.pos) > m.range) return this.game.bus.emit('toast', `Put the crosshair on a vehicle within ${m.range} m`);
+      u.target = t;
+      st.fireMissile(u, m);
+      u.target = null;
+      return;
+    }
+    if (!st.usesCover || !u.stats.lightAT) return this.game.bus.emit('toast', 'No anti-tank rockets');
+    if ((st.lightAT ??= u.stats.lightAT) <= 0) return this.game.bus.emit('toast', 'No rockets left — the squad gets more after a lull');
+    if (time < (st.nextLightAT ?? 0)) return;
+    u.proneTarget = 0; // (you can't fire one lying down)
+    st.fireLightAT(u, this.aimPoint);
+    this.game.cameraManager.shake(0.05);
+    this.game.bus.emit('toast', `Rocket away — ${st.lightAT} left`);
+  }
+
+  /** T: a hand grenade, lobbed at the crosshair (as far as a man can throw). */
+  grenade() {
+    const u = this.unit;
+    if (!this.stack.usesCover || !u.stats.grenades) return this.game.bus.emit('toast', 'No grenades');
+    if ((u.grenades ??= u.stats.grenades) <= 0) return this.game.bus.emit('toast', 'No grenades left — more after a lull');
+    if (this.game.world.time < (u.nextGrenade ?? 0)) return;
+    _aim.subVectors(this.aimPoint, u.pos).setY(0);
+    const d = Math.min(GRENADE.range, Math.max(GRENADE.min, _aim.length()));
+    _aim.setLength(d).add(u.pos);
+    _aim.y = this.game.terrain.heightAt(_aim.x, _aim.z);
+    this.stack.throwGrenade(u, _aim);
+    u.nextGrenade = this.game.world.time + 2; // (your own arm: quicker than the AI's)
+    this.game.bus.emit('toast', `Grenade! ${u.grenades} left`);
+  }
+
+  /** V: binoculars up (zoomed in) or down; with them up, a click calls a fire mission at the crosshair. */
+  toggleBinoculars(on = !this.binos) {
+    if (on && !(this.stack.stats.binoculars || this.stack.stats.observer)) return this.game.bus.emit('toast', 'Only observers, scouts and recon vehicles carry binoculars');
+    this.binos = on;
+    const cam = this.game.camera;
+    if (on) this.fov ??= cam.fov;
+    cam.fov = on ? this.fov / 4 : (this.fov ?? cam.fov);
+    cam.updateProjectionMatrix();
+    document.body.classList.toggle('binoculars', on);
+    if (on) this.game.bus.emit('toast', 'Binoculars — click to call a fire mission on the spot, V to lower them');
+  }
+
+  /** Every gun of yours in range fires on the crosshair (core/Orders.js 'fireMission'). */
+  callFire() {
+    const g = this.game;
+    if (g.world.time < (this.nextCall ?? 0)) return g.bus.emit('toast', `The guns are still firing — next call in ${Math.ceil(this.nextCall - g.world.time)} s`);
+    const guns = g.world.stacksOf(this.stack.faction).filter((s) => g.mine(s) && s.units.some((u) => u.alive && u.stats.indirect));
+    if (!guns.length) return g.bus.emit('toast', 'No mortars or guns to call on');
+    this.nextCall = g.world.time + 15;
+    g.orders.issue({ t: 'fireMission', s: guns.map((s) => s.id), x: Math.round(this.aimPoint.x), z: Math.round(this.aimPoint.z) });
   }
 
   /**
@@ -124,6 +206,7 @@ export class PlayerControl {
   detach() {
     const u = this.unit;
     if (!u) return;
+    if (this.binos) this.toggleBinoculars(false);
     if (this.beam) this.game.beams.stop(this.beam);
     this.beam = null;
     u.possessed = false;
@@ -229,7 +312,10 @@ export class PlayerControl {
     // --- weapon
     this.fireTimer -= dt;
     const trigger = (input.locked || input.touch) && input.isMouseDown(0) && !game.ended;
-    if (ws.weapon === 'beam') {
+    if (this.binos) { // binoculars up: a click is a fire mission, not a shot
+      if (trigger && !this.calling) this.callFire();
+      this.calling = trigger;
+    } else if (ws.weapon === 'beam') {
       if (trigger && !this.beam && u.cooldown <= 0) {
         this.beam = game.beams.start(u, stack, { player: true, aim: this.aimPoint });
         u.cooldown = ws.beamDuration + ws.fireCooldown * 0.6;
@@ -263,8 +349,9 @@ export class PlayerControl {
     const game = this.game;
     const camera = game.camera;
     const dir = game.cameraManager.forward(_dir);
-    const range = this.unit.stats.range * 1.3;
+    const range = this.binos ? 1500 : Math.max(this.unit.stats.range * 1.3, this.unit.stats.atgm?.range ?? 0, this.unit.stats.lightAT ? LAW.range : 0);
     const hit = game.world.raycast(camera.position, dir, enemyOf(this.stack.faction), range);
+    this.aimHit = hit?.target ?? null; // (what's under the crosshair: the missile's target)
     let dist = hit ? hit.distance : range;
     const ground = game.terrain.raycast(camera.position, dir, dist, _aim);
     if (ground) dist = Math.min(dist, ground.distanceTo(camera.position));

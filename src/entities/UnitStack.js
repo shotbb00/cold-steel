@@ -27,6 +27,7 @@ import { FACTIONS, enemyOf, DEFAULT_ARMY } from '../data/factions.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
+import { KITS } from '../data/kits.js';
 import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
@@ -60,12 +61,12 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // which one by where it struck (front: the gun, sides: the tracks, rear: the engine). Tracks the
 // crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
 const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
-const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
+export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 // a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
 // refills after a lull like the grenades
 const REFILL = { base: 150, post: 80 }; // m: how near the base or a set-up command post a squad must be to take in new men
-const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
+export const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
 // row: squeeze through (collisions off for `ghostT` s, the last resort)
@@ -197,6 +198,20 @@ export class UnitStack {
     if (!sp || index >= sp.count) return this.stats;
     this._specialistStats ??= { ...this.stats, ...sp.stats };
     return this._specialistStats;
+  }
+
+  /** A squad kit (data/kits.js) on top of its stats: every member re-equipped (the specialists keep their own weapon). */
+  setKit(id) {
+    const kit = KITS[id];
+    if (!kit || id === 'standard') return;
+    this.kit = id;
+    this.stats = { ...this.stats, ...kit.stats(this.stats) };
+    this._specialistStats = null;
+    this.lightAT = this.stats.lightAT ?? 0;
+    for (const u of this.units) {
+      u.stats = this.unitStats(u.index);
+      u.grenades = u.stats.grenades ?? 0;
+    }
   }
 
   get usesCover() {
@@ -1082,13 +1097,17 @@ export class UnitStack {
     return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
   }
 
-  fireLightAT(u) {
+  /** One of the squad's rockets at u's target (led), or at the point `at` (direct control: the crosshair). */
+  fireLightAT(u, at = null) {
     const t = u.target;
     this.lightAT--;
     this.nextLightAT = this.world.time + LAW.every;
     this.muzzleWorld(u, _p);
-    _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
-    if (t.vel) _v.addScaledVector(t.vel, _v.distanceTo(_p) / LAW.speed * 0.8);
+    if (at) _v.copy(at);
+    else {
+      _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
+      if (t.vel) _v.addScaledVector(t.vel, _v.distanceTo(_p) / LAW.speed * 0.8);
+    }
     _w.subVectors(_v, _p).normalize();
     const sp = LAW.spread * (1 + u.suppression) * (u.moving ? 2 : 1);
     _w.x += (Math.random() - 0.5) * sp * 2;
@@ -1119,9 +1138,9 @@ export class UnitStack {
     return near >= 2;
   }
 
-  /** Throw a hand grenade at u's target: a high lob that bursts where it lands (or on the wall it hits). */
-  throwGrenade(u) {
-    const t = u.target;
+  /** Throw a hand grenade at u's target (or at the point `at`: direct control): a high lob that bursts where it lands (or on the wall it hits). */
+  throwGrenade(u, at = u.target.pos) {
+    const t = { pos: at };
     u.grenades--;
     u.nextGrenade = this.world.time + GRENADE.every;
     _p.set(u.pos.x, u.pos.y + 1.6, u.pos.z);
@@ -1219,8 +1238,9 @@ export class UnitStack {
   smokeMission(u) {
     const o = this.smokeOrder;
     const flare = o?.kind === 'flare';
-    if (!o || !u.stats.indirect || (flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
-    o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare, flare };
+    const he = o?.kind === 'he'; // shells on the spot: a fire mission called through binoculars (systems/PlayerControl.js)
+    if (!o || !u.stats.indirect || (he ? 1 : flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
+    o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare && !he, flare };
     return o.target;
   }
 
@@ -1293,9 +1313,9 @@ export class UnitStack {
       const smoke = !!t.smoke;
       const flare = !!t.flare;
       this.lob(u, _v.set(t.pos.x, t.pos.y, t.pos.z), smoke, flare);
-      if (smoke || flare) {
-        if (flare) this.flareRounds--; else this.smokeRounds--;
-        const left = flare ? this.flareRounds : this.smokeRounds;
+      if (t === this.smokeOrder?.target) { // a mission: smoke, illumination or shells on the spot
+        if (flare) this.flareRounds--; else if (smoke) this.smokeRounds--;
+        const left = flare ? this.flareRounds : smoke ? this.smokeRounds : 1;
         if (--this.smokeOrder.left <= 0 || left <= 0) { this.smokeOrder = null; u.target = null; }
       }
       return;

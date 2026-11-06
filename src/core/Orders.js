@@ -8,7 +8,8 @@
 //   { t: 'unload', s: [ids] }                    { t: 'board', s: id, c: carrierId }
 //   { t: 'garrison', s: [ids], b: buildingIndex, face? }{ t: 'popSmoke', s: [ids] }
 //   { t: 'smoke', s: [ids], x, z }               { t: 'air', x, z, yaw, k: 'heli' | 'jet' | 'lift' }
-//   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId, e?: road (base entry index) }
+//   { t: 'fireMission', s: [ids], x, z }         (shells on the spot, from binoculars in direct control)
+//   { t: 'flare', s: [ids], x, z }             { t: 'buy', u: unitTypeId, e?: road (base entry index), k?: squad kit (data/kits.js) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 //   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
@@ -33,6 +34,7 @@ export class Orders {
   issue(cmd) {
     const net = this.game.net;
     if (cmd.t === 'buy' && cmd.e === undefined) cmd.e = this.game.reinforceEntry ?? null; // the road picked in the reinforcement window
+    if (cmd.t === 'buy' && cmd.k === undefined) cmd.k = this.game.reinforceKit ?? null;   // …and the rifle squads' kit
     if (net?.isClient) {
       net.sendOrder(cmd);
       return null;
@@ -157,6 +159,17 @@ export class Orders {
           for (const u of s.units) u.retarget = 0;
         }
         return null;
+      case 'fireMission': { // called through binoculars in direct control (systems/PlayerControl.js): shells on the spot
+        const tubes = (s) => s.units.filter((u) => u.alive && u.stats.indirect);
+        const guns = mine(cmd.s).filter((s) => !s.barrage && tubes(s).some((u) => Math.hypot(cmd.x - u.pos.x, cmd.z - u.pos.z) <= u.stats.range));
+        for (const s of guns) {
+          s.ai.halt(); // (as for smoke: they stop, set up and fire)
+          s.smokeOrder = { x: cmd.x, z: cmd.z, left: Math.min(12, 3 * tubes(s).length), kind: 'he' };
+          for (const u of s.units) u.retarget = 0;
+        }
+        g.tell(faction, guns.length ? `Fire mission: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
+        return null;
+      }
       case 'flare':
         if (!g.conditions?.night) return g.tell(faction, 'Illumination rounds are for night battles');
         for (const s of mine(cmd.s)) {
@@ -206,7 +219,7 @@ export class Orders {
         for (const s of mine(cmd.s)) s.startBarrage?.(cmd.x, cmd.z);
         return null;
       case 'buy':
-        return g.modeState?.buy?.(faction, cmd.u, cmd.e ?? null) ?? null;
+        return g.modeState?.buy?.(faction, cmd.u, cmd.e ?? null, cmd.k ?? null) ?? null;
       default:
         return null;
     }

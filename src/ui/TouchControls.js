@@ -358,7 +358,7 @@ export class TouchControls {
     fire.addEventListener('touchend', press(false), opts);
     fire.addEventListener('touchcancel', press(false), opts);
     box.append(fire);
-    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['sight', 'Sight'], ['toggleView', 'Command']]) {
+    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['sight', 'Sight'], ['rocket', 'Rocket'], ['grenade', 'Grenade'], ['vehicleSmoke', 'Smoke'], ['binoculars', 'Binoculars'], ['toggleView', 'Command']]) {
       const b = btn(`tp-${action}`, label);
       b.addEventListener('touchstart', (e) => { e.preventDefault(); this.key(action); }, opts);
       box.append(b);
@@ -388,6 +388,7 @@ export class TouchControls {
     this.tb.clear.hidden = !cs.selected.size;
     this.sightBtn ??= this.pad.querySelector('.tp-sight');
     if (this.sightBtn) this.sightBtn.hidden = !this.game.player.sightKind?.();
+    for (const a of ['rocket', 'grenade', 'vehicleSmoke', 'binoculars']) { const b = this.pad.querySelector(`.tp-${a}`); if (b) b.hidden = !this.game.player.has?.(a); } // only what the unit carries
     if (commanding && (this.held.size || this.input.mouse.buttons.has(0))) {
       this.hold(new Set());
       if (!this.single) this.input.mouse.buttons.delete(0);

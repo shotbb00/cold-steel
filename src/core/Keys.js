@@ -45,6 +45,10 @@ export const ACTIONS = [
   { id: 'prevMember', label: 'Previous squad member', ctx: 'control', key: 'KeyQ' },
   { id: 'nextMember', label: 'Next squad member', ctx: 'control', key: 'KeyE' },
   { id: 'sight', label: 'Thermal / night sight', ctx: 'control', key: 'KeyN' },
+  { id: 'rocket', label: 'Anti-tank rocket / guided missile', ctx: 'control', key: 'KeyF' },
+  { id: 'grenade', label: 'Throw a grenade', ctx: 'control', key: 'KeyT' },
+  { id: 'vehicleSmoke', label: 'Smoke launchers (vehicles)', ctx: 'control', key: 'KeyX' },
+  { id: 'binoculars', label: 'Binoculars: click calls a fire mission (observers, scouts)', ctx: 'control', key: 'KeyV' },
   // anywhere
   { id: 'quality', label: 'Cycle graphics quality', ctx: 'both', key: 'KeyG' },
   { id: 'mute', label: 'Mute', ctx: 'both', key: 'KeyM' },
