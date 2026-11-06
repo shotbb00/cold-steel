@@ -26,6 +26,18 @@ export class Support {
     const step = this.t;
     this.t = 0;
     const world = this.game.world;
+    // 1945: a smoke generator, set up, keeps its screen up ahead of it; a supply lorry restocks what's near it
+    for (const s of world.stacks) {
+      const sg = s.alive && s.stats.smokeGen;
+      if (sg && s.setUpFully() && (s.smokeT = (s.smokeT ?? 0) - step) <= 0) {
+        s.smokeT = sg.every;
+        const u = s.units.find((m) => m.alive);
+        this.game.smoke?.add(u.pos.x + Math.sin(u.yaw) * sg.ahead, u.pos.z + Math.cos(u.yaw) * sg.ahead, { radius: sg.radius, duration: sg.duration });
+        s.job = 'making smoke';
+      }
+      const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
+      s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
+    }
     for (const s of world.stacks) {
       if (!s.alive) continue;
       const kit = s.stats.repair ?? s.stats.heal;

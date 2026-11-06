@@ -10,6 +10,7 @@ import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildUsSherman, buildSovT34, buildWhPanzerIV, buildFjStuG, buildUsM3, buildWh251, buildSovStudebaker, buildFjOpelBlitz } from '../models/ww2Armour.js';
 import { buildUsPriest, buildSovM30, buildWhWespe, buildFjLeFH18, buildUsCalliope, buildSovKatyusha, buildWhPanzerwerfer, buildFjNebelwerfer, buildUsM4Mortar, buildSovPM38, buildWh2512, buildFjGrw42Lorry } from '../models/ww2Fire.js';
 import { buildUsM16, buildSovM17, buildWhWirbelwind, buildFj251Flak, buildUsBofors, buildSov61K, buildWhFlak38, buildFjFlakvierling, buildUs90mm, buildSov52K, buildDeFlak36, buildFjOstwind, buildUsSCR584, buildSovRUS2, buildDeWuerzburg, buildUsM15, buildSovZSU37 } from '../models/ww2AirDefence.js';
+import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, buildSovT34Tractor, buildWhBergepanther, buildFjFamo, buildUsTreadway, buildSovPontoon, buildWhBrueckenleger, buildFjPontoon, buildUsT1E3, buildSovPT3, buildDeGoliath, buildUsM3Command, buildSovRadioLorry, buildWh2516, buildFjBlitzCommand, buildUsSmokeGen, buildSovSmokeGen, buildWhSmokeGen, buildFjSupply } from '../models/ww2Support.js';
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 const T = TYPES_1985;
@@ -409,6 +410,91 @@ const engineers = derive(T.engineers, {
   },
 });
 
+// support: as in 1985 (heal, repair, bridgeLayer, minePlough / lineCharge, commandPost) — the
+// jammer's slot holds the smoke generators and the Fallschirmjäger's supply lorry
+const lorryStats = { nightSight: undefined, armor: 0.05, hp: 380 };
+const ambulance = derive(T.ambulance, {
+  stats: lorryStats,
+  factionStats: { pact: { armor: 0.25, hp: 600 }, fj: { armor: 0.05, hp: 380 } },        // the 251/8 has armour
+  models: { nato: buildUsWC54, sov: buildSovGazAmb, pact: buildWh2518, fj: buildFjBlitzAmb },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'Dodge WC54', weapon: 'unarmed', text: 'The field ambulance: wounded men near it are patched up and go back to the line.' },
+    sov: { name: 'GAZ ambulance', weapon: 'unarmed', text: 'The medical lorry: wounded men near it are patched up and go back to the line.' },
+    pact: { name: 'Sd.Kfz. 251/8', weapon: 'unarmed', text: 'The armoured ambulance half-track: it can go where the fighting is to fetch the wounded.' },
+    fj: { name: 'Opel Blitz Sanka', weapon: 'unarmed', text: 'The ambulance lorry: wounded men near it are patched up and go back to the line.' },
+  },
+});
+
+const recovery = derive(T.recovery, {
+  stats: { nightSight: undefined },
+  factionStats: { fj: { armor: 0.1, hp: 500 } },
+  models: { nato: buildUsM32, sov: buildSovT34Tractor, pact: buildWhBergepanther, fj: buildFjFamo },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'M32 Recovery Vehicle', weapon: 'A-frame boom, winch, .50 cal', text: 'A Sherman with a boom and winch: mends tracks, hauls knocked-out vehicles back into running order.' },
+    sov: { name: 'T-34 recovery tractor', weapon: 'jib, winch', text: 'A turretless T-34 with a jib: gets damaged tanks moving again behind the line.' },
+    pact: { name: 'Bergepanther', weapon: 'crane, winch', text: 'The Panther hull with a crane and a spade: the only thing that could drag a Tiger.' },
+    fj: { name: 'Sd.Kfz. 9 Famo', weapon: 'crane, winch', text: 'The biggest German half-track tractor, with its crane: field repairs and recovery.' },
+  },
+});
+
+const bridgeLayer = derive(T.bridgeLayer, {
+  stats: { nightSight: undefined },
+  factionStats: { nato: { armor: 0.05, hp: 450 }, sov: { armor: 0.05, hp: 450 }, fj: { armor: 0.05, hp: 450 } },
+  models: { nato: buildUsTreadway, sov: buildSovPontoon, pact: buildWhBrueckenleger, fj: buildFjPontoon },
+  variants: {
+    nato: { name: 'Treadway Bridge Lorry', weapon: 'treadway bridge', text: 'The engineers’ treadway on a lorry: a bridge over the river where none stood.' },
+    sov: { name: 'Pontoon Lorry', weapon: 'pontoon bridge', text: 'The pontoon sections on a Studebaker: a crossing in minutes.' },
+    pact: { name: 'Brückenleger IV', weapon: 'bridge on a Panzer IV', text: 'A Panzer IV carrying its bridge: it lays it across the gap and backs off.' },
+    fj: { name: 'Brückengerät', weapon: 'pontoon bridge', text: 'The engineers’ pontoon sections on an Opel Blitz: a crossing in minutes.' },
+  },
+});
+
+const mineClear = derive(T.mineClear, {
+  stats: { nightSight: undefined, noStabilizer: true },
+  factionStats: {
+    sov: { minePlough: true },
+    pact: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0 }, // Goliath: drives in and blows the lane
+    fj: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0 },
+  },
+  models: { nato: buildUsT1E3, sov: buildSovPT3, pact: buildDeGoliath, fj: buildDeGoliath },
+  variants: {
+    nato: { name: 'T1E3 Mine Exploder', weapon: 'roller discs, 75 mm', text: '"Aunt Jemima": a Sherman pushing two great sets of steel discs that set off the mines ahead of it.' },
+    sov: { name: 'T-34 with PT-3', weapon: 'mine rollers, 85 mm', text: 'Heavy rollers on arms ahead of the tracks: lane after lane through the minefields.' },
+    pact: { name: 'Goliath', weapon: 'demolition charge', text: 'The little remote-controlled carrier on its cable: driven into the minefield, it blows a lane.' },
+    fj: { name: 'Goliath', weapon: 'demolition charge', text: 'The little remote-controlled carrier on its cable: driven into the minefield, it blows a lane.' },
+  },
+});
+
+const commandPost = derive(T.commandPost, {
+  stats: { nightSight: undefined },
+  factionStats: { nato: { armor: 0.25, hp: 600 }, sov: { armor: 0.05, hp: 380 }, pact: { armor: 0.25, hp: 600 }, fj: { armor: 0.05, hp: 380 } },
+  models: { nato: buildUsM3Command, sov: buildSovRadioLorry, pact: buildWh2516, fj: buildFjBlitzCommand },
+  variants: {
+    nato: { name: 'M3 Command Half-track', weapon: 'radios, mast', text: 'The battalion command post: set it up behind the front and the reinforcements report there.' },
+    sov: { name: 'Radio Lorry', weapon: 'radios, mast', text: 'The command post on a lorry: once its mast is up, the reinforcements come forward to it.' },
+    pact: { name: 'Sd.Kfz. 251/6', weapon: 'radios, frame antenna', text: 'The command half-track with its bedstead antenna: the reinforcements come forward to it.' },
+    fj: { name: 'Gefechtsstand', weapon: 'radios, mast', text: 'The command post on an Opel Blitz: once its mast is up, the reinforcements come forward to it.' },
+  },
+});
+
+/** The jammer's slot: a smoke generator (screens the front ahead of it), the Fallschirmjäger's supply lorry. */
+const jammer = derive(T.jammer, {
+  name: 'Smoke Generator', shortName: 'Smoke',
+  stats: { ...lorryStats, jammer: undefined, smokeGen: { deploy: 8, every: 6, ahead: 20, radius: 14, duration: 28 } },
+  factionStats: {
+    fj: { smokeGen: undefined, supply: { deploy: 4, radius: 60, restock: 0.25 } },
+  },
+  models: { nato: buildUsSmokeGen, sov: buildSovSmokeGen, pact: buildWhSmokeGen, fj: buildFjSupply },
+  variants: {
+    nato: { name: 'Smoke Generator', weapon: 'M2 smoke generator, fog oil', text: 'Set up, it keeps a smoke screen standing 20 m in front of it for as long as it stays: turn it toward the enemy.' },
+    sov: { name: 'Smoke Generator', weapon: 'smoke apparatus', text: 'Set up, it keeps a smoke screen standing 20 m in front of it for as long as it stays: turn it toward the enemy.' },
+    pact: { name: 'Nebeltruppe', weapon: 'smoke generator', text: 'Set up, it keeps a smoke screen standing 20 m in front of it for as long as it stays: turn it toward the enemy.' },
+    fj: { name: 'Supply Lorry', weapon: 'ammunition, men', text: 'A mobile supply point: squads within 60 m can take in new men (Refill) and get their grenades and Panzerfausts back four times faster.' },
+  },
+});
+
 // the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
 const airAssault = derive(T.airAssault, {
   models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
@@ -428,11 +514,11 @@ export const TYPES_1945 = {
   artillery, rockets, spMortar, observers, cbRadar,
   aa, towedAA, sam, manpads, airRadar, gunMissile,
   scouts, sniper, engineers,
+  ambulance, recovery, bridgeLayer, mineClear, commandPost, jammer,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
 export const ALIAS_1945 = {
   kampfgruppe: 'rifles',
-  commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
 };

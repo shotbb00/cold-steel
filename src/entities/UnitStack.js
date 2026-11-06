@@ -258,7 +258,8 @@ export class UnitStack {
   get supplied() {
     const base = this.world.bases[this.faction];
     if (base && Math.hypot(base.x - this.centroid.x, base.z - this.centroid.z) < REFILL.base) return true;
-    return this.world.stacksOf(this.faction).some((o) => o.postReady && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < REFILL.post);
+    return this.world.stacksOf(this.faction).some((o) => (o.postReady && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < REFILL.post)
+      || (o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < o.stats.supply.radius)); // (the Fallschirmjäger's supply lorry, 1945)
   }
 
   /** The missing men rejoin, each in his slot by the squad (the new men thin its experience a little). */
@@ -863,7 +864,7 @@ export class UnitStack {
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
     if (u.target) u.calmT = 0;
-    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -1511,7 +1512,7 @@ export class UnitStack {
   /** Seconds a radar / jammer / command post takes to set up (null: it doesn't). */
   get deploySeconds() {
     const s = this.stats;
-    return s.commandPost?.deploy ?? s.jammer?.deploy ?? s.airRadar?.deploy ?? s.cbRadar?.deploy ?? null;
+    return s.commandPost?.deploy ?? s.jammer?.deploy ?? s.airRadar?.deploy ?? s.cbRadar?.deploy ?? s.smokeGen?.deploy ?? s.supply?.deploy ?? null;
   }
 
   /** Fully set up (and so working)? */
