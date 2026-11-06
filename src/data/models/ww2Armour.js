@@ -15,6 +15,7 @@
 // the side colour. Contract: render/RigRenderer.js.
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
+import { buildWw2Soldier } from './ww2Soldier.js';
 import { stationHull, castTurret, trackedHull, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
 
 const OD = 0x4d4f34;
@@ -119,7 +120,7 @@ export const buildUsSherman = (mats) => rig(once('sherman', () => {
 
 // ---------------------------------------------------------------- T-34-85
 
-export const buildSovT34 = (mats) => rig(once('t34', () => {
+const sovT34 = (mats) => rig(once('t34', () => {
   const gear = runningGear({ halfWidth: 1.25, length: 4.3, wheels: 5, wheelR: 0.41, sprocket: -1, rollers: 0, trackWidth: 0.5, wheelColor: SOV_DK });
   return {
     gear, wheel: roadWheelGeometry(0.41, 0.42, SOV_DK, 0, 0.1),
@@ -141,6 +142,46 @@ export const buildSovT34 = (mats) => rig(once('t34', () => {
     gun: merge([P.cyl(0.06, 0.07, 4.4, { z: 2.2, rx: Math.PI / 2, color: SOV }, 12)]),
   };
 }), mats, { turretAt: [0, 1.62, 0.45], gunAt: [0, 0.42, 1.5], muzzle: 4.4 });
+
+/**
+ * The T-34-85 with the Red Army's tank riders (data/epoch.js 'riders'): while the platoon still
+ * carries its squad (stack.passengers), three of them sit on each hull behind the turret, facing
+ * out, legs over the side — gone once the squad is put down (U) or the tank is knocked out.
+ */
+export const buildSovT34 = (mats) => {
+  const r = sovT34(mats);
+  const hull = r.root.children[0];
+  const g = (cache.rider ??= buildWw2Soldier({ army: 'sov', weapon: 'smg' }));
+  const seats = [[-0.95, -0.9, -1], [-0.95, -1.95, -1], [0.95, -1.45, 1]]; // x, z, which side it faces
+  const riders = seats.map(([x, z, s]) => {
+    const man = new THREE.Group();
+    man.position.set(x, 1.7 - g.rig.hipY, z);
+    man.rotation.y = (s * Math.PI) / 2;
+    const add = meshAdder(man);
+    add(g.torso, mats.body);
+    add(g.arms, mats.body);
+    for (const side of [-1, 1]) {
+      const thigh = new THREE.Group();                 // sitting: the thighs out over the edge…
+      thigh.position.set(side * g.rig.hipX, g.rig.hipY, 0);
+      thigh.rotation.x = -Math.PI / 2;
+      man.add(thigh);
+      meshAdder(thigh)(g.thigh, mats.body);
+      const shin = new THREE.Group();                  // …the shins hanging down the side
+      shin.position.set(side * g.rig.hipX, g.rig.hipY, g.rig.thighLen);
+      man.add(shin);
+      meshAdder(shin)(g.shin, mats.body);
+    }
+    hull.add(man);
+    return man;
+  });
+  const animate = r.animate;
+  r.animate = (u, dt, t, ctx) => {
+    animate(u, dt, t, ctx);
+    const n = Math.max(0, Math.min(3, (u.stack?.passengers ?? 0) - u.index * 3)); // eight men over three hulls
+    riders.forEach((m, i) => { m.visible = u.alive && i < n; });
+  };
+  return r;
+};
 
 // ---------------------------------------------------------------- Panzer IV H
 
