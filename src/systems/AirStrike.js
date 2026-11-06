@@ -14,7 +14,7 @@
 //   recon – recon flight, O: one fast, low photo run along the line; every enemy within `swath`
 //          m of its track is located for `hold` s — on your map through the fog, and your guns'
 //          first choice (u.locatedUntil, as the counter-battery radar does; Sortie.photograph).
-//          (cap and recon fly the jets' models for now: ponytail — own fighter / recon models later)
+//          (data/air.ts FIGHTERS / RECON, models/fighters.js)
 // Ground fire answers all of them: radar-directed SP anti-aircraft guns (data/units/aa.js) and
 // missile air defence (manpads.js, sam.js — systems/AirStrike missile()) are the real threat;
 // MG teams and tank machine guns add a little (visible tracers), rifles hardly at all; damaged,

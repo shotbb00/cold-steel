@@ -143,10 +143,10 @@ export class UnitPreview {
     const rig = buildAircraft(kind, faction, army);
     this.aircraft = { rig, kind, type: airType(kind, faction, army) };
     this.scene.add(rig.root);
-    const jet = kind === 'jet';
+    const jet = kind === 'jet' || kind === 'cap' || kind === 'recon';
     this.orbit.target.set(0, jet ? 3.2 : 3, 0);
     this.orbit.zoom = 1;
-    this.fit = jet ? { w: 9.5, h: 3.4 } : { w: (rig.rotorRadius ?? 7) + 1.2, h: 3.4 };
+    this.fit = jet ? { w: kind === 'jet' ? 9.5 : 12.5, h: 3.4 } : { w: (rig.rotorRadius ?? 7) + 1.2, h: 3.4 };
     this.setPose('hover');
   }
 
@@ -174,8 +174,8 @@ export class UnitPreview {
       const { rig, type, kind } = this.aircraft;
       const fly = this.pose === 'fly';
       // hovering: a gentle bob; flying: nose down, banking in a lazy turn
-      rig.root.position.set(0, (kind === 'jet' ? 3 : 2.6) + Math.sin(t * 1.3) * 0.12, 0);
-      rig.root.rotation.set(fly ? (kind === 'jet' ? 0.05 : 0.14) : 0, 0, fly ? Math.sin(t * 0.5) * 0.35 : Math.sin(t * 0.9) * 0.03, 'YXZ');
+      rig.root.position.set(0, (kind !== 'heli' && kind !== 'lift' ? 3 : 2.6) + Math.sin(t * 1.3) * 0.12, 0);
+      rig.root.rotation.set(fly ? (kind !== 'heli' && kind !== 'lift' ? 0.05 : 0.14) : 0, 0, fly ? Math.sin(t * 0.5) * 0.35 : Math.sin(t * 0.9) * 0.03, 'YXZ');
       if (rig.rotor) rig.rotor.rotation.y += dt * (type.rotorSpeed ?? 25);
       if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70;
     }

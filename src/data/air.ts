@@ -8,6 +8,7 @@ import { buildPactHind, buildNvaHind } from './models/pactHind.js';
 import { buildNatoA10, buildPactSu25, buildNatoUH60, buildPactMi8, buildNvaMi8 } from './models/aircraft.js';
 import { buildBwPAH1, buildBwAlphaJet, buildBwUH1D, buildNvaSu22 } from './models/armyAircraft.js';
 import { MERDC } from '../render/paint.js';
+import { buildNatoF15, buildPactMiG23, buildBwF4F, buildBwRF4E, buildNatoRF4C, buildNvaMiG21, buildPactMiG25 } from './models/fighters.js';
 import type { Aircraft, PerFaction } from '../types.ts';
 
 export const AIRCRAFT = {
@@ -111,11 +112,22 @@ export const JETS = {
   },
 } satisfies PerFaction<Aircraft>;
 
-// Fighter patrol (I) and recon flight (O), systems/AirStrike.js: each army's own type by name;
-// they fly the strike jets' models for now (ponytail: own fighter and recon models later)
-const renamed = (names: PerFaction<string>) => Object.fromEntries(Object.entries(JETS).map(([k, a]) => [k, { ...a, name: names[k as keyof typeof names] }])) as PerFaction<Aircraft>;
-export const FIGHTERS = renamed({ nato: 'F-15C Eagle', pact: 'MiG-23MLD', bw: 'F-4F Phantom II', nva: 'MiG-21bis' });
-export const RECON = renamed({ nato: 'RF-4C Phantom II', pact: 'MiG-25RB', bw: 'RF-4E Phantom II', nva: 'Su-22M4R' });
+// Fighter patrol (I) and recon flight (O), systems/AirStrike.js — each army's own aircraft
+// (models/fighters.js). Their weapons are the patrol's missiles (KINDS.cap aam) and the recon
+// cameras; `gun` / `rockets` stay as the type needs them but are never fired.
+const air = (a: PerFaction<Aircraft>, k: keyof PerFaction<Aircraft>, o: Partial<Aircraft>): Aircraft => ({ ...a[k], ...o } as Aircraft);
+export const FIGHTERS = {
+  nato: air(JETS, 'nato', { name: 'F-15C Eagle', weapon: 'AIM-7 Sparrow · AIM-9 Sidewinder', text: 'Air superiority: a pair circles over the spot and shoots down what comes near.', model: buildNatoF15, paint: { colors: [0x7f878e, 0x6a7279, 0x8b9398, 0x737b82], scale: 1.2 } }),
+  pact: air(JETS, 'pact', { name: 'MiG-23MLD', weapon: 'R-23 · R-60', text: 'The frontline fighter of the Soviet air armies in Germany, swing wings at 45° for the patrol.', model: buildPactMiG23, paint: { colors: [0x88908f, 0x6e7775, 0x9aa1a0, 0x7b8483], scale: 1.1 } }),
+  bw: air(JETS, 'bw', { name: 'F-4F Phantom II', weapon: 'AIM-9 Sidewinder · M61 cannon', text: 'The Luftwaffe’s air defence fighter, Jagdgeschwader 71 to 74.', model: buildBwF4F, paint: { colors: [0x4e5440, 0x5c6150, 0x3f4436, 0x60645a], scale: 0.7 } }),
+  nva: air(JETS, 'nva', { name: 'MiG-21bis', weapon: 'R-60 · R-13M · GSh-23', text: 'The LSK/LV’s fighter: small, fast to climb, short on fuel.', model: buildNvaMiG21, paint: { colors: [0x9fa4a3, 0x8f9493, 0xaeb2b1, 0x979c9b], scale: 1.4 } }),
+} satisfies PerFaction<Aircraft>;
+export const RECON = {
+  nato: air(JETS, 'nato', { name: 'RF-4C Phantom II', weapon: 'KS-87 cameras', text: 'Tactical reconnaissance: one fast, low photo run, and the film shows where they are.', model: buildNatoRF4C, paint: { colors: [0x3f4a35, 0x4e5a44, 0x4a4e4a, 0x353d2e], scale: 0.7 } }),
+  pact: air(JETS, 'pact', { name: 'MiG-25RB', weapon: 'A-70M cameras', text: 'The fastest thing in the sky: a photo run few can catch.', model: buildPactMiG25, paint: { colors: [0xa9aeac, 0x9da2a0, 0xb4b8b6, 0xa3a8a6], scale: 1.4 } }),
+  bw: air(JETS, 'bw', { name: 'RF-4E Phantom II', weapon: 'camera nose', text: 'Aufklärungsgeschwader 51 and 52: the Phantom with the camera nose.', model: buildBwRF4E, paint: { colors: [0x4e5440, 0x5c6150, 0x3f4436, 0x60645a], scale: 0.7 } }),
+  nva: air(JETS, 'nva', { name: 'Su-22M4R', text: 'The Su-22 with the reconnaissance pod: one low photo run along the line.', weapon: 'KKR-1 recon pod' }),
+} satisfies PerFaction<Aircraft>;
 
 // Air assault (P): a transport helicopter flies a squad in, lands it on the spot, and leaves.
 // Shot down before it touches down, the squad goes with it.

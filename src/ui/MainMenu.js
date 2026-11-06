@@ -152,18 +152,21 @@ const el = (tag, cls, html) => {
 };
 
 const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
-const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport' }; // support powers in the units list
+const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
 function aircraftRows(kind, faction, army) {
   const p = KINDS[kind];
   const a = airType(kind, faction, army);
   const rows = [
-    ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift' }[kind]) ?? p.key}`],
+    ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon' }[kind]) ?? p.key}`],
     ['Cost', `${p.cost} CP · ready again after ${p.cooldown} s`],
     ['Speed', `${Math.round(p.attackSpeed * 3.6)}–${Math.round(p.cruiseSpeed * 3.6)} km/h`],
     ['Toughness', `${a.hp} hits from ground fire; missiles do several at once`],
   ];
+  if (p.aam) rows.push(['Missiles', `${p.aam.count} air-to-air, ${p.aam.range} m — circles ${p.station} s`]);
+  if (p.swath) rows.push(['Cameras', `everything within ${p.swath} m of the run, on the map for ${p.hold} s`]);
+  if (p.aam || p.swath) return rows; // (no gun or rockets fired)
   if (a.gun) rows.push(['Gun', `${a.gun.rate} rounds/s`]);
   if (a.rockets) rows.push([kind === 'jet' && a.rockets.count <= 4 ? 'Missiles' : 'Rockets', `${a.rockets.count}`]);
   if (a.squad) rows.push(['Carries', '8-man air assault squad, landed on the spot']);
