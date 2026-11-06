@@ -15,10 +15,15 @@
 //   { t: 'walze', s: [ids], x, z }               (the NVA's creeping barrage: its artillery, UnitStack.startBarrage)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
+//   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
+import { unitCost } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
+
+/** What new men for `s`'s empty places cost: its price times the share missing. */
+export const refillCost = (s) => Math.ceil(unitCost(s.type, s.army) * (s.missing / s.units.length));
 export class Orders {
   constructor(game) {
     this.game = game;
@@ -175,6 +180,22 @@ export class Orders {
         for (const site of jobs) g.construction.cancel(site);
         for (const s of mine(cmd.s)) if (jobs.some((site) => site.stackId === s.id)) s.ai.halt(); // stop where they are
         g.tell(faction, jobs.length ? `Order cancelled${back ? ` — ${back} CP back` : ''}` : 'Nothing to cancel');
+        return null;
+      }
+      case 'refill': {
+        let men = 0;
+        let spent = 0;
+        let far = 0;
+        for (const s of mine(cmd.s)) {
+          if (!s.missing) continue;
+          if (!s.supplied) { far++; continue; }
+          const cost = refillCost(s);
+          if (!g.spend(faction, cost)) { g.tell(faction, `Not enough command points to refill ${s.name} (${cost})`); continue; }
+          spent += cost;
+          men += s.refill();
+        }
+        if (men) g.tell(faction, `${men} new men join — ${spent} CP`);
+        else if (far) g.tell(faction, 'New men only reach squads near the base or a set-up command post');
         return null;
       }
       case 'gas':

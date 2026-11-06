@@ -64,6 +64,7 @@ const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 
 // a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
 // refills after a lull like the grenades
+const REFILL = { base: 150, post: 80 }; // m: how near the base or a set-up command post a squad must be to take in new men
 const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
@@ -233,6 +234,42 @@ export class UnitStack {
   }
 
   /** A member's loose formation position around the anchor, on the ground. */
+  /** Men missing from a squad (infantry only: vehicles come back through recovery). */
+  get missing() {
+    return this.usesCover && !this.stats.structure ? this.units.filter((u) => !u.alive).length : 0;
+  }
+
+  /** Within reach of supply: your base, or a forward command post that is set up (core/Orders.js 'refill'). */
+  get supplied() {
+    const base = this.world.bases[this.faction];
+    if (base && Math.hypot(base.x - this.centroid.x, base.z - this.centroid.z) < REFILL.base) return true;
+    return this.world.stacksOf(this.faction).some((o) => o.postReady && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < REFILL.post);
+  }
+
+  /** The missing men rejoin, each in his slot by the squad (the new men thin its experience a little). */
+  refill() {
+    let n = 0;
+    for (const u of this.units) {
+      if (u.alive) continue;
+      this.slotPosition(u, _v);
+      u.alive = true;
+      u.hp = u.maxHp;
+      u.deathTime = 0;
+      u.suppression = 0;
+      u.target = null;
+      u.pos.set(_v.x, this.world.terrain.heightAt(_v.x, _v.z), _v.z);
+      u.dest.copy(u.pos);
+      u.vel.set(0, 0, 0);
+      this.aliveCount++;
+      n++;
+    }
+    if (!n) return 0;
+    this.renderer.done = false;
+    this.setXp(this.xp * (1 - 0.25 * (n / this.units.length)));
+    this.morale = Math.min(1, this.morale + 0.2);
+    return n;
+  }
+
   /** Put the whole stack at (x, z) at once, facing `facing` (the deployment phase, systems/Deployment.js): every man or vehicle in its formation slot, off anything solid. */
   placeAt(x, z, facing = this.facing) {
     const w = this.world;

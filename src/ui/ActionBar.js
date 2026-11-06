@@ -5,6 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
+import { refillCost } from '../core/Orders.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
@@ -33,6 +34,7 @@ const ACTIONS = [
   { cmd: 'barrage', label: 'Feuerwalze', icon: 'flare', key: 'barrage', tip: 'Creeping barrage: click where it starts — the shells walk forward ahead of your advance', when: (sel) => sel.some((s) => s.stats.indirect && armyDoctrine(s.army, 'walze')) },
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
+  { cmd: 'refill', label: 'Refill', icon: 'reinforce', key: 'refill', cost: (g) => [...g.commands.selected].reduce((a, s) => a + (s.missing && s.supplied ? refillCost(s) : 0), 0), tip: (g) => ([...g.commands.selected].some((s) => s.missing && !s.supplied) ? 'New men for the missing: only near the base or a set-up command post' : 'New men fill the squad\'s empty places'), when: (sel, g) => !!g.modeState?.cp && sel.some((s) => s.missing > 0) },
   { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
@@ -125,7 +127,7 @@ export class ActionBar {
       const cost = value(a.cost, g);
       b.title = `${label}${cost ? ` (${cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`;
+      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
       return b;
     }));
     this.el.hidden = !shown.length;

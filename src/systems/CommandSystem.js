@@ -196,6 +196,9 @@ export class CommandSystem {
       this.queueing = !this.queueing;
       this.game.bus.emit('toast', this.queueing ? 'Waypoints: each tap adds one to the route' : 'Waypoints off');
       this.game.bus.emit('selection', [...this.selected]);
+    } else if (cmd === 'refill') {
+      const squads = [...this.selected].filter((s) => s.alive && s.missing);
+      if (squads.length) this.game.orders.issue({ t: 'refill', s: ids(squads) });
     } else if (cmd === 'hold') {
       if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
       this.game.orders.issue({ t: 'hold', s: ids(this.selected) });
