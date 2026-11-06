@@ -84,6 +84,7 @@ export const RANKS = [
 ];
 
 const _v = new THREE.Vector3();
+const FLAME = new THREE.Color(1, 0.55, 0.15).multiplyScalar(2.2);
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
@@ -1365,10 +1366,11 @@ export class UnitStack {
       speed: s.boltSpeed,
       damage: s.damage * u.damageMult * (ambush ? AMBUSH.damage : 1),
       faction: this.faction,
-      color: this.boltColor,
+      color: s.ignite ? FLAME : this.boltColor, // (a flamethrower's burning fuel)
       size: s.boltSize,
       source: this,
       life: (s.range * 1.5) / s.boltSpeed + 0.2,
+      ignite: s.ignite ?? null,
       splash: s.splash ?? 0,
       pierce: s.pierce ?? 0,
       vsArmor: s.vsArmor ?? 1,

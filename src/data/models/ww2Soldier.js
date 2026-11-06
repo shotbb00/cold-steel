@@ -132,6 +132,14 @@ function weapon(kind, army, c) {
           P.box(0.4, 0.04, 0.4, { x: 0.05, y: 0.56, z: 0.26, color: STEEL }),
         ],
         muzzle: { x: 0.05, y: 1.53, z: 0.98 } };
+    case 'flame': { // M2-2 / ROKS-3 / Flammenwerfer 41: the fuel tanks on the back (in the torso), the gun with its hose
+      return { parts: [
+        P.cyl(0.03, 0.03, 0.75, { x: 0.2, y: 1.29, z: 0.42, rx: Math.PI / 2, color: STEEL }, 8),
+        P.cyl(0.045, 0.045, 0.12, { x: 0.2, y: 1.29, z: 0.82, rx: Math.PI / 2, color: BLACK }, 8),
+        P.box(0.04, 0.1, 0.05, { x: 0.2, y: 1.22, z: 0.2, color: BLACK }),
+        P.box(0.04, 0.1, 0.05, { x: 0.2, y: 1.22, z: 0.55, color: BLACK }),
+      ], muzzle: { x: 0.2, y: 1.29, z: 0.88 } };
+    }
     case 'sniper':
       return { parts: [...rifle({ wood: w, to: army === 'sov' ? 1.06 : 1.0 }),
         P.cyl(0.017, 0.017, 0.26, { x: 0.2, y: 1.39, z: 0.33, rx: Math.PI / 2, color: BLACK }, 10),
@@ -185,7 +193,7 @@ function headgear(army, c, crew) {
 
 // ------------------------------------------------------------------ the man
 
-export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = false, scout = false, radio = false } = {}) {
+export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = false, scout = false, radio = false, engineer = false } = {}) {
   const c = ARMY[army] ?? ARMY.us;
   const w = weapon(crew ? 'smg' : kind, army, c);
   const gear = !crew;
@@ -218,6 +226,13 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
     ...head(),
     ...headgear(army, c, crew),
     ...(scout ? binoculars(BLACK) : []),
+    ...(kind === 'flame' ? [ // the fuel tanks on the back
+      ...pair((s) => P.cyl(0.075, 0.075, 0.5, { x: s * 0.085, y: 1.25, z: -0.24, color: 0x3a3c30 }, 10)),
+      P.cyl(0.045, 0.045, 0.32, { y: 1.12, z: -0.26, rz: Math.PI / 2, color: 0x3a3c30 }, 8),
+    ] : []),
+    ...(army === 'sov' && engineer ? [ // the assault sappers' steel breastplate (SN-42)
+      loft([[0, 1.1, 0.02, 0.18, 0.15, 2.6], [0, 1.3, 0.04, 0.2, 0.16, 2.6], [0, 1.48, 0.03, 0.18, 0.15, 2.6]], { color: 0x4a5236 }, 12),
+    ] : []),
     ...(radio ? [ // the radio on the back (SCR-300 / RBM / Feldfu), its whip antenna
       loft([[0, 1.18, -0.24, 0.13, 0.08, 5], [0, 1.48, -0.25, 0.13, 0.08, 5]], { color: 0x3e4030 }, 10),
       P.cyl(0.006, 0.006, 1.3, { x: 0.09, y: 2.15, z: -0.27, rx: -0.1, color: BLACK }, 4),

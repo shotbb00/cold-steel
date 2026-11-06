@@ -371,6 +371,44 @@ const gunMissile = derive(T.gunMissile, {
   },
 });
 
+const scouts = derive(T.scouts, {
+  models: men({ scout: true }),
+  variants: {
+    nato: { name: 'I&R Scouts', weapon: 'M1 carbine, binoculars', text: 'The regiment’s Intelligence and Reconnaissance platoon: two men who see far and are seen by nobody.' },
+    sov: { name: 'Razvedchiki', weapon: 'PPS-43, binoculars', text: 'The scouts who go out at night and come back with what the enemy has, and where.' },
+    pact: { name: 'Aufklärer', weapon: 'MP 40, binoculars', text: 'Reconnaissance: they find the Allied positions before the attack runs into them.' },
+    fj: { name: 'Aufklärer', weapon: 'FG 42, binoculars', text: 'Fallschirmjäger scouts: far forward, hidden, watching.' },
+  },
+});
+
+const sniper = derive(T.sniper, {
+  models: men({ scout: true }),
+  specialistModels: men({ weapon: 'sniper', scout: true }),
+  variants: {
+    nato: { name: 'Sniper Team', weapon: 'M1903A4 Springfield', text: 'A marksman and his spotter: officers, crews and observers first, from three times a squad’s reach.' },
+    sov: { name: 'Sniper Pair', weapon: 'Mosin-Nagant with PU scope', text: 'The Red Army’s snipers, the best of the war: patient, hidden, deadly at long range.' },
+    pact: { name: 'Scharfschützen', weapon: 'Kar98k with ZF 39', text: 'The Kar98k with its scope: one shot, then the next position.' },
+    fj: { name: 'Scharfschützen', weapon: 'FG 42 with ZF 4', text: 'The Fallschirmjäger marksman with the scoped FG 42: quick follow-up shots.' },
+  },
+});
+
+/** Engineers: dig, wire, clear and blow as in 1985 — and one man of each squad carries a flamethrower. */
+const engineers = derive(T.engineers, {
+  models: men({ engineer: true }),
+  specialist: { count: 1, stats: {
+    range: 32, aggroRange: 40, preferredRange: 20, damage: 75, splash: 2.2, fireCooldown: 0.07, burst: 1, burstInterval: 0,
+    boltSpeed: 32, boltSize: 1.4, tracer: 1, spread: 0.05, magSize: 40, reloadTime: 7, vsStructure: 3, suppressPower: 3,
+    ignite: 0.6, vsArmor: 0.15, aimTime: 0.3, playerFireInterval: 0.07, weaponSound: 'mg',
+  } },
+  specialistModels: men({ weapon: 'flame', engineer: true }),
+  variants: {
+    nato: { name: 'Combat Engineers', weapon: 'M1 Garand, M2-2 flamethrower, demolition charges', text: 'They dig, wire and clear mines three times as fast — and the flamethrower burns out bunkers and houses.' },
+    sov: { name: 'Assault Sappers', weapon: 'PPSh-41, ROKS-3 flamethrower, steel breastplates', text: 'The assault engineer brigades in their steel breastplates: first into the enemy’s strongpoints, with fire and explosives.' },
+    pact: { name: 'Pioniere', weapon: 'Kar98k, Flammenwerfer 41, charges', text: 'German combat engineers: mines, wire, demolitions, and the flamethrower for the bunker fight.' },
+    fj: { name: 'Fallschirm-Pioniere', weapon: 'MP 40, Flammenwerfer 41, charges', text: 'The paratroop engineers: blow it, burn it, hold it.' },
+  },
+});
+
 // the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
 const airAssault = derive(T.airAssault, {
   models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
@@ -389,11 +427,12 @@ export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
   artillery, rockets, spMortar, observers, cbRadar,
   aa, towedAA, sam, manpads, airRadar, gunMissile,
+  scouts, sniper, engineers,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
 export const ALIAS_1945 = {
-  scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', 
+  kampfgruppe: 'rifles',
   commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
 };
