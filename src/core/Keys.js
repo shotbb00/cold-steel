@@ -18,6 +18,7 @@ export const ACTIONS = [
   { id: 'selectAll', label: 'Select all', ctx: 'command', key: 'KeyQ' },
   { id: 'reinforce', label: 'Reinforcements', ctx: 'command', key: 'KeyC' },
   { id: 'hold', label: 'Stop / hold position', ctx: 'command', key: 'KeyH' },
+  { id: 'startBattle', label: 'Start the battle (after deployment)', ctx: 'command', key: 'Space' },
   { id: 'sandbags', label: 'Build sandbags', ctx: 'command', key: 'KeyN' },
   { id: 'trench', label: 'Dig a trench', ctx: 'command', key: 'KeyT' },
   { id: 'wire', label: 'Lay wire', ctx: 'command', key: 'KeyV' },

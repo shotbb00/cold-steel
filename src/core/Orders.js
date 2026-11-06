@@ -67,6 +67,7 @@ export class Orders {
         for (const [id, x, z] of cmd.m ?? []) {
           const s = own(id);
           if (!s) continue;
+          if (g.deployment?.on && !s.stats.structure) { g.deployment.place(s, x, z, cmd.face ?? null); continue; } // deployment: placed there at once
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed

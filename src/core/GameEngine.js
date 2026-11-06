@@ -10,6 +10,7 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { Deployment } from '../systems/Deployment.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
 import { unitCost } from '../data/doctrine.js';
@@ -208,6 +209,8 @@ export class GameEngine {
     if (campaign) { this.blasts = []; if (campaign.scars) this.replayScars(campaign.scars); } // the sector as the last battle left it
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
+    this.deployment = new Deployment(this); // the clock stopped while you place your stacks (single player)
+    if (!net && mode.id !== 'bootcamp') this.deployment.begin();
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
     // the AI side starts with and earns twice as much to make up for it
@@ -587,6 +590,7 @@ export class GameEngine {
     try {
       if (this.net?.isClient) this.stepClient(dt);
       else if (this.waiting) this.stepWaiting(dt);
+      else if (this.deployment?.on && !this.paused) this.deployment.step(dt);
       else if (!this.paused) this.step(dt);
       this.render(this.paused ? 0 : dt);
     } catch (e) {

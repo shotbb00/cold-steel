@@ -152,6 +152,7 @@ export class CommandSystem {
       else if (keys.is(code, 'turnRight')) this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) - Math.PI / 12;
       return;
     }
+    if (this.game.deployment?.on && (keys.is(code, 'startBattle') || code === 'Enter')) return this.game.deployment.start(); // systems/Deployment.js
     if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');

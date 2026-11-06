@@ -839,3 +839,16 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 .sl-care:empty { display: none; }
 .sl-care.heal { color: #6dff9a; }
 .sl-care.repair { color: #ffc060; }
+
+/* the deployment phase (src/systems/Deployment.js) */
+#deploy-bar {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 6;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  max-width: min(760px, calc(100vw - 32px)); padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--gold);
+}
+#deploy-bar[hidden] { display: none; }
+#deploy-bar .dp-title { font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+#deploy-bar .dp-text { color: var(--muted); font-size: 13.5px; flex: 1 1 260px; }
+#deploy-bar .dp-go { padding: 8px 18px; font-size: 15px; }
+@media (max-width: 700px) { #deploy-bar { top: 52px; padding: 8px 10px; gap: 8px; } #deploy-bar .dp-text { font-size: 12.5px; } }

@@ -229,6 +229,37 @@ export class UnitStack {
   }
 
   /** A member's loose formation position around the anchor, on the ground. */
+  /** Put the whole stack at (x, z) at once, facing `facing` (the deployment phase, systems/Deployment.js): every man or vehicle in its formation slot, off anything solid. */
+  placeAt(x, z, facing = this.facing) {
+    const w = this.world;
+    this.facing = facing;
+    this.holdFacing = null;
+    this.anchor.set(x, w.terrain.heightAt(x, z), z);
+    this.centroid.copy(this.anchor);
+    this.moveTarget = null;
+    this.route = null;
+    this.column = false;
+    this.garrison = null;
+    this.ai.plannedSpots = null;
+    for (const u of this.units) {
+      if (!u.alive) continue;
+      this.slotPosition(u, _v);
+      // off walls and houses: a little further out round the slot until it's clear
+      for (let k = 1; k < 14 && w.cover.pointBlocked(_v.x, _v.z, u.radius + 0.3); k++) {
+        this.slotPosition(u, _v);
+        _v.x += Math.cos(k * 2.4) * k * 1.2;
+        _v.z += Math.sin(k * 2.4) * k * 1.2;
+      }
+      w.cover.release(u);
+      u.pos.set(_v.x, w.terrain.heightAt(_v.x, _v.z), _v.z);
+      u.dest.copy(u.pos);
+      u.vel.set(0, 0, 0);
+      u.yaw = facing;
+      if (u.turretYaw !== undefined) u.turretYaw = facing;
+    }
+    this.ai.defend();
+  }
+
   slotPosition(u, out) {
     if (this.column) return this.columnSlot(u, out);
     const c = Math.cos(this.facing);

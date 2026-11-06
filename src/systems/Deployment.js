@@ -1,0 +1,78 @@
+// The deployment phase (single player): every battle opens with the clock stopped. You place
+// your stacks on the field — select one and click where it should stand, and it is there at once,
+// every man or vehicle in its slot — anywhere inside your deployment zone: your side of a gold line
+// just ahead of where your forces start. Pull back out of contact, spread out, mass on a flank,
+// then Start battle (the bar's button, Space or Enter). Until then the simulation doesn't step at
+// all (mode timers, the AI, fire): only the camera, selection and orders, the HUD and the fog of
+// war run (GameEngine.stepWaiting, plus the renderers of the stacks you place).
+import * as THREE from 'three';
+import { enemyOf } from '../data/factions.js';
+import { GroundDecal } from '../world/GroundDecal.js';
+
+const AHEAD = 30;        // m: the zone reaches this far past your most forward stack at the start
+
+export class Deployment {
+  constructor(game) {
+    this.game = game;
+    this.on = false;
+    this.bar = document.createElement('div');
+    this.bar.id = 'deploy-bar';
+    this.bar.hidden = true;
+    this.bar.innerHTML = '<span class="dp-title">Deployment</span><span class="dp-text">Place your stacks: select one and click where it should stand, anywhere behind the gold line.</span><button type="button" tabindex="-1" class="deploy dp-go">Start battle</button>';
+    this.bar.querySelector('.dp-go').addEventListener('click', (e) => { e.currentTarget.blur(); this.start(); });
+    document.getElementById('hud')?.append(this.bar);
+  }
+
+  /** The opening: the clock stopped, the zone drawn. */
+  begin() {
+    const g = this.game;
+    const f = g.playerFaction;
+    const base = g.world.bases[f];
+    const foe = g.world.bases[enemyOf(f)];
+    if (!base || !foe) return;
+    const d = new THREE.Vector2(foe.x - base.x, foe.z - base.z);
+    const len = d.length() || 1;
+    d.divideScalar(len);
+    const t = (p) => (p.x - base.x) * d.x + (p.z - base.z) * d.y;
+    const mine = g.world.stacksOf(f).filter((s) => !s.stats.structure);
+    const limit = (mine.length ? Math.max(...mine.map((s) => t(s.anchor))) : len * 0.35) + AHEAD;
+    this.zone = { base, d, limit, t };
+    // the front edge of the zone, a gold line across the field
+    const span = Math.max(g.world.bounds.x, g.world.bounds.z) * 3;
+    const geo = new THREE.PlaneGeometry(span, 1.6, 400, 1).rotateX(-Math.PI / 2);
+    this.edge = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffc35a, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false }), g.terrain, 0.25);
+    this.edge.place(base.x + d.x * limit, base.z + d.y * limit, 1, Math.atan2(-d.x, -d.y));
+    g.scene.add(this.edge.mesh);
+    this.on = true;
+    this.bar.hidden = false;
+  }
+
+  /** Start battle: the clock runs. */
+  start() {
+    if (!this.on) return;
+    this.on = false;
+    this.bar.hidden = true;
+    this.edge?.mesh.removeFromParent();
+    this.edge?.geometry.dispose();
+    this.game.bus.emit('toast', 'The battle begins');
+  }
+
+  /** A frame while deploying: what the player needs to look and place, nothing that moves the battle. */
+  step(dt) {
+    const g = this.game;
+    g.world.refresh();
+    g.visibility?.update(dt);
+    for (const s of g.world.stacks) s.renderer.update(0, g.time);
+    g.stepWaiting(dt);
+  }
+
+  /** Put `s` at (x, z), facing the enemy (or `face`) — pulled back onto your side of the line if it was past it. */
+  place(s, x, z, face = null) {
+    const { base, d, limit, t } = this.zone;
+    const over = t({ x, z }) - limit;
+    if (over > 0) { x -= d.x * over; z -= d.y * over; }
+    const p = this.game.world.clampToBounds({ x, z });
+    const dry = this.game.world.river ? this.game.world.river.dry(p) : p;
+    s.placeAt(dry.x, dry.z, face ?? Math.atan2(base.x + d.x * 1e4 - dry.x, base.z + d.y * 1e4 - dry.z));
+  }
+}
