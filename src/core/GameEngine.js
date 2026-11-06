@@ -700,6 +700,7 @@ export class GameEngine {
     this.flares.update(dt);
     this.barrage.update(dt);
     this.fire.update(dt);
+    this.air.updateChutes(dt); // a paradrop's men on the way down (the host's 'chute')
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);
     this.decor?.update?.(dt, t);

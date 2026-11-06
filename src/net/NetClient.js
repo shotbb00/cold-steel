@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { decodeSnapshot, unpackArgs, FLAG, FLAG2 } from './protocol.js';
 import { FX_CALLS, SOUND_CALLS } from './NetHost.js';
-import { SortieView } from '../systems/AirStrike.js';
+import { SortieView, Stick } from '../systems/AirStrike.js';
 import { enemyOf } from '../data/factions.js';
 import { angleDelta } from '../core/math.js';
 
@@ -346,6 +346,11 @@ export class NetClient {
       }
       case 'air': g.air.sorties.push(new SortieView(g, e[1], e[2], e[3], e[4], e[5], e[6] ?? 'heli')); break;
       case 'flare': g.flares.add(e[1], e[2], e[3]); break;
+      case 'chute': { // a paradrop: the men coming down (the squad itself spawns when the host's lands)
+        const [, faction, army, squad, x, y, z, dx, dz, yaw] = e;
+        g.air.chutes.push(new Stick(g, { faction, army, owner: null, type: { squad }, yaw, pos: { x, y, z }, dir: { x: dx, z: dz } }, true));
+        break;
+      }
       case 'fire': g.fire.light(e[1], e[2]); break;
       case 'span': {
         const river = g.world.river;

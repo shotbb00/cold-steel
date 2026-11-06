@@ -534,6 +534,8 @@ class Sortie {
   paradrop() {
     this.dropped = true;
     this.game.air.chutes.push(new Stick(this.game, this));
+    // a guest sees the same men come down (its own copy: the squad itself comes in the host's 'spawn')
+    this.game.netEvent('chute', this.faction, this.army, this.type.squad, r2(this.pos.x), r2(this.pos.y), r2(this.pos.z), r2(this.dir.x), r2(this.dir.z), r2(this.yaw));
     this.game.tellBoth(this.faction, `${this.type.name}: green light — the stick is out`, 'Enemy paratroopers dropping!');
   }
 
@@ -731,11 +733,13 @@ function jumper(army) {
 /**
  * A stick of paratroopers: each man leaves the door `gap` s after the one before, falls a moment,
  * then sinks under his canopy, swaying; when the last is down the squad forms where they landed
- * (a unit only from then on). Host only: a guest sees the squad when it forms.
+ * (a unit only from then on). A guest runs a `cosmetic` copy (the 'chute' event): the men only,
+ * the squad itself arrives from the host.
  */
-class Stick {
-  constructor(game, sortie) {
+export class Stick {
+  constructor(game, sortie, cosmetic = false) {
     this.game = game;
+    this.cosmetic = cosmetic;
     this.faction = sortie.faction;
     this.owner = sortie.owner;
     this.squad = sortie.type.squad;
@@ -808,6 +812,7 @@ class Stick {
     for (const m of this.men) m.g.removeFromParent();
     for (const mat of this.mats) mat.dispose();
     this.done = true;
+    if (this.cosmetic) return;
     const was = g.currentOwner;
     g.currentOwner = this.owner;
     const s = g.spawnStack(this.squad, this.faction, { x: cx, z: cz }, this.yaw);
@@ -1011,6 +1016,14 @@ export class AirStrike {
     this.missiles.push(new Missile(this.game, from, target, faction, m));
   }
 
+  /** Paratroopers on their way down (a guest calls this alone: GameEngine.stepClient). */
+  updateChutes(dt) {
+    for (let i = this.chutes.length - 1; i >= 0; i--) {
+      this.chutes[i].update(dt);
+      if (this.chutes[i].done) this.chutes.splice(i, 1);
+    }
+  }
+
   update(dt) {
     this.updateRadars(dt);
     for (let i = this.sorties.length - 1; i >= 0; i--) {
@@ -1018,10 +1031,7 @@ export class AirStrike {
       s.update(dt);
       if (s.state === 'done') this.sorties.splice(i, 1);
     }
-    for (let i = this.chutes.length - 1; i >= 0; i--) {
-      this.chutes[i].update(dt);
-      if (this.chutes[i].done) this.chutes.splice(i, 1);
-    }
+    this.updateChutes(dt);
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       this.missiles[i].update(dt);
       if (this.missiles[i].done) this.missiles.splice(i, 1);

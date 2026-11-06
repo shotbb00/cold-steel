@@ -272,6 +272,122 @@ export const CODEX = {
 // 1945 (data/epoch.js): entries whose use differs from 1985's, by type id; `armies` holds one army's
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
 export const CODEX45 = {
+  atTeam: {
+    use: 'The infantry\'s answer to armour: a bazooka or Panzerschreck team (the Red Army\'s carry the PTRS anti-tank rifle). Hide them where the tanks must pass — a house, a hedge, a wood edge — and fire from the side or rear, close: their reach is short.',
+    strong: 'Tanks and half-tracks at close range, especially from the flank',
+    weak: 'Infantry with rifles, anything beyond a hundred metres or so, being spotted first',
+    counter: 'Lead with infantry to find them, and keep your tanks out of hedges and villages you haven\'t cleared.',
+  },
+  scouts: {
+    use: 'Your eyes. They see farther than anything else and are hard to find. Push them forward into a hedgerow and leave them still: everything they spot, your guns and fighter-bombers can hit.',
+    strong: 'Spotting, staying unseen', weak: 'Any real fight; they break quickly once found',
+    counter: 'Sweep likely hides with an armoured car or a rifle squad; fire at movement. When your positions get shelled out of nowhere, there are scouts nearby.',
+  },
+  gunMissile: {
+    use: 'Quick-firing AA cannon on a tank or half-track chassis: it shreds low-flying fighter-bombers, and its shells tear up infantry and light vehicles on the ground too. Keep it behind the front where enemy aircraft will come in.',
+    strong: 'Low aircraft, infantry and soft vehicles', weak: 'Tanks and anti-tank guns; it is lightly armoured above',
+    counter: 'Kill it from the ground before you call in your own aircraft, or bring the planes in from the other side.',
+  },
+  airRadar: {
+    use: 'Park it behind your flak and leave it: after fifteen seconds its dish turns, and every enemy aircraft that comes on station within 900 m is reported with its bearing. Towed flak within 380 m gets its full reach, and all other air defence there reaches a fifth further.',
+    strong: 'Warning, making cheap flak deadly, a whole sector\'s air defence', weak: 'Everything: no weapon, thin skin, useless on the move',
+    counter: 'Find it and destroy it before your fighter-bombers go in.',
+  },
+  towedAA: {
+    use: 'Cheap flak you can hide. Put it where fighter-bombers will come in low — behind a hedgerow, in a dug vehicle position — and leave it still. Without a radar of yours nearby it sees aircraft only at two-thirds of the range of the self-propelled guns.',
+    strong: 'Low aircraft, infantry and lorries in the open, being cheap and hard to spot', weak: 'Moving: it travels behind its tractor and needs time to unhitch before it fires; armour; any fire on the open mount',
+    counter: 'Keep your aircraft away from hedgerows you haven\'t scouted; when tracer comes out of nowhere, shell the spot.',
+  },
+  cev: {
+    use: 'The assault gun for fortified ground: a short heavy gun (the Sherman dozer: a blade and the 75) that goes for bunkers, held houses and trenches first and brings buildings down. The dozer digs vehicle positions (T): a tank parked in one is hull down.',
+    strong: 'Bunkers, strongpoints, houses, trenches', weak: 'Tanks and anti-tank guns at range; a slow, short-range gun; a long reload',
+    counter: 'Kill it before it gets close: anti-tank guns and tank destroyers. Its gun is slow to reload — move in after it fires.',
+  },
+  commandPost: {
+    use: 'Move it up behind your front and park it: after fifteen seconds it is set up, and the reinforcements you buy arrive behind it instead of at your base — as long as no enemy is within 80 m. Stacks within 60 m hold their nerve as if their officer were with them.',
+    strong: 'Getting reinforcements into the fight in seconds instead of minutes; steadying a position', weak: 'No weapon, and a prize target: lose it and everything walks from home again',
+    counter: 'Find it — the reinforcements coming out of nowhere point to it — and destroy it, or get close: under fire it can\'t take arrivals.',
+  },
+  cbRadar: {
+    use: 'Sound ranging: a team with its microphones and plotting board. Set it up behind your lines facing the enemy and wait: every enemy gun, mortar or rocket launcher that fires inside its sector of about 90° within 500 m is plotted from the bang — it shows on your map for 25 seconds, and your own artillery and mortars take it first.',
+    strong: 'Making the enemy\'s artillery pay for every barrage', weak: 'No real weapon, no use on the move, blind to the sides and rear, only as good as your own guns',
+    counter: 'Shoot and move: fire a few salvos, then shift the guns. Find the team with scouts and shell it.',
+  },
+  ifv: {
+    use: 'A half-track carries a rifle squad to the fight behind a little armour and covers it with its machine gun. Drop the squad under cover ({unload}), then hang back and support; it is not a tank, and its open top is no friend of mortar bombs.',
+    strong: 'Moving infantry fast, machine-gun support', weak: 'Tanks, anti-tank teams, anything firing into its open top',
+    counter: 'An anti-tank gun or a tank from the flank; mortar it. Kill it before it unloads and you take the squad too.',
+  },
+  reconVehicle: {
+    use: 'Fast, far-seeing and armoured enough to survive contact: find the enemy for your guns and get out. Its gun deals with other scouts and lorries, not tanks.',
+    strong: 'Spotting on the move, scouting a flank, killing light vehicles', weak: 'Tanks and anti-tank teams; it is easier to see than infantry scouts',
+    counter: 'Ambush it with anti-tank teams on the roads it will use; keep MGs covering the approaches to your positions.',
+  },
+  tankDestroyer: {
+    use: 'A long, hard-hitting gun on a lighter hull: sit back behind a hedge or in a wood edge with a long view, and kill tanks before they get close. Most have no turret — turn the whole vehicle — and no stabiliser: they fire standing still.',
+    strong: 'Tanks at long range, from ambush', weak: 'Anything up close, infantry, artillery; thin armour (the Hellcat), or no turret (the rest)',
+    counter: 'Approach through dead ground and cover, use smoke, flank it where its gun cannot turn, or shell its hide.',
+  },
+  tank: {
+    use: 'The main punch: armour and a big gun. Most tanks of 1945 fire only standing still (the Sherman, with its stabiliser, can shoot on the move): advance from cover to cover, halt, fire, move on. Lead with infantry, and keep the front of the hull towards the enemy.',
+    strong: 'Vehicles, fortifications, infantry in the open', weak: 'Anti-tank teams and guns in cover, artillery, being alone',
+    counter: 'Side and rear shots, bazookas and Panzerfausts where it has to pass close, smoke to blind it, a tank destroyer at range.',
+  },
+  heavyTank: {
+    use: 'A tougher, harder-hitting tank for the decisive attack — the Tiger, the Panther, the IS-2, the Pershing. Its gun outranges almost everything; let it fight from a distance, halted, and keep support close.',
+    strong: 'Everything in a straight fight at range', weak: 'Flanks and rear, close-in anti-tank teams, artillery, its price',
+    counter: 'Concentrate: several anti-tank weapons at once, from the side, at close range — or smoke and go round it.',
+  },
+  artillery: {
+    use: 'Howitzers behind the front — self-propelled, or towed and laid before they fire: heavy shells onto anything your side has spotted, out to long range. With an observer watching, they land on target. A towed gun that moves has to set up again.',
+    strong: 'Infantry, dug-in positions, soft vehicles, breaking up an attack', weak: 'Anything close, counter-battery fire, having nothing spotted to shoot at',
+    counter: 'Find and kill its spotters, spread out, dig in, move out of a barrage. Sound ranging finds the guns.',
+  },
+  spMortar: {
+    use: 'A heavy mortar for the battalion — in a half-track that fires from where it stands, or towed behind a lorry: quick fire missions onto infantry and positions behind cover.',
+    strong: 'Infantry and positions behind cover, fast fire missions', weak: 'Tanks and anti-tank weapons; thin-skinned or none at all',
+    counter: 'Treat it like a mortar: find it with scouts or sound ranging and hit it while it fires.',
+  },
+  rockets: {
+    use: 'A salvo of rockets that blankets a wide area in seconds — then a long reload. The Nebelwerfer is towed and must be set up first. Save it for a big target: an attack forming up, a crowded point.',
+    strong: 'Massed infantry and soft vehicles in the open', weak: 'Point targets, armour, the long reload, counter-battery',
+    counter: 'Don\'t bunch up. Every salvo gives the launcher away to sound ranging, and after it the launcher is reloading — that\'s your moment.',
+  },
+  aa: {
+    use: 'Self-propelled flak: rapid-fire cannon or machine guns that shred low-flying aircraft. Place it behind your front where enemy fighter-bombers will come in.',
+    strong: 'Fighter-bombers on a strafing run, infantry in the open', weak: 'Tanks, anti-tank guns, artillery; it is lightly armoured',
+    counter: 'Kill it with ground forces before calling in your own aircraft, or bring them in from the other side.',
+  },
+  sam: {
+    use: 'The heavy flak gun — 88, 90 mm or 85 mm: it reaches aircraft far beyond the light guns, and its shells go through tank armour as well. Slow to set up; dig it in where it covers both the sky and a road.',
+    strong: 'Aircraft at range, tanks at long range', weak: 'Moving, artillery, infantry close in; it is big and hard to hide',
+    counter: 'Shell it, or come at it through dead ground: once found, it cannot run.',
+  },
+  manpads: {
+    use: 'A heavy machine gun on an anti-aircraft tripod with an infantry team: a hidden answer to strafing runs anywhere along the front, and a heavy MG against infantry when the sky is quiet.',
+    strong: 'Low aircraft, infantry', weak: 'Anything with armour; short reach against aircraft',
+    counter: 'Scout before you fly in, or send the aircraft where your troops already hold.',
+  },
+  mineClear: {
+    use: 'Opening a way through minefields and wire. The Allies\' mine exploders roll ahead of a tank and set the mines off — just drive through the field. The Germans\' Goliath is a little remote-controlled demolition carrier: into a minefield it blows a lane; driven up to a tank, a bunker or a held house it goes off against it.',
+    strong: 'Minefields and wire in seconds; the Goliath against strongpoints', weak: 'The rollers are slow and the tank behind them is a target; the Goliath is used up',
+    counter: 'Cover your minefields with anti-tank weapons: the clearing vehicle comes first, kill it in the field. Shoot the Goliath before it arrives.',
+  },
+  airAssault: {
+    use: 'Paratroopers dropped from a transport ({lift}) where you click: they come down wherever the wind puts them and gather on their leader. Seize a point behind the lines or reinforce one about to fall — and drop them where the enemy is not.',
+    strong: 'Speed and surprise, taking undefended points', weak: 'Flak and fighters on the way in, the scattered landing, being cut off afterwards',
+    counter: 'Keep flak and a reserve near your rear points; a landed stick is scattered and has no support at first.',
+  },
+  'air:jet': {
+    use: 'A fighter-bomber ({jet}) along a line you set: rockets or a bomb first, then its guns on everything under it. Expensive and slow to come back.',
+    strong: 'Columns of vehicles, guns, massed infantry', weak: 'Flak, enemy fighters; a single pass',
+    counter: 'Flak, a fighter patrol, and never bunch your vehicles on a straight road.',
+  },
+  'air:lift': {
+    use: 'The transport that carries a paradrop ({lift}): it flies low over the drop zone and the stick jumps.',
+    strong: 'Speed', weak: 'Flak and fighters near the drop zone — it is slow and cannot fight back',
+    counter: 'Flak around your rear points, and a fighter patrol over them.',
+  },
   jammer: {
     use: 'Set it up close behind the front, facing the enemy: after eight seconds it keeps a smoke screen standing 20 m in front of it for as long as it stays. Use it to cover an advance over open ground, a river crossing or a withdrawal.',
     strong: 'Blinding enemy guns and observers across open ground',
