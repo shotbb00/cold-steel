@@ -222,8 +222,8 @@ const rockets = derive(T.rockets, {
   factionStats: {
     nato: { armor: 0.5, hp: 1000, magSize: 12, weaponSound: 'mlrs' },                                                         // Calliope: on a Sherman
     sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14, weaponSound: 'katyusha' },  // Katyusha: sixteen rails, a lorry
-    pact: { magSize: 10, damage: 130, fireCooldown: 0.6, weaponSound: 'nebelwerfer' },                                               // Panzerwerfer 42: ten tubes
-    fj: { magSize: 6, damage: 140, fireCooldown: 0.7, towed: { deploy: 12 }, armor: 0, hp: 250, weaponSound: 'nebelwerfer' },        // Nebelwerfer 41: six, towed
+    pact: { magSize: 10, damage: 130, fireCooldown: 1.2, weaponSound: 'nebelwerfer' },   // (a rocket every ~1.2 s, as the real ones fired)                                               // Panzerwerfer 42: ten tubes
+    fj: { magSize: 6, damage: 140, fireCooldown: 1.2, towed: { deploy: 12 }, armor: 0, hp: 250, weaponSound: 'nebelwerfer' },        // Nebelwerfer 41: six, towed
   },
   models: { nato: buildUsCalliope, sov: buildSovKatyusha, pact: buildWhPanzerwerfer, fj: buildFjNebelwerfer },
   engine: 'engine.diesel',

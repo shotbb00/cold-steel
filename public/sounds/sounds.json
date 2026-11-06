@@ -129,6 +129,16 @@
   "pact.katyusha": [
     "weapons/katyusha-1.mp3"
   ],
+  "nato.nebelwerfer": [
+    "weapons/nebelwerfer-1.wav",
+    "weapons/nebelwerfer-2.wav",
+    "weapons/nebelwerfer-3.wav"
+  ],
+  "pact.nebelwerfer": [
+    "weapons/nebelwerfer-1.wav",
+    "weapons/nebelwerfer-2.wav",
+    "weapons/nebelwerfer-3.wav"
+  ],
   "nato.sam": [
     "weapons/missile-1.wav"
   ],

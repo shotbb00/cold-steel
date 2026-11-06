@@ -26,6 +26,12 @@ but not to be sold or redistributed on their own.
 |---|---|---|
 | `weapons/katyusha-1.mp3` | [Katyusha Rocket (Single)](https://pixabay.com/sound-effects/katyusha-rocket-single-114499/) | kuiycb |
 
+## Licence not verified
+
+`weapons/nebelwerfer-1.wav`, `-2.wav`, `-3.wav`: single launches cut from [Nebelwerfer - The sound](https://www.youtube.com/watch?v=qd9bHF9F4a0)
+(YouTube, uploaded by Kyntteri). The original source and its licence are unknown — replace these if a
+public-domain or CC0 recording turns up, or if the rights holder objects.
+
 ## Freesound
 
 | File | Sound | Author | Licence |
