@@ -3,6 +3,8 @@
 // host or join a friend's battle), Units (a 3D preview of every unit for both sides, with
 // stats), Settings. Modes and maps come straight from their registries, so new ones show up
 // here by themselves. `onDeploy({ mode, map, side, net? })` starts the battle.
+import { settings } from '../core/Settings.js';
+import { EPOCHS, epoch, epochInfo } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
@@ -248,7 +250,17 @@ export class MainMenu {
     r.classList.remove('loading-open', 'boot');
     r.replaceChildren();
     const side = el('aside', 'menu-side');
-    side.append(el('div', 'menu-brand', logo(GAME.title, GAME.tagline)));
+    side.append(el('div', 'menu-brand', logo(GAME.title, epochInfo().title)));
+    // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
+    const year = el('div', 'seg menu-epoch');
+    for (const e of Object.values(EPOCHS)) {
+      const b = el('button', e.id === epoch() ? 'on' : '', e.name);
+      b.type = 'button';
+      b.title = e.title;
+      b.addEventListener('click', () => { if (e.id === epoch()) return; settings.set('epoch', e.id); location.reload(); });
+      year.append(b);
+    }
+    side.append(year);
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
@@ -276,8 +288,11 @@ export class MainMenu {
     else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
-    else if (id === 'bootcamp') this.bootcampPanel();
-    else if (id === 'campaign') {
+    else if (id === 'bootcamp' && epoch() === '1985') this.bootcampPanel();
+    else if ((id === 'campaign' || id === 'bootcamp') && epoch() !== '1985') {
+      // ponytail: the campaign and boot camp are 1985's for now (the 1945 campaign is phase 3)
+      this.panel.append(el('h2', '', id === 'campaign' ? 'Campaign' : 'Boot camp'), el('p', 'mp-lead', `${id === 'campaign' ? 'The campaign' : 'Boot camp'} is set in 1985 for now — switch the year under the title to 1985 to play it. 1945 has single-player and multiplayer battles.`));
+    } else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),
         onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? Object.values(MAPS)[0], side, true, 'menu'); },
@@ -498,7 +513,7 @@ export class MainMenu {
       list.append(b);
     }
     // the support powers' aircraft
-    for (const kind of Object.keys(KINDS)) {
+    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off)) { // (this war's: data/epoch.js)
       const id = `air:${kind}`;
       const b = el('button', id === this.unit.id ? 'on air' : 'air', AIR_LABEL[kind]);
       b.type = 'button';

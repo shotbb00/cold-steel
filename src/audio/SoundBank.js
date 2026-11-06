@@ -546,6 +546,7 @@ export function soundDefinitions(ctx) {
     'engine.diesel': () => diesel(ctx, { fire: 24, growl: 0.55, rough: 0.55 }),
     'engine.dieselSmall': () => diesel(ctx, { fire: 30, growl: 0.4, rough: 0.4 }),
     'engine.turbine': () => turbine(ctx, {}),
+    prop: () => diesel(ctx, { fire: 46, growl: 0.45, rough: 0.28 }),   // a piston aero engine and its propeller (1945 aircraft)
     'tracks.heavy': () => tracks(ctx, { clanks: 8, squeal: 0.35 }),
     'tracks.light': () => tracks(ctx, { clanks: 10, squeal: 0.2 }),
     traverse: () => traverse(ctx, { f: 420 }),

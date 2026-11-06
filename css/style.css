@@ -846,3 +846,4 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 
 /* binoculars up in direct control (systems/PlayerControl.js toggleBinoculars): the round field of view */
 body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 4; background: radial-gradient(circle at 50% 50%, transparent 40vmin, rgba(0, 0, 0, 0.94) 44vmin); }
+.sup .sup-sil { background: #efd59a; width: 34px; height: 26px; } /* an air power: the army's own aircraft (ui/ActionBar.js) */

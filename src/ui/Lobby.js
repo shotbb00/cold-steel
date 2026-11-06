@@ -12,6 +12,7 @@
 // Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, rules, name, campaign? }
 // (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
 // start { … } (host). A version mismatch gets refuse { reason }.
+import { epoch } from '../data/epoch.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
 import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
@@ -202,8 +203,8 @@ export class Lobby {
       box.append(sec);
     };
     // the host's campaign (campaign/Campaign.js, this browser's save): its next battle, fought together
-    const camp = loadCampaign();
-    if (camp?.battles?.length || this.choice.campaignBattle) {
+    const camp = epoch() === '1985' ? loadCampaign() : null; // (the campaign is 1985's)
+    if (camp?.battles?.length || (this.choice.campaignBattle && camp)) {
       const seg = el('div', 'seg mp-together');
       for (const [on, label] of [[false, 'A battle of our own'], [true, 'Our campaign’s next battle']]) {
         const b = button(label, !!this.choice.campaignBattle === on ? 'on' : '', () => { this.choice.campaignBattle = on; this.render(); this.sendLobby(); });
@@ -412,7 +413,7 @@ export class Lobby {
       const rules = info?.rules ? ` · ${info.coop ? `${DIFFICULTY[info.rules.difficulty]?.label ?? 'Regular'} enemy · ` : ''}${info.rules.air === false ? 'no air support' : 'air support'}` : '';
       r.append(el('p', 'mp-wait', info?.campaign
         ? `The host’s campaign: the next battle, fought together.<br><b>${info.campaign.sector}</b> · ${info.campaign.attacker === info.side ? 'we attack' : 'they attack'} · <b>${map}</b> · You command half of <b>${side.replace(' together with the host', '')}</b>’s battalion · <b>${when}</b>.`
-        : `The host picks the mode, map, sides, conditions and rules.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
+        : `The host picks the mode, map, sides, conditions and rules.<br><b>${info?.epoch ?? '1985'}</b> · <b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
       r.append(this.status(this.peerReady ? 'Ready — waiting for the host to start the battle…' : 'Press Ready when you are, then the host can start.'));
       const row = el('div', 'deploy-row mp-row');
       row.append(button(this.peerReady ? 'Not ready' : 'Ready', 'deploy', () => {
@@ -507,7 +508,7 @@ export class Lobby {
     } else {
       link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
-      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, campaign: m.campaign ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
+      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, campaign: m.campaign ?? null, epoch: m.epoch ?? '1985', net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
     this.render();
@@ -534,14 +535,14 @@ export class Lobby {
 
   /** The campaign's next battle as a co-op battle (null when not picked, or none is waiting). */
   campaignBattle() {
-    if (!this.choice.campaignBattle) return null;
+    if (!this.choice.campaignBattle || epoch() !== '1985') return null;
     const c = loadCampaign();
     return c?.battles?.length ? { ...battleChoice(c), coop: true, rules: this.choice.rules } : null;
   }
 
   /** What the host would start: its own choices, or the campaign's battle. */
   battle() {
-    return this.campaignBattle() ?? { ...this.choice, campaign: null };
+    return { ...(this.campaignBattle() ?? { ...this.choice, campaign: null }), epoch: epoch() }; // (the guest plays the host's war)
   }
 
   sendLobby() {

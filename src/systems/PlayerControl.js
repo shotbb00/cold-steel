@@ -328,7 +328,10 @@ export class PlayerControl {
       }
     } else if (trigger && this.fireTimer <= 0 && u.reloadT <= 0 && u.mag > 0 && (u.prone > 0.85 || u.prone < 0.1)) {
       const aligned = infantry || Math.abs(angleDelta(u.turretYaw, aimYaw)) < 0.08;
-      if (aligned) {
+      const steady = infantry || !ws.noStabilizer || !u.moving; // no stabiliser: stop to fire
+      if (!steady && !this.toldStop) { this.toldStop = true; game.bus.emit('toast', 'No stabiliser — stop to fire'); }
+      if (steady) this.toldStop = false;
+      if (aligned && steady) {
         stack.fireAt(u, this.aimPoint);
         this.fireTimer = ws.playerFireInterval ?? 0.3;
         u.mag--;

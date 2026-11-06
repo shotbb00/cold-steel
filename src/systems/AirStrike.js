@@ -130,6 +130,8 @@ export const KINDS = {
     hold: 30,          // s what they found stays located
   },
 };
+/** The 1985 aircraft per kind (data/epoch.js puts an epoch's own into KINDS[kind].aircraft, and sets `off` on kinds it has none for). */
+export const AIR_1985 = Object.fromEntries(Object.entries(KINDS).map(([k, p]) => [k, p.aircraft]));
 /** The helicopter run's parameters (older callers). */
 export const AIR = KINDS.heli;
 const GROUND_FIRE_RANGE = 150;
@@ -167,6 +169,7 @@ export const buildHelicopter = (faction) => buildAircraft('heli', faction);
 function spin(rig, type, dt, k = 1) {
   if (rig.rotor) rig.rotor.rotation.y += dt * type.rotorSpeed * k;
   if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70 * k;
+  if (rig.prop) rig.prop.rotation.z += dt * 45 * k; // a propeller (1945: models/ww2Aircraft.js)
 }
 
 const loopSound = (type) => type.rotorSound ?? type.engineSound;
@@ -379,8 +382,9 @@ class Sortie {
         if (t && t.kind !== 'cap') { // (fighters don't duel: they hunt the strike aircraft)
           this.aamT = p.aam.every;
           this.aamLeft--;
-          g.air.missile(_p.copy(this.pos), t, this.faction, p.aam);
-          g.tellBoth(this.faction, `${this.type.name}: missile away at an enemy ${t.type?.name ?? 'aircraft'}`, `Enemy fighter fires on our ${t.type?.name ?? 'aircraft'}!`);
+          const guns = this.type.guns; // 1945: no missiles — the fighter dives on it, guns firing
+          g.air.missile(_p.copy(this.pos), t, this.faction, guns ? { ...p.aam, speed: 700, guns: true } : p.aam);
+          g.tellBoth(this.faction, guns ? `${this.type.name}: diving on an enemy ${t.type?.name ?? 'aircraft'}` : `${this.type.name}: missile away at an enemy ${t.type?.name ?? 'aircraft'}`, `Enemy fighter ${guns ? 'attacks' : 'fires on'} our ${t.type?.name ?? 'aircraft'}!`);
         }
       }
       const hurt = this.hp <= this.type.hp * 0.35;
@@ -706,7 +710,7 @@ class Missile {
     _d.divideScalar(dist || 1);
     this.dir.lerp(_d, Math.min(1, dt * 5)).normalize();
     this.pos.addScaledVector(this.dir, this.speed * dt);
-    this.game.effects.trail(this.pos, this.dir);
+    if (!this.m.guns) this.game.effects.trail(this.pos, this.dir); // (a gun pass: no smoke trail)
     if (dist < this.speed * dt * 1.5 + 2) this.burst(Math.random() < this.m.pk * (t.kind === 'jet' ? 0.7 : 1));
   }
 
@@ -766,6 +770,7 @@ export class AirStrike {
   call(faction, x, z, yaw = null, kind = 'heli') {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
+    if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
     const name = forArmy(p.aircraft, game.armyOf(faction), faction).name;
     if (this.limit[faction] === 0) {
       game.tell(faction, 'No air support left');

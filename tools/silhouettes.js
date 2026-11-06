@@ -3,6 +3,8 @@
 // shape. window.silhouettes() → { 'tank-nato': dataURL, … }; tools/render_silhouettes.py saves them.
 import * as THREE from 'three';
 import { UNIT_TYPES } from '../src/data/units/index.js';
+import { setEpoch } from '../src/data/epoch.js';
+import { KINDS } from '../src/systems/AirStrike.js';
 import { UnitPreview } from '../src/ui/UnitPreview.js';
 
 const W = 240, H = 84; // the saved image: the shape fitted inside, bottom-aligned
@@ -42,14 +44,35 @@ function trim(canvas) {
   return out.toDataURL('image/png');
 }
 
-window.silhouettes = () => {
+// each war's armies (data/epoch.js): [side, army, the army's own key or null for the side's]
+const ARMIES = {
+  1985: [['nato', 'us', null], ['pact', 'sov', null], ['nato', 'bw', 'bw'], ['pact', 'nva', 'nva']],
+  1945: [['nato', 'us', null], ['pact', 'wh', null], ['nato', 'sov', 'sov'], ['pact', 'fj', 'fj']],
+};
+
+window.silhouettes = (year = '1985') => {
+  setEpoch(year);
+  const prefix = year === '1985' ? '' : `${year}-`; // (ui/Icons.js silhouette)
   const out = {};
+  // the support powers' aircraft (ui/ActionBar.js): planes seen from above, helicopters from the side
+  for (const [kind, p] of Object.entries(KINDS)) {
+    if (p.off) continue;
+    for (const [faction, army, own] of ARMIES[year]) {
+      if (own && !p.aircraft[own]) continue;
+      preview.showAircraft(kind, faction, army);
+      const plane = kind !== 'heli' && kind !== 'lift';
+      Object.assign(preview.orbit, plane ? { yaw: -Math.PI / 2, pitch: 1.5, zoom: 1, idle: 0 } : { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 });
+      preview.setPose('hover');
+      for (let i = 0; i < 3; i++) preview.frame();
+      out[`air-${kind}-${prefix}${own ?? faction}`] = trim(preview.canvas);
+    }
+  }
   for (const type of Object.values(UNIT_TYPES)) {
     if (!type.models || type.stats?.structure) continue; // bunkers and the HQ are never on a card
     // each side's, and each army's own where it has a model of its own (Icons.js artKey)
-    for (const [faction, army] of [['nato', 'us'], ['pact', 'sov'], ['nato', 'bw'], ['pact', 'nva']]) {
-      const key = army === 'us' || army === 'sov' ? faction : army;
-      if (key === army && !type.models[army]) continue;
+    for (const [faction, army, own] of ARMIES[year]) {
+      const key = own ?? faction;
+      if (own && !type.models[army]) continue;
       preview.show(type.id, faction, army);
       const units = preview.stack.units;
       // infantry: the men one behind the other along their line of march, so the side view
@@ -59,7 +82,7 @@ window.silhouettes = () => {
       Object.assign(preview.orbit, { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 }); // from the left: the front faces right
       preview.fit = preview.vehicle ? { w: 4.6, h: 2.4 } : { w: 2.2, h: 1.1 };
       for (let i = 0; i < 3; i++) preview.frame(); // let the poses settle
-      out[`${type.id}-${key}`] = trim(preview.canvas);
+      out[`${type.id}-${prefix}${key}`] = trim(preview.canvas);
     }
   }
   return out;

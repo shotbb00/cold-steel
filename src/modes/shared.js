@@ -37,6 +37,10 @@ export function makeBuyer(game, state) {
       game.tell(faction, 'Stack limit reached');
       return null;
     }
+    if (type.limit && game.world.stacksOf(faction).filter((s) => s.type.id === type.id && !s.withdrawing).length >= type.limit) {
+      game.tell(faction, `No more than ${type.limit} ${type.shortName} in the field`);
+      return null;
+    }
     const base = map.bases[faction];
     const toward = -Math.sign(base.z);
     // the road it comes in on: the one asked for, else any that's free (one arrival per road every ENTRY_GAP s)

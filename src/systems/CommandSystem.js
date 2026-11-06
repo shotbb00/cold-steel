@@ -260,6 +260,7 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       const air = cmd.slice(4) || 'heli';
+      if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }

@@ -5,12 +5,13 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
+import { epoch } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { keyOf } from '../core/Keys.js';
-import { icon } from './Icons.js';
+import { icon, silhouette } from './Icons.js';
 
 const ACTIONS = [
   { cmd: 'hold', label: 'Stop', icon: 'stop', key: 'hold', tip: 'Stop where they are and hold the spot', when: (sel) => sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
@@ -68,13 +69,19 @@ export class ActionBar {
   buildSupport() {
     const row = document.querySelector('.cmd-buttons.support');
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
+      if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;
       b.className = 'sup';
       b.dataset.cmd = cmd;
       b.title = `${label} — ${tip}`;
-      b.innerHTML = `<i class="cd"></i>${icon(ic)}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
+      // an air power shows the army's own aircraft (tools/render_silhouettes.py air-…), the rest their icon
+      const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
+      const me = this.game.playerFaction;
+      const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
+      const art = kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic);
+      b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
       return { b, cmd, small: b.querySelector('small') };
     });
     row.replaceChildren(...this.support.map((s) => s.b));
@@ -104,7 +111,7 @@ export class ActionBar {
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
-      b.hidden = off || mass === false;
+      b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off); // (not in this war: data/epoch.js)
     }
   }
 

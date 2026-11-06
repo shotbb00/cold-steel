@@ -4,6 +4,8 @@
 //   • "Play again" / "Restart battle" set a one-shot replay note in sessionStorage
 //     (requestReplay) and reload; the next load starts that battle and clears the note
 //   • ?mode=…&map=…&side=… in the address (development and headless tests)
+import { settings } from './core/Settings.js';
+import { setEpoch, epoch } from './data/epoch.js';
 import { GameEngine } from './core/GameEngine.js';
 import { GAME } from './data/game.js';
 import { getMap } from './maps/index.js';
@@ -18,9 +20,10 @@ import './core/Keys.js';   // fills every key hint in the page (data-key) and ke
 document.title = GAME.title;
 const screen = document.getElementById('loading');
 
-function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null, armies = null }) {
+function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null, armies = null, epoch: year = null }) {
+  if (year) setEpoch(year); // a replay, a multiplayer guest: the battle's own war
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
-  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies });
+  if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies, epoch: epoch() });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
   const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
   window.game = game; // handy for poking at the simulation from the dev console
@@ -28,7 +31,8 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
 
 const params = new URLSearchParams(location.search);
 const replay = takeReplay();
-if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather'), armies: { nato: params.get('nato'), pact: params.get('pact') } });
+setEpoch(params.get('epoch') ?? replay?.epoch ?? settings.get('epoch')); // the war the menu and the battle are set in (data/epoch.js)
+if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather'), armies: { nato: params.get('nato'), pact: params.get('pact') }, epoch: params.get('epoch') });
 else if (replay) start(replay);
 else {
   const music = new MenuMusic(); // the menu's own synth tune, until a battle is deployed

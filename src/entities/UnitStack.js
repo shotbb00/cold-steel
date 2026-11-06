@@ -22,7 +22,7 @@
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
-import { FACTIONS, enemyOf, DEFAULT_ARMY } from '../data/factions.js';
+import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
@@ -113,7 +113,7 @@ export class UnitStack {
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
-    this.name = name ?? `${type.shortName} ${this.id}`;
+    this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
     this.services = services;
     this.world = services.world;
 
@@ -985,6 +985,7 @@ export class UnitStack {
   updateHeavyWeapon(u) {
     const s = u.stats;
     if (!u.target) return;
+    if (s.noStabilizer && u.moving) return; // no stabiliser (1945 tanks but the Sherman): only fires standing still
     if (Math.abs(angleDelta(u.turretYaw, u.aimYaw)) > 0.12) return;
     const dist = Math.sqrt(dist2DSq(u.pos, u.target.pos));
     // IFV missile (TOW / Konkurs) against vehicles, on its own long reload

@@ -75,8 +75,16 @@ export const UNIT_TYPES = {
   [hq.id]: hq,
 };
 
+/** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */
+export const TYPES_1985 = { ...UNIT_TYPES };
+/** The epoch's stand-ins for types it doesn't have (data/epoch.js): 'scouts' → 'rifles' … */
+export const ALIAS = {};
+
+/** The type for `id` in this epoch, or its stand-in, or undefined. */
+export const typeOf = (id) => UNIT_TYPES[id] ?? UNIT_TYPES[ALIAS[id]];
+
 export function getUnitType(id) {
-  const type = UNIT_TYPES[id];
+  const type = typeOf(id);
   if (!type) throw new Error(`Unknown unit type "${id}"`);
   return type;
 }

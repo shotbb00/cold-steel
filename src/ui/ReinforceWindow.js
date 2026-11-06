@@ -12,6 +12,7 @@ import { silhouette } from './Icons.js';
 import { forArmy, artKey } from '../data/factions.js';
 import * as THREE from 'three';
 import { KITS, takesKit } from '../data/kits.js';
+import { epoch } from '../data/epoch.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
@@ -94,7 +95,7 @@ export class ReinforceWindow {
     // the kit the next rifle squads bring (data/kits.js; same price)
     game.reinforceKit = null;
     const kitSeg = root.querySelector('.rw-kit .seg');
-    root.querySelector('.rw-kit').hidden = !types.some(takesKit);
+    root.querySelector('.rw-kit').hidden = epoch() !== '1985' || !types.some(takesKit); // (the kits are 1985's: LAWs, Panzerfaust 44)
     for (const [id, kit] of Object.entries(KITS)) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -198,10 +199,11 @@ export class ReinforceWindow {
     if (lastType) this.again.disabled = full || cp < unitCost(lastType, army);
     for (const { card, type, have, why } of this.cards) {
       const cost = unitCost(type, army);
-      const capped = full && !type.uncapped;
-      card.disabled = capped || cp < cost;
-      why.textContent = capped ? 'Stack limit reached' : cp < cost ? `Need ${cost - cp} more CP` : '';
       const n = mine.filter((s) => s.type.id === type.id).length;
+      const limited = type.limit && g.world.stacksOf(me).filter((s) => s.type.id === type.id && !s.withdrawing).length >= type.limit; // (the side's, co-op included)
+      const capped = (full && !type.uncapped) || limited;
+      card.disabled = capped || cp < cost;
+      why.textContent = limited ? `Limit reached (${type.limit})` : capped ? 'Stack limit reached' : cp < cost ? `Need ${cost - cp} more CP` : '';
       have.textContent = n ? `${n} in the field` : '';
     }
   }

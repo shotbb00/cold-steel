@@ -14,6 +14,7 @@ export const DEFAULTS = {
   fpsCounter: false,   // the frame counter in the top bar
   radioChatter: false, // radio traffic from the rest of the war in the radio log
   keys: {},
+  epoch: '1985',       // the war the game is set in: '1985' | '1945' (data/epoch.js, the menu's year switch)
   playerName: '',      // shown to the other player in multiplayer (lobby, chat)            // the player's own key bindings: { action: KeyboardEvent.code } (core/Keys.js)
 };
 

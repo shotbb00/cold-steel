@@ -10,6 +10,7 @@
 // lost unit costs the front: 0 = only the points count).
 // Multiplayer: the host runs the mode for both sides (no AI director — the other side is a
 // person); the client only builds the points and the HUD and shows the host's numbers.
+import { epoch } from '../data/epoch.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineDirector } from '../ai/FrontlineDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
@@ -39,7 +40,7 @@ export default {
     for (const [faction, spawns] of Object.entries(map.spawns)) {
       const allowed = spawns.filter((sp) => this.allows(sp.unit));
       for (const sp of allowed.length ? allowed : spawns.slice(0, 1).map((sp) => ({ ...sp, unit: 'rifles' }))) {
-        game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, sp.name);
+        game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); // (the maps' names are 1985's: "1-ya Rota")
       }
     }
     const foe = enemyOf(game.playerFaction);

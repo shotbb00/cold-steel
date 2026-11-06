@@ -2,7 +2,9 @@
 // tank obstacles, car wrecks, border towers and fence, command-post tents and radio masts;
 // town houses, a church, factory halls and hangars, aircraft shelters, a control tower, rails and
 // wagons, mine headframes and conveyors, log piles)
-// and registers their colliders with the CoverMap. All geometry is batched per
+// and registers their colliders with the CoverMap. In 1945 (data/epoch.js) the era shows: 1930s
+// car wrecks, log barricades instead of concrete barriers, no inner-German border (towers, fence),
+// a timber hangar instead of the hardened shelter, a propeller plane's wreck. All geometry is batched per
 // material and merged in finish(), so a whole map of props is a handful of draw calls.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -10,6 +12,7 @@ import { makeDetailTextures } from './textures.js';
 import { createNoise2D } from './Noise.js';
 import { mulberry32 } from '../core/math.js';
 import { stationHull } from '../data/models/vehicleCommon.js';
+import { epoch } from '../data/epoch.js';
 
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const TILED = new Set(['stone', 'plaster']); // textured materials: their texture repeats every TILE m
@@ -95,6 +98,46 @@ function carGeometry() {
   }));
   const trim = mergeGeometries([b(1.66, 0.12, 0.12, 0, 0.45, 2.08), b(1.66, 0.12, 0.12, 0, 0.47, -2.06), ...rims].map((g) => normalizeGeometry(g)));
   return { body, dark, trim };
+}
+
+let CAR45 = null;
+
+/** A 1930s saloon (an Opel Olympia, a Ford): the long bonnet, the upright cab, the separate wings and running boards. */
+function car45Geometry() {
+  const half = (yb, sill, belt, top, roofIn) => [[0, yb], [0.72, yb], [0.74, sill], [0.74, belt], [roofIn, top], [0, top]];
+  const b = (sx, sy, sz, x, y, z, rx = 0, ry = 0) => {
+    const g = new THREE.BoxGeometry(sx, sy, sz);
+    g.rotateX(rx).rotateY(ry).translate(x, y, z);
+    return normalizeGeometry(g);
+  };
+  const body = mergeGeometries([
+    stationHull([
+      [-2.0, half(0.5, 0.55, 0.9, 0.95, 0.6)],
+      [-1.75, half(0.45, 0.5, 0.95, 1.4, 0.6)],
+      [0.25, half(0.45, 0.5, 0.95, 1.55, 0.62)],
+      [0.55, half(0.45, 0.5, 0.95, 1.05, 0.6)],
+      [2.0, half(0.48, 0.55, 0.9, 0.98, 0.5)],
+    ]),
+    ...[-1.3, 1.4].flatMap((z) => [0.78, -0.78].map((x) => b(0.36, 0.08, 1.2, x, 0.85, z, z > 0 ? 0.08 : -0.08))), // the wings over the wheels
+    ...[0.86, -0.86].map((x) => b(0.24, 0.05, 1.5, x, 0.5, 0.05)),                                                // running boards
+  ].map((g) => normalizeGeometry(g)));
+  const dark = mergeGeometries([
+    b(0.04, 0.38, 1.4, 0.74, 1.2, -0.75), b(0.04, 0.38, 1.4, -0.74, 1.2, -0.75),                                  // side windows
+    b(1.0, 0.36, 0.04, 0, 1.22, 0.45, 0.2),                                                                         // the upright windscreen
+    b(0.7, 0.4, 0.04, 0, 0.75, 2.02),                                                                               // the tall grille
+  ]);
+  const rims = [-1.3, 1.4].flatMap((z) => [0.72, -0.72].map((x) => {
+    const g = new THREE.CylinderGeometry(0.34, 0.34, 0.16, 12);
+    g.rotateZ(Math.PI / 2).translate(x, 0.34, z);
+    return normalizeGeometry(g);
+  }));
+  const lamps = [0.5, -0.5].map((x) => {
+    const g = new THREE.CylinderGeometry(0.11, 0.11, 0.14, 10);
+    g.rotateX(Math.PI / 2).translate(x, 1.0, 1.85);
+    return normalizeGeometry(g);
+  });
+  const trim = mergeGeometries([b(1.5, 0.1, 0.1, 0, 0.5, 2.1), b(1.5, 0.1, 0.1, 0, 0.5, -2.06), ...rims, ...lamps]);
+  return { body: normalizeGeometry(body), dark, trim };
 }
 
 export class PropBuilder {
@@ -308,6 +351,7 @@ export class PropBuilder {
 
   /** Concrete Jersey barriers in a staggered row (low cover: lie behind them). */
   jersey({ x, z, yaw, length = 6 }) {
+    if (epoch() === '1945') return this.logBarricade({ x, z, yaw, length });
     const n = Math.max(1, Math.round(length / 3));
     for (let i = 0; i < n; i++) {
       const lx = -length / 2 + (i + 0.5) * (length / n);
@@ -317,6 +361,20 @@ export class PropBuilder {
       this.part('stone', x, z, yaw, lx, 0.55, 0, 2.9, 0.6, 0.26, grey, tilt);
     }
     this.cover.addBox({ x, z, yaw, length, thickness: 0.62, height: 0.95 });
+  }
+
+  /** 1945's road block: logs stacked between upright stakes (where 1985 has concrete barriers). */
+  logBarricade({ x, z, yaw, length = 6 }) {
+    const r = this.rand;
+    for (let k = 0; k < 3; k++) {
+      const wood = new THREE.Color().setHSL(0.08, 0.3, 0.2 + r() * 0.06).getHex();
+      this.part('plain', x, z, yaw, (r() - 0.5) * 0.3, 0.18 + k * 0.3, (k % 2) * 0.05, length, 0.3, 0.3, wood, (r() - 0.5) * 0.04);
+    }
+    for (let i = 0; i <= Math.round(length / 2); i++) {
+      const lx = -length / 2 + (i * length) / Math.round(length / 2);
+      for (const side of [-1, 1]) this.part('plain', x, z, yaw, lx, 0.6, side * 0.24, 0.14, 1.2, 0.14, 0x3e2e20, 0, side * 0.08);
+    }
+    this.cover.addBox({ x, z, yaw, length, thickness: 0.6, height: 0.95 });
   }
 
   /** Czech hedgehog anti-tank obstacle: three crossed steel beams (no infantry cover). */
@@ -333,20 +391,22 @@ export class PropBuilder {
   /** A burnt-out civilian car, pushed off the road. */
   wreckCar({ x, z, yaw }) {
     const r = this.rand;
-    CAR ??= carGeometry();
-    // burnt out (charred, rusting) or just abandoned in its faded paint: Trabant beige, Lada red, VW blue
+    const old = epoch() === '1945';
+    const car = old ? (CAR45 ??= car45Geometry()) : (CAR ??= carGeometry());
+    // burnt out (charred, rusting) or just abandoned in its faded paint: Trabant beige, Lada red, VW blue — in 1945 black, dark green, grey-blue
     const burnt = r() < 0.6;
-    const paint = burnt ? [0x3a2a22, 0x4a3324, 0x2c2826][Math.floor(r() * 3)] : [0x9a9070, 0x7a3428, 0x3a5068, 0x5a6a4a][Math.floor(r() * 4)];
+    const paint = burnt ? [0x3a2a22, 0x4a3324, 0x2c2826][Math.floor(r() * 3)] : old ? [0x1e1e1c, 0x3a4434, 0x48525a][Math.floor(r() * 3)] : [0x9a9070, 0x7a3428, 0x3a5068, 0x5a6a4a][Math.floor(r() * 4)];
     const sunk = (r() - 0.5) * 0.12;                                  // settled on a flat or a missing wheel
     _m.compose(_p.set(x, this.terrain.heightAt(x, z) - 0.04, z), _q.setFromEuler(_e.set((r() - 0.5) * 0.05, yaw, sunk)), _s.set(1, 1, 1));
-    this.push('metal', CAR.body, _m, paint);
-    this.push('metal', CAR.dark, _m, burnt ? 0x141210 : 0x1c2024);    // window holes or glass, grille, wheel arches
-    this.push('metal', CAR.trim, _m, burnt ? 0x2a2420 : 0x6a6a64);    // bumpers, rims
+    this.push('metal', car.body, _m, paint);
+    this.push('metal', car.dark, _m, burnt ? 0x141210 : 0x1c2024);    // window holes or glass, grille, wheel arches
+    this.push('metal', car.trim, _m, burnt ? 0x2a2420 : 0x6a6a64);    // bumpers, rims
     this.cover.addBox({ x, z, yaw, length: 1.7, thickness: 4.1, height: 1.3 });
   }
 
   /** Border watchtower: concrete shaft with an observation cab (East) or a wooden OP (West). */
   tower({ x, z, concrete = true }) {
+    if (epoch() === '1945') return; // no inner-German border yet
     const g = this.terrain.heightAt(x, z);
     if (concrete) {
       this.box('stone', x, g + 4.5, z, 1.3, 9, 1.3, 0, 0x8d8a80);
@@ -366,6 +426,7 @@ export class PropBuilder {
   /** A run of border fence: posts and wire, with breaches blown through it. Visual only. */
   /** @param {any} o  options, untyped until this file moves to TypeScript */
   fence({ x0, x1, z, breaches = [] }) {
+    if (epoch() === '1945') return;
     for (let x = x0; x <= x1; x += 3.2) {
       if (breaches.some(([a, b]) => x > a && x < b)) continue;
       const g = this.terrain.heightAt(x, z);
@@ -656,6 +717,7 @@ export class PropBuilder {
 
   /** A hardened aircraft shelter: a concrete half-barrel, open at the front. */
   aircraftShelter({ x, z, yaw }) {
+    if (epoch() === '1945') return this.timberHangar({ x, z, yaw });
     const g = this.terrain.heightAt(x, z);
     const R = 11;
     const L = 30;
@@ -681,6 +743,24 @@ export class PropBuilder {
     this.cover.addBox({ x: bx, z: bz, yaw, length: R * 2, thickness: 1.2, height: 6 });
   }
 
+  /** 1945's hangar: timber walls on three sides and a gable roof, open at the front. */
+  timberHangar({ x, z, yaw }) {
+    const W = 22;
+    const L = 26;
+    const H = 6;
+    const wood = 0x5a4632;
+    for (const side of [-1, 1]) {
+      this.part('plain', x, z, yaw, side * W / 2, H / 2, 0, 0.3, H, L, wood);
+      this.part('plain', x, z, yaw, side * W / 4, H + 2.2, 0, W / 2 + 1.2, 0.25, L + 0.6, 0x3a3a34, 0, 0, side * -0.38); // the roof
+      const [sx, sz] = PropBuilder.local(x, z, yaw, side * W / 2, 0);
+      this.cover.addBox({ x: sx, z: sz, yaw: yaw + Math.PI / 2, length: L, thickness: 0.4, height: H });
+    }
+    this.part('plain', x, z, yaw, 0, H / 2, -L / 2, W, H, 0.3, wood);                                           // the back wall
+    this.part('plain', x, z, yaw, 0, H + 1.1, L / 2, W, 2.2, 0.2, wood);                                        // the gable over the doors
+    const [bx, bz] = PropBuilder.local(x, z, yaw, 0, -L / 2);
+    this.cover.addBox({ x: bx, z: bz, yaw, length: W, thickness: 0.4, height: H });
+  }
+
   /** The airfield control tower: a two-storey block with the glazed cab on top. Occupiable. */
   controlTower({ x, z, yaw }) {
     const b = this.beginBuilding('control tower', x, z, yaw, 12, 9);
@@ -695,7 +775,12 @@ export class PropBuilder {
   /** A jet caught on the ground: burnt out on its gear (cover, not a unit). */
   aircraftWreck({ x, z, yaw, scale = 1 }) {
     const g = this.terrain.heightAt(x, z);
-    const s = scale;
+    const old = epoch() === '1945';
+    const s = scale * (old ? 0.7 : 1); // 1945: a Bf 109 / Ju 88-sized wreck, its propeller bent
+    if (old) {
+      const [px, pz] = PropBuilder.local(x, z, yaw, 0, 7.2 * s);
+      this.box('metal', px, g + 1.6 * s, pz, 0.25, 2.4 * s, 0.1, yaw, 0x1e1e1c, 0, 0.5);
+    }
     const P = (lx, ly, lz, sx, sy, sz, c, ry = 0, rx = 0, rz = 0) => {
       const [wx, wz] = PropBuilder.local(x, z, yaw, lx * s, lz * s);
       this.box('metal', wx, g + ly * s, wz, sx * s, sy * s, sz * s, yaw + ry, c, rx, rz);

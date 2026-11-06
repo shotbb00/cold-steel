@@ -16,6 +16,7 @@ export default {
   cost: 70,
   armies: ['nva'],
   uncapped: true,
+  limit: 50,             // …but no more than this many in the field at once (modes/shared.js makeBuyer)
   formation: { count: 10, columns: 5, spacing: 2.6 },
   stats: {
     ...rifles.stats,
