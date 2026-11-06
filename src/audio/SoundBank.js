@@ -702,20 +702,5 @@ export function soundDefinitions(ctx) {
       }
       loopify(d, sr, n, 0.1);
     }),
-    // breathing through a gas mask: a rasping intake through the filter, the valve, a slow exhale
-    breath: () => makeBuffer(ctx, 3.6, (d, sr, n) => {
-      const inhale = bandpass(1100, 2.5, sr);
-      const exhale = bandpass(520, 2, sr);
-      for (let i = 0; i < n; i++) {
-        const t = i / sr;
-        const w = Math.random() * 2 - 1;
-        const a = t < 1.2 ? Math.sin(Math.PI * t / 1.2) ** 1.5 : 0;
-        const b = t > 1.5 && t < 3.1 ? Math.sin(Math.PI * (t - 1.5) / 1.6) ** 2 : 0;
-        d[i] = inhale(w) * a * 0.9 + exhale(w) * b * 0.6;
-        const v = t - 1.32; // the exhale valve clicking open
-        if (v > 0 && v < 0.03) d[i] += Math.sin(TAU * 900 * v) * Math.exp(-v * 180) * 0.5;
-      }
-      loopify(d, sr, n, 0.15);
-    }),
   };
 }

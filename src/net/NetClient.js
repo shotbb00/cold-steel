@@ -9,7 +9,7 @@
 //     labels, minimap and HUD then run as in single player
 // Orders go to the host (core/Orders.js); the host's simulation answers in the next snapshots.
 import * as THREE from 'three';
-import { decodeSnapshot, unpackArgs, FLAG } from './protocol.js';
+import { decodeSnapshot, unpackArgs, FLAG, FLAG2 } from './protocol.js';
 import { FX_CALLS, SOUND_CALLS } from './NetHost.js';
 import { SortieView } from '../systems/AirStrike.js';
 import { enemyOf } from '../data/factions.js';
@@ -213,6 +213,10 @@ export class NetClient {
       u.peekT = f & FLAG.peek ? 0.2 : 0;
       u.reloadT = f & FLAG.reloading ? 1 : 0;
       if (fresh && f & FLAG.recoil) u.recoil = 1;
+      const f2 = sa.f2[i]; // radars and jammers at work (the minimap's areas, the turning antenna)
+      u.spinning = !!(f2 & FLAG2.radar);
+      u.radarOn = !!(f2 & FLAG2.cbRadar);
+      u.jamming = !!(f2 & FLAG2.jamming);
       const ts = sa.ts[i];
       u.target = ts ? g.world.stackById(ts)?.units[sa.ti[i]] ?? null : null;
       if (u.target && !u.target.alive) u.target = null;
@@ -329,7 +333,6 @@ export class NetClient {
       }
       case 'air': g.air.sorties.push(new SortieView(g, e[1], e[2], e[3], e[4], e[5], e[6] ?? 'heli')); break;
       case 'flare': g.flares.add(e[1], e[2], e[3]); break;
-      case 'gas': g.gas.land(e[1], e[2]); break;
       case 'fire': g.fire.light(e[1], e[2]); break;
       case 'span': {
         const river = g.world.river;
@@ -391,7 +394,6 @@ export class NetClient {
       if (m.status !== undefined) ms.statusText = m.status ?? '';
     }
     if (m.air) Object.assign(g.air.readyAt, m.air);
-    if (m.gas) Object.assign(g.gas.readyAt, m.gas);
     for (const [id, progress] of m.sites ?? []) {
       const site = g.construction.sites.find((s) => s.id === id);
       if (site) { site.progress = progress; g.construction.showProgress(site); }

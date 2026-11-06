@@ -69,7 +69,6 @@ import { keys } from './Keys.js';
 import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
-import { Gas } from '../systems/Gas.js';
 import { CounterBattery } from '../systems/CounterBattery.js';
 import { Jamming } from '../systems/Jamming.js';
 import { Fire } from '../systems/Fire.js';
@@ -181,7 +180,6 @@ export class GameEngine {
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);
-    this.gas = new Gas(this);             // chemical fire missions (a support power)
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
@@ -644,7 +642,6 @@ export class GameEngine {
     this.buildings.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
-    this.gas.update(dt);
     this.barrage.update(dt);
     this.fire.update(dt);
     this.counterBattery.update(dt);
@@ -694,7 +691,6 @@ export class GameEngine {
     this.effects.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
-    this.gas.update(dt);
     this.barrage.update(dt);
     this.fire.update(dt);
     this.mode.clientUpdate?.(this, dt);

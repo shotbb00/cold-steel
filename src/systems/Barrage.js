@@ -1,5 +1,5 @@
 // The Soviet Army's preparatory barrage (data/doctrine.js 'mass'): a support power beside the air
-// strikes and gas (Z). Click a spot: after the shells' flight a whole sector `radius` m round it
+// strikes (Z). Click a spot: after the shells' flight a whole sector `radius` m round it
 // is shelled for `duration` s by the division's guns off the map — heavy shells falling at random
 // across it, cratering, felling trees, pinning everything inside. It hits whoever is there.
 import * as THREE from 'three';

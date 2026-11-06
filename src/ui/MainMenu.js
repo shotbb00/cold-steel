@@ -101,7 +101,7 @@ export function loadRules() {
 }
 export function rulesPicker(rules, economy, onChange = () => {}) {
   const box = el('div', 'conditions rules');
-  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault and gas for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
+  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
     ['startCp', 'Starting CP', 'Command points each side starts with'],
     ['income', 'CP income', 'How fast both sides earn command points'],

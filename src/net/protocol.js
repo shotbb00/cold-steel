@@ -14,6 +14,9 @@ export const SNAPSHOT_RATE = 15;   // per second
 export const STATE_RATE = 4;       // stack / economy state per second
 
 export const FLAG = { alive: 1, spotted: 2, run: 4, working: 8, peek: 16, reloading: 32, recoil: 64 };
+// the second flag byte (byte 17): kit that works only set up — an air search radar's antenna turning
+// (AirStrike radars), a counter-battery radar on (CounterBattery), a jammer transmitting (Jamming)
+export const FLAG2 = { radar: 1, cbRadar: 2, jamming: 4 };
 export const SORTIE_STATES = ['inbound', 'ingress', 'attack', 'break', 'home', 'down', 'done', 'land'];
 const FACTION_IDS = ['nato', 'pact'];
 
@@ -63,6 +66,7 @@ export function encodeSnapshot(time, stacks, sorties) {
       const t = u.alive && u.target?.stack?.id ? u.target : null;
       v.setUint16(o + 14, t ? t.stack.id : 0, true);
       v.setUint8(o + 16, t ? t.index : 0);
+      v.setUint8(o + 17, (u.spinning ? FLAG2.radar : 0) | (u.radarOn ? FLAG2.cbRadar : 0) | (u.jamming ? FLAG2.jamming : 0));
       o += UNIT_BYTES;
     }
   }
@@ -101,6 +105,7 @@ export function decodeSnapshot(buf) {
     const f = new Uint8Array(n);
     const ts = new Uint16Array(n);
     const ti = new Uint8Array(n);
+    const f2 = new Uint8Array(n);
     for (let k = 0; k < n; k++) {
       const b = k * 9;
       d[b] = v.getInt16(o, true) / 40;
@@ -115,9 +120,10 @@ export function decodeSnapshot(buf) {
       f[k] = v.getUint8(o + 13);
       ts[k] = v.getUint16(o + 14, true);
       ti[k] = v.getUint8(o + 16);
+      f2[k] = v.getUint8(o + 17);
       o += UNIT_BYTES;
     }
-    stacks.set(id, { n, d, f, ts, ti });
+    stacks.set(id, { n, d, f, f2, ts, ti });
   }
   const sorties = new Map();
   for (let i = 0; i < na; i++) {
