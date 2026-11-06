@@ -2,7 +2,7 @@
 // army's own aircraft — `nato` the US Army's, `sov` the Red Army's, `pact` the Wehrmacht's, `fj`
 // the Fallschirmjäger's. Phase 1: the strike run ('jet') and the fighter patrol ('cap'); no
 // helicopters in this war, the paradrop and the recon flight come later.
-import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52 } from './models/ww2Aircraft.js';
+import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52, buildUsF5, buildSovPe2, buildFjAr234 } from './models/ww2Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const MG50 = { rate: 26, damage: 120, splash: 0.6, vsArmor: 0.3, pierce: 0.25, speed: 880, tracer: 0.3, size: 0.8, sound: 'nato.aa' };   // eight .50 cals
@@ -42,5 +42,13 @@ const DROP: Record<string, Aircraft> = {
     model: buildDeJu52, paint: RLM, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
 };
 
+// the recon flight (KINDS.recon): one fast photo run along the line (AirStrike.photograph)
+const RECON: Record<string, Aircraft> = {
+  nato: { name: 'F-5 Lightning', weapon: 'cameras', text: 'The photo-reconnaissance P-38: one fast run, and the film shows where they are.', model: buildUsF5, paint: { colors: [0x6f7a86, 0x65707c, 0x79848f, 0x6a7580] as [number, number, number, number], scale: 1.2 }, engineSound: 'prop', gun: NOGUN, hp: 6 },
+  sov: { name: 'Pe-2R', weapon: 'cameras', text: 'The Pe-2 dive bomber with cameras in the bomb bay: fast enough to come home with the pictures.', model: buildSovPe2, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 7 },
+  pact: { name: 'Bf 109 G-8', weapon: 'cameras', text: 'The Messerschmitt with a camera behind the cockpit: a quick look over the Allied line.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 5 },
+  fj: { name: 'Ar 234 B Blitz', weapon: 'cameras', text: 'The jet reconnaissance bomber: too fast for any Allied fighter to catch on its run.', model: buildFjAr234, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 6 },
+};
+
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (sov, fj). */
-export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP };
+export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP, recon: RECON };
