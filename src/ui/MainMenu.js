@@ -156,6 +156,8 @@ const el = (tag, cls, html) => {
 const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
+/** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
+const COMING_EPOCHS = [{ id: '1806', name: '1806', title: 'Napoleonic Wars, 1806' }, { id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
 const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
@@ -255,11 +257,13 @@ export class MainMenu {
     side.append(el('div', 'menu-brand', logo(GAME.title, epochInfo().title)));
     // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
     const year = el('div', 'seg menu-epoch');
-    for (const e of Object.values(EPOCHS)) {
-      const b = el('button', e.id === epoch() ? 'on' : '', e.name);
+    for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
+      const soon = !EPOCHS[e.id];
+      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.name);
       b.type = 'button';
-      b.title = e.title;
-      b.addEventListener('click', () => { if (e.id === epoch()) return; settings.set('epoch', e.id); location.reload(); });
+      b.title = soon ? `${e.title} — coming soon` : e.title;
+      if (soon) b.disabled = true;
+      else b.addEventListener('click', () => { if (e.id === epoch()) return; settings.set('epoch', e.id); location.reload(); });
       year.append(b);
     }
     side.append(year);
