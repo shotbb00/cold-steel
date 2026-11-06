@@ -31,12 +31,12 @@ const BLACK = 0x161616;
 const GLASS = 0x1a1d1c;
 const C = { camo: 1 };
 
-const whiteStar = (x, y, z, r, facing = 'x') => [ // the Allied white star in its circle
+export const whiteStar = (x, y, z, r, facing = 'x') => [ // the Allied white star in its circle
   P.cyl(r, r, 0.015, facing === 'x' ? { x, y, z, rz: Math.PI / 2, color: WHITE } : { x, y, z, color: WHITE }, 18),
   P.cyl(r * 0.82, r * 0.82, 0.02, facing === 'x' ? { x, y, z, rz: Math.PI / 2, color: OD } : { x, y, z, color: OD }, 18),
   ...[0, 1, 2, 3, 4].map((k) => P.box(0.012, r * 0.95, r * 0.3, facing === 'x' ? { x: x + Math.sign(x) * 0.012, y: y + Math.cos(k * 1.2566) * r * 0.35, z: z + Math.sin(k * 1.2566) * r * 0.35, rx: -k * 1.2566, color: WHITE } : { x, y, z, color: WHITE })),
 ];
-const balkenkreuz = (x, y, z, r) => [ // white-edged black cross, on a side
+export const balkenkreuz = (x, y, z, r) => [ // white-edged black cross, on a side
   P.box(0.012, r * 2, r * 0.6, { x, y, z, color: WHITE }), P.box(0.012, r * 0.6, r * 2, { x, y, z, color: WHITE }),
   P.box(0.02, r * 1.7, r * 0.3, { x, y, z, color: BLACK }), P.box(0.02, r * 0.3, r * 1.7, { x, y, z, color: BLACK }),
 ];
@@ -45,7 +45,7 @@ const balkenkreuz = (x, y, z, r) => [ // white-edged black cross, on a side
  * The rig: hull (tilting with the ground), the turret or gun mount on it turning to turretYaw
  * (`arc`: how far a casemate gun or pintle mount may traverse), the gun recoiling in it.
  */
-function rig(g, mats, { turretAt, gunAt, muzzle, arc = Infinity, recoil = 0.3 }) {
+export function rig(g, mats, { turretAt, gunAt, muzzle, arc = Infinity, recoil = 0.3 }) {
   const root = new THREE.Group();
   const hull = new THREE.Group();
   root.add(hull);
@@ -185,7 +185,7 @@ export const buildSovT34 = (mats) => {
 
 // ---------------------------------------------------------------- Panzer IV H
 
-const skirts = (x, y, z0, z1, h, n, color) => {
+export const skirts = (x, y, z0, z1, h, n, color) => {
   const out = [];
   const L = (z1 - z0) / n;
   for (let i = 0; i < n; i++) out.push(P.box(0.03, h, L * 0.97, { x, y, z: z0 + L * (i + 0.5), rz: Math.sign(x) * 0.04, color, ...C }));

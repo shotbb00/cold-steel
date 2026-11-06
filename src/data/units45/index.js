@@ -8,6 +8,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildUsSherman, buildSovT34, buildWhPanzerIV, buildFjStuG, buildUsM3, buildWh251, buildSovStudebaker, buildFjOpelBlitz } from '../models/ww2Armour.js';
+import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -106,6 +107,87 @@ const crew = derive(T.crew, {
   },
 });
 
+// (factionStats layer side, then army: `sov` sets every key `nato` sets, `fj` every key `pact` sets)
+const heavyTank = derive(T.heavyTank, {
+  name: 'Heavy Tanks', shortName: 'Heavy tanks',
+  stats: { nightSight: undefined, noStabilizer: true, smoke: { charges: 1 }, armor: 0.78, hp: 1650, damage: 450, range: 210 },
+  factionStats: {
+    nato: { armor: 0.7, damage: 430, fireCooldown: 5.6, speed: 5.4 },                // M26: the 90 mm, quick for a heavy
+    sov: { armor: 0.74, damage: 540, fireCooldown: 9, speed: 4.8 },                  // IS-2: the 122 mm, two-piece rounds: slow to load
+    pact: { armor: 0.8, damage: 470, speed: 5.2 },                                    // Panther: the long 7.5 cm, the sloped front
+    fj: { armor: 0.8, damage: 480, speed: 4.2 },                                      // Tiger I: thick, slow, the 8.8
+  },
+  models: { nato: buildUsPershing, sov: buildSovIS2, pact: buildWhPanther, fj: buildFjTiger },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'M26 Pershing', weapon: '90 mm M3', text: 'The heavy tank that finally matched the Panther: the 90 mm and armour to take a hit. Stops to fire.' },
+    sov: { name: 'IS-2', weapon: '122 mm D-25T', text: 'The breakthrough tank: a 122 mm shell wrecks whatever it hits, but the next one takes a while. Stops to fire.' },
+    pact: { name: 'Panther G', weapon: '7.5 cm KwK 42 L/70', text: 'Fast, sloped, and the long 7.5 cm that pierces any Allied tank at range. Stops to fire.' },
+    fj: { name: 'Tiger I (attached)', weapon: '8.8 cm KwK 36 L/56', text: 'Lent by a heavy tank battalion for the operation: slow, thick-skinned, the 8.8 that kills at any range. Stops to fire.' },
+  },
+});
+
+const reconVehicle = derive(T.reconVehicle, {
+  name: 'Recon Vehicles', shortName: 'Recon',
+  stats: { nightSight: undefined, smoke: undefined },
+  factionStats: {
+    nato: { weapon: 'autocannon', damage: 110 },                                                                    // M8: the 37 mm
+    sov: { weapon: 'rifle', weaponSound: 'mg', damage: 70, vsArmor: 0.03, pierce: 0, splash: 0, fireCooldown: 0.12, armor: 0.15, hp: 380, speed: 8 },  // BA-64: a DT machine gun
+    pact: { damage: 220, vsArmor: 0.5, pierce: 0.4, splash: 1.4, fireCooldown: 1.8 },                               // Puma: the 5 cm
+    fj: { weapon: 'rifle', weaponSound: 'mg', damage: 60, vsArmor: 0.02, pierce: 0, splash: 0, fireCooldown: 0.15, armor: 0, hp: 220, speed: 8.5, radius: 1.0, height: 1.3 }, // Kettenkrad: the crew's MP 40s
+  },
+  models: { nato: buildUsM8, sov: buildSovBA64, pact: buildWhPuma, fj: buildFjKettenkrad },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'M8 Greyhound', weapon: '37 mm M6', text: 'The cavalry’s armoured car: fast on roads, sees far, the little 37 mm for anything lighter than a tank.' },
+    sov: { name: 'BA-64', weapon: 'DT machine gun', text: 'A small four-wheeled armoured car: scouts ahead, sees, and gets out of the way.' },
+    pact: { name: 'Sd.Kfz. 234/2 Puma', weapon: '5 cm KwK 39', text: 'Eight wheels, a turret and a real gun: the best armoured car of the war.' },
+    fj: { name: 'Kettenkrad', weapon: 'MP 40', text: 'The tracked motorcycle: no armour at all, but it gets two men anywhere and quick.' },
+  },
+});
+
+const tankDestroyer = derive(T.tankDestroyer, {
+  name: 'Tank Destroyers', shortName: 'Tank hunters', weaponSound: 'cannon',
+  stats: {
+    nightSight: undefined, atgm: undefined, gunRange: undefined, weaponSound: undefined, suppressPower: undefined, noStabilizer: true,
+    weapon: 'cannon', range: 240, aggroRange: 0, preferredRange: 180, fireCooldown: 6, aimTime: 1.1, damage: 460, pierce: 0.65, splash: 3,
+    boltSpeed: 650, boltSize: 1.5, tracer: 1, spread: 0.004, magSize: 40, reloadTime: 8, playerFireInterval: 6, hp: 900, armor: 0.5, speed: 5.6, turretRate: 0.6,
+  },
+  factionStats: {
+    nato: { armor: 0.25, hp: 700, speed: 7.5, turretRate: 1.0 },          // M18: thin and the fastest thing on tracks
+    sov: { armor: 0.55, hp: 950, speed: 5.6, turretRate: 0.6 },           // SU-100: the gun in the hull
+    pact: { armor: 0.6, hp: 950, speed: 5.0, damage: 480 },               // Jagdpanzer IV/70: low, the long gun
+    fj: { armor: 0.55, hp: 800, speed: 5.2, damage: 420 },                // Hetzer: small, low, hard to spot
+  },
+  models: { nato: buildUsHellcat, sov: buildSovSU100, pact: buildWhJagdpanzerIV, fj: buildFjHetzer },
+  engine: 'engine.diesel', tracks: 'tracks.heavy',
+  variants: {
+    nato: { name: 'M18 Hellcat', weapon: '76 mm M1', text: 'Built for speed: shoot from the flank, move before they answer. Its open turret stops little. Stops to fire.' },
+    sov: { name: 'SU-100', weapon: '100 mm D-10S', text: 'A T-34 hull with a 100 mm in the front plate: kills a Panther from the front. The hull aims the gun. Stops to fire.' },
+    pact: { name: 'Jagdpanzer IV/70', weapon: '7.5 cm PaK 42 L/70', text: 'Low and sloped, the Panther’s gun in a casemate: an ambusher. Stops to fire.' },
+    fj: { name: 'Hetzer', weapon: '7.5 cm PaK 39 L/48', text: 'Small, low and well sloped: hard to see, hard to hit, deadly from cover. Stops to fire.' },
+  },
+});
+
+const cev = derive(T.cev, {
+  name: 'Assault Guns', shortName: 'Assault',
+  stats: { noStabilizer: true, nightSight: undefined, smoke: { charges: 1 } },
+  factionStats: {
+    nato: { dozer: true, damage: 900, vsStructure: 2 },                                    // M4 dozer: the blade, the 75 mm
+    sov: { dozer: false, damage: 1700, vsStructure: 2.6, splash: 7.5, fireCooldown: 16 },  // ISU-152: the "beast killer"
+    pact: { dozer: false, damage: 1500 },                                                   // Brummbär: the 15 cm
+    fj: { dozer: false, damage: 2600, splash: 10, fireCooldown: 26, range: 160 },           // Sturmtiger: a 38 cm rocket
+  },
+  models: { nato: buildUsM4Dozer, sov: buildSovISU152, pact: buildWhBrummbaer, fj: buildFjSturmtiger },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'M4 Dozer', weapon: '75 mm M3, dozer blade', text: 'A Sherman with a blade: digs vehicle positions, clears obstacles, and still fires its 75. Stops to fire.' },
+    sov: { name: 'ISU-152', weapon: '152 mm ML-20S', text: 'The “beast killer”: a 152 mm howitzer on the IS hull. Buildings fall, bunkers open. Stops to fire.' },
+    pact: { name: 'Brummbär', weapon: '15 cm StuH 43', text: 'A heavy howitzer in a box on a Panzer IV: for the house fight and the bunker. Stops to fire.' },
+    fj: { name: 'Sturmtiger', weapon: '38 cm RW 61', text: 'One rocket-propelled shell takes a building down. Slow to reload: the crane lifts each round in. Stops to fire.' },
+  },
+});
+
 // the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
 const airAssault = derive(T.airAssault, {
   models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
@@ -121,14 +203,14 @@ const airAssault = derive(T.airAssault, {
 });
 
 export const TYPES_1945 = {
-  rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault,
+  rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
 export const ALIAS_1945 = {
   scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', observers: 'rifles',
-  heavyTank: 'tank', tankDestroyer: 'tank', cev: 'tank', reconVehicle: 'ifv', commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
+  commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
   artillery: 'mortar', spMortar: 'mortar', rockets: 'mortar', cbRadar: 'mortar',
   aa: 'mgTeam', towedAA: 'mgTeam', manpads: 'atTeam',
 };
