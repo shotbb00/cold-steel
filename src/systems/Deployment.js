@@ -1,10 +1,12 @@
-// The deployment phase (single player): every battle opens with the clock stopped. You place
+// The deployment phase (campaign battles, alone or in co-op): the battle opens with the clock stopped. You place
 // your stacks on the field — select one and click where it should stand, and it is there at once,
 // every man or vehicle in its slot — anywhere inside your deployment zone: your side of a gold line
 // just ahead of where your forces start. Pull back out of contact, spread out, mass on a flank,
 // then Start battle (the bar's button, Space or Enter). Until then the simulation doesn't step at
 // all (mode timers, the AI, fire): only the camera, selection and orders, the HUD and the fog of
 // war run (GameEngine.stepWaiting, plus the renderers of the stacks you place).
+// Co-op: the host runs the guest's placements and shows them to it (NetHost.deploySnapshot); the
+// battle starts once both have pressed Start (deploy-ready → deploy-go).
 import * as THREE from 'three';
 import { enemyOf } from '../data/factions.js';
 import { GroundDecal } from '../world/GroundDecal.js';
@@ -44,11 +46,30 @@ export class Deployment {
     this.edge.place(base.x + d.x * limit, base.z + d.y * limit, 1, Math.atan2(-d.x, -d.y));
     g.scene.add(this.edge.mesh);
     this.on = true;
+    this.ready = { host: false, guest: false };
     this.bar.hidden = false;
   }
 
-  /** Start battle: the clock runs. */
+  /** Start battle (the button, Space, Enter) — in co-op, once the other player is ready too. */
   start() {
+    if (!this.on) return;
+    const net = this.game.net;
+    if (!net) return this.go();
+    this.bar.querySelector('.dp-text').textContent = 'Ready — waiting for the other player to start…';
+    this.bar.querySelector('.dp-go').disabled = true;
+    if (net.isClient) net.link.send({ k: 'deploy-ready' });
+    else { this.ready.host = true; this.maybeGo(); }
+  }
+
+  /** Co-op host: both ready → the battle begins for both. */
+  maybeGo() {
+    if (!this.on || !this.ready.host || !this.ready.guest) return;
+    this.game.net.link.send({ k: 'deploy-go', t: this.game.time });
+    this.go();
+  }
+
+  /** The clock runs. */
+  go() {
     if (!this.on) return;
     this.on = false;
     this.bar.hidden = true;
@@ -60,6 +81,7 @@ export class Deployment {
   /** A frame while deploying: what the player needs to look and place, nothing that moves the battle. */
   step(dt) {
     const g = this.game;
+    if (g.net?.isHost) g.net.deploySnapshot(dt); // the guest's placements run here, and it sees them
     g.world.refresh();
     g.visibility?.update(dt);
     for (const s of g.world.stacks) s.renderer.update(0, g.time);

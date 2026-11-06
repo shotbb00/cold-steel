@@ -18,6 +18,7 @@ const MAX_LIT = 400;            // cells lit in a battle
 const FIRE_SIZE = [25, 60];     // cells one fire may burn before it runs out of steam
 const HURT = 14;                // hit points a second to a man standing in it
 const FLEE_EVERY = 6;           // seconds between a stack's moves away from the fire
+const TUFT_REACH = 1.6;         // metres from a tuft of flame that burn
 const FLAMING = 0.35;           // share of a cell's burn it is in flames (the front); then it smoulders
 const MAX_TUFTS = 45;           // flame tufts drawn at once (~18 particles each; the fire pool is 1500)
 const CORE = 0xffc45a;          // flame colours: the bright core low down…
@@ -150,9 +151,10 @@ export class Fire {
           if (Math.random() < p) this.light(c.ix + dx, c.iz + dz, c.fire);
         }
       }
-      // burns whoever is in it; infantry pulls back upwind
+      // burns whoever stands in its flames (the front, at its tufts — the smouldering ground doesn't); infantry pulls back upwind
+      if (c.t > c.dur * FLAMING) continue;
       for (const u of g.world.neighbors({ x: c.x, y: 0, z: c.z }, CELL * 0.75, [])) {
-        if (!u.alive) continue;
+        if (!u.alive || !c.tufts.some((f) => Math.hypot(u.pos.x - f.x, u.pos.z - f.z) < TUFT_REACH + u.radius)) continue;
         const s = u.stack;
         u.receiveDamage(HURT * TICK * (s.usesCover ? 1 : 0.15), null, 0.2, null, 0.1);
         if (!s.usesCover || g.time < (s.fleeAt ?? 0)) continue; // nobody holds a position in a fire

@@ -44,6 +44,7 @@ export class NetClient {
     game.projectiles.cosmetic = true;
 
     link.on('init', (m) => this.init(m));
+    link.on('deploy-go', (m) => this.deployGo(m));
     link.on('ev', (m) => { for (const e of m.e) this.queue.push([m.t, e]); });
     link.on('st', (m) => this.queue.push([m.t, ['state', m]]));
     link.onSnapshot((buf) => this.onSnapshot(buf));
@@ -73,6 +74,18 @@ export class NetClient {
     this.clock(m.t);
     this.renderTime = m.t - this.delay;
     this.started = true;
+    if (this.game.deploys) this.game.deployment.begin(); // campaign co-op: place your stacks too (systems/Deployment.js)
+  }
+
+  /** Both players are ready: the battle starts, and the clock follows the battle's snapshots, not deployment's. */
+  deployGo(m) {
+    this.game.deployment.go();
+    this.snaps = [];
+    this.latest = -Infinity;
+    this.offset = null;
+    this.clock(m.t);
+    this.renderTime = m.t - this.delay;
+    this.prevNow = this.renderTime;
   }
 
   onSnapshot(buf) {

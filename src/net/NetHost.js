@@ -13,6 +13,8 @@
 import { encodeSnapshot, packArgs, v3, dir3, SNAPSHOT_RATE, STATE_RATE } from './protocol.js';
 import { enemyOf } from '../data/factions.js';
 
+const DEPLOY_CLOCK = -1e4; // deployment snapshots' clock (s): below any battle time
+
 export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn', 'weld', 'tend']; // (new ones go at the end: the client looks them up by index)
 export const SOUND_CALLS = ['play', 'weapon'];
 
@@ -44,6 +46,7 @@ export class NetHost {
 
     link.on('ready', () => this.start());
     link.on('order', (m) => this.orders.push(m.o));
+    link.on('deploy-ready', () => { const d = game.deployment; if (d?.on) { d.ready.guest = true; d.maybeGo(); } });
     link.on('bye', () => this.peerLeft());
     link.onClose(() => this.peerLeft());
   }
@@ -153,6 +156,23 @@ export class NetHost {
       this.stateT = Math.max(-0.2, this.stateT) + 1 / STATE_RATE;
       this.sendState();
     }
+  }
+
+  /**
+   * Deployment (campaign co-op): the clock stands still, so the guest's orders run here and the
+   * stacks go out on a clock of their own, far below the battle's — the battle's first real
+   * snapshot is newer than all of them (and the guest resets its clock at deploy-go).
+   */
+  deploySnapshot(dt) {
+    if (!this.ready) return;
+    for (const o of this.orders.splice(0)) {
+      try { this.game.orders.run(this.remoteFaction, o, 'guest'); } catch (e) { console.error('bad order', o, e); }
+    }
+    this.deployT = (this.deployT ?? 0) + dt;
+    this.snapT -= dt;
+    if (this.snapT > 0) return;
+    this.snapT = 1 / SNAPSHOT_RATE;
+    this.link.sendSnapshot(encodeSnapshot(DEPLOY_CLOCK + this.deployT, this.game.world.stacks.filter((s) => s.alive), []));
   }
 
   sendSnapshot() {
