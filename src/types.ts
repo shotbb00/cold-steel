@@ -84,7 +84,9 @@ export interface UnitStats {
   jammer?: { radius: number; deploy: number }; // electronic warfare (systems/Jamming.js)
   cbRadar?: { range: number; arc: number; deploy: number }; // a counter-battery radar (systems/CounterBattery.js)
   airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
-  noStabilizer?: boolean; // the main gun only fires standing still (UnitStack.updateHeavyWeapon; 1945 tanks)
+  noStabilizer?: boolean;
+  /** a demolition carrier (1945's Goliath): blows up on contact with an enemy (systems/Support.js) */
+  goliath?: { trigger: number; radius: number; damage: number }; // the main gun only fires standing still (UnitStack.updateHeavyWeapon; 1945 tanks)
   demolition?: boolean; // goes for bunkers, held houses and trenches first
   dozer?: boolean;      // digs vehicle positions (Construction 'revetment')   // a sniper: officers, crews and observers first, never vehicles
   quietShot?: number;   // share of the usual time a shot keeps the shooter revealed
@@ -150,6 +152,8 @@ export interface UnitType {
   /** only these armies field it (the NVA's Kampfgruppe); uncapped: outside the stack limit */
   armies?: string[];
   uncapped?: boolean;
+  /** an army's own price for the type (the Goliath in 1945's mine-clearing slot), else `cost` */
+  armyCost?: Record<string, number>;
   /** at most this many stacks of the type in the field per side (an uncapped type's own limit) */
   limit?: number;
   /** only arrives by helicopter (air assault) */

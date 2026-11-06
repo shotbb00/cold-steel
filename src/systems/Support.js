@@ -11,6 +11,7 @@
 import { dist2DSq } from '../core/math.js';
 import { AIState } from '../ai/StackAI.js';
 
+const _near = [];
 const TICK = 0.5;
 const SEEK_EVERY = 3;   // seconds between looking for new work
 
@@ -34,6 +35,13 @@ export class Support {
         const u = s.units.find((m) => m.alive);
         this.game.smoke?.add(u.pos.x + Math.sin(u.yaw) * sg.ahead, u.pos.z + Math.cos(u.yaw) * sg.ahead, { radius: sg.radius, duration: sg.duration });
         s.job = 'making smoke';
+      }
+      // the Goliath: driven up to an enemy — a tank, a bunker, men in a house — it goes off
+      const gol = s.alive && s.stats.goliath;
+      if (gol) {
+        for (const u of s.units) {
+          if (u.alive && world.neighbors(u.pos, gol.trigger, _near).some((o) => o.alive && o.faction !== s.faction)) this.detonate(s, u, gol);
+        }
       }
       const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
       s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
@@ -90,6 +98,22 @@ export class Support {
       s.job = repair ? job : treated ? `Treating ${treated} wounded` : null;
       if (!working) this.seek(s, s.stats.repair ?? s.stats.heal, repair);
     }
+  }
+
+  /** A Goliath's charge: heavy damage all round (armour hardly helps), houses shaken, the carrier gone. */
+  detonate(s, u, gol) {
+    const g = this.game;
+    const p = u.pos.clone();
+    for (const o of g.world.neighbors(p, gol.radius + 3, _near.slice(0, 0))) {
+      if (!o.alive || o.faction === s.faction) continue;
+      const d = Math.max(0, Math.hypot(o.pos.x - p.x, o.pos.z - p.z) - o.radius);
+      if (d <= gol.radius) o.stack.damageUnit(o, gol.damage * (1 - d / gol.radius), s, 0.85, null, 1);
+    }
+    g.buildings?.blast(p, gol.damage, gol.radius);
+    g.effects.explosion(p, 2.6, { ground: true, fire: 1.2 });
+    g.audio?.play('explosion.big', p, { volume: 1 });
+    s.damageUnit(u, 1e6, null);
+    g.tellBoth(s.faction, `${s.name}: the Goliath went off`, 'An enemy Goliath went off!');
   }
 
   /** Something to see at the patient: welding sparks on a vehicle, a medic's glow over a man. */

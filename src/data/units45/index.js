@@ -455,15 +455,19 @@ const mineClear = derive(T.mineClear, {
   stats: { nightSight: undefined, noStabilizer: true },
   factionStats: {
     sov: { minePlough: true },
-    pact: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0 }, // Goliath: drives in and blows the lane
-    fj: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0 },
+    // Goliath: blows a lane through a minefield, or — driven up to a tank, a bunker, a held house — goes off against it
+    pact: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0,
+      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50 },
+    fj: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0,
+      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50 },
   },
+  armyCost: { wh: 120, fj: 120 },   // the Goliath: cheap — it is used up
   models: { nato: buildUsT1E3, sov: buildSovPT3, pact: buildDeGoliath, fj: buildDeGoliath },
   variants: {
     nato: { name: 'T1E3 Mine Exploder', weapon: 'roller discs, 75 mm', text: '"Aunt Jemima": a Sherman pushing two great sets of steel discs that set off the mines ahead of it.' },
     sov: { name: 'T-34 with PT-3', weapon: 'mine rollers, 85 mm', text: 'Heavy rollers on arms ahead of the tracks: lane after lane through the minefields.' },
-    pact: { name: 'Goliath', weapon: 'demolition charge', text: 'The little remote-controlled carrier on its cable: driven into the minefield, it blows a lane.' },
-    fj: { name: 'Goliath', weapon: 'demolition charge', text: 'The little remote-controlled carrier on its cable: driven into the minefield, it blows a lane.' },
+    pact: { name: 'Goliath', weapon: '100 kg demolition charge', text: 'The little remote-controlled carrier on its cable. Into a minefield it blows a lane; driven up to a tank, a bunker or a held house it goes off against it. Small, low and hard to spot — and used up.' },
+    fj: { name: 'Goliath', weapon: '100 kg demolition charge', text: 'The little remote-controlled carrier on its cable. Into a minefield it blows a lane; driven up to a tank, a bunker or a held house it goes off against it. Small, low and hard to spot — and used up.' },
   },
 });
 
