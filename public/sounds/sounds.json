@@ -123,6 +123,12 @@
     "weapons/rocket-launch-low.wav",
     "weapons/himars-2.wav"
   ],
+  "nato.katyusha": [
+    "weapons/katyusha-1.mp3"
+  ],
+  "pact.katyusha": [
+    "weapons/katyusha-1.mp3"
+  ],
   "nato.sam": [
     "weapons/missile-1.wav"
   ],

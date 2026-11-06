@@ -18,7 +18,7 @@ in `sounds.json` under the key they replace:
 - Loops (engines, tracks, rotors, wind, rain) are made seamless when they load: a few seconds of
   steady sound is plenty.
 - Formats: `.ogg` or `.mp3` (both play in every current browser), mono is fine and smaller.
-- Licence: only use sounds you may redistribute (CC0 / public domain, or your own). Note the source
+- Licence: only use sounds you may redistribute (CC0 / public domain, or your own; Pixabay files by exception, see CREDITS.md). Note the source
   of each in `CREDITS.md`.
 
 ## Keys

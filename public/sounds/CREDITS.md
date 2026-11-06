@@ -1,6 +1,6 @@
 # Sound credits
 
-Every recorded sound in this folder is CC0 1.0 (public domain dedication) — free to use, change
+Every recorded sound in this folder, except those listed under Pixabay, is CC0 1.0 (public domain dedication) — free to use, change
 and redistribute without permission or attribution. They are credited here anyway, with thanks.
 Files in `far/` are distant versions rendered from the near recordings (muffled, echoes, reverb).
 
@@ -16,6 +16,15 @@ CC0 — <https://opengameart.org/content/the-free-firearm-sound-library> (origin
 Bullet impacts (`impacts/armor-*`, `stone-*`, `ground-*`, `flesh-*`) and footsteps (`steps/`) from the
 [Impact Sounds](https://kenney.nl/assets/impact-sounds) pack; `ui/click-*`, `ui/order-*`, `ui/ready.ogg` from the
 [Interface Sounds](https://kenney.nl/assets/interface-sounds) pack. By Kenney (kenney.nl), CC0.
+
+## Pixabay
+
+Not CC0: under the [Pixabay Content License](https://pixabay.com/service/license-summary/) — free to use in this game, no attribution required,
+but not to be sold or redistributed on their own.
+
+| File | Sound | Author |
+|---|---|---|
+| `weapons/katyusha-1.mp3` | [Katyusha Rocket (Single)](https://pixabay.com/sound-effects/katyusha-rocket-single-114499/) | kuiycb |
 
 ## Freesound
 
