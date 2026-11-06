@@ -108,6 +108,7 @@ export class ProjectileSystem {
       b.life -= dt;
       b.age += dt;
       if (b.trail) this.effects.trail(b.pos, b.dir);
+      else if (b.ignite) this.effects.flame?.(b.pos, b.dir, b.age); // (a flamethrower: drawn as flame, not a tracer)
       const heavy = b.splash > 5; // howitzer / rocket artillery: a long tearing scream, heard farther
       if (b.whistleAt >= 0 && b.age >= b.whistleAt - (heavy ? 1.2 : 0)) {
         b.whistleAt = -1;
@@ -267,6 +268,11 @@ export class ProjectileSystem {
       }
       this.suppressAround(point, b.faction, r * 2.2, 0.6);
       this.buildings?.blast(point, b.damage, r);
+    }
+    if (b.ignite) { // a flamethrower's fuel: it burns where it lands, nothing goes bang
+      this.effects.flameSplash?.(point);
+      if (!this.cosmetic && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) this.fire?.ignite(point.x, point.z, b.ignite);
+      return;
     }
     const size = Math.max(0.5, r / 3.5); // tank round / rocket ~1, 155 mm ~2
     // earth is thrown up only where it bursts on the earth; a hedge, tree or wall top hit in the air

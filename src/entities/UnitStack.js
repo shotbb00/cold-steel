@@ -1377,11 +1377,11 @@ export class UnitStack {
       vsArmor: s.vsArmor ?? 1,
       suppress: (s.suppressPower ?? 1) * (ambush ? AMBUSH.suppress : 1),
       ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
-      tracer: Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS),
+      tracer: !s.ignite && Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS), // (flame draws itself: ProjectileSystem)
       trail: !!s.trail,
     });
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
-    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior);
+    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
   }

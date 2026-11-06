@@ -21,7 +21,7 @@ const STRIKE: Record<string, Aircraft> = {
   pact: { name: 'Fw 190 F-8', weapon: '2 × 20 mm MG 151 · SC 250 bomb', text: 'The Focke-Wulf as a fighter-bomber: one 250 kg bomb on the target, then the cannon.',
     model: buildWhFw190F, paint: RLM, engineSound: 'prop', gun: CANNON, rockets: { count: 1, interval: 0.1, damage: 1100, splash: 7, vsArmor: 0.9, pierce: 0.5, speed: 160, sound: 'heli.rocket' }, hp: 7 },
   fj: { name: 'Ju 87 G Stuka', weapon: '2 × 3.7 cm BK 3,7', text: 'The tank-buster Stuka: two 37 mm guns under the wings, slow and deadly to armour — and to itself when fighters are about.',
-    model: buildFjJu87, paint: RLM, engineSound: 'prop', gun: { rate: 3, damage: 520, splash: 1.5, vsArmor: 1, pierce: 0.7, speed: 850, tracer: 0.6, size: 1.2, sound: 'pact.cannon' }, hp: 6 },
+    model: buildFjJu87, paint: RLM, engineSound: 'prop', siren: 'stuka.siren', gun: { rate: 3, damage: 520, splash: 1.5, vsArmor: 1, pierce: 0.7, speed: 850, tracer: 0.6, size: 1.2, sound: 'pact.cannon' }, hp: 6 },
 };
 const FIGHTER: Record<string, Aircraft> = {
   nato: { name: 'P-51D Mustang', weapon: '6 × .50 cal', text: 'Long-range escort fighter: a pair circles over the spot and shoots down what comes near.', model: buildUsP51, paint: SILVER, engineSound: 'prop', gun: MG50, hp: 6, guns: true },

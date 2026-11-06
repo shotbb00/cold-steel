@@ -449,6 +449,28 @@ export class EffectsSystem {
   }
 
   /** Keep a wreck burning: flames at the hull, a black column drifting downwind. */
+  /** A flamethrower's burning fuel in flight: a puff of flame that swells as the jet spreads (`age` s out). */
+  flame(pos, dir, age) {
+    if (Math.random() < 0.4) return;
+    const k = Math.min(1, age * 2.5);
+    this.fire.spawn(pos.x + rnd(-0.15, 0.15), pos.y + rnd(-0.1, 0.15), pos.z + rnd(-0.15, 0.15), {
+      vx: dir.x * 3, vy: 0.8 + k, vz: dir.z * 3, size: 0.35 + 1.4 * k, grow: 1.6, life: rnd(0.12, 0.22), color: Math.random() < 0.3 ? FLASH : FIRE, bright: 1.7, drag: 3,
+    });
+    if (k > 0.6 && Math.random() < 0.12) {
+      this.smoke.spawn(pos.x, pos.y + 0.3, pos.z, { vy: rnd(1, 2.5), size: rnd(0.8, 1.4), grow: 1.5, life: rnd(1, 1.8), alpha: 0.6, color: SMOKE_BLACK, drag: 1, wind: 0.5 });
+    }
+  }
+
+  /** Where the burning fuel lands: it splashes and flares up — no blast. */
+  flameSplash(pos) {
+    for (let i = 0; i < 4; i++) {
+      this.fire.spawn(pos.x + rnd(-0.8, 0.8), pos.y + rnd(0.1, 0.8), pos.z + rnd(-0.8, 0.8), {
+        vy: rnd(1, 3), size: rnd(1, 1.8), grow: 1.2, life: rnd(0.25, 0.45), color: FIRE, bright: 1.8, drag: 3,
+      });
+    }
+    if (Math.random() < 0.3) this.smoke.spawn(pos.x, pos.y + 0.8, pos.z, { vy: rnd(1.5, 3), size: rnd(1, 1.8), grow: 1.6, life: rnd(1.5, 2.5), alpha: 0.7, color: SMOKE_BLACK, drag: 1, wind: 0.5 });
+  }
+
   burn(pos, duration = 40, size = 1) {
     this.emitters.push({ kind: 'burn', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
   }

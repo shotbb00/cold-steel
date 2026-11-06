@@ -410,7 +410,7 @@ const engineers = derive(T.engineers, {
   specialist: { count: 1, stats: {
     range: 32, aggroRange: 40, preferredRange: 20, damage: 75, splash: 2.2, fireCooldown: 0.07, burst: 1, burstInterval: 0,
     boltSpeed: 32, boltSize: 1.4, tracer: 1, spread: 0.05, magSize: 40, reloadTime: 7, vsStructure: 3, suppressPower: 3,
-    ignite: 0.6, vsArmor: 0.15, aimTime: 0.3, playerFireInterval: 0.07, weaponSound: 'mg',
+    ignite: 0.6, vsArmor: 0.15, aimTime: 0.3, playerFireInterval: 0.07, weaponSound: 'flame',
   } },
   specialistModels: men({ weapon: 'flame', engineer: true }),
   variants: {

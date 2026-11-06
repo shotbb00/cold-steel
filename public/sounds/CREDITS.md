@@ -32,6 +32,14 @@ but not to be sold or redistributed on their own.
 (YouTube, uploaded by Kyntteri). The original source and its licence are unknown — replace these if a
 public-domain or CC0 recording turns up, or if the rights holder objects.
 
+The same goes for these, cut from YouTube uploads whose source and licence are unknown:
+
+| File | From | Uploader |
+|---|---|---|
+| `guns/garand-1.wav` … `-7.wav`, `guns/garand-last.wav` (the clip's ping) | [M1 Garand Sound Effect](https://www.youtube.com/watch?v=cXg_mV2ITxU) | War Sound Effects |
+| `aircraft/stuka-siren.wav` | [Ju-87 Stuka dive attack](https://www.youtube.com/watch?v=63BxhHeeipY) | Manuel Perales |
+| `weapons/flame-1.wav` … `-4.wav` | [flamethrower sound effects](https://www.youtube.com/watch?v=sRXrS6xOn4Y) | MasterHand125 |
+
 ## Freesound
 
 | File | Sound | Author | Licence |

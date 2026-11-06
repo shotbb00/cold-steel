@@ -200,6 +200,8 @@ export interface Aircraft {
   rotorSound?: string;
   rotorSpeed?: number;
   engineSound?: string;
+  /** a one-off sound looped down the attack run (the Ju 87's siren) */
+  siren?: string;
   gun: AircraftWeapon & { rate: number; tracer: number; sound: string };
   rockets?: AircraftWeapon & { count: number; interval: number };
   /** fighter patrol with guns only (1945): it dives on its target instead of firing missiles */

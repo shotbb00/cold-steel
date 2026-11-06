@@ -275,7 +275,10 @@ class Sortie {
       if (this.state === 'ingress' && d < 140) this.state = 'attack';     // the approach: slowing, guns on the LZ
       if (this.state === 'attack' && d < 4) this.state = 'land';
     } else {
-      if (this.state === 'ingress' && d < p.rocketsFrom + 40) this.state = 'attack';
+      if (this.state === 'ingress' && d < p.rocketsFrom + 40) {
+        this.state = 'attack';
+        if (this.type.siren) this.siren = game.audio.loop(this.type.siren, this.pos, 1.2, 40); // the Stuka's Jericho trumpet, all down the dive
+      }
       if (this.state === 'attack' && d < p.gunTo - 15) {
         this.state = 'break';
         if (this.kind === 'recon') {
@@ -425,6 +428,8 @@ class Sortie {
     r.root.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
     spin(r, this.type, dt);
     this.loop.setPos(this.pos);
+    this.siren?.setPos(this.pos);
+    if (this.siren && this.state !== 'attack') { this.siren.stop(); this.siren = null; }
   }
 
   fireWeapons(dt, d) {
@@ -640,6 +645,7 @@ class Sortie {
   finish(wreck = false) {
     this.state = 'done';
     this.loop.stop();
+    this.siren?.stop();
     if (!wreck) this.rig.root.removeFromParent();
     else this.rig.root.traverse((o) => { if (o.isMesh) o.material = WRECK; });
   }
