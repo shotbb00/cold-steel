@@ -42,7 +42,7 @@ const ENGINE_LEVEL = { 'engine.turbine': 0.55 }; // gas turbines: a hiss, not a 
 const WIND = 0.11;         // the wind bed; halved while the guns are talking
 const BED = 0.2;           // the distant battle at its loudest
 const BED_FILL = 90;       // weighted shots in the last ~20 s for the bed to be about two-thirds up
-const SHOT_WEIGHT = { cannon: 3, arty: 5, mlrs: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
+const SHOT_WEIGHT = { cannon: 3, arty: 5, mlrs: 5, katyusha: 5, nebelwerfer: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
 const QUIET_FOR = 18;      // seconds without gunfire before birds come back
 const BUILD_SLICE_MS = 6;  // main-thread time per background synthesis slice
 
@@ -321,7 +321,7 @@ export class AudioSystem {
   weapon(faction, kind, pos, indoors = false) {
     this.lastLoud = this.game.world.time;
     this.intensity += SHOT_WEIGHT[kind] ?? 1;
-    const volume = { cannon: 0.85, arty: 0.85, mlrs: 0.85, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
+    const volume = { cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.95, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
     // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
     const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
     this.play(`${faction}.${kind}`, pos, { volume, throttle: (kind === 'cannon' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });

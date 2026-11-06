@@ -268,3 +268,26 @@ export const CODEX = {
     pact: 'The Mi-8 Hip, the most produced helicopter in history — transport, gunship and command post.',
   },
 };
+
+// 1945 (data/epoch.js): entries whose use differs from 1985's, by type id; `armies` holds one army's
+// own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
+export const CODEX45 = {
+  jammer: {
+    use: 'Set it up close behind the front, facing the enemy: after eight seconds it keeps a smoke screen standing 20 m in front of it for as long as it stays. Use it to cover an advance over open ground, a river crossing or a withdrawal.',
+    strong: 'Blinding enemy guns and observers across open ground',
+    weak: 'No weapon, thin skin — and the screen blinds your own guns too',
+    counter: 'The generator sits just behind its smoke: shell the screen\'s near edge, or go round where the smoke isn\'t.',
+    nato: 'US chemical smoke generator companies screened river crossings, bridges and ports from 1943 with M1 and M2 fog-oil generators.',
+    sov: 'The Red Army screened its river crossings, the Dnieper among them, with smoke generators and smoke pots.',
+    pact: 'The Wehrmacht\'s Nebeltruppen — the smoke troops — laid screens over crossings and positions as well as firing the Nebelwerfer.',
+    armies: {
+      fj: {
+        use: 'A supply point on wheels. Set it up (four seconds) behind your line: squads within 60 m can take in new men there (Refill) and get their grenades and Panzerfausts back four times faster. Keep it near the fighting but out of the enemy\'s sight.',
+        strong: 'Keeping squads at strength far from your own lines',
+        weak: 'No weapon, no armour, and everything near it depends on it',
+        counter: 'Find it — squads that keep refilling point to it — and shell it.',
+        fj: 'Dropped without heavy transport, the Fallschirmjäger lived on what lorries they could gather — supply was always their weak point.',
+      },
+    },
+  },
+};

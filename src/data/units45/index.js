@@ -23,7 +23,12 @@ const derive = (base, o) => ({ ...base, ...o, stats: { ...base.stats, ...o.stats
 const rifles = derive(T.rifles, {
   name: 'Rifle Squad', shortName: 'Rifles',
   stats: { lightAT: 0, nightSight: undefined },
-  factionStats: { pact: { lightAT: 1 }, fj: { lightAT: 1, hp: 115, breakMorale: 0.1 } }, // the Germans' Panzerfaust; the Fallschirmjäger hold longer
+  factionStats: {   // the rifles' rates: bolt actions slow, the Garand and the FG 42 quick (seconds per aimed shot, rounds a clip)
+    nato: { fireCooldown: 1.3, magSize: 8, reloadTime: 2.4, playerFireInterval: 0.3 },                          // M1 Garand
+    sov: { fireCooldown: 2.6, magSize: 5, reloadTime: 3.5, playerFireInterval: 1.4 },                           // Mosin-Nagant
+    pact: { fireCooldown: 2.6, magSize: 5, reloadTime: 3.5, playerFireInterval: 1.4, lightAT: 1 },              // Kar98k, the Panzerfaust
+    fj: { fireCooldown: 1.1, magSize: 20, reloadTime: 3, playerFireInterval: 0.15, lightAT: 1, hp: 115, breakMorale: 0.1 }, // FG 42; they hold longer
+  },
   models: men(),
   variants: {
     nato: { name: 'Rifle Squad', weapon: 'M1 Garand, BAR', text: 'The GI rifle squad: the semi-automatic Garand gives every man more shots than the enemy, the BAR the base of fire.' },
@@ -35,7 +40,7 @@ const rifles = derive(T.rifles, {
 
 const atTeam = derive(T.atTeam, {
   models: men({ weapon: 'at' }),
-  factionStats: { sov: { damage: T.atTeam.stats.damage * 0.6, range: 90 } }, // the PTRS: an anti-tank rifle, not a rocket
+  factionStats: { sov: { damage: T.atTeam.stats.damage * 0.6, range: 90, magSize: 5, reloadTime: 4, fireCooldown: 2, playerFireInterval: 1 } }, // the PTRS: a semi-automatic anti-tank rifle, not a rocket
   variants: {
     nato: { name: 'Bazooka Team', weapon: 'M9 bazooka, 2.36 in', text: 'The bazooka: a light rocket that stops a Panzer IV from the side — not a Panther from the front.' },
     sov: { name: 'Anti-Tank Rifle Team', weapon: 'PTRS-41, 14.5 mm', text: 'A long anti-tank rifle: no match for a tank’s front by 1945, but it opens half-tracks and tank sides.' },
@@ -45,6 +50,12 @@ const atTeam = derive(T.atTeam, {
 });
 
 const mgTeam = derive(T.mgTeam, {
+  specialist: { ...T.mgTeam.specialist, armyStats: {
+    nato: { burst: 10, burstInterval: 0.11, fireCooldown: 2.2 },                            // M1919: ~550 rounds a minute
+    sov: { burst: 8, burstInterval: 0.1, fireCooldown: 2.2, magSize: 47, reloadTime: 5 },   // DP-28: the 47-round pan
+    pact: { burst: 16, burstInterval: 0.05, fireCooldown: 2.0, playerFireInterval: 0.05 },  // MG 42: ~1,200 a minute
+    fj: { burst: 16, burstInterval: 0.05, fireCooldown: 2.0, playerFireInterval: 0.05 },
+  } },
   models: men(),
   specialistModels: men({ weapon: 'mg' }),
   variants: {
@@ -70,10 +81,10 @@ const tank = derive(T.tank, {
   name: 'Tanks', shortName: 'Tanks',
   stats: { nightSight: undefined, noStabilizer: true, armor: 0.55, hp: 1100, range: 180, damage: 360, smoke: { charges: 1 } },
   factionStats: {
-    nato: { noStabilizer: false, armor: 0.5, damage: 330, speed: 5.4 },   // Sherman: the gyrostabiliser, more but thinner
-    sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6, carries: { unit: 'rifles', count: 8 } }, // (Tank riders: data/epoch.js)      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
-    pact: { armor: 0.6, damage: 380 },                                       // Panzer IV H: the long 7.5 cm
-    fj: { armor: 0.6, damage: 380, speed: 4.6 },                             // StuG III G: low, the same gun, no turret
+    nato: { noStabilizer: false, armor: 0.5, damage: 330, speed: 5.4, fireCooldown: 6 },   // Sherman: the gyrostabiliser, more but thinner
+    sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6, fireCooldown: 8, carries: { unit: 'rifles', count: 8 } }, // (Tank riders: data/epoch.js)      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
+    pact: { armor: 0.6, damage: 380, fireCooldown: 6.5 },                    // Panzer IV H: the long 7.5 cm
+    fj: { armor: 0.6, damage: 380, speed: 4.6, fireCooldown: 7 },            // StuG III G: low, the same gun, no turret
   },
   models: { nato: buildUsSherman, sov: buildSovT34, pact: buildWhPanzerIV, fj: buildFjStuG },
   engine: 'engine.diesel',
@@ -115,10 +126,10 @@ const heavyTank = derive(T.heavyTank, {
   name: 'Heavy Tanks', shortName: 'Heavy tanks',
   stats: { nightSight: undefined, noStabilizer: true, smoke: { charges: 1 }, armor: 0.78, hp: 1650, damage: 450, range: 210 },
   factionStats: {
-    nato: { armor: 0.7, damage: 430, fireCooldown: 5.6, speed: 5.4 },                // M26: the 90 mm, quick for a heavy
-    sov: { armor: 0.74, damage: 540, fireCooldown: 9, speed: 4.8 },                  // IS-2: the 122 mm, two-piece rounds: slow to load
-    pact: { armor: 0.8, damage: 470, speed: 5.2 },                                    // Panther: the long 7.5 cm, the sloped front
-    fj: { armor: 0.8, damage: 480, speed: 4.2 },                                      // Tiger I: thick, slow, the 8.8
+    nato: { armor: 0.7, damage: 430, fireCooldown: 7, speed: 5.4 },                // M26: the 90 mm, quick for a heavy
+    sov: { armor: 0.74, damage: 540, fireCooldown: 16, speed: 4.8 },                  // IS-2: the 122 mm, two-piece rounds: slow to load
+    pact: { armor: 0.8, damage: 470, speed: 5.2, fireCooldown: 7 },                   // Panther: the long 7.5 cm, the sloped front
+    fj: { armor: 0.8, damage: 480, speed: 4.2, fireCooldown: 8 },                     // Tiger I: thick, slow, the 8.8
   },
   models: { nato: buildUsPershing, sov: buildSovIS2, pact: buildWhPanther, fj: buildFjTiger },
   engine: 'engine.diesel',
@@ -157,10 +168,10 @@ const tankDestroyer = derive(T.tankDestroyer, {
     boltSpeed: 650, boltSize: 1.5, tracer: 1, spread: 0.004, magSize: 40, reloadTime: 8, playerFireInterval: 6, hp: 900, armor: 0.5, speed: 5.6, turretRate: 0.6,
   },
   factionStats: {
-    nato: { armor: 0.25, hp: 700, speed: 7.5, turretRate: 1.0 },          // M18: thin and the fastest thing on tracks
-    sov: { armor: 0.55, hp: 950, speed: 5.6, turretRate: 0.6 },           // SU-100: the gun in the hull
-    pact: { armor: 0.6, hp: 950, speed: 5.0, damage: 480 },               // Jagdpanzer IV/70: low, the long gun
-    fj: { armor: 0.55, hp: 800, speed: 5.2, damage: 420 },                // Hetzer: small, low, hard to spot
+    nato: { armor: 0.25, hp: 700, speed: 7.5, turretRate: 1.0, fireCooldown: 6 },          // M18: thin and the fastest thing on tracks
+    sov: { armor: 0.55, hp: 950, speed: 5.6, turretRate: 0.6, fireCooldown: 9 },           // SU-100: the gun in the hull
+    pact: { armor: 0.6, hp: 950, speed: 5.0, damage: 480, fireCooldown: 7 },               // Jagdpanzer IV/70: low, the long gun
+    fj: { armor: 0.55, hp: 800, speed: 5.2, damage: 420, fireCooldown: 7 },                // Hetzer: small, low, hard to spot
   },
   models: { nato: buildUsHellcat, sov: buildSovSU100, pact: buildWhJagdpanzerIV, fj: buildFjHetzer },
   engine: 'engine.diesel', tracks: 'tracks.heavy',
@@ -176,10 +187,10 @@ const cev = derive(T.cev, {
   name: 'Assault Guns', shortName: 'Assault',
   stats: { noStabilizer: true, nightSight: undefined, smoke: { charges: 1 } },
   factionStats: {
-    nato: { dozer: true, damage: 900, vsStructure: 2 },                                    // M4 dozer: the blade, the 75 mm
-    sov: { dozer: false, damage: 1700, vsStructure: 2.6, splash: 7.5, fireCooldown: 16 },  // ISU-152: the "beast killer"
-    pact: { dozer: false, damage: 1500 },                                                   // Brummbär: the 15 cm
-    fj: { dozer: false, damage: 2600, splash: 10, fireCooldown: 26, range: 160 },           // Sturmtiger: a 38 cm rocket
+    nato: { dozer: true, damage: 900, vsStructure: 2, fireCooldown: 6 },                                    // M4 dozer: the blade, the 75 mm
+    sov: { dozer: false, damage: 1700, vsStructure: 2.6, splash: 7.5, fireCooldown: 20 },  // ISU-152: the "beast killer"
+    pact: { dozer: false, damage: 1500, fireCooldown: 18 },                                                   // Brummbär: the 15 cm
+    fj: { dozer: false, damage: 2600, splash: 10, fireCooldown: 40, range: 160 },           // Sturmtiger: a 38 cm rocket
   },
   models: { nato: buildUsM4Dozer, sov: buildSovISU152, pact: buildWhBrummbaer, fj: buildFjSturmtiger },
   engine: 'engine.diesel',
@@ -209,10 +220,10 @@ const rockets = derive(T.rockets, {
   name: 'Rocket Artillery', shortName: 'Rockets',
   stats: { nightSight: undefined },
   factionStats: {
-    nato: { armor: 0.5, hp: 1000, magSize: 12 },                                                         // Calliope: on a Sherman
-    sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14 },  // Katyusha: sixteen rails, a lorry
-    pact: { magSize: 10, damage: 130, fireCooldown: 0.6 },                                               // Panzerwerfer 42: ten tubes
-    fj: { magSize: 6, damage: 140, fireCooldown: 0.7, towed: { deploy: 12 }, armor: 0, hp: 250 },        // Nebelwerfer 41: six, towed
+    nato: { armor: 0.5, hp: 1000, magSize: 12, weaponSound: 'mlrs' },                                                         // Calliope: on a Sherman
+    sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14, weaponSound: 'katyusha' },  // Katyusha: sixteen rails, a lorry
+    pact: { magSize: 10, damage: 130, fireCooldown: 0.6, weaponSound: 'nebelwerfer' },                                               // Panzerwerfer 42: ten tubes
+    fj: { magSize: 6, damage: 140, fireCooldown: 0.7, towed: { deploy: 12 }, armor: 0, hp: 250, weaponSound: 'nebelwerfer' },        // Nebelwerfer 41: six, towed
   },
   models: { nato: buildUsCalliope, sov: buildSovKatyusha, pact: buildWhPanzerwerfer, fj: buildFjNebelwerfer },
   engine: 'engine.diesel',

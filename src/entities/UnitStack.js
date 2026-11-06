@@ -196,7 +196,7 @@ export class UnitStack {
   unitStats(index) {
     const sp = this.type.specialist;
     if (!sp || index >= sp.count) return this.stats;
-    this._specialistStats ??= { ...this.stats, ...sp.stats };
+    this._specialistStats ??= { ...this.stats, ...sp.stats, ...(sp.armyStats?.[this.army] ?? sp.armyStats?.[this.faction]) }; // (an army's own: the MG 42's rate)
     return this._specialistStats;
   }
 

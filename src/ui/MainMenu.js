@@ -20,7 +20,7 @@ import { takeMenuTab } from '../core/replay.js';
 import { CHAPTERS, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
-import { CODEX } from '../data/codex.js';
+import { CODEX, CODEX45 } from '../data/codex.js';
 import { keyOf } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
@@ -584,7 +584,9 @@ export class MainMenu {
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
-    const c = CODEX[id];
+    const ww2 = epoch() === '1945';
+    const own = ww2 && CODEX45[id];
+    const c = own ? { ...own, ...own.armies?.[army] } : CODEX[id]; // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
     const box = el('div', 'codex');
@@ -595,7 +597,7 @@ export class MainMenu {
       row.lastChild.textContent = text(body);
       box.append(row);
     }
-    const history = army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
+    const history = ww2 && !own ? null : army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
     if (history) {
       const h = el('div', 'codex-row codex-history');
       h.append(el('h4', '', 'History'), el('p', '', ''));

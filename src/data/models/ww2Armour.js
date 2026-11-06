@@ -36,6 +36,20 @@ export const whiteStar = (x, y, z, r, facing = 'x') => [ // the Allied white sta
   P.cyl(r * 0.82, r * 0.82, 0.02, facing === 'x' ? { x, y, z, rz: Math.PI / 2, color: OD } : { x, y, z, color: OD }, 18),
   ...[0, 1, 2, 3, 4].map((k) => P.box(0.012, r * 0.95, r * 0.3, facing === 'x' ? { x: x + Math.sign(x) * 0.012, y: y + Math.cos(k * 1.2566) * r * 0.35, z: z + Math.sin(k * 1.2566) * r * 0.35, rx: -k * 1.2566, color: WHITE } : { x, y, z, color: WHITE })),
 ];
+const RED = 0xa8231b;
+/** The Soviet red star on a side: x = the surface there, `tilt` = how far the side leans in (rad). */
+export const redStar = (x, y, z, r, tilt = 0) => [0, 1, 2, 3, 4].map((k) => P.box(0.016, r, r * 0.3, { y: Math.cos(k * 1.2566) * r * 0.4, z: Math.sin(k * 1.2566) * r * 0.4, rx: -k * 1.2566, color: RED })
+  .rotateZ(Math.sign(x) * tilt).translate(x + Math.sign(x) * 0.006 * Math.cos(tilt), y + 0.006 * Math.sin(tilt), z));
+/** A crane: a post from `base` up to `top`, its jib reaching `reach` along z (negative: over the back) and dropping `drop`, the hook on its cable. */
+export const crane = (x, base, top, z, reach, drop, color) => {
+  const L = Math.hypot(reach, drop);
+  return [
+    P.box(0.16, top - base, 0.16, { x, y: (base + top) / 2, z, color }),
+    P.box(0.12, 0.12, L + 0.12, { x, y: top - 0.06 - drop / 2, z: z + reach / 2, rx: Math.atan(drop / reach), color }),
+    P.box(0.025, 0.8, 0.025, { x, y: top - 0.12 - drop - 0.4, z: z + reach, color: 0x222222 }),
+    P.box(0.12, 0.14, 0.1, { x, y: top - 0.12 - drop - 0.85, z: z + reach, color }),
+  ];
+};
 export const balkenkreuz = (x, y, z, r) => [ // white-edged black cross, on a side
   P.box(0.012, r * 2, r * 0.6, { x, y, z, color: WHITE }), P.box(0.012, r * 0.6, r * 2, { x, y, z, color: WHITE }),
   P.box(0.02, r * 1.7, r * 0.3, { x, y, z, color: BLACK }), P.box(0.02, r * 0.3, r * 1.7, { x, y, z, color: BLACK }),
@@ -96,7 +110,7 @@ export const buildUsSherman = (mats) => rig(once('sherman', () => {
       ...gear.parts,
       ...pair((s) => [-1.35, 0, 1.35].map((z) => P.box(0.2, 0.42, 0.7, { x: s * 1.12, y: 0.55, z, color: OD_DK }))).flat(), // volute bogies
       trackedHull([[-2.95, 1.75, 0.55], [-2.7, 1.95, 0.5], [1.3, 1.98, 0.5], [2.75, 1.05, 0.55]], { belly: 0.85, fender: 1.32, fenderY: 1.02, chamfer: 0.06 }, { color: OD, ...C }),
-      P.cyl(0.45, 0.45, 1.75, { y: 0.92, z: 2.75, rz: Math.PI / 2, color: OD, ...C }, 16),                   // the rounded transmission nose
+      P.box(1.75, 0.62, 0.1, { y: 0.78, z: 2.62, rx: 0.46, color: OD, ...C }),                   // the lower nose plate
       ...pair((s) => P.box(0.36, 0.14, 0.18, { x: s * 0.42, y: 2.0, z: 1.15, color: OD_DK })),               // driver's and bow gunner's hatches
       P.cyl(0.02, 0.02, 0.45, { x: 0.5, y: 1.62, z: 2.1, rx: Math.PI / 2 - 0.6, color: STEEL }, 6),        // bow MG
       P.box(1.8, 0.04, 1.2, { y: 1.77, z: -2.3, color: OD_DK }),                                              // engine deck
@@ -137,7 +151,7 @@ const sovT34 = (mats) => rig(once('t34', () => {
       P.cyl(0.34, 0.36, 0.22, { x: -0.45, y: 0.86, z: -0.6, color: SOV, ...C }, 14),                        // commander's cupola
       P.cyl(0.26, 0.26, 0.05, { x: 0.42, y: 0.76, z: -0.4, color: SOV_DK }, 14),
       P.box(0.85, 0.55, 0.35, { y: 0.4, z: 1.45, color: SOV, ...C }),                                         // mantlet
-      ...pair((s) => P.box(0.012, 0.22, 0.42, { x: s * 1.13, y: 0.42, z: -0.2, color: WHITE })),            // the white turret number
+      ...[-1, 1].flatMap((s) => redStar(s * 1.02, 0.42, -0.25, 0.3, 0.49)),
     ]), 0.9, 0.0, 0.3),
     gun: merge([P.cyl(0.06, 0.07, 4.4, { z: 2.2, rx: Math.PI / 2, color: SOV }, 12)]),
   };

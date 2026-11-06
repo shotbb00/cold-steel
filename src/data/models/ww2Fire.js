@@ -50,7 +50,7 @@ export const buildUsPriest = vehicle(() => {
     hull: grime(merge([
       ...g.parts,
       trackedHull([[-2.95, 1.75, 0.55], [1.3, 1.85, 0.5], [2.75, 1.05, 0.55]], { belly: 0.85, fender: 1.32, fenderY: 1.02, chamfer: 0.06 }, { color: OD, ...C }),
-      P.cyl(0.45, 0.45, 1.75, { y: 0.92, z: 2.75, rz: Math.PI / 2, color: OD, ...C }, 16),
+      P.box(1.75, 0.62, 0.1, { y: 0.78, z: 2.62, rx: 0.46, color: OD, ...C }),
       // the open fighting compartment: thin walls round it
       ...pair((s) => P.box(0.05, 0.75, 3.2, { x: s * 1.3, y: 2.2, z: -0.4, color: OD, ...C })),
       P.box(2.6, 0.75, 0.05, { y: 2.2, z: -2.0, color: OD, ...C }),
@@ -111,7 +111,7 @@ export const buildUsCalliope = vehicle(() => {
     hull: grime(merge([
       ...g.parts,
       trackedHull([[-2.95, 1.75, 0.55], [-2.7, 1.95, 0.5], [1.3, 1.98, 0.5], [2.75, 1.05, 0.55]], { belly: 0.85, fender: 1.32, fenderY: 1.02, chamfer: 0.06 }, { color: OD, ...C }),
-      P.cyl(0.45, 0.45, 1.75, { y: 0.92, z: 2.75, rz: Math.PI / 2, color: OD, ...C }, 16),
+      P.box(1.75, 0.62, 0.1, { y: 0.78, z: 2.62, rx: 0.46, color: OD, ...C }),
       ...[-1, 1].flatMap((s) => whiteStar(s * 1.335, 1.55, -0.6, 0.38)),
     ]), 1.25, 0.3),
     // the turret, the rocket box on its frame over it

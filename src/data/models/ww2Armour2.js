@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { stationHull, castTurret, trackedHull, runningGear, roadWheelGeometry, meshAdder } from './vehicleCommon.js';
-import { rig, skirts, whiteStar, balkenkreuz } from './ww2Armour.js';
+import { rig, skirts, whiteStar, balkenkreuz, redStar } from './ww2Armour.js';
 import { vehicle, wheeled, tracked } from './support.js';
 import { buildWw2Soldier } from './ww2Soldier.js';
 
@@ -69,7 +69,7 @@ export const buildSovIS2 = (mats) => rig(once('is2', () => {
       P.cyl(0.36, 0.38, 0.25, { x: -0.5, y: 0.92, z: -0.6, color: SOV, ...C }, 14),
       P.box(0.12, 0.14, 0.45, { x: 0.5, y: 0.8, z: -0.6, color: STEEL }),                     // the DShK on the loader's hatch
       P.box(0.95, 0.6, 0.4, { y: 0.4, z: 1.6, color: SOV, ...C }),
-      ...pair((s) => P.box(0.012, 0.24, 0.5, { x: s * 1.26, y: 0.42, z: -0.2, color: WHITE })),
+      ...[-1, 1].flatMap((s) => redStar(s * 1.129, 0.42, -0.2, 0.32, 0.51)),
     ]), 0.9, 0.0, 0.3),
     gun: barrel(4.6, 0.08, SOV),
   };
@@ -258,7 +258,7 @@ export const buildSovSU100 = (mats) => rig(once('su100', () => {
         [3.0, [[0, 0.5], [0.95, 0.5], [1.5, 0.9], [1.15, 1.0], [0, 1.0]]],
       ], { color: SOV, ...C }),
       P.cyl(0.32, 0.34, 0.22, { x: 0.6, y: 2.35, z: 0.4, color: SOV, ...C }, 14),
-      ...pair((s) => P.box(0.012, 0.25, 0.5, { x: s * 1.3, y: 1.8, z: 0.5, color: WHITE })),
+      ...[-1, 1].flatMap((s) => redStar(s * 1.244, 1.8, 0.5, 0.34, 0.31)),
     ]), 1.25, 0.3),
     turret: merge([castTurret([[0.45, 0.3, 0.35], [0.2, 0.42, 0.42], [0.0, 0.45, 0.45]], { color: SOV, ...C }, 2.4)]),
     gun: barrel(4.6, 0.065, SOV, 'none'),
@@ -315,7 +315,7 @@ export const buildUsM4Dozer = (mats) => rig(once('m4dozer', () => {
       ...gear.parts,
       ...pair((s) => [-1.35, 0, 1.35].map((z) => P.box(0.2, 0.42, 0.7, { x: s * 1.12, y: 0.55, z, color: OD_DK }))).flat(),
       trackedHull([[-2.95, 1.75, 0.55], [-2.7, 1.95, 0.5], [1.3, 1.98, 0.5], [2.75, 1.05, 0.55]], { belly: 0.85, fender: 1.32, fenderY: 1.02, chamfer: 0.06 }, { color: OD, ...C }),
-      P.cyl(0.45, 0.45, 1.75, { y: 0.92, z: 2.75, rz: Math.PI / 2, color: OD, ...C }, 16),
+      P.box(1.75, 0.62, 0.1, { y: 0.78, z: 2.62, rx: 0.46, color: OD, ...C }),
       // the dozer blade on its push arms
       P.box(3.3, 0.95, 0.1, { y: 0.6, z: 3.85, rx: -0.15, color: OD_DK }),
       ...pair((s) => P.box(0.12, 0.15, 1.6, { x: s * 1.2, y: 0.7, z: 3.0, rx: 0.15, color: STEEL })),

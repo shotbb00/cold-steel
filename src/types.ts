@@ -165,7 +165,7 @@ export interface UnitType {
   /** per-side changes on top of `stats` */
   factionStats?: Partial<PerFaction<Partial<UnitStats>>>;
   /** the first `count` members get these stats on top (and specialistModels) */
-  specialist?: { count: number; stats: Partial<UnitStats> };
+  specialist?: { count: number; stats: Partial<UnitStats>; armyStats?: Record<string, Partial<UnitStats>> };
   models: Partial<PerFaction<ModelBuilder>>;
   specialistModels?: Partial<PerFaction<ModelBuilder>>;
   weaponSound?: string;

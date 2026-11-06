@@ -14,7 +14,7 @@ import { P, merge, pair, grime } from '../units/geometry.js';
 import { trackedHull, stationHull } from './vehicleCommon.js';
 import { vehicle, tracked, wheeled, cross } from './support.js';
 import { truckUnit } from './truck.js';
-import { halfTrack, whiteStar, balkenkreuz } from './ww2Armour.js';
+import { halfTrack, whiteStar, balkenkreuz, crane } from './ww2Armour.js';
 
 const OD = 0x4d4f34;
 const OD_DK = 0x3c3e28;
@@ -79,7 +79,7 @@ export const buildWh2518 = (mats) => {
 const shermanGear = () => tracked({ halfWidth: 1.12, length: 4.0, wheels: 6, wheelR: 0.26, sprocket: 1, rollers: 3, trackWidth: 0.42, wheelColor: OD_DK });
 const shermanHull = () => [
   trackedHull([[-2.95, 1.75, 0.55], [-2.7, 1.95, 0.5], [1.3, 1.98, 0.5], [2.75, 1.05, 0.55]], { belly: 0.85, fender: 1.32, fenderY: 1.02, chamfer: 0.06 }, { color: OD, ...C }),
-  P.cyl(0.45, 0.45, 1.75, { y: 0.92, z: 2.75, rz: Math.PI / 2, color: OD, ...C }, 16),
+  P.box(1.75, 0.62, 0.1, { y: 0.78, z: 2.62, rx: 0.46, color: OD, ...C }),
 ];
 const t34Gear = () => tracked({ halfWidth: 1.25, length: 4.3, wheels: 5, wheelR: 0.41, sprocket: -1, rollers: 0, trackWidth: 0.5, wheelColor: SOV_DK });
 const t34Hull = () => trackedHull([[-3.0, 1.45, 0.5], [-2.7, 1.62, 0.45], [1.75, 1.62, 0.45], [3.0, 0.7, 0.5]], { belly: 0.95, fender: 1.5, fenderY: 1.0, chamfer: 0.42 }, { color: SOV, ...C });
@@ -105,8 +105,7 @@ export const buildSovT34Tractor = vehicle(() => {
     hull: grime(merge([
       ...g.parts, t34Hull(),
       P.cyl(0.9, 0.9, 0.12, { y: 1.68, z: 0.45, color: SOV_DK }, 16),                                  // the turret ring, plated over
-      P.box(0.15, 1.6, 0.15, { x: 0.8, y: 2.4, z: 1.6, color: STEEL }),                                 // the jib
-      P.box(0.12, 0.12, 1.8, { x: 0.8, y: 3.2, z: 2.3, rx: 0.2, color: STEEL }),
+      ...crane(0.8, 1.6, 3.2, 1.6, 1.6, 0.35, STEEL),                                                    // the jib
       P.box(1.2, 0.5, 1.6, { y: 1.9, z: -1.8, color: WOOD }),                                           // stowage on the deck
     ]), 1.25, 0.3),
     muzzle: [0, 2.5, 0],
@@ -125,8 +124,7 @@ export const buildWhBergepanther = vehicle(() => {
       ], { color: GELB, ...C }),
       ...pair((s) => P.box(0.06, 0.8, 2.6, { x: s * 1.25, y: 2.25, z: -0.3, color: WOOD })),             // the wooden box walls
       P.box(2.5, 0.8, 0.06, { y: 2.25, z: -1.6, color: WOOD }),
-      P.box(0.15, 1.6, 0.15, { x: -0.9, y: 2.6, z: 1.4, color: STEEL }),                                // the crane
-      P.box(0.12, 0.12, 2.0, { x: -0.9, y: 3.4, z: 2.2, rx: 0.2, color: STEEL }),
+      ...crane(-0.9, 1.8, 3.4, 1.4, 1.8, 0.4, STEEL),                                                   // the crane
       ...[-1, 1].flatMap((s) => balkenkreuz(s * 1.75, 1.45, -1.0, 0.24)),
     ]), 1.25, 0.3),
     muzzle: [0, 2.5, 0],
@@ -136,7 +134,7 @@ export const buildFjFamo = (mats) => {
   const g = halfTrack({ color: GELB, dark: GELB_DK, length: 8.3, width: 2.6, wheelZ: 3.0, trackZ: -1.4, trackLen: 4.0, faceted: false, mg: 'ring' });
   return vehicle(() => ({
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
-    hull: merge([g.hull, P.box(0.15, 1.45, 0.15, { y: 1.68, z: -3.6, color: STEEL }), P.box(0.12, 0.12, 2.2, { y: 2.62, z: -4.62, rx: -0.3, color: STEEL })]), // the crane at the back
+    hull: merge([g.hull, ...crane(0, 0.95, 2.6, -3.6, -1.9, 0.5, STEEL)]), // the crane at the back
     muzzle: [0, 2.5, 0],
   }))(mats);
 };
