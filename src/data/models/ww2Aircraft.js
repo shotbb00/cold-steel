@@ -162,3 +162,57 @@ export const buildFjBf109 = (mats) => mount('bf109', mats, () => M([
   ...pair((s) => mark('de', s * 0.37, 2.05, -1.8, 0.3)),
   ...pair((s) => mark('de', s * 3.8, 1.65, -0.4, 0.32, true)),
 ]), { gun: [0, 2.0, 4.4], prop: [0, 2.0, 4.4], blades: 3, r: 1.5 });
+
+// ---------------------------------------------------------------- the paradrop's transports
+
+/** Mount a multi-engined aircraft: `props` [[x, y, z], …] each with its own propeller. */
+function mountMulti(key, mats, make, { props, blades = 3, r = 1.5, door }) {
+  const m = (cache[key] ??= { body: make(), prop: propeller(blades, r) });
+  const root = new THREE.Group();
+  meshAdder(root)(m.body, mats.body);
+  const list = props.map((at) => {
+    const p = new THREE.Group();
+    p.position.set(...at);
+    root.add(p);
+    meshAdder(p)(m.prop, mats.body);
+    return p;
+  });
+  return { root, gun: point(root, ...door), pods: [], props: list, door: point(root, ...door) };
+}
+
+/** C-47 Skytrain (US) and Li-2 (the Soviet-built DC-3): the round fuselage, the low wing, two radials in their nacelles. */
+function dakota(color, kind) {
+  return M([
+    body([[9.6, 2.3, 0.15, 0.2], [9.0, 2.3, 0.8, 0.9], [7.5, 2.35, 1.2, 1.3], [3.0, 2.4, 1.35, 1.45], [-3.0, 2.45, 1.25, 1.35], [-7.5, 2.7, 0.6, 0.75], [-9.8, 2.95, 0.15, 0.3]], { color, ...C }),
+    body([[8.7, 3.1, 0.05, 0.05], [8.3, 3.3, 0.6, 0.3], [7.2, 3.45, 0.75, 0.3], [6.8, 3.4, 0.5, 0.2]], { color: GLASS }), // the cockpit glazing
+    ...pair((s) => [1, 2, 3, 4, 5].map((k) => P.box(0.02, 0.32, 0.4, { x: s * 1.33, y: 2.65, z: 5 - k * 1.5, color: GLASS }))), // the cabin windows
+    P.box(0.04, 1.6, 1.1, { x: -1.3, y: 2.3, z: -4.2, color: 0x1a1a18 }),                                         // the open cargo door (port)
+    ...pair((s) => surface([[s * 1.2, 1.7, 1.2, 2.6, 0.4], [s * 6.0, 1.95, 0.6, 2.0, 0.25], [s * 14.5, 2.45, -0.4, 0.9, 0.08]], { color, ...C })),
+    ...pair((s) => body([[3.9, 2.0, 0.75, 0.75], [3.3, 2.0, 0.78, 0.78], [1.0, 2.05, 0.6, 0.62], [-1.6, 2.1, 0.3, 0.32]], { x: s * 2.8, color, ...C })), // engine nacelles
+    ...pair((s) => P.cyl(0.58, 0.58, 0.02, { x: s * 2.8, y: 2.0, z: 3.91, rx: Math.PI / 2, color: HOLE }, 16)),
+    ...pair((s) => surface([[s * 0.3, 3.0, -8.4, 1.4, 0.1], [s * 4.3, 3.0, -8.9, 0.6, 0.04]], { color, ...C })),
+    fin([[3.1, -7.6, 1.9, 0.12], [4.5, -8.4, 1.5, 0.09], [6.0, -9.0, 0.8, 0.05]], { color, ...C }),
+    ...(kind === 'us' ? [...pair((s) => mark('us', s * 9.5, 2.3, -0.3, 0.9, true)), ...pair((s) => mark('us', s * 1.18, 2.6, -5.8, 0.75))]
+      : [...pair((s) => mark('sov', s * 0.15, 4.6, -8.5, 0.6)), ...pair((s) => mark('sov', s * 1.2, 2.6, -5.8, 0.6))]),
+  ]);
+}
+export const buildUsC47 = (mats) => mountMulti('c47', mats, () => dakota(0x4d4f34, 'us'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
+export const buildSovLi2 = (mats) => mountMulti('li2', mats, () => dakota(0x4f5a34, 'sov'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
+
+/** Ju 52/3m: the corrugated slab sides, three engines (one in the nose), the fixed spatted gear, the double wing flaps. */
+export const buildDeJu52 = (mats) => mountMulti('ju52', mats, () => M([
+  body([[8.6, 2.6, 0.75, 0.75], [7.8, 2.6, 0.8, 0.8], [6.5, 2.7, 0.95, 1.1, 3], [2.0, 2.75, 1.05, 1.3, 3.4], [-3.0, 2.85, 0.95, 1.15, 3.2], [-7.5, 3.05, 0.45, 0.6, 2.6], [-9.4, 3.2, 0.15, 0.3]], { color: 0x5a6248, ...C }),
+  ...pair((s) => Array.from({ length: 9 }, (_, k) => P.box(0.02, 1.8, 0.04, { x: s * 1.06, y: 2.75, z: 5 - k * 0.9, color: 0x4e5640 }))).flat(), // the corrugations
+  body([[6.9, 3.5, 0.05, 0.05], [6.5, 3.75, 0.6, 0.35], [5.6, 3.9, 0.7, 0.35], [5.2, 3.8, 0.4, 0.2]], { color: GLASS }),
+  ...pair((s) => [1, 2, 3, 4].map((k) => P.box(0.02, 0.3, 0.45, { x: s * 1.07, y: 3.05, z: 4.2 - k * 1.4, color: GLASS }))),
+  P.box(0.04, 1.5, 1.0, { x: -1.08, y: 2.6, z: -3.5, color: 0x1a1a18 }),                                         // the door
+  P.cyl(0.62, 0.62, 0.02, { y: 2.6, z: 8.61, rx: Math.PI / 2, color: HOLE }, 16),                              // the nose engine's cowl
+  ...pair((s) => surface([[s * 1.0, 2.1, 0.6, 2.4, 0.4], [s * 6.0, 2.25, 0.2, 1.9, 0.24], [s * 14.6, 2.6, -0.7, 0.85, 0.08]], { color: 0x5a6248, ...C })),
+  ...pair((s) => body([[3.2, 2.0, 0.55, 0.55], [2.5, 2.0, 0.58, 0.58], [0.8, 2.05, 0.45, 0.48], [-0.4, 2.1, 0.2, 0.22]], { x: s * 4.6, color: 0x5a6248, ...C })), // the wing engines
+  ...pair((s) => [P.box(0.1, 1.3, 0.25, { x: s * 2.5, y: 1.0, z: 0.8, rz: s * 0.25, color: 0x3a3c32 }),
+    body([[1.4, 0.45, 0.05, 0.05], [1.0, 0.45, 0.22, 0.4], [0.3, 0.45, 0.2, 0.38], [0.0, 0.5, 0.05, 0.05]], { x: s * 2.7, color: 0x5a6248 })]), // the spatted legs
+  ...pair((s) => surface([[s * 0.3, 3.3, -8.0, 1.3, 0.1], [s * 4.0, 3.3, -8.4, 0.6, 0.04]], { color: 0x5a6248, ...C })),
+  fin([[3.4, -7.6, 1.6, 0.1], [4.8, -8.4, 1.2, 0.08], [5.6, -8.9, 0.6, 0.05]], { color: 0x5a6248, ...C }),
+  ...pair((s) => mark('de', s * 1.1, 2.8, -5.5, 0.55)),
+  ...pair((s) => mark('de', s * 9.5, 2.45, -0.4, 0.8, true)),
+]), { props: [[0, 2.6, 8.75], [-4.6, 2.0, 3.35], [4.6, 2.0, 3.35]], blades: 3, r: 1.5, door: [-1.15, 2.4, -3.5] });

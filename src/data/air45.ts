@@ -2,7 +2,7 @@
 // army's own aircraft — `nato` the US Army's, `sov` the Red Army's, `pact` the Wehrmacht's, `fj`
 // the Fallschirmjäger's. Phase 1: the strike run ('jet') and the fighter patrol ('cap'); no
 // helicopters in this war, the paradrop and the recon flight come later.
-import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109 } from './models/ww2Aircraft.js';
+import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52 } from './models/ww2Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const MG50 = { rate: 26, damage: 120, splash: 0.6, vsArmor: 0.3, pierce: 0.25, speed: 880, tracer: 0.3, size: 0.8, sound: 'nato.aa' };   // eight .50 cals
@@ -30,5 +30,17 @@ const FIGHTER: Record<string, Aircraft> = {
   fj: { name: 'Bf 109 G-10', weapon: '30 mm MK 108 · 2 × 13 mm', text: 'The old Messerschmitt, still in the fight in its last versions.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true },
 };
 
+// the paradrop (KINDS.lift; systems/AirStrike.js Sortie.paradrop): the transport flies over the
+// drop zone and the stick jumps; the men land under their canopies and form up as a squad
+const NOGUN = { rate: 1, damage: 0, splash: 0, vsArmor: 0, pierce: 0, speed: 600, tracer: 0, size: 0.5, sound: 'nato.mg' };
+const DROP: Record<string, Aircraft> = {
+  nato: { name: 'C-47 Skytrain', weapon: 'a stick of paratroopers', text: 'The Dakota: over the drop zone at a few hundred feet, the green light, and the stick is out of the door.',
+    model: buildUsC47, paint: OD, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
+  sov: { name: 'Li-2', weapon: 'a stick of Guards paratroopers', text: 'The Soviet-built DC-3, carrying a stick of the Guards airborne.',
+    model: buildSovLi2, paint: SOVG, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
+  pact: { name: 'Ju 52/3m', weapon: 'a stick of Fallschirmjäger', text: 'Tante Ju: three engines, corrugated metal, and the Fallschirmjäger jumping from the door.',
+    model: buildDeJu52, paint: RLM, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
+};
+
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (sov, fj). */
-export const AIR_1945 = { jet: STRIKE, cap: FIGHTER };
+export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP };

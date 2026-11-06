@@ -70,6 +70,7 @@ export class ActionBar {
     const row = document.querySelector('.cmd-buttons.support');
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
       if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
+      if (cmd === 'air:lift' && epoch() === '1945') [label, tip] = ['Paradrop', 'A transport flies over the spot and drops a stick of paratroopers']
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;
@@ -80,7 +81,7 @@ export class ActionBar {
       const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
       const me = this.game.playerFaction;
       const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
-      const art = kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic);
+      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
       b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
       return { b, cmd, small: b.querySelector('small') };
     });

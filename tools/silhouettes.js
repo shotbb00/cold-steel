@@ -60,7 +60,7 @@ window.silhouettes = (year = '1985') => {
     for (const [faction, army, own] of ARMIES[year]) {
       if (own && !p.aircraft[own]) continue;
       preview.showAircraft(kind, faction, army);
-      const plane = kind !== 'heli' && kind !== 'lift';
+      const plane = kind !== 'heli' && !(kind === 'lift' && year === '1985'); // (1945's air assault is a paradrop: a plane)
       Object.assign(preview.orbit, plane ? { yaw: -Math.PI / 2, pitch: 1.5, zoom: 1, idle: 0 } : { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 });
       preview.setPose('hover');
       for (let i = 0; i < 3; i++) preview.frame();

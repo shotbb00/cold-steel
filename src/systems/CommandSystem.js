@@ -7,6 +7,7 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { epoch } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
@@ -355,7 +356,7 @@ export class CommandSystem {
       }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
       t.hint = t.air === 'lift'
-        ? `Air assault (${p.cost} CP): ${click} the landing zone — ${turn('the approach')}, ${cancel}`
+        ? `${p.label} (${p.cost} CP): ${click} the ${epoch() === '1945' ? 'drop zone' : 'landing zone'} — ${turn('the approach')}, ${cancel}`
         : t.air === 'cap' ? `${p.label} (${p.cost} CP): ${click} where the fighters should circle — ${cancel}`
         : t.air === 'recon' ? `${p.label} (${p.cost} CP): ${click} the middle of the photo run — ${turn('the run')}, ${cancel}`
         : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;

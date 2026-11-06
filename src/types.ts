@@ -200,6 +200,8 @@ export interface Aircraft {
   rockets?: AircraftWeapon & { count: number; interval: number };
   /** fighter patrol with guns only (1945): it dives on its target instead of firing missiles */
   guns?: boolean;
+  /** air assault by parachute (1945): flies over the drop zone instead of landing (systems/AirStrike.js) */
+  paradrop?: boolean;
   /** air assault: the unit type landed */
   squad?: string;
   hp: number;

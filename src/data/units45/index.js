@@ -106,14 +106,28 @@ const crew = derive(T.crew, {
   },
 });
 
+// the paradrop's stick (KINDS.lift; airOnly: never bought on the ground)
+const airAssault = derive(T.airAssault, {
+  models: { nato: () => buildWw2Soldier({ army: 'us' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'smg' }), pact: () => buildWw2Soldier({ army: 'fj' }), fj: () => buildWw2Soldier({ army: 'fj' }) },
+  specialistModels: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'mg' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'mg' }), pact: () => buildWw2Soldier({ army: 'fj', weapon: 'mg' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'mg' }) }, // (not 1985's)
+  stats: { lightAT: 0, nightSight: undefined },
+  factionStats: { pact: { lightAT: 1 }, fj: { lightAT: 1 } },
+  variants: {
+    nato: { name: 'Paratroopers', weapon: 'M1 carbines, M1 Garand, bazooka', text: 'The 101st and the 82nd: dropped behind the line, lightly armed, hard to dislodge once down.' },
+    sov: { name: 'Guards Paratroopers', weapon: 'PPSh-41, DP-28', text: 'The Guards airborne: few drops, but hard men when they come down.' },
+    pact: { name: 'Fallschirmjäger', weapon: 'FG 42, MG 42', text: 'The Luftwaffe’s paratroopers in their own role: out of the Ju 52 over the target.' },
+    fj: { name: 'Fallschirmjäger', weapon: 'FG 42, MG 42', text: 'The Luftwaffe’s paratroopers in their own role: out of the Ju 52 over the target.' },
+  },
+});
+
 export const TYPES_1945 = {
-  rifles, atTeam, mgTeam, mortar, tank, ifv, crew,
+  rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
 export const ALIAS_1945 = {
-  scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', airAssault: 'rifles', kampfgruppe: 'rifles', observers: 'rifles',
+  scouts: 'rifles', sniper: 'rifles', engineers: 'rifles', kampfgruppe: 'rifles', observers: 'rifles',
   heavyTank: 'tank', tankDestroyer: 'tank', cev: 'tank', reconVehicle: 'ifv', commandPost: 'ifv', ambulance: 'ifv', recovery: 'ifv',
   artillery: 'mortar', spMortar: 'mortar', rockets: 'mortar', cbRadar: 'mortar',
   aa: 'mgTeam', towedAA: 'mgTeam', manpads: 'atTeam',

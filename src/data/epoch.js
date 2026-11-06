@@ -87,7 +87,9 @@ export function setEpoch(id) {
   swap(DOCTRINE, e.doctrine);
   for (const [kind, k] of Object.entries(KINDS)) {
     const aircraft = e.air[kind];
-    k.off = !aircraft;           // no helicopters in 1945 (yet: no paradrop or recon flight either)
+    k.off = !aircraft;           // no helicopters in 1945 (nor a recon flight yet)
+    k.label0 ??= k.label;
+    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || k.label0;
     if (aircraft) k.aircraft = aircraft;
   }
   return e;

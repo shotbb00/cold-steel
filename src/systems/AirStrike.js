@@ -21,6 +21,9 @@
 // a machine aborts its run and trails smoke; enough hits and it goes down and crashes. Each
 // side has a cooldown per kind. Used by the player (CommandSystem targeting) and the enemy
 // director (before assaults, against dug-in troops).
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildWw2Soldier } from '../data/models/ww2Soldier.js';
+import { typeOf } from '../data/units/index.js';
 import { JAM } from './Jamming.js';
 import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
@@ -170,6 +173,7 @@ function spin(rig, type, dt, k = 1) {
   if (rig.rotor) rig.rotor.rotation.y += dt * type.rotorSpeed * k;
   if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70 * k;
   if (rig.prop) rig.prop.rotation.z += dt * 45 * k; // a propeller (1945: models/ww2Aircraft.js)
+  if (rig.props) for (const p of rig.props) p.rotation.z += dt * 40 * k; // a twin or a trimotor
 }
 
 const loopSound = (type) => type.rotorSound ?? type.engineSound;
@@ -263,7 +267,11 @@ class Sortie {
     const terrain = game.terrain;
     const d = this.toGo;
 
-    if (this.kind === 'lift') {
+    if (this.type.paradrop) { // 1945: over the drop zone, the stick jumps, on and away (Stick)
+      if (this.state === 'ingress' && d < 400) this.state = 'attack';
+      if (this.state === 'attack' && d < 24 && !this.dropped) this.paradrop();
+      if (this.state === 'attack' && d < -200) this.state = 'break';
+    } else if (this.kind === 'lift') {
       if (this.state === 'ingress' && d < 140) this.state = 'attack';     // the approach: slowing, guns on the LZ
       if (this.state === 'attack' && d < 4) this.state = 'land';
     } else {
@@ -282,7 +290,10 @@ class Sortie {
     let wantSpeed = p.cruiseSpeed;
     let wantPitch = 0;
     let wantRoll = 0;
-    if (this.state === 'attack' && this.kind === 'lift') {
+    if (this.type.paradrop && this.state !== 'break' && this.state !== 'home') {
+      alt = PARA.alt;                                        // level over the drop zone, slow
+      wantSpeed = PARA.speed;
+    } else if (this.state === 'attack' && this.kind === 'lift') {
       alt = 6 + Math.max(0, d) * 0.15;                      // flaring down into the LZ
       wantSpeed = Math.max(3, Math.min(p.cruiseSpeed, d * 0.35));
       wantPitch = -0.12;                                     // nose up, slowing
@@ -297,7 +308,7 @@ class Sortie {
       wantSpeed = p.attackSpeed;
       wantPitch = p.pitchDown ?? 0.14;   // nose down onto the target
     } else if (this.state === 'break' || this.state === 'home') {
-      alt = p.cruiseAlt + (this.kind === 'jet' ? 60 : 12);
+      alt = this.type.paradrop ? PARA.alt + 20 : p.cruiseAlt + (this.kind === 'jet' ? 60 : 12);
       if (this.kind === 'lift') wantSpeed = p.cruiseSpeed;
       if (p.turn && this.turned < Math.PI) {
         const step = Math.min(Math.PI - this.turned, dt * p.turn);
@@ -323,7 +334,7 @@ class Sortie {
     this.place(dt);
 
     if (this.state === 'attack' || this.state === 'land') {
-      if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon') this.photograph(dt); else this.fireWeapons(dt, d);
+      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon') this.photograph(dt); else this.fireWeapons(dt, d);
     }
     this.fireT -= dt;
     const exposed = this.state === 'attack' || this.state === 'land' || (this.state === 'ingress' && d < p.rocketsFrom + 120);
@@ -514,6 +525,13 @@ class Sortie {
   }
 
   /** Touchdown: the squad jumps out around the helicopter. */
+  /** The paradrop: the stick out of the door, one man after another along the run (Stick). */
+  paradrop() {
+    this.dropped = true;
+    this.game.air.chutes.push(new Stick(this.game, this));
+    this.game.tellBoth(this.faction, `${this.type.name}: green light — the stick is out`, 'Enemy paratroopers dropping!');
+  }
+
   dropSquad() {
     const game = this.game;
     this.dropped = true;
@@ -683,6 +701,121 @@ export class SortieView {
   }
 }
 
+/** The paradrop (1945): height and speed over the drop zone, the men's sink rate and spacing. */
+const PARA = { alt: 110, speed: 50, sink: 6.5, gap: 0.13, free: 1.2 };
+const CANOPY = new THREE.SphereGeometry(3, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+const CORD = new THREE.CylinderGeometry(0.012, 0.012, 1, 3);
+const JUMPER = {}; // per army: the paratrooper's figure (models/ww2Soldier.js), legs straight down
+
+/** The man under the canopy: the 1945 soldier of `army` (the Germans' are Fallschirmjäger), standing straight, feet at 0. */
+function jumper(army) {
+  const a = army === 'wh' ? 'fj' : army;
+  if (!JUMPER[a]) {
+    const m = buildWw2Soldier({ army: a });
+    const legs = [];
+    for (const side of [-1, 1]) {
+      legs.push(m.thigh.clone().translate(side * m.rig.hipX, m.rig.hipY, 0));
+      legs.push(m.shin.clone().translate(side * m.rig.hipX, m.rig.hipY - m.rig.thighLen, 0));
+    }
+    JUMPER[a] = mergeGeometries([m.torso, m.arms, ...legs].map((g) => g.toNonIndexed ? (g.index ? g.toNonIndexed() : g) : g), false);
+  }
+  return JUMPER[a];
+}
+
+/**
+ * A stick of paratroopers: each man leaves the door `gap` s after the one before, falls a moment,
+ * then sinks under his canopy, swaying; when the last is down the squad forms where they landed
+ * (a unit only from then on). Host only: a guest sees the squad when it forms.
+ */
+class Stick {
+  constructor(game, sortie) {
+    this.game = game;
+    this.faction = sortie.faction;
+    this.owner = sortie.owner;
+    this.squad = sortie.type.squad;
+    this.yaw = sortie.yaw;
+    this.t = 0;
+    this.done = false;
+    const n = typeOf(this.squad)?.formation.count ?? 8;
+    const canopy = new THREE.MeshStandardMaterial({ color: sortie.faction === 'pact' ? 0x7a7a5c : 0xd8d6c8, roughness: 0.9, side: THREE.DoubleSide });
+    const man = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    const cord = new THREE.MeshBasicMaterial({ color: 0x2a2a26 });
+    const figure = jumper(sortie.army);
+    this.mats = [canopy, man, cord];
+    this.men = [];
+    for (let k = 0; k < n; k++) {
+      const g = new THREE.Group();
+      const c = new THREE.Mesh(CANOPY, canopy);
+      c.position.y = 5.4;
+      c.scale.y = 0.55;
+      g.add(c);
+      // the rigging lines from the canopy's rim down to the harness at the shoulders
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const top = new THREE.Vector3(Math.cos(a) * 2.9, 5.4, Math.sin(a) * 2.9);
+        const bottom = new THREE.Vector3(Math.cos(a) * 0.18, 1.5, Math.sin(a) * 0.12);
+        const l = new THREE.Mesh(CORD, cord);
+        l.position.copy(top).add(bottom).multiplyScalar(0.5);
+        l.scale.y = top.distanceTo(bottom);
+        l.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), top.clone().sub(bottom).normalize());
+        g.add(l);
+      }
+      g.add(new THREE.Mesh(figure, man));
+      g.visible = false;
+      game.scene.add(g);
+      this.men.push({ g, at: k * PARA.gap, x: 0, y: 0, z: 0, out: false, down: false, sway: Math.random() * 6 });
+    }
+    // where each leaves the aircraft: along the run behind the door, as the aircraft moves on
+    this.from = { x: sortie.pos.x, y: sortie.pos.y - 2, z: sortie.pos.z, dx: sortie.dir.x * PARA.speed, dz: sortie.dir.z * PARA.speed };
+  }
+
+  update(dt) {
+    const g = this.game;
+    this.t += dt;
+    let down = 0;
+    for (const m of this.men) {
+      if (this.t < m.at) continue;
+      if (!m.out) {
+        m.out = true;
+        m.x = this.from.x + this.from.dx * m.at + (Math.random() - 0.5) * 3;
+        m.z = this.from.z + this.from.dz * m.at + (Math.random() - 0.5) * 3;
+        m.y = this.from.y;
+        m.g.visible = true;
+      }
+      if (m.down) { down++; continue; }
+      const open = this.t - m.at > PARA.free;
+      m.y -= (open ? PARA.sink : 18) * dt;
+      m.g.children[0].visible = open;
+      const ground = g.terrain.heightAt(m.x, m.z);
+      if (m.y <= ground) {
+        m.y = ground;
+        m.down = true;
+        for (const part of m.g.children.slice(0, -1)) part.visible = false; // the canopy collapses, the lines with it
+      }
+      m.g.position.set(m.x, m.y, m.z);
+      m.g.rotation.set(Math.sin(this.t * 1.3 + m.sway) * 0.12, 0, Math.cos(this.t * 1.1 + m.sway) * 0.12);
+    }
+    if (down < this.men.length) return;
+    // all down: the squad forms where they landed
+    const cx = this.men.reduce((a, m) => a + m.x, 0) / this.men.length;
+    const cz = this.men.reduce((a, m) => a + m.z, 0) / this.men.length;
+    for (const m of this.men) m.g.removeFromParent();
+    for (const mat of this.mats) mat.dispose();
+    this.done = true;
+    const was = g.currentOwner;
+    g.currentOwner = this.owner;
+    const s = g.spawnStack(this.squad, this.faction, { x: cx, z: cz }, this.yaw);
+    g.currentOwner = was;
+    // each man where he came down; from there they gather into the squad's formation
+    s.units.forEach((u, i) => {
+      const m = this.men[i % this.men.length];
+      u.pos.set(m.x, g.terrain.heightAt(m.x, m.z), m.z);
+    });
+    s.ai.defend();
+    g.tell(this.faction, `${s.name} on the ground`);
+  }
+}
+
 /**
  * A surface-to-air missile in flight (MANPADS, Chaparral, Strela-10): the smoke trail chases
  * the aircraft; when it gets there it hits (a chance, `pk`) or is decoyed / misses.
@@ -731,6 +864,7 @@ export class AirStrike {
     this.game = game;
     this.sorties = [];
     this.missiles = [];
+    this.chutes = [];  // paratroopers on their way down (Stick)
     this.readyAt = {};
     this.span = {};    // the same keys: how long the last call's recharge was (the action bar's ring)
     this.nextId = 1;
@@ -877,6 +1011,10 @@ export class AirStrike {
       const s = this.sorties[i];
       s.update(dt);
       if (s.state === 'done') this.sorties.splice(i, 1);
+    }
+    for (let i = this.chutes.length - 1; i >= 0; i--) {
+      this.chutes[i].update(dt);
+      if (this.chutes[i].done) this.chutes.splice(i, 1);
     }
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       this.missiles[i].update(dt);
