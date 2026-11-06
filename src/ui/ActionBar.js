@@ -1,18 +1,21 @@
 // The command panel's buttons (src/ui/Icons.js draws them):
 //   actions         what the selection can do, as icon tiles with the key in the corner —
-//                   sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
+//                   stop (anything that moves), sandbags / trench / wire / mines (one infantry stack), clear or blow a bridge
 //                   (engineers), lay a bridge, smoke, flare (night), unload, cancel a job, leave a building
-//   support powers  always there in their own row: helicopter, jet, air assault, gas — each with
+//   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
+import { epoch } from '../data/epoch.js';
+import { refillCost } from '../core/Orders.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
-import { GAS } from '../systems/Gas.js';
 import { keyOf } from '../core/Keys.js';
-import { icon } from './Icons.js';
+import { icon, silhouette } from './Icons.js';
 
 const ACTIONS = [
+  { cmd: 'hold', label: 'Stop', icon: 'stop', key: 'hold', tip: 'Stop where they are and hold the spot', when: (sel) => sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
+  { cmd: 'waypoints', label: (g) => (g.commands.queueing ? 'Waypoints on' : 'Waypoints'), icon: 'place', key: 'waypoints', tip: 'Each order adds a waypoint to the route instead of replacing it (with a mouse: Shift+right-click)', when: (sel) => document.body.classList.contains('touch') && sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
   { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.sandbags), tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.trench), tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.wire), tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
@@ -31,6 +34,7 @@ const ACTIONS = [
   { cmd: 'barrage', label: 'Feuerwalze', icon: 'flare', key: 'barrage', tip: 'Creeping barrage: click where it starts — the shells walk forward ahead of your advance', when: (sel) => sel.some((s) => s.stats.indirect && armyDoctrine(s.army, 'walze')) },
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
+  { cmd: 'refill', label: 'Refill', icon: 'reinforce', key: 'refill', cost: (g) => [...g.commands.selected].reduce((a, s) => a + (s.missing && s.supplied ? refillCost(s) : 0), 0), tip: (g) => ([...g.commands.selected].some((s) => s.missing && !s.supplied) ? 'New men for the missing: only near the base or a set-up command post' : 'New men fill the squad\'s empty places'), when: (sel, g) => !!g.modeState?.cp && sel.some((s) => s.missing > 0) },
   { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
@@ -40,7 +44,8 @@ const SUPPORT = [
   ['air', 'heli', 'heli', 'Helicopter', 'Attack helicopter: rockets and the chin gun along a line'],
   ['air:jet', 'jet', 'jet', 'Jet', 'Ground-attack jet: one fast, devastating gun run'],
   ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
-  ['gas', 'gas', 'gas', 'Gas', 'Chemical shells: infantry there mask up, aim worse and see less'],
+  ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
+  ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
 ];
 
@@ -64,13 +69,20 @@ export class ActionBar {
   buildSupport() {
     const row = document.querySelector('.cmd-buttons.support');
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
+      if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
+      if (cmd === 'air:lift' && epoch() === '1945') [label, tip] = ['Paradrop', 'A transport flies over the spot and drops a stick of paratroopers']
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;
       b.className = 'sup';
       b.dataset.cmd = cmd;
       b.title = `${label} — ${tip}`;
-      b.innerHTML = `<i class="cd"></i>${icon(ic)}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
+      // an air power shows the army's own aircraft (tools/render_silhouettes.py air-…), the rest their icon
+      const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
+      const me = this.game.playerFaction;
+      const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
+      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
+      b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
       return { b, cmd, small: b.querySelector('small') };
     });
     row.replaceChildren(...this.support.map((s) => s.b));
@@ -90,18 +102,18 @@ export class ActionBar {
     const me = g.playerFaction;
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
-      const gas = cmd === 'gas';
-      const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? false : null; // the Soviet Army's only
-      const kind = gas || mass !== null ? null : cmd.slice(4) || 'heli';
-      const left = Math.ceil(gas ? g.gas.cooldownLeft(me) : mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
-      const total = gas ? GAS.cooldown : mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
+      const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? doctrine(g, me, 'tot') ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target
+      const kind = mass !== null ? null : cmd.slice(4) || 'heli';
+      const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
+      const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const text = left > 0 ? `${left} s` : String(gas ? GAS.cost : mass !== null ? mass.cost ?? '' : terms.cost);
+      const text = left > 0 ? `${left} s` : String(mass !== null ? mass.cost ?? '' : terms.cost);
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
-      b.hidden = off || mass === false;
+      b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off); // (not in this war: data/epoch.js)
+      if (mass?.id === 'tot' && b.querySelector('.sup-name').textContent !== 'Time on Target') { b.querySelector('.sup-name').textContent = 'Time on Target'; b.title = 'Time on Target — every gun in range fires one salvo; all the shells land at the same moment'; }
     }
   }
 
@@ -123,7 +135,7 @@ export class ActionBar {
       const cost = value(a.cost, g);
       b.title = `${label}${cost ? ` (${cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`;
+      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
       return b;
     }));
     this.el.hidden = !shown.length;

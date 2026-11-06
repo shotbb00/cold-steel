@@ -1,13 +1,18 @@
 // The reinforcement window (C, or the button in the command panel): every unit you can call in,
 // under tabs — infantry, armour, fire support, air defence — each with its cost, what it's
 // for, how many you have out, and why it can't be bought when it can't. Click to call one in
-// (it arrives at your base); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
+// (it arrives at your base, on the road picked under the head: Auto — a forward command post,
+// else any free road — or left, centre or right as you look at the field; each road brings one
+// arrival at a time); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
 // one lands under "Other". The battle doesn't pause.
 import { unitCost } from '../data/doctrine.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
 import { forArmy, artKey } from '../data/factions.js';
+import * as THREE from 'three';
+import { KITS, takesKit } from '../data/kits.js';
+import { epoch } from '../data/epoch.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
@@ -32,7 +37,7 @@ export function damageVs(type) {
   const va = (w) => w.vsArmor ?? 1;
   return {
     inf: best((w) => !(w.damage > 0) ? 0 : w.splash >= 3 || w.indirect || (w.burst ?? 1) >= 3 || (w.fireCooldown <= 0.5 && va(w) < 0.9) ? 3 : va(w) >= 0.9 ? 1 : 2),
-    armour: best((w) => w.atgm || (va(w) >= 0.9 && (w.pierce ?? 0) >= 0.5) ? 3 : !(w.damage > 0) ? 0 : va(w) >= 0.4 ? 2 : 1),
+    armour: Math.max(type.stats.lightAT ? 2 : 0, best((w) => w.atgm || (va(w) >= 0.9 && (w.pierce ?? 0) >= 0.5) ? 3 : !(w.damage > 0) ? 0 : va(w) >= 0.4 ? 2 : 1)), // (a rifle squad's LAWs: a fair chance)
     air: best((w) => (w.antiAir ? 3 : 0)),
   };
 }
@@ -50,6 +55,7 @@ export class ReinforceWindow {
   constructor(game, state) {
     this.game = game;
     this.state = state;
+    this._p = new THREE.Vector3();
     const me = game.playerFaction;
     const army = game.armyOf(me);
     const root = (this.root = document.createElement('div'));
@@ -57,15 +63,52 @@ export class ReinforceWindow {
     root.hidden = true;
     root.innerHTML = `<div class="rw-head"><b>Reinforcements</b><span class="rw-cp"></span><span class="rw-stacks"></span>
       <button type="button" class="rw-again" tabindex="-1" hidden></button>
-      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
+      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-entry"><span>Arrive</span><div class="seg"></div></div><div class="rw-kit"><span>Rifle kit</span><div class="seg"></div></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
     document.getElementById('hud').append(root);
     this.cp = root.querySelector('.rw-cp');
     this.stacks = root.querySelector('.rw-stacks');
     const body = root.querySelector('.rw-body');
     const tabs = root.querySelector('.rw-tabs');
     this.again = root.querySelector('.rw-again');
+    // the road: Auto, then the base's entries ordered left to right as the camera sees them (update())
+    const roads = game.map.bases[me]?.entries ?? [];
+    this.roads = roads.map((x, i) => ({ i, x: game.map.bases[me].x + x, z: game.map.bases[me].z }));
+    this.entrySeg = root.querySelector('.rw-entry .seg');
+    root.querySelector('.rw-entry').hidden = roads.length < 2;
+    game.reinforceEntry = null;
+    this.entryBtns = [null, ...this.roads.map((r) => r.i)].map((i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.className = i === null ? 'on' : '';
+      b.textContent = i === null ? 'Auto' : '';
+      b.title = i === null ? 'At a forward command post if one is set up, else on any free road' : '';
+      b.addEventListener('click', () => {
+        game.reinforceEntry = i;
+        for (const o of this.entryBtns) o.b.classList.toggle('on', o.b === b);
+      });
+      this.entrySeg.append(b);
+      return { b, i };
+    });
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
+    // the kit the next rifle squads bring (data/kits.js; same price)
+    game.reinforceKit = null;
+    const kitSeg = root.querySelector('.rw-kit .seg');
+    root.querySelector('.rw-kit').hidden = epoch() !== '1985' || !types.some(takesKit); // (the kits are 1985's: LAWs, Panzerfaust 44)
+    for (const [id, kit] of Object.entries(KITS)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.textContent = kit.label;
+      b.title = kit.tip;
+      b.className = id === 'standard' ? 'on' : '';
+      b.addEventListener('click', () => {
+        game.reinforceKit = id === 'standard' ? null : id;
+        for (const o of kitSeg.children) o.classList.toggle('on', o === b);
+      });
+      kitSeg.append(b);
+    }
     this.cards = [];
     for (const [cat, title] of SECTIONS) {
       const list = types.filter((t) => (SECTIONS.some(([c]) => c === t.category) ? t.category : 'other') === cat);
@@ -135,6 +178,20 @@ export class ReinforceWindow {
     const count = forces(g, me).length;
     const full = count >= this.state.maxStacks;
     this.cp.textContent = `${cp} CP`;
+    // the roads, named as the field looks from where the camera is (left, centre, right), and how long each is busy
+    const screenX = (r) => this._p.set(r.x, 0, r.z).project(g.camera).x;
+    const order = [...this.roads].sort((a, b) => screenX(a) - screenX(b));
+    const names = order.length === 3 ? ['Left', 'Centre', 'Right'] : order.length === 2 ? ['Left', 'Right'] : order.map((_, k) => `Road ${k + 1}`);
+    const free = this.state.entryFree ?? {};
+    for (const o of this.entryBtns) {
+      if (o.i === null) continue;
+      const k = order.findIndex((r) => r.i === o.i);
+      const wait = Math.ceil((free[`${me}:${o.i}`] ?? 0) - g.time);
+      const text = wait > 0 ? `${names[k]} ${wait} s` : names[k];
+      if (o.b.textContent !== text) o.b.textContent = text;
+      o.b.style.order = String(k + 1);
+      o.b.title = `Arrive on the ${names[k].toLowerCase()} road${wait > 0 ? ` (busy, ${wait} s)` : ''}`;
+    }
     this.stacks.textContent = `${count} / ${this.state.maxStacks} stacks`;
     this.stacks.classList.toggle('full', full);
     const lastType = this.last && this.cards.find((c) => c.type.id === this.last)?.type;
@@ -142,10 +199,11 @@ export class ReinforceWindow {
     if (lastType) this.again.disabled = full || cp < unitCost(lastType, army);
     for (const { card, type, have, why } of this.cards) {
       const cost = unitCost(type, army);
-      const capped = full && !type.uncapped;
-      card.disabled = capped || cp < cost;
-      why.textContent = capped ? 'Stack limit reached' : cp < cost ? `Need ${cost - cp} more CP` : '';
       const n = mine.filter((s) => s.type.id === type.id).length;
+      const limited = type.limit && g.world.stacksOf(me).filter((s) => s.type.id === type.id && !s.withdrawing).length >= type.limit; // (the side's, co-op included)
+      const capped = (full && !type.uncapped) || limited;
+      card.disabled = capped || cp < cost;
+      why.textContent = limited ? `Limit reached (${type.limit})` : capped ? 'Stack limit reached' : cp < cost ? `Need ${cost - cp} more CP` : '';
       have.textContent = n ? `${n} in the field` : '';
     }
   }

@@ -235,6 +235,8 @@ export class TouchControls {
     const cancel = btn('tb-cancel', `${icon('close')}<span>Cancel</span>`, 'Cancel');
     const place = btn('tb-place', `${icon('place')}<span>Place</span>`, 'Place it here');
     place.addEventListener('click', () => this.game.commands.confirmPinned());
+    const line = btn('tb-line', `${icon('wire')}<span>Line</span>`, 'Build a line of them: tap the start, then the end');
+    line.addEventListener('click', () => this.game.commands.toggleLine());
     const left = btn('tb-turn', icon('turnLeft'), 'Turn left');
     const right = btn('tb-turn', icon('turnRight'), 'Turn right');
     const pause = btn('tb-pause', icon('pause'), 'Pause');
@@ -244,7 +246,7 @@ export class TouchControls {
     clear.addEventListener('click', () => { this.game.commands.select([]); });
     cancel.addEventListener('click', () => this.game.commands.cancelTargeting());
     pause.addEventListener('click', () => this.game.bus.emit('key', { code: 'Escape' }));
-    bar.append(place, left, right, cancel, control, clear);
+    bar.append(place, line, left, right, cancel, control, clear);
     const panel = document.getElementById('command-panel');
     const orders = btn('tb-orders', 'Orders', 'Show or hide the orders panel');
     orders.addEventListener('click', () => this.setPanel(panel.classList.contains('collapsed')));
@@ -254,9 +256,10 @@ export class TouchControls {
     // an order on the battlefield — folds the panel away again
     panel.addEventListener('click', (e) => {
       const b = e.target.closest('button');
-      if (b && !b.matches('.tb-orders, .rf-open, .tb-turn, .tb-place')) setTimeout(() => this.setPanel(false), 0);
+      if (b && !b.matches('.tb-orders, .rf-open, .tb-turn, .tb-place, .tb-line')) setTimeout(() => this.setPanel(false), 0);
     });
-    this.game.bus.on('order', () => {
+    this.game.bus.on('order', (o) => {
+      if (o?.kind === 'waypoint') return; // adding waypoints: the stack stays selected for the next
       this.setPanel(false); // (buying a unit doesn't: the reinforcements stay open for the next)
       // a finger has no right button: with the stack still selected, the next tap (meant to pick
       // another stack or just look) would order it again — so an order given by touch lets go of it
@@ -269,7 +272,7 @@ export class TouchControls {
       chat.addEventListener('click', () => (this.game.chat.box.isOpen ? this.game.chat.box.close() : this.game.chat.box.open()));
       document.getElementById('topbar').append(chat);
     }
-    this.tb = { control, clear, cancel, orders, left, right, place };
+    this.tb = { control, clear, cancel, orders, left, right, place, line };
     this.setPanel(false);
   }
 
@@ -355,7 +358,7 @@ export class TouchControls {
     fire.addEventListener('touchend', press(false), opts);
     fire.addEventListener('touchcancel', press(false), opts);
     box.append(fire);
-    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['sight', 'Sight'], ['toggleView', 'Command']]) {
+    for (const [action, label] of [['reload', 'Reload'], ['crouch', 'Crouch'], ['prone', 'Prone'], ['nextMember', 'Next man'], ['sight', 'Sight'], ['rocket', 'Rocket'], ['grenade', 'Grenade'], ['vehicleSmoke', 'Smoke'], ['binoculars', 'Binoculars'], ['toggleView', 'Command']]) {
       const b = btn(`tp-${action}`, label);
       b.addEventListener('touchstart', (e) => { e.preventDefault(); this.key(action); }, opts);
       box.append(b);
@@ -377,11 +380,15 @@ export class TouchControls {
     const commanding = this.commanding;
     this.tb.cancel.hidden = !cs.targeting;
     this.tb.place.hidden = !cs.targeting?.pin;
-    this.tb.left.hidden = this.tb.right.hidden = !(cs.targeting?.kind === 'build' || cs.targeting?.kind === 'air');
+    const lineable = cs.targeting?.kind === 'build' && !cs.targeting.structure?.startsWith('revetment');
+    this.tb.line.hidden = !lineable;
+    this.tb.line.classList.toggle('on', !!cs.targeting?.lineTouch);
+    this.tb.left.hidden = this.tb.right.hidden = !(cs.targeting?.kind === 'build' || (cs.targeting?.kind === 'air' && cs.targeting.air !== 'cap'));
     this.tb.control.hidden = !cs.selected.size || !!this.game.net;
     this.tb.clear.hidden = !cs.selected.size;
     this.sightBtn ??= this.pad.querySelector('.tp-sight');
     if (this.sightBtn) this.sightBtn.hidden = !this.game.player.sightKind?.();
+    for (const a of ['rocket', 'grenade', 'vehicleSmoke', 'binoculars']) { const b = this.pad.querySelector(`.tp-${a}`); if (b) b.hidden = !this.game.player.has?.(a); } // only what the unit carries
     if (commanding && (this.held.size || this.input.mouse.buttons.has(0))) {
       this.hold(new Set());
       if (!this.single) this.input.mouse.buttons.delete(0);

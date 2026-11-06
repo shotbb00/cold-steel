@@ -40,7 +40,8 @@ export class SampleBank {
       if (key.startsWith('_')) continue; // comments
       const files = Array.isArray(entry) ? entry : entry.files ?? [];
       const trim = Array.isArray(entry) ? 1 : entry.gain ?? 1;
-      for (const file of files) jobs.push({ key, file, trim });
+      const match = Array.isArray(entry) ? key : entry.match ?? key; // (a key with no synthesised twin: match this one's level)
+      for (const file of files) jobs.push({ key, file, trim, match });
     }
     const next = async () => {
       while (jobs.length) {
@@ -50,7 +51,7 @@ export class SampleBank {
           if (!res.ok) throw new Error(res.status);
           let buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
           if (LOOPS.test(job.key)) buffer = loopable(this.ctx, buffer);
-          const ref = await synth(job.key);
+          const ref = await synth(job.match);
           const gain = (ref ? clamp(peak(ref) / Math.max(1e-4, peak(buffer)), 0.01, 20) : 1) * job.trim;
           (this.samples[job.key] ??= []).push({ buffer, gain });
           this.loaded++;

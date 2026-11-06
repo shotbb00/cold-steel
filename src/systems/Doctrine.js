@@ -15,6 +15,11 @@ export class Doctrine {
   constructor(game) {
     this.game = game;
     this.t = 0;
+    this.lost = []; // the Wehrmacht's Counter-attack (1945): { faction, p, until } — points just lost
+    game.bus.on('point:owner', ({ point, owner, prev }) => {
+      if (prev && !owner) this.lost.push({ faction: prev, p: point, until: game.time + (doctrine(game, prev, 'counter')?.window ?? 0) });
+      if (owner) this.lost = this.lost.filter((l) => l.p !== point || l.faction !== owner); // taken back
+    });
     game.bus.on('unit:death', ({ stack, killer }) => {
       const f = killer?.faction;
       const al = f && f !== stack.faction && DEEP.has(stack.type.id) && doctrine(game, f, 'airland');
@@ -36,6 +41,12 @@ export class Doctrine {
       if (vw && w.stacksOf(s.faction).some((o) => o.type.id === 'ifv' && near(o.centroid, vw.range))) {
         doc.aim = vw.aim;
         doc.supp = vw.suppression;
+      }
+      const ca = !s.stats.structure && doctrine(g, s.faction, 'counter');
+      if (ca && this.lost.some((l) => l.faction === s.faction && l.until > g.time && near(l.p, ca.radius))) {
+        doc.fire *= ca.fire;
+        doc.aim *= ca.aim;
+        s.morale = Math.min(1, s.morale + ca.morale);
       }
       const tempo = !s.stats.structure && doctrine(g, s.faction, 'tempo');
       if (tempo) {

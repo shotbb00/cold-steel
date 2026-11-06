@@ -79,6 +79,13 @@
   <div id="loading" class="title-screen boot">
     <div class="boot-card">
       <div class="logo"><img class="logo-art" src="brand/mark.svg" alt="Cold Steel" width="605" height="268"><span class="logo-tag">World War III, 1985</span></div>
+      <script>
+        // the boot screen's tagline in the war the game is set in (data/epoch.js; settings 'epoch', or ?epoch=)
+        try {
+          const year = new URLSearchParams(location.search).get('epoch') || JSON.parse(localStorage.getItem('coldsteel.settings') || '{}').epoch;
+          if (year === '1945') document.querySelector('#loading .logo-tag').textContent = 'Western Front, spring 1945';
+        } catch (e) { /* storage blocked: 1985 */ }
+      </script>
       <div id="ts-status">Loading…</div>
       <small class="ts-note">If this stays here, start the game with <b>start.bat</b> — browsers won't load ES modules from a double-clicked file.</small>
     </div>

@@ -16,10 +16,12 @@ export default {
   cost: 70,
   armies: ['nva'],
   uncapped: true,
+  limit: 50,             // …but no more than this many in the field at once (modes/shared.js makeBuyer)
   formation: { count: 10, columns: 5, spacing: 2.6 },
   stats: {
     ...rifles.stats,
     grenades: 1,
+    lightAT: 1,           // one RPG-18 for the whole squad
     speed: 3.1,
     spread: 0.02,         // weekend shooting practice
     aimTime: 1.2,

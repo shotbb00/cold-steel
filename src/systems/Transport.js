@@ -5,6 +5,9 @@
 //   carrier knocked out    – its share of the passengers is lost; about half of them make it out
 // Carriers the player doesn't control dismount on their own when they come under fire or
 // settle into a defence.
+import { typeOf } from '../data/units/index.js';
+import { forArmy } from '../data/factions.js';
+import { epoch } from '../data/epoch.js';
 import { AIState } from '../ai/StackAI.js';
 
 const BOARD_DISTANCE = 7;   // metres from a vehicle to climb in
@@ -36,7 +39,9 @@ export class Transport {
     const game = this.game;
     const back = carrier.footprint + 3;
     const pos = { x: carrier.centroid.x - Math.sin(carrier.facing) * back, z: carrier.centroid.z - Math.cos(carrier.facing) * back };
-    const name = `${SQUAD_NAMES[carrier.faction] ?? 'Squad'} ${++this.counter}`;
+    // 1945 (data/epoch.js): the army's own name for the squad; off a T-34, the Red Army's tank riders
+    const own = epoch() === '1985' ? null : carrier.type.id === 'tank' ? 'Tank Riders' : forArmy(typeOf(carrier.passengerType)?.variants, carrier.army, carrier.faction)?.name;
+    const name = `${own ?? SQUAD_NAMES[carrier.faction] ?? 'Squad'} ${++this.counter}`;
     const squad = game.spawnStack(carrier.passengerType, carrier.faction, pos, carrier.facing, name, { count: carrier.passengers });
     carrier.passengers = 0;
     squad.carrier = carrier;

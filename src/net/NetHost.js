@@ -13,7 +13,9 @@
 import { encodeSnapshot, packArgs, v3, dir3, SNAPSHOT_RATE, STATE_RATE } from './protocol.js';
 import { enemyOf } from '../data/factions.js';
 
-export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn'];
+const DEPLOY_CLOCK = -1e4; // deployment snapshots' clock (s): below any battle time
+
+export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn', 'weld', 'tend']; // (new ones go at the end: the client looks them up by index)
 export const SOUND_CALLS = ['play', 'weapon'];
 
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -44,6 +46,7 @@ export class NetHost {
 
     link.on('ready', () => this.start());
     link.on('order', (m) => this.orders.push(m.o));
+    link.on('deploy-ready', () => { const d = game.deployment; if (d?.on) { d.ready.guest = true; d.maybeGo(); } });
     link.on('bye', () => this.peerLeft());
     link.onClose(() => this.peerLeft());
   }
@@ -155,6 +158,23 @@ export class NetHost {
     }
   }
 
+  /**
+   * Deployment (campaign co-op): the clock stands still, so the guest's orders run here and the
+   * stacks go out on a clock of their own, far below the battle's — the battle's first real
+   * snapshot is newer than all of them (and the guest resets its clock at deploy-go).
+   */
+  deploySnapshot(dt) {
+    if (!this.ready) return;
+    for (const o of this.orders.splice(0)) {
+      try { this.game.orders.run(this.remoteFaction, o, 'guest'); } catch (e) { console.error('bad order', o, e); }
+    }
+    this.deployT = (this.deployT ?? 0) + dt;
+    this.snapT -= dt;
+    if (this.snapT > 0) return;
+    this.snapT = 1 / SNAPSHOT_RATE;
+    this.link.sendSnapshot(encodeSnapshot(DEPLOY_CLOCK + this.deployT, this.game.world.stacks.filter((s) => s.alive), []));
+  }
+
   sendSnapshot() {
     const g = this.game;
     const stacks = g.world.stacks.filter((s) => s.alive);
@@ -172,6 +192,7 @@ export class NetHost {
       s: g.world.stacks.filter((s) => s.alive).map((s) => [
         s.id, s.ai.state, Math.round(s.ai.defendTime ?? 0), r2(s.morale), s.passengers ?? 0,
         s.smokeLeft ?? 0, s.smokeRounds ?? 0, s.garrison?.index ?? -1, s.ai.ordered ? 1 : 0, s.rank, s.autonomous ? 1 : 0,
+        s.job ?? '', s.tended && s.tended.until > g.time ? s.tended.kind : '', // a support vehicle's work, and whom it treats (systems/Support.js)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),
@@ -180,7 +201,6 @@ export class NetHost {
       ]) ?? null,
       status: ms?.statusFor?.(this.remoteFaction) ?? ms?.status?.() ?? null,
       air: round(g.air.readyAt),
-      gas: round(g.gas.readyAt),
       sites: g.construction.sites.map((s) => [s.id, r2(s.progress)]),
     });
   }

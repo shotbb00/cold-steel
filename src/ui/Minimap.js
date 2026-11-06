@@ -84,8 +84,8 @@ export class Minimap {
     for (const s of game.world.stacksOf(game.playerFaction)) {
       const st = s.stats;
       const u = s.units[0];
-      if (!u?.alive || !game.mine(s)) continue;
-      if (st.airRadar) area(u.pos.x, u.pos.z, st.airRadar.cover, '#7ff0ff', radarOn.has(u));
+      if (!u?.alive) continue; // (co-op: your partner's too — they cover you as well)
+      if (st.airRadar) area(u.pos.x, u.pos.z, st.airRadar.cover, '#7ff0ff', radarOn.has(u) || !!u.spinning);
       if (st.cbRadar) area(u.pos.x, u.pos.z, st.cbRadar.range, '#ffc46a', !!u.radarOn, st.cbRadar.arc, u.yaw);
       if (st.jammer) area(u.pos.x, u.pos.z, st.jammer.radius, '#c49bff', !!u.jamming);
       if (st.commandPost) area(u.pos.x, u.pos.z, st.commandPost.lead, '#9fe08a', s.postReady);

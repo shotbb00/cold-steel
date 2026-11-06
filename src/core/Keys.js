@@ -17,7 +17,8 @@ export const ACTIONS = [
   // command view
   { id: 'selectAll', label: 'Select all', ctx: 'command', key: 'KeyQ' },
   { id: 'reinforce', label: 'Reinforcements', ctx: 'command', key: 'KeyC' },
-  { id: 'hold', label: 'Hold position', ctx: 'command', key: 'KeyH' },
+  { id: 'hold', label: 'Stop / hold position', ctx: 'command', key: 'KeyH' },
+  { id: 'startBattle', label: 'Start the battle (after deployment)', ctx: 'command', key: 'Space' },
   { id: 'sandbags', label: 'Build sandbags', ctx: 'command', key: 'KeyN' },
   { id: 'trench', label: 'Dig a trench', ctx: 'command', key: 'KeyT' },
   { id: 'wire', label: 'Lay wire', ctx: 'command', key: 'KeyV' },
@@ -32,7 +33,8 @@ export const ACTIONS = [
   { id: 'heli', label: 'Helicopter', ctx: 'command', key: 'KeyY' },
   { id: 'jet', label: 'Jet gun run', ctx: 'command', key: 'KeyJ' },
   { id: 'lift', label: 'Air assault', ctx: 'command', key: 'KeyP' },
-  { id: 'gas', label: 'Gas fire mission', ctx: 'command', key: 'KeyI' },
+  { id: 'cap', label: 'Fighter patrol', ctx: 'command', key: 'KeyI' },
+  { id: 'recon', label: 'Recon flight', ctx: 'command', key: 'KeyO' },
   { id: 'barrage', label: 'Barrage (Soviet preparatory barrage / NVA Feuerwalze)', ctx: 'command', key: 'KeyZ' },
   { id: 'turnLeft', label: 'Turn left (placing, air runs)', ctx: 'command', key: 'KeyQ', targeting: true },
   { id: 'turnRight', label: 'Turn right (placing, air runs)', ctx: 'command', key: 'KeyE', targeting: true },
@@ -44,12 +46,16 @@ export const ACTIONS = [
   { id: 'prevMember', label: 'Previous squad member', ctx: 'control', key: 'KeyQ' },
   { id: 'nextMember', label: 'Next squad member', ctx: 'control', key: 'KeyE' },
   { id: 'sight', label: 'Thermal / night sight', ctx: 'control', key: 'KeyN' },
+  { id: 'rocket', label: 'Anti-tank rocket / guided missile', ctx: 'control', key: 'KeyF' },
+  { id: 'grenade', label: 'Throw a grenade', ctx: 'control', key: 'KeyT' },
+  { id: 'vehicleSmoke', label: 'Smoke launchers (vehicles)', ctx: 'control', key: 'KeyX' },
+  { id: 'binoculars', label: 'Binoculars: click calls a fire mission (observers, scouts)', ctx: 'control', key: 'KeyV' },
   // anywhere
   { id: 'quality', label: 'Cycle graphics quality', ctx: 'both', key: 'KeyG' },
   { id: 'mute', label: 'Mute', ctx: 'both', key: 'KeyM' },
   { id: 'chat', label: 'Chat (multiplayer)', ctx: 'both', key: 'Enter', alt: 'NumpadEnter' },
   { id: 'bloom', label: 'Bloom on / off', ctx: 'both', key: 'KeyB' },
-  { id: 'ao', label: 'Ambient occlusion on / off', ctx: 'both', key: 'KeyO' },
+  { id: 'ao', label: 'Ambient occlusion on / off', ctx: 'both', key: 'F8' },
 ];
 const BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));
 

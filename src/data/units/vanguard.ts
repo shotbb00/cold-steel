@@ -22,6 +22,7 @@ export default {
   stats: {
     hp: 100,              // one solid hit is usually enough
     grenades: 2,          // hand grenades per man (UnitStack GRENADE)
+    lightAT: 2,           // light anti-tank rockets the squad carries (UnitStack LAW)
     armor: 0,
     speed: 3.3,           // walking pace, m/s (runs ~1.6x)
     radius: 0.45,         // hit / body radius
@@ -58,9 +59,9 @@ export default {
   weaponSound: 'rifle',
   // shown in the main menu's unit preview
   variants: {
-    bw: { name: 'Panzergrenadier Squad', weapon: 'G3 rifles, MG3', text: 'West German mechanised infantry: they ride the Marder into battle and fight beside it. Steady, well drilled, and at their best in a prepared position.' },
-    nva: { name: 'Mot.-Schützen Squad', weapon: 'MPi-KM rifles', text: 'The East German motor riflemen: drilled hard, well equipped, and expected to go first through the gap their artillery has made.' },
-    nato: { name: 'Rifle Squad', weapon: 'M16A2 rifles', text: 'The backbone of the line: nine men with single aimed shots. They hold ground, dig in and take points.' },
-    pact: { name: 'Motor Rifle Section', weapon: 'AK-74 rifles', text: 'Soviet motor riflemen, the mass of every assault wave. Dangerous in numbers, brittle once pinned.' },
+    bw: { name: 'Panzergrenadier Squad', weapon: 'G3 rifles, MG3, Panzerfaust 44', text: 'West German mechanised infantry: they ride the Marder into battle and fight beside it. Steady, well drilled, and at their best in a prepared position.' },
+    nva: { name: 'Mot.-Schützen Squad', weapon: 'MPi-KM rifles, RPG-18', text: 'The East German motor riflemen: drilled hard, well equipped, and expected to go first through the gap their artillery has made.' },
+    nato: { name: 'Rifle Squad', weapon: 'M16A2 rifles, M72 LAW', text: 'The backbone of the line: nine men with single aimed shots. They hold ground, dig in and take points.' },
+    pact: { name: 'Motor Rifle Section', weapon: 'AK-74 rifles, RPG-18', text: 'Soviet motor riflemen, the mass of every assault wave. Dangerous in numbers, brittle once pinned.' },
   },
 } satisfies UnitType;

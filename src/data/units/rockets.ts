@@ -13,7 +13,7 @@ export default {
   category: 'fire', // reinforcement window section
   kind: 'vehicle',
   role: 'support',
-  cost: 420,
+  cost: 480,
 
   formation: { count: 1, columns: 1, spacing: 10 },
 
@@ -37,12 +37,12 @@ export default {
     weapon: 'artillery',
     indirect: true,
     gravity: 25,
-    scatter: 9,           // a carpet, not a point
+    scatter: 12,          // a carpet, not a point
     scatterPerM: 0.035,
     fireCooldown: 0.45,   // the ripple…
     burst: 1,
     burstInterval: 0,
-    damage: 150,
+    damage: 120,
     splash: 6,
     pierce: 0.2,
     vsArmor: 0.55,
@@ -52,7 +52,7 @@ export default {
     trail: true,          // rockets: a smoke trail all the way
     spread: 0,
     magSize: 12,
-    reloadTime: 50,       // …then the long reload
+    reloadTime: 75,       // …then the long reload
     breakMorale: 0,
     muzzleKind: 'rocket',
     weaponSound: 'mlrs',
@@ -62,7 +62,7 @@ export default {
   },
   // per-side differences on top of `stats`
   factionStats: {
-    pact: { magSize: 20, damage: 115, splash: 5, fireCooldown: 0.25, scatter: 11, armor: 0.08, hp: 340, speed: 5.4, reloadTime: 55 },
+    pact: { magSize: 20, damage: 95, splash: 5, fireCooldown: 0.25, scatter: 14, armor: 0.08, hp: 340, speed: 5.4, reloadTime: 80 },
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2 },

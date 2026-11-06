@@ -479,3 +479,9 @@
 .cp-legend .cut::before { background: transparent; border: 2px dashed var(--muted); width: 7px; height: 7px; border-radius: 50%; }
 .cp-bname small em { color: var(--enemy); font-style: normal; font-weight: 600; }
 .cp-event.cut { border-left-color: var(--enemy); background: rgba(255, 90, 72, 0.08); }
+/* the year picker: five years across the sidebar; the ones still to come greyed out */
+.menu-epoch { display: flex; }
+.menu-epoch button { flex: 1 1 0; padding: 7px 4px; text-align: center; line-height: 1.1; }
+.menu-epoch button.soon { cursor: default; opacity: 0.45; }
+.menu-epoch button.soon:hover { color: var(--muted); }
+.menu-epoch button small { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }

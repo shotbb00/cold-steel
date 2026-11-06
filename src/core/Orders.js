@@ -3,22 +3,27 @@
 // In single player and on a multiplayer host that happens at once; a multiplayer client sends
 // them to the host, which runs them for the client's side (net/NetHost.js) — so both players'
 // orders go through exactly the same code.
-//   { t: 'hold', s: [ids] }                      { t: 'move', m: [[id, x, z], …], hold, face? (yaw) }
+//   { t: 'hold', s: [ids] }                      { t: 'move', m: [[id, x, z], …], hold, face? (yaw), q? (add a waypoint) }
 //   { t: 'attack', s: [ids], target: id }        { t: 'build', s: id, k: kind, x, z, yaw }
 //   { t: 'unload', s: [ids] }                    { t: 'board', s: id, c: carrierId }
 //   { t: 'garrison', s: [ids], b: buildingIndex, face? }{ t: 'popSmoke', s: [ids] }
 //   { t: 'smoke', s: [ids], x, z }               { t: 'air', x, z, yaw, k: 'heli' | 'jet' | 'lift' }
-//   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId }
+//   { t: 'fireMission', s: [ids], x, z }         (shells on the spot, from binoculars in direct control)
+//   { t: 'flare', s: [ids], x, z }             { t: 'buy', u: unitTypeId, e?: road (base entry index), k?: squad kit (data/kits.js) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
-//   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
 //   { t: 'walze', s: [ids], x, z }               (the NVA's creeping barrage: its artillery, UnitStack.startBarrage)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
+//   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
+import { unitCost } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
+
+/** What new men for `s`'s empty places cost: its price times the share missing. */
+export const refillCost = (s) => Math.ceil(unitCost(s.type, s.army) * (s.missing / s.units.length));
 export class Orders {
   constructor(game) {
     this.game = game;
@@ -27,6 +32,8 @@ export class Orders {
   /** An order from this machine's player. Returns run()'s result (null on a client). */
   issue(cmd) {
     const net = this.game.net;
+    if (cmd.t === 'buy' && cmd.e === undefined) cmd.e = this.game.reinforceEntry ?? null; // the road picked in the reinforcement window
+    if (cmd.t === 'buy' && cmd.k === undefined) cmd.k = this.game.reinforceKit ?? null;   // …and the rifle squads' kit
     if (net?.isClient) {
       net.sendOrder(cmd);
       return null;
@@ -56,13 +63,23 @@ export class Orders {
     const mine = (ids) => (ids ?? []).map(own).filter(Boolean);
     switch (cmd.t) {
       case 'hold':
-        for (const s of mine(cmd.s)) s.ai.defend();
+        for (const s of mine(cmd.s)) {
+          s.waypoints = null;
+          if (s.moveTarget) { s.anchor.x = s.centroid.x; s.anchor.z = s.centroid.z; } // stop here, not at the end of the formation's slide
+          s.ai.defend();
+          // vehicles halt each where it stands, not back into formation (ai/SoldierAI.js reads plannedSpots)
+          if (!s.usesCover) s.ai.plannedSpots = new Map(s.units.filter((u) => u.alive).map((u) => [u, { x: u.pos.x, z: u.pos.z }]));
+        }
         return null;
       case 'move':
         for (const [id, x, z] of cmd.m ?? []) {
           const s = own(id);
           if (!s) continue;
+          if (g.deployment?.on && !s.stats.structure) { g.deployment.place(s, x, z, cmd.face ?? null); continue; } // deployment: placed there at once
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
+          // a waypoint: queued behind the route it's already on (StackAI takes the next on arrival)
+          if (cmd.q && (s.moveTarget || s.waypoints?.length)) { (s.waypoints ??= []).push({ x, z, hold: !!cmd.hold, face }); continue; }
+          s.waypoints = null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
           const plan = s.moveTarget && (s.usesCover ? planCover(g.world, s, s.moveTarget, face) : g.construction.planRevetments(s, s.moveTarget)); // cover, or dug-in vehicle positions
@@ -70,6 +87,7 @@ export class Orders {
         }
         return null;
       case 'attack': {
+        for (const s of mine(cmd.s)) s.waypoints = null;
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
         for (const s of mine(cmd.s)) s.ai.attack(target);
@@ -140,6 +158,17 @@ export class Orders {
           for (const u of s.units) u.retarget = 0;
         }
         return null;
+      case 'fireMission': { // called through binoculars in direct control (systems/PlayerControl.js): shells on the spot
+        const tubes = (s) => s.units.filter((u) => u.alive && u.stats.indirect);
+        const guns = mine(cmd.s).filter((s) => !s.barrage && tubes(s).some((u) => Math.hypot(cmd.x - u.pos.x, cmd.z - u.pos.z) <= u.stats.range));
+        for (const s of guns) {
+          s.ai.halt(); // (as for smoke: they stop, set up and fire)
+          s.smokeOrder = { x: cmd.x, z: cmd.z, left: Math.min(12, 3 * tubes(s).length), kind: 'he' };
+          for (const u of s.units) u.retarget = 0;
+        }
+        g.tell(faction, guns.length ? `Fire mission: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
+        return null;
+      }
       case 'flare':
         if (!g.conditions?.night) return g.tell(faction, 'Illumination rounds are for night battles');
         for (const s of mine(cmd.s)) {
@@ -165,15 +194,29 @@ export class Orders {
         g.tell(faction, jobs.length ? `Order cancelled${back ? ` — ${back} CP back` : ''}` : 'Nothing to cancel');
         return null;
       }
-      case 'gas':
-        return g.gas.call(faction, cmd.x, cmd.z);
+      case 'refill': {
+        let men = 0;
+        let spent = 0;
+        let far = 0;
+        for (const s of mine(cmd.s)) {
+          if (!s.missing) continue;
+          if (!s.supplied) { far++; continue; }
+          const cost = refillCost(s);
+          if (!g.spend(faction, cost)) { g.tell(faction, `Not enough command points to refill ${s.name} (${cost})`); continue; }
+          spent += cost;
+          men += s.refill();
+        }
+        if (men) g.tell(faction, `${men} new men join — ${spent} CP`);
+        else if (far) g.tell(faction, 'New men only reach squads near the base or a set-up command post');
+        return null;
+      }
       case 'barrage':
         return g.barrage.call(faction, cmd.x, cmd.z);
       case 'walze':
         for (const s of mine(cmd.s)) s.startBarrage?.(cmd.x, cmd.z);
         return null;
       case 'buy':
-        return g.modeState?.buy?.(faction, cmd.u) ?? null;
+        return g.modeState?.buy?.(faction, cmd.u, cmd.e ?? null, cmd.k ?? null) ?? null;
       default:
         return null;
     }

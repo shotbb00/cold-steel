@@ -55,7 +55,7 @@ export class ProjectileSystem {
   spawn({
     origin, dir, speed, damage, faction, color, size = 1, source = null, life = 1.8, ignore = null,
     splash = 0, pierce = 0, vsArmor = 1, suppress = 1, gravity = 0, target = null, whistleAt = -1, crater = 0,
-    tracer = true, trail = false, smoke = false, guide = null, flare = false,
+    tracer = true, trail = false, smoke = false, guide = null, flare = false, ignite = null,
   }) {
     const b = this.free.pop();
     if (!b) return null;
@@ -64,6 +64,7 @@ export class ProjectileSystem {
     if (target) b.target.copy(target);
     b.whistleAt = whistleAt; // seconds after launch to play the incoming whistle at the target
     b.crater = crater;       // crater depth on ground impact
+    b.ignite = ignite;       // chance it sets what it lands on burning (a flamethrower's fuel), else the blast's own
     b.age = 0;
     b.tracer = tracer; // drawn as a glowing streak
     b.smoke = smoke;   // a smoke round: lays a screen where it lands, no damage
@@ -107,6 +108,7 @@ export class ProjectileSystem {
       b.life -= dt;
       b.age += dt;
       if (b.trail) this.effects.trail(b.pos, b.dir);
+      else if (b.ignite) this.effects.flame?.(b.pos, b.dir, b.age); // (a flamethrower: drawn as flame, not a tracer)
       const heavy = b.splash > 5; // howitzer / rocket artillery: a long tearing scream, heard farther
       if (b.whistleAt >= 0 && b.age >= b.whistleAt - (heavy ? 1.2 : 0)) {
         b.whistleAt = -1;
@@ -267,6 +269,11 @@ export class ProjectileSystem {
       this.suppressAround(point, b.faction, r * 2.2, 0.6);
       this.buildings?.blast(point, b.damage, r);
     }
+    if (b.ignite) { // a flamethrower's fuel: it burns where it lands, nothing goes bang
+      this.effects.flameSplash?.(point);
+      if (!this.cosmetic && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) this.fire?.ignite(point.x, point.z, b.ignite);
+      return;
+    }
     const size = Math.max(0.5, r / 3.5); // tank round / rocket ~1, 155 mm ~2
     // earth is thrown up only where it bursts on the earth; a hedge, tree or wall top hit in the air
     // makes a grey puff, and only a vehicle hit the black smoke of something burning
@@ -279,7 +286,7 @@ export class ProjectileSystem {
     }
     const onGround = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
     if (onGround && size >= 0.8) this.world.terrain.scorch(point.x, point.z, r * 0.7 + 1, 0.45); // the blast leaves a black mark
-    if (onGround && !this.cosmetic) this.fire?.ignite(point.x, point.z, 0.18 * size); // dry grass may catch
+    if (onGround && !this.cosmetic) this.fire?.ignite(point.x, point.z, b.ignite ?? 0.18 * size); // dry grass may catch
     // small HE (autocannon rounds) pops quieter and runs together: a burst of them mustn't flood the mix
     this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, size < 0.8 ? { volume: 0.5, throttle: 0.12 } : { volume: 0.75, throttle: 0.05 });
     if (this.cameraManager && this.audio && size > 0.9) { // the ground shakes under the camera

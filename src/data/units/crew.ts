@@ -38,8 +38,8 @@ export default {
     nva: () => buildNvaSoldier({ weapon: 'smg', crew: true }),
   },
   variants: {
-    bw: { name: 'Panzerbesatzung', weapon: 'MP2 (Uzi)', text: 'The crew of a knocked-out vehicle, running for the rear. Get them home and they fight again.' },
-    nva: { name: 'Panzerbesatzung', weapon: 'MPi-KMS-72', text: 'The crew of a knocked-out vehicle, making for the rear.' },
+    bw: { name: 'Panzerbesatzung', weapon: 'MP2 (Uzi)', text: 'The crew of a knocked-out vehicle, running for the rear. Walk them to one of your knocked-out vehicles that didn\u2019t burn out and they man it again.' },
+    nva: { name: 'Panzerbesatzung', weapon: 'MPi-KMS-72', text: 'The crew of a knocked-out vehicle, making for the rear. Beside one of your knocked-out vehicles that didn\u2019t burn out, they man it again.' },
   },
   weaponSound: 'rifle',
 } satisfies UnitType;

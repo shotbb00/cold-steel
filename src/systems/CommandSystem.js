@@ -7,11 +7,11 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { epoch } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
-import { GAS } from './Gas.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
@@ -19,6 +19,8 @@ import { GroundDecal } from '../world/GroundDecal.js';
 import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
+const LINE_MAX = 16;       // pieces in one dragged line of sandbags, trench or wire
+const ROUTE_SEGMENTS = 96; // waypoint legs drawn at once (the selection's routes)
 const ARROW_SIZE = 10;     // metres long: the facing arrow drawn while right-dragging
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
 const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
@@ -111,7 +113,11 @@ export class CommandSystem {
       return;
     }
     if (this.targeting) {
-      if (button === 0) this.confirmTargeting(x, y);
+      if (button === 0 && this.targeting.kind === 'build' && !STRUCTURES[this.targeting.structure].dozer && !this.game.input.touch) { // (a finger's taps go through pinTargeting)
+        // a blueprint: press, drag and let go for a line of them (a click is still one)
+        const p = this.pickGround(x, y, this._p);
+        if (p) this.targeting.lineFrom = p.clone();
+      } else if (button === 0) this.confirmTargeting(x, y);
       else if (button === 2) this.cancelTargeting();
       return;
     }
@@ -119,11 +125,12 @@ export class CommandSystem {
     else if (button === 2) {
       // a click orders at once on release; a drag sets the facing (see update / onMouseUp)
       const p = this.pickGround(x, y, this._p);
-      this.rdrag = { x0: x, y0: y, ctrl, p0: p ? p.clone() : null };
+      this.rdrag = { x0: x, y0: y, ctrl, shift, p0: p ? p.clone() : null };
     }
   }
 
   onMouseUp({ button, x, y }) {
+    if (button === 0 && this.targeting?.lineFrom && !this.targeting.lineTouch && !this.game.input.touch) return this.placeLine(x, y); // a mouse drag's end (a tap's mouse events are not)
     if (button === 2 && this.rdrag) {
       const r = this.rdrag;
       this.rdrag = null;
@@ -132,7 +139,7 @@ export class CommandSystem {
       const far = Math.hypot(x - r.x0, y - r.y0) > 10;
       const p1 = far ? this.pickGround(x, y, this._v) : null;
       if (far && r.p0 && p1 && this.selected.size) this.issueFacing(r.p0, p1, r.ctrl);
-      else this.issueOrder(r.x0, r.y0, r.ctrl);
+      else this.issueOrder(r.x0, r.y0, r.ctrl, r.shift || this.queueing);
       return;
     }
     if (button !== 0 || !this.drag) return;
@@ -152,6 +159,7 @@ export class CommandSystem {
       else if (keys.is(code, 'turnRight')) this.targeting.yaw = (this.targeting.yaw ?? this.targeting.autoYaw ?? 0) - Math.PI / 12;
       return;
     }
+    if (this.game.deployment?.on && (keys.is(code, 'startBattle') || code === 'Enter')) return this.game.deployment.start(); // systems/Deployment.js
     if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
@@ -161,7 +169,8 @@ export class CommandSystem {
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
-    else if (keys.is(code, 'gas')) this.runCommand('gas');
+    else if (keys.is(code, 'cap')) this.runCommand('air:cap');
+    else if (keys.is(code, 'recon')) this.runCommand('air:recon');
     else if (keys.is(code, 'barrage')) this.runCommand('barrage');
     else if (keys.is(code, 'cancelJob')) this.runCommand('cancelJob');
     else if (keys.is(code, 'smoke')) this.runCommand('smoke');
@@ -184,6 +193,13 @@ export class CommandSystem {
     if (cmd === 'selectAll') {
       this.selected = new Set(this.playerStacks());
       this.emitSelection();
+    } else if (cmd === 'waypoints') { // touch: the next taps add waypoints instead of new orders
+      this.queueing = !this.queueing;
+      this.game.bus.emit('toast', this.queueing ? 'Waypoints: each tap adds one to the route' : 'Waypoints off');
+      this.game.bus.emit('selection', [...this.selected]);
+    } else if (cmd === 'refill') {
+      const squads = [...this.selected].filter((s) => s.alive && s.missing);
+      if (squads.length) this.game.orders.issue({ t: 'refill', s: ids(squads) });
     } else if (cmd === 'hold') {
       if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
       this.game.orders.issue({ t: 'hold', s: ids(this.selected) });
@@ -245,17 +261,14 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       const air = cmd.slice(4) || 'heli';
+      if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
-    } else if (cmd === 'gas') {
-      if (this.game.air.limit[this.faction] === 0) return this.game.bus.emit('toast', 'No support in this battle');
-      if (!this.game.gas.ready(this.faction)) return this.game.bus.emit('toast', `Gas not ready (${Math.ceil(this.game.gas.cooldownLeft(this.faction))} s)`);
-      this.startTargeting({ kind: 'smoke', gas: true });
     } else if (cmd === 'barrage') {
       const g = this.game;
-      if (doctrine(g, this.faction, 'mass')) {
+      if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
         if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
         if (!g.barrage.ready(this.faction)) return g.bus.emit('toast', `Barrage not ready (${Math.ceil(g.barrage.cooldownLeft(this.faction))} s)`);
         return this.startTargeting({ kind: 'smoke', barrage: true });
@@ -289,7 +302,7 @@ export class CommandSystem {
       // face the enemy by default
       const base = this.game.world.bases[this.enemy];
       t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
-      t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place — ${turn('it')}, ${cancel}`;
+      t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place${touch || def.dozer ? '' : ', or drag a line of them'} — ${turn('it')}, ${cancel}`;
     } else if (t.kind === 'engineer') {
       const geo = new THREE.RingGeometry(0.9, 1, 48);
       geo.rotateX(-Math.PI / 2);
@@ -308,28 +321,34 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      if (t.gas) t.decal.mesh.material.color.set(0xd8d27a);
       if (t.barrage || t.walze) t.decal.mesh.material.color.set(0xe0904a);
-      t.hint = t.barrage ? `Barrage (${doctrine(this.game, this.faction, 'mass').cost} CP): ${click} the middle of the sector — ${cancel}`
+      const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
+      t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
-        : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells should fall — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
-      // an air assault: the landing zone, with the arrow it comes in along
+      // an air assault: the landing zone, with the arrow it comes in along; a fighter patrol: its circle
       const p = KINDS[t.air];
       const shape = new THREE.Shape();
       const L = (p.runLength || 30) / 2;
-      shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
-      shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
-      if (t.air === 'lift') {
-        const hole = new THREE.Path();
-        hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
-        shape.moveTo(0, L + 20);
-        shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
-        shape.holes.push(hole);
+      if (p.orbit) {
+        shape.absarc(0, 0, p.orbit + 2, 0, Math.PI * 2, false);
+        const ring = new THREE.Path();
+        ring.absarc(0, 0, p.orbit - 2, 0, Math.PI * 2, true);
+        shape.holes.push(ring);
+      } else {
+        shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
+        shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
+        if (t.air === 'lift') {
+          const hole = new THREE.Path();
+          hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
+          shape.moveTo(0, L + 20);
+          shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
+          shape.holes.push(hole);
+        }
       }
-      const geo = new THREE.ShapeGeometry(shape);
+      const geo = new THREE.ShapeGeometry(shape, p.orbit ? 64 : 12);
       if (t.air === 'lift') geo.translate(0, -(L + 12), 0); // the ring sits on the clicked spot
       geo.rotateX(Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({
@@ -337,37 +356,91 @@ export class CommandSystem {
       }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
       t.hint = t.air === 'lift'
-        ? `Air assault (${p.cost} CP): ${click} the landing zone — ${turn('the approach')}, ${cancel}`
+        ? `${p.label} (${p.cost} CP): ${click} the ${epoch() === '1945' ? 'drop zone' : 'landing zone'} — ${turn('the approach')}, ${cancel}`
+        : t.air === 'cap' ? `${p.label} (${p.cost} CP): ${click} where the fighters should circle — ${cancel}`
+        : t.air === 'recon' ? `${p.label} (${p.cost} CP): ${click} the middle of the photo run — ${turn('the run')}, ${cancel}`
         : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;
     }
     scene.add(t.ghost);
     if (touch) { // on a touch screen: tap where it goes (it stays there while you pan or turn it), then Place
       t.ghost.visible = false;
-      const turns = t.kind === 'build' || t.kind === 'air';
+      const turns = t.kind === 'build' || (t.kind === 'air' && !KINDS[t.air]?.orbit); // (a patrol circle has no heading)
       t.hint = `${t.hint.split(':')[0]}: tap where it goes${turns ? ', the arrows turn it' : ''}, then Place — ${cancel}`;
     }
     this.targeting = t;
   }
 
-  /** Touch: put the blueprint at the tapped point (it stays there until the next tap or Place). */
+  /** Touch: put the blueprint at the tapped point (it stays there until the next tap or Place). In line mode the first tap is the start, the next ones the end. */
   pinTargeting(x, y) {
     const t = this.targeting;
     const p = t && this.pickGround(x, y, this._p);
     if (!p) return;
+    if (t.lineTouch && !t.lineFrom) t.lineFrom = p.clone();
     t.pin = p.clone();
     t.ghost.visible = true;
     this.updateTargeting();
   }
 
-  /** Touch: the Place button — confirm the blueprint where it was put. */
+  /** Touch: the Place button — confirm the blueprint (or the line) where it was put. */
   confirmPinned() {
     const t = this.targeting;
+    if (t?.lineFrom) return this.placeLine(0, 0, t.pin);
     if (t?.pin) this.confirmTargeting(0, 0, t.pin);
+  }
+
+  /** Touch: the Line button — taps set a line's start and end instead of one blueprint. */
+  toggleLine() {
+    const t = this.targeting;
+    if (t?.kind !== 'build' || STRUCTURES[t.structure].dozer) return;
+    t.lineTouch = !t.lineTouch;
+    t.lineFrom = null;
+    t.pin = null;
+    t.ghost.visible = false;
+    if (t.lineGhosts) t.lineGhosts.visible = false;
+    const def = STRUCTURES[t.structure];
+    t.hint = t.lineTouch ? `${def.name} line: tap where it starts, then where it ends — Place builds it` : `${def.name}: tap where it goes, the arrows turn it, then Place`;
+  }
+
+  /**
+   * The pieces of a line of `def` from `a` to `b`: [{ x, z, yaw }] laid end to end along it, each
+   * turned so its front faces the enemy (a short drag is one piece at `a`, facing as set).
+   */
+  lineOf(def, a, b, yaw) {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    if (len < def.length * 0.6) return [{ x: a.x, z: a.z, yaw }];
+    const n = Math.min(LINE_MAX, Math.max(1, Math.round(len / (def.length * 0.95))));
+    const ux = dx / len;
+    const uz = dz / len;
+    let y = Math.atan2(-uz, ux); // the piece's length along the line
+    const foe = this.game.world.bases[this.enemy];
+    if (foe && (Math.sin(y) * (foe.x - a.x) + Math.cos(y) * (foe.z - a.z)) < 0) y += Math.PI; // its front toward them
+    const step = len / n;
+    return Array.from({ length: n }, (_, i) => ({ x: a.x + ux * step * (i + 0.5), z: a.z + uz * step * (i + 0.5), yaw: y }));
+  }
+
+  /** Let go after pressing on a blueprint: one piece, or the whole line, ordered at once. */
+  placeLine(x, y, at = null) {
+    const t = this.targeting;
+    const a = t.lineFrom;
+    t.lineFrom = null;
+    const b = (at ? this._v.copy(at) : this.pickGround(x, y, this._v)) ?? a;
+    const pieces = this.lineOf(STRUCTURES[t.structure], a, b, t.yaw);
+    if (pieces.length === 1) return this.confirmTargeting(0, 0, a);
+    if (!t.stack.alive) return this.cancelTargeting();
+    // farthest first: each order sends the squad to its piece, so the last (nearest) is where it starts
+    const s = t.stack.anchor;
+    pieces.sort((p, q) => Math.hypot(q.x - s.x, q.z - s.z) - Math.hypot(p.x - s.x, p.z - s.z));
+    for (const p of pieces) this.game.orders.issue({ t: 'build', s: t.stack.id, k: t.structure, x: p.x, z: p.z, yaw: Math.round(p.yaw * 1000) / 1000 });
+    this.game.bus.emit('order', { kind: 'build' });
+    this.cancelTargeting();
   }
 
   cancelTargeting() {
     const t = this.targeting;
     if (!t) return;
+    t.lineGhosts?.removeFromParent();
     t.ghost.removeFromParent();
     this.targeting = null;
   }
@@ -405,9 +478,6 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.walze) {
       this.game.orders.issue({ t: 'walze', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'attack');
-    } else if (t.kind === 'smoke' && t.gas) {
-      if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
-      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke') {
       this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
@@ -428,7 +498,31 @@ export class CommandSystem {
     const p = this.game.input.touch ? (t.pin ? this._p.copy(t.pin) : null) : this.pickGround(m.x, m.y, this._p);
     if (!p) return;
     if (t.kind === 'build') {
-      t.ghost.position.set(p.x, p.y + 0.4, p.z);
+      const def = STRUCTURES[t.structure];
+      const pieces = t.lineFrom ? this.lineOf(def, t.lineFrom, p, t.yaw) : null;
+      if (pieces && pieces.length > 1) {
+        // dragging a line: a blueprint for every piece, and what it all costs
+        t.ghost.visible = false;
+        if (!t.lineGhosts) { t.lineGhosts = new THREE.Group(); this.game.scene.add(t.lineGhosts); }
+        while (t.lineGhosts.children.length < pieces.length) t.lineGhosts.add(t.ghost.children[0].clone());
+        t.lineGhosts.visible = true;
+        t.lineGhosts.children.forEach((g, i) => {
+          const q = pieces[i];
+          g.visible = !!q;
+          if (!q) return;
+          g.position.set(q.x, this.game.terrain.heightAt(q.x, q.z) + 0.4, q.z);
+          g.rotation.y = q.yaw;
+          // red where it can't go (the same test the build order makes: systems/Construction.js place)
+          this.badMat ??= new THREE.MeshBasicMaterial({ color: 0xff6a5a, transparent: true, opacity: 0.35, depthWrite: false });
+          g.material = this.game.cover.pointBlocked(q.x, q.z, def.width * 0.5 + 0.4) ? this.badMat : t.ghost.children[0].material;
+        });
+        const each = structureCost(this.game, this.faction, def);
+        t.hint = `${pieces.length} × ${def.name} (${pieces.length * each} CP): ${t.lineTouch ? 'Place builds the line, a tap moves its end' : 'let go to place the line'}`;
+        return;
+      }
+      if (t.lineGhosts) t.lineGhosts.visible = false;
+      t.ghost.visible = true;
+      t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
       if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? doctrine(this.game, this.faction, 'mass').radius : 10);
@@ -524,7 +618,7 @@ export class CommandSystem {
 
   // ---------------------------------------------------------------- orders
 
-  issueOrder(x, y, hold) {
+  issueOrder(x, y, hold, queue = false) {
     if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
     const target = this.stackAt(x, y, this.enemy);
     const p = this.pickGround(x, y, this._p);
@@ -551,6 +645,12 @@ export class CommandSystem {
         this.addMarker({ x: building.x, z: building.z }, 'hold');
         return;
       }
+    }
+    if (queue && !target) { // a waypoint: added to the route (Shift+right-click, or the touch toggle)
+      this.moveGroup([...this.selected], p, { hold, queue: true });
+      this.addMarker(p, 'move');
+      this.game.bus.emit('order', { kind: 'waypoint' });
+      return;
     }
     this.game.bus.emit('order', { kind: target ? 'attack' : hold ? 'hold' : 'move' });
     if (target) {
@@ -611,10 +711,11 @@ export class CommandSystem {
    * behind them. Rows run perpendicular to `facing` (default: from the group toward the point).
    * `face` (yaw): they hold there looking that way.
    */
-  moveGroup(stacks, point, { hold = false, facing = null, face = null } = {}) {
+  moveGroup(stacks, point, { hold = false, facing = null, face = null, queue = false } = {}) {
     if (!stacks.length) return;
     const moves = this.groupDests(stacks, point, facing).map(([s, x, z]) => [s.id, x, z]);
-    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000 });
+    const q = queue ? { q: 1 } : {};
+    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold, ...q } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000, ...q });
   }
 
   /** Where each of `stacks` goes when sent to `point` together: [[stack, x, z]], side by side. */
@@ -731,6 +832,32 @@ export class CommandSystem {
     for (let i = n; i < pv.els.length; i++) pv.els[i].hidden = true;
   }
 
+  /** The selected stacks' routes: from each stack through where it's going and every waypoint after. */
+  drawRoutes() {
+    if (!this.routes) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ROUTE_SEGMENTS * 6).fill(-1000), 3));
+      this.routes = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(MARKER_COLORS.move).multiplyScalar(1.4), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
+      this.routes.frustumCulled = false;
+      this.game.scene.add(this.routes);
+      this.routeKey = '';
+    }
+    const t = this.game.terrain;
+    const pts = [];
+    for (const s of this.selected) {
+      if (!s.alive || !s.waypoints?.length) continue;
+      const chain = [s.centroid, ...(s.moveTarget ? [s.moveTarget] : []), ...s.waypoints];
+      for (let i = 0; i + 1 < chain.length && pts.length < ROUTE_SEGMENTS * 2; i++) pts.push(chain[i], chain[i + 1]);
+    }
+    const key = pts.map((p) => `${p.x | 0},${p.z | 0}`).join(';');
+    if (key === this.routeKey) return;
+    this.routeKey = key;
+    const a = this.routes.geometry.attributes.position;
+    a.array.fill(-1000);
+    pts.forEach((p, i) => { a.array[i * 3] = p.x; a.array[i * 3 + 1] = t.heightAt(p.x, p.z) + 0.6; a.array[i * 3 + 2] = p.z; });
+    a.needsUpdate = true;
+  }
+
   addMarker(point, kind) {
     const mat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(MARKER_COLORS[kind]).multiplyScalar(1.6), transparent: true,
@@ -747,6 +874,7 @@ export class CommandSystem {
   update(dt) {
     this.updateTargeting();
     this.updatePreview();
+    this.drawRoutes();
     // right-drag: show which way they'll face
     if (this.rdrag?.p0 && this.active) {
       const m = this.game.input.mouse;

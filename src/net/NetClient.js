@@ -9,9 +9,9 @@
 //     labels, minimap and HUD then run as in single player
 // Orders go to the host (core/Orders.js); the host's simulation answers in the next snapshots.
 import * as THREE from 'three';
-import { decodeSnapshot, unpackArgs, FLAG } from './protocol.js';
+import { decodeSnapshot, unpackArgs, FLAG, FLAG2 } from './protocol.js';
 import { FX_CALLS, SOUND_CALLS } from './NetHost.js';
-import { SortieView } from '../systems/AirStrike.js';
+import { SortieView, Stick } from '../systems/AirStrike.js';
 import { enemyOf } from '../data/factions.js';
 import { angleDelta } from '../core/math.js';
 
@@ -44,6 +44,7 @@ export class NetClient {
     game.projectiles.cosmetic = true;
 
     link.on('init', (m) => this.init(m));
+    link.on('deploy-go', (m) => this.deployGo(m));
     link.on('ev', (m) => { for (const e of m.e) this.queue.push([m.t, e]); });
     link.on('st', (m) => this.queue.push([m.t, ['state', m]]));
     link.onSnapshot((buf) => this.onSnapshot(buf));
@@ -73,6 +74,18 @@ export class NetClient {
     this.clock(m.t);
     this.renderTime = m.t - this.delay;
     this.started = true;
+    if (this.game.deploys) this.game.deployment.begin(); // campaign co-op: place your stacks too (systems/Deployment.js)
+  }
+
+  /** Both players are ready: the battle starts, and the clock follows the battle's snapshots, not deployment's. */
+  deployGo(m) {
+    this.game.deployment.go();
+    this.snaps = [];
+    this.latest = -Infinity;
+    this.offset = null;
+    this.clock(m.t);
+    this.renderTime = m.t - this.delay;
+    this.prevNow = this.renderTime;
   }
 
   onSnapshot(buf) {
@@ -147,8 +160,7 @@ export class NetClient {
     const k = b ? Math.max(0, Math.min(1, (now - a.time) / (b.time - a.time))) : 0;
     const fresh = a.seq !== this.lastSeq;
     this.lastSeq = a.seq;
-    for (const s of g.world.stacks) {
-      if (!s.alive) continue;
+    for (const s of g.world.stacks) { // (all knocked out here, it may be back on the host: re-manned, recovered)
       const sa = a.stacks.get(s.id);
       if (sa) this.applyStack(s, sa, b?.stacks.get(s.id) ?? sa, k, fresh, dt, span);
     }
@@ -170,8 +182,7 @@ export class NetClient {
         if (u.alive) this.kill(s, u);
         continue;
       }
-      if (!u.alive) { // back: a knocked-out vehicle a recovery vehicle got running again (systems/Support.js)
-        if (s.usesCover) continue;
+      if (!u.alive) { // back: a vehicle recovered or re-manned (systems/Support.js, CrewBailout.js), or new men in a refilled squad
         u.alive = true;
         u.deathTime = 0;
         s.aliveCount++;
@@ -215,6 +226,10 @@ export class NetClient {
       u.peekT = f & FLAG.peek ? 0.2 : 0;
       u.reloadT = f & FLAG.reloading ? 1 : 0;
       if (fresh && f & FLAG.recoil) u.recoil = 1;
+      const f2 = sa.f2[i]; // radars and jammers at work (the minimap's areas, the turning antenna)
+      u.spinning = !!(f2 & FLAG2.radar);
+      u.radarOn = !!(f2 & FLAG2.cbRadar);
+      u.jamming = !!(f2 & FLAG2.jamming);
       const ts = sa.ts[i];
       u.target = ts ? g.world.stackById(ts)?.units[sa.ti[i]] ?? null : null;
       if (u.target && !u.target.alive) u.target = null;
@@ -331,7 +346,11 @@ export class NetClient {
       }
       case 'air': g.air.sorties.push(new SortieView(g, e[1], e[2], e[3], e[4], e[5], e[6] ?? 'heli')); break;
       case 'flare': g.flares.add(e[1], e[2], e[3]); break;
-      case 'gas': g.gas.land(e[1], e[2]); break;
+      case 'chute': { // a paradrop: the men coming down (the squad itself spawns when the host's lands)
+        const [, faction, army, squad, x, y, z, dx, dz, yaw] = e;
+        g.air.chutes.push(new Stick(g, { faction, army, owner: null, type: { squad }, yaw, pos: { x, y, z }, dir: { x: dx, z: dz } }, true));
+        break;
+      }
       case 'fire': g.fire.light(e[1], e[2]); break;
       case 'span': {
         const river = g.world.river;
@@ -366,7 +385,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -379,6 +398,8 @@ export class NetClient {
       s.garrison = garrison >= 0 ? g.buildings.list[garrison] : null;
       s.rank = rank ?? 0;
       s.autonomous = !!autonomous;
+      s.job = job || null;
+      s.tended = tended ? { kind: tended, until: g.time + 1 } : null;
     }
     const ms = g.modeState;
     if (ms) {
@@ -391,7 +412,6 @@ export class NetClient {
       if (m.status !== undefined) ms.statusText = m.status ?? '';
     }
     if (m.air) Object.assign(g.air.readyAt, m.air);
-    if (m.gas) Object.assign(g.gas.readyAt, m.gas);
     for (const [id, progress] of m.sites ?? []) {
       const site = g.construction.sites.find((s) => s.id === id);
       if (site) { site.progress = progress; g.construction.showProgress(site); }

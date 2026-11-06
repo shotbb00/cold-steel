@@ -123,6 +123,27 @@
     "weapons/rocket-launch-low.wav",
     "weapons/himars-2.wav"
   ],
+  "nato.katyusha": [
+    "weapons/katyusha-1.mp3"
+  ],
+  "pact.katyusha": [
+    "weapons/katyusha-1.mp3"
+  ],
+  "nato.nebelwerfer": [
+    "weapons/nebelwerfer-1.wav",
+    "weapons/nebelwerfer-2.wav",
+    "weapons/nebelwerfer-3.wav"
+  ],
+  "pact.nebelwerfer": [
+    "weapons/nebelwerfer-1.wav",
+    "weapons/nebelwerfer-2.wav",
+    "weapons/nebelwerfer-3.wav"
+  ],
+  "1945.us.rifle": { "files": ["guns/garand-1.wav", "guns/garand-2.wav", "guns/garand-3.wav", "guns/garand-4.wav", "guns/garand-5.wav", "guns/garand-6.wav", "guns/garand-7.wav"], "match": "nato.rifle" },
+  "1945.us.rifle.last": { "files": ["guns/garand-last.wav"], "match": "nato.rifle" },
+  "nato.flame": { "files": ["weapons/flame-1.wav", "weapons/flame-2.wav", "weapons/flame-3.wav", "weapons/flame-4.wav"], "match": "nato.mg" },
+  "pact.flame": { "files": ["weapons/flame-1.wav", "weapons/flame-2.wav", "weapons/flame-3.wav", "weapons/flame-4.wav"], "match": "nato.mg" },
+  "stuka.siren": { "files": ["aircraft/stuka-siren.wav"], "match": "pact.mlrs", "gain": 0.8 },
   "nato.sam": [
     "weapons/missile-1.wav"
   ],

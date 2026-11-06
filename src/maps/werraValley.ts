@@ -78,6 +78,7 @@ export default {
   id: 'werra-valley',
   name: 'Werra Valley',
   description: 'A river across the border and only three bridges over it. Hold them, blow them, or lay your own.',
+  ww2: { description: 'The Werra across the valley and only three bridges over it. Hold them, blow them, or lay your own.' },
   size: 1000,
   segments: 600,
   bounds: { x: 300, z: 310 },

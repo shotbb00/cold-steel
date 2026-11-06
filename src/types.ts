@@ -5,7 +5,7 @@
 
 export type Faction = 'nato' | 'pact';
 // per side, and optionally per army of a side (data/factions.js ARMIES: bw, nva — us and sov use the side's entry)
-export type PerFaction<T> = Record<Faction, T> & Partial<Record<'bw' | 'nva', T>>;
+export type PerFaction<T> = Record<Faction, T> & Partial<Record<'bw' | 'nva' | 'sov' | 'fj', T>>; // (1945: sov and fj on top of nato and pact, data/epoch.js)
 
 /** A model builder (data/models): materials in, a rig for render/RigRenderer or StackRenderer out. */
 export type ModelBuilder = (mats?: any) => any;
@@ -73,6 +73,7 @@ export interface UnitStats {
   stealth?: number;
   holdFire?: boolean;
   grenades?: number;     // hand grenades per man (UnitStack GRENADE)
+  lightAT?: number;      // light anti-tank rockets the squad carries (UnitStack LAW)
   scope?: number;        // spotting: share of cover / prone concealment seen past (a sniper's scope)
   marksman?: boolean;
   vsStructure?: number;
@@ -83,6 +84,9 @@ export interface UnitStats {
   jammer?: { radius: number; deploy: number }; // electronic warfare (systems/Jamming.js)
   cbRadar?: { range: number; arc: number; deploy: number }; // a counter-battery radar (systems/CounterBattery.js)
   airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
+  noStabilizer?: boolean;
+  /** a demolition carrier (1945's Goliath): blows up on contact with an enemy (systems/Support.js) */
+  goliath?: { trigger: number; radius: number; damage: number }; // the main gun only fires standing still (UnitStack.updateHeavyWeapon; 1945 tanks)
   demolition?: boolean; // goes for bunkers, held houses and trenches first
   dozer?: boolean;      // digs vehicle positions (Construction 'revetment')   // a sniper: officers, crews and observers first, never vehicles
   quietShot?: number;   // share of the usual time a shot keeps the shooter revealed
@@ -148,6 +152,10 @@ export interface UnitType {
   /** only these armies field it (the NVA's Kampfgruppe); uncapped: outside the stack limit */
   armies?: string[];
   uncapped?: boolean;
+  /** an army's own price for the type (the Goliath in 1945's mine-clearing slot), else `cost` */
+  armyCost?: Record<string, number>;
+  /** at most this many stacks of the type in the field per side (an uncapped type's own limit) */
+  limit?: number;
   /** only arrives by helicopter (air assault) */
   airOnly?: boolean;
   /** only offered on maps with a river */
@@ -157,7 +165,7 @@ export interface UnitType {
   /** per-side changes on top of `stats` */
   factionStats?: Partial<PerFaction<Partial<UnitStats>>>;
   /** the first `count` members get these stats on top (and specialistModels) */
-  specialist?: { count: number; stats: Partial<UnitStats> };
+  specialist?: { count: number; stats: Partial<UnitStats>; armyStats?: Record<string, Partial<UnitStats>> };
   models: Partial<PerFaction<ModelBuilder>>;
   specialistModels?: Partial<PerFaction<ModelBuilder>>;
   weaponSound?: string;
@@ -192,8 +200,14 @@ export interface Aircraft {
   rotorSound?: string;
   rotorSpeed?: number;
   engineSound?: string;
+  /** a one-off sound looped down the attack run (the Ju 87's siren) */
+  siren?: string;
   gun: AircraftWeapon & { rate: number; tracer: number; sound: string };
   rockets?: AircraftWeapon & { count: number; interval: number };
+  /** fighter patrol with guns only (1945): it dives on its target instead of firing missiles */
+  guns?: boolean;
+  /** air assault by parachute (1945): flies over the drop zone instead of landing (systems/AirStrike.js) */
+  paradrop?: boolean;
   /** air assault: the unit type landed */
   squad?: string;
   hp: number;
@@ -263,6 +277,8 @@ export interface MapDef {
   id: string;
   name: string;
   description: string;
+  /** 1945's own description and point names (maps/index.js forEpoch) */
+  ww2?: { description?: string; points?: Record<string, string> };
   size: number;
   segments: number;
   bounds: { x: number; z: number };

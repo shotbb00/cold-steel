@@ -12,14 +12,19 @@ import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
+import { KITS, takesKit } from '../data/kits.js';
 
 /**
  * state.buy(faction, typeId) for points-and-CP modes: pay, check the stack limit, and bring
  * the new stack in at the side's base (on one of its roads in, on big maps).
  */
+const ENTRY_GAP = 10; // seconds: each road brings in one arrival at a time
+
 export function makeBuyer(game, state) {
   const counter = {};
-  return (faction, typeId) => {
+  state.entryFree ??= {}; // `${faction}:${road}` → battle time the road is free again
+  /** `entry`: the road to arrive on (an index into the base's entries), or null: a command post, else any free road. */
+  return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
     if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type))) return null;
@@ -32,12 +37,26 @@ export function makeBuyer(game, state) {
       game.tell(faction, 'Stack limit reached');
       return null;
     }
-    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
-    counter[typeId] = (counter[typeId] ?? 0) + 1;
+    if (type.limit && game.world.stacksOf(faction).filter((s) => s.type.id === type.id && !s.withdrawing).length >= type.limit) {
+      game.tell(faction, `No more than ${type.limit} ${type.shortName} in the field`);
+      return null;
+    }
     const base = map.bases[faction];
     const toward = -Math.sign(base.z);
-    const entry = base.entries ? base.entries[Math.floor(Math.random() * base.entries.length)] : 0;
-    let pos = { x: base.x + entry + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
+    // the road it comes in on: the one asked for, else any that's free (one arrival per road every ENTRY_GAP s)
+    const roads = base.entries ?? [0];
+    const freeAt = (i) => state.entryFree[`${faction}:${i}`] ?? 0;
+    const asked = entry != null && roads[entry] !== undefined ? entry : null;
+    const open = roads.map((_, i) => i).filter((i) => freeAt(i) <= game.time);
+    const road = asked ?? open[Math.floor(Math.random() * open.length)] ?? null;
+    if (road === null || freeAt(road) > game.time) {
+      const wait = Math.ceil(Math.min(...(asked !== null ? [asked] : roads.map((_, i) => i)).map(freeAt)) - game.time);
+      game.tell(faction, `${asked !== null ? 'That road is' : 'Every road is'} busy: the next arrival in ${wait} s`);
+      return null;
+    }
+    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
+    counter[typeId] = (counter[typeId] ?? 0) + 1;
+    let pos = { x: base.x + roads[road] + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
     // a forward command post that is set up and not under fire takes the new arrivals (the one furthest
     // forward) — in co-op only the buyer's own: each player brings their troops in at their post
     const buyer = game.currentOwner ?? 'host';
@@ -45,13 +64,16 @@ export function makeBuyer(game, state) {
       .filter((s) => s.postReady && (!game.coop || faction !== game.playerFaction || s.owner === buyer) && !game.world.stacks.some((e) => e.faction !== faction && e.alive && !e.stats.structure
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
-    if (post && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
+    if (post && asked === null && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
+    else state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP;
     const army = game.armyOf(faction);
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
-    const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}`;
+    const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)
+    const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}${kitted ? ` (${KITS[kitted].short})` : ''}`;
     const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, name);
+    if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
-    game.tell(faction, `${type.shortName} called in — arriving at ${post ? post.name : 'base'}`);
+    game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);
     return stack;
   };
 }

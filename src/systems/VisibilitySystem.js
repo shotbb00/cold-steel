@@ -15,7 +15,6 @@
 // Units only shoot spotted enemies, so hidden, prone troops create real lulls.
 // For the player: hidden enemies aren't drawn, labelled or orderable (`visible`), nor are
 // spotted ones standing in the fog of war; their gunfire can still be heard.
-import { MASKED } from './Gas.js';
 
 const INTERVAL = 0.25;
 const REVEAL_TIME = 3;     // seconds a shot keeps the shooter revealed
@@ -101,7 +100,7 @@ export class VisibilitySystem {
       // a sniper's scope (stats.scope: the share of that cover it sees past) finds men lying low
       const conceal = (os.scope ? 1 - (1 - posture) * (1 - os.scope) : posture) * rest;
       const base = (os.sight ?? 100) * (os.binoculars && !o.moving ? 1.25 : 1);
-      let r = (base * (cond ? cond.sightFor(os, o.faction, lit) : 1) + u.height * 4) * conceal * (o.masked > 0 ? MASKED.sight : 1);
+      let r = (base * (cond ? cond.sightFor(os, o.faction, lit) : 1) + u.height * 4) * conceal;
       if (this.overwatch && o.pos.y > u.pos.y) r *= 1 + Math.min(0.5, (o.pos.y - u.pos.y) / 50); // looking down from a height
       const dx = o.pos.x - u.pos.x;
       const dz = o.pos.z - u.pos.z;

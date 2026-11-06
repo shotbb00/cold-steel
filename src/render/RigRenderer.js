@@ -7,6 +7,7 @@
 //
 // Model contract: build(mats) → { root, muzzle (Object3D), animate(u, dt, t, ctx), die?(time) }
 //   mats: { body, glow }   ctx: { terrain, onStep(worldPos, size) }
+import { epoch } from '../data/epoch.js';
 import * as THREE from 'three';
 import { paintMaterial, MERDC } from './paint.js';
 
@@ -19,15 +20,25 @@ const rnd = ([a, b]) => a + Math.random() * (b - a);
 // camouflage per army (parts with camo 1): MERDC for the US Army, the Bundeswehr's NATO three-tone
 // of 1984 (bronze green, leather brown, tar black); the Pact armies paint plain green
 const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] };
+// 1945 (data/epoch.js): US olive drab and the Red Army's 4BO green, plain; the Germans' dark
+// yellow with olive green and red-brown over it
+const ARMY_CAMO_1945 = {
+  us: [0x4d4f34, 0x4a4c31, 0x515337, 0x484a30],
+  sov: [0x4a5a34, 0x475631, 0x4e5e37, 0x44532f],
+  wh: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
+  fj: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
+};
 
 function materialsFor(army, glowColor) {
-  if (!materialCache.has(army)) {
-    materialCache.set(army, {
-      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: ARMY_CAMO[army] ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
+  const key = `${epoch()}:${army}`; // (the 1985 and the 1945 US Army don't share a paint)
+  if (!materialCache.has(key)) {
+    const camo = epoch() === '1945' ? ARMY_CAMO_1945[army] : ARMY_CAMO[army];
+    materialCache.set(key, {
+      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
     });
   }
-  return materialCache.get(army);
+  return materialCache.get(key);
 }
 
 const _p = new THREE.Vector3();

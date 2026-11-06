@@ -1,7 +1,8 @@
 // Floating HTML labels over each stack: name, survivors, health bar, (tactical view) AI state and
 // morale, and how hard it is being shot at: an amber suppression bar under the health bar (the
 // squad's average), PINNED when most of it is pinned down, the morale word coloured from steady
-// through shaken and wavering to broken (flashing).
+// through shaken and wavering to broken (flashing). Support vehicles at work say what they're doing
+// (stack.job, systems/Support.js) and the stacks they treat wear a wrench or a cross (stack.tended).
 import * as THREE from 'three';
 import { RANKS } from '../entities/UnitStack.js';
 
@@ -20,8 +21,8 @@ export class StackLabels {
     const el = document.createElement('div');
     const g = this.game;
     el.className = `stack-label ${stack.faction === g.playerFaction ? (g.mine(stack) ? 'ally' : 'ally partner') : 'enemy'}`;
-    el.innerHTML = '<div class="sl-head"><span class="sl-rank"></span><span class="sl-off" title="Platoon leader"></span><span class="sl-name"></span><span class="sl-count"></span></div>'
-      + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div><div class="sl-state"><span class="sl-ai"></span><span class="sl-sep"> · </span><span class="sl-morale"></span><span class="sl-pinned">Pinned</span></div>';
+    el.innerHTML = '<div class="sl-head"><span class="sl-rank"></span><span class="sl-off" title="Platoon leader"></span><span class="sl-care"></span><span class="sl-name"></span><span class="sl-count"></span></div>'
+      + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div><div class="sl-state"><span class="sl-ai"></span><span class="sl-sep"> · </span><span class="sl-morale"></span><span class="sl-pinned">Pinned</span></div><div class="sl-job"></div>';
     el.querySelector('.sl-name').textContent = stack.name;
     this.root.appendChild(el);
     const item = {
@@ -33,6 +34,8 @@ export class StackLabels {
       ai: el.querySelector('.sl-ai'),
       morale: el.querySelector('.sl-morale'),
       sup: el.querySelector('.sl-sup i'),
+      care: el.querySelector('.sl-care'),
+      job: el.querySelector('.sl-job'),
       last: {},
     };
     this.items.set(stack, item);
@@ -92,6 +95,14 @@ export class StackLabels {
         item.off.textContent = off ? 'LT' : '';
         item.off.className = `sl-off ${off}`;
         item.off.title = off === 'lost' ? 'Platoon leader down: slower to react' : 'Platoon leader: steadies this and nearby stacks';
+      });
+      const job = stack.faction === this.game.playerFaction ? stack.job ?? '' : '';
+      this.set(item, 'job', job, () => { item.job.textContent = job; item.el.classList.toggle('working', !!job); });
+      const care = stack.tended && stack.tended.until > this.game.time && stack.faction === this.game.playerFaction ? stack.tended.kind : '';
+      this.set(item, 'care', care, () => {
+        item.care.textContent = care === 'heal' ? '✚' : care === 'repair' ? '⚙' : '';
+        item.care.className = `sl-care ${care}`;
+        item.care.title = care === 'heal' ? 'Being treated by an ambulance' : care === 'repair' ? 'Being repaired by a recovery vehicle' : '';
       });
       this.set(item, 'auto', !!stack.autonomous, () => item.el.classList.toggle('wave', !!stack.autonomous));
       const sel = commands.selected.has(stack);

@@ -1,6 +1,6 @@
 // Electronic warfare jammers — NATO AN/MLQ-34 TACJAM, Pact R-330. Unarmed. Parked for ten seconds
 // with the mast up, it jams the other side's radio nets within 160 m (systems/Jamming.js): air
-// strikes and gas called in there come 8 s late and up to 25 m off the mark, forward observers
+// strikes called in there come 8 s late and up to 25 m off the mark, forward observers
 // there lose their fire-direction bonus, radars there go blind. But a transmitter is easy to find:
 // while it jams, the enemy sees it on the map.
 import { buildBwFuchsEW, buildNvaR378 } from '../models/armySupport.js';

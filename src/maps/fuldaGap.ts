@@ -100,6 +100,7 @@ export default {
   id: 'fulda-gap',
   name: 'Fulda Gap',
   description: 'Three sectors of autumn farmland either side of the inner-German border, split by wooded ridges: villages to hold, Point Alpha in the middle.',
+  ww2: { description: 'Three sectors of farmland in the hills between Hesse and Thuringia, split by wooded ridges: villages to hold, the Rasdorfer Berg in the middle.', points: { F: 'Rasdorfer Berg' } }, // (no border or Point Alpha yet: maps/index.js forEpoch)
   size: 1000,
   segments: 600,
   bounds: { x: 300, z: 320 },

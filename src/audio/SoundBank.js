@@ -395,6 +395,51 @@ function rocket(ctx, { boom = 1, thumpF = 70, motor = 0.8, motorDur = 0.9, dur =
 }
 
 /**
+ * The Nebelwerfer (1945): the launch crack, then the wail that gave it its names — a rough,
+ * wobbling tone that climbs and sags over a hiss, the "moaning minnie".
+ */
+function nebelwerfer(ctx) {
+  return makeBuffer(ctx, 2.6, (d, sr, n) => {
+    let ph = 0;
+    let l = 0;
+    const bp = bandpass(900, 4, sr);
+    const bp2 = bandpass(1800, 6, sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const w = Math.random() * 2 - 1;
+      l += lpCoef(1500, sr) * (w - l);
+      let s = w * Math.exp(-t * 120) * 0.8 + Math.sin(TAU * 55 * t) * Math.exp(-t * 18) * 0.8;   // the launch
+      const env = t > 0.08 ? Math.min(1, (t - 0.08) / 0.25) * Math.exp(-Math.max(0, t - 1.4) * 1.8) : 0;
+      const f = 380 + 420 * Math.sin(Math.min(1, t / 1.6) * Math.PI * 0.75) + 35 * Math.sin(TAU * 7 * t) + 20 * (Math.random() - 0.5);
+      ph += (TAU * f) / sr;
+      const tone = Math.sin(ph) + 0.5 * Math.sin(2 * ph + 0.3) + 0.25 * Math.sin(3 * ph);
+      s += env * (tone * 0.55 + bp(w) * 1.4 + bp2(w) * 0.6 + l * 0.4);
+      d[i] = Math.tanh(s * 1.4 * attack(t, 0.0005));
+    }
+  });
+}
+
+/** The Katyusha (1945): a hard ignition whump, then a ragged, crackling roar tearing off into the distance. */
+function katyusha(ctx) {
+  return makeBuffer(ctx, 2.0, (d, sr, n) => {
+    let l1 = 0;
+    let l2 = 0;
+    const bp = bandpass(450, 1.5, sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const w = Math.random() * 2 - 1;
+      l1 += lpCoef(3500, sr) * (w - l1);
+      l2 += lpCoef(300, sr) * (w - l2);
+      let s = (w * Math.exp(-t * 90) + l2 * 3 * Math.exp(-t * 10)) * 0.9;
+      const env = t > 0.03 ? Math.min(1, (t - 0.03) / 0.08) * Math.exp(-t * 1.6) : 0;
+      const crackle = Math.random() < 0.02 ? (Math.random() * 2 - 1) * 3 : 0;
+      s += env * (l1 * 1.6 * (1 - t * 0.4) + bp(w) * 2 + crackle);
+      d[i] = Math.tanh(s * 1.6 * attack(t, 0.0004));
+    }
+  });
+}
+
+/**
  * The sound definitions: key → () => AudioBuffer. Building every buffer at once takes a
  * second or two of main-thread time, so AudioSystem builds them a few at a time while the
  * game loads (most urgent first: the order below).
@@ -546,6 +591,7 @@ export function soundDefinitions(ctx) {
     'engine.diesel': () => diesel(ctx, { fire: 24, growl: 0.55, rough: 0.55 }),
     'engine.dieselSmall': () => diesel(ctx, { fire: 30, growl: 0.4, rough: 0.4 }),
     'engine.turbine': () => turbine(ctx, {}),
+    prop: () => diesel(ctx, { fire: 46, growl: 0.45, rough: 0.28 }),   // a piston aero engine and its propeller (1945 aircraft)
     'tracks.heavy': () => tracks(ctx, { clanks: 8, squeal: 0.35 }),
     'tracks.light': () => tracks(ctx, { clanks: 10, squeal: 0.2 }),
     traverse: () => traverse(ctx, { f: 420 }),
@@ -583,6 +629,11 @@ export function soundDefinitions(ctx) {
     // --- rocket artillery and SAMs: a launch per rocket; a salvo is a ripple of these
     'nato.mlrs': () => rocket(ctx, { boom: 0.9, thumpF: 60, motor: 1.5, motorDur: 1.3, dur: 2.2 }),
     'pact.mlrs': () => rocket(ctx, { boom: 0.8, thumpF: 70, motor: 1.3, motorDur: 1.0, dur: 1.9 }),
+    // 1945's rocket artillery, by the sound alone (sides: whoever fields them — the Red Army is on the Allied side)
+    'nato.katyusha': () => katyusha(ctx),
+    'pact.katyusha': () => katyusha(ctx),
+    'nato.nebelwerfer': () => nebelwerfer(ctx),
+    'pact.nebelwerfer': () => nebelwerfer(ctx),
     'nato.sam': () => rocket(ctx, { boom: 0.6, thumpF: 75, motor: 1.6, motorDur: 1.6, dur: 2.2 }),
     'pact.sam': () => rocket(ctx, { boom: 0.55, thumpF: 80, motor: 1.5, motorDur: 1.4, dur: 2.0 }),
 
@@ -701,21 +752,6 @@ export function soundDefinitions(ctx) {
         for (let j = 0; j < sr * 0.006; j++) d[at + j] += (Math.random() * 2 - 1) * Math.exp(-j / (sr * 0.0012)) * a;
       }
       loopify(d, sr, n, 0.1);
-    }),
-    // breathing through a gas mask: a rasping intake through the filter, the valve, a slow exhale
-    breath: () => makeBuffer(ctx, 3.6, (d, sr, n) => {
-      const inhale = bandpass(1100, 2.5, sr);
-      const exhale = bandpass(520, 2, sr);
-      for (let i = 0; i < n; i++) {
-        const t = i / sr;
-        const w = Math.random() * 2 - 1;
-        const a = t < 1.2 ? Math.sin(Math.PI * t / 1.2) ** 1.5 : 0;
-        const b = t > 1.5 && t < 3.1 ? Math.sin(Math.PI * (t - 1.5) / 1.6) ** 2 : 0;
-        d[i] = inhale(w) * a * 0.9 + exhale(w) * b * 0.6;
-        const v = t - 1.32; // the exhale valve clicking open
-        if (v > 0 && v < 0.03) d[i] += Math.sin(TAU * 900 * v) * Math.exp(-v * 180) * 0.5;
-      }
-      loopify(d, sr, n, 0.15);
     }),
   };
 }

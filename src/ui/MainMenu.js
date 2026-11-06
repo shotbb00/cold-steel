@@ -3,6 +3,8 @@
 // host or join a friend's battle), Units (a 3D preview of every unit for both sides, with
 // stats), Settings. Modes and maps come straight from their registries, so new ones show up
 // here by themselves. `onDeploy({ mode, map, side, net? })` starts the battle.
+import { settings } from '../core/Settings.js';
+import { EPOCHS, epoch, epochInfo } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
@@ -15,10 +17,10 @@ import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
 import { takeMenuTab } from '../core/replay.js';
-import { CHAPTERS, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
+import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
-import { CODEX } from '../data/codex.js';
+import { CODEX, CODEX45 } from '../data/codex.js';
 import { keyOf } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
@@ -101,7 +103,7 @@ export function loadRules() {
 }
 export function rulesPicker(rules, economy, onChange = () => {}) {
   const box = el('div', 'conditions rules');
-  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault and gas for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
+  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
     ['startCp', 'Starting CP', 'Command points each side starts with'],
     ['income', 'CP income', 'How fast both sides earn command points'],
@@ -152,18 +154,25 @@ const el = (tag, cls, html) => {
 };
 
 const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
-const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport' }; // support powers in the units list
+const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
+const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
+/** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
+const COMING_EPOCHS = [{ id: '1806', name: '1806', title: 'Napoleonic Wars, 1806' }, { id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
+const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
 function aircraftRows(kind, faction, army) {
   const p = KINDS[kind];
   const a = airType(kind, faction, army);
   const rows = [
-    ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift' }[kind]) ?? p.key}`],
+    ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon' }[kind]) ?? p.key}`],
     ['Cost', `${p.cost} CP · ready again after ${p.cooldown} s`],
     ['Speed', `${Math.round(p.attackSpeed * 3.6)}–${Math.round(p.cruiseSpeed * 3.6)} km/h`],
     ['Toughness', `${a.hp} hits from ground fire; missiles do several at once`],
   ];
+  if (p.aam) rows.push(a.guns ? ['Guns', `dives on enemy aircraft within ${p.aam.range} m, ${p.aam.count} passes — circles ${p.station} s`] : ['Missiles', `${p.aam.count} air-to-air, ${p.aam.range} m — circles ${p.station} s`]);
+  if (p.swath) rows.push(['Cameras', `everything within ${p.swath} m of the run, on the map for ${p.hold} s`]);
+  if (p.aam || p.swath) return rows; // (no gun or rockets fired)
   if (a.gun) rows.push(['Gun', `${a.gun.rate} rounds/s`]);
   if (a.rockets) rows.push([kind === 'jet' && a.rockets.count <= 4 ? 'Missiles' : 'Rockets', `${a.rockets.count}`]);
   if (a.squad) rows.push(['Carries', '8-man air assault squad, landed on the spot']);
@@ -245,7 +254,19 @@ export class MainMenu {
     r.classList.remove('loading-open', 'boot');
     r.replaceChildren();
     const side = el('aside', 'menu-side');
-    side.append(el('div', 'menu-brand', logo(GAME.title, GAME.tagline)));
+    side.append(el('div', 'menu-brand', logo(GAME.title, epochInfo().title)));
+    // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
+    const year = el('div', 'seg menu-epoch');
+    for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
+      const soon = !EPOCHS[e.id];
+      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.name);
+      b.type = 'button';
+      b.title = soon ? `${e.title} — coming soon` : e.title;
+      if (soon) b.disabled = true;
+      else b.addEventListener('click', () => { if (e.id === epoch()) return; settings.set('epoch', e.id); location.reload(); });
+      year.append(b);
+    }
+    side.append(year);
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
@@ -255,7 +276,7 @@ export class MainMenu {
       nav.append(b);
       this.tabs[id] = b;
     }
-    side.append(nav, el('p', 'menu-blurb', GAME.blurb));
+    side.append(nav, el('p', 'menu-blurb', epochInfo().blurb ?? GAME.blurb));
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
     this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
@@ -412,7 +433,7 @@ export class MainMenu {
     p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base on the Fulda Gap, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
     const done = chaptersDone();
     const list = el('div', 'bc-chapters');
-    CHAPTERS.forEach((c, i) => {
+    chapters().forEach((c, i) => {
       const card = el('div', `bc-chapter${done.has(c.id) ? ' done' : ''}`);
       card.append(el('span', 'bc-num', done.has(c.id) ? '✓' : String(i + 1)));
       const body = el('div', 'bc-body');
@@ -464,7 +485,7 @@ export class MainMenu {
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
-    const box = el('div', 'loading-card', `${logo(GAME.title, GAME.tagline)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page
@@ -495,9 +516,9 @@ export class MainMenu {
       list.append(b);
     }
     // the support powers' aircraft
-    for (const kind of Object.keys(KINDS)) {
+    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off)) { // (this war's: data/epoch.js)
       const id = `air:${kind}`;
-      const b = el('button', id === this.unit.id ? 'on air' : 'air', AIR_LABEL[kind]);
+      const b = el('button', id === this.unit.id ? 'on air' : 'air', airLabel(kind));
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
@@ -564,7 +585,9 @@ export class MainMenu {
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
-    const c = CODEX[id];
+    const ww2 = epoch() === '1945';
+    const own = ww2 && CODEX45[id];
+    const c = own ? { ...own, ...own.armies?.[army] } : CODEX[id]; // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
     const box = el('div', 'codex');
@@ -575,7 +598,7 @@ export class MainMenu {
       row.lastChild.textContent = text(body);
       box.append(row);
     }
-    const history = army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
+    const history = ww2 && !own ? null : army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
     if (history) {
       const h = el('div', 'codex-row codex-history');
       h.append(el('h4', '', 'History'), el('p', '', ''));

@@ -22,11 +22,11 @@
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
-import { MASKED } from '../systems/Gas.js';
-import { FACTIONS, enemyOf, DEFAULT_ARMY } from '../data/factions.js';
+import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
+import { KITS } from '../data/kits.js';
 import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
@@ -34,6 +34,8 @@ import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL } from '../world/Nav.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
+
+const TRACERS = 1.6; // every weapon's tracer share (stats.tracer) times this: the battle reads better with more of them
 
 // Officers: a rifle platoon's first man leads it. While he lives, his own men and every friendly
 // stack within LEAD_RANGE lose morale slower, rally faster and react quicker; once he's down
@@ -58,14 +60,19 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // which one by where it struck (front: the gun, sides: the tracks, rear: the engine). Tracks the
 // crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
 const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
-const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
+export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
+// a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
+// Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
+// refills after a lull like the grenades
+const REFILL = { base: 150, post: 80 }; // m: how near the base or a set-up command post a squad must be to take in new men
+export const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
 // row: squeeze through (collisions off for `ghostT` s, the last resort)
 const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3, ghostT: 1.6, ghostTVehicle: 3.5 };
 // single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
 // m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
-const COLUMN = { gap: 1.3, trail: 120, narrow: 4, wide: 6, after: 10 };
+const COLUMN = { gap: 1.3, trail: 120, narrow: 4, wide: 6, after: 10, afterVehicle: 40 }; // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -77,6 +84,7 @@ export const RANKS = [
 ];
 
 const _v = new THREE.Vector3();
+const FLAME = new THREE.Color(1, 0.55, 0.15).multiplyScalar(2.2);
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
@@ -106,7 +114,7 @@ export class UnitStack {
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
-    this.name = name ?? `${type.shortName} ${this.id}`;
+    this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
     this.services = services;
     this.world = services.world;
 
@@ -188,8 +196,22 @@ export class UnitStack {
   unitStats(index) {
     const sp = this.type.specialist;
     if (!sp || index >= sp.count) return this.stats;
-    this._specialistStats ??= { ...this.stats, ...sp.stats };
+    this._specialistStats ??= { ...this.stats, ...sp.stats, ...(sp.armyStats?.[this.army] ?? sp.armyStats?.[this.faction]) }; // (an army's own: the MG 42's rate)
     return this._specialistStats;
+  }
+
+  /** A squad kit (data/kits.js) on top of its stats: every member re-equipped (the specialists keep their own weapon). */
+  setKit(id) {
+    const kit = KITS[id];
+    if (!kit || id === 'standard') return;
+    this.kit = id;
+    this.stats = { ...this.stats, ...kit.stats(this.stats) };
+    this._specialistStats = null;
+    this.lightAT = this.stats.lightAT ?? 0;
+    for (const u of this.units) {
+      u.stats = this.unitStats(u.index);
+      u.grenades = u.stats.grenades ?? 0;
+    }
   }
 
   get usesCover() {
@@ -227,6 +249,74 @@ export class UnitStack {
   }
 
   /** A member's loose formation position around the anchor, on the ground. */
+  /** Men missing from a squad (infantry only: vehicles come back through recovery). */
+  get missing() {
+    return this.usesCover && !this.stats.structure ? this.units.filter((u) => !u.alive).length : 0;
+  }
+
+  /** Within reach of supply: your base, or a forward command post that is set up (core/Orders.js 'refill'). */
+  get supplied() {
+    const base = this.world.bases[this.faction];
+    if (base && Math.hypot(base.x - this.centroid.x, base.z - this.centroid.z) < REFILL.base) return true;
+    return this.world.stacksOf(this.faction).some((o) => (o.postReady && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < REFILL.post)
+      || (o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - this.centroid.x, o.centroid.z - this.centroid.z) < o.stats.supply.radius)); // (the Fallschirmjäger's supply lorry, 1945)
+  }
+
+  /** The missing men rejoin, each in his slot by the squad (the new men thin its experience a little). */
+  refill() {
+    let n = 0;
+    for (const u of this.units) {
+      if (u.alive) continue;
+      this.slotPosition(u, _v);
+      u.alive = true;
+      u.hp = u.maxHp;
+      u.deathTime = 0;
+      u.suppression = 0;
+      u.target = null;
+      u.pos.set(_v.x, this.world.terrain.heightAt(_v.x, _v.z), _v.z);
+      u.dest.copy(u.pos);
+      u.vel.set(0, 0, 0);
+      this.aliveCount++;
+      n++;
+    }
+    if (!n) return 0;
+    this.renderer.done = false;
+    this.setXp(this.xp * (1 - 0.25 * (n / this.units.length)));
+    this.morale = Math.min(1, this.morale + 0.2);
+    return n;
+  }
+
+  /** Put the whole stack at (x, z) at once, facing `facing` (the deployment phase, systems/Deployment.js): every man or vehicle in its formation slot, off anything solid. */
+  placeAt(x, z, facing = this.facing) {
+    const w = this.world;
+    this.facing = facing;
+    this.holdFacing = null;
+    this.anchor.set(x, w.terrain.heightAt(x, z), z);
+    this.centroid.copy(this.anchor);
+    this.moveTarget = null;
+    this.route = null;
+    this.column = false;
+    this.garrison = null;
+    this.ai.plannedSpots = null;
+    for (const u of this.units) {
+      if (!u.alive) continue;
+      this.slotPosition(u, _v);
+      // off walls and houses: a little further out round the slot until it's clear
+      for (let k = 1; k < 14 && w.cover.pointBlocked(_v.x, _v.z, u.radius + 0.3); k++) {
+        this.slotPosition(u, _v);
+        _v.x += Math.cos(k * 2.4) * k * 1.2;
+        _v.z += Math.sin(k * 2.4) * k * 1.2;
+      }
+      w.cover.release(u);
+      u.pos.set(_v.x, w.terrain.heightAt(_v.x, _v.z), _v.z);
+      u.dest.copy(u.pos);
+      u.vel.set(0, 0, 0);
+      u.yaw = facing;
+      if (u.turretYaw !== undefined) u.turretYaw = facing;
+    }
+    this.ai.defend();
+  }
+
   slotPosition(u, out) {
     if (this.column) return this.columnSlot(u, out);
     const c = Math.cos(this.facing);
@@ -406,7 +496,7 @@ export class UnitStack {
     if (!this.moveTarget || this.units.length < 2) this.column = false;
     else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
-    else if (step && ++this.wideFor > COLUMN.after) this.column = false;
+    else if (step && ++this.wideFor > (this.usesCover ? COLUMN.after : COLUMN.afterVehicle)) this.column = false;
   }
 
   /**
@@ -704,6 +794,7 @@ export class UnitStack {
       return;
     }
     if (s.antiAir?.missile && this.engageAirMissile(u, dt)) u.target = null; // the launcher is busy: no rifle shots
+    else if (s.antiAir && !s.antiAir.missile && this.engageAir(u, dt)) { u.target = null; return; } // an AA machine gun on its tripod (1945): aircraft first
 
     const reloading = u.reloadT > 0;
     const inCover = u.atCover;
@@ -753,6 +844,10 @@ export class UnitStack {
             this.startReload(u);
           }
         }
+      } else if (u.cooldown <= 0 && this.lightATAt(u, distToTarget)) {
+        this.fireLightAT(u);
+        u.cooldown = 3;
+        u.peekT = 0.8; // up over the cover with the tube on the shoulder
       } else if (u.cooldown <= 0 && this.grenadeAt(u, distToTarget)) {
         this.throwGrenade(u);
         u.cooldown = 2.5;
@@ -769,7 +864,7 @@ export class UnitStack {
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
     if (u.target) u.calmT = 0;
-    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill) u.grenades = s.grenades ?? 0; // grenades from the platoon's stock
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -893,6 +988,7 @@ export class UnitStack {
   updateHeavyWeapon(u) {
     const s = u.stats;
     if (!u.target) return;
+    if (s.noStabilizer && u.moving) return; // no stabiliser (1945 tanks but the Sherman): only fires standing still
     if (Math.abs(angleDelta(u.turretYaw, u.aimYaw)) > 0.12) return;
     const dist = Math.sqrt(dist2DSq(u.pos, u.target.pos));
     // IFV missile (TOW / Konkurs) against vehicles, on its own long reload
@@ -995,6 +1091,43 @@ export class UnitStack {
   }
 
   /** A grenade instead of a shot? The target close, and dug in, in a house or a bunker, or bunched up. */
+  /** May `u` fire one of the squad's light anti-tank rockets at its target, `d` m away? */
+  lightATAt(u, d) {
+    const s = u.stats;
+    const t = u.target;
+    if (!s.lightAT || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only
+    this.lightAT ??= s.lightAT;
+    return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
+  }
+
+  /** One of the squad's rockets at u's target (led), or at the point `at` (direct control: the crosshair). */
+  fireLightAT(u, at = null) {
+    const t = u.target;
+    this.lightAT--;
+    this.nextLightAT = this.world.time + LAW.every;
+    this.muzzleWorld(u, _p);
+    if (at) _v.copy(at);
+    else {
+      _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
+      if (t.vel) _v.addScaledVector(t.vel, _v.distanceTo(_p) / LAW.speed * 0.8);
+    }
+    _w.subVectors(_v, _p).normalize();
+    const sp = LAW.spread * (1 + u.suppression) * (u.moving ? 2 : 1);
+    _w.x += (Math.random() - 0.5) * sp * 2;
+    _w.y += (Math.random() - 0.5) * sp;
+    _w.z += (Math.random() - 0.5) * sp * 2;
+    _w.normalize();
+    this.services.projectiles.spawn({
+      origin: _p, dir: _w, speed: LAW.speed, damage: LAW.damage * u.damageMult, faction: this.faction, color: this.boltColor,
+      size: LAW.size, source: this, life: (LAW.range * 1.5) / LAW.speed + 0.2, splash: LAW.splash, pierce: LAW.pierce, vsArmor: LAW.vsArmor,
+      suppress: 2, ignore: u.coverSpot?.collider ?? null, tracer: true, trail: true,
+    });
+    this.services.effects.muzzle(_p, _w, 1.2, 'rocket');
+    this.services.audio?.weapon(this.faction, 'rocket', _p, u.atCover && !!u.coverSpot?.interior);
+    VisibilitySystem.revealShooter(u);
+    u.recoil = 1;
+  }
+
   grenadeAt(u, d) {
     const s = u.stats;
     const t = u.target;
@@ -1008,9 +1141,9 @@ export class UnitStack {
     return near >= 2;
   }
 
-  /** Throw a hand grenade at u's target: a high lob that bursts where it lands (or on the wall it hits). */
-  throwGrenade(u) {
-    const t = u.target;
+  /** Throw a hand grenade at u's target (or at the point `at`: direct control): a high lob that bursts where it lands (or on the wall it hits). */
+  throwGrenade(u, at = u.target.pos) {
+    const t = { pos: at };
     u.grenades--;
     u.nextGrenade = this.world.time + GRENADE.every;
     _p.set(u.pos.x, u.pos.y + 1.6, u.pos.z);
@@ -1108,8 +1241,9 @@ export class UnitStack {
   smokeMission(u) {
     const o = this.smokeOrder;
     const flare = o?.kind === 'flare';
-    if (!o || !u.stats.indirect || (flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
-    o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare, flare };
+    const he = o?.kind === 'he'; // shells on the spot: a fire mission called through binoculars (systems/PlayerControl.js)
+    if (!o || !u.stats.indirect || (he ? 1 : flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
+    o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare && !he, flare };
     return o.target;
   }
 
@@ -1182,9 +1316,9 @@ export class UnitStack {
       const smoke = !!t.smoke;
       const flare = !!t.flare;
       this.lob(u, _v.set(t.pos.x, t.pos.y, t.pos.z), smoke, flare);
-      if (smoke || flare) {
-        if (flare) this.flareRounds--; else this.smokeRounds--;
-        const left = flare ? this.flareRounds : this.smokeRounds;
+      if (t === this.smokeOrder?.target) { // a mission: smoke, illumination or shells on the spot
+        if (flare) this.flareRounds--; else if (smoke) this.smokeRounds--;
+        const left = flare ? this.flareRounds : smoke ? this.smokeRounds : 1;
         if (--this.smokeOrder.left <= 0 || left <= 0) { this.smokeOrder = null; u.target = null; }
       }
       return;
@@ -1199,7 +1333,6 @@ export class UnitStack {
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
       * (u.wounded ? 1.3 : 1)
-      * (u.masked > 0 ? MASKED.spread : 1)    // fogged gas-mask lenses (systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3)            // an MG fired from the hip sprays
       / (this.doc?.aim ?? 1);                 // the army's doctrine (systems/Doctrine.js)
@@ -1210,7 +1343,7 @@ export class UnitStack {
   fireAt(u, point) {
     const s = u.stats;
     if (s.weapon === 'artillery') return this.lob(u, point);
-    const spread = s.spread * 0.3 * (u.moving ? 1.6 : 1) * (1 + u.suppression * 0.5) * (u.masked > 0 ? MASKED.spread : 1)
+    const spread = s.spread * 0.3 * (u.moving ? 1.6 : 1) * (1 + u.suppression * 0.5)
       * (u.prone > 0.8 ? 0.6 : 1) * (this.deployed(u) ? 1 : 3);
     this.shoot(u, _v.copy(point), spread);
   }
@@ -1234,20 +1367,21 @@ export class UnitStack {
       speed: s.boltSpeed,
       damage: s.damage * u.damageMult * (ambush ? AMBUSH.damage : 1),
       faction: this.faction,
-      color: this.boltColor,
+      color: s.ignite ? FLAME : this.boltColor, // (a flamethrower's burning fuel)
       size: s.boltSize,
       source: this,
       life: (s.range * 1.5) / s.boltSpeed + 0.2,
+      ignite: s.ignite ?? null,
       splash: s.splash ?? 0,
       pierce: s.pierce ?? 0,
       vsArmor: s.vsArmor ?? 1,
       suppress: (s.suppressPower ?? 1) * (ambush ? AMBUSH.suppress : 1),
       ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
-      tracer: Math.random() < (s.tracer ?? 1),
+      tracer: !s.ignite && Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS), // (flame draws itself: ProjectileSystem)
       trail: !!s.trail,
     });
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
-    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior);
+    this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
   }
@@ -1378,7 +1512,7 @@ export class UnitStack {
   /** Seconds a radar / jammer / command post takes to set up (null: it doesn't). */
   get deploySeconds() {
     const s = this.stats;
-    return s.commandPost?.deploy ?? s.jammer?.deploy ?? s.airRadar?.deploy ?? s.cbRadar?.deploy ?? null;
+    return s.commandPost?.deploy ?? s.jammer?.deploy ?? s.airRadar?.deploy ?? s.cbRadar?.deploy ?? s.smokeGen?.deploy ?? s.supply?.deploy ?? null;
   }
 
   /** Fully set up (and so working)? */
@@ -1420,7 +1554,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind);
+    const text = barkLine(this.faction, kind, this.army);
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

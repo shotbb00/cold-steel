@@ -10,9 +10,10 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { Deployment } from '../systems/Deployment.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
-import { unitCost } from '../data/doctrine.js';
+import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
@@ -33,7 +34,7 @@ import { CoverMap } from '../world/Cover.js';
 import { EffectsSystem } from '../combat/EffectsSystem.js';
 import { ProjectileSystem } from '../combat/ProjectileSystem.js';
 import { BeamSystem } from '../combat/BeamSystem.js';
-import { UnitStack } from '../entities/UnitStack.js';
+import { UnitStack, RANKS } from '../entities/UnitStack.js';
 import { StackAI } from '../ai/StackAI.js';
 import { CommandSystem } from '../systems/CommandSystem.js';
 import { PlayerControl } from '../systems/PlayerControl.js';
@@ -68,7 +69,6 @@ import { keys } from './Keys.js';
 import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
-import { Gas } from '../systems/Gas.js';
 import { CounterBattery } from '../systems/CounterBattery.js';
 import { Jamming } from '../systems/Jamming.js';
 import { Fire } from '../systems/Fire.js';
@@ -180,7 +180,6 @@ export class GameEngine {
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);
-    this.gas = new Gas(this);             // chemical fire missions (a support power)
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
@@ -208,6 +207,9 @@ export class GameEngine {
     if (campaign) { this.blasts = []; if (campaign.scars) this.replayScars(campaign.scars); } // the sector as the last battle left it
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
+    this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
+    this.deploys = !!campaign && mode.id !== 'bootcamp';
+    if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
     // the AI side starts with and earns twice as much to make up for it
@@ -255,6 +257,12 @@ export class GameEngine {
 
   /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
+    const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
+    return stack;
+  }
+
+  spawnStackRaw(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
     const stack = new UnitStack({
       type: getUnitType(unitId),
       faction,
@@ -587,6 +595,7 @@ export class GameEngine {
     try {
       if (this.net?.isClient) this.stepClient(dt);
       else if (this.waiting) this.stepWaiting(dt);
+      else if (this.deployment?.on && !this.paused) this.deployment.step(dt);
       else if (!this.paused) this.step(dt);
       this.render(this.paused ? 0 : dt);
     } catch (e) {
@@ -636,10 +645,10 @@ export class GameEngine {
     this.air.update(dt);
     this.transport.update(dt);
     this.support.update(dt);
+    this.crews.update(dt);
     this.buildings.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
-    this.gas.update(dt);
     this.barrage.update(dt);
     this.fire.update(dt);
     this.counterBattery.update(dt);
@@ -689,9 +698,9 @@ export class GameEngine {
     this.effects.update(dt);
     this.smoke.update(dt);
     this.flares.update(dt);
-    this.gas.update(dt);
     this.barrage.update(dt);
     this.fire.update(dt);
+    this.air.updateChutes(dt); // a paradrop's men on the way down (the host's 'chute')
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);
     this.decor?.update?.(dt, t);

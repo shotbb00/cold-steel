@@ -4,9 +4,14 @@
 // themselves (no order of the player's standing), both drive to the nearest friendly work
 // within `seek` metres that isn't in the middle of a fight. Runs where the simulation runs
 // (the multiplayer host), twice a second.
+// The work shows: the support vehicle's label says what it's doing (stack.job: "Repairing
+// T-72 2 · tracks 60 %", "Treating 4 wounded"), the stacks it works on carry a badge
+// (stack.tended until a moment after the last care), and there is something to see at each
+// patient — welding sparks on a vehicle, a medic's glow over a wounded man (EffectsSystem).
 import { dist2DSq } from '../core/math.js';
 import { AIState } from '../ai/StackAI.js';
 
+const _near = [];
 const TICK = 0.5;
 const SEEK_EVERY = 3;   // seconds between looking for new work
 
@@ -22,34 +27,66 @@ export class Support {
     const step = this.t;
     this.t = 0;
     const world = this.game.world;
+    // 1945: a smoke generator, set up, keeps its screen up ahead of it; a supply lorry restocks what's near it
+    for (const s of world.stacks) {
+      const sg = s.alive && s.stats.smokeGen;
+      if (sg && s.setUpFully() && (s.smokeT = (s.smokeT ?? 0) - step) <= 0) {
+        s.smokeT = sg.every;
+        const u = s.units.find((m) => m.alive);
+        this.game.smoke?.add(u.pos.x + Math.sin(u.yaw) * sg.ahead, u.pos.z + Math.cos(u.yaw) * sg.ahead, { radius: sg.radius, duration: sg.duration });
+        s.job = 'making smoke';
+      }
+      // the Goliath: driven up to an enemy — a tank, a bunker, men in a house — it goes off
+      const gol = s.alive && s.stats.goliath;
+      if (gol) {
+        for (const u of s.units) {
+          if (u.alive && world.neighbors(u.pos, gol.trigger, _near).some((o) => o.alive && o.faction !== s.faction)) this.detonate(s, u, gol);
+        }
+      }
+      const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
+      s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
+    }
     for (const s of world.stacks) {
       if (!s.alive) continue;
-      const job = s.stats.repair ?? s.stats.heal;
-      if (!job) continue;
+      const kit = s.stats.repair ?? s.stats.heal;
+      if (!kit) continue;
       const repair = !!s.stats.repair;
       let working = false;
+      let job = null;       // the label's line: the most telling task this tick
+      let treated = 0;
       for (const o of world.stacksOf(s.faction)) {
         if (o === s || !o.alive || o.stats.structure || o.usesCover === repair) continue;
         for (const u of o.units) {
-          if (!(u.alive || (repair && u.recoverable && o.alive)) || !this.needs(u, repair) || !s.units.some((m) => m.alive && dist2DSq(m.pos, u.pos) < job.range * job.range)) continue;
+          if (!(u.alive || (repair && u.recoverable && o.alive)) || !this.needs(u, repair) || !s.units.some((m) => m.alive && dist2DSq(m.pos, u.pos) < kit.range * kit.range)) continue;
           working = true;
+          o.tended = { kind: repair ? 'repair' : 'heal', until: this.game.time + 1.2 };
+          treated++;
+          this.show(u, repair);
           if (!u.alive) { // a knocked-out vehicle of a platoon still in the fight: hauled back into running order
-            if ((u.reviveT = (u.reviveT ?? 0) + step) < job.mend * 2) continue;
+            u.reviveT = (u.reviveT ?? 0) + step;
+            job = `Recovering a knocked-out ${o.name} · ${Math.min(99, Math.round((u.reviveT / (kit.mend * 2)) * 100))} %`;
+            if (u.reviveT < s.stats.repair.mend * 2) continue;
             this.revive(o, u);
             this.game.tell(s.faction, `${s.name}: ${o.name} has a vehicle back in service`);
             continue;
           }
-          u.hp = Math.min(u.maxHp, u.hp + job.rate * step);
+          u.hp = Math.min(u.maxHp, u.hp + kit.rate * step);
           if (!u.wounded) u.woundedBarked = false;
+          if (repair && !job?.startsWith('Recovering')) {
+            const part = u.speedMul === 0 ? ['tracks', u.mendT] : u.gunOut ? ['gun', u.partT] : u.engineHit ? ['engine', u.partT] : null;
+            // a timed job (tracks, gun, engine) says more than patching a hull
+            if (part) job = `Repairing ${o.name} · ${part[0]} ${Math.min(99, Math.round(((part[1] ?? 0) / s.stats.repair.mend) * 100))} %`;
+            else job ??= `Repairing ${o.name} · hull`;
+          }
           if (repair && u.speedMul === 0) {
             u.mendT = (u.mendT ?? 0) + step;
-            if (u.mendT >= job.mend) {
+            if (u.mendT >= kit.mend) {
               u.speedMul = 0.95;
               u.mendT = 0;
               this.game.tell(s.faction, `${s.name}: ${o.name} is moving again`);
             }
           }
-          if (repair && (u.gunOut || u.engineHit) && (u.partT = (u.partT ?? 0) + step) >= job.mend) {
+          if (repair && (u.gunOut || u.engineHit) && (u.partT = (u.partT ?? 0) + step) >= kit.mend) {
             u.gunOut = false;
             u.engineHit = false;
             u.partT = 0;
@@ -58,8 +95,34 @@ export class Support {
         }
       }
       s.working = working;
-      if (!working) this.seek(s, job, repair);
+      s.job = repair ? job : treated ? `Treating ${treated} wounded` : null;
+      if (!working) this.seek(s, s.stats.repair ?? s.stats.heal, repair);
     }
+  }
+
+  /** A Goliath's charge: heavy damage all round (armour hardly helps), houses shaken, the carrier gone. */
+  detonate(s, u, gol) {
+    const g = this.game;
+    const p = u.pos.clone();
+    for (const o of g.world.neighbors(p, gol.radius + 3, _near.slice(0, 0))) {
+      if (!o.alive || o.faction === s.faction) continue;
+      const d = Math.max(0, Math.hypot(o.pos.x - p.x, o.pos.z - p.z) - o.radius);
+      if (d <= gol.radius) o.stack.damageUnit(o, gol.damage * (1 - d / gol.radius), s, 0.85, null, 1);
+    }
+    g.buildings?.blast(p, gol.damage, gol.radius);
+    g.effects.explosion(p, 2.6, { ground: true, fire: 1.2 });
+    g.audio?.play('explosion.big', p, { volume: 1 });
+    s.damageUnit(u, 1e6, null);
+    g.tellBoth(s.faction, `${s.name}: the Goliath went off`, 'An enemy Goliath went off!');
+  }
+
+  /** Something to see at the patient: welding sparks on a vehicle, a medic's glow over a man. */
+  show(u, repair) {
+    const fx = this.game.effects;
+    if (!fx || Math.random() < 0.35) return; // not every patient every tick: a flicker of work, not a light show
+    const p = { x: u.pos.x + (Math.random() - 0.5) * 2, y: u.pos.y + (repair ? 0.8 + Math.random() * 1.2 : 0.6), z: u.pos.z + (Math.random() - 0.5) * 2 };
+    if (repair) fx.weld(p);
+    else fx.tend(p);
   }
 
   /** A knocked-out vehicle running again: a third of its strength, its tracks still to be mended. */

@@ -619,25 +619,6 @@ body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: 
 #cover-preview i::after { content: ''; position: absolute; left: 11px; top: 4.5px; width: 10px; height: 3px; border-radius: 2px; background: rgba(255, 195, 90, 0.95); }
 #cover-preview i[hidden] { display: none; }
 
-/* Looking out through a gas mask (systems/Gas.js): two round lenses fogging at the rims, a sickly
-   tint, and the dark rubber of the mask everywhere outside them. */
-#gas-mask {
-  position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity 0.6s;
-  --lens-a: ellipse 31% 46% at 30% 48%;
-  --lens-b: ellipse 31% 46% at 70% 48%;
-  background:
-    radial-gradient(var(--lens-a), transparent 64%, rgba(205, 210, 195, 0.2) 82%, transparent 86%),
-    radial-gradient(var(--lens-b), transparent 64%, rgba(205, 210, 195, 0.2) 82%, transparent 86%),
-    rgba(120, 125, 70, 0.1);
-}
-#gas-mask::before {
-  content: ''; position: absolute; inset: 0; background: #0b0c0b;
-  -webkit-mask-image: radial-gradient(var(--lens-a), transparent 84%, #000 88%), radial-gradient(var(--lens-b), transparent 84%, #000 88%);
-  mask-image: radial-gradient(var(--lens-a), transparent 84%, #000 88%), radial-gradient(var(--lens-b), transparent 84%, #000 88%);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
-}
-#gas-mask.on { opacity: 1; }
 body.touch .rw-close { min-width: 44px; min-height: 44px; font-size: 30px; margin: -10px -10px -10px auto; }
 /* the platoon leader (entities/UnitStack.js officers): LT while he lives, struck through once he's down */
 .sl-off { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--gold); margin-right: 4px; }
@@ -831,3 +812,38 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 
 #touch-bar .tb-place { border-color: rgba(143, 233, 255, 0.7); color: #bff4ff; }
 #touch-bar .tb-place .ico { stroke: #bff4ff; }
+
+/* support at work (src/systems/Support.js): what the vehicle is doing, a badge on whoever it treats */
+.sl-job { display: none; margin-top: 2px; font-size: 10.5px; color: #8fe0a4; letter-spacing: 0.04em; white-space: nowrap; }
+.stack-label.working .sl-job { display: block; }
+.sl-care { font-weight: 700; margin-right: 4px; }
+.sl-care:empty { display: none; }
+.sl-care.heal { color: #6dff9a; }
+.sl-care.repair { color: #ffc060; }
+
+/* the deployment phase (src/systems/Deployment.js) */
+#deploy-bar {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: auto; /* (#hud lets clicks through: its own panels take them back) */
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  max-width: min(760px, calc(100vw - 32px)); padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--gold);
+}
+#deploy-bar[hidden] { display: none; }
+#deploy-bar .dp-title { font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+#deploy-bar .dp-text { color: var(--muted); font-size: 13.5px; flex: 1 1 260px; }
+#deploy-bar .dp-go { padding: 8px 18px; font-size: 15px; }
+@media (max-width: 700px) { #deploy-bar { top: 52px; padding: 8px 10px; gap: 8px; } #deploy-bar .dp-text { font-size: 12.5px; } }
+
+/* the reinforcement window's road picker (src/ui/ReinforceWindow.js) */
+.rw-entry, .rw-kit { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 12px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+.rw-entry[hidden], .rw-kit[hidden] { display: none; }
+.rw-entry .seg, .rw-kit .seg { display: flex; flex-wrap: wrap; }
+.rw-entry .seg button, .rw-kit .seg button { font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
+
+/* touch: the Line toggle while placing a blueprint (src/ui/TouchControls.js) */
+#touch-bar .tb-line.on { border-color: var(--gold); color: var(--gold); background: rgba(224, 180, 90, 0.16); }
+#touch-bar .tb-line.on .ico { stroke: var(--gold); }
+
+/* binoculars up in direct control (systems/PlayerControl.js toggleBinoculars): the round field of view */
+body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 4; background: radial-gradient(circle at 50% 50%, transparent 40vmin, rgba(0, 0, 0, 0.94) 44vmin); }
+.sup .sup-sil { background: #efd59a; width: 34px; height: 26px; } /* an air power: the army's own aircraft (ui/ActionBar.js) */

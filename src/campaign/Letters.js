@@ -7,6 +7,10 @@
 // own weapon, rumours, home, being cut off…) and its lines from big pools, and no line comes back
 // until about sixty others have been written (c.letterUsed).
 import { UNIT_TYPES } from '../data/units/index.js';
+import { epoch } from '../data/epoch.js';
+import { PEOPLE_1945, OPEN_1945, FOOD_1945, ENEMY_1945, HOME_1945, CLOSE_1945 } from './Letters45.js';
+const ww2 = () => epoch() === '1945';
+const LOCAL = new Set(['bw', 'nva', 'wh', 'fj']); // fighting in their own country
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
@@ -43,8 +47,11 @@ const PEOPLE = {
     to: [['Mutti', 'Liebe Mutti,'], ['Vati', 'Lieber Vati,'], ['Kerstin', 'Liebe Kerstin,'], ['Anja', 'Meine Anja,'], ['Mutti and Vati', 'Liebe Eltern,'], ['Oma', 'Liebe Oma,'], ['Ines', 'Ines, mein Mädchen,']],
     sign: ['Dein', 'Es grüßt dich herzlich', 'Bis bald,', 'Halt die Ohren steif,', 'In Liebe,', 'Dein Junge,'],
   },
+  ...PEOPLE_1945,
 };
 const DEFAULT = { nato: 'us', pact: 'sov' };
+const DEFAULT_1945 = { nato: 'us45', pact: 'wh' };
+const ARMY_1945 = { us: 'us45', sov: 'sov45', wh: 'wh', fj: 'fj' }; // 1945's armies' letter voices
 
 // ------------------------------------------------------------------ the parts of a letter
 // Each pool: (ctx) => [lines]. ctx: { army, side, place, friend, n, wounded, kind, day, time, weather, cut, to }
@@ -54,6 +61,7 @@ const OPEN = {
   bw: ['I am writing quickly, the Feldpost goes in ten minutes.','We have a break, the first one in two days, so here is a letter.', 'Your package came. The cake was a bit squashed, the others ate it anyway in five minutes.', 'I am writing in the Marder, the light is bad, please excuse the writing.', 'Do not believe everything on the Tagesschau. Here it is different and also not so bad.', 'Finally a moment. Everyone else is asleep.', 'I got your letter yesterday. I carry it in my breast pocket.'],
   sov: ['The field post goes tonight, so I am writing quickly.', 'Do not worry about me, I am fed and warm enough.', 'We have a quiet hour, the first in days.', 'Your letter came. The others were jealous of the photograph.', 'I write on an ammunition box, so the letters jump.', 'The politruk says we may write, so I write.', 'I have three minutes and a stub of pencil.', 'Forgive me for the short letter last time. This one will be longer.'],
   nva: ['The Feldpost leaves tonight, so I am writing quickly.', 'Your letter reached me. Everyone wanted to know who the girl in the photo is.', 'Finally a quiet hour. The Spieß says we may write.', 'I am writing under the tarpaulin with a torch, please excuse the scrawl.', 'Do not worry. We are eating properly and I have dry socks, mostly.', 'A short letter, the paper is rationed too now.', 'I read your last letter until it fell apart at the folds.'],
+  ...OPEN_1945,
 };
 
 const LOST_WRITER = (name) => [
@@ -71,6 +79,7 @@ const WHERE = (x) => [
   `They sent us to ${x.place}. Somebody on a map decided it mattered.`,
   `We spent the day around ${x.place}: a crossroads, a few farms, a lot of mud.`,
   ...(x.army === 'bw' ? [`It was ${x.place}. We used to drive through there on the way to the Rhön. Now look at it.`, `${x.place} — Oma has a cousin there. I hope they got out in time.`] : []),
+  ...(x.army === 'wh' || x.army === 'fj' ? [`${x.place}. I went through here once on a Sunday outing. Now it is the front.`, `It was ${x.place}. So close to home, and still the war.`] : []),
   ...(x.army === 'nva' ? [`It was near ${x.place}. On the other side of the border they speak like us, that is the strange thing.`, `${x.place}. Before the war I only knew it from the weather report.`] : []),
 ];
 
@@ -88,8 +97,8 @@ const SKY = {
   day: ['It went on the whole day. I didn\'t notice the hours.', 'Broad daylight, nowhere to hide, and still everybody hid.'],
   rain: ['It rained the whole time. Everything I own is wet.', 'Rain, mud, more rain.', 'The rain filled the trenches up to the knee.', 'It rains here like it means it.'],
   fog: ['There was fog so thick you couldn\'t see the next hole.', 'In the fog you only hear them coming.', 'The fog lay in the valley all morning. You shoot at sounds.'],
-  clear: ['It was a beautiful day, which felt wrong.', 'Blue sky, not a cloud. The jets loved it. We didn\'t.'],
-  overcast: ['Grey sky all day, the kind that doesn\'t rain and doesn\'t stop threatening to.', 'The clouds were so low the helicopters stayed home.'],
+  clear: ['It was a beautiful day, which felt wrong.', 'Blue sky, not a cloud. The planes loved it. We didn\'t.'],
+  overcast: ['Grey sky all day, the kind that doesn\'t rain and doesn\'t stop threatening to.', 'The clouds were so low the planes stayed home.'],
 };
 
 // the middle: a few topics each time
@@ -99,6 +108,7 @@ const TOPICS = {
     bw: ['The EPa is as bad as ever. I would kill for one of your Rouladen.', 'The field kitchen came up with Erbsensuppe. Everybody had three helpings.', 'A baker in the last village gave us all his Brötchen before he left.', 'We live on Knäckebrot and Leberwurst from tubes.'],
     sov: ['The kasha is cold but there is a lot of it.', 'We found a cellar full of jars — pickles and jam. The sergeant pretended not to see.', 'The canned meat is from 1979, the date says. It is still meat.', 'I dream of your pirozhki every night.'],
     nva: ['The Feldküche brought Soljanka, the good kind. A small miracle.', 'We have the hard bread again, the one you can build a bunker from.', 'In an abandoned house we found West coffee. Real coffee. We drank all of it.', 'Mutti, your Stollen would be worth a medal here.'],
+    ...FOOD_1945,
   })[x.army],
   sleep: () => ['I think I slept two hours in the last two days.', 'We sleep in shifts, sitting up, boots on.', 'You can sleep anywhere once you\'re tired enough. I slept on a tank engine deck, it was warm.', 'Nobody really sleeps. You close your eyes and listen.', 'I fell asleep standing up on watch and the sergeant just let me.'],
   land: (x) => [
@@ -106,13 +116,14 @@ const TOPICS = {
     'Every village has a church, a pond and a dog that won\'t stop barking.',
     'The woods are so dark and thick you could lose a battalion in them. Somebody probably has.',
     'There are cows standing in the fields like nothing is happening. Some of them are dead now.',
-    ...(x.army === 'bw' || x.army === 'nva' ? ['It is so strange to fight here. It looks like every Sunday drive we ever made.'] : ['It looks like a postcard. A postcard somebody is shooting at.']),
+    ...(LOCAL.has(x.army) ? ['It is so strange to fight here. It looks like every Sunday drive we ever made.'] : ['It looks like a postcard. A postcard somebody is shooting at.']),
   ],
   enemy: (x) => ({
     us: ['We took some prisoners today. They looked about sixteen and scared out of their minds, same as us.', 'Their tanks are low and fast. You see the gun before you see anything else.', 'The guys who fought them say they come in waves and don\'t stop. That\'s about right.'],
     bw: ['The prisoners we took were from the NVA. They speak exactly like my cousins in Thüringen. That was hard.', 'The Russians come in waves, like Opa always said. He was right about that too.', 'Their artillery never stops. You learn to hear which ones are for you.'],
     sov: ['The Americans have a lot of everything. Their helicopters especially.', 'The Germans fight hard here. It is their country, after all.', 'We captured a jeep full of chocolate and cigarettes. The capitalists live well, the boys say.'],
     nva: ['Over there it is Germans too. Bundeswehr. Sometimes you hear them shout, and it is our language. I cannot describe it.', 'The West has so many tanks, I did not know there were so many.', 'One of their prisoners asked me where I am from. Gotha, I said. He said his aunt lives there.'],
+    ...ENEMY_1945,
   })[x.army],
   mates: (x) => [
     `${x.friend} keeps us laughing. Today he did the colonel's voice and nearly got caught.`,
@@ -125,7 +136,9 @@ const TOPICS = {
     'Everybody says something different about how long this lasts. Christmas, some say. Which one, I ask.',
     'There\'s a rumour we get relieved next week. There\'s always a rumour we get relieved next week.',
     'Somebody heard on the radio that the politicians are talking. I hope they talk fast.',
-    ...(x.side === 'nato' ? ['They say the reinforcements from the States are on the way. Every day they\'re on the way.'] : ['They say the second echelon is right behind us, a whole army. I haven\'t seen it.']),
+    ...(ww2()
+      ? (x.side === 'nato' ? ['They say the Germans are finished, that it is a matter of weeks. They said that at Christmas too.'] : ['They say the new weapons will turn it all around. Nobody believes it any more.'])
+      : x.side === 'nato' ? ['They say the reinforcements from the States are on the way. Every day they\'re on the way.'] : ['They say the second echelon is right behind us, a whole army. I haven\'t seen it.']),
   ],
   weapon: (x) => ({
     infantry: ['My rifle is the cleanest thing I own. The sergeant makes sure.', 'I carry so much ammunition I walk like an old man.', 'We dig, we move, we dig again. My hands are one big blister.', 'The machine gunner in our squad is the most popular man in the company.'],
@@ -137,6 +150,7 @@ const TOPICS = {
     bw: ['Is the garden ready for winter? Vati, cover the roses.', 'I miss Sunday mornings: Brötchen, the radio, nobody in a hurry.', 'Did Eintracht win? Nobody here knows.', 'When this is over I am driving to the Ostsee... no, the Nordsee. Anywhere with water and no trees.'],
     sov: ['Is the birch by the house still standing? I think about it.', 'Tell me about the dacha. Did the apples come in?', 'I dream of the Volga in summer.', 'Kiss the little ones for me. Tell them their brother is a hero, but a careful one.'],
     nva: ['Is the Trabi running? Vati, do not let anyone borrow it.', 'I think about the Datsche, the barbecue in summer, everybody there.', 'When I come back we go to the Ostsee, like before. Promise.', 'Tell Oma I wear the scarf she knitted. It is the warmest thing I have.'],
+    ...HOME_1945,
   })[x.army],
   phase: (x) => (x.day <= 2
     ? ['It\'s only been a couple of days. It feels like a year already.', 'Everything is still new. They say you get used to it.']
@@ -162,6 +176,7 @@ const CLOSE = {
   bw: ['Macht euch keine Sorgen. I am careful.', 'Please send socks and Nivea, my hands are cracked.', 'Write soon. Every letter is a little bit of home.', 'Greet the neighbours. And the dog.', 'Do not watch the news every evening, Mutti. It does not help.'],
   sov: ['Do not cry, Mama, I am careful.', 'Tell Grandfather I remember what he told me about his war.', 'Write to me, even short. Every letter is like bread.', 'Do not worry. Our sergeant is a wise man, he keeps us alive.', 'Wait for me and I will come back.'],
   nva: ['Mach dir keine Sorgen, Mutti. I keep my head down.', 'Send me a few cigarettes if you can, they are worth more than money here.', 'Write soon, even just two lines.', 'Greet everyone in the Hausgemeinschaft.', 'Tell my brother he is not missing anything. He should stay in school.'],
+  ...CLOSE_1945,
 };
 
 // ------------------------------------------------------------------
@@ -187,7 +202,7 @@ const kindOf = (type) => {
  */
 export function writeLetter(c, b, { attackerWon, lost, wounded }) {
   const side = c.side;
-  const army = PEOPLE[c.army] ? c.army : DEFAULT[side];
+  const army = ww2() ? ARMY_1945[c.army] ?? DEFAULT_1945[side] : PEOPLE[c.army] ? c.army : DEFAULT[side];
   const P = PEOPLE[army];
   const used = new Set(c.letterUsed ?? []);
   // a line counts as used with its place, names and numbers blanked out: the same sentence about another village is still the same sentence

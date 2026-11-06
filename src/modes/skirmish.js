@@ -4,6 +4,7 @@
 //
 // A game mode is { id, name, description, setup(game), update(game, dt) }. setup spawns
 // whatever the mode needs and may push extra systems ({ update(dt, t) }) onto game.systems.
+import { epoch } from '../data/epoch.js';
 import { EnemyDirector } from '../ai/EnemyDirector.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 
@@ -22,7 +23,7 @@ export default {
 
   setup(game) {
     for (const [faction, spawns] of Object.entries(game.map.spawns)) {
-      for (const sp of spawns) game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, sp.name);
+      for (const sp of spawns) game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); // (the maps' names are 1985's: "1-ya Rota")
     }
     game.systems.push(new EnemyDirector(game, enemyOf(game.playerFaction), { holdTime: 12 }));
     const foe = enemyOf(game.playerFaction);

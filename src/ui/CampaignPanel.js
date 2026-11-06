@@ -12,6 +12,7 @@ import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { unitCost } from '../data/doctrine.js';
 import { armiesPicker } from './MainMenu.js';
+import { epoch } from '../data/epoch.js';
 import {
   loadCampaign, newCampaign, clearCampaign, battleChoice, orderMove, endTurn, autoResolve, sides, intel, sighted,
   refill, refillCost, recruit, recruitable, sectorsOf, neighbours, hour, day, power, supplied, cutLevel,
@@ -31,7 +32,14 @@ const btn = (label, cls, fn) => {
   b.addEventListener('click', fn);
   return b;
 };
-const LENGTHS = { endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', 'The Pact must take Fulda and Bad Hersfeld in 16 turns; NATO holds them, or takes Eisenach.'] };
+const ww2 = () => epoch() === '1945';
+const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', ww2()
+  ? 'The Allies must take Eisenach and Meiningen in 16 turns; the Germans hold them, or win back Fulda and Bad Hersfeld.'
+  : 'The Pact must take Fulda and Bad Hersfeld in 16 turns; NATO holds them, or takes Eisenach.'] });
+/** What each side's war is, on the side cards. */
+const SIDE_TEXT = () => (ww2()
+  ? { nato: 'April 1945: across the Fulda and east into Thuringia — take Eisenach and Meiningen.', pact: 'Hold the hills before Eisenach and Meiningen, and throw the Allies back over the Fulda.' }
+  : { nato: 'Hold the border, keep Fulda and Bad Hersfeld, then throw them back.', pact: 'Break the NATO line and drive for Fulda and Bad Hersfeld.' });
 
 export class CampaignPanel {
   /** `onPreview(mapId, side)`: the map the coming battle is fought on, for the menu's map table. */
@@ -87,7 +95,7 @@ export class CampaignPanel {
     r.append(el('h3', 'menu-sub', 'Your side'));
     const sideCards = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {
-      const text = f === 'nato' ? 'Hold the border, keep Fulda and Bad Hersfeld, then throw them back.' : 'Break the NATO line and drive for Fulda and Bad Hersfeld.';
+      const text = SIDE_TEXT()[f];
       const card = btn(`<b>${FACTIONS[f].name}</b><span>${text}</span>`, `card ${f}${ch.side === f ? ' on' : ''}`, () => {
         ch.side = f;
         for (const o of sideCards.children) o.classList.toggle('on', o === card);
@@ -98,8 +106,8 @@ export class CampaignPanel {
     r.append(sideCards, armiesPicker(ch));
     r.append(el('h3', 'menu-sub', 'How long'));
     const seg = el('div', 'seg cp-length');
-    const note = el('p', 'cp-hint', esc(LENGTHS[ch.length][1]));
-    for (const [id, [name, text]] of Object.entries(LENGTHS)) {
+    const note = el('p', 'cp-hint', esc(LENGTHS()[ch.length][1]));
+    for (const [id, [name, text]] of Object.entries(LENGTHS())) {
       const b = btn(name, ch.length === id ? 'on' : '', () => {
         ch.length = id;
         for (const o of seg.children) o.classList.toggle('on', o === b);
