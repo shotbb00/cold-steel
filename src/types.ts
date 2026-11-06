@@ -277,6 +277,8 @@ export interface MapDef {
   id: string;
   name: string;
   description: string;
+  /** 1945's own description and point names (maps/index.js forEpoch) */
+  ww2?: { description?: string; points?: Record<string, string> };
   size: number;
   segments: number;
   bounds: { x: number; z: number };

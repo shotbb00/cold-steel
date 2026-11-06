@@ -30,6 +30,7 @@ export const EPOCHS = {
   },
   1945: {
     id: '1945', name: '1945', title: 'Western Front, spring 1945',
+    blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
     sides: { nato: 'Allies', pact: 'Germany' },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army' },

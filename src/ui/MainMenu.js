@@ -17,7 +17,7 @@ import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
 import { takeMenuTab } from '../core/replay.js';
-import { CHAPTERS, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
+import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX, CODEX45 } from '../data/codex.js';
@@ -272,7 +272,7 @@ export class MainMenu {
       nav.append(b);
       this.tabs[id] = b;
     }
-    side.append(nav, el('p', 'menu-blurb', GAME.blurb));
+    side.append(nav, el('p', 'menu-blurb', epochInfo().blurb ?? GAME.blurb));
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
     this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
@@ -290,10 +290,8 @@ export class MainMenu {
     else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
-    else if (id === 'bootcamp' && epoch() === '1985') this.bootcampPanel();
-    else if (id === 'bootcamp' && epoch() !== '1985') {
-      this.panel.append(el('h2', '', 'Boot camp'), el('p', 'mp-lead', 'Boot camp is set in 1985 for now — switch the year under the title to 1985 to play it.'));
-    } else if (id === 'campaign') {
+    else if (id === 'bootcamp') this.bootcampPanel();
+    else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),
         onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? Object.values(MAPS)[0], side, true, 'menu'); },
@@ -431,7 +429,7 @@ export class MainMenu {
     p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base on the Fulda Gap, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
     const done = chaptersDone();
     const list = el('div', 'bc-chapters');
-    CHAPTERS.forEach((c, i) => {
+    chapters().forEach((c, i) => {
       const card = el('div', `bc-chapter${done.has(c.id) ? ' done' : ''}`);
       card.append(el('span', 'bc-num', done.has(c.id) ? '✓' : String(i + 1)));
       const body = el('div', 'bc-body');
