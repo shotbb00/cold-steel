@@ -6,7 +6,10 @@
 // same side against the AI; a mode's `multiplayer` is true for both, 'coop' for co-op only).
 // Each player has a name (settings.playerName); once connected both see who's in, the guest
 // marks themselves ready and the host's Start waits for that, and the two can chat (ui/Chat.js).
-// Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, rules, name }
+// The host may instead pick its campaign's next battle (campaign/Campaign.js battleChoice, this
+// browser's save): fought in co-op, the guest commanding half the battalion; `campaign` rides along
+// in lobby / start (the guest's game replays the sector's scars), the result is recorded on the host.
+// Lobby messages: hello { v, name } (joiner) → lobby { map, mode, side, coop, time, weather, rules, name, campaign? }
 // (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
 // start { … } (host). A version mismatch gets refuse { reason }.
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
@@ -19,6 +22,7 @@ import { DIFFICULTY } from '../data/rules.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { settings } from '../core/Settings.js';
 import { ChatBox } from './Chat.js';
+import { loadCampaign, battleChoice } from '../campaign/Campaign.js';
 
 // After a battle both players come back here connected again: the battle's start remembers
 // who hosted and the join code (sessionStorage, SESSION); leaving the after-action report sets
@@ -197,6 +201,21 @@ export class Lobby {
       sec.append(el('h3', '', title), ...body);
       box.append(sec);
     };
+    // the host's campaign (campaign/Campaign.js, this browser's save): its next battle, fought together
+    const camp = loadCampaign();
+    if (camp?.battles?.length || this.choice.campaignBattle) {
+      const seg = el('div', 'seg mp-together');
+      for (const [on, label] of [[false, 'A battle of our own'], [true, 'Our campaign’s next battle']]) {
+        const b = button(label, !!this.choice.campaignBattle === on ? 'on' : '', () => { this.choice.campaignBattle = on; this.render(); this.sendLobby(); });
+        b.disabled = on && !camp?.battles?.length;
+        seg.append(b);
+      }
+      const c = this.campaignBattle();
+      q('Your campaign', seg, el('p', 'map-about', c
+        ? `<b>${c.campaign.sector}</b> · ${c.campaign.attacker === c.side ? 'we attack' : 'they attack'} · ${MAPS[c.map]?.name ?? c.map}. Your friend commands half the battalion; the result goes into your campaign.`
+        : camp?.battles?.length ? 'Fight the next battle of your campaign together: your friend takes half the battalion.' : 'Your campaign has no battle waiting: plan the turn in the Campaign tab first.'));
+      if (c) return; // the campaign sets the rest
+    }
     const together = el('div', 'seg mp-together');
     const setTogether = () => {
       const only = MODES[this.choice.mode]?.multiplayer === 'coop';
@@ -391,7 +410,9 @@ export class Lobby {
       const modeName = info ? MODES[info.mode]?.name ?? info.mode : '…';
       const when = info ? `${TIMES[info.time]?.name ?? 'Day'}, ${(WEATHER[info.weather]?.name ?? 'Overcast').toLowerCase()}` : '…';
       const rules = info?.rules ? ` · ${info.coop ? `${DIFFICULTY[info.rules.difficulty]?.label ?? 'Regular'} enemy · ` : ''}${info.rules.air === false ? 'no air support' : 'air support'}` : '';
-      r.append(el('p', 'mp-wait', `The host picks the mode, map, sides, conditions and rules.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
+      r.append(el('p', 'mp-wait', info?.campaign
+        ? `The host’s campaign: the next battle, fought together.<br><b>${info.campaign.sector}</b> · ${info.campaign.attacker === info.side ? 'we attack' : 'they attack'} · <b>${map}</b> · You command half of <b>${side.replace(' together with the host', '')}</b>’s battalion · <b>${when}</b>.`
+        : `The host picks the mode, map, sides, conditions and rules.<br><b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
       r.append(this.status(this.peerReady ? 'Ready — waiting for the host to start the battle…' : 'Press Ready when you are, then the host can start.'));
       const row = el('div', 'deploy-row mp-row');
       row.append(button(this.peerReady ? 'Not ready' : 'Ready', 'deploy', () => {
@@ -486,7 +507,7 @@ export class Lobby {
     } else {
       link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
-      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
+      link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, campaign: m.campaign ?? null, net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
     this.render();
@@ -496,7 +517,7 @@ export class Lobby {
   drawPlayers() {
     if (!this.players || !this.link) return;
     const host = this.role === 'host';
-    const info = host ? this.choice : this.lobbyInfo;
+    const info = host ? this.battle() : this.lobbyInfo;
     const peerSide = info ? (info.coop ? info.side : enemyOf(info.side)) : null;
     const hostSide = info?.side ?? null;
     const row = (name, side, tag, ready) => {
@@ -511,16 +532,28 @@ export class Lobby {
     );
   }
 
+  /** The campaign's next battle as a co-op battle (null when not picked, or none is waiting). */
+  campaignBattle() {
+    if (!this.choice.campaignBattle) return null;
+    const c = loadCampaign();
+    return c?.battles?.length ? { ...battleChoice(c), coop: true, rules: this.choice.rules } : null;
+  }
+
+  /** What the host would start: its own choices, or the campaign's battle. */
+  battle() {
+    return this.campaignBattle() ?? { ...this.choice, campaign: null };
+  }
+
   sendLobby() {
     this.drawPlayers();
     this.preview();
-    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.choice, name: myName() });
+    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.battle(), name: myName() });
   }
 
   /** The map and the side this player would fight on, for the map table. */
   preview() {
     const host = this.role === 'host';
-    const info = host ? this.choice : this.lobbyInfo;
+    const info = host ? this.battle() : this.lobbyInfo;
     if (!info) return this.onPreview(null); // a guest before the host has said: no map yet
     this.onPreview(info.map, host || info.coop ? info.side : enemyOf(info.side));
   }
@@ -528,8 +561,9 @@ export class Lobby {
   start() {
     if (!this.peerReady) return;
     const link = this.link;
-    link.send({ k: 'start', ...this.choice });
-    this.begin({ ...this.choice, net: { role: 'host', link, names: { me: myName(), peer: this.peerName ?? 'Your friend' } } });
+    const battle = this.battle();
+    link.send({ k: 'start', ...battle });
+    this.begin({ ...battle, net: { role: 'host', link, names: { me: myName(), peer: this.peerName ?? 'Your friend' } } });
   }
 
   begin(choice) {
