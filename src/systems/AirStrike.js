@@ -104,7 +104,7 @@ export const KINDS = {
     gunTo: 0,
     runLength: 0,
     turn: 0,
-    orbit: 380,        // m: the circle it flies round the spot
+    orbit: 160,        // m: the circle it flies round the spot (kept on the map: AirStrike.call)
     station: 75,       // s on station
     aam: { count: 4, range: 1300, speed: 480, pk: 0.75, hits: 99, every: 3 }, // air-to-air missiles: a hit brings it down
   },
@@ -774,6 +774,11 @@ export class AirStrike {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
+    if (p.orbit) { // a patrol circle stays over the battlefield: its centre at least `orbit` in from the edges
+      const b = game.map.bounds ?? { x: 1e4, z: 1e4 };
+      x = Math.max(-Math.max(0, b.x - p.orbit), Math.min(Math.max(0, b.x - p.orbit), x));
+      z = Math.max(-Math.max(0, b.z - p.orbit), Math.min(Math.max(0, b.z - p.orbit), z));
+    }
     const name = forArmy(p.aircraft, game.armyOf(faction), faction).name;
     if (this.limit[faction] === 0) {
       game.tell(faction, 'No air support left');

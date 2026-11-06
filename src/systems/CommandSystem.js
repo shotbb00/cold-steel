@@ -327,20 +327,27 @@ export class CommandSystem {
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
-      // an air assault: the landing zone, with the arrow it comes in along
+      // an air assault: the landing zone, with the arrow it comes in along; a fighter patrol: its circle
       const p = KINDS[t.air];
       const shape = new THREE.Shape();
       const L = (p.runLength || 30) / 2;
-      shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
-      shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
-      if (t.air === 'lift') {
-        const hole = new THREE.Path();
-        hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
-        shape.moveTo(0, L + 20);
-        shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
-        shape.holes.push(hole);
+      if (p.orbit) {
+        shape.absarc(0, 0, p.orbit + 2, 0, Math.PI * 2, false);
+        const ring = new THREE.Path();
+        ring.absarc(0, 0, p.orbit - 2, 0, Math.PI * 2, true);
+        shape.holes.push(ring);
+      } else {
+        shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
+        shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
+        if (t.air === 'lift') {
+          const hole = new THREE.Path();
+          hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
+          shape.moveTo(0, L + 20);
+          shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
+          shape.holes.push(hole);
+        }
       }
-      const geo = new THREE.ShapeGeometry(shape);
+      const geo = new THREE.ShapeGeometry(shape, p.orbit ? 64 : 12);
       if (t.air === 'lift') geo.translate(0, -(L + 12), 0); // the ring sits on the clicked spot
       geo.rotateX(Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({
@@ -356,7 +363,7 @@ export class CommandSystem {
     scene.add(t.ghost);
     if (touch) { // on a touch screen: tap where it goes (it stays there while you pan or turn it), then Place
       t.ghost.visible = false;
-      const turns = t.kind === 'build' || t.kind === 'air';
+      const turns = t.kind === 'build' || (t.kind === 'air' && !KINDS[t.air]?.orbit); // (a patrol circle has no heading)
       t.hint = `${t.hint.split(':')[0]}: tap where it goes${turns ? ', the arrows turn it' : ''}, then Place — ${cancel}`;
     }
     this.targeting = t;

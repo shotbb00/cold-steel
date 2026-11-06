@@ -383,7 +383,7 @@ export class TouchControls {
     const lineable = cs.targeting?.kind === 'build' && !cs.targeting.structure?.startsWith('revetment');
     this.tb.line.hidden = !lineable;
     this.tb.line.classList.toggle('on', !!cs.targeting?.lineTouch);
-    this.tb.left.hidden = this.tb.right.hidden = !(cs.targeting?.kind === 'build' || cs.targeting?.kind === 'air');
+    this.tb.left.hidden = this.tb.right.hidden = !(cs.targeting?.kind === 'build' || (cs.targeting?.kind === 'air' && cs.targeting.air !== 'cap'));
     this.tb.control.hidden = !cs.selected.size || !!this.game.net;
     this.tb.clear.hidden = !cs.selected.size;
     this.sightBtn ??= this.pad.querySelector('.tp-sight');

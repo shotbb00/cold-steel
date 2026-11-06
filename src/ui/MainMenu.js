@@ -484,7 +484,7 @@ export class MainMenu {
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
-    const box = el('div', 'loading-card', `${logo(GAME.title, GAME.tagline)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page
