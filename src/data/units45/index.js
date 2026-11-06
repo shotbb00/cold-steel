@@ -67,7 +67,7 @@ const tank = derive(T.tank, {
   stats: { nightSight: undefined, noStabilizer: true, armor: 0.55, hp: 1100, range: 180, damage: 360, smoke: { charges: 1 } },
   factionStats: {
     nato: { noStabilizer: false, armor: 0.5, damage: 330, speed: 5.4 },   // Sherman: the gyrostabiliser, more but thinner
-    sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6 },      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
+    sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6, carries: { unit: 'rifles', count: 8 } }, // (Tank riders: data/epoch.js)      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
     pact: { armor: 0.6, damage: 380 },                                       // Panzer IV H: the long 7.5 cm
     fj: { armor: 0.6, damage: 380, speed: 4.6 },                             // StuG III G: low, the same gun, no turret
   },

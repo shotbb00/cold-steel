@@ -43,7 +43,7 @@ export const ARTILLERY = new Set(['artillery', 'rockets', 'spMortar', 'mortar'])
 export const armyDoctrine = (army, id) => DOCTRINE[army]?.find((d) => d.id === id);
 
 /** What unit `type` costs `army`: the NVA's Feuerwalze makes its artillery cheaper. */
-export const unitCost = (type, army) => Math.round(type.cost * (ARTILLERY.has(type.id) ? armyDoctrine(army, 'walze')?.cost ?? 1 : 1));
+export const unitCost = (type, army) => Math.round(type.cost * (ARTILLERY.has(type.id) ? armyDoctrine(army, 'walze')?.cost ?? 1 : 1) * (type.id === 'heavyTank' ? armyDoctrine(army, 'cats')?.cost ?? 1 : 1)); // (the NVA's Feuerwalze, the Wehrmacht's Big cats)
 
 /** `game`'s doctrine `id` for `faction`, if its army has it (else undefined). */
 export const doctrine = (game, faction, id) => DOCTRINE[game.armyOf?.(faction)]?.find((d) => d.id === id);

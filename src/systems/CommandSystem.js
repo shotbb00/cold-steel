@@ -267,7 +267,7 @@ export class CommandSystem {
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
     } else if (cmd === 'barrage') {
       const g = this.game;
-      if (doctrine(g, this.faction, 'mass')) {
+      if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
         if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
         if (!g.barrage.ready(this.faction)) return g.bus.emit('toast', `Barrage not ready (${Math.ceil(g.barrage.cooldownLeft(this.faction))} s)`);
         return this.startTargeting({ kind: 'smoke', barrage: true });
@@ -321,7 +321,8 @@ export class CommandSystem {
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
       if (t.barrage || t.walze) t.decal.mesh.material.color.set(0xe0904a);
-      t.hint = t.barrage ? `Barrage (${doctrine(this.game, this.faction, 'mass').cost} CP): ${click} the middle of the sector — ${cancel}`
+      const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
+      t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {

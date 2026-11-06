@@ -757,6 +757,9 @@ export class AirStrike {
     const al = doctrine(this.game, faction, 'airland');
     const w = this.game.world;
     const on = al && w.stacksOf(faction).some((s) => w.time - s.lastHitTime < al.contact || s.units.some((u) => u.alive && u.target));
+    // 1945: the US Army's Air superiority (fighter patrols), the Fallschirmjäger's Paradrop
+    const own = (kind === 'cap' && doctrine(this.game, faction, 'airsup')) || (kind === 'lift' && doctrine(this.game, faction, 'paradrop'));
+    if (own) return { cost: Math.round(p.cost * own.cost), cooldown: p.cooldown * own.cooldown, airland: true };
     return on ? { cost: Math.round(p.cost * al.cost), cooldown: p.cooldown * al.cooldown, airland: true } : { cost: p.cost, cooldown: p.cooldown };
   }
 

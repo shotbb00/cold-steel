@@ -10,6 +10,7 @@
 //   Defend  – never move; soldiers dig into cover around the anchor
 //   Retreat – morale broke: fall back toward base, recover, then return to Idle
 //   Follow  – the player has taken over one member: the rest move and fight around them
+import { armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 
 export const AIState = Object.freeze({
@@ -164,7 +165,9 @@ export class StackAI {
     if (s.stats.structure) { this.state = AIState.DEFEND; return; } // concrete doesn't go anywhere
 
     // A squad you are leading in person holds its nerve.
-    if (this.state !== AIState.RETREAT && this.state !== AIState.FOLLOW && s.morale < s.stats.breakMorale) {
+    const hold = s.usesCover && armyDoctrine(s.army, 'hold'); // the Fallschirmjäger in cover break late
+    const nerve = hold && s.units.filter((u) => u.alive && u.atCover).length * 2 >= s.aliveCount ? hold.morale : 1;
+    if (this.state !== AIState.RETREAT && this.state !== AIState.FOLLOW && s.morale < s.stats.breakMorale * nerve) {
       this.retreat();
       return;
     }

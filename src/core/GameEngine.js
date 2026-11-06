@@ -13,7 +13,7 @@
 import { Deployment } from '../systems/Deployment.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
-import { unitCost } from '../data/doctrine.js';
+import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
@@ -34,7 +34,7 @@ import { CoverMap } from '../world/Cover.js';
 import { EffectsSystem } from '../combat/EffectsSystem.js';
 import { ProjectileSystem } from '../combat/ProjectileSystem.js';
 import { BeamSystem } from '../combat/BeamSystem.js';
-import { UnitStack } from '../entities/UnitStack.js';
+import { UnitStack, RANKS } from '../entities/UnitStack.js';
 import { StackAI } from '../ai/StackAI.js';
 import { CommandSystem } from '../systems/CommandSystem.js';
 import { PlayerControl } from '../systems/PlayerControl.js';
@@ -256,6 +256,12 @@ export class GameEngine {
 
   /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
+    const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
+    return stack;
+  }
+
+  spawnStackRaw(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
     const stack = new UnitStack({
       type: getUnitType(unitId),
       faction,

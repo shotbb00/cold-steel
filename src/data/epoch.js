@@ -39,8 +39,28 @@ export const EPOCHS = {
     },
     defaults: { nato: 'us', pact: 'wh' },
     types: TYPES_1945, alias: ALIAS_1945, air: AIR_1945,
-    // ponytail: the other three armies' signatures come with phase 3 (the Soviets bring theirs from 1985)
-    doctrine: { sov: DOCTRINE_1985.sov },
+    // each army's two signatures (1945's own ids: tot, airsup, riders, counter, cats, hold, paradrop;
+    // the Soviets' mass barrage is 1985's)
+    doctrine: {
+      us: [
+        { id: 'tot', name: 'Time on Target', text: 'A support power (Z): every gun and mortar of yours in range fires one salvo on the spot — timed so that all the shells land at the same moment (120 CP).',
+          cost: 120, cooldown: 120, flight: 9 },
+        { id: 'airsup', name: 'Air superiority', text: 'Fighter patrols cost 40 % less and are ready again 30 % sooner.', cost: 0.6, cooldown: 0.7 },
+      ],
+      sov: [
+        DOCTRINE_1985.sov[0],
+        { id: 'riders', name: 'Tank riders', text: 'Every T-34 platoon brings a rifle squad riding on its hulls: drive them up, U puts them down.' },
+      ],
+      wh: [
+        { id: 'counter', name: 'Counter-attack', text: 'For two minutes after a point is lost, your units within 60 m of it fire 25 % faster, aim 20 % better and get their nerve back.',
+          window: 120, radius: 60, fire: 1.25, aim: 1.2, morale: 0.04 },
+        { id: 'cats', name: 'Big cats', text: 'Heavy tanks cost 15 % more and come with Veteran crews. (The Panther and the Tiger arrive with the next units.)', cost: 1.15 },
+      ],
+      fj: [
+        { id: 'hold', name: 'Hold to the last', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
+        { id: 'paradrop', name: 'Paradrop', text: 'Their paradrop costs 30 % less and is ready again 30 % sooner. (The paradrop arrives with the next units.)', cost: 0.7, cooldown: 0.7 },
+      ],
+    },
   },
 };
 
