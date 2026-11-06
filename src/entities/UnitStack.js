@@ -61,6 +61,10 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
 const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
 const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
+// a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
+// Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
+// refills after a lull like the grenades
+const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
 // row: squeeze through (collisions off for `ghostT` s, the last resort)
@@ -786,6 +790,10 @@ export class UnitStack {
             this.startReload(u);
           }
         }
+      } else if (u.cooldown <= 0 && this.lightATAt(u, distToTarget)) {
+        this.fireLightAT(u);
+        u.cooldown = 3;
+        u.peekT = 0.8; // up over the cover with the tube on the shoulder
       } else if (u.cooldown <= 0 && this.grenadeAt(u, distToTarget)) {
         this.throwGrenade(u);
         u.cooldown = 2.5;
@@ -802,7 +810,7 @@ export class UnitStack {
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
     if (u.target) u.calmT = 0;
-    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill) u.grenades = s.grenades ?? 0; // grenades from the platoon's stock
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -1028,6 +1036,39 @@ export class UnitStack {
   }
 
   /** A grenade instead of a shot? The target close, and dug in, in a house or a bunker, or bunched up. */
+  /** May `u` fire one of the squad's light anti-tank rockets at its target, `d` m away? */
+  lightATAt(u, d) {
+    const s = u.stats;
+    const t = u.target;
+    if (!s.lightAT || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only
+    this.lightAT ??= s.lightAT;
+    return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
+  }
+
+  fireLightAT(u) {
+    const t = u.target;
+    this.lightAT--;
+    this.nextLightAT = this.world.time + LAW.every;
+    this.muzzleWorld(u, _p);
+    _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
+    if (t.vel) _v.addScaledVector(t.vel, _v.distanceTo(_p) / LAW.speed * 0.8);
+    _w.subVectors(_v, _p).normalize();
+    const sp = LAW.spread * (1 + u.suppression) * (u.moving ? 2 : 1);
+    _w.x += (Math.random() - 0.5) * sp * 2;
+    _w.y += (Math.random() - 0.5) * sp;
+    _w.z += (Math.random() - 0.5) * sp * 2;
+    _w.normalize();
+    this.services.projectiles.spawn({
+      origin: _p, dir: _w, speed: LAW.speed, damage: LAW.damage * u.damageMult, faction: this.faction, color: this.boltColor,
+      size: LAW.size, source: this, life: (LAW.range * 1.5) / LAW.speed + 0.2, splash: LAW.splash, pierce: LAW.pierce, vsArmor: LAW.vsArmor,
+      suppress: 2, ignore: u.coverSpot?.collider ?? null, tracer: true, trail: true,
+    });
+    this.services.effects.muzzle(_p, _w, 1.2, 'rocket');
+    this.services.audio?.weapon(this.faction, 'rocket', _p, u.atCover && !!u.coverSpot?.interior);
+    VisibilitySystem.revealShooter(u);
+    u.recoil = 1;
+  }
+
   grenadeAt(u, d) {
     const s = u.stats;
     const t = u.target;

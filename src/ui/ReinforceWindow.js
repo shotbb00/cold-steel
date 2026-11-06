@@ -35,7 +35,7 @@ export function damageVs(type) {
   const va = (w) => w.vsArmor ?? 1;
   return {
     inf: best((w) => !(w.damage > 0) ? 0 : w.splash >= 3 || w.indirect || (w.burst ?? 1) >= 3 || (w.fireCooldown <= 0.5 && va(w) < 0.9) ? 3 : va(w) >= 0.9 ? 1 : 2),
-    armour: best((w) => w.atgm || (va(w) >= 0.9 && (w.pierce ?? 0) >= 0.5) ? 3 : !(w.damage > 0) ? 0 : va(w) >= 0.4 ? 2 : 1),
+    armour: Math.max(type.stats.lightAT ? 2 : 0, best((w) => w.atgm || (va(w) >= 0.9 && (w.pierce ?? 0) >= 0.5) ? 3 : !(w.damage > 0) ? 0 : va(w) >= 0.4 ? 2 : 1)), // (a rifle squad's LAWs: a fair chance)
     air: best((w) => (w.antiAir ? 3 : 0)),
   };
 }

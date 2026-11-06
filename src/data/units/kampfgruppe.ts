@@ -20,6 +20,7 @@ export default {
   stats: {
     ...rifles.stats,
     grenades: 1,
+    lightAT: 1,           // one RPG-18 for the whole squad
     speed: 3.1,
     spread: 0.02,         // weekend shooting practice
     aimTime: 1.2,

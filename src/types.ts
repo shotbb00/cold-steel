@@ -73,6 +73,7 @@ export interface UnitStats {
   stealth?: number;
   holdFire?: boolean;
   grenades?: number;     // hand grenades per man (UnitStack GRENADE)
+  lightAT?: number;      // light anti-tank rockets the squad carries (UnitStack LAW)
   scope?: number;        // spotting: share of cover / prone concealment seen past (a sniper's scope)
   marksman?: boolean;
   vsStructure?: number;
