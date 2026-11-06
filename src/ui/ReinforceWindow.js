@@ -1,13 +1,16 @@
 // The reinforcement window (C, or the button in the command panel): every unit you can call in,
 // under tabs — infantry, armour, fire support, air defence — each with its cost, what it's
 // for, how many you have out, and why it can't be bought when it can't. Click to call one in
-// (it arrives at your base); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
+// (it arrives at your base, on the road picked under the head: Auto — a forward command post,
+// else any free road — or left, centre or right as you look at the field; each road brings one
+// arrival at a time); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
 // one lands under "Other". The battle doesn't pause.
 import { unitCost } from '../data/doctrine.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forces } from '../modes/shared.js';
 import { silhouette } from './Icons.js';
 import { forArmy, artKey } from '../data/factions.js';
+import * as THREE from 'three';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
@@ -50,6 +53,7 @@ export class ReinforceWindow {
   constructor(game, state) {
     this.game = game;
     this.state = state;
+    this._p = new THREE.Vector3();
     const me = game.playerFaction;
     const army = game.armyOf(me);
     const root = (this.root = document.createElement('div'));
@@ -57,13 +61,33 @@ export class ReinforceWindow {
     root.hidden = true;
     root.innerHTML = `<div class="rw-head"><b>Reinforcements</b><span class="rw-cp"></span><span class="rw-stacks"></span>
       <button type="button" class="rw-again" tabindex="-1" hidden></button>
-      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
+      <button type="button" class="rw-close" aria-label="Close">×</button></div><div class="rw-entry"><span>Arrive</span><div class="seg"></div></div><div class="rw-tabs"></div><div class="rw-body"></div>`;
     document.getElementById('hud').append(root);
     this.cp = root.querySelector('.rw-cp');
     this.stacks = root.querySelector('.rw-stacks');
     const body = root.querySelector('.rw-body');
     const tabs = root.querySelector('.rw-tabs');
     this.again = root.querySelector('.rw-again');
+    // the road: Auto, then the base's entries ordered left to right as the camera sees them (update())
+    const roads = game.map.bases[me]?.entries ?? [];
+    this.roads = roads.map((x, i) => ({ i, x: game.map.bases[me].x + x, z: game.map.bases[me].z }));
+    this.entrySeg = root.querySelector('.rw-entry .seg');
+    root.querySelector('.rw-entry').hidden = roads.length < 2;
+    game.reinforceEntry = null;
+    this.entryBtns = [null, ...this.roads.map((r) => r.i)].map((i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.className = i === null ? 'on' : '';
+      b.textContent = i === null ? 'Auto' : '';
+      b.title = i === null ? 'At a forward command post if one is set up, else on any free road' : '';
+      b.addEventListener('click', () => {
+        game.reinforceEntry = i;
+        for (const o of this.entryBtns) o.b.classList.toggle('on', o.b === b);
+      });
+      this.entrySeg.append(b);
+      return { b, i };
+    });
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
     this.cards = [];
@@ -135,6 +159,20 @@ export class ReinforceWindow {
     const count = forces(g, me).length;
     const full = count >= this.state.maxStacks;
     this.cp.textContent = `${cp} CP`;
+    // the roads, named as the field looks from where the camera is (left, centre, right), and how long each is busy
+    const screenX = (r) => this._p.set(r.x, 0, r.z).project(g.camera).x;
+    const order = [...this.roads].sort((a, b) => screenX(a) - screenX(b));
+    const names = order.length === 3 ? ['Left', 'Centre', 'Right'] : order.length === 2 ? ['Left', 'Right'] : order.map((_, k) => `Road ${k + 1}`);
+    const free = this.state.entryFree ?? {};
+    for (const o of this.entryBtns) {
+      if (o.i === null) continue;
+      const k = order.findIndex((r) => r.i === o.i);
+      const wait = Math.ceil((free[`${me}:${o.i}`] ?? 0) - g.time);
+      const text = wait > 0 ? `${names[k]} ${wait} s` : names[k];
+      if (o.b.textContent !== text) o.b.textContent = text;
+      o.b.style.order = String(k + 1);
+      o.b.title = `Arrive on the ${names[k].toLowerCase()} road${wait > 0 ? ` (busy, ${wait} s)` : ''}`;
+    }
     this.stacks.textContent = `${count} / ${this.state.maxStacks} stacks`;
     this.stacks.classList.toggle('full', full);
     const lastType = this.last && this.cards.find((c) => c.type.id === this.last)?.type;

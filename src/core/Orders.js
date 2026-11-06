@@ -8,7 +8,7 @@
 //   { t: 'unload', s: [ids] }                    { t: 'board', s: id, c: carrierId }
 //   { t: 'garrison', s: [ids], b: buildingIndex, face? }{ t: 'popSmoke', s: [ids] }
 //   { t: 'smoke', s: [ids], x, z }               { t: 'air', x, z, yaw, k: 'heli' | 'jet' | 'lift' }
-//   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId }
+//   { t: 'flare', s: [ids], x, z }               { t: 'buy', u: unitTypeId, e?: road (base entry index) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 //   { t: 'gas', x, z }                           (chemical fire mission, systems/Gas.js)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
@@ -27,6 +27,7 @@ export class Orders {
   /** An order from this machine's player. Returns run()'s result (null on a client). */
   issue(cmd) {
     const net = this.game.net;
+    if (cmd.t === 'buy' && cmd.e === undefined) cmd.e = this.game.reinforceEntry ?? null; // the road picked in the reinforcement window
     if (net?.isClient) {
       net.sendOrder(cmd);
       return null;
@@ -179,7 +180,7 @@ export class Orders {
         for (const s of mine(cmd.s)) s.startBarrage?.(cmd.x, cmd.z);
         return null;
       case 'buy':
-        return g.modeState?.buy?.(faction, cmd.u) ?? null;
+        return g.modeState?.buy?.(faction, cmd.u, cmd.e ?? null) ?? null;
       default:
         return null;
     }

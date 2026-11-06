@@ -852,3 +852,9 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 #deploy-bar .dp-text { color: var(--muted); font-size: 13.5px; flex: 1 1 260px; }
 #deploy-bar .dp-go { padding: 8px 18px; font-size: 15px; }
 @media (max-width: 700px) { #deploy-bar { top: 52px; padding: 8px 10px; gap: 8px; } #deploy-bar .dp-text { font-size: 12.5px; } }
+
+/* the reinforcement window's road picker (src/ui/ReinforceWindow.js) */
+.rw-entry { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 12px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+.rw-entry[hidden] { display: none; }
+.rw-entry .seg { display: flex; flex-wrap: wrap; }
+.rw-entry .seg button { font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
