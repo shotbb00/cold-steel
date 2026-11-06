@@ -113,7 +113,7 @@ export class CommandSystem {
       return;
     }
     if (this.targeting) {
-      if (button === 0 && this.targeting.kind === 'build' && !STRUCTURES[this.targeting.structure].dozer) {
+      if (button === 0 && this.targeting.kind === 'build' && !STRUCTURES[this.targeting.structure].dozer && !this.game.input.touch) { // (a finger's taps go through pinTargeting)
         // a blueprint: press, drag and let go for a line of them (a click is still one)
         const p = this.pickGround(x, y, this._p);
         if (p) this.targeting.lineFrom = p.clone();
@@ -130,7 +130,7 @@ export class CommandSystem {
   }
 
   onMouseUp({ button, x, y }) {
-    if (button === 0 && this.targeting?.lineFrom) return this.placeLine(x, y);
+    if (button === 0 && this.targeting?.lineFrom && !this.targeting.lineTouch && !this.game.input.touch) return this.placeLine(x, y); // a mouse drag's end (a tap's mouse events are not)
     if (button === 2 && this.rdrag) {
       const r = this.rdrag;
       this.rdrag = null;
@@ -361,20 +361,35 @@ export class CommandSystem {
     this.targeting = t;
   }
 
-  /** Touch: put the blueprint at the tapped point (it stays there until the next tap or Place). */
+  /** Touch: put the blueprint at the tapped point (it stays there until the next tap or Place). In line mode the first tap is the start, the next ones the end. */
   pinTargeting(x, y) {
     const t = this.targeting;
     const p = t && this.pickGround(x, y, this._p);
     if (!p) return;
+    if (t.lineTouch && !t.lineFrom) t.lineFrom = p.clone();
     t.pin = p.clone();
     t.ghost.visible = true;
     this.updateTargeting();
   }
 
-  /** Touch: the Place button — confirm the blueprint where it was put. */
+  /** Touch: the Place button — confirm the blueprint (or the line) where it was put. */
   confirmPinned() {
     const t = this.targeting;
+    if (t?.lineFrom) return this.placeLine(0, 0, t.pin);
     if (t?.pin) this.confirmTargeting(0, 0, t.pin);
+  }
+
+  /** Touch: the Line button — taps set a line's start and end instead of one blueprint. */
+  toggleLine() {
+    const t = this.targeting;
+    if (t?.kind !== 'build' || STRUCTURES[t.structure].dozer) return;
+    t.lineTouch = !t.lineTouch;
+    t.lineFrom = null;
+    t.pin = null;
+    t.ghost.visible = false;
+    if (t.lineGhosts) t.lineGhosts.visible = false;
+    const def = STRUCTURES[t.structure];
+    t.hint = t.lineTouch ? `${def.name} line: tap where it starts, then where it ends — Place builds it` : `${def.name}: tap where it goes, the arrows turn it, then Place`;
   }
 
   /**
@@ -397,11 +412,11 @@ export class CommandSystem {
   }
 
   /** Let go after pressing on a blueprint: one piece, or the whole line, ordered at once. */
-  placeLine(x, y) {
+  placeLine(x, y, at = null) {
     const t = this.targeting;
     const a = t.lineFrom;
     t.lineFrom = null;
-    const b = this.pickGround(x, y, this._v) ?? a;
+    const b = (at ? this._v.copy(at) : this.pickGround(x, y, this._v)) ?? a;
     const pieces = this.lineOf(STRUCTURES[t.structure], a, b, t.yaw);
     if (pieces.length === 1) return this.confirmTargeting(0, 0, a);
     if (!t.stack.alive) return this.cancelTargeting();
@@ -496,7 +511,7 @@ export class CommandSystem {
           g.material = this.game.cover.pointBlocked(q.x, q.z, def.width * 0.5 + 0.4) ? this.badMat : t.ghost.children[0].material;
         });
         const each = structureCost(this.game, this.faction, def);
-        t.hint = `${pieces.length} × ${def.name} (${pieces.length * each} CP): let go to place the line`;
+        t.hint = `${pieces.length} × ${def.name} (${pieces.length * each} CP): ${t.lineTouch ? 'Place builds the line, a tap moves its end' : 'let go to place the line'}`;
         return;
       }
       if (t.lineGhosts) t.lineGhosts.visible = false;

@@ -858,3 +858,7 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 .rw-entry[hidden] { display: none; }
 .rw-entry .seg { display: flex; flex-wrap: wrap; }
 .rw-entry .seg button { font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
+
+/* touch: the Line toggle while placing a blueprint (src/ui/TouchControls.js) */
+#touch-bar .tb-line.on { border-color: var(--gold); color: var(--gold); background: rgba(224, 180, 90, 0.16); }
+#touch-bar .tb-line.on .ico { stroke: var(--gold); }
