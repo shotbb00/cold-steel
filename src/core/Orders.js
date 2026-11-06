@@ -3,7 +3,7 @@
 // In single player and on a multiplayer host that happens at once; a multiplayer client sends
 // them to the host, which runs them for the client's side (net/NetHost.js) — so both players'
 // orders go through exactly the same code.
-//   { t: 'hold', s: [ids] }                      { t: 'move', m: [[id, x, z], …], hold, face? (yaw) }
+//   { t: 'hold', s: [ids] }                      { t: 'move', m: [[id, x, z], …], hold, face? (yaw), q? (add a waypoint) }
 //   { t: 'attack', s: [ids], target: id }        { t: 'build', s: id, k: kind, x, z, yaw }
 //   { t: 'unload', s: [ids] }                    { t: 'board', s: id, c: carrierId }
 //   { t: 'garrison', s: [ids], b: buildingIndex, face? }{ t: 'popSmoke', s: [ids] }
@@ -58,6 +58,7 @@ export class Orders {
     switch (cmd.t) {
       case 'hold':
         for (const s of mine(cmd.s)) {
+          s.waypoints = null;
           if (s.moveTarget) { s.anchor.x = s.centroid.x; s.anchor.z = s.centroid.z; } // stop here, not at the end of the formation's slide
           s.ai.defend();
           // vehicles halt each where it stands, not back into formation (ai/SoldierAI.js reads plannedSpots)
@@ -70,6 +71,9 @@ export class Orders {
           if (!s) continue;
           if (g.deployment?.on && !s.stats.structure) { g.deployment.place(s, x, z, cmd.face ?? null); continue; } // deployment: placed there at once
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
+          // a waypoint: queued behind the route it's already on (StackAI takes the next on arrival)
+          if (cmd.q && (s.moveTarget || s.waypoints?.length)) { (s.waypoints ??= []).push({ x, z, hold: !!cmd.hold, face }); continue; }
+          s.waypoints = null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
           const plan = s.moveTarget && (s.usesCover ? planCover(g.world, s, s.moveTarget, face) : g.construction.planRevetments(s, s.moveTarget)); // cover, or dug-in vehicle positions
@@ -77,6 +81,7 @@ export class Orders {
         }
         return null;
       case 'attack': {
+        for (const s of mine(cmd.s)) s.waypoints = null;
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
         for (const s of mine(cmd.s)) s.ai.attack(target);

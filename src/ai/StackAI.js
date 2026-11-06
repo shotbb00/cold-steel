@@ -180,7 +180,10 @@ export class StackAI {
         if (thinkNow) this.lookForFight();
         break;
       case AIState.MOVE:
-        if (!s.moveTarget) {
+        if (!s.moveTarget && s.waypoints?.length) { // there: on to the next waypoint
+          const w = s.waypoints.shift();
+          this.moveTo(w, { hold: w.hold, face: w.face, ordered: this.ordered });
+        } else if (!s.moveTarget) {
           if (this.holdOnArrival) this.defend();
           else this.idle();
         }

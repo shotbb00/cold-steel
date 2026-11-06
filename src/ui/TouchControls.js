@@ -256,7 +256,8 @@ export class TouchControls {
       const b = e.target.closest('button');
       if (b && !b.matches('.tb-orders, .rf-open, .tb-turn, .tb-place')) setTimeout(() => this.setPanel(false), 0);
     });
-    this.game.bus.on('order', () => {
+    this.game.bus.on('order', (o) => {
+      if (o?.kind === 'waypoint') return; // adding waypoints: the stack stays selected for the next
       this.setPanel(false); // (buying a unit doesn't: the reinforcements stay open for the next)
       // a finger has no right button: with the stack still selected, the next tap (meant to pick
       // another stack or just look) would order it again — so an order given by touch lets go of it

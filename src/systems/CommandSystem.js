@@ -19,6 +19,7 @@ import { GroundDecal } from '../world/GroundDecal.js';
 import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
+const ROUTE_SEGMENTS = 96; // waypoint legs drawn at once (the selection's routes)
 const ARROW_SIZE = 10;     // metres long: the facing arrow drawn while right-dragging
 const MARKER_COLORS = { move: 0x5cf4ff, attack: 0xff4f86, hold: 0xffc35a };
 const ids = (stacks) => [...stacks].filter((s) => s.alive).map((s) => s.id);
@@ -119,7 +120,7 @@ export class CommandSystem {
     else if (button === 2) {
       // a click orders at once on release; a drag sets the facing (see update / onMouseUp)
       const p = this.pickGround(x, y, this._p);
-      this.rdrag = { x0: x, y0: y, ctrl, p0: p ? p.clone() : null };
+      this.rdrag = { x0: x, y0: y, ctrl, shift, p0: p ? p.clone() : null };
     }
   }
 
@@ -132,7 +133,7 @@ export class CommandSystem {
       const far = Math.hypot(x - r.x0, y - r.y0) > 10;
       const p1 = far ? this.pickGround(x, y, this._v) : null;
       if (far && r.p0 && p1 && this.selected.size) this.issueFacing(r.p0, p1, r.ctrl);
-      else this.issueOrder(r.x0, r.y0, r.ctrl);
+      else this.issueOrder(r.x0, r.y0, r.ctrl, r.shift || this.queueing);
       return;
     }
     if (button !== 0 || !this.drag) return;
@@ -185,6 +186,10 @@ export class CommandSystem {
     if (cmd === 'selectAll') {
       this.selected = new Set(this.playerStacks());
       this.emitSelection();
+    } else if (cmd === 'waypoints') { // touch: the next taps add waypoints instead of new orders
+      this.queueing = !this.queueing;
+      this.game.bus.emit('toast', this.queueing ? 'Waypoints: each tap adds one to the route' : 'Waypoints off');
+      this.game.bus.emit('selection', [...this.selected]);
     } else if (cmd === 'hold') {
       if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
       this.game.orders.issue({ t: 'hold', s: ids(this.selected) });
@@ -525,7 +530,7 @@ export class CommandSystem {
 
   // ---------------------------------------------------------------- orders
 
-  issueOrder(x, y, hold) {
+  issueOrder(x, y, hold, queue = false) {
     if (!this.selected.size) return this.game.bus.emit('toast', 'Select a stack first');
     const target = this.stackAt(x, y, this.enemy);
     const p = this.pickGround(x, y, this._p);
@@ -552,6 +557,12 @@ export class CommandSystem {
         this.addMarker({ x: building.x, z: building.z }, 'hold');
         return;
       }
+    }
+    if (queue && !target) { // a waypoint: added to the route (Shift+right-click, or the touch toggle)
+      this.moveGroup([...this.selected], p, { hold, queue: true });
+      this.addMarker(p, 'move');
+      this.game.bus.emit('order', { kind: 'waypoint' });
+      return;
     }
     this.game.bus.emit('order', { kind: target ? 'attack' : hold ? 'hold' : 'move' });
     if (target) {
@@ -612,10 +623,11 @@ export class CommandSystem {
    * behind them. Rows run perpendicular to `facing` (default: from the group toward the point).
    * `face` (yaw): they hold there looking that way.
    */
-  moveGroup(stacks, point, { hold = false, facing = null, face = null } = {}) {
+  moveGroup(stacks, point, { hold = false, facing = null, face = null, queue = false } = {}) {
     if (!stacks.length) return;
     const moves = this.groupDests(stacks, point, facing).map(([s, x, z]) => [s.id, x, z]);
-    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000 });
+    const q = queue ? { q: 1 } : {};
+    this.game.orders.issue(face === null ? { t: 'move', m: moves, hold, ...q } : { t: 'move', m: moves, hold: true, face: Math.round(face * 1000) / 1000, ...q });
   }
 
   /** Where each of `stacks` goes when sent to `point` together: [[stack, x, z]], side by side. */
@@ -732,6 +744,32 @@ export class CommandSystem {
     for (let i = n; i < pv.els.length; i++) pv.els[i].hidden = true;
   }
 
+  /** The selected stacks' routes: from each stack through where it's going and every waypoint after. */
+  drawRoutes() {
+    if (!this.routes) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ROUTE_SEGMENTS * 6).fill(-1000), 3));
+      this.routes = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(MARKER_COLORS.move).multiplyScalar(1.4), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
+      this.routes.frustumCulled = false;
+      this.game.scene.add(this.routes);
+      this.routeKey = '';
+    }
+    const t = this.game.terrain;
+    const pts = [];
+    for (const s of this.selected) {
+      if (!s.alive || !s.waypoints?.length) continue;
+      const chain = [s.centroid, ...(s.moveTarget ? [s.moveTarget] : []), ...s.waypoints];
+      for (let i = 0; i + 1 < chain.length && pts.length < ROUTE_SEGMENTS * 2; i++) pts.push(chain[i], chain[i + 1]);
+    }
+    const key = pts.map((p) => `${p.x | 0},${p.z | 0}`).join(';');
+    if (key === this.routeKey) return;
+    this.routeKey = key;
+    const a = this.routes.geometry.attributes.position;
+    a.array.fill(-1000);
+    pts.forEach((p, i) => { a.array[i * 3] = p.x; a.array[i * 3 + 1] = t.heightAt(p.x, p.z) + 0.6; a.array[i * 3 + 2] = p.z; });
+    a.needsUpdate = true;
+  }
+
   addMarker(point, kind) {
     const mat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(MARKER_COLORS[kind]).multiplyScalar(1.6), transparent: true,
@@ -748,6 +786,7 @@ export class CommandSystem {
   update(dt) {
     this.updateTargeting();
     this.updatePreview();
+    this.drawRoutes();
     // right-drag: show which way they'll face
     if (this.rdrag?.p0 && this.active) {
       const m = this.game.input.mouse;
