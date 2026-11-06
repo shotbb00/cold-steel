@@ -366,7 +366,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -379,6 +379,8 @@ export class NetClient {
       s.garrison = garrison >= 0 ? g.buildings.list[garrison] : null;
       s.rank = rank ?? 0;
       s.autonomous = !!autonomous;
+      s.job = job || null;
+      s.tended = tended ? { kind: tended, until: g.time + 1 } : null;
     }
     const ms = g.modeState;
     if (ms) {

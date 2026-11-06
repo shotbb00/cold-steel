@@ -13,7 +13,7 @@
 import { encodeSnapshot, packArgs, v3, dir3, SNAPSHOT_RATE, STATE_RATE } from './protocol.js';
 import { enemyOf } from '../data/factions.js';
 
-export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn'];
+export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn', 'weld', 'tend']; // (new ones go at the end: the client looks them up by index)
 export const SOUND_CALLS = ['play', 'weapon'];
 
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -172,6 +172,7 @@ export class NetHost {
       s: g.world.stacks.filter((s) => s.alive).map((s) => [
         s.id, s.ai.state, Math.round(s.ai.defendTime ?? 0), r2(s.morale), s.passengers ?? 0,
         s.smokeLeft ?? 0, s.smokeRounds ?? 0, s.garrison?.index ?? -1, s.ai.ordered ? 1 : 0, s.rank, s.autonomous ? 1 : 0,
+        s.job ?? '', s.tended && s.tended.until > g.time ? s.tended.kind : '', // a support vehicle's work, and whom it treats (systems/Support.js)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),
