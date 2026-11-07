@@ -12,7 +12,7 @@ import { makeDetailTextures } from './textures.js';
 import { createNoise2D } from './Noise.js';
 import { mulberry32 } from '../core/math.js';
 import { stationHull } from '../data/models/vehicleCommon.js';
-import { epoch } from '../data/epoch.js';
+import { year } from '../data/epoch.js';
 
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const TILED = new Set(['stone', 'plaster']); // textured materials: their texture repeats every TILE m
@@ -351,7 +351,7 @@ export class PropBuilder {
 
   /** Concrete Jersey barriers in a staggered row (low cover: lie behind them). */
   jersey({ x, z, yaw, length = 6 }) {
-    if (epoch() === '1945') return this.logBarricade({ x, z, yaw, length });
+    if (year() < 1985) return this.logBarricade({ x, z, yaw, length });
     const n = Math.max(1, Math.round(length / 3));
     for (let i = 0; i < n; i++) {
       const lx = -length / 2 + (i + 0.5) * (length / n);
@@ -391,7 +391,8 @@ export class PropBuilder {
   /** A burnt-out civilian car, pushed off the road. */
   wreckCar({ x, z, yaw }) {
     const r = this.rand;
-    const old = epoch() === '1945';
+    if (year() < 1900) return; // (no motor cars yet)
+    const old = year() < 1985;
     const car = old ? (CAR45 ??= car45Geometry()) : (CAR ??= carGeometry());
     // burnt out (charred, rusting) or just abandoned in its faded paint: Trabant beige, Lada red, VW blue — in 1945 black, dark green, grey-blue
     const burnt = r() < 0.6;
@@ -406,7 +407,7 @@ export class PropBuilder {
 
   /** Border watchtower: concrete shaft with an observation cab (East) or a wooden OP (West). */
   tower({ x, z, concrete = true }) {
-    if (epoch() === '1945') return; // no inner-German border yet
+    if (year() < 1985) return; // no inner-German border yet
     const g = this.terrain.heightAt(x, z);
     if (concrete) {
       this.box('stone', x, g + 4.5, z, 1.3, 9, 1.3, 0, 0x8d8a80);
@@ -426,7 +427,7 @@ export class PropBuilder {
   /** A run of border fence: posts and wire, with breaches blown through it. Visual only. */
   /** @param {any} o  options, untyped until this file moves to TypeScript */
   fence({ x0, x1, z, breaches = [] }) {
-    if (epoch() === '1945') return;
+    if (year() < 1985) return;
     for (let x = x0; x <= x1; x += 3.2) {
       if (breaches.some(([a, b]) => x > a && x < b)) continue;
       const g = this.terrain.heightAt(x, z);
@@ -717,7 +718,8 @@ export class PropBuilder {
 
   /** A hardened aircraft shelter: a concrete half-barrel, open at the front. */
   aircraftShelter({ x, z, yaw }) {
-    if (epoch() === '1945') return this.timberHangar({ x, z, yaw });
+    if (year() < 1900) return; // (no aircraft)
+    if (year() < 1985) return this.timberHangar({ x, z, yaw });
     const g = this.terrain.heightAt(x, z);
     const R = 11;
     const L = 30;
@@ -774,8 +776,9 @@ export class PropBuilder {
 
   /** A jet caught on the ground: burnt out on its gear (cover, not a unit). */
   aircraftWreck({ x, z, yaw, scale = 1 }) {
+    if (year() < 1900) return;
     const g = this.terrain.heightAt(x, z);
-    const old = epoch() === '1945';
+    const old = year() < 1985;
     const s = scale * (old ? 0.7 : 1); // 1945: a Bf 109 / Ju 88-sized wreck, its propeller bent
     if (old) {
       const [px, pz] = PropBuilder.local(x, z, yaw, 0, 7.2 * s);

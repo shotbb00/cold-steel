@@ -33,6 +33,14 @@ export function thinkSoldier(u, stack, world, interval) {
   if (threat && !u.threat) stack.bark(u, 'contact', 0.3);
   u.threat = threat;
 
+  // Drilled foot (1806 line infantry): every man keeps his place in the ranks — no cover, no shuffle.
+  if (s.drill && !u.window) {
+    if (u.coverSpot) cover.release(u);
+    u.wander.set(0, 0);
+    stack.slotPosition(u, u.dest);
+    return;
+  }
+
   // In a building: each man stays at his window (or in the room) — systems/Buildings.js.
   if (u.window) {
     u.dest.set(u.window.x, u.window.y, u.window.z);

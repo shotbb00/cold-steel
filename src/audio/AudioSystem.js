@@ -30,7 +30,7 @@ const FAR = 110;           // metres beyond which shots switch to their '.far' v
 // How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
 // fades within a few hundred metres, a howitzer is heard across the whole map.
 const CARRY = {
-  rifle: 8, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
+  rifle: 8, musket: 12, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
   explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
 };
 const carry = (key) => CARRY[key.replace(/^(\d{4}\.\w+\.|nato\.|pact\.)/, '').replace(/\.(far|last)$/, '')] ?? 6;
@@ -325,7 +325,7 @@ export class AudioSystem {
   weapon(faction, kind, pos, indoors = false, army = null, last = false) {
     this.lastLoud = this.game.world.time;
     this.intensity += SHOT_WEIGHT[kind] ?? 1;
-    const volume = { flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
+    const volume = { musket: 0.6, flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
     // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
     const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
     let key = `${faction}.${kind}`;

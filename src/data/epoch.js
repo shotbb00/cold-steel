@@ -10,12 +10,45 @@ import { FACTIONS, ARMIES, DEFAULT_ARMY } from './factions.js';
 import { DOCTRINE } from './doctrine.js';
 import { UNIT_TYPES, TYPES_1985, ALIAS } from './units/index.js';
 import { TYPES_1945, ALIAS_1945 } from './units45/index.js';
+import { TYPES_1806, ALIAS_1806 } from './units1806/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
 
 export const EPOCHS = {
+  1806: {
+    id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
+    blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
+    sides: { nato: 'France', pact: 'Prussia' },
+    armies: {
+      fr: { id: 'fr', faction: 'nato', name: 'Grande Armée' },
+      by: { id: 'by', faction: 'nato', name: 'Bavaria' },
+      pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
+      sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
+    },
+    defaults: { nato: 'fr', pact: 'pr' },
+    types: TYPES_1806, alias: ALIAS_1806, air: {},
+    // each army's two signatures (they take effect as the units they need arrive: formations, cavalry, guns)
+    doctrine: {
+      fr: [
+        { id: 'pasDeCharge', name: 'Pas de charge', text: 'Columns march 20 % faster, and their bayonet charge hits the enemy\'s nerve 50 % harder.', speed: 1.2, shock: 1.5 },
+        { id: 'tirailleurs', name: 'Tirailleur swarm', text: 'Light infantry is harder to spot, and its skirmishing fire pins 30 % more.', stealth: 1.3, suppress: 1.3 },
+      ],
+      by: [
+        { id: 'quickGuns', name: 'Quick guns', text: 'Artillery limbers and unlimbers 40 % faster (the reformed artillery of 1804).', deploy: 0.6 },
+        { id: 'lightHorse', name: 'Light horse', text: 'Light cavalry costs 20 % less and sees farther.', cost: 0.8, sight: 1.25 },
+      ],
+      pr: [
+        { id: 'peloton', name: 'Peloton fire', text: 'Line infantry reloads 15 % faster and hits better in line (the drill of Frederick the Great).', reload: 0.85, spread: 0.85 },
+        { id: 'cuirassiers', name: 'Heavy cuirassiers', text: 'Heavy cavalry charges 25 % harder — but formations change 25 % slower (the old rigid drill).', shock: 1.25, form: 1.25 },
+      ],
+      sx: [
+        { id: 'squares', name: 'Steady squares', text: 'Squares never break against cavalry and lose less nerve under artillery (the Saxon grenadiers left Jena in square).' },
+        { id: 'gardeDuCorps', name: 'Garde du Corps', text: 'Heavy cavalry starts as Veterans.' },
+      ],
+    },
+  },
   1985: {
     id: '1985', name: '1985', title: 'World War III, 1985',
     sides: { nato: 'NATO', pact: 'Warsaw Pact' },
@@ -66,8 +99,10 @@ export const EPOCHS = {
 };
 
 let current = '1985';
-/** The epoch now in force: '1985' or '1945'. */
+/** The epoch now in force: '1985', '1945' or '1806'. */
 export const epoch = () => current;
+/** The epoch's year as a number, for 'before …' tests (props, sounds). */
+export const year = () => Number(current);
 export const epochInfo = () => EPOCHS[current];
 
 const swap = (target, source) => {

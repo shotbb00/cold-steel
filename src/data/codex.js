@@ -271,6 +271,15 @@ export const CODEX = {
 
 // 1945 (data/epoch.js): entries whose use differs from 1985's, by type id; `armies` holds one army's
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
+// 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
+export const CODEX1806 = {
+  rifles: {
+    use: 'The line: a company in two ranks, standing shoulder to shoulder. It fires by volleys — the whole company on the word, then a long reload — and every volley leaves a bank of smoke in front of it. Bring it within a hundred paces of the enemy, then fire; let the enemy waste its volley at long range.',
+    strong: 'Other foot at a hundred paces, holding a line', weak: 'Artillery (a line is a long target), cavalry on its flank, being caught reloading',
+    counter: 'Make it fire first and far, then close in while it reloads. Guns on its flank rake the whole line.',
+  },
+};
+
 export const CODEX45 = {
   atTeam: {
     use: 'The infantry\'s answer to armour: a bazooka or Panzerschreck team (the Red Army\'s carry the PTRS anti-tank rifle). Hide them where the tanks must pass — a house, a hedge, a wood edge — and fire from the side or rear, close: their reach is short.',

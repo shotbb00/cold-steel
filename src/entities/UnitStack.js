@@ -821,6 +821,8 @@ export class UnitStack {
       wantProne = 0;
     } else if (inCover) {
       if (u.coverSpot.height < 1.15 || u.wounded) wantProne = 1; else wantCrouch = 1;
+    } else if (s.stance === 'stand' && !u.wounded) {
+      // (1806: the line stands — to fire, to reload, to take the enemy's volley)
     } else if (pinned || u.wounded || u.suppression > 0.6 || s.stance === 'prone' || (u.target && !s.indirect && !s.marksman && distToTarget > s.range * 0.55)) { // (a sniper kneels to shoot: lying flat, the ground in between takes his rounds)
       wantProne = 1;
     } else if (reloading || u.suppression > 0.3 || u.target) {
@@ -835,7 +837,7 @@ export class UnitStack {
         u.burstTimer -= dt;
         // From cover (crouched), wait until we've actually risen before shooting.
         const ready = !inCover || u.prone > 0.85 || u.crouch < 0.35;
-        if (u.burstTimer <= 0 && ready) {
+        if (u.burstTimer <= 0 && ready && (!s.volley || this.volleyLets(u))) {
           this.fire(u);
           u.mag--;
           u.burstLeft--;
@@ -873,6 +875,26 @@ export class UnitStack {
     }
     this.applyPosture(u, wantCrouch, wantProne, dt);
     u.reloadAnim += ((reloading || u.working ? 1 : 0) - u.reloadAnim) * Math.min(1, dt * 6);
+  }
+
+  /**
+   * The volley (1806 drilled foot): a loaded, aimed man waits for the word. When most of the loaded
+   * men are waiting — or the first has waited 3 s — the company fires together, each man within a
+   * quarter of a second, and its powder smoke hangs in front of the line (systems/Smoke.js).
+   */
+  volleyLets(u) {
+    if (u.volleyGo) { u.volleyGo = false; return true; }
+    if (!u.volleyWait) { u.volleyWait = true; this.volleyFirst ??= this.world.time; }
+    const loaded = this.units.filter((m) => m.alive && m.target && m.mag > 0 && m.reloadT <= 0);
+    const waiting = loaded.filter((m) => m.volleyWait).length;
+    if (waiting < Math.max(1, loaded.length * 0.6) && this.world.time - this.volleyFirst < 3) return false;
+    for (const m of this.units) if (m.volleyWait) { m.volleyWait = false; m.volleyGo = true; m.burstTimer = Math.random() * 0.25; }
+    this.volleyFirst = null;
+    const c = this.centroid, f = this.facing ?? 0;
+    const front = this.units.filter((m) => m.alive);
+    const wide = front.length ? Math.max(...front.map((m) => Math.hypot(m.pos.x - c.x, m.pos.z - c.z))) : 4;
+    this.services.effects?.powderBank(c.x, this.world.terrain.heightAt(c.x, c.z), c.z, f, Math.max(6, wide * 2)); // (a haze: it doesn't blind like a screen)
+    return false;
   }
 
   /**

@@ -450,6 +450,9 @@ export function soundDefinitions(ctx) {
     // M16A2 (5.56 mm): sharp, bright crack, lighter body
     'nato.rifle': () => gunshot(ctx, { crack: 1.1, crackDecay: 1100, body: 0.7, bodyLP: 2400, bodyDecay: 38, thump: 0.5, thumpF: 140, tail: 0.25, tailLP: 650, tailDecay: 3.8 }),
     // AK-74 (5.45 mm): a harsher mid-range bark, a touch more body
+    // 1806: the smoothbore musket — a heavy, dull report and a long roll (a volley runs these together)
+    'nato.musket': () => gunshot(ctx, { dur: 1.6, crack: 0.45, crackDecay: 380, body: 1.15, bodyLP: 950, bodyDecay: 14, thump: 1.15, thumpF: 70, tail: 0.5, tailLP: 380, tailDecay: 2.2, drive: 1.6 }),
+    'pact.musket': () => gunshot(ctx, { dur: 1.6, crack: 0.42, crackDecay: 360, body: 1.2, bodyLP: 900, bodyDecay: 13, thump: 1.2, thumpF: 66, tail: 0.52, tailLP: 360, tailDecay: 2.1, drive: 1.7 }),
     'pact.rifle': () => gunshot(ctx, { crack: 1, crackDecay: 900, body: 0.8, bodyLP: 1700, bodyDecay: 30, thump: 0.6, thumpF: 120, bark: 0.6, barkF: 850, tail: 0.27, tailLP: 550, tailDecay: 3.5, drive: 1.9 }),
     // M60 (7.62 mm NATO): heavier, deeper thump
     'nato.mg': () => gunshot(ctx, { dur: 0.9, crack: 1, crackDecay: 800, body: 0.9, bodyLP: 1500, bodyDecay: 30, thump: 0.95, thumpF: 95, tail: 0.22, tailLP: 450, tailDecay: 4.2, drive: 1.8 }),

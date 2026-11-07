@@ -14,7 +14,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errors.append(str(e)))
     pg.goto(URL)
     pg.wait_for_function('window.ready', timeout=120000)
-    shots = {**pg.evaluate("() => window.silhouettes('1985')"), **pg.evaluate("() => window.silhouettes('1945')")}
+    shots = {**pg.evaluate("() => window.silhouettes('1985')"), **pg.evaluate("() => window.silhouettes('1945')"), **pg.evaluate("() => window.silhouettes('1806')")}
     b.close()
 for name, url in shots.items():
     if url: (OUT / f'{name}.png').write_bytes(base64.b64decode(url.split(',', 1)[1]))

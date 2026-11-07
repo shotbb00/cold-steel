@@ -20,7 +20,7 @@ import { takeMenuTab } from '../core/replay.js';
 import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
-import { CODEX, CODEX45 } from '../data/codex.js';
+import { CODEX, CODEX45, CODEX1806 } from '../data/codex.js';
 import { keyOf } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
@@ -157,7 +157,7 @@ const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone'
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
-const COMING_EPOCHS = [{ id: '1806', name: '1806', title: 'Napoleonic Wars, 1806' }, { id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
+const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
 const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
@@ -201,6 +201,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const w = sp ? { ...s, ...sp } : s;
   const armed = w.range > 1 && (w.damage ?? 1) > 0; // ambulances, bridge layers: no gun to describe
   if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
+  else if (armed && w.volley) rows.push(['Fire', `volleys, then ${w.reloadTime} s to reload`]); // (1806: the company fires together)
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
@@ -294,7 +295,9 @@ export class MainMenu {
     else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
-    else if (id === 'bootcamp') this.bootcampPanel();
+    else if ((id === 'bootcamp' || id === 'campaign') && epoch() === '1806') { // (1806 is being built: battles first)
+      this.panel.append(el('h2', '', id === 'campaign' ? 'Campaign' : 'Boot camp'), el('p', 'mp-lead', `The 1806 ${id === 'campaign' ? 'campaign' : 'boot camp'} is coming — for now, 1806 has single-player and multiplayer battles.`));
+    } else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),
@@ -585,8 +588,8 @@ export class MainMenu {
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
-    const ww2 = epoch() === '1945';
-    const own = ww2 && CODEX45[id];
+    const ww2 = epoch() !== '1985'; // (another war: its own entry, never 1985's history)
+    const own = { 1945: CODEX45, 1806: CODEX1806 }[epoch()]?.[id];
     const c = own ? { ...own, ...own.armies?.[army] } : CODEX[id]; // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
