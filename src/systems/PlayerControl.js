@@ -312,6 +312,8 @@ export class PlayerControl {
     // --- weapon
     this.fireTimer -= dt;
     const trigger = (input.locked || input.touch) && input.isMouseDown(0) && !game.ended;
+    if (ws.towed) u.towing = !u.setUp || game.world.time - u.setUp.at < ws.towed.deploy; // (moveBody keeps u.setUp: where and since when it stood still)
+    if (!trigger) this.toldTowed = false;
     if (this.binos) { // binoculars up: a click is a fire mission, not a shot
       if (trigger && !this.calling) this.callFire();
       this.calling = trigger;
@@ -326,6 +328,9 @@ export class PlayerControl {
           this.beam = null;
         } else this.beam.aim.copy(this.aimPoint);
       }
+    } else if (trigger && u.towing) {
+      // a towed gun fires only once it is unhitched and laid, as under the AI (UnitStack.updateWeapon)
+      if (!this.toldTowed) { this.toldTowed = true; game.bus.emit('toast', `Unlimbering — stand still ${Math.ceil(ws.towed.deploy - (game.world.time - u.setUp.at))} s`); }
     } else if (trigger && this.fireTimer <= 0 && u.reloadT <= 0 && u.mag > 0 && (u.prone > 0.85 || u.prone < 0.1)) {
       const aligned = infantry || Math.abs(angleDelta(u.turretYaw, aimYaw)) < 0.08;
       const steady = infantry || !ws.noStabilizer || !u.moving; // no stabiliser: stop to fire

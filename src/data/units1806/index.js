@@ -23,7 +23,7 @@ const men = (o = {}) => ({
 const MUSKET = {
   hp: 100, grenades: 0, lightAT: 0, nightSight: undefined,
   speed: 1.6,              // the marching pace (the charge runs ~1.6×)
-  sight: 250, range: 130, aggroRange: 135, preferredRange: 75,   // (massed coloured coats: seen far off; the musket reaches a hundred-odd paces)
+  sight: 110, range: 80, aggroRange: 85, preferredRange: 50,   // (the game's scale: a 1985 rifle squad sees 70 m and shoots 90; massed coloured coats are seen a little further, the musket reaches less)
   fireCooldown: 0.5, aimTime: 0.5, burst: 1, burstInterval: 0,
   damage: 120, spread: 0.03, boltSpeed: 300, boltSize: 0.5, tracer: 0, vsArmor: 1, // (no armour in 1806: a ball fells horse or man)
   magSize: 1, reloadTime: 17,   // three rounds a minute, from a drilled company
@@ -57,7 +57,7 @@ const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx' };
 const mounts = (kind, mounted = true) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildCavalry({ army, kind, mounted })]));
 const HORSE = {
   armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
-  aggroRange: 150, preferredRange: 18, fireCooldown: 1, aimTime: 0.4, burst: 1, burstInterval: 0, spread: 0.06, boltSpeed: 280,
+  aggroRange: 100, preferredRange: 18, fireCooldown: 1, aimTime: 0.4, burst: 1, burstInterval: 0, spread: 0.06, boltSpeed: 280,
   boltSize: 0.5, tracer: 0, magSize: 1, weapon: 'musket', vsArmor: 1, pierce: 0, breakMorale: 0.25, noStabilizer: false,
 };
 const cavalry = (id, kind, o) => ({
@@ -70,7 +70,7 @@ const cavalry = (id, kind, o) => ({
 
 const reconVehicle = cavalry('reconVehicle', 'light', {
   name: 'Light Cavalry', shortName: 'Light horse', cost: 220,
-  stats: { hp: 140, speed: 4.6, sight: 280, range: 35, damage: 90, reloadTime: 30, cavalry: { chargeSpeed: 11.5, shock: 0.25, sabre: 105, reach: 2.8 } },
+  stats: { hp: 140, speed: 4.6, sight: 140, range: 35, damage: 90, reloadTime: 30, cavalry: { chargeSpeed: 11.5, shock: 0.25, sabre: 105, reach: 2.8 } },
   variants: {
     nato: { name: 'Hussards', weapon: 'Sabre, pistols, carbine', text: 'The French hussars: fast, bold and far ahead of the army. They find the enemy, ride down his skirmishers and pursue the broken.' },
     by: { name: 'Chevaulegers', weapon: 'Sabre, carbine', text: 'Bavaria\'s light horse in green: the eyes of the army and quick to pursue.' },
@@ -80,7 +80,7 @@ const reconVehicle = cavalry('reconVehicle', 'light', {
 });
 const ifv = cavalry('ifv', 'medium', {
   name: 'Dragoons', shortName: 'Dragoons', cost: 260,
-  stats: { hp: 160, speed: 4.2, sight: 220, range: 90, damage: 110, reloadTime: 22, cavalry: { chargeSpeed: 10.5, shock: 0.33, sabre: 120, reach: 2.8 } },
+  stats: { hp: 160, speed: 4.2, sight: 120, range: 60, damage: 110, reloadTime: 22, cavalry: { chargeSpeed: 10.5, shock: 0.33, sabre: 120, reach: 2.8 } },
   variants: {
     nato: { name: 'Dragons', weapon: 'Sabre, dragoon musket', text: 'The French dragoons in green and their brass helmets: they charge like any horsemen, and their muskets reach further than a carbine.' },
     by: { name: 'Dragoner', weapon: 'Sabre, carbine', text: 'Bavarian dragoons: the line cavalry of Napoleon\'s new ally.' },
@@ -90,7 +90,7 @@ const ifv = cavalry('ifv', 'medium', {
 });
 const tank = cavalry('tank', 'heavy', {
   name: 'Heavy Cavalry', shortName: 'Cuirassiers', cost: 320,
-  stats: { hp: 190, speed: 3.9, sight: 200, range: 25, damage: 100, reloadTime: 30, cavalry: { chargeSpeed: 10, shock: 0.45, sabre: 140, reach: 2.9 } },
+  stats: { hp: 190, speed: 3.9, sight: 110, range: 25, damage: 100, reloadTime: 30, cavalry: { chargeSpeed: 10, shock: 0.45, sabre: 140, reach: 2.9 } },
   variants: {
     nato: { name: 'Cuirassiers', weapon: 'Straight sword, pistols, cuirass', text: 'The French heavy cavalry in steel breastplates: big men on big horses, kept for the charge that decides the day.' },
     by: { name: 'Garde du Corps', weapon: 'Sword, pistols, cuirass', text: 'The Bavarian king\'s horse guards in their cuirasses: few and heavy.' },
@@ -124,7 +124,7 @@ const dismounted = {
 const guns = (size) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildFieldGun({ army, size })]));
 const GUN = {
   armor: 0, hp: 320, turnRate: 0.7, turretRate: 0.5, radius: 1.6, height: 1.8, eyeHeight: 1.7, aimHeight: 1, fov: 2.4, nightSight: undefined,
-  sight: 450, aggroRange: 750, fireCooldown: 1, aimTime: 1.2,   // (an officer with a telescope over open ground)
+  sight: 120, aggroRange: 350, fireCooldown: 1, aimTime: 1.2,   // (the gunners see little further than the foot; the rest comes from whoever spots for them)
   burst: 1, burstInterval: 0, magSize: 1, spread: 0.01, boltSpeed: 240,
   boltSize: 1.3, tracer: 1, weapon: 'cannon', vsArmor: 1, pierce: 0, splash: 0, traverse: 0.35, noStabilizer: true, breakMorale: 0.28,
 };
@@ -137,7 +137,7 @@ const gunType = (id, size, o) => ({
 });
 const artillery = gunType('artillery', 'field', {
   name: 'Foot Battery', shortName: 'Battery', cost: 240,
-  stats: { speed: 2.8, range: 700, preferredRange: 450, damage: 170, reloadTime: 18, towed: { deploy: 20 }, gun: { canister: 220, pellets: 16, pelletDamage: 75, pelletSpread: 0.07, through: 4, bounce: 2 } },
+  stats: { speed: 2.8, range: 280, preferredRange: 200, damage: 170, reloadTime: 18, towed: { deploy: 20 }, gun: { canister: 100, pellets: 16, pelletDamage: 75, pelletSpread: 0.07, through: 4, bounce: 2 } },
   variants: {
     nato: { name: 'Artillerie à pied', weapon: '8-pounder Gribeauval guns', text: 'Two French 8-pounders: roundshot that ploughs through the ranks at long range, canister that sweeps the field close in.' },
     by: { name: 'Fußartillerie', weapon: '6-pounder guns', text: 'Bavarian foot artillery, reformed and quick to come into action.' },
@@ -147,7 +147,7 @@ const artillery = gunType('artillery', 'field', {
 });
 const spMortar = gunType('spMortar', 'heavy', {
   name: 'Heavy Battery', shortName: '12-pdr', cost: 320,
-  stats: { hp: 380, speed: 2.2, range: 900, preferredRange: 600, damage: 230, reloadTime: 24, towed: { deploy: 30 }, gun: { canister: 250, pellets: 22, pelletDamage: 80, pelletSpread: 0.075, through: 5, bounce: 2 } },
+  stats: { hp: 380, speed: 2.2, range: 340, preferredRange: 250, damage: 230, reloadTime: 24, towed: { deploy: 30 }, gun: { canister: 110, pellets: 22, pelletDamage: 80, pelletSpread: 0.075, through: 5, bounce: 2 } },
   variants: {
     nato: { name: 'Batterie de 12', weapon: '12-pounder guns', text: '"The Emperor\'s beautiful daughters": the heavy 12-pounders that reach furthest and hit hardest — and move slowest.' },
     by: { name: 'Schwere Batterie', weapon: '12-pounder guns', text: 'Bavaria\'s heavy guns.' },
@@ -157,7 +157,7 @@ const spMortar = gunType('spMortar', 'heavy', {
 });
 const rockets = gunType('rockets', 'horse', {
   name: 'Horse Artillery', shortName: 'Horse guns', cost: 280,
-  stats: { speed: 4.6, range: 600, preferredRange: 380, damage: 140, reloadTime: 16, towed: { deploy: 10 }, gun: { canister: 200, pellets: 14, pelletDamage: 70, pelletSpread: 0.07, through: 3, bounce: 2 } },
+  stats: { speed: 4.6, range: 240, preferredRange: 170, damage: 140, reloadTime: 16, towed: { deploy: 10 }, gun: { canister: 90, pellets: 14, pelletDamage: 70, pelletSpread: 0.07, through: 3, bounce: 2 } },
   variants: {
     nato: { name: 'Artillerie à cheval', weapon: 'Light 6-pounders', text: 'Guns that keep up with the cavalry: every gunner mounted, in action in moments, gone again before the enemy answers.' },
     by: { name: 'Reitende Artillerie', weapon: 'Light 6-pounders', text: 'Bavaria\'s horse artillery.' },
@@ -167,8 +167,8 @@ const rockets = gunType('rockets', 'horse', {
 });
 const mortar = gunType('mortar', 'howitzer', {
   name: 'Howitzers', shortName: 'Howitzers', cost: 280,
-  stats: { speed: 2.6, range: 850, minRange: 90, preferredRange: 500, damage: 190, splash: 6, reloadTime: 22, indirect: true, weapon: 'artillery', scatter: 18, towed: { deploy: 22 },
-    gun: { canister: 160, pellets: 14, pelletDamage: 70, pelletSpread: 0.08, through: 0, bounce: 0 } },
+  stats: { speed: 2.6, range: 300, minRange: 60, preferredRange: 220, damage: 190, splash: 6, reloadTime: 22, indirect: true, weapon: 'artillery', scatter: 18, towed: { deploy: 22 },
+    gun: { canister: 80, pellets: 14, pelletDamage: 70, pelletSpread: 0.08, through: 0, bounce: 0 } },
   variants: {
     nato: { name: 'Obusiers', weapon: '6-inch howitzers', text: 'Short guns that throw explosive shells over walls and hedges onto troops in cover — and onto villages.' },
     by: { name: 'Haubitzen', weapon: '7-pounder howitzers', text: 'Bavarian howitzers: shells for troops behind cover.' },
@@ -200,7 +200,7 @@ const mgTeam = foot('mgTeam', 'light', {
   name: 'Light Infantry', shortName: 'Light', cost: 140, light: true,   // (light: they skirmish by default, ai/FrontlineDirector.drill)
   formation: { count: 20, columns: 10, spacing: 0.95 },
   specialist: undefined, specialistModels: undefined,
-  stats: { speed: 1.8, spread: 0.026, sight: 260, formations: true, bayonet: 100 },
+  stats: { speed: 1.8, spread: 0.026, sight: 120, formations: true, bayonet: 100 },
   variants: {
     nato: { name: 'Voltigeurs', weapon: 'Light musket, bayonet', text: 'The French light infantry: a cloud of skirmishers ahead of the columns, shooting the enemy\'s officers and gunners before the line comes on.' },
     by: { name: 'Leichte Infanterie', weapon: 'Musket, bayonet', text: 'Bavaria\'s light battalions in green: skirmishers in front of the line.' },
@@ -225,7 +225,7 @@ const sniper = foot('sniper', 'rifle', {
   formation: { count: 8, columns: 4, spacing: 3 },
   specialist: undefined, specialistModels: undefined,
   stats: { drill: false, volley: false, stance: 'crouch', leash: 10, formations: false, marksman: true, scope: 0.3, stealth: 0.75,
-    sight: 260, range: 230, aggroRange: 240, preferredRange: 190, damage: 130, spread: 0.008, reloadTime: 35, aimTime: 1.5, boltSpeed: 330 },
+    sight: 130, range: 150, aggroRange: 155, preferredRange: 120, damage: 130, spread: 0.008, reloadTime: 35, aimTime: 1.5, boltSpeed: 330 },
   variants: {
     nato: { name: 'Carabiniers', weapon: 'Rifled carbine', text: 'The light infantry\'s picked marksmen: few rifles, slow to load, deadly at range — they go for the officers.' },
     by: { name: 'Scharfschützen', weapon: 'Rifle', text: 'Bavarian marksmen with rifles.' },
@@ -237,7 +237,7 @@ const engineers = foot('engineers', 'pioneer', {
   name: 'Pioneers', shortName: 'Pioneers', cost: 150,
   formation: { count: 12, columns: 6, spacing: 1.4 },
   specialist: undefined, specialistModels: undefined,
-  stats: { ...T.engineers.stats, ...MUSKET, drill: false, volley: false, stance: 'crouch', leash: 8, formations: false, engineer: true, range: 110 },
+  stats: { ...T.engineers.stats, ...MUSKET, drill: false, volley: false, stance: 'crouch', leash: 8, formations: false, engineer: true, range: 70 },
   variants: {
     nato: { name: 'Sapeurs', weapon: 'Musket, axe', text: 'The sappers with their axes and aprons: earthworks for the guns, breastworks for the foot, a way through hedges and walls — and bridges to blow.' },
     by: { name: 'Pioniere', weapon: 'Musket, axe', text: 'Bavarian pioneers: earthworks and bridges.' },
@@ -249,7 +249,7 @@ const observers = foot('observers', 'officer', {
   name: 'Artillery Officers', shortName: 'Officers', cost: 120,
   formation: { count: 2, columns: 2, spacing: 3 },
   specialist: undefined, specialistModels: undefined,
-  stats: { ...T.observers.stats, drill: false, volley: false, stance: 'crouch', leash: 6, formations: false, sight: 480, range: 1, damage: 0 },
+  stats: { ...T.observers.stats, drill: false, volley: false, stance: 'crouch', leash: 6, formations: false, sight: 180, range: 1, damage: 0 },
   variants: {
     nato: { name: 'Officiers d\'artillerie', weapon: 'Telescope, sword', text: 'Gunner officers with telescopes on a height: every gun and howitzer of yours lands tight on what they can see.' },
     by: { name: 'Artillerieoffiziere', weapon: 'Telescope, sword', text: 'Artillery officers with their telescopes.' },
@@ -262,7 +262,7 @@ const observers = foot('observers', 'officer', {
 // kind 'wagon' (render/RigRenderer.js, models/napWagons.js): a pair of horses and a driver, no weapon
 const wagons = (kind) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildWagon({ army, kind })]));
 const WAGON = {
-  armor: 0, hp: 220, speed: 2.8, turnRate: 1, turretRate: 1, radius: 1.6, height: 2.4, eyeHeight: 2.2, aimHeight: 1.2, sight: 150, fov: 3,
+  armor: 0, hp: 220, speed: 2.8, turnRate: 1, turretRate: 1, radius: 1.6, height: 2.4, eyeHeight: 2.2, aimHeight: 1.2, sight: 70, fov: 3,
   range: 1, damage: 0, fireCooldown: 1, magSize: 1, reloadTime: 1, vsArmor: 1, weapon: undefined, nightSight: undefined, wagon: true, smoke: undefined,
 };
 const wagon = (id, kind, o) => ({

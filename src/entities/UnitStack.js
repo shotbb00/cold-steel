@@ -73,7 +73,7 @@ const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3, ghostT: 1.6, ghostTVehicle: 3.5 };
 // single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
 // m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
-const COLUMN = { gap: 1.3, trail: 120, narrow: 4, wide: 6, after: 10, afterVehicle: 40 }; // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
+const COLUMN = { gap: 1.3, trail: 120, narrow: 2.5, wide: 4, after: 10, afterVehicle: 40 }; // narrow: only a real choke point (a gate, a bridge, a gap in a wall) — not a hedge beside the way // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -325,8 +325,8 @@ export class UnitStack {
     if (this.column) return this.columnSlot(u, out);
     const c = Math.cos(this.facing);
     const s = Math.sin(this.facing);
-    const wx = this.usesCover ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
-    const wy = this.usesCover ? u.wander.y : 0;
+    const wx = this.usesCover && !this.form ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
+    const wy = this.usesCover && !this.form ? u.wander.y : 0; // (1806: a formed company stands in its ranks)
     const loose = this.form ? 1 : LOOSENESS; // (1806 formations: the exact places)
     const ox = u.offset.x * loose + wx;
     const oy = u.offset.y * loose + wy;
@@ -503,7 +503,7 @@ export class UnitStack {
     // formation only once it's open for a while — every change strings the men out again
     const nav = this.world.nav;
     const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
-    if (!this.moveTarget || this.units.length < 2) this.column = false;
+    if (!this.moveTarget || this.units.length < 2 || this.form) this.column = false; // (1806: a formed company keeps its ranks — the slots squeeze in round trees and walls, fitSlot)
     else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
     else if (step && ++this.wideFor > (this.usesCover ? COLUMN.after : COLUMN.afterVehicle)) this.column = false;
