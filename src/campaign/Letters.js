@@ -9,6 +9,7 @@
 import { UNIT_TYPES } from '../data/units/index.js';
 import { epoch } from '../data/epoch.js';
 import { PEOPLE_1945, OPEN_1945, FOOD_1945, ENEMY_1945, HOME_1945, CLOSE_1945 } from './Letters45.js';
+import { PEOPLE_1806, L1806 } from './Letters1806.js';
 const ww2 = () => epoch() === '1945';
 const LOCAL = new Set(['bw', 'nva', 'wh', 'fj']); // fighting in their own country
 
@@ -48,6 +49,7 @@ const PEOPLE = {
     sign: ['Dein', 'Es grüßt dich herzlich', 'Bis bald,', 'Halt die Ohren steif,', 'In Liebe,', 'Dein Junge,'],
   },
   ...PEOPLE_1945,
+  ...PEOPLE_1806,
 };
 const DEFAULT = { nato: 'us', pact: 'sov' };
 const DEFAULT_1945 = { nato: 'us45', pact: 'wh' };
@@ -202,7 +204,9 @@ const kindOf = (type) => {
  */
 export function writeLetter(c, b, { attackerWon, lost, wounded }) {
   const side = c.side;
-  const army = ww2() ? ARMY_1945[c.army] ?? DEFAULT_1945[side] : PEOPLE[c.army] ? c.army : DEFAULT[side];
+  const y06 = epoch() === '1806';
+  const army = ww2() ? ARMY_1945[c.army] ?? DEFAULT_1945[side] : y06 ? (PEOPLE_1806[c.army] ? c.army : side === 'nato' ? 'fr' : 'pr') : PEOPLE[c.army] ? c.army : DEFAULT[side];
+  const L = y06 ? L1806 : { OPEN, CLOSE, WHERE, OUTCOME, SKY, CUT, LOSSES, TOPICS }; // (1806: no tanks, tracers or aircraft in its lines)
   const P = PEOPLE[army];
   const used = new Set(c.letterUsed ?? []);
   // a line counts as used with its place, names and numbers blanked out: the same sentence about another village is still the same sentence
@@ -226,21 +230,21 @@ export function writeLetter(c, b, { attackerWon, lost, wounded }) {
     kind: kindOf(w.type), day: c.day ?? Math.ceil((c.turn ?? 1) / 2), cut: c.cut ?? 0,
   };
   key = (l) => l.split(x.place).join('§').split(x.friend).join('@').replace(/\d+/g, '#');
-  if (!lines.length) lines.push(take(OPEN[army]));
-  lines.push(take(WHERE(x)));
+  if (!lines.length) lines.push(take(L.OPEN[army]));
+  lines.push(take(L.WHERE(x)));
   const ours = b.attacker === side;
-  lines.push(take(OUTCOME[ours ? (attackerWon ? 'attackWon' : 'attackLost') : attackerWon ? 'broken' : 'held'](x)));
-  const sky = SKY[b.weather === 'rain' || b.weather === 'fog' ? b.weather : Math.random() < 0.5 ? b.time : b.weather] ?? SKY[b.time];
+  lines.push(take(L.OUTCOME[ours ? (attackerWon ? 'attackWon' : 'attackLost') : attackerWon ? 'broken' : 'held'](x)));
+  const sky = L.SKY[b.weather === 'rain' || b.weather === 'fog' ? b.weather : Math.random() < 0.5 ? b.time : b.weather] ?? L.SKY[b.time];
   if (sky && Math.random() < 0.6) lines.push(take(sky));
-  if (x.cut) lines.push(take(CUT));
+  if (x.cut) lines.push(take(L.CUT));
   // two or three topics, never the same mix twice in a row
-  for (const t of shuffle(Object.keys(TOPICS)).slice(0, x.cut ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0))) {
-    const pool = TOPICS[t](x);
+  for (const t of shuffle(Object.keys(L.TOPICS)).slice(0, x.cut ? 2 : 2 + (Math.random() < 0.5 ? 1 : 0))) {
+    const pool = L.TOPICS[t](x);
     if (pool?.length) lines.push(take(pool));
   }
-  lines.push(take(lost ? LOSSES.some(x) : LOSSES.none));
-  if (wounded) lines.push(take(LOSSES.wounded(x)));
-  lines.push(take(CLOSE[army]));
+  lines.push(take(lost ? L.LOSSES.some(x) : L.LOSSES.none));
+  if (wounded) lines.push(take(L.LOSSES.wounded(x)));
+  lines.push(take(L.CLOSE[army]));
   c.letterUsed = [...used].slice(-MEMORY);
   c.letter = { turn: c.turn, greet: w.greet, body: lines, sign: pick(P.sign), from: `${w.rank} ${w.name}`, unit: w.unitName };
   return c.letter;

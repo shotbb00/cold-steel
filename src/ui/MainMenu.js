@@ -305,9 +305,7 @@ export class MainMenu {
     else if (id === 'bootcamp') this.sheet?.show(MAPS[chapterBattle('basics').map] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
-    else if (id === 'campaign' && epoch() === '1806') { // (1806 is being built: battles first)
-      this.panel.append(el('h2', '', id === 'campaign' ? 'Campaign' : 'Boot camp'), el('p', 'mp-lead', `The 1806 ${id === 'campaign' ? 'campaign' : 'boot camp'} is coming — for now, 1806 has single-player and multiplayer battles.`));
-    } else if (id === 'bootcamp') this.bootcampPanel();
+    else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),

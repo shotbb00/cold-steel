@@ -33,11 +33,15 @@ const btn = (label, cls, fn) => {
   return b;
 };
 const ww2 = () => epoch() === '1945';
-const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', ww2()
+const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '1806'
+  ? 'The French must take Weimar and Naumburg in 16 turns; the Prussians hold them, or carry the war back to Coburg and Hof.'
+  : ww2()
   ? 'The Allies must take Eisenach and Meiningen in 16 turns; the Germans hold them, or win back Fulda and Bad Hersfeld.'
   : 'The Pact must take Fulda and Bad Hersfeld in 16 turns; NATO holds them, or takes Eisenach.'] });
 /** What each side's war is, on the side cards. */
-const SIDE_TEXT = () => (ww2()
+const SIDE_TEXT = () => (epoch() === '1806'
+  ? { nato: 'October 1806: through the Thuringian Forest to the Saale — take Weimar and Naumburg.', pact: 'Stop the French at the passes and on the Saale, and carry the war back to Coburg and Hof.' }
+  : ww2()
   ? { nato: 'April 1945: across the Fulda and east into Thuringia — take Eisenach and Meiningen.', pact: 'Hold the hills before Eisenach and Meiningen, and throw the Allies back over the Fulda.' }
   : { nato: 'Hold the border, keep Fulda and Bad Hersfeld, then throw them back.', pact: 'Break the NATO line and drive for Fulda and Bad Hersfeld.' });
 
@@ -91,7 +95,7 @@ export class CampaignPanel {
   renderNew() {
     const r = this.root;
     const ch = this.choice;
-    r.append(el('p', 'mp-lead', 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
+    r.append(el('p', 'mp-lead', epoch() === '1806' ? 'October 1806, on the road map from Franconia to the Saale. You command three regiments and brigades: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
     r.append(el('h3', 'menu-sub', 'Your side'));
     const sideCards = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {
