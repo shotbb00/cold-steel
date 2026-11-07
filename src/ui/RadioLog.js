@@ -4,7 +4,6 @@
 // clock and fades after a few seconds. Built from events every machine
 // sees (multiplayer clients included), so both players get their own side's log.
 import { RADIO } from '../data/radio.js';
-import { FACTIONS } from '../data/factions.js';
 import { settings } from '../core/Settings.js';
 
 const LINES = 3;
@@ -24,10 +23,11 @@ export class RadioLog {
     this.clock = game.conditions?.clock ?? 14 * 60; // minutes after midnight at the start
     const me = game.playerFaction;
     game.bus.on('point:owner', ({ point, owner, prev }) => {
-      if (owner) this.add(owner === me ? `${point.name} is ours.` : `${point.name} has fallen to the ${FACTIONS[owner].name}.`, owner === me ? 'good' : 'bad');
+      if (owner) this.add(owner === me ? `${point.name} is ours.` : `${point.name} has fallen to the enemy.`, owner === me ? 'good' : 'bad');
       else if (prev) this.add(prev === me ? `We've been pushed out of ${point.name}.` : `The enemy has been thrown out of ${point.name}.`, prev === me ? 'bad' : 'good');
     });
     game.bus.on('stack:destroyed', (s) => {
+      if (s.stats.loose || s.stats.dismounted) return; // (1806: a loose horse, a man on foot — not a unit lost)
       this.add(s.faction === me ? `Lost contact with ${s.name}.` : `Enemy ${s.type.shortName} destroyed.`, s.faction === me ? 'bad' : 'good');
     });
     game.bus.on('game:end', () => { this.next = Infinity; });

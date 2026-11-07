@@ -11,6 +11,7 @@
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
 import { Deployment } from '../systems/Deployment.js';
+import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
@@ -180,6 +181,8 @@ export class GameEngine {
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);
+    this.powers = new Powers1806(this);   // 1806's grand battery, cavalry reserve, the Guard
+    this.systems.push(this.powers);
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
@@ -259,6 +262,9 @@ export class GameEngine {
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
     const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
     if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
+    if (stack.type.id === 'tank' && stack.stats.cavalry && armyDoctrine(stack.army, 'gardeDuCorps') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // Saxony's Garde du Corps: Veteran
+    const light = stack.type.id === 'reconVehicle' && stack.stats.cavalry && armyDoctrine(stack.army, 'lightHorse');
+    if (light) { stack.stats = { ...stack.stats, sight: stack.stats.sight * light.sight }; for (const u of stack.units) u.stats = stack.unitStats(u.index); } // Bavaria's light horse sees farther
     return stack;
   }
 

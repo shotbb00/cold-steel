@@ -100,7 +100,7 @@ export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, d
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x3e4f52, roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.88 });
       for (const p of paths) {
         const zs = [];
-        for (let x = -520; x <= 520; x += 20) zs.push(p(x));
+        for (let x = -820; x <= 820; x += 20) zs.push(p(x)); // (past the edge of the big maps' terrain)
         const z0 = Math.min(...zs) - halfWidth - 20;
         const z1 = Math.max(...zs) + halfWidth + 20;
         const water = new THREE.Mesh(new THREE.PlaneGeometry(1100, z1 - z0, 1, 1), waterMat);

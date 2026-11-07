@@ -12,10 +12,11 @@ import { silhouette } from './Icons.js';
 import { forArmy, artKey } from '../data/factions.js';
 import * as THREE from 'three';
 import { KITS, takesKit } from '../data/kits.js';
-import { epoch } from '../data/epoch.js';
+import { epoch, year } from '../data/epoch.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
+  ['cavalry', 'Cavalry'],   // (1806)
   ['armour', 'Armour'],
   ['fire', 'Fire support'],
   ['airdefence', 'Air defence'],
@@ -45,6 +46,11 @@ const GRADE = [['\u2013', 'none'], ['\u2193', 'low'], ['\u2192', 'medium'], ['\u
 /** The card's row of three: infantry, armour, air — a dash, or an arrow down / level / up. */
 const damageRow = (type) => {
   const d = damageVs(type);
+  if (year() < 1900) { // 1806: against foot and against horse (no armour, no aircraft); horsemen's weapon is the charge
+    const cav = type.stats.cavalry && !type.stats.loose;
+    const v = { inf: cav ? 3 : d.inf, horse: cav ? 2 : d.inf };
+    return `<span class="rw-dmg">${[['inf', 'Foot'], ['horse', 'Horse']].map(([k, label]) => { const [mark, word] = GRADE[v[k]]; return `<span class="g${v[k]}" title="Against ${label.toLowerCase()}: ${word}">${label}<b>${mark}</b></span>`; }).join('')}</span>`;
+  }
   return `<span class="rw-dmg">${[['inf', 'Inf'], ['armour', 'Arm'], ['air', 'Air']].map(([k, label]) => {
     const [mark, word] = GRADE[d[k]];
     return `<span class="g${d[k]}" title="${label === 'Inf' ? 'Infantry' : label === 'Arm' ? 'Armour' : 'Aircraft'}: ${word}">${label}<b>${mark}</b></span>`;
@@ -95,7 +101,7 @@ export class ReinforceWindow {
     // the kit the next rifle squads bring (data/kits.js; same price)
     game.reinforceKit = null;
     const kitSeg = root.querySelector('.rw-kit .seg');
-    root.querySelector('.rw-kit').hidden = epoch() !== '1985' || !types.some(takesKit); // (the kits are 1985's: LAWs, Panzerfaust 44)
+    root.querySelector('.rw-kit').hidden = !types.some(takesKit); // (the rifle squads of 1985 and 1945: the types with kitModels)
     for (const [id, kit] of Object.entries(KITS)) {
       const b = document.createElement('button');
       b.type = 'button';

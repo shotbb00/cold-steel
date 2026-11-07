@@ -5,7 +5,8 @@
 // gets you over again. Every way onto the middle ground is a choke point.
 // Bridgehead villages on both outer banks, five villages on the middle ground; the centre village
 // lies between the two centre bridges, not on either. Point-mirrored, like the other maps.
-// One river object with two channels (world/River.js `paths`).
+// One river object with two channels (world/River.js `paths`). The big field (1.0 × 1.12 km): the
+// rivers ~400 m apart, the roads and bridges at x = ∓300, 0.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -15,13 +16,13 @@ import { createRiver } from '../world/River.js';
 import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
-const BASE_Z = 280;
-const ROAD_X = 170;
+const BASE_Z = 500;
+const ROAD_X = 300;
 const noise = createNoise2D(1909);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
 // the Haune on NATO's side, the Fulda on the Pact's: each the other point-mirrored
-const hauneZ = (x) => 95 + 10 * Math.sin(x * 0.009) + 5 * Math.sin(x * 0.023 + 1);
+const hauneZ = (x) => 200 + 16 * Math.sin(x * 0.006) + 7 * Math.sin(x * 0.017 + 1);
 const fuldaZ = (x) => -hauneZ(-x);
 const away = (x, z) => Math.min(Math.abs(z - hauneZ(x)), Math.abs(z - fuldaZ(x)));
 
@@ -42,18 +43,20 @@ const river = createRiver({
 });
 
 // the low wooded knolls on the middle ground (and their mirrors)
-const KNOLLS = [[-95, 30, 26, 6], [60, 40, 20, 4]];
+const KNOLLS = [[-166, 52, 40, 6], [105, 70, 32, 4]];
+// the heights over the outer banks (and their mirrors)
+const HEIGHTS = [[-210, 360, 45, 10], [260, 400, 36, 7]];
 
 function height(x, z) {
   const ax = Math.abs(x);
   const az = Math.abs(z);
-  let h = fbm(noise, x * 0.006, z * 0.006, 5) * 5;                         // rolling ground
+  let h = fbm(noise, x * 0.004, z * 0.004, 5) * 5;                         // rolling ground
   h += fbm(noise, x * 0.05 + 50, z * 0.05, 3) * 0.5;
-  h += smoothstep(55, 150, away(x, z)) * (7 + ridged(noise, x * 0.01 + 3, z * 0.01, 4) * 7); // the ground climbs away from the water
+  h += smoothstep(60, 200, away(x, z)) * (7 + ridged(noise, x * 0.008 + 3, z * 0.008, 4) * 7); // the ground climbs away from the water
   for (const [cx, cz, r, a] of KNOLLS) h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a);
-  for (const [cx, cz, r, a] of [[-120, 205, 30, 10], [150, 230, 24, 7]]) h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a); // heights over the outer banks
-  h += smoothstep(300, 420, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded edges
-  h += smoothstep(320, 440, az) * 18;
+  for (const [cx, cz, r, a] of HEIGHTS) h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a); // heights over the outer banks
+  h += smoothstep(500, 620, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded edges
+  h += smoothstep(560, 680, az) * 18;
   for (const bz of [BASE_Z, -BASE_Z]) {
     const k = smoothstep(28, 15, Math.hypot(x, z - bz));
     h += (h * 0.4 + 6 - h) * k; // a level base area
@@ -65,26 +68,26 @@ const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' 
 const pactName = { '1st Platoon': '1-ya Rota' };
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Eiterfeld', x: 0, z: BASE_Z - 40, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Burghaun', x: -ROAD_X, z: hauneZ(-ROAD_X) + 55, owner: null, sector: 'west' },
-  { id: 'C', name: 'Rothenkirchen', x: -150, z: 22, owner: null, sector: 'west' },
-  { id: 'D', name: 'Steinbach', x: ROAD_X, z: hauneZ(ROAD_X) + 55, owner: null, sector: 'east' },
-  { id: 'E', name: 'Hünhan', x: -55, z: 50, owner: null, sector: 'centre' },
+  { id: 'A', name: 'Eiterfeld', x: 0, z: BASE_Z - 34, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Burghaun', x: -ROAD_X, z: hauneZ(-ROAD_X) + 90, owner: null, sector: 'west' },
+  { id: 'C', name: 'Rothenkirchen', x: -262, z: 38, owner: null, sector: 'west' },
+  { id: 'D', name: 'Steinbach', x: ROAD_X, z: hauneZ(ROAD_X) + 90, owner: null, sector: 'east' },
+  { id: 'E', name: 'Hünhan', x: -96, z: 88, owner: null, sector: 'centre' },
   { id: 'F', name: 'Kirchhasel', x: 0, z: 0, owner: null, sector: 'centre' },
-  { id: 'G', name: 'Großenmoor', x: 55, z: -50, owner: null, sector: 'centre' },
-  { id: 'H', name: 'Neukirchen', x: ROAD_X, z: fuldaZ(ROAD_X) - 55, owner: null, sector: 'east' },
-  { id: 'I', name: 'Wehrda', x: 150, z: -22, owner: null, sector: 'east' },
-  { id: 'J', name: 'Schlitz', x: -ROAD_X, z: fuldaZ(-ROAD_X) - 55, owner: null, sector: 'west' },
-  { id: 'K', name: 'Niederaula', x: 0, z: -(BASE_Z - 40), owner: 'pact', sector: 'centre' },
+  { id: 'G', name: 'Großenmoor', x: 96, z: -88, owner: null, sector: 'centre' },
+  { id: 'H', name: 'Neukirchen', x: ROAD_X, z: fuldaZ(ROAD_X) - 90, owner: null, sector: 'east' },
+  { id: 'I', name: 'Wehrda', x: 262, z: -38, owner: null, sector: 'east' },
+  { id: 'J', name: 'Schlitz', x: -ROAD_X, z: fuldaZ(-ROAD_X) - 90, owner: null, sector: 'west' },
+  { id: 'K', name: 'Niederaula', x: 0, z: -(BASE_Z - 34), owner: 'pact', sector: 'centre' },
 ];
 
 export default {
   id: 'haune-fulda',
   name: 'Haune and Fulda',
   description: 'Two rivers split the land in three. The middle ground between them is where the battle is won — and every way onto it is a bridge.',
-  size: 1000,
-  segments: 600,
-  bounds: { x: 300, z: 310 },
+  size: 1600,
+  segments: 640,
+  bounds: { x: 500, z: 560 },
   seed: 1909,
   height,
   river,
@@ -94,7 +97,7 @@ export default {
   theme: {
     // a hazy September afternoon: stubble fields, the trees still green
     fogColor: 0xb4b8ae,
-    fogDensity: 0.0022,
+    fogDensity: 0.0018,
     skyTop: 0x6f8296,
     skyHorizon: 0xc8ccc2,
     skyBottom: 0x7a7c72,
@@ -121,16 +124,16 @@ export default {
       ploughed: '#4e3e2e',
       stubble: '#94825a',
       meadow: '#66753f',
-      farmX: [310, 400],
-      farmZ: [340, 430],
+      farmX: [520, 600],
+      farmZ: [580, 660],
       roads: [-ROAD_X, 0, ROAD_X],  // every road meets a crossing on both rivers
-      roadZ: 300,
+      roadZ: 540,
     },
   },
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-ROAD_X, 0, ROAD_X] }, pact: { x: 0, z: -BASE_Z, entries: [-ROAD_X, 0, ROAD_X] } },
-  maxStacks: 22,
-  cameraStart: { nato: { x: 0, z: 190 }, pact: { x: 0, z: -190 } },
+  maxStacks: 26,
+  cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
@@ -153,11 +156,11 @@ export default {
     // cover on our half (outer bank and our side of the middle ground), mirrored
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 60 && tries < 6000; tries++) {
+    for (let tries = 0; sites.length < 140 && tries < 9000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
       const z = 6 + rand() * (bounds.z - 26);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 22 * 22)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 34 || nearPoint(x, z, 28) || nearWater(x, z, 9)) continue;
+      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
+      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 34) || nearWater(x, z, 9)) continue;
       if (river.crossings.some((c) => Math.abs(x - c.x) < 16 && Math.abs(z - c.z) < 40)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
@@ -178,13 +181,13 @@ export default {
       if (d < river.halfWidth + 1) return -1; // not in the water
       const bank = d < river.halfWidth + 12 ? 0.55 : 0;
       let woods = 0;
-      for (const [cx, cz, r] of [...KNOLLS, [-120, 205, 30], [150, 230, 24]]) woods = Math.max(woods, hill(x, z, cx, cz, r, 1), hill(x, z, -cx, -cz, r, 1));
+      for (const [cx, cz, r] of [...KNOLLS, ...HEIGHTS]) woods = Math.max(woods, hill(x, z, cx, cz, r, 1), hill(x, z, -cx, -cz, r, 1));
       return Math.max(bank, woods > 0.45 ? 0.8 : 0);
     };
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1500, forest });
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, forest });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 6000, lane: 0 });
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 4.2, fields: this.fields });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 8000, lane: 0 });
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 3, fields: this.fields });
 
     return {
       buildings: props.buildings,

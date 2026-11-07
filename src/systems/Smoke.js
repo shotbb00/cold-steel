@@ -23,13 +23,13 @@ export class SmokeSystem {
   }
 
   /** Lay a cloud at (x, z). */
-  add(x, z, { radius = SMOKE.radius, duration = SMOKE.duration } = {}) {
+  add(x, z, { radius = SMOKE.radius, duration = SMOKE.duration, powder = false } = {}) { // (powder: a volley's smoke, no canister pop)
     duration /= 1 + 0.12 * wind.speed; // a gale tears a screen apart sooner
     const cloud = { x, z, maxR: radius, r: 0, t: 0, duration };
     this.clouds.push(cloud);
     const y = this.game.terrain.heightAt(x, z);
     cloud.emitter = this.game.effects.screen({ x, y, z }, radius, duration + 6);
-    this.game.audio?.play('smoke.pop', { x, y, z }, { volume: 0.5, throttle: 0.1 });
+    if (!powder) this.game.audio?.play('smoke.pop', { x, y, z }, { volume: 0.5, throttle: 0.1 });
     return cloud;
   }
 

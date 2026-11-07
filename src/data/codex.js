@@ -271,6 +271,85 @@ export const CODEX = {
 
 // 1945 (data/epoch.js): entries whose use differs from 1985's, by type id; `armies` holds one army's
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
+// 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
+export const CODEX1806 = {
+  mgTeam: {
+    use: 'Light infantry fights in open order: a screen of skirmishers in front of your line, in hedges and woods, picking off the enemy\'s officers and gunners and spoiling his volleys. It can close up into line or square when it must (the formation buttons).',
+    strong: 'Enemy lines and guns from cover, screening your own columns', weak: 'Cavalry caught in the open, a volley at close range',
+    counter: 'Your own skirmishers, or cavalry to ride them down — they can\'t form square from a scattered screen in time.',
+  },
+  atTeam: {
+    use: 'The grenadiers: picked men for the assault. Bring them up in column behind the line, then send them in with the bayonet where the enemy wavers — they shake his nerve harder and stand longer.',
+    strong: 'The bayonet charge, holding a village or a breach', weak: 'Artillery before they close, cavalry in the open',
+    counter: 'Guns and volleys before they reach you; square if their horse is near.',
+  },
+  sniper: {
+    use: 'Riflemen with rifled guns: slow to load, deadly at 200 m. Put them in hedges and woods in front of your line: they go for officers and gunners first, and the companies left leaderless waver.',
+    strong: 'Officers, gunners, skirmishers, from cover', weak: 'Anything that reaches them; slow fire; cavalry',
+    counter: 'Light horse to ride them out of the open, or howitzers on the woods they hide in.',
+  },
+  engineers: {
+    use: 'Pioneers: they dig earthworks for your guns and breastworks for your foot, clear a way through obstacles, and blow bridges. A position they prepared holds much longer.',
+    strong: 'Preparing a position, bridges', weak: 'Any fight in the open',
+    counter: 'Shell their works before they are finished.',
+  },
+  observers: {
+    use: 'Artillery officers with telescopes: put them on a height with a view, and every gun and howitzer of yours lands its shot tighter on what they can see.',
+    strong: 'Making your guns accurate at long range', weak: 'Any fight; being found',
+    counter: 'Skirmishers or light horse to find and chase them off the height.',
+  },
+  jammer: {
+    use: 'The ammunition wagon: park it behind your line and companies within 60 m take in new men (Refill) and refill their pouches four times faster.',
+    strong: 'Keeping companies at strength far from your base', weak: 'No weapon; it goes up if hit',
+    counter: 'Find it behind the line and send light horse or guns at it.',
+  },
+  bridgeLayer: {
+    use: 'The pontoon train: drive it to the river bank where you want to cross and the pontonniers lay a bridge of boats.',
+    strong: 'Crossing where there is no bridge', weak: 'No weapon; slow',
+    counter: 'Guns on the crossing; cavalry on the far bank.',
+  },
+  artillery: {
+    use: 'Two field guns. Unlimber them where they see the enemy\'s lines — on a rise, on open ground: roundshot skips through a line or a column from 700 m and kills men in every rank it passes. Let the enemy come on and switch to canister inside 200 m: one discharge empties a company. Keep foot or a square close: alone, guns are a prize for the enemy\'s horse.',
+    strong: 'Columns and lines at long range, anything close in with canister, squares', weak: 'Cavalry on its flank, skirmishers picking off the gunners, moving',
+    counter: 'Skirmishers to kill the gunners, cavalry round the flank, or close in fast while it reloads.',
+  },
+  spMortar: {
+    use: 'The heavy 12-pounders: the longest reach and the heaviest ball, but slow to move and slow to set up. Put them where they can stay: in the centre of your line, on a height.',
+    strong: 'Everything at long range, a grand battery\'s backbone', weak: 'Moving them, cavalry, skirmishers',
+    counter: 'Don\'t stand in front of them: go round, or rush them under cover of smoke and ground.',
+  },
+  rockets: {
+    use: 'Horse artillery: light guns that keep up with the cavalry, in action in seconds and limbered again before the answer comes. Bring them up close, fire a few rounds of canister, and go.',
+    strong: 'Speed, surprise, canister at close range', weak: 'Lighter shot than the foot guns, cavalry',
+    counter: 'Cavalry of your own when they limber up, or guns of your own at long range.',
+  },
+  mortar: {
+    use: 'Howitzers lob explosive shells over hedges, walls and the brow of a hill: they reach what flat-firing guns can\'t see. Use them on villages, on troops behind cover, and to set things alight.',
+    strong: 'Troops in cover and in villages, behind a rise', weak: 'Anything close (canister only), moving targets',
+    counter: 'Keep moving and spread out; send cavalry at them.',
+  },
+  tank: {
+    use: 'The charge that decides the day. Keep the heavy horse back until the enemy foot is shaken, caught in line or on the move, then send it in (Charge!): at the gallop the shock alone breaks a wavering company, and the swords do the rest. Rally it after every charge.',
+    strong: 'Foot in line or column, broken troops, guns without cover', weak: 'A formed square (the horses won\'t go in), guns with canister, a long fight',
+    counter: 'Form square when it comes, and keep your guns close to the square.',
+  },
+  ifv: {
+    use: 'Horsemen who can also fight with the musket: charge like any cavalry, or hold a flank and shoot. Good against the enemy\'s light horse and his skirmishers.',
+    strong: 'Skirmishers, light cavalry, holding a flank', weak: 'Squares, massed volleys, heavy cavalry',
+    counter: 'Square against the charge; your own heavy horse against them.',
+  },
+  reconVehicle: {
+    use: 'The eyes of the army: the light horse sees farthest. Ride ahead, find the enemy, and fall back; in the battle, ride down skirmishers and pursue the broken.',
+    strong: 'Scouting, skirmishers in the open, pursuit', weak: 'Formed foot, heavy cavalry, guns',
+    counter: 'Keep your skirmishers close to formed foot; meet them with dragoons or heavy horse.',
+  },
+  rifles: {
+    use: 'The line: a company in two ranks, standing shoulder to shoulder. It fires by volleys — the whole company on the word, then a long reload — and every volley leaves a bank of smoke in front of it. Bring it within a hundred paces of the enemy, then fire; let the enemy waste its volley at long range.',
+    strong: 'Other foot at a hundred paces, holding a line', weak: 'Artillery (a line is a long target), cavalry on its flank, being caught reloading',
+    counter: 'Make it fire first and far, then close in while it reloads. Guns on its flank rake the whole line.',
+  },
+};
+
 export const CODEX45 = {
   atTeam: {
     use: 'The infantry\'s answer to armour: a bazooka or Panzerschreck team (the Red Army\'s carry the PTRS anti-tank rifle). Hide them where the tanks must pass — a house, a hedge, a wood edge — and fire from the side or rear, close: their reach is short.',

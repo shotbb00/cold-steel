@@ -23,6 +23,7 @@
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
+import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
@@ -72,7 +73,7 @@ const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3, ghostT: 1.6, ghostTVehicle: 3.5 };
 // single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
 // m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
-const COLUMN = { gap: 1.3, trail: 120, narrow: 4, wide: 6, after: 10, afterVehicle: 40 }; // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
+const COLUMN = { gap: 1.3, trail: 120, narrow: 2.5, wide: 4, after: 10, afterVehicle: 40 }; // narrow: only a real choke point (a gate, a bridge, a gap in a wall) — not a hedge beside the way // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -112,6 +113,8 @@ export class UnitStack {
     if (cav) this.stats = { ...this.stats, sight: (this.stats.sight ?? 100) * cav.sight };
     const walze = ARTILLERY.has(type.id) && armyDoctrine(this.army, 'walze'); // the NVA's Feuerwalze reloads faster
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
+    const quick = this.stats.gun && this.stats.towed && armyDoctrine(this.army, 'quickGuns'); // Bavaria's reformed artillery unlimbers sooner
+    if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
     this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
@@ -152,6 +155,7 @@ export class UnitStack {
       this.units.push(u);
     }
     this.aliveCount = count;
+    if (this.stats.formations) this.setForm(type.light ? 'skirmish' : 'line', true); // (1806: a company arrives in line; the light infantry in skirmish order)
     this.hadOfficer = type.kind === 'infantry' && count >= 8 && !type.stats.structure; // a rifle platoon has a leader
     if (this.hadOfficer) this.units[0].officer = true;
     this.led = false;
@@ -208,9 +212,18 @@ export class UnitStack {
     this.stats = { ...this.stats, ...kit.stats(this.stats) };
     this._specialistStats = null;
     this.lightAT = this.stats.lightAT ?? 0;
+    // the riflemen it re-arms (not the squad's specialist: its MG gunner keeps the MG)
+    const carry = kit.carry;
+    let left = carry?.count ?? 0;
     for (const u of this.units) {
       u.stats = this.unitStats(u.index);
       u.grenades = u.stats.grenades ?? 0;
+      const specialist = u.index < (this.type.specialist?.count ?? 0);
+      u.kitWeapon = carry && !specialist && left-- > 0 ? carry.weapon : null;
+    }
+    if (carry && this.renderer) { // the new weapons in their hands (the renderer was built with the stack, before its kit)
+      this.renderer.dispose();
+      this.renderer = createRenderer(this, this.services.scene);
     }
   }
 
@@ -321,10 +334,11 @@ export class UnitStack {
     if (this.column) return this.columnSlot(u, out);
     const c = Math.cos(this.facing);
     const s = Math.sin(this.facing);
-    const wx = this.usesCover ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
-    const wy = this.usesCover ? u.wander.y : 0;
-    const ox = u.offset.x * LOOSENESS + wx;
-    const oy = u.offset.y * LOOSENESS + wy;
+    const wx = this.usesCover && !this.form ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
+    const wy = this.usesCover && !this.form ? u.wander.y : 0; // (1806: a formed company stands in its ranks)
+    const loose = this.form ? 1 : LOOSENESS; // (1806 formations: the exact places)
+    const ox = u.offset.x * loose + wx;
+    const oy = u.offset.y * loose + wy;
     out.set(this.anchor.x + ox * c + oy * s, 0, this.anchor.z - ox * s + oy * c);
     this.fitSlot(u, out);
     this.onDeck(out);
@@ -425,6 +439,11 @@ export class UnitStack {
       }
       this.updateMorale(dt);
       this.updateCentroid();
+      if (this.form) this.updateForm(dt);
+      if (this.charging) this.updateCharge(dt);
+      if (this.stats.cavalry && !this.stats.loose) this.updateSabres(dt);
+      if (this.stats.loose) this.updateLoose(dt);
+      if (this.stats.dismounted) this.updateDismounted(dt);
     }
     // (the renderer is updated by GameEngine after the simulation step)
   }
@@ -493,7 +512,7 @@ export class UnitStack {
     // formation only once it's open for a while — every change strings the men out again
     const nav = this.world.nav;
     const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
-    if (!this.moveTarget || this.units.length < 2) this.column = false;
+    if (!this.moveTarget || this.units.length < 2 || this.form) this.column = false; // (1806: a formed company keeps its ranks — the slots squeeze in round trees and walls, fitSlot)
     else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
     else if (step && ++this.wideFor > (this.usesCover ? COLUMN.after : COLUMN.afterVehicle)) this.column = false;
@@ -588,17 +607,19 @@ export class UnitStack {
     const scan = Math.sin(this.world.time * 0.35 + u.phase * 3) * 0.7;
     if (this.usesCover) {
       const desired = u.airTarget ? u.airYaw : u.target ? u.aimYaw
+        : this.form && this.stats.drill ? this.facing + (this.stats.square ? u.faceOut ?? 0 : 0)
         : u.alertT > 0 ? u.alertYaw
           : u.moving ? u.moveYaw
             : (u.atCover ? Math.atan2(u.coverSpot.dirX, u.coverSpot.dirZ) : this.facing) + scan;
       u.yaw += angleDelta(u.yaw, desired) * Math.min(1, dt * (u.target || u.alertT > 0 ? 7 : 1.5));
     } else {
       // hull turns toward travel; the turret tracks the target (or sweeps) on its own
-      if (u.wantsMove) { /* the hull is steered in driveAlongHull */ } else if ((this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
+      const casemate = s.traverse != null && (u.target || u.airTarget); // (a fixed gun on a target: the hull answers to the gun, not the ordered facing)
+      if (u.wantsMove) { /* the hull is steered in driveAlongHull */ } else if (!casemate && (this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
         u.yaw += clamp(angleDelta(u.yaw, this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing), -s.turnRate * dt * 0.6, s.turnRate * dt * 0.6); // turn on the spot to face the order
       }
       const aim = u.airTarget ? u.airYaw : u.target ? u.aimYaw : u.alertT > 0 ? u.alertYaw : u.yaw + scan;
-      u.turretYaw += clamp(angleDelta(u.turretYaw, aim), -s.turretRate * dt, s.turretRate * dt);
+      this.aimGun(u, aim, dt, 1, !!(u.target || u.airTarget || u.alertT > 0));
       // gun elevation (AA guns follow the helicopter up; others keep a slight rise)
       const wantPitch = u.airTarget ? u.airPitch : 0.05;
       u.gunPitch = (u.gunPitch ?? 0.05) + (wantPitch - (u.gunPitch ?? 0.05)) * Math.min(1, dt * 4);
@@ -783,7 +804,7 @@ export class UnitStack {
     }
     if (u.retarget <= 0) {
       u.retarget = (0.4 + Math.random() * 0.3 + u.suppression * 0.3) * (this.led ? LED.react : this.hadOfficer ? LEADERLESS.react : 1);
-      u.target = this.smokeMission(u) ?? this.barrageMission(u) ?? this.pickTarget(u);
+      u.target = this.smokeMission(u) ?? this.barrageMission(u) ?? this.batteryMission(u) ?? this.pickTarget(u);
     }
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
@@ -820,6 +841,8 @@ export class UnitStack {
       wantProne = 0;
     } else if (inCover) {
       if (u.coverSpot.height < 1.15 || u.wounded) wantProne = 1; else wantCrouch = 1;
+    } else if (s.stance === 'stand' && !u.wounded) {
+      // (1806: the line stands — to fire, to reload, to take the enemy's volley)
     } else if (pinned || u.wounded || u.suppression > 0.6 || s.stance === 'prone' || (u.target && !s.indirect && !s.marksman && distToTarget > s.range * 0.55)) { // (a sniper kneels to shoot: lying flat, the ground in between takes his rounds)
       wantProne = 1;
     } else if (reloading || u.suppression > 0.3 || u.target) {
@@ -828,13 +851,13 @@ export class UnitStack {
     if (u.working && !u.target && !pinned) { wantCrouch = 1; wantProne = 0; } // kneeling, digging
     const settled = u.prone > 0.85 || u.prone < 0.1; // can't shoot while dropping or getting up
 
-    if (u.target && !reloading && u.mag > 0 && !fleeing && settled && this.deployed(u)) {
+    if (u.target && !reloading && u.mag > 0 && !fleeing && settled && this.deployed(u) && this.formReady(u)) {
       if (u.burstLeft > 0) {
         u.peekT = 0.35;
         u.burstTimer -= dt;
         // From cover (crouched), wait until we've actually risen before shooting.
         const ready = !inCover || u.prone > 0.85 || u.crouch < 0.35;
-        if (u.burstTimer <= 0 && ready) {
+        if (u.burstTimer <= 0 && ready && (!s.volley || this.volleyLets(u))) {
           this.fire(u);
           u.mag--;
           u.burstLeft--;
@@ -872,6 +895,259 @@ export class UnitStack {
     }
     this.applyPosture(u, wantCrouch, wantProne, dt);
     u.reloadAnim += ((reloading || u.working ? 1 : 0) - u.reloadAnim) * Math.min(1, dt * 6);
+  }
+
+  // ------------------------------------------------------------------ 1806: formations and the charge
+
+  /** Form `form` (data/formations.js): the men walk to their new places; no firing until it's done. */
+  setForm(form, instant = false) {
+    const F = FORMS[form];
+    if (!F || !this.stats.formations || this.form === form) return false;
+    this.formBase ??= this.stats;
+    const base = this.formBase;
+    this.form = form;
+    // the armies' signatures (data/epoch.js, 1806): France's quick columns and skirmishers, Prussia's drilled line and slow re-forming
+    const pas = form === 'column' && armyDoctrine(this.army, 'pasDeCharge');
+    const pel = form === 'line' && armyDoctrine(this.army, 'peloton');
+    const tir = form === 'skirmish' && armyDoctrine(this.army, 'tirailleurs');
+    this.stats = {
+      ...base, ...F.stats, speed: base.speed * (F.speed ?? 1) * (pas?.speed ?? 1),
+      ...(pel ? { reloadTime: base.reloadTime * pel.reload, spread: base.spread * pel.spread } : {}),
+      ...(tir ? { stealth: (base.stealth ?? 1) / tir.stealth, suppressPower: (base.suppressPower ?? 1) * tir.suppress } : {}),
+    };
+    this._specialistStats = null;
+    this.packForm();
+    this.formedAt = instant ? 0 : this.world.time + FORM_TIME * (armyDoctrine(this.army, 'cuirassiers')?.form ?? 1);
+    for (const u of this.units) { u.stats = this.unitStats(u.index); u.volleyWait = false; u.volleyGo = false; }
+    this.volleyFirst = null;
+    return true;
+  }
+
+  /** The places of the living men in the formation (closing the ranks over the fallen). */
+  packForm() {
+    const alive = this.units.filter((u) => u.alive);
+    const offs = formOffsets(this.form, alive.length, this.type.formation.spacing);
+    alive.forEach((u, i) => { u.offset.set(offs[i].x, offs[i].y); u.formRow = offs[i].row; u.faceOut = offs[i].out; });
+    this.packedFor = alive.length;
+  }
+
+  /** May `u` fire now? Not while re-forming or charging; a column only from its front rank. */
+  formReady(u) {
+    if (!this.form) return true;
+    return this.world.time >= this.formedAt && !this.charging && (!this.stats.frontOnly || !u.formRow);
+  }
+
+  updateForm() {
+    if (this.aliveCount !== this.packedFor && this.world.time >= (this.repackAt ?? 0)) { this.packForm(); this.repackAt = this.world.time + 4; } // close up every few seconds
+  }
+
+  updateCharge(dt) {
+    const c = this.charging;
+    const t = c.target;
+    // horses won't go into a square: they swerve off it, and the riders lose heart
+    if (this.stats.cavalry && t.stats.square && Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z) < 16) {
+      this.morale = Math.max(0, this.morale - 0.15);
+      const a = Math.atan2(this.centroid.x - t.centroid.x, this.centroid.z - t.centroid.z);
+      this.endCharge();
+      this.ai.moveTo(this.world.clampToBounds({ x: t.centroid.x + Math.sin(a) * 70, z: t.centroid.z + Math.cos(a) * 70 }), { ordered: false });
+      this.services.tell?.(this.faction, `${this.name}: the horses won't face the square`);
+      return;
+    }
+    if (!t.alive || t.ai.state === AIState.RETREAT || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
+    if ((c.steer -= dt) <= 0) { c.steer = 0.5; this.ai.moveTo({ x: t.centroid.x, z: t.centroid.z }, { ordered: true }); }
+    const d = Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z);
+    if (!c.shocked && d < 30) {
+      // the bayonets coming on: the target's nerve takes the blow (a square shrugs off foot)
+      c.shocked = true;
+      const steady = t.stats.square && armyDoctrine(t.army, 'squares'); // (Saxony's squares don't flinch)
+      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (steady ? 0 : t.stats.square ? 0.4 : 1));
+      this.bark(this.units.find((u) => u.alive), 'flank', 1);
+    }
+  }
+
+  /** The bayonet charge on `target`: at the run, no firing; men within reach fight hand to hand (ai/SoldierAI.js). */
+  startCharge(target) {
+    if (!(this.form || this.stats.cavalry) || this.stats.loose || !target?.alive || this.charging) return false;
+    const cav = this.stats.cavalry;
+    const perk = cav ? (this.type.id === 'tank' && armyDoctrine(this.army, 'cuirassiers')) : armyDoctrine(this.army, 'pasDeCharge'); // (Prussia's cuirassiers, France's pas de charge)
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
+    if (cav) { // at the gallop
+      this.chargeBase = this.stats;
+      this.stats = { ...this.stats, speed: cav.chargeSpeed };
+      for (const u of this.units) u.stats = this.stats;
+    }
+    this.ai.moveTo({ x: target.centroid.x, z: target.centroid.z }, { ordered: true });
+    return true;
+  }
+
+  endCharge() {
+    this.charging = null;
+    if (this.chargeBase) { this.stats = this.chargeBase; this.chargeBase = null; for (const u of this.units) u.stats = this.stats; }
+    if (this.alive) this.ai.defend();
+  }
+
+  /** Sabres: a trooper strikes at the enemy within reach — hard at the gallop, less in a mêlée. */
+  updateSabres(dt) {
+    const cav = this.stats.cavalry;
+    if (!cav?.sabre) return;
+    const rate = this.charging ? 1.5 : 0.7;
+    for (const u of this.units) {
+      if (!u.alive || Math.random() > rate * dt) continue;
+      let best = null, bd = (cav.reach + 0.6) ** 2;
+      for (const o of this.world.neighbors(u.pos, cav.reach + 0.6, _near)) {
+        if (!o.alive || o.faction === this.faction || o.stack.stats.loose) continue;
+        if (o.stack.stats.square && this.world.time >= (o.stack.formedAt ?? 0) && Math.random() > 0.15) continue; // a formed square: the horses won't close on its bayonets
+        const d = dist2DSq(u.pos, o.pos);
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1);
+    }
+  }
+
+  // ------------------------------------------------------------------ 1806: horse and rider
+
+  /**
+   * A trooper is down: the rider, the horse, or both (u.fate, for the rig's fall). A horse that
+   * lives runs on as a loose horse; a rider who lives gets up and goes on foot. Host only (the
+   * new stacks reach a guest by their spawn).
+   */
+  unhorse(u) {
+    if (this.stats.loose) { u.fate = 'horse'; return; }
+    const r = Math.random();
+    u.fate = r < 0.4 ? 'rider' : r < 0.75 ? 'horse' : 'both';
+    const g = this.services.game;
+    if (!g || g.net?.isClient || u.fate === 'both') return;
+    const side = { x: Math.cos(u.yaw), z: -Math.sin(u.yaw) };
+    if (u.fate === 'rider') {
+      const h = g.spawnStack('looseHorse', this.faction, { x: u.pos.x, z: u.pos.z }, u.yaw, 'Loose horse');
+      if (h) { h.autonomous = true; h.panicUntil = this.world.time + 8 + Math.random() * 6; }
+    } else {
+      const m = g.spawnStack('dismounted', this.faction, { x: u.pos.x + side.x * 1.4, z: u.pos.z + side.z * 1.4 }, u.yaw, `${this.name}: unhorsed`);
+      if (m) { m.autonomous = true; m.origin = this; m.originType = this.type.id; }
+    }
+  }
+
+  /** A loose horse: it bolts from fire and from the enemy, then wanders and grazes. */
+  updateLoose(dt) {
+    if ((this.looseT = (this.looseT ?? 0) - dt) > 0) return;
+    this.looseT = 1;
+    const u = this.units[0];
+    if (!u?.alive) return;
+    if (this.stats === this.type.stats) this.stats = { ...this.stats };
+    const threat = this.world.nearestEnemyCombatant(u.pos, this.faction, 45, false);
+    const scared = threat || this.world.time - this.lastHitTime < 3 || this.world.time < (this.panicUntil ?? 0);
+    this.stats.speed = scared ? 9 : 1.5;
+    u.stats = this.stats;
+    if (scared && (threat || this.world.time - (this.boltAt ?? -99) > 4)) {
+      this.boltAt = this.world.time;
+      const from = threat?.pos ?? this.lastAttacker?.centroid ?? { x: u.pos.x - Math.sin(u.yaw), z: u.pos.z - Math.cos(u.yaw) };
+      const a = Math.atan2(u.pos.x - from.x, u.pos.z - from.z) + (Math.random() - 0.5) * 0.8;
+      this.ai.moveTo(this.world.clampToBounds({ x: u.pos.x + Math.sin(a) * 60, z: u.pos.z + Math.cos(a) * 60 }), { ordered: false });
+    } else if (!scared && Math.random() < 0.08) { // a few steps to fresh grass
+      const a = Math.random() * Math.PI * 2;
+      this.ai.moveTo(this.world.clampToBounds({ x: u.pos.x + Math.sin(a) * 8, z: u.pos.z + Math.cos(a) * 8 }), { ordered: false });
+    }
+  }
+
+  /** A trooper on foot: to the nearest loose horse of his side and back into the saddle, else home. */
+  updateDismounted(dt) {
+    if ((this.footT = (this.footT ?? 0) - dt) > 0) return;
+    this.footT = 0.5;
+    const u = this.units[0];
+    if (!u?.alive || this.services.game?.net?.isClient) return;
+    let horse = null, hd = 80 * 80;
+    for (const h of this.world.stacksOf(this.faction)) {
+      if (!h.stats.loose || !h.alive) continue;
+      const d = dist2DSq(h.units[0].pos, u.pos);
+      if (d < hd) { hd = d; horse = h; }
+    }
+    if (horse && hd < 2.5 * 2.5) return this.remount(horse);
+    if (horse) { this.ai.moveTo({ x: horse.units[0].pos.x, z: horse.units[0].pos.z }, { ordered: false }); u.run = true; return; }
+    if (!this.homeward) { // no horse about: back to his own lines
+      this.homeward = true;
+      const base = this.world.bases?.[this.faction];
+      if (base) this.ai.moveTo(this.world.clampToBounds({ x: base.x, z: base.z }), { ordered: false });
+    }
+  }
+
+  /** Back in the saddle: into his own squadron's empty place if it still rides, else a squadron of one. */
+  remount(horse) {
+    const g = this.services.game;
+    const at = horse.units[0].pos;
+    const o = this.origin;
+    const slot = o?.alive && o.units.find((m) => !m.alive);
+    if (slot) {
+      slot.alive = true;
+      slot.hp = slot.maxHp;
+      slot.fate = null;
+      slot.pos.set(at.x, at.y, at.z);
+      slot.dest.copy(slot.pos);
+      o.aliveCount++;
+      o.renderer.done = false;
+      if (o.form) o.packForm();
+    } else if (this.originType) {
+      const s = g.spawnStack(this.originType, this.faction, { x: at.x, z: at.z }, horse.units[0].yaw, this.name.replace(': unhorsed', ''), { count: 1 });
+      if (s && o?.owner) s.owner = o.owner;
+    }
+    g.removeStack(horse);
+    g.removeStack(this);
+    g.tell?.(this.faction, 'A trooper caught a loose horse and is back in the saddle');
+  }
+
+  /**
+   * A 1806 gun's shot at `t`: canister inside its range (a spray of balls, one report), roundshot
+   * beyond (flat, low, through the ranks and bouncing). The grand battery's point counts as a target.
+   * Howitzers lob shells (fire's indirect path) unless canister range. True: handled here.
+   */
+  gunFire(u, t) {
+    const s = u.stats, G = s.gun;
+    this.muzzleWorld(u, _p);
+    const d = Math.hypot(t.pos.x - _p.x, t.pos.z - _p.z);
+    if (t.battery) this.battery.left--;
+    if (d <= G.canister && !t.battery) {
+      _v.set(t.pos.x, t.pos.y + 0.9, t.pos.z);
+      for (let i = 0; i < G.pellets; i++) this.shoot(u, _v, G.pelletSpread, { damage: G.pelletDamage, through: 1, size: 0.5, tracer: false, quiet: true, life: (G.canister * 1.4) / s.boltSpeed });
+      this.services.effects.muzzle(_p, _w, 2, 'cannon');
+      this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 4);
+      this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
+      VisibilitySystem.revealShooter(u);
+      return true;
+    }
+    if (s.indirect) return false; // the howitzer's shell: lobbed (fire)
+    // roundshot: aimed low, to strike short and skip on into the target
+    _v.set(t.pos.x, t.pos.y + 0.6, t.pos.z);
+    this.shoot(u, _v, s.spread * (1 + d / s.range), { through: G.through, bounce: G.bounce, splash: 0, tracer: true, size: 1.4 });
+    this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 5);
+    return true;
+  }
+
+  /** The grand battery's spot (systems/Powers1806.js): a pseudo-target for every gun given the order. */
+  batteryMission(u) {
+    const b = this.battery;
+    if (!b || !u.stats.gun) return null;
+    if (b.left <= 0 || this.world.time > b.until) { this.battery = null; return null; }
+    b.target ??= { pos: new THREE.Vector3(b.x, this.world.terrain.heightAt(b.x, b.z), b.z), alive: true, spotted: true, aimHeight: 0, battery: true, vel: null, stack: null };
+    return b.target;
+  }
+
+  /**
+   * The volley (1806 drilled foot): a loaded, aimed man waits for the word. When most of the loaded
+   * men are waiting — or the first has waited 3 s — the company fires together, each man within a
+   * quarter of a second, and its powder smoke hangs in front of the line (systems/Smoke.js).
+   */
+  volleyLets(u) {
+    if (u.volleyGo) { u.volleyGo = false; return true; }
+    if (!u.volleyWait) { u.volleyWait = true; this.volleyFirst ??= this.world.time; }
+    const loaded = this.units.filter((m) => m.alive && m.target && m.mag > 0 && m.reloadT <= 0);
+    const waiting = loaded.filter((m) => m.volleyWait).length;
+    if (waiting < Math.max(1, loaded.length * 0.6) && this.world.time - this.volleyFirst < 3) return false;
+    for (const m of this.units) if (m.volleyWait) { m.volleyWait = false; m.volleyGo = true; m.burstTimer = Math.random() * 0.25; }
+    this.volleyFirst = null;
+    const c = this.centroid, f = this.facing ?? 0;
+    const front = this.units.filter((m) => m.alive);
+    const wide = front.length ? Math.max(...front.map((m) => Math.hypot(m.pos.x - c.x, m.pos.z - c.z))) : 4;
+    this.services.effects?.powderBank(c.x, this.world.terrain.heightAt(c.x, c.z), c.z, f, Math.max(6, wide * 2)); // (a haze: it doesn't blind like a screen)
+    return false;
   }
 
   /**
@@ -982,6 +1258,22 @@ export class UnitStack {
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
     this.services.audio?.weapon(this.faction, 'rocket', _p);
     VisibilitySystem.revealShooter(u);
+  }
+
+  /**
+   * Lay the gun toward `aim` at its traverse rate (× `rate`). A gun with a narrow arc (stats.traverse,
+   * radians either side of the hull: casemates, fixed rails, field guns on their trails) stays in
+   * it, and — standing still, with `turnHull` — the hull swings round to bring the aim into it.
+   */
+  aimGun(u, aim, dt, rate = 1, turnHull = true) {
+    const s = u.stats;
+    const step = s.turretRate * rate * dt;
+    if (s.traverse == null) { u.turretYaw += clamp(angleDelta(u.turretYaw, aim), -step, step); return; }
+    const off = angleDelta(u.yaw, aim);
+    if (turnHull && !u.moving && !u.wantsMove && Math.abs(off) > s.traverse * 0.7) u.yaw += clamp(off, -s.turnRate * dt, s.turnRate * dt);
+    const want = u.yaw + clamp(angleDelta(u.yaw, aim), -s.traverse, s.traverse);
+    u.turretYaw += clamp(angleDelta(u.turretYaw, want), -step, step);
+    u.turretYaw = u.yaw + clamp(angleDelta(u.yaw, u.turretYaw), -s.traverse, s.traverse);
   }
 
   /** Tanks and guns: fire once the turret is on target. */
@@ -1096,6 +1388,7 @@ export class UnitStack {
     const s = u.stats;
     const t = u.target;
     if (!s.lightAT || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only
+    if (this.kit === 'at' && u.kitWeapon !== 'at') return false; // the anti-tank kit: its launchers are in three men's hands
     this.lightAT ??= s.lightAT;
     return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
   }
@@ -1316,6 +1609,7 @@ export class UnitStack {
       const smoke = !!t.smoke;
       const flare = !!t.flare;
       this.lob(u, _v.set(t.pos.x, t.pos.y, t.pos.z), smoke, flare);
+      if (t.battery) this.battery.left--; // (a howitzer of the grand battery)
       if (t === this.smokeOrder?.target) { // a mission: smoke, illumination or shells on the spot
         if (flare) this.flareRounds--; else if (smoke) this.smokeRounds--;
         const left = flare ? this.flareRounds : smoke ? this.smokeRounds : 1;
@@ -1323,6 +1617,7 @@ export class UnitStack {
       }
       return;
     }
+    if (s.gun && this.gunFire(u, t)) return; // 1806 guns: roundshot or canister
     this.muzzleWorld(u, _p);
     _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
     const dist = _v.distanceTo(_p);
@@ -1348,7 +1643,7 @@ export class UnitStack {
     this.shoot(u, _v.copy(point), spread);
   }
 
-  shoot(u, aimPoint, spread) {
+  shoot(u, aimPoint, spread, over = null) {
     const s = u.stats;
     const ambush = !u.spotted && !u.possessed; // nobody has seen us yet: the first volley counts
     if (ambush && this.world.time - (this.ambushAt ?? -Infinity) > AMBUSH.tellEvery) {
@@ -1379,7 +1674,9 @@ export class UnitStack {
       ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
       tracer: !s.ignite && Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS), // (flame draws itself: ProjectileSystem)
       trail: !!s.trail,
+      ...over,
     });
+    if (over?.quiet) return; // (canister: one report for the whole load)
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);
@@ -1431,8 +1728,8 @@ export class UnitStack {
       }
       const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
-      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure) this.hitPart(u, facing);
-      if (u.hp <= 0) u.recoverable = Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
+      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
+      if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);
     }
@@ -1463,14 +1760,16 @@ export class UnitStack {
     this.world.cover.release(u);
     this.aliveCount--;
     this.renderer.done = false;
-    this.morale = Math.max(0, this.morale - (0.1 + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
+    if (this.stats.cavalry) this.unhorse(u); // 1806: the horse, the rider or both
+    if (this.form === 'square' && armyDoctrine(this.army, 'squares')) this.morale = Math.max(this.morale, (this.stats.breakMorale ?? 0) + 0.05); // Saxony's squares hold
+    this.morale = Math.max(0, this.morale - ((this.form || this.stats.cavalry ? 0.035 : 0.1) + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
     if (u.officer) {
       this.morale = Math.max(0, this.morale - OFFICER_DOWN * (1 - 0.15 * this.rank));
       const w = this.units.find((m) => m.alive);
       if (w) this.bark(w, 'officer', 1, true);
       this.services.tell(this.faction, `${this.name}: the platoon leader is down!`);
     }
-    const shock = this.usesCover ? 0.02 : 0.08; // a tank brewing up rattles everyone
+    const shock = this.usesCover || this.stats.cavalry ? 0.02 : 0.08; // a tank brewing up rattles everyone (a fallen horseman, no more than a man)
     for (const o of this.world.stacksOf(this.faction)) {
       if (o !== this && dist2DSq(o.centroid, this.centroid) < 1600) o.morale = Math.max(0, o.morale - shock);
     }

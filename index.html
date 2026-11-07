@@ -83,7 +83,9 @@
         // the boot screen's tagline in the war the game is set in (data/epoch.js; settings 'epoch', or ?epoch=)
         try {
           const year = new URLSearchParams(location.search).get('epoch') || JSON.parse(localStorage.getItem('coldsteel.settings') || '{}').epoch;
-          if (year === '1945') document.querySelector('#loading .logo-tag').textContent = 'Western Front, spring 1945';
+          // (the titles of data/epoch.js; a year it doesn't know: no tagline rather than the wrong war)
+          const tag = { 1806: 'Jena and Auerstedt, 1806 (beta)', 1945: 'Western Front, spring 1945', 1985: 'World War III, 1985' }[year || '1985'];
+          document.querySelector('#loading .logo-tag').textContent = tag || '';
         } catch (e) { /* storage blocked: 1985 */ }
       </script>
       <div id="ts-status">Loading…</div>

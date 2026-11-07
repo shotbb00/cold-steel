@@ -47,6 +47,8 @@ export class RigRenderer {
   constructor(stack, scene) {
     this.stack = stack;
     const build = stack.type.models[stack.army] ?? stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0];
+    this.build = build;
+    this.scene = scene;
     // specialists (the first type.specialist.count members) may have a model of their own
     const special = stack.type.specialistModels?.[stack.army] ?? stack.type.specialistModels?.[stack.faction] ?? null;
     const specials = stack.type.specialist?.count ?? 0;
@@ -65,6 +67,11 @@ export class RigRenderer {
         s.effects.dust(pos, 1.6 * size);
         s.audio?.play('stomp', pos, { volume: 0.8 * size, throttle: 0.05 });
       },
+      onHoof: (pos, gait) => { // 1806: a hoof set down — louder and dustier the faster
+        const fast = gait === 'gallop' ? 1 : gait === 'canter' ? 0.75 : gait === 'trot' ? 0.55 : 0.32;
+        s.audio?.play('hoof', pos, { volume: fast, rate: 0.9 + Math.random() * 0.25, throttle: 0.04 });
+        if (fast > 0.7 && Math.random() < 0.25) s.effects.dust(pos, 0.5);
+      },
     };
     this.done = false;
   }
@@ -81,6 +88,13 @@ export class RigRenderer {
       const u = units[i];
       const rig = this.rigs[i];
       rig.root.visible = u.visible !== false || rig.dead;
+      if (u.alive && rig.dead) { // brought back (1806: a dismounted trooper caught a horse and remounted) — a fresh rig
+        rig.root.removeFromParent();
+        this.rigs[i] = this.build(this.mats);
+        this.rigs[i].root.position.copy(u.pos);
+        this.scene.add(this.rigs[i].root);
+        continue;
+      }
       if (u.alive) {
         animating = true;
         rig.root.position.copy(u.pos);
@@ -88,7 +102,10 @@ export class RigRenderer {
         rig.animate(u, dt, t, this.ctx);
         continue;
       }
-      if (!rig.dead) {
+      if (!rig.dead && (this.stack.stats.cavalry || this.stack.stats.gun || this.stack.stats.wagon)) { // 1806 horse and rider, gun and team: they fall (models/napCavalry.js, napGuns.js), nothing burns
+        rig.dead = true;
+        rig.fate = u.fate;
+      } else if (!rig.dead) {
         rig.dead = true;
         rig.root.traverse((o) => {
           if (o.isMesh) o.material = o.material === this.mats.glow ? DEAD_GLOW : WRECK;

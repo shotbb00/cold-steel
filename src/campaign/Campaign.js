@@ -27,7 +27,11 @@
 // 1945 (data/epoch.js): the same ground in April 1945, the other way round — the Allies attack east
 // (the US Third Army did, through Hersfeld to Eisenach), and must take Eisenach and Meiningen in the
 // eight days; the Germans hold them (or win back Fulda and Bad Hersfeld). Its own save.
-// Saved in localStorage ('coldsteel.campaign.2', 1945: 'coldsteel.campaign.1945'); the old column campaign's saves are left alone.
+// 1806: its own ground — the Grande Armée comes north out of Franconia through the Thuringian Forest
+// (Saalfeld, Schleiz) to the Saale (Jena, Auerstedt), and must take Weimar and Naumburg in the eight
+// days (SECTORS_1806; syncEpoch swaps the map in place). The Prussians hold them, or carry the war
+// back to Coburg and Hof. Battalions are regiments and brigades of 1806.
+// Saved in localStorage ('coldsteel.campaign.2', other wars: 'coldsteel.campaign.<year>'); the old column campaign's saves are left alone.
 import { UNIT_TYPES } from '../data/units/index.js';
 import { writeLetter } from './Letters.js';
 import { enemyOf, forArmy, armiesFrom } from '../data/factions.js';
@@ -35,9 +39,10 @@ import { unitCost } from '../data/doctrine.js';
 import { epoch } from '../data/epoch.js';
 
 const ww2 = () => epoch() === '1945';
-const key = () => (ww2() ? 'coldsteel.campaign.1945' : 'coldsteel.campaign.2');
-/** The side that attacks on the timetable: the Pact in 1985, the Allies (the NATO slot) in 1945. */
-export const attacker = () => (ww2() ? 'nato' : 'pact');
+const y06 = () => epoch() === '1806';
+const key = () => (epoch() === '1985' ? 'coldsteel.campaign.2' : `coldsteel.campaign.${epoch()}`);
+/** The side that attacks on the timetable: the Pact in 1985, the Allies (the NATO slot) in 1945, the French in 1806. */
+export const attacker = () => (ww2() || y06() ? 'nato' : 'pact');
 export const TIMETABLE = 16;        // turns in the eight-day war
 export const MAX_STACKS = 18;       // per battalion
 const REPLACEMENTS = 300;           // replacement points a turn…
@@ -75,17 +80,54 @@ export const ROADS = [
   ['dermbach', 'salzungen'], ['dermbach', 'geisa'], ['geisa', 'meiningen'], ['salzungen', 'eisenach'], ['salzungen', 'kaltennordheim'],
   ['kaltennordheim', 'meiningen'], ['dermbach', 'kaltennordheim'],
 ];
+
+// 1806: Franconia to the Saale (north is up). The French start in the south, the Prussians and Saxons hold the north.
+const SECTORS_1806 = {
+  coburg: { name: 'Coburg', x: 110, y: 380, map: 'haune-fulda', home: 'nato', depot: true, objective: 'pact' },
+  kronach: { name: 'Kronach', x: 300, y: 380, map: 'thuringian-forest', home: 'nato' },
+  hof: { name: 'Hof', x: 570, y: 380, map: 'fulda-gap', home: 'nato', depot: true, objective: 'pact' },
+  graefenthal: { name: 'Gräfenthal', x: 210, y: 315, map: 'thuringian-forest', home: 'nato' },
+  lobenstein: { name: 'Lobenstein', x: 470, y: 320, map: 'thuringian-forest', home: 'nato' },
+  saalfeld: { name: 'Saalfeld', x: 250, y: 240, map: 'werra-valley', home: 'pact' },
+  schleiz: { name: 'Schleiz', x: 520, y: 245, map: 'thuringian-forest', home: 'pact' },
+  rudolstadt: { name: 'Rudolstadt', x: 300, y: 180, map: 'haune-fulda', home: 'pact' },
+  poessneck: { name: 'Pößneck', x: 400, y: 200, map: 'huenfeld', home: 'pact' },
+  neustadt: { name: 'Neustadt (Orla)', x: 490, y: 170, map: 'fulda-gap', home: 'pact' },
+  gera: { name: 'Gera', x: 620, y: 160, map: 'huenfeld', home: 'pact' },
+  kahla: { name: 'Kahla', x: 380, y: 145, map: 'werra-valley', home: 'pact' },
+  jena: { name: 'Jena', x: 390, y: 95, map: 'jena', home: 'pact' },
+  erfurt: { name: 'Erfurt', x: 90, y: 90, map: 'fulda-gap', home: 'pact', depot: true },
+  weimar: { name: 'Weimar', x: 250, y: 75, map: 'jena', home: 'pact', depot: true, objective: 'nato' },
+  auerstedt: { name: 'Auerstedt', x: 490, y: 60, map: 'auerstedt', home: 'pact' },
+  naumburg: { name: 'Naumburg', x: 620, y: 70, map: 'auerstedt', home: 'pact', depot: true, objective: 'nato' },
+};
+const ROADS_1806 = [
+  ['coburg', 'kronach'], ['kronach', 'hof'], ['coburg', 'graefenthal'], ['kronach', 'graefenthal'], ['kronach', 'lobenstein'], ['hof', 'lobenstein'],
+  ['graefenthal', 'saalfeld'], ['lobenstein', 'schleiz'], ['saalfeld', 'rudolstadt'], ['saalfeld', 'poessneck'], ['schleiz', 'poessneck'],
+  ['schleiz', 'neustadt'], ['schleiz', 'gera'], ['rudolstadt', 'kahla'], ['poessneck', 'kahla'], ['poessneck', 'neustadt'], ['neustadt', 'gera'],
+  ['kahla', 'jena'], ['neustadt', 'jena'], ['gera', 'naumburg'], ['jena', 'weimar'], ['jena', 'auerstedt'], ['auerstedt', 'naumburg'],
+  ['weimar', 'auerstedt'], ['weimar', 'erfurt'], ['rudolstadt', 'erfurt'],
+];
+const START_1806 = {
+  nato: ['graefenthal', 'lobenstein', 'kronach', 'coburg', 'hof', 'graefenthal'],
+  pact: ['saalfeld', 'schleiz', 'rudolstadt', 'poessneck', 'jena', 'weimar', 'gera'],
+};
+const BASE = { sectors: Object.fromEntries(Object.entries(SECTORS).map(([k, v]) => [k, { ...v }])), roads: ROADS.map((r) => [...r]) };
 const LINKS = {};
-for (const [a, b] of ROADS) { (LINKS[a] ??= []).push(b); (LINKS[b] ??= []).push(a); }
+function link() {
+  for (const k of Object.keys(LINKS)) delete LINKS[k];
+  for (const [a, b] of ROADS) { (LINKS[a] ??= []).push(b); (LINKS[b] ??= []).push(a); }
+}
+link();
 export const neighbours = (id) => LINKS[id] ?? [];
 
 // what can happen before a battle; weight = how often, apply(c, battle) changes it
 export const EVENTS = {
   quiet: { weight: 5 },
-  airCover: { weight: 1, text: 'Our air force holds the sky over the sector: the enemy\'s aircraft stay grounded for this battle.' },
-  enemyAir: { weight: 1, get text() { return ww2() ? 'Enemy fighters own the sky today: our aircraft stay on the ground for this battle.' : 'Enemy air superiority: our helicopters and jets are grounded for this battle.'; } },
+  airCover: { get weight() { return y06() ? 0 : 1; }, text: 'Our air force holds the sky over the sector: the enemy\'s aircraft stay grounded for this battle.' },
+  enemyAir: { get weight() { return y06() ? 0 : 1; }, get text() { return ww2() ? 'Enemy fighters own the sky today: our aircraft stay on the ground for this battle.' : 'Enemy air superiority: our helicopters and jets are grounded for this battle.'; } },
   guns: { weight: 1, text: 'Corps artillery has a battery to spare: a battery of guns is attached to us for this battle.' },
-  reserves: { weight: 1, text: 'The enemy has brought up fresh reserves: expect more armour.' },
+  reserves: { weight: 1, get text() { return y06() ? 'The enemy has brought up fresh reserves: expect more cavalry.' : 'The enemy has brought up fresh reserves: expect more armour.'; } },
   fog: { weight: 1, text: 'Fog has settled in the valleys.', apply: (c, b) => { b.weather = 'fog'; } },
 };
 const rollEvent = () => {
@@ -103,6 +145,13 @@ const KINDS = {
   mech: ['rifles', 'rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'atTeam', 'ifv', 'ifv', 'tank', 'mortar', 'engineers', 'scouts'],
   support: ['rifles', 'rifles', 'rifles', 'mgTeam', 'atTeam', 'artillery', 'artillery', 'rockets', 'mortar', 'reconVehicle', 'engineers', 'manpads'],
 };
+// 1806 (ids as data/units1806: tank heavy cavalry, ifv dragoons, reconVehicle light cavalry, rockets horse artillery, artillery foot battery, spMortar 12-pounders, mortar howitzers, mgTeam light infantry, atTeam grenadiers, sniper riflemen)
+const KINDS_1806 = {
+  armour: ['tank', 'tank', 'ifv', 'ifv', 'reconVehicle', 'reconVehicle', 'rockets', 'rifles', 'rifles', 'mgTeam'],
+  mech: ['rifles', 'rifles', 'rifles', 'rifles', 'rifles', 'atTeam', 'mgTeam', 'mgTeam', 'sniper', 'artillery', 'engineers', 'reconVehicle'],
+  support: ['rifles', 'rifles', 'rifles', 'mgTeam', 'artillery', 'artillery', 'spMortar', 'mortar', 'observers', 'jammer', 'reconVehicle'],
+};
+const kinds = () => (y06() ? KINDS_1806 : KINDS);
 const BRIGADE = ['armour', 'mech', 'support'];
 const NAMES = {
   us: { armour: 'Armor Battalion', mech: 'Infantry Battalion', support: 'Field Artillery Battalion' },
@@ -116,13 +165,20 @@ const NAMES_1945 = { // (army ids repeat across the wars: us, sov)
   wh: { armour: 'Panzer-Abteilung', mech: 'Panzergrenadier-Bataillon', support: 'Artillerie-Abteilung' },
   fj: { armour: 'Fallschirm-Sturmgeschütz-Brigade', mech: 'Fallschirmjäger-Bataillon', support: 'Fallschirm-Artillerie-Abteilung' },
 };
+const NAMES_1806 = {
+  fr: { armour: 'Brigade de cavalerie', mech: 'Régiment d\'infanterie de ligne', support: 'Brigade d\'artillerie' },
+  by: { armour: 'Chevaulegers-Regiment', mech: 'Linien-Infanterie-Regiment', support: 'Artillerie-Bataillon' },
+  pr: { armour: 'Kürassier-Regiment', mech: 'Infanterie-Regiment', support: 'Artillerie-Brigade' },
+  sx: { armour: 'Kavallerie-Regiment', mech: 'Infanterie-Regiment', support: 'Artillerie-Brigade' },
+};
 const ordinal = (n) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
-const GERMAN = new Set(['bw', 'nva', 'wh', 'fj']);
+const GERMAN = new Set(['bw', 'nva', 'wh', 'fj', 'by', 'pr', 'sx']);
 const battalionName = (army, kind, n) => {
-  const name = (ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  const name = (y06() ? NAMES_1806 : ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  if (army === 'fr') return `${n === 1 ? '1er' : `${n}e`} ${name}`;
   return GERMAN.has(army) ? `${name} ${n}` : `${ordinal(n)} ${name}`;
 };
-const START = { // where the battalions stand on turn 1
+const START_BASE = { // where the battalions stand on turn 1
   nato: ['philippsthal', 'rasdorf', 'huenfeld', 'burghaun', 'heringen', 'fulda'],
   pact: ['vacha', 'dermbach', 'geisa', 'salzungen', 'kaltennordheim', 'meiningen', 'eisenach'],
 };
@@ -152,15 +208,25 @@ export function clearCampaign() {
 }
 
 /** A new war: `side`, `armies` ({ nato, pact }), `length` 'endless' | 'timetable'. */
-/** The map as this war has it: 1945 has no Point Alpha yet, and Meiningen is an Allied objective too. */
+/** The map as this war has it: 1806 its own; 1945 has no Point Alpha yet, and Meiningen is an Allied objective too. */
+let START = START_BASE;
 function syncEpoch() {
+  const src = y06() ? { sectors: SECTORS_1806, roads: ROADS_1806 } : BASE;
+  for (const k of Object.keys(SECTORS)) delete SECTORS[k];
+  for (const [k, v] of Object.entries(src.sectors)) SECTORS[k] = { ...v };
+  ROADS.splice(0, ROADS.length, ...src.roads.map((r) => [...r]));
+  link();
+  START = y06() ? START_1806 : START_BASE;
+  if (y06()) return;
   SECTORS.rasdorf.name = ww2() ? 'Rasdorf' : 'Rasdorf · Point Alpha';
   if (ww2()) SECTORS.meiningen.objective = 'nato';
   else delete SECTORS.meiningen.objective;
 }
 
 /** The first line of the war's log. */
-const opening = (side) => (ww2()
+const opening = (side) => (y06()
+  ? (side === 'nato' ? 'The Grande Armée is through the Thuringian Forest: forward to the Saale.' : 'The French are across the passes of the Thuringian Forest. Stop them before the Saale.')
+  : ww2()
   ? (side === 'nato' ? 'The Allies are across the Fulda: the drive east into Thuringia begins.' : 'The enemy is across the Fulda. Hold them before Eisenach.')
   : `The ${side === 'nato' ? 'Warsaw Pact is massing on the border' : 'NATO line is thin along the border'}.`);
 
@@ -180,7 +246,7 @@ export function newCampaign({ side, armies, length = 'endless' }) {
     const count = {};
     c.battalions.push({
       id: newId('b'), name: battalionName(army, kind, i + 1), kind, faction: side, at: START[side][i], order: null,
-      stacks: KINDS[kind].map((t) => { count[t] = (count[t] ?? 0) + 1; return stack(t, stackName(c, t, count[t])); }),
+      stacks: kinds()[kind].map((t) => { count[t] = (count[t] ?? 0) + 1; return stack(t, stackName(c, t, count[t])); }),
     });
   });
   const n = foe === attacker() ? 5 : 4;
@@ -215,10 +281,9 @@ export const day = (c) => Math.ceil(c.turn / 2);
 const forcesAt = (c, id, f) => (f === c.side ? c.battalions : c.enemy).filter((b) => b.at === id);
 
 /** A battalion's fighting power: what its men are worth (an enemy one: its strength of a full one). */
-const FULL = KINDS.mech.reduce((a, t) => a + UNIT_TYPES[t].cost, 0);
 export function power(b) {
   if (b.stacks) return b.stacks.reduce((a, u) => a + UNIT_TYPES[u.type].cost * (u.men / UNIT_TYPES[u.type].formation.count), 0);
-  return b.strength * FULL;
+  return b.strength * kinds().mech.reduce((a, t) => a + UNIT_TYPES[t].cost, 0); // (a full battalion of the war)
 }
 
 /** The enemy battalions we know of: those next to our ground or our battalions (with numbers if one of them has recon). */
@@ -318,13 +383,13 @@ export function sides(c, b) {
 export function intel(c, b) {
   const force = enemyForce(c, b);
   const scouted = sides(c, b).ours.some((x) => x.stacks.some((u) => RECON.includes(u.type)));
-  const kinds = { Infantry: 0, Armour: 0, 'Fire support': 0, 'Air defence': 0 };
+  const count = y06() ? { Infantry: 0, Cavalry: 0, Artillery: 0 } : { Infantry: 0, Armour: 0, 'Fire support': 0, 'Air defence': 0 };
   for (const { type } of force) {
     const cat = UNIT_TYPES[type]?.category;
-    kinds[cat === 'armour' ? 'Armour' : cat === 'fire' ? 'Fire support' : cat === 'airdefence' ? 'Air defence' : 'Infantry']++;
+    count[cat === 'cavalry' ? 'Cavalry' : cat === 'armour' ? 'Armour' : cat === 'fire' ? (y06() ? 'Artillery' : 'Fire support') : cat === 'airdefence' ? 'Air defence' : 'Infantry']++;
   }
   const guess = (n) => (n === 0 ? 'none seen' : n <= 1 ? 'some' : n <= 3 ? 'several' : 'strong');
-  return { scouted, rows: Object.entries(kinds).map(([k, n]) => [k, scouted ? (n ? `${n} stack${n > 1 ? 's' : ''}` : 'none') : guess(n)]) };
+  return { scouted, rows: Object.entries(count).map(([k, n]) => [k, scouted ? (n ? `${n} stack${n > 1 ? 's' : ''}` : 'none') : guess(n)]) };
 }
 
 const GUNS = new Set(['artillery', 'rockets']);
@@ -338,7 +403,7 @@ function neighbourSupport(c, b, f) {
   const out = [];
   for (const x of f === c.side ? c.battalions : c.enemy) {
     if (ids.includes(x.id) || !neighbours(b.sector).includes(x.at) || (x.strength ?? 1) < 0.4) continue;
-    const has = (set) => (x.stacks ? x.stacks.some((u) => set.has(u.type)) : KINDS[x.kind].some((t) => set.has(t)));
+    const has = (set) => (x.stacks ? x.stacks.some((u) => set.has(u.type)) : kinds()[x.kind].some((t) => set.has(t)));
     if (has(GUNS) && out.filter((u) => u.type === 'artillery').length < 2) out.push({ type: 'artillery', cid: 'attached', name: `${x.name} · guns` });
     if (has(FLAK) && out.filter((u) => u.type === 'aa').length < 2) out.push({ type: 'aa', cid: 'attached', name: `${x.name} · air defence` });
   }
@@ -349,7 +414,7 @@ function neighbourSupport(c, b, f) {
 export function enemyForce(c, b) {
   const out = [];
   for (const e of sides(c, b).theirs) {
-    const list = KINDS[e.kind];
+    const list = kinds()[e.kind];
     const n = Math.max(3, Math.round(list.length * e.strength));
     out.push(...list.slice(0, n));
   }
@@ -527,11 +592,15 @@ function checkEnd(c) {
   if (c.over) return;
   const me = c.side;
   const holds = (f, ids) => ids.every((id) => c.owner[id] === f);
-  const pactGoal = ['fulda', 'hersfeld'];
+  const pactGoal = y06() ? ['coburg', 'hof'] : ['fulda', 'hersfeld'];
   if (!c.battalions.length) c.over = { won: false, text: 'The brigade has been destroyed.' };
   else if (!c.enemy.length) c.over = { won: true, text: 'The enemy has no battalions left in the field. The war on this front is won.' };
   else if (c.length === 'timetable') {
-    if (ww2()) { // April 1945: the Allies must reach Eisenach and Meiningen in time
+    if (y06()) { // October 1806: the French must reach Weimar and Naumburg in time
+      if (holds('nato', ['weimar', 'naumburg'])) c.over = { won: me === 'nato', text: 'Weimar and Naumburg are taken: the Prussian army is broken, and the road to Berlin lies open.' };
+      else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Coburg and Hof are taken: the French are thrown back into Franconia.' };
+      else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Weimar and Naumburg still hold: winter is coming, and the French advance has stalled on the Saale.' };
+    } else if (ww2()) { // April 1945: the Allies must reach Eisenach and Meiningen in time
       if (holds('nato', ['eisenach', 'meiningen'])) c.over = { won: me === 'nato', text: 'Eisenach and Meiningen are taken: the road into Thuringia is open, and the front here is finished.' };
       else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Fulda and Bad Hersfeld are German again: the Allied drive has been thrown back across the river.' };
       else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Eisenach and Meiningen still hold: the Allied drive has stalled in the hills.' };

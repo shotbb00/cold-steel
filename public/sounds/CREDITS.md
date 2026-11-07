@@ -39,6 +39,9 @@ The same goes for these, cut from YouTube uploads whose source and licence are u
 | `guns/garand-1.wav` … `-7.wav`, `guns/garand-last.wav` (the clip's ping) | [M1 Garand Sound Effect](https://www.youtube.com/watch?v=cXg_mV2ITxU) | War Sound Effects |
 | `aircraft/stuka-siren.wav` | [Ju-87 Stuka dive attack](https://www.youtube.com/watch?v=63BxhHeeipY) | Manuel Perales |
 | `weapons/flame-1.wav` … `-4.wav` | [flamethrower sound effects](https://www.youtube.com/watch?v=sRXrS6xOn4Y) | MasterHand125 |
+| `animals/hoof-1.wav` … `-6.wav` (single hoof beats) | "Horse Gallop Sound Effect" (YouTube download, link not kept) | unknown |
+| `animals/neigh-1.wav` | [HORSE - Sound Effect](https://www.youtube.com/watch?v=8H299dMuZ8M) | unknown |
+| `animals/neigh-2.wav`, `animals/snort-1.wav` | "Horse - Sound Effect" (YouTube download, link not kept) | unknown |
 
 ## Freesound
 

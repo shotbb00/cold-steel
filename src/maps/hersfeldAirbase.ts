@@ -4,7 +4,8 @@
 // station, the fuel depot and the bomb dump are the points, wrecked jets litter the aprons.
 // Flat and open: sight lines of hundreds of metres, tank and missile country — cover is the
 // concrete itself. Barracks at each end of the base are the home points. NATO holds the south
-// (+z), the Pact the north. Point-mirrored.
+// (+z), the Pact the north. Point-mirrored. The big field (1.0 × 1.12 km) shows the whole runway;
+// the hangars and the fuel depot / bomb dump stand at its ends, the barracks outside the airfield.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -13,7 +14,10 @@ import { smoothstep } from '../core/math.js';
 import { buildSite, commandPost, mirrored } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
-const BASE_Z = 285;
+const BASE_Z = 500;
+const END_X = 330;                      // hangars / fuel depot at the runway's ends
+const SHELTER_X = 150;                  // the shelters
+const BARRACKS_Z = 330;
 const RUNWAY = { x: 360, z: 16 };      // half-extents
 const TAXI_Z = 62;                      // taxiways at ±TAXI_Z
 const TAXI = 8;                         // taxiway half-width
@@ -26,10 +30,10 @@ const airfield = (x, z) => smoothstep(FIELD_X + 30, FIELD_X, Math.abs(x)) * smoo
 
 /** Aprons: the hard standing in front of the shelters, hangars and tower (our half; mirrored). */
 const APRONS = [
-  { x: -100, z: 104, w: 60, d: 28 },    // shelters
-  { x: -215, z: 96, w: 50, d: 30 },     // hangars
-  { x: 0, z: 88, w: 30, d: 16 },        // tower
-  { x: 215, z: 98, w: 40, d: 26 },      // fuel depot
+  { x: -SHELTER_X, z: 104, w: 70, d: 28 }, // shelters
+  { x: -END_X, z: 96, w: 50, d: 30 },     // hangars
+  { x: 0, z: 88, w: 30, d: 16 },          // tower
+  { x: END_X, z: 98, w: 40, d: 26 },      // fuel depot
 ];
 function paved(x, z) {
   if (Math.abs(x) < RUNWAY.x && Math.abs(z) < RUNWAY.z) return 1;
@@ -46,8 +50,9 @@ function paved(x, z) {
 
 function height(x, z) {
   let h = fbm(noise, x * 0.005, z * 0.005, 5) * 6 + fbm(noise, x * 0.04 + 9, z * 0.04, 3) * 0.5;
-  h += smoothstep(320, 420, Math.abs(x)) * (10 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 18);
-  h += smoothstep(330, 440, Math.abs(z)) * 16;
+  h += smoothstep(500, 610, Math.abs(x)) * (10 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 18);
+  h += smoothstep(560, 670, Math.abs(z)) * 16;
+  h += (1.8 - h) * smoothstep(60, 40, Math.abs(Math.abs(z) - BARRACKS_Z)) * smoothstep(80, 55, Math.abs(x)); // the barracks' level ground
   h += (1.8 - h) * airfield(x, z);                     // the airfield is dead level
   for (const bz of [BASE_Z, -BASE_Z]) h += (1.8 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
   return h;
@@ -57,26 +62,26 @@ const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' 
 const pactName = { '1st Platoon': '1-ya Rota' };
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'South barracks', x: 0, z: 232, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Hangars', x: -215, z: 110, owner: null, sector: 'west' },
+  { id: 'A', name: 'South barracks', x: 0, z: BARRACKS_Z + 10, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Hangars', x: -END_X, z: 110, owner: null, sector: 'west' },
   { id: 'C', name: 'Control tower', x: 0, z: 96, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Fuel depot', x: 215, z: 110, owner: null, sector: 'east' },
-  { id: 'E', name: 'Shelters west', x: -100, z: 120, owner: null, sector: 'west' },
+  { id: 'D', name: 'Fuel depot', x: END_X, z: 110, owner: null, sector: 'east' },
+  { id: 'E', name: 'Shelters west', x: -SHELTER_X, z: 120, owner: null, sector: 'west' },
   { id: 'F', name: 'Runway', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
-  { id: 'G', name: 'Shelters east', x: 100, z: -120, owner: null, sector: 'east' },
-  { id: 'H', name: 'Bomb dump', x: -215, z: -110, owner: null, sector: 'west' },
+  { id: 'G', name: 'Shelters east', x: SHELTER_X, z: -120, owner: null, sector: 'east' },
+  { id: 'H', name: 'Bomb dump', x: -END_X, z: -110, owner: null, sector: 'west' },
   { id: 'I', name: 'Fire station', x: 0, z: -96, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Maintenance hangars', x: 215, z: -110, owner: null, sector: 'east' },
-  { id: 'K', name: 'North barracks', x: 0, z: -232, owner: 'pact', sector: 'centre' },
+  { id: 'J', name: 'Maintenance hangars', x: END_X, z: -110, owner: null, sector: 'east' },
+  { id: 'K', name: 'North barracks', x: 0, z: -(BARRACKS_Z + 10), owner: 'pact', sector: 'centre' },
 ];
 
 export default {
   id: 'hersfeld-airbase',
   name: 'Hersfeld Airbase',
   description: 'A forward airfield on the open plain: the runway, aircraft shelters, hangars and the tower. Long sight lines — tank and missile country, the concrete is the only cover.',
-  size: 1000,
-  segments: 600,
-  bounds: { x: 300, z: 310 },
+  size: 1600,
+  segments: 640,
+  bounds: { x: 500, z: 560 },
   seed: 1989,
   height,
   fields: createFields({ seed: 1989, cell: 80 }),
@@ -110,10 +115,10 @@ export default {
       ploughed: '#4b3c2e',
       stubble: '#8c7c4e',
       meadow: '#62703e',
-      farmX: [390, 420],
-      farmZ: [200, 230],   // fields only beyond the airfield
+      farmX: [520, 600],
+      farmZ: [580, 660],
       roads: [-140, 140],
-      roadZ: 300,
+      roadZ: 540,
       surface(x, z) {
         const p = paved(x, z);
         if (p > 0) return [Math.abs(z) < RUNWAY.z ? 0x4a4a48 : 0x58585a, p];   // runway asphalt, concrete
@@ -124,8 +129,8 @@ export default {
   },
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-140, 0, 140] }, pact: { x: 0, z: -BASE_Z, entries: [-140, 0, 140] } },
-  maxStacks: 22,
-  cameraStart: { nato: { x: 0, z: 190 }, pact: { x: 0, z: -190 } },
+  maxStacks: 26,
+  cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
@@ -146,39 +151,39 @@ export default {
 
     mirrored(props, 3301, (m, flip) => {
       // hardened aircraft shelters facing the taxiway, wrecked jets on the apron
-      for (const x of [-140, -100, -60]) props.aircraftShelter({ x: x * m, z: 132 * m, yaw: Math.PI + flip });
-      props.aircraftWreck({ x: -112 * m, z: 98 * m, yaw: 1.2 + flip });
-      props.aircraftWreck({ x: -70 * m, z: 94 * m, yaw: -0.6 + flip, scale: 0.9 });
-      for (const x of [-128, -88]) props.jersey({ x: x * m, z: 112 * m, yaw: flip, length: 9 });   // blast walls
+      for (const x of [-40, 0, 40]) props.aircraftShelter({ x: (x - SHELTER_X) * m, z: 132 * m, yaw: Math.PI + flip });
+      props.aircraftWreck({ x: (-12 - SHELTER_X) * m, z: 98 * m, yaw: 1.2 + flip });
+      props.aircraftWreck({ x: (30 - SHELTER_X) * m, z: 94 * m, yaw: -0.6 + flip, scale: 0.9 });
+      for (const x of [-28, 12]) props.jersey({ x: (x - SHELTER_X) * m, z: 112 * m, yaw: flip, length: 9 });   // blast walls
       // the hangars
-      props.hall({ x: -232 * m, z: 116 * m, yaw: Math.PI + flip, width: 34, depth: 26, height: 11, color: 0x6e726e, roof: 0x55585a, door: 26, name: 'hangar' });
-      props.hall({ x: -192 * m, z: 120 * m, yaw: Math.PI + flip, width: 26, depth: 20, height: 9, color: 0x6a6e6a, roof: 0x55585a, door: 18, name: 'hangar' });
-      props.aircraftWreck({ x: -215 * m, z: 88 * m, yaw: 2.6 + flip });
+      props.hall({ x: (-17 - END_X) * m, z: 116 * m, yaw: Math.PI + flip, width: 34, depth: 26, height: 11, color: 0x6e726e, roof: 0x55585a, door: 26, name: 'hangar' });
+      props.hall({ x: (23 - END_X) * m, z: 120 * m, yaw: Math.PI + flip, width: 26, depth: 20, height: 9, color: 0x6a6e6a, roof: 0x55585a, door: 18, name: 'hangar' });
+      props.aircraftWreck({ x: -END_X * m, z: 88 * m, yaw: 2.6 + flip });
       // the control tower and the fire station opposite
       props.controlTower({ x: 0, z: 106 * m, yaw: Math.PI + flip });
       props.hall({ x: 30 * m, z: 108 * m, yaw: Math.PI + flip, width: 16, depth: 10, height: 5, color: 0x8a8278, door: 10, name: 'crash tender garage' });
       props.wreckCar({ x: -18 * m, z: 92 * m, yaw: 0.3 + flip });
       // the fuel depot / bomb dump: tanks behind an earth bank
-      props.tanks({ x: 222 * m, z: 116 * m, yaw: flip, count: 3, radius: 4.2, height: 7 });
-      props.tanks({ x: 222 * m, z: 132 * m, yaw: flip, count: 2, radius: 3, height: 5, color: 0x7a8070 });
-      for (const x of [190, 254]) props.lowWall({ x: x * m, z: 112 * m, yaw: Math.PI / 2, length: 30, height: 1.6 });
-      props.hall({ x: 196 * m, z: 92 * m, yaw: flip, width: 12, depth: 8, height: 4.5, color: 0x8a8070, name: 'pump house' });
+      props.tanks({ x: (END_X + 7) * m, z: 116 * m, yaw: flip, count: 3, radius: 4.2, height: 7 });
+      props.tanks({ x: (END_X + 7) * m, z: 132 * m, yaw: flip, count: 2, radius: 3, height: 5, color: 0x7a8070 });
+      for (const x of [-25, 39]) props.lowWall({ x: (END_X + x) * m, z: 112 * m, yaw: Math.PI / 2, length: 30, height: 1.6 });
+      props.hall({ x: (END_X - 19) * m, z: 92 * m, yaw: flip, width: 12, depth: 8, height: 4.5, color: 0x8a8070, name: 'pump house' });
       // runway debris: wrecks and craters' worth of rubble around the centre
       props.aircraftWreck({ x: 40 * m, z: 6 * m, yaw: 1.62 + flip });
       props.wreckCar({ x: -24 * m, z: 10 * m, yaw: 0.7 + flip });
       props.jersey({ x: 14 * m, z: 22 * m, yaw: 0.1 + flip, length: 9 });
       // the barracks at the home end: three long blocks, a guard post, the perimeter fence
-      for (const x of [-34, 0, 34]) props.townHouse({ x: x * m, z: 222 * m, yaw: flip, width: 24, depth: 10, storeys: 2, name: 'barracks' });
-      props.tower({ x: 60 * m, z: 196 * m, concrete: true });
-      props.fence({ x0: -FIELD_X, x1: FIELD_X, z: 190 * m, breaches: [[-150, -128], [-12, 12], [128, 150]] });
+      for (const x of [-34, 0, 34]) props.townHouse({ x: x * m, z: BARRACKS_Z * m, yaw: flip, width: 24, depth: 10, storeys: 2, name: 'barracks' });
+      props.tower({ x: 60 * m, z: (BARRACKS_Z + 44) * m, concrete: true });
+      props.fence({ x0: -FIELD_X, x1: FIELD_X, z: (BARRACKS_Z + 40) * m, breaches: [[-152, -128], [-12, 12], [128, 152]] }); // the perimeter, behind the barracks
     });
     // farm cover beyond the fence
     const kinds = ['farm', 'fieldwall', 'hay', 'rocks', 'hay', 'wrecks'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 26 && tries < 5000; tries++) {
+    for (let tries = 0; sites.length < 80 && tries < 8000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
       const z = 30 + rand() * (bounds.z - 40);
-      if (airfield(x, z) > 0.2 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 26 * 26) || Math.abs(z - 222) < 22 || Math.hypot(x, z - BASE_Z) < 34) continue;
+      if (airfield(x, z) > 0.2 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 26 * 26) || (Math.abs(z - BARRACKS_Z) < 30 && Math.abs(x) < 70) || Math.abs(z - BARRACKS_Z - 40) < 6 || Math.hypot(x, z - BASE_Z) < 40) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
     for (const s of sites) {
@@ -191,9 +196,9 @@ export default {
 
     const avoid = [{ x: 0, z: BASE_Z, r: 24 }, { x: 0, z: -BASE_Z, r: 24 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })),
       { test: (x, z) => paved(x, z) > 0 }];
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 900, forest: (x, z) => (airfield(x, z) > 0.1 ? -1 : Math.abs(x) > 270 ? 0.6 : 0.03) });
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1400, forest: (x, z) => (airfield(x, z) > 0.1 ? -1 : Math.abs(x) > 460 ? 0.6 : 0.03) });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid: [...avoid, { test: (x, z) => airfield(x, z) > 0.05 }], count: 3000, lane: 0 });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid: [...avoid, { test: (x, z) => airfield(x, z) > 0.05 }], count: 6000, lane: 0 });
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 3.2, fields: this.fields });
 
     return {

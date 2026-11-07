@@ -7,6 +7,8 @@ import huenfeld from './huenfeld.ts';
 import thuringianForest from './thuringianForest.ts';
 import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
+import jena from './jena.ts';
+import auerstedt from './auerstedt.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -16,6 +18,8 @@ export const MAPS = {
   [thuringianForest.id]: thuringianForest,
   [hersfeldAirbase.id]: hersfeldAirbase,
   [monteKali.id]: monteKali,
+  [jena.id]: jena,
+  [auerstedt.id]: auerstedt,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;
@@ -28,7 +32,7 @@ export function forEpoch(year) {
   for (const m of Object.values(MAPS)) {
     if (!m.ww2) continue;
     m.base ??= { description: m.description, points: Object.fromEntries((m.points ?? []).map((p) => [p.id, p.name])) };
-    const w = year === '1945' ? m.ww2 : null;
+    const w = year !== '1985' ? m.ww2 : null; // (no inner-German border before 1945 either)
     m.description = w?.description ?? m.base.description;
     for (const p of m.points ?? []) p.name = w?.points?.[p.id] ?? m.base.points[p.id];
   }
@@ -37,3 +41,12 @@ export function forEpoch(year) {
 export function getMap(id) {
   return MAPS[id] ?? MAPS[DEFAULT_MAP];
 }
+
+/** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only), its own maps first. */
+export function mapsFor(ep) {
+  const all = Object.values(MAPS).filter((m) => !m.epochs || m.epochs.includes(ep));
+  return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
+}
+
+/** `id` if `ep` has that map, else the epoch's first map. */
+export const mapIn = (id, ep) => (mapsFor(ep).some((m) => m.id === id) ? id : mapsFor(ep)[0].id);

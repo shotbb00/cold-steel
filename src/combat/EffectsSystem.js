@@ -332,6 +332,18 @@ export class EffectsSystem {
   muzzle(pos, dir, size = 1, weapon = 'rifle') {
     const F = this.fire;
     const S = this.smoke;
+    if (weapon === 'musket') { // black powder: the flash, then a thick white puff that hangs (1806)
+      F.spawn(pos.x + dir.x * 0.3, pos.y + dir.y * 0.3, pos.z + dir.z * 0.3, { size: 0.9, grow: 0.6, life: 0.07, color: FLASH, bright: 2.6 });
+      F.spawn(pos.x + dir.x * 0.6, pos.y, pos.z + dir.z * 0.6, { size: 0.5, grow: 0.5, life: 0.06, color: FIRE, bright: 2.4 });
+      for (let i = 0; i < 3; i++) {
+        const f = rnd(1.5, 4);
+        S.spawn(pos.x + dir.x * 0.5, pos.y, pos.z + dir.z * 0.5, {
+          vx: dir.x * f + rnd(-0.3, 0.3), vy: rnd(0.1, 0.5), vz: dir.z * f + rnd(-0.3, 0.3), size: rnd(0.5, 0.9), grow: 2.6,
+          life: rnd(3, 5), alpha: 0.62, color: 0xdcdad2, drag: 1.6, wind: 0.5,
+        });
+      }
+      return;
+    }
     if (weapon === 'cannon' || weapon === 'artillery') {
       const big = weapon === 'artillery' ? 1.4 : 1;
       F.spawn(pos.x, pos.y, pos.z, { size: 2.2 * big, grow: 0.8, life: 0.09, color: FLASH, bright: 2.5 });
@@ -473,6 +485,19 @@ export class EffectsSystem {
 
   burn(pos, duration = 40, size = 1) {
     this.emitters.push({ kind: 'burn', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
+  }
+
+  /** A volley's powder smoke (1806): a loose grey-white bank along the front of the line, drifting off on the wind. */
+  powderBank(x, y, z, yaw, width) {
+    const n = Math.max(4, Math.round(width / 1.6));
+    const ax = Math.cos(yaw), az = -Math.sin(yaw), fx = Math.sin(yaw), fz = Math.cos(yaw);
+    for (let i = 0; i < n; i++) {
+      const s = (i / (n - 1) - 0.5) * width + rnd(-0.6, 0.6), ahead = rnd(1.5, 4.5);
+      this.smoke.spawn(x + ax * s + fx * ahead, y + rnd(1, 1.8), z + az * s + fz * ahead, {
+        vx: fx * rnd(0.3, 0.9), vy: rnd(0.1, 0.35), vz: fz * rnd(0.3, 0.9), size: rnd(1.6, 2.6), grow: 1.3,
+        life: rnd(6, 9), alpha: 0.34, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
+      });
+    }
   }
 
   /** A smoke screen: dense white billows filling `radius` for `duration` seconds (systems/Smoke.js). */

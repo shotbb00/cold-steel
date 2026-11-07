@@ -4,15 +4,15 @@
 // stats), Settings. Modes and maps come straight from their registries, so new ones show up
 // here by themselves. `onDeploy({ mode, map, side, net? })` starts the battle.
 import { settings } from '../core/Settings.js';
-import { EPOCHS, epoch, epochInfo } from '../data/epoch.js';
+import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, DEFAULT_MAP } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
-import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
+import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
@@ -20,13 +20,13 @@ import { takeMenuTab } from '../core/replay.js';
 import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
-import { CODEX, CODEX45 } from '../data/codex.js';
+import { CODEX, CODEX45, CODEX1806 } from '../data/codex.js';
 import { keyOf } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
 
 // shown on the loading screen while a battle is built
-const TIPS = [
+const TIPS = { 1985: [
   'Infantry takes points; tanks cannot. Let the riflemen lead into the villages.',
   'Mortars and guns fire on anything your side can see. Forward observers make them land tight.',
   'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
@@ -35,7 +35,26 @@ const TIPS = [
   'At night, flares light the ground and thermal sights see through the dark (N in direct control).',
   'Engineers clear wire and mines. The enemy uses them too.',
   'Wounded men in a campaign come back after the next battle; the dead do not.',
-];
+], 1945: [
+  'Infantry takes points; tanks cannot. Let the riflemen lead into the villages.',
+  'Most tanks of 1945 cannot aim on the move: halt, fire, move on. The Sherman, with its stabiliser, is the exception.',
+  'Forward observers with radios make the guns land tight. Without them, the shells plough the fields.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A Panzerfaust or a bazooka team in a hedge is a tank\'s worst enemy. Send infantry ahead of the armour.',
+  'Paratroopers come down wherever the wind puts them. Drop them where the enemy is not.',
+  'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
+  'Wounded men in a campaign come back after the next battle; the dead do not.',
+], 1806: [
+  'Line beats column in a firefight, column beats line with the bayonet, square beats cavalry — and guns beat square.',
+  'Cavalry coming? Form square before it reaches you: the horses will not go into the bayonets.',
+  'A company fires by volleys: wait until the enemy is in range, then the whole line fires together.',
+  'Guns must unlimber before they fire, and limber up again to move. Choose their spot before you need it.',
+  'Close in, a battery fires canister — a spray of balls that sweeps the ground in front of it.',
+  'Light infantry and riflemen fight from hedges and woods, in skirmish order, and go for the officers.',
+  'A rider can fall and leave his horse running loose. A dismounted trooper climbs back onto a loose horse of his side.',
+  'Only foot takes points. Cavalry rides through, but holds nothing.',
+  'The Guard comes once a battle. Keep it for the moment that decides the day.',
+] };
 
 /** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
 export function armiesPicker(choice, onChange = () => {}) {
@@ -153,11 +172,11 @@ const el = (tag, cls, html) => {
   return e;
 };
 
-const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
+const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', trot: 'Trot', canter: 'Canter', gallop: 'Gallop', limbered: 'Limbered', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
-const COMING_EPOCHS = [{ id: '1806', name: '1806', title: 'Napoleonic Wars, 1806' }, { id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
+const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
 const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
@@ -186,13 +205,20 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
-    [vehicle ? 'Vehicles' : 'Men', type.formation.count],
+    [s.cavalry ? 'Riders' : s.gun ? 'Guns' : s.wagon ? 'Wagons' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
     ['Cost', `${unitCost(type, army)} CP`],
     ['Speed', `${Math.round(s.speed * 3.6)} km/h`],
     ['Sight', `${s.sight} m`],
     ['Range', (sp ?? s).range <= 1 ? (s.antiAir ? 'no ground weapon' : 'unarmed') : `${(sp ?? s).minRange ? `${(sp ?? s).minRange}–` : ''}${s.gunRange ?? (sp ?? s).range} m`],
   ];
-  if (vehicle) {
+  if (s.cavalry) {
+    rows.push(['Horse and rider', 'a hit may down the horse, the rider or both']);
+    rows.push(['Charge', `${Math.round(s.cavalry.chargeSpeed * 3.6)} km/h at the gallop`]);
+  } else if (s.gun) {
+    rows.push(['Team', `limbers and unlimbers in ${s.towed?.deploy ?? 0} s`]);
+  } else if (s.wagon) {
+    rows.push(['Hit points', s.hp]);
+  } else if (vehicle) {
     rows.push(['Hit points', s.hp]);
     rows.push(['Armour', `${Math.round(s.armor * 100)} % front · ${Math.round(s.armor * 70)} % side · ${Math.round(s.armor * 35)} % rear`]);
   } else {
@@ -201,6 +227,10 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const w = sp ? { ...s, ...sp } : s;
   const armed = w.range > 1 && (w.damage ?? 1) > 0; // ambulances, bridge layers: no gun to describe
   if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
+  else if (armed && w.volley) rows.push(['Fire', `volleys, then ${w.reloadTime} s to reload`]); // (1806: the company fires together)
+  else if (armed && s.gun) rows.push(['Fire', `${s.indirect ? 'shells over cover' : 'roundshot through the ranks'}, canister inside ${s.gun.canister} m — ${s.reloadTime} s to reload`]);
+  else if (armed && s.cavalry) rows.push(['Fire', `${w.range > 50 ? 'carbines' : 'pistols'}, then ${w.reloadTime} s to reload — the sabre is the weapon`]);
+  else if (armed && w.magSize === 1 && w.reloadTime > 5) rows.push(['Fire', `single shots, ${w.reloadTime} s to reload`]); // (a rifle or a musket loaded by hand)
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
@@ -234,7 +264,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
   if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
-  if (armed) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
+  if (armed && year() >= 1900) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
 }
 
@@ -242,7 +272,7 @@ export class MainMenu {
   constructor(root, { onDeploy }) {
     this.root = root;
     this.onDeploy = onDeploy;
-    this.choice = { mode: DEFAULT_MODE, map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', rules: loadRules() };
+    this.choice = { mode: DEFAULT_MODE, map: mapsFor(epoch())[0].id, side: 'nato', time: 'day', weather: 'overcast', rules: loadRules() };
     this.unit = { id: 'rifles', faction: 'nato', army: 'us', pose: 'idle' };
     this.build();
     this.open(takeMenuTab() ?? 'battle');
@@ -259,7 +289,7 @@ export class MainMenu {
     const year = el('div', 'seg menu-epoch');
     for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
       const soon = !EPOCHS[e.id];
-      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.name);
+      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.beta ? `${e.name}<small>beta</small>` : e.name);
       b.type = 'button';
       b.title = soon ? `${e.title} — coming soon` : e.title;
       if (soon) b.disabled = true;
@@ -291,7 +321,7 @@ export class MainMenu {
     // the map table beside a battle being set up or about to be fought (single player, multiplayer,
     // boot camp, the campaign's next battle); units and settings on the plain table
     if (id === 'battle') this.sheet?.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side, true, 'menu');
-    else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
+    else if (id === 'bootcamp') this.sheet?.show(MAPS[chapterBattle('basics').map] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp') this.bootcampPanel();
@@ -360,8 +390,9 @@ export class MainMenu {
     const where = el('div', 'map-pick');
     const chips = el('div', 'map-chips');
     chips.setAttribute('role', 'radiogroup');
+    c.map = mapIn(c.map, epoch());
     const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
-    for (const m of Object.values(MAPS)) {
+    for (const m of mapsFor(epoch())) {
       const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
       b.type = 'button';
       b.setAttribute('role', 'radio');
@@ -380,6 +411,9 @@ export class MainMenu {
     // which side
     const sides = el('div', 'side-pick');
     const sideText = {
+      1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
+      1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
+    }[epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
@@ -430,7 +464,7 @@ export class MainMenu {
   bootcampPanel() {
     const p = this.panel;
     p.append(el('h2', '', 'Boot camp'));
-    p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base on the Fulda Gap, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
+    p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
     const done = chaptersDone();
     const list = el('div', 'bc-chapters');
     chapters().forEach((c, i) => {
@@ -484,7 +518,8 @@ export class MainMenu {
     this.root.classList.remove('menu-open');
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
-    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const tips = TIPS[epoch()] ?? TIPS[1985]; // (this war's hints)
+    const tip = tips[Math.floor(Math.random() * tips.length)];
     const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
@@ -585,8 +620,8 @@ export class MainMenu {
 
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
-    const ww2 = epoch() === '1945';
-    const own = ww2 && CODEX45[id];
+    const ww2 = epoch() !== '1985'; // (another war: its own entry, never 1985's history)
+    const own = { 1945: CODEX45, 1806: CODEX1806 }[epoch()]?.[id];
     const c = own ? { ...own, ...own.armies?.[army] } : CODEX[id]; // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
@@ -614,7 +649,7 @@ export class MainMenu {
     const type = UNIT_TYPES[id];
     this.preview.show(id, faction, army);
     this.preview.setPose(this.unit.pose);
-    const poses = type.kind === 'infantry' ? INFANTRY_POSES : VEHICLE_POSES;
+    const poses = type.kind === 'infantry' ? INFANTRY_POSES : type.kind === 'cavalry' ? CAVALRY_POSES : type.kind === 'gun' ? GUN_POSES : VEHICLE_POSES;
     this.poses.replaceChildren();
     for (const pose of poses) {
       const b = el('button', pose === this.unit.pose ? 'on' : '', POSE_LABEL[pose]);

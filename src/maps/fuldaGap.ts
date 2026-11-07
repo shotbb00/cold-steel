@@ -21,9 +21,12 @@ import { mulberry32, smoothstep } from '../core/math.js';
 import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
-const BASE_Z = 290;
-const SECTOR_X = 200;   // west / east sector axes at x = ∓200
-const RIDGE_X = 105;    // wooded ridges between the sectors
+// The big field (2026-11: 1.0 × 1.12 km playable, like Jena): the old layout spread outward, the
+// villages ~300 m apart instead of ~150.
+const BASE_Z = 500;
+const ROW_Z = 290;      // the forward villages' row on each side
+const SECTOR_X = 330;   // west / east sector axes at x = ∓330
+const RIDGE_X = 170;    // wooded ridges between the sectors
 const noise = createNoise2D(1985);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
@@ -31,23 +34,23 @@ const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz)
 function ridge(x, z) {
   const ax = Math.abs(x);
   const spine = Math.exp(-((ax - RIDGE_X) ** 2) / (20 * 20));
-  const saddle = 1 - 0.8 * (Math.exp(-((z - 150) ** 2) / 900) + Math.exp(-((z + 150) ** 2) / 900) + Math.exp(-(z * z) / 700));
-  return spine * Math.max(0, saddle) * smoothstep(300, 250, Math.abs(z));
+  const saddle = 1 - 0.8 * (Math.exp(-((z - ROW_Z) ** 2) / 1600) + Math.exp(-((z + ROW_Z) ** 2) / 1600) + Math.exp(-(z * z) / 1200));
+  return spine * Math.max(0, saddle) * smoothstep(520, 460, Math.abs(z));
 }
 
 function height(x, z) {
   const ax = Math.abs(x);
   const az = Math.abs(z);
-  let h = fbm(noise, x * 0.007, z * 0.007, 5) * 9;             // rolling farmland
+  let h = fbm(noise, x * 0.0045, z * 0.0045, 5) * 6;           // rolling farmland (broad swells: long views across a sector)
   h += fbm(noise, x * 0.045 + 100, z * 0.045, 3) * 0.7;        // furrows and bumps
   h += Math.exp(-(z * z) / 1200) * (2.5 + 1.5 * noise(x * 0.02, 9.1)); // the border rise
   h += ridge(x, z) * (11 + 4 * noise(x * 0.03 + 7, z * 0.03));        // sector ridges
   // point-mirrored hills: overwatch for each sector on each side
-  for (const [cx, cz, r, a] of [[-SECTOR_X, 70, 26, 6], [0, 80, 22, 4.5], [SECTOR_X, 60, 24, 5.5], [-SECTOR_X + 50, 215, 20, 4], [SECTOR_X - 40, 210, 18, 4]]) {
+  for (const [cx, cz, r, a] of [[-SECTOR_X, 120, 40, 6], [0, 135, 34, 4.5], [SECTOR_X, 100, 38, 5.5], [-SECTOR_X + 80, 380, 30, 4], [SECTOR_X - 70, 370, 28, 4]]) {
     h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a);
   }
-  h += smoothstep(300, 410, ax) * (16 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 26); // wooded hills at the edges
-  h += smoothstep(330, 440, az) * 20;
+  h += smoothstep(500, 620, ax) * (16 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 26); // wooded hills at the edges
+  h += smoothstep(560, 680, az) * 20;
   for (const bz of [BASE_Z, -BASE_Z]) {
     const k = smoothstep(28, 15, Math.hypot(x, z - bz)); // flatten the base areas
     h += (1.2 - h) * k;
@@ -58,22 +61,22 @@ function height(x, z) {
 // Each side opens with a single rifle squad at its home village: the battle starts as a land
 // grab (development phase) and the armies are bought from command points.
 const natoLayout = [
-  { unit: 'rifles', x: 0, z: 214, name: '1st Platoon' },
+  { unit: 'rifles', x: 0, z: 454, name: '1st Platoon' },
 ];
 // The full combined-arms deployment across the three sectors (kept for a later mode).
 export const natoFullLayout = [
-  { unit: 'rifles', x: -205, z: 175, name: '1st Platoon' },
-  { unit: 'mgTeam', x: -180, z: 182, name: 'Weapons West' },
-  { unit: 'atTeam', x: -225, z: 190, name: 'AT West' },
-  { unit: 'scouts', x: -200, z: 140, name: 'Scouts West' },
-  { unit: 'rifles', x: -18, z: 175, name: '2nd Platoon' },
-  { unit: 'rifles', x: 22, z: 180, name: '3rd Platoon' },
-  { unit: 'tank', x: 0, z: 200, name: 'Tank Platoon' },
-  { unit: 'mortar', x: -10, z: 220, name: 'Mortars' },
-  { unit: 'aa', x: 20, z: 232, name: 'Flak' },
-  { unit: 'rifles', x: 205, z: 175, name: '4th Platoon' },
-  { unit: 'ifv', x: 190, z: 195, name: 'Bradleys' },
-  { unit: 'atTeam', x: 225, z: 188, name: 'AT East' },
+  { unit: 'rifles', x: -338, z: 389, name: '1st Platoon' },
+  { unit: 'mgTeam', x: -297, z: 400, name: 'Weapons West' },
+  { unit: 'atTeam', x: -371, z: 414, name: 'AT West' },
+  { unit: 'scouts', x: -330, z: 331, name: 'Scouts West' },
+  { unit: 'rifles', x: -30, z: 389, name: '2nd Platoon' },
+  { unit: 'rifles', x: 36, z: 397, name: '3rd Platoon' },
+  { unit: 'tank', x: 0, z: 430, name: 'Tank Platoon' },
+  { unit: 'mortar', x: -16, z: 463, name: 'Mortars' },
+  { unit: 'aa', x: 33, z: 483, name: 'Flak' },
+  { unit: 'rifles', x: 338, z: 389, name: '4th Platoon' },
+  { unit: 'ifv', x: 314, z: 422, name: 'Bradleys' },
+  { unit: 'atTeam', x: 371, z: 410, name: 'AT East' },
 ];
 const pactName = {
   '1st Platoon': '1-ya Rota', 'Weapons West': 'PK Team West', 'AT West': 'RPG Group West', 'Scouts West': 'Razvedka',
@@ -83,17 +86,17 @@ const pactName = {
 
 // Point-mirrored villages: A/K home, B–D and H–J each side's forward villages, E–G on the border.
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Hünfeld', x: 0, z: 228, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Rasdorf', x: -SECTOR_X, z: 150, owner: null, sector: 'west' },
-  { id: 'C', name: 'Mackenzell', x: 0, z: 150, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Grüsselbach', x: SECTOR_X, z: 150, owner: null, sector: 'east' },
-  { id: 'E', name: 'Setzelbach', x: -SECTOR_X, z: 10, owner: null, sector: 'west', radius: 20 },
-  { id: 'F', name: 'Point Alpha', x: 0, z: 0, owner: null, sector: 'centre', radius: 20 },
-  { id: 'G', name: 'Wenigentaft', x: SECTOR_X, z: -10, owner: null, sector: 'east', radius: 20 },
-  { id: 'H', name: 'Geisa', x: -SECTOR_X, z: -150, owner: null, sector: 'west' },
-  { id: 'I', name: 'Borsch', x: 0, z: -150, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Buttlar', x: SECTOR_X, z: -150, owner: null, sector: 'east' },
-  { id: 'K', name: 'Vacha', x: 0, z: -228, owner: 'pact', sector: 'centre' },
+  { id: 'A', name: 'Hünfeld', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Rasdorf', x: -SECTOR_X, z: ROW_Z, owner: null, sector: 'west' },
+  { id: 'C', name: 'Mackenzell', x: 0, z: ROW_Z, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Grüsselbach', x: SECTOR_X, z: ROW_Z, owner: null, sector: 'east' },
+  { id: 'E', name: 'Setzelbach', x: -SECTOR_X, z: 20, owner: null, sector: 'west', radius: 22 },
+  { id: 'F', name: 'Point Alpha', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
+  { id: 'G', name: 'Wenigentaft', x: SECTOR_X, z: -20, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Geisa', x: -SECTOR_X, z: -ROW_Z, owner: null, sector: 'west' },
+  { id: 'I', name: 'Borsch', x: 0, z: -ROW_Z, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Buttlar', x: SECTOR_X, z: -ROW_Z, owner: null, sector: 'east' },
+  { id: 'K', name: 'Vacha', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
@@ -101,9 +104,9 @@ export default {
   name: 'Fulda Gap',
   description: 'Three sectors of autumn farmland either side of the inner-German border, split by wooded ridges: villages to hold, Point Alpha in the middle.',
   ww2: { description: 'Three sectors of farmland in the hills between Hesse and Thuringia, split by wooded ridges: villages to hold, the Rasdorfer Berg in the middle.', points: { F: 'Rasdorfer Berg' } }, // (no border or Point Alpha yet: maps/index.js forEpoch)
-  size: 1000,
-  segments: 600,
-  bounds: { x: 300, z: 320 },
+  size: 1600,
+  segments: 640,
+  bounds: { x: 500, z: 560 },
   seed: 1985,
   height,
   fields: createFields({ seed: 1985, cell: 72 }), // farmland patchwork (terrain + vegetation)
@@ -111,7 +114,7 @@ export default {
   theme: {
     // overcast autumn afternoon
     fogColor: 0x9a9e9c,
-    fogDensity: 0.003,
+    fogDensity: 0.0021,
     skyTop: 0x6c7378,
     skyHorizon: 0xb4b5ae,
     skyBottom: 0x6f706a,
@@ -138,16 +141,16 @@ export default {
       ploughed: '#4b3c2e',
       stubble: '#8c7c4e',
       meadow: '#6a703e',
-      farmX: [320, 400],   // farmland gives way to the wooded edge hills
-      farmZ: [350, 430],
+      farmX: [520, 600],   // farmland gives way to the wooded edge hills
+      farmZ: [580, 660],
       roads: [-SECTOR_X, 0, SECTOR_X], // a dirt track up each sector
-      roadZ: 300,
+      roadZ: 540,
     },
   },
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-SECTOR_X, 0, SECTOR_X] }, pact: { x: 0, z: -BASE_Z, entries: [-SECTOR_X, 0, SECTOR_X] } },
-  maxStacks: 22,          // per side: enough for a battle in every sector
-  cameraStart: { nato: { x: 0, z: 190 }, pact: { x: 0, z: -190 } },
+  maxStacks: 26,          // per side: enough for a battle in every sector
+  cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
@@ -170,11 +173,11 @@ export default {
     // Battlefield cover sites on our half, each mirrored through the centre.
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'roadblock', 'rocks', 'wrecks', 'hay', 'fieldwall'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 70 && tries < 5000; tries++) {
+    for (let tries = 0; sites.length < 150 && tries < 9000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 14 + rand() * (bounds.z - 50);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 22 * 22)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 34 || nearPoint(x, z, 30) || ridge(x, z) > 0.4) continue;
+      const z = 14 + rand() * (bounds.z - 60);
+      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
+      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 30) || ridge(x, z) > 0.4) continue;
       if (Math.abs(z) < 20 && [0, -SECTOR_X, SECTOR_X].some((cx) => Math.abs(x - cx) < 14)) continue; // keep the crossings open
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
@@ -205,12 +208,12 @@ export default {
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);
     props.finish();
 
-    const avoid = [{ x: 0, z: BASE_Z, r: 22 }, { x: 0, z: -BASE_Z, r: 22 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 9 }))];
+    const avoid = [{ x: 0, z: BASE_Z, r: 26 }, { x: 0, z: -BASE_Z, r: 26 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 10 }))];
     // woods on the ridges between sectors, open farmland elsewhere
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1700, forest: (x, z) => (ridge(x, z) > 0.35 ? 0.85 : 0) });
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2800, forest: (x, z) => (ridge(x, z) > 0.35 ? 0.85 : 0) });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 8000, lane: 0 });
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 4.5, fields: this.fields });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 13000, lane: 0 }); // (hedge country: thinner than before over three times the ground)
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 3, fields: this.fields });
 
     return {
       buildings: props.buildings, // systems/Buildings.js: garrison and collapse

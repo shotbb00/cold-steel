@@ -56,6 +56,11 @@ export default {
 
   models: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(),
     bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
+  // the squad kits' weapons in the riflemen's hands (data/kits.js)
+  kitModels: {
+    at: { nato: () => buildNatoSoldier({ weapon: 'at' }), pact: () => buildPactSoldier({ weapon: 'at' }), bw: () => buildBwSoldier({ weapon: 'at' }), nva: () => buildNvaSoldier({ weapon: 'at' }) },
+    smg: { nato: () => buildNatoSoldier({ weapon: 'smg' }), pact: () => buildPactSoldier({ weapon: 'smg' }), bw: () => buildBwSoldier({ weapon: 'smg' }), nva: () => buildNvaSoldier({ weapon: 'smg' }) },
+  },
   weaponSound: 'rifle',
   // shown in the main menu's unit preview
   variants: {

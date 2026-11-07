@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Horse demo</title>
+  <style>
+    :root { --bg: #14130f; --panel: rgba(18, 17, 13, 0.86); --line: #3a3628; --text: #ece6d4; --muted: #a59f8a; --gold: #e0b45a; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .bar { position: fixed; left: 16px; right: 16px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); }
+    .group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .group > span { color: var(--muted); font-size: 12px; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+    button { all: unset; cursor: pointer; padding: 6px 10px; border: 1px solid var(--line); color: var(--muted); font-weight: 600; }
+    button:hover { color: var(--text); }
+    button.on { color: var(--text); background: rgba(224, 180, 90, 0.16); box-shadow: inset 0 -2px 0 var(--gold); }
+    .readout { position: fixed; top: 16px; left: 16px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); }
+    .readout b { color: var(--gold); }
+    .hint { color: var(--muted); font-size: 12px; }
+    @media (max-width: 600px) { .bar { gap: 6px; padding: 8px; } button { padding: 6px 8px; } }
+  </style>
+</head>
+<body>
+  <!-- served by `npm run dev`: http://localhost:5173/tools/horse.html -->
+  <canvas id="c"></canvas>
+  <div class="readout"><b id="gait">Halt</b> · <span id="speed">0 km/h</span><div class="hint">Drag to orbit · wheel to zoom · keys 1–5 change gait</div></div>
+  <div class="bar">
+    <div class="group" id="gaits"><span>Gait</span></div>
+    <div class="group" id="coats"><span>Coat</span></div>
+    <div class="group" id="views"><span>View</span></div>
+    <div class="group" id="opts"><span>Show</span></div>
+  </div>
+  <script type="module" src="horse.js"></script>
+</body>
+</html>

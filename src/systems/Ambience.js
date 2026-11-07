@@ -4,9 +4,13 @@
 //   • distant artillery: flashes flicker on the horizon beyond the map edge, the rumble arriving
 //     seconds later (sound travels ~340 m/s)
 //   • burning villages: two or three smoke columns rising beyond the edge, kept alight
+// 1806 has no aircraft; 1945 flies its own propeller fighter-bombers (systems/AirStrike.js models
+// and engine sound). Everything is placed beyond the map's playable edge.
 // Each player's machine makes its own (multiplayer doesn't send any of it); run from
 // GameEngine.render so the multiplayer host doesn't record it for the client.
 import * as THREE from 'three';
+import { year } from '../data/epoch.js';
+import { buildAircraft, airType } from './AirStrike.js';
 
 const JET_SPEED = 230;            // m/s
 const JET_GAP = [55, 120];        // seconds between passes
@@ -59,6 +63,7 @@ export class Ambience {
     this.game = game;
     this.bounds = game.world.bounds;
     this.jets = [];
+    this.edge = (game.map?.size ?? 1000) / 2 - 30; // the terrain's edge: beyond the playable bounds
     this.nextJet = rand([25, 60]);
     this.nextArty = rand([3, 8]);
     this.flashes = [];
@@ -82,7 +87,7 @@ export class Ambience {
     }
     for (let i = this.jets.length - 1; i >= 0; i--) {
       const j = this.jets[i];
-      j.d += JET_SPEED * dt;
+      j.d += j.v * dt;
       const x = j.x0 + j.dx * j.d;
       const z = j.z0 + j.dz * j.d;
       const y = Math.max(g.terrain.heightAt(x, z) + j.alt, j.y);
@@ -93,7 +98,7 @@ export class Ambience {
       const rx = x - l.x;
       const rz = z - l.z;
       const r = Math.hypot(rx, j.y - (l.y ?? 0), rz) || 1;
-      const closing = -(rx * j.dx + rz * j.dz) * JET_SPEED / r;
+      const closing = -(rx * j.dx + rz * j.dz) * j.v / r;
       j.loop.setRate(Math.max(0.7, Math.min(1.4, 1 / (1 - closing / SOUND))));
       j.loop.setPos({ x, y: j.y, z });
       if (j.d > j.len) {
@@ -137,7 +142,10 @@ export class Ambience {
 
   launchJets() {
     const g = this.game;
+    if (year() < 1914) return; // (no aircraft in 1806)
     const side = Math.random() < 0.5 ? 'nato' : 'pact';
+    const prop = year() < 1950; // 1945: the war's own fighter-bombers, slower, lower, propeller noise
+    const army = g.armyOf?.(side);
     // across the map at a random heading, passing within ~200 m of the middle
     const a = Math.random() * Math.PI * 2;
     const off = (Math.random() - 0.5) * 400;
@@ -146,17 +154,17 @@ export class Ambience {
     const len = 2600;
     const x0 = -dx * len / 2 + dz * off;
     const z0 = -dz * len / 2 - dx * off;
-    const alt = 90 + Math.random() * 70;
+    const alt = (prop ? 60 : 90) + Math.random() * 70;
     const meshes = [];
     for (const [side2, back] of [[0, 0], [-22, -30]]) {   // a pair: lead and wingman (metres aside, behind)
-      const m = this.jetModels[side].clone();
+      const m = prop ? buildAircraft('jet', side, army).root : this.jetModels[side].clone();
       m.rotation.y = Math.atan2(dx, dz);
       m.userData = { ox: back * dx + side2 * dz, oy: (Math.random() - 0.5) * 6, oz: back * dz - side2 * dx };
       g.scene.add(m);
       meshes.push(m);
     }
-    const loop = g.audio.loop('jet', { x: x0, y: alt, z: z0 }, 9);
-    this.jets.push({ x0, z0, dx, dz, d: 0, len, alt, y: alt + 20, meshes, loop });
+    const loop = g.audio.loop(prop ? airType('jet', side, army).engineSound ?? 'prop' : 'jet', { x: x0, y: alt, z: z0 }, 9);
+    this.jets.push({ x0, z0, dx, dz, d: 0, len, alt, y: alt + 20, meshes, loop, v: prop ? 140 : JET_SPEED });
   }
 
   /** A battery somewhere beyond the edge: a few flashes, their thunder arriving later. */
@@ -176,7 +184,7 @@ export class Ambience {
       const delay = i * (0.3 + Math.random() * 0.9);
       const px = x + (Math.random() - 0.5) * 60;
       const pz = z + (Math.random() - 0.5) * 60;
-      const ground = g.terrain.heightAt(Math.max(-490, Math.min(490, px)), Math.max(-490, Math.min(490, pz)));
+      const ground = g.terrain.heightAt(Math.max(-this.edge, Math.min(this.edge, px)), Math.max(-this.edge, Math.min(this.edge, pz)));
       this.pending.push([this.t + delay, () => {
         const s = new THREE.Sprite(this.glow.clone());
         const size = 40 + Math.random() * 50;
@@ -200,8 +208,8 @@ export class Ambience {
       [-(b.x + 90), -b.z * 0.55], [b.x + 120, b.z * 0.25], [b.x * 0.4, -(b.z + 110)],
     ];
     for (const [x, z] of spots) {
-      const cx = Math.max(-480, Math.min(480, x));
-      const cz = Math.max(-480, Math.min(480, z));
+      const cx = Math.max(-this.edge, Math.min(this.edge, x)); // (beyond the playable bounds: the fire never reaches the fight)
+      const cz = Math.max(-this.edge, Math.min(this.edge, z));
       this.fires.push({ pos: { x: cx, y: g.terrain.heightAt(cx, cz) + 2, z: cz }, size: 2.5 + Math.random(), renew: 0 });
     }
   }

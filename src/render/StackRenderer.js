@@ -75,10 +75,10 @@ export function setLodDistance(d, camera = LOD_CAMERA) {
  * The model for a unit type as `army` of `faction` fields it (the army's own, else the side's,
  * else the type's first model); `low`: the light stand-in.
  */
-export function modelFor(type, faction, specialist = false, low = false, army = null) {
-  const models = specialist && type.specialistModels ? type.specialistModels : type.models;
+export function modelFor(type, faction, specialist = false, low = false, army = null, kit = null) {
+  const models = kit ? type.kitModels[kit] : specialist && type.specialistModels ? type.specialistModels : type.models; // kit: a squad kit's weapon (data/kits.js)
   const own = army && models[army] ? army : faction;
-  const key = `${type.id}:${own}:${specialist && type.specialistModels ? 's' : 'b'}${low ? ':low' : ''}`;
+  const key = `${type.id}:${own}:${kit ? `k${kit}` : specialist && type.specialistModels ? 's' : 'b'}${low ? ':low' : ''}`;
   if (!modelCache.has(key)) {
     const build = models[own] ?? Object.values(models)[0];
     lod.low = low;
@@ -135,9 +135,22 @@ export class StackRenderer {
     const all = stack.units.map((u) => u.index);
     const make = (...a) => this.make(...a);
     const army = stack.army;
-    this.variants = [new Variant(modelFor(type, stack.faction, false, false, army), modelFor(type, stack.faction, false, true, army), all.slice(nSpec), scene, make)];
-    if (nSpec) this.variants.push(new Variant(modelFor(type, stack.faction, true, false, army), modelFor(type, stack.faction, true, true, army), all.slice(0, nSpec), scene, make));
-    this.variantOf = all.map((i) => this.variants[i < nSpec ? 1 : 0]);
+    const kitOf = (i) => (type.kitModels?.[stack.units[i].kitWeapon] ? stack.units[i].kitWeapon : null); // (a squad kit: those men carry its weapon)
+    const plain = all.slice(nSpec).filter((i) => !kitOf(i));
+    this.variants = [new Variant(modelFor(type, stack.faction, false, false, army), modelFor(type, stack.faction, false, true, army), plain, scene, make)];
+    this.variantOf = [];
+    for (const i of plain) this.variantOf[i] = this.variants[0];
+    if (nSpec) {
+      const v = new Variant(modelFor(type, stack.faction, true, false, army), modelFor(type, stack.faction, true, true, army), all.slice(0, nSpec), scene, make);
+      this.variants.push(v);
+      for (const i of all.slice(0, nSpec)) this.variantOf[i] = v;
+    }
+    for (const w of new Set(all.map(kitOf).filter(Boolean))) {
+      const idx = all.slice(nSpec).filter((i) => kitOf(i) === w);
+      const v = new Variant(modelFor(type, stack.faction, false, false, army, w), modelFor(type, stack.faction, false, true, army, w), idx, scene, make);
+      this.variants.push(v);
+      for (const i of idx) this.variantOf[i] = v;
+    }
     this.meshes = this.variants.flatMap((v) => v.meshes);
     // smoothed pose state per soldier
     this.armPitch = new Float32Array(n).fill(0.4);

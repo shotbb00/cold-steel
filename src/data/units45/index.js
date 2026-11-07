@@ -30,6 +30,11 @@ const rifles = derive(T.rifles, {
     fj: { fireCooldown: 1.1, magSize: 20, reloadTime: 3, playerFireInterval: 0.15, lightAT: 1, hp: 115, breakMorale: 0.1 }, // FG 42; they hold longer
   },
   models: men(),
+  // the kits (data/kits.js): bazookas for the GIs, Panzerfausts for the Germans — and for the Red Army, which used captured ones by the thousand in 1945; Thompson, PPSh, MP 40 for the assault
+  kitModels: {
+    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }) },
+    smg: men({ weapon: 'smg' }),
+  },
   variants: {
     nato: { name: 'Rifle Squad', weapon: 'M1 Garand, BAR', text: 'The GI rifle squad: the semi-automatic Garand gives every man more shots than the enemy, the BAR the base of fire.' },
     sov: { name: 'Rifle Section', weapon: 'Mosin-Nagant, PPSh-41, DP-28', text: 'The Red Army’s riflemen, rifles and sub-machine guns together: dangerous in the assault, many of them.' },
@@ -84,7 +89,7 @@ const tank = derive(T.tank, {
     nato: { noStabilizer: false, armor: 0.5, damage: 330, speed: 5.4, fireCooldown: 6 },   // Sherman: the gyrostabiliser, more but thinner
     sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6, fireCooldown: 8, carries: { unit: 'rifles', count: 8 } }, // (Tank riders: data/epoch.js)      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
     pact: { armor: 0.6, damage: 380, fireCooldown: 6.5 },                    // Panzer IV H: the long 7.5 cm
-    fj: { armor: 0.6, damage: 380, speed: 4.6, fireCooldown: 7 },            // StuG III G: low, the same gun, no turret
+    fj: { armor: 0.6, damage: 380, speed: 4.6, fireCooldown: 7, traverse: 0.17 },            // StuG III G: low, the same gun, no turret
   },
   models: { nato: buildUsSherman, sov: buildSovT34, pact: buildWhPanzerIV, fj: buildFjStuG },
   engine: 'engine.diesel',
@@ -169,9 +174,9 @@ const tankDestroyer = derive(T.tankDestroyer, {
   },
   factionStats: {
     nato: { armor: 0.25, hp: 700, speed: 7.5, turretRate: 1.0, fireCooldown: 6 },          // M18: thin and the fastest thing on tracks
-    sov: { armor: 0.55, hp: 950, speed: 5.6, turretRate: 0.6, fireCooldown: 9 },           // SU-100: the gun in the hull
-    pact: { armor: 0.6, hp: 950, speed: 5.0, damage: 480, fireCooldown: 7 },               // Jagdpanzer IV/70: low, the long gun
-    fj: { armor: 0.55, hp: 800, speed: 5.2, damage: 420, fireCooldown: 7 },                // Hetzer: small, low, hard to spot
+    sov: { armor: 0.55, hp: 950, speed: 5.6, turretRate: 0.6, fireCooldown: 9, traverse: 0.14 },           // SU-100: the gun in the hull
+    pact: { armor: 0.6, hp: 950, speed: 5.0, damage: 480, fireCooldown: 7, traverse: 0.19 },               // Jagdpanzer IV/70: low, the long gun
+    fj: { armor: 0.55, hp: 800, speed: 5.2, damage: 420, fireCooldown: 7, traverse: 0.14 },                // Hetzer: small, low, hard to spot
   },
   models: { nato: buildUsHellcat, sov: buildSovSU100, pact: buildWhJagdpanzerIV, fj: buildFjHetzer },
   engine: 'engine.diesel', tracks: 'tracks.heavy',
@@ -188,9 +193,9 @@ const cev = derive(T.cev, {
   stats: { noStabilizer: true, nightSight: undefined, smoke: { charges: 1 } },
   factionStats: {
     nato: { dozer: true, damage: 900, vsStructure: 2, fireCooldown: 6 },                                    // M4 dozer: the blade, the 75 mm
-    sov: { dozer: false, damage: 1700, vsStructure: 2.6, splash: 7.5, fireCooldown: 20 },  // ISU-152: the "beast killer"
-    pact: { dozer: false, damage: 1500, fireCooldown: 18 },                                                   // Brummbär: the 15 cm
-    fj: { dozer: false, damage: 2600, splash: 10, fireCooldown: 40, range: 160 },           // Sturmtiger: a 38 cm rocket
+    sov: { dozer: false, damage: 1700, vsStructure: 2.6, splash: 7.5, fireCooldown: 20, traverse: 0.09 },  // ISU-152: the "beast killer"
+    pact: { dozer: false, damage: 1500, fireCooldown: 18, traverse: 0.17 },                                                   // Brummbär: the 15 cm
+    fj: { dozer: false, damage: 2600, splash: 10, fireCooldown: 40, range: 160, traverse: 0.17 },           // Sturmtiger: a 38 cm rocket
   },
   models: { nato: buildUsM4Dozer, sov: buildSovISU152, pact: buildWhBrummbaer, fj: buildFjSturmtiger },
   engine: 'engine.diesel',
@@ -205,7 +210,9 @@ const cev = derive(T.cev, {
 const artillery = derive(T.artillery, {
   name: 'Artillery', shortName: 'Artillery',
   stats: { nightSight: undefined },
-  factionStats: { sov: { towed: { deploy: 18 } }, fj: { towed: { deploy: 16 } } },   // the towed guns: unhitched and laid before they fire
+  factionStats: { // the towed guns: unhitched and laid before they fire; all of them swing only so far on their mounts or trails (M7 ±23°, M-30 ±25°, Wespe ±17°, leFH 18 ±28°)
+    nato: { traverse: 0.4 }, sov: { towed: { deploy: 18 }, traverse: 0.43 }, pact: { traverse: 0.3 }, fj: { towed: { deploy: 16 }, traverse: 0.49 },
+  },
   models: { nato: buildUsPriest, sov: buildSovM30, pact: buildWhWespe, fj: buildFjLeFH18 },
   engine: 'engine.diesel',
   variants: {
@@ -221,7 +228,7 @@ const rockets = derive(T.rockets, {
   stats: { nightSight: undefined },
   factionStats: {
     nato: { armor: 0.5, hp: 1000, magSize: 12, weaponSound: 'mlrs' },                                                         // Calliope: on a Sherman
-    sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14, weaponSound: 'katyusha' },  // Katyusha: sixteen rails, a lorry
+    sov: { armor: 0.05, hp: 400, magSize: 16, damage: 100, splash: 5, fireCooldown: 0.2, scatter: 14, weaponSound: 'katyusha', traverse: 0.1 },  // Katyusha: sixteen rails, a lorry
     pact: { magSize: 10, damage: 130, fireCooldown: 1.2, weaponSound: 'nebelwerfer' },   // (a rocket every ~1.2 s, as the real ones fired)                                               // Panzerwerfer 42: ten tubes
     fj: { magSize: 6, damage: 140, fireCooldown: 1.2, towed: { deploy: 12 }, armor: 0, hp: 250, weaponSound: 'nebelwerfer' },        // Nebelwerfer 41: six, towed
   },

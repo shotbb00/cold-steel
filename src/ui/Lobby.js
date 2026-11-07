@@ -13,7 +13,7 @@
 // (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
 // start { … } (host). A version mismatch gets refuse { reason }.
 import { epoch } from '../data/epoch.js';
-import { MAPS, DEFAULT_MAP } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn } from '../maps/index.js';
 import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { NET_VERSION } from '../net/protocol.js';
@@ -74,7 +74,7 @@ export class Lobby {
     this.onStart = onStart;
     this.onPreview = onPreview;
     const mode = Object.values(MODES).find((m) => m.multiplayer);
-    this.choice = { mode: mode?.id ?? 'frontline', map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', coop: false, rules: loadRules() };
+    this.choice = { mode: mode?.id ?? 'frontline', map: mapsFor(epoch())[0].id, side: 'nato', time: 'day', weather: 'overcast', coop: false, rules: loadRules() };
     this.role = 'host';
     this.link = null;
     this.hosting = null;
@@ -233,7 +233,8 @@ export class Lobby {
     const modes = this.chips(Object.values(MODES).filter((m) => m.multiplayer), this.choice.mode, (m) => { this.choice.mode = m.id; setTogether(); this.renderSides(); this.renderRules(); this.sendLobby(); });
     q('What kind of battle', modes, together);
     setTogether();
-    q('Where', this.chips(Object.values(MAPS), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
+    this.choice.map = mapIn(this.choice.map, epoch());
+    q('Where', this.chips(mapsFor(epoch()), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
     this.sidesBox = el('div', 'side-pick');
     q('Which side', this.sidesBox, armiesPicker(this.choice, () => this.sendLobby()));
     this.renderSides();

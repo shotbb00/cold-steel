@@ -15,7 +15,7 @@ import { enemyOf } from '../data/factions.js';
 
 const DEPLOY_CLOCK = -1e4; // deployment snapshots' clock (s): below any battle time
 
-export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn', 'weld', 'tend']; // (new ones go at the end: the client looks them up by index)
+export const FX_CALLS = ['impact', 'dust', 'muzzle', 'explosion', 'trail', 'burn', 'weld', 'tend', 'powderBank']; // (new ones go at the end: the client looks them up by index)
 export const SOUND_CALLS = ['play', 'weapon'];
 
 const r2 = (n) => Math.round(n * 100) / 100;
