@@ -6,7 +6,8 @@
 // held from either bridgehead (soldiers on the deck are hard to command); a
 // wooded hill on each side overlooks the valley. NATO holds the south bank (+z), the Pact the
 // north. Point-mirrored, so neither side gets the better ground.
-// Same shape as fuldaGap.js, plus `river` (world/River.js: routing, water, bridges).
+// Same shape as fuldaGap.js, plus `river` (world/River.js: routing, water, bridges). The big field
+// (1.0 × 1.12 km): bridges at x = ∓330, 0, the heights 300 m back from the river.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -16,13 +17,14 @@ import { createRiver } from '../world/River.js';
 import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
-const BASE_Z = 280;
-const SIDE_X = 190;
+const BASE_Z = 500;
+const SIDE_X = 330;
+const HILL = [-180, 300];   // the wooded height over our bank (and its mirror)
 const noise = createNoise2D(1986);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
 // an odd function: the river is point-mirrored too
-const riverZ = (x) => 13 * Math.sin(x * 0.0085) + 6 * Math.sin(x * 0.021);
+const riverZ = (x) => 20 * Math.sin(x * 0.0055) + 9 * Math.sin(x * 0.014);
 
 const river = createRiver({
   path: riverZ,
@@ -41,15 +43,15 @@ function height(x, z) {
   const ax = Math.abs(x);
   const az = Math.abs(z);
   const away = Math.abs(z - riverZ(x));
-  let h = fbm(noise, x * 0.006, z * 0.006, 5) * 7;                  // rolling ground
+  let h = fbm(noise, x * 0.0042, z * 0.0042, 5) * 7;                 // rolling ground
   h += fbm(noise, x * 0.05 + 50, z * 0.05, 3) * 0.6;
-  h += smoothstep(70, 200, away) * (9 + ridged(noise, x * 0.01 + 3, z * 0.01, 4) * 9); // the bluffs above the valley
+  h += smoothstep(90, 300, away) * (9 + ridged(noise, x * 0.007 + 3, z * 0.007, 4) * 9); // the bluffs above the valley
   // point-mirrored hills: the wooded heights over each bank
-  for (const [cx, cz, r, a] of [[-100, 165, 34, 13], [SIDE_X + 30, 200, 26, 6], [-SIDE_X - 40, 215, 24, 5]]) {
+  for (const [cx, cz, r, a] of [[HILL[0], HILL[1], 50, 13], [SIDE_X + 50, 350, 36, 6], [-SIDE_X - 60, 370, 34, 5]]) {
     h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a);
   }
-  h += smoothstep(300, 420, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded edges
-  h += smoothstep(320, 440, az) * 18;
+  h += smoothstep(500, 620, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded edges
+  h += smoothstep(560, 680, az) * 18;
   for (const bz of [BASE_Z, -BASE_Z]) {
     const k = smoothstep(28, 15, Math.hypot(x, z - bz));
     h += (h * 0.4 + 6 - h) * k; // a level base area up on the heights
@@ -61,17 +63,17 @@ const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' 
 const pactName = { '1st Platoon': '1-ya Rota' };
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Friedewald', x: 0, z: BASE_Z - 40, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Philippsthal', x: -SIDE_X, z: riverZ(-SIDE_X) + 52, owner: null, sector: 'west' },
-  { id: 'C', name: 'Heimboldshausen', x: 0, z: 58, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Heringen', x: SIDE_X, z: riverZ(SIDE_X) + 52, owner: null, sector: 'east' },
-  { id: 'E', name: 'Seulingswald', x: -100, z: 165, owner: null, sector: 'west' },
+  { id: 'A', name: 'Friedewald', x: 0, z: BASE_Z - 34, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Philippsthal', x: -SIDE_X, z: riverZ(-SIDE_X) + 90, owner: null, sector: 'west' },
+  { id: 'C', name: 'Heimboldshausen', x: 0, z: 100, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Heringen', x: SIDE_X, z: riverZ(SIDE_X) + 90, owner: null, sector: 'east' },
+  { id: 'E', name: 'Seulingswald', x: HILL[0], z: HILL[1], owner: null, sector: 'west' },
   { id: 'F', name: 'Vacha bridge', x: 0, z: 0, owner: null, sector: 'centre', radius: 32 }, // reaches both bridgeheads: held from a bank, not only from the deck
-  { id: 'G', name: 'Öchsen', x: 100, z: -165, owner: null, sector: 'east' },
-  { id: 'H', name: 'Dippach', x: -SIDE_X, z: riverZ(-SIDE_X) - 52, owner: null, sector: 'west' },
-  { id: 'I', name: 'Vacha', x: 0, z: -58, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Unterbreizbach', x: SIDE_X, z: riverZ(SIDE_X) - 52, owner: null, sector: 'east' },
-  { id: 'K', name: 'Dorndorf', x: 0, z: -(BASE_Z - 40), owner: 'pact', sector: 'centre' },
+  { id: 'G', name: 'Öchsen', x: -HILL[0], z: -HILL[1], owner: null, sector: 'east' },
+  { id: 'H', name: 'Dippach', x: -SIDE_X, z: riverZ(-SIDE_X) - 90, owner: null, sector: 'west' },
+  { id: 'I', name: 'Vacha', x: 0, z: -100, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Unterbreizbach', x: SIDE_X, z: riverZ(SIDE_X) - 90, owner: null, sector: 'east' },
+  { id: 'K', name: 'Dorndorf', x: 0, z: -(BASE_Z - 34), owner: 'pact', sector: 'centre' },
 ];
 
 export default {
@@ -79,9 +81,9 @@ export default {
   name: 'Werra Valley',
   description: 'A river across the border and only three bridges over it. Hold them, blow them, or lay your own.',
   ww2: { description: 'The Werra across the valley and only three bridges over it. Hold them, blow them, or lay your own.' },
-  size: 1000,
-  segments: 600,
-  bounds: { x: 300, z: 310 },
+  size: 1600,
+  segments: 640,
+  bounds: { x: 500, z: 560 },
   seed: 1986,
   height,
   river,
@@ -91,7 +93,7 @@ export default {
   theme: {
     // a damp, misty November morning in the valley
     fogColor: 0x9ea6a8,
-    fogDensity: 0.0029,
+    fogDensity: 0.0021,
     skyTop: 0x6a7378,
     skyHorizon: 0xb6bab6,
     skyBottom: 0x6c706c,
@@ -118,16 +120,16 @@ export default {
       ploughed: '#4a3b2d',
       stubble: '#857650',
       meadow: '#62703e',
-      farmX: [310, 400],
-      farmZ: [340, 430],
+      farmX: [520, 600],
+      farmZ: [580, 660],
       roads: [-SIDE_X, 0, SIDE_X],  // a road to each bridge
-      roadZ: 300,
+      roadZ: 540,
     },
   },
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-SIDE_X, 0, SIDE_X] }, pact: { x: 0, z: -BASE_Z, entries: [-SIDE_X, 0, SIDE_X] } },
-  maxStacks: 22,
-  cameraStart: { nato: { x: 0, z: 170 }, pact: { x: 0, z: -170 } },
+  maxStacks: 26,
+  cameraStart: { nato: { x: 0, z: 380 }, pact: { x: 0, z: -380 } },
   points,
 
   spawns: {
@@ -150,11 +152,11 @@ export default {
     // cover on our half, mirrored; keep the banks by the crossings open
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 60 && tries < 6000; tries++) {
+    for (let tries = 0; sites.length < 140 && tries < 9000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
       const z = riverZ(x) + 26 + rand() * (bounds.z - 60);
-      if (z > bounds.z - 20 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 22 * 22)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 34 || nearPoint(x, z, 28) || nearWater(x, z, 10)) continue;
+      if (z > bounds.z - 20 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
+      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 34) || nearWater(x, z, 10)) continue;
       if (river.crossings.some((c) => Math.abs(x - c.x) < 16 && Math.abs(z - c.z) < 45)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
@@ -181,13 +183,13 @@ export default {
       const d = Math.abs(z - riverZ(x));
       if (d < river.halfWidth + 1) return -1; // not in the water
       const bank = d < river.halfWidth + 14 ? 0.55 : 0;
-      const hills = hill(x, z, -100, 165, 34, 1) + hill(x, z, 100, -165, 34, 1) > 0.45 ? 0.8 : 0;
+      const hills = hill(x, z, HILL[0], HILL[1], 50, 1) + hill(x, z, -HILL[0], -HILL[1], 50, 1) > 0.45 ? 0.8 : 0;
       return Math.max(bank, hills);
     };
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1500, forest });
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, forest });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 6000, lane: 0 });
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 4.2, fields: this.fields });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 8000, lane: 0 });
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 3, fields: this.fields });
 
     return {
       buildings: props.buildings,
