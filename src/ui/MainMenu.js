@@ -26,7 +26,7 @@ import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
 
 // shown on the loading screen while a battle is built
-const TIPS = [
+const TIPS = { 1985: [
   'Infantry takes points; tanks cannot. Let the riflemen lead into the villages.',
   'Mortars and guns fire on anything your side can see. Forward observers make them land tight.',
   'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
@@ -35,7 +35,26 @@ const TIPS = [
   'At night, flares light the ground and thermal sights see through the dark (N in direct control).',
   'Engineers clear wire and mines. The enemy uses them too.',
   'Wounded men in a campaign come back after the next battle; the dead do not.',
-];
+], 1945: [
+  'Infantry takes points; tanks cannot. Let the riflemen lead into the villages.',
+  'Most tanks of 1945 cannot aim on the move: halt, fire, move on. The Sherman, with its stabiliser, is the exception.',
+  'Forward observers with radios make the guns land tight. Without them, the shells plough the fields.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A Panzerfaust or a bazooka team in a hedge is a tank\'s worst enemy. Send infantry ahead of the armour.',
+  'Paratroopers come down wherever the wind puts them. Drop them where the enemy is not.',
+  'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
+  'Wounded men in a campaign come back after the next battle; the dead do not.',
+], 1806: [
+  'Line beats column in a firefight, column beats line with the bayonet, square beats cavalry — and guns beat square.',
+  'Cavalry coming? Form square before it reaches you: the horses will not go into the bayonets.',
+  'A company fires by volleys: wait until the enemy is in range, then the whole line fires together.',
+  'Guns must unlimber before they fire, and limber up again to move. Choose their spot before you need it.',
+  'Close in, a battery fires canister — a spray of balls that sweeps the ground in front of it.',
+  'Light infantry and riflemen fight from hedges and woods, in skirmish order, and go for the officers.',
+  'A rider can fall and leave his horse running loose. A dismounted trooper climbs back onto a loose horse of his side.',
+  'Only foot takes points. Cavalry rides through, but holds nothing.',
+  'The Guard comes once a battle. Keep it for the moment that decides the day.',
+] };
 
 /** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
 export function armiesPicker(choice, onChange = () => {}) {
@@ -499,7 +518,8 @@ export class MainMenu {
     this.root.classList.remove('menu-open');
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
-    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const tips = TIPS[epoch()] ?? TIPS[1985]; // (this war's hints)
+    const tip = tips[Math.floor(Math.random() * tips.length)];
     const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
