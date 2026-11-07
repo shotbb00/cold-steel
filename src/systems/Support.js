@@ -40,7 +40,9 @@ export class Support {
       const gol = s.alive && s.stats.goliath;
       if (gol) {
         for (const u of s.units) {
-          if (u.alive && world.neighbors(u.pos, gol.trigger, _near).some((o) => o.alive && o.faction !== s.faction)) this.detonate(s, u, gol);
+          if (!u.alive) continue;
+          const onBridge = !s.moveTarget && !!this.bridgeNear(u.pos, 2); // driven onto a bridge and halted there: it goes off (crossing one doesn't)
+          if (onBridge || world.neighbors(u.pos, gol.trigger, _near).some((o) => o.alive && o.faction !== s.faction)) this.detonate(s, u, gol);
         }
       }
       const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
@@ -101,6 +103,14 @@ export class Support {
   }
 
   /** A Goliath's charge: heavy damage all round (armour hardly helps), houses shaken, the carrier gone. */
+  /** A standing bridge at `p` or within `r` m of it (map.bridgeAt; the rivers' crossings). */
+  bridgeNear(p, r) {
+    const map = this.game.map;
+    const at = map.bridgeAt?.(p.x, p.z);
+    if (at && !at.blown) return at;
+    return map.river?.crossings.find((c) => c.kind === 'bridge' && !c.blown && Math.hypot(c.x - p.x, c.z - p.z) < r + (c.width ?? 7) / 2) ?? null;
+  }
+
   detonate(s, u, gol) {
     const g = this.game;
     const p = u.pos.clone();
@@ -110,6 +120,8 @@ export class Support {
       if (d <= gol.radius) o.stack.damageUnit(o, gol.damage * (1 - d / gol.radius), s, 0.85, null, 1);
     }
     g.buildings?.blast(p, gol.damage, gol.radius);
+    const bridge = this.bridgeNear(p, gol.radius);
+    if (bridge) g.blowBridge(bridge); // a bridge it went off on or beside comes down, like the engineers' charges (systems/Construction.js)
     g.effects.explosion(p, 2.6, { ground: true, fire: 1.2 });
     g.audio?.play('explosion.big', p, { volume: 1 });
     s.damageUnit(u, 1e6, null);
