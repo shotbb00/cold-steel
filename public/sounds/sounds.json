@@ -235,6 +235,8 @@
   "birds": [
     "ambience/birds.mp3"
   ],
+  "hoof": ["animals/hoof-1.wav", "animals/hoof-2.wav", "animals/hoof-3.wav", "animals/hoof-4.wav", "animals/hoof-5.wav", "animals/hoof-6.wav"],
+  "horse.neigh": { "files": ["animals/neigh-1.wav", "animals/neigh-2.wav", "animals/snort-1.wav"], "gain": 0.7 },
   "wind": [
     "ambience/wind.mp3"
   ],

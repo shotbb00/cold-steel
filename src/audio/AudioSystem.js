@@ -30,7 +30,7 @@ const FAR = 110;           // metres beyond which shots switch to their '.far' v
 // How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
 // fades within a few hundred metres, a howitzer is heard across the whole map.
 const CARRY = {
-  rifle: 8, musket: 12, hoof: 5, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
+  rifle: 8, musket: 12, hoof: 5, 'horse.neigh': 14, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
   explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
 };
 const carry = (key) => CARRY[key.replace(/^(\d{4}\.\w+\.|nato\.|pact\.)/, '').replace(/\.(far|last)$/, '')] ?? 6;
@@ -88,7 +88,7 @@ export class AudioSystem {
     this.controlT = 0;
     this.channels = [];
     this.lastLoud = -Infinity;
-    this.nextAmbient = 0;
+    this.nextAmbient = 10; // (not in the first seconds: the recordings may still be loading)
     this.lastStep = 0;
     this.listenerPos = { x: 0, y: 0, z: 0 };
 
@@ -99,15 +99,19 @@ export class AudioSystem {
 
     const bus = game.bus;
     bus.on('key', ({ code }) => { if (keys.is(code, 'mute')) this.toggleMute(); });
-    bus.on('unit:death', ({ unit, stack }) => { if (stack.usesCover) this.play('death', unit.pos, { volume: 0.5 }); });
+    bus.on('unit:death', ({ unit, stack }) => {
+      if (stack.usesCover) this.play('death', unit.pos, { volume: 0.5 });
+      if ((stack.stats.cavalry || stack.stats.loose) && Math.random() < 0.5) this.play('horse.neigh', unit.pos, { volume: 0.7, rate: 0.92 + Math.random() * 0.16, throttle: 1.5 }); // 1806: a horse cries out as it or its rider falls
+    });
     bus.on('player:down', () => this.play('hurt', null, { volume: 1 }));
     bus.on('player:reloaded', () => this.play('ready', null, { volume: 0.3 }));
-    bus.on('point:captured', ({ owner }) => this.play(`${owner}.horn`, null, { volume: 0.5, throttle: 1 }));
+    const radio = () => epoch() !== '1806'; // (1806: no radios — ponytail: drum signals once there is a recording)
+    bus.on('point:captured', ({ owner }) => radio() && this.play(`${owner}.horn`, null, { volume: 0.5, throttle: 1 }));
     bus.on('selection', () => this.play('click', null, { volume: 0.4, throttle: 0.05 }));
-    bus.on('order', () => this.play('order', null, { volume: 0.5 }));
+    bus.on('order', () => radio() && this.play('order', null, { volume: 0.5 }));
     bus.on('view', () => this.play('whoosh', null, { volume: 0.35 }));
-    bus.on('wave', ({ faction, bought }) => { if (!bought || faction === game.playerFaction) this.play(`${faction}.horn`, null, { volume: 0.6 }); }); // the enemy's purchases are none of our business
-    bus.on('built', () => { if (!game.net?.isClient) this.play('order', null, { volume: 0.3 }); }); // a client gets the host's
+    bus.on('wave', ({ faction, bought }) => { if (radio() && (!bought || faction === game.playerFaction)) this.play(`${faction}.horn`, null, { volume: 0.6 }); }); // the enemy's purchases are none of our business
+    bus.on('built', () => { if (radio() && !game.net?.isClient) this.play('order', null, { volume: 0.3 }); }); // a client gets the host's
   }
 
   /** Create the context and mix bus now (suspended), and start building the sound bank. */
@@ -488,6 +492,7 @@ export class AudioSystem {
     const r = 20 + Math.random() * 45;
     const l = this.listenerPos;
     const crowCall = Math.random() < 0.35;
+    if (!this.samples?.samples[crowCall ? 'crow' : 'birds']) return; // only the recordings: the synthesised chirps sound fake
     this.play(crowCall ? 'crow' : 'birds', { x: l.x + Math.cos(a) * r, y: this.game.terrain.heightAt(l.x, l.z) + 4, z: l.z + Math.sin(a) * r },
       { volume: crowCall ? 0.55 : 0.35, throttle: 3 });
   }
