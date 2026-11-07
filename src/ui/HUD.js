@@ -59,7 +59,7 @@ export class HUD {
       if (code === 'F1') this.toggleKeys();
       else if (code === 'Escape' && !this.el.keyCard.hidden) { this.toggleKeys(false); game.commands.escConsumed = true; }
     });
-    bus.on('stack:destroyed', (s) => this.toast(`${s.name} ${s.faction === game.playerFaction ? 'lost' : 'destroyed'}`));
+    bus.on('stack:destroyed', (s) => { if (!s.stats.loose && !s.stats.dismounted) this.toast(`${s.name} ${s.faction === game.playerFaction ? 'lost' : 'destroyed'}`); }); // (1806: a loose horse or a man on foot is no unit lost)
     bus.on('selection', () => this.renderSelection());
     bus.on('game:end', (r) => this.showBanner(r));
 
