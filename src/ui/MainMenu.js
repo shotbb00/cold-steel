@@ -4,7 +4,7 @@
 // stats), Settings. Modes and maps come straight from their registries, so new ones show up
 // here by themselves. `onDeploy({ mode, map, side, net? })` starts the battle.
 import { settings } from '../core/Settings.js';
-import { EPOCHS, epoch, epochInfo } from '../data/epoch.js';
+import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, DEFAULT_MAP } from '../maps/index.js';
@@ -186,7 +186,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
-    [s.cavalry ? 'Riders' : s.gun ? 'Guns' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
+    [s.cavalry ? 'Riders' : s.gun ? 'Guns' : s.wagon ? 'Wagons' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
     ['Cost', `${unitCost(type, army)} CP`],
     ['Speed', `${Math.round(s.speed * 3.6)} km/h`],
     ['Sight', `${s.sight} m`],
@@ -197,6 +197,8 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
     rows.push(['Charge', `${Math.round(s.cavalry.chargeSpeed * 3.6)} km/h at the gallop`]);
   } else if (s.gun) {
     rows.push(['Team', `limbers and unlimbers in ${s.towed?.deploy ?? 0} s`]);
+  } else if (s.wagon) {
+    rows.push(['Hit points', s.hp]);
   } else if (vehicle) {
     rows.push(['Hit points', s.hp]);
     rows.push(['Armour', `${Math.round(s.armor * 100)} % front · ${Math.round(s.armor * 70)} % side · ${Math.round(s.armor * 35)} % rear`]);
@@ -209,6 +211,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   else if (armed && w.volley) rows.push(['Fire', `volleys, then ${w.reloadTime} s to reload`]); // (1806: the company fires together)
   else if (armed && s.gun) rows.push(['Fire', `${s.indirect ? 'shells over cover' : 'roundshot through the ranks'}, canister inside ${s.gun.canister} m — ${s.reloadTime} s to reload`]);
   else if (armed && s.cavalry) rows.push(['Fire', `${w.range > 50 ? 'carbines' : 'pistols'}, then ${w.reloadTime} s to reload — the sabre is the weapon`]);
+  else if (armed && w.magSize === 1 && w.reloadTime > 5) rows.push(['Fire', `single shots, ${w.reloadTime} s to reload`]); // (a rifle or a musket loaded by hand)
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
@@ -242,7 +245,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
   if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
-  if (armed && !s.cavalry && !s.formations && !s.gun) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
+  if (armed && year() >= 1900) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
 }
 

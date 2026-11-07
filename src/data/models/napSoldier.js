@@ -28,8 +28,7 @@ export const ARMIES_1806 = {
 };
 
 /** The smoothbore musket (Charleville / Potsdam), bayonet fixed (in the arms' frame). */
-function musket(bayonet = true) {
-  const to = 1.3;
+function musket(bayonet = true, to = 1.3) { // (the rifle: shorter, no bayonet fixed)
   return {
     parts: [
       loft([[0.2, 1.3, 0.2, 0.022, 0.036, 3], [0.2, 1.28, 0.02, 0.022, 0.05, 3], [0.2, 1.265, -0.12, 0.024, 0.066, 3.2], [0.2, 1.265, -0.135, 0.023, 0.062, 3]], { color: WOOD }, 8), // butt
@@ -82,12 +81,16 @@ export const raupenhelm = (plume) => [
 ];
 
 export function buildNapSoldier({ army = 'fr', kind = 'line', armed = true } = {}) {
-  const c = ARMIES_1806[army] ?? ARMIES_1806.fr;
-  const w = armed ? musket() : { parts: [], muzzle: { x: 0.2, y: 1.3, z: 0.4 } }; // (gunners: the rammer and the sponge, not a musket)
-  const plume = kind === 'grenadier' ? 0xb02424 : kind === 'light' ? 0x2a7a3a : null;
+  // the light troops and the riflemen of the German armies in green; the officers with a sash, no musket
+  const green = (kind === 'light' || kind === 'rifle') && army !== 'fr' ? { coat: kind === 'rifle' ? 0x26402c : 0x30553a, facing: kind === 'rifle' ? 0x161616 : 0xa82626, lapel: kind === 'rifle' ? 0x26402c : 0xa82626 } : {};
+  const c = { ...(ARMIES_1806[army] ?? ARMIES_1806.fr), ...green };
+  const officer = kind === 'officer';
+  const w = !armed || officer ? { parts: officer ? [P.box(0.012, 0.75, 0.03, { x: 0.2, y: 1.62, z: 0.12, rx: -0.35, color: 0xb8bab6 })] : [], muzzle: { x: 0.2, y: 1.3, z: 0.4 } } // (gunners: the rammer and the sponge; officers: the sword)
+    : kind === 'rifle' ? musket(false, 1.0) : musket();
+  const plume = kind === 'grenadier' ? 0xb02424 : kind === 'light' ? 0x2a7a3a : officer ? 0xf0f0f0 : kind === 'rifle' ? 0x161616 : null;
   const hat = army === 'by' ? raupenhelm(plume)
     : kind === 'grenadier' && army === 'fr' ? bearskin()
-      : kind === 'light' && army === 'fr' ? shako(0xd8c040)
+      : (kind === 'light' || kind === 'rifle') && army === 'fr' ? shako(kind === 'rifle' ? 0xb02424 : 0xd8c040)
         : bicorne(c, plume);
   const torso = [
     ...trunk({ upper: c.coat, lower: c.breeches, cut: 1.08 }),
@@ -108,6 +111,11 @@ export function buildNapSoldier({ army = 'fr', kind = 'line', armed = true } = {
     ...(army === 'pr' ? [loft([[0, 1.62, -0.11, 0.02, 0.02, 2], [0, 1.48, -0.13, 0.016, 0.016, 2]], { color: 0x3a2a1e }, 6)] : []), // the queue
     ...head(),
     ...hat,
+    ...(officer ? [loft([[0, 1.04, 0, 0.19, 0.13, 3], [0, 1.1, 0, 0.19, 0.13, 3]], { color: army === 'fr' ? 0xe6e2d6 : army === 'pr' ? 0x161616 : 0xd8b54a }, 12)] : []), // the officer's sash
+    ...(kind === 'pioneer' ? [ // the pioneer's axe on his back, the leather apron
+      P.box(0.03, 0.7, 0.03, { x: -0.08, y: 1.3, z: -0.27, rz: 0.4, color: 0x6a4428 }), P.box(0.16, 0.1, 0.02, { x: -0.23, y: 1.62, z: -0.27, rz: 0.4, color: 0x8c8e8c }),
+      P.box(0.3, 0.45, 0.012, { y: 0.88, z: 0.14, color: 0xc8b48a }),
+    ] : []),
   ];
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.facing }), ...w.parts];
   const thigh = merge([thighPart({ color: c.breeches })]);

@@ -142,7 +142,7 @@ export class ActionBar {
     const g = this.game;
     const sel = [...g.commands.selected].filter((s) => s.alive);
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
-    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')));
+    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && (a.cmd === 'build:wire' || a.cmd === 'build:mines'))); // (1806: no wire, no mines)
     // only touch the DOM when what's shown changed
     const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}`).join('|');
     if (!force && key === this.key) return;

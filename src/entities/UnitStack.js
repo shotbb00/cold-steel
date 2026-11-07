@@ -153,7 +153,7 @@ export class UnitStack {
       this.units.push(u);
     }
     this.aliveCount = count;
-    if (this.stats.formations) this.setForm('line', true); // (1806: a company arrives in line)
+    if (this.stats.formations) this.setForm(type.light ? 'skirmish' : 'line', true); // (1806: a company arrives in line; the light infantry in skirmish order)
     this.hadOfficer = type.kind === 'infantry' && count >= 8 && !type.stats.structure; // a rifle platoon has a leader
     if (this.hadOfficer) this.units[0].officer = true;
     this.led = false;

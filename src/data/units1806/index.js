@@ -11,6 +11,7 @@ import { TYPES_1985 } from '../units/index.js';
 import { buildNapSoldier } from '../models/napSoldier.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
 import { buildFieldGun } from '../models/napGuns.js';
+import { buildWagon } from '../models/napWagons.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -188,10 +189,131 @@ const guard = {
   },
 };
 
+// ------------------------------------------------------------------ the rest of the foot
+const foot = (id, kind, o) => ({
+  ...T[id], ...o, id, kind: 'infantry', category: 'infantry', weaponSound: 'musket',
+  stats: { ...T.rifles.stats, ...MUSKET, ...o.stats },
+  models: men({ kind }),
+});
+const mgTeam = foot('mgTeam', 'light', {
+  name: 'Light Infantry', shortName: 'Light', cost: 140, light: true,   // (light: they skirmish by default, ai/FrontlineDirector.drill)
+  formation: { count: 20, columns: 10, spacing: 0.95 },
+  specialist: undefined, specialistModels: undefined,
+  stats: { speed: 1.8, spread: 0.026, sight: 260, formations: true, bayonet: 100 },
+  variants: {
+    nato: { name: 'Voltigeurs', weapon: 'Light musket, bayonet', text: 'The French light infantry: a cloud of skirmishers ahead of the columns, shooting the enemy\'s officers and gunners before the line comes on.' },
+    by: { name: 'Leichte Infanterie', weapon: 'Musket, bayonet', text: 'Bavaria\'s light battalions in green: skirmishers in front of the line.' },
+    pact: { name: 'Füsiliere', weapon: 'Musket, bayonet', text: 'The Prussian fusiliers in green: the army\'s light infantry, trained to fight in open order.' },
+    sx: { name: 'Schützen', weapon: 'Musket, bayonet', text: 'Saxon light troops in green.' },
+  },
+});
+const atTeam = foot('atTeam', 'grenadier', {
+  name: 'Grenadiers', shortName: 'Grenadiers', cost: 190,
+  formation: { count: 24, columns: 12, spacing: 0.95 },
+  specialist: undefined, specialistModels: undefined,
+  stats: { hp: 110, breakMorale: 0.15, formations: true, bayonet: 135, lightAT: 0 },
+  variants: {
+    nato: { name: 'Grenadiers', weapon: 'Musket, bayonet, sabre', text: 'The tallest and steadiest men of every battalion, in their bearskins: first into the assault, last to give way.' },
+    by: { name: 'Grenadiere', weapon: 'Musket, bayonet', text: 'Bavarian grenadiers, the elite of their regiments.' },
+    pact: { name: 'Grenadiere', weapon: 'Musket, bayonet', text: 'Prussian grenadiers: picked men, massed for the decisive attack.' },
+    sx: { name: 'Grenadiere', weapon: 'Musket, bayonet', text: 'The Saxon grenadiers who left the field at Jena in square.' },
+  },
+});
+const sniper = foot('sniper', 'rifle', {
+  name: 'Riflemen', shortName: 'Riflemen', cost: 180,
+  formation: { count: 8, columns: 4, spacing: 3 },
+  specialist: undefined, specialistModels: undefined,
+  stats: { drill: false, volley: false, stance: 'crouch', leash: 10, formations: false, marksman: true, scope: 0.3, stealth: 0.75,
+    sight: 260, range: 230, aggroRange: 240, preferredRange: 190, damage: 130, spread: 0.008, reloadTime: 35, aimTime: 1.5, boltSpeed: 330 },
+  variants: {
+    nato: { name: 'Carabiniers', weapon: 'Rifled carbine', text: 'The light infantry\'s picked marksmen: few rifles, slow to load, deadly at range — they go for the officers.' },
+    by: { name: 'Scharfschützen', weapon: 'Rifle', text: 'Bavarian marksmen with rifles.' },
+    pact: { name: 'Feldjäger', weapon: 'Jäger rifle', text: 'Prussian foresters and huntsmen in green with rifled guns: they pick off officers and gunners from cover.' },
+    sx: { name: 'Feldjäger', weapon: 'Jäger rifle', text: 'The Saxon Jäger company: huntsmen with rifles.' },
+  },
+});
+const engineers = foot('engineers', 'pioneer', {
+  name: 'Pioneers', shortName: 'Pioneers', cost: 150,
+  formation: { count: 12, columns: 6, spacing: 1.4 },
+  specialist: undefined, specialistModels: undefined,
+  stats: { ...T.engineers.stats, ...MUSKET, drill: false, volley: false, stance: 'crouch', leash: 8, formations: false, engineer: true, range: 110 },
+  variants: {
+    nato: { name: 'Sapeurs', weapon: 'Musket, axe', text: 'The sappers with their axes and aprons: earthworks for the guns, breastworks for the foot, a way through hedges and walls — and bridges to blow.' },
+    by: { name: 'Pioniere', weapon: 'Musket, axe', text: 'Bavarian pioneers: earthworks and bridges.' },
+    pact: { name: 'Pioniere', weapon: 'Musket, axe', text: 'Prussian pioneers: field works and demolitions.' },
+    sx: { name: 'Pioniere', weapon: 'Musket, axe', text: 'Saxon pioneers.' },
+  },
+});
+const observers = foot('observers', 'officer', {
+  name: 'Artillery Officers', shortName: 'Officers', cost: 120,
+  formation: { count: 2, columns: 2, spacing: 3 },
+  specialist: undefined, specialistModels: undefined,
+  stats: { ...T.observers.stats, drill: false, volley: false, stance: 'crouch', leash: 6, formations: false, sight: 480, range: 1, damage: 0 },
+  variants: {
+    nato: { name: 'Officiers d\'artillerie', weapon: 'Telescope, sword', text: 'Gunner officers with telescopes on a height: every gun and howitzer of yours lands tight on what they can see.' },
+    by: { name: 'Artillerieoffiziere', weapon: 'Telescope, sword', text: 'Artillery officers with their telescopes.' },
+    pact: { name: 'Artillerieoffiziere', weapon: 'Telescope, sword', text: 'Artillery officers with their telescopes.' },
+    sx: { name: 'Artillerieoffiziere', weapon: 'Telescope, sword', text: 'Artillery officers with their telescopes.' },
+  },
+});
+
+// ------------------------------------------------------------------ the wagons
+// kind 'wagon' (render/RigRenderer.js, models/napWagons.js): a pair of horses and a driver, no weapon
+const wagons = (kind) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildWagon({ army, kind })]));
+const WAGON = {
+  armor: 0, hp: 220, speed: 2.8, turnRate: 1, turretRate: 1, radius: 1.6, height: 2.4, eyeHeight: 2.2, aimHeight: 1.2, sight: 150, fov: 3,
+  range: 1, damage: 0, fireCooldown: 1, magSize: 1, reloadTime: 1, vsArmor: 1, weapon: undefined, nightSight: undefined, wagon: true, smoke: undefined,
+};
+const wagon = (id, kind, o) => ({
+  ...T[id], ...o, id, kind: 'wagon', category: 'support', engine: undefined, weaponSound: undefined,
+  formation: { count: 1, columns: 1, spacing: 10 },
+  stats: { ...T[id].stats, ...WAGON, ...o.stats },
+  models: wagons(kind),
+});
+const jammer = wagon('jammer', 'ammo', {
+  name: 'Ammunition Wagon', shortName: 'Ammunition', cost: 120,
+  stats: { jammer: undefined, supply: { deploy: 4, radius: 60, restock: 0.25 } },
+  variants: {
+    nato: { name: 'Caisson', weapon: 'Cartridges, men', text: 'The ammunition wagon: companies within 60 m take in new men (Refill) and refill their pouches.' },
+    by: { name: 'Munitionswagen', weapon: 'Cartridges', text: 'Companies within 60 m refill.' },
+    pact: { name: 'Munitionswagen', weapon: 'Cartridges', text: 'Companies within 60 m refill.' },
+    sx: { name: 'Munitionswagen', weapon: 'Cartridges', text: 'Companies within 60 m refill.' },
+  },
+});
+const ambulance = wagon('ambulance', 'ambulance', {
+  name: 'Ambulance', shortName: 'Ambulance', cost: 100,
+  variants: {
+    nato: { name: 'Ambulance volante', weapon: 'Surgeons, litters', text: 'Larrey\'s "flying ambulance": light wagons that fetch the wounded from the field under fire. Wounded men near it are patched up and go back to the line.' },
+    by: { name: 'Feldspitalwagen', weapon: 'Surgeons', text: 'The field hospital wagon: wounded men near it go back to the line.' },
+    pact: { name: 'Feldlazarettwagen', weapon: 'Surgeons', text: 'The field hospital wagon: wounded men near it go back to the line.' },
+    sx: { name: 'Feldspitalwagen', weapon: 'Surgeons', text: 'The field hospital wagon: wounded men near it go back to the line.' },
+  },
+});
+const commandPost = wagon('commandPost', 'hq', {
+  name: 'Headquarters', shortName: 'HQ', cost: 160,
+  variants: {
+    nato: { name: 'État-major', weapon: 'Aides, couriers', text: 'The marshal\'s staff: set up behind the front (the tent goes up), and your reinforcements come forward to it; troops near it hold their nerve.' },
+    by: { name: 'Divisionsstab', weapon: 'Aides, couriers', text: 'The division\'s staff: reinforcements come forward to it.' },
+    pact: { name: 'Generalstab', weapon: 'Aides, couriers', text: 'The general\'s staff: reinforcements come forward to it.' },
+    sx: { name: 'Generalstab', weapon: 'Aides, couriers', text: 'The general\'s staff: reinforcements come forward to it.' },
+  },
+});
+const bridgeLayer = wagon('bridgeLayer', 'pontoon', {
+  name: 'Pontoon Train', shortName: 'Pontoons', cost: 140,
+  variants: {
+    nato: { name: 'Pontonniers', weapon: 'Pontoon bridge', text: 'The pontoon wagons: a bridge of boats over the river where none stood.' },
+    by: { name: 'Brückentrain', weapon: 'Pontoon bridge', text: 'A bridge of boats over the river.' },
+    pact: { name: 'Pontontrain', weapon: 'Pontoon bridge', text: 'A bridge of boats over the river.' },
+    sx: { name: 'Brückentrain', weapon: 'Pontoon bridge', text: 'A bridge of boats over the river.' },
+  },
+});
+
 export const TYPES_1806 = {
   rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
+  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)
 };
 
-/** Everything not built yet fights as line infantry (ponytail: replaced as the roster grows). */
-export const ALIAS_1806 = Object.fromEntries(Object.keys(T).filter((id) => !TYPES_1806[id]).map((id) => [id, 'rifles']));
+/** 1806 has no such troops: what a map or mode that asks for one gets instead (the AI never buys these). */
+const STAND_IN = { scouts: 'reconVehicle', heavyTank: 'tank', tankDestroyer: 'artillery', cev: 'spMortar', airRadar: 'observers', cbRadar: 'observers', mineClear: 'engineers', recovery: 'jammer', crew: 'dismounted' };
+export const ALIAS_1806 = Object.fromEntries(Object.keys(T).filter((id) => !TYPES_1806[id]).map((id) => [id, STAND_IN[id] ?? 'rifles']));

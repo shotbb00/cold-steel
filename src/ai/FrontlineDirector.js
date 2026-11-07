@@ -44,7 +44,7 @@
 // points), targetable(point) (which points it may go for), firstAssault (s). Locked points
 // (point.locked) are never targeted.
 import { AIState } from './StackAI.js';
-import { getUnitType } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { enemyOf } from '../data/factions.js';
 import { unitCost, doctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
@@ -201,7 +201,7 @@ export class FrontlineDirector {
     if (mine.length >= this.state.maxStacks) return;
     const army = this.game.armyOf(this.faction);
     const cp = this.state.cp[this.faction];
-    const allowed = (id) => !this.state.allow || this.state.allow(getUnitType(id));
+    const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(getUnitType(id))); // (not a war's stand-in: 1806 has no anti-aircraft)
     const capped = (id) => CAPS[id] !== undefined && mine.filter((s) => s.type.id === id).length >= CAPS[id];
     const squads = mine.filter((s) => ASSAULT.has(s.type.id)).length;
     const rifles = () => { if (cp >= unitCost(getUnitType('rifles'), army)) this.state.buy(this.faction, 'rifles'); };
