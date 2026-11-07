@@ -109,6 +109,10 @@ export function keyName(code) {
 
 /** Name of the key bound to an action, for help texts. */
 export const keyOf = (id) => keyName(keys.code(id));
+/** A phone or tablet (no keyboard to speak of): the touch controls are on (ui/TouchControls.js), or the screen has no mouse. */
+export const touchScreen = () => document.body.classList.contains('touch') || !!globalThis.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+/** The key for `id` in a text — on a touch screen `button` instead (the order's button), or nothing. */
+export const keyHint = (id, button = '') => (touchScreen() ? button : keyOf(id));
 
 /**
  * Key hints in the page: any element with data-key="action" shows that action's key. Filled at

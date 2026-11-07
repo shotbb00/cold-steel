@@ -66,7 +66,7 @@ import { RangeIndicators } from '../ui/RangeIndicators.js';
 import { NetHost } from '../net/NetHost.js';
 import { NetClient } from '../net/NetClient.js';
 import { BabylonView } from '../render/babylon/BabylonView.js';
-import { keys } from './Keys.js';
+import { keys, touchScreen, keyOf } from './Keys.js';
 import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
@@ -508,7 +508,7 @@ export class GameEngine {
     if (this.net) return this.bus.emit('toast', 'Direct control is single player only — multiplayer is fought from the command view');
     if (this.player.active) return this.player.release();
     const stack = [...this.commands.selected].find((s) => s.alive);
-    if (!stack) return this.bus.emit('toast', 'Select one of your stacks, then press Tab to take control');
+    if (!stack) return this.bus.emit('toast', touchScreen() ? 'Select one of your stacks, then tap Control' : `Select one of your stacks, then press ${keyOf('toggleView')} to take control`);
     this.takeControl(stack);
   }
 

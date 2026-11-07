@@ -837,6 +837,7 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 #deploy-bar .dp-text { color: var(--muted); font-size: 13.5px; flex: 1 1 260px; }
 #deploy-bar .dp-go { padding: 8px 18px; font-size: 15px; }
 @media (max-width: 700px) { #deploy-bar { top: 52px; padding: 8px 10px; gap: 8px; } #deploy-bar .dp-text { font-size: 12.5px; } }
+@media (max-height: 520px) { #deploy-bar { left: 8px; transform: none; top: 52px; max-width: calc(100vw - min(300px, 46vw) - 32px); padding: 6px 10px; gap: 8px; } #deploy-bar .dp-text { font-size: 12px; } } /* (landscape phone: left of the orders panel, not over it) */
 
 /* the reinforcement window's road picker (src/ui/ReinforceWindow.js) */
 .rw-entry, .rw-kit { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 12px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }

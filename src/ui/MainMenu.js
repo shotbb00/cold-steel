@@ -21,7 +21,7 @@ import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX, CODEX45, CODEX1806 } from '../data/codex.js';
-import { keyOf } from '../core/Keys.js';
+import { keyOf, touchScreen, keyHint } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
 import { logo } from './Logo.js';
 
@@ -32,7 +32,7 @@ const TIPS = { 1985: [
   'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
   'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
   'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
-  'At night, flares light the ground and thermal sights see through the dark (N in direct control).',
+  'At night, flares light the ground — and in direct control, thermal sights see through the dark.',
   'Engineers clear wire and mines. The enemy uses them too.',
   'Wounded men in a campaign come back after the next battle; the dead do not.',
 ], 1945: [
@@ -186,7 +186,7 @@ function aircraftRows(kind, faction, army) {
   const p = KINDS[kind];
   const a = airType(kind, faction, army);
   const rows = [
-    ['Support power', `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon' }[kind]) ?? p.key}`],
+    ['Support power', touchScreen() ? p.label : `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon' }[kind]) ?? p.key}`],
     ['Cost', `${p.cost} CP · ready again after ${p.cooldown} s`],
     ['Speed', `${Math.round(p.attackSpeed * 3.6)}–${Math.round(p.cruiseSpeed * 3.6)} km/h`],
     ['Toughness', `${a.hp} hits from ground fire; missiles do several at once`],
@@ -234,7 +234,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   else if (armed && s.cavalry) rows.push(['Fire', `${w.range > 50 ? 'carbines' : 'pistols'}, then ${w.reloadTime} s to reload — the sabre is the weapon`]);
   else if (armed && w.magSize === 1 && w.reloadTime > 5) rows.push(['Fire', `single shots, ${w.reloadTime} s to reload`]); // (a rifle or a musket loaded by hand)
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
-  if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
+  if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyHint('engineer', 'Lay bridge')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
   if (aa) {
     const reach = aa.optical ? `the gunner's eyes: ${Math.round(aa.range * aa.optical)} m (${aa.range} m under an air search radar)` : `out to ${aa.range} m`;
@@ -252,9 +252,9 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.cbRadar) rows.push(['Radar', `locates guns firing within ${s.cbRadar.range} m in a ${Math.round(s.cbRadar.arc * 57.3)}° sector ahead (set up ${s.cbRadar.deploy} s)`]);
   if (s.jammer) rows.push(['Jamming', `enemy support calls, observers and radars within ${s.jammer.radius} m (set up ${s.jammer.deploy} s); seen while it jams`]);
   if (s.commandPost) rows.push(['Command post', `reinforcements arrive here once set up (${s.commandPost.deploy} s); steadies stacks within ${s.commandPost.lead} m`]);
-  if (s.dozer) rows.push(['Blade', `digs vehicle positions (${keyOf('trench')}): hull down behind the berm`]);
+  if (s.dozer) rows.push(['Blade', `digs vehicle positions (${keyHint('trench', 'Trench')}): hull down behind the berm`]);
   if (s.minePlough) rows.push(['Plough', 'lifts mines as it drives through a field and leaves a safe lane']);
-  if (s.lineCharge) rows.push(['Line charge', `${s.lineCharge.count}, blow a lane through mines and wire, 25–${s.lineCharge.range} m (${keyOf('engineer')})`]);
+  if (s.lineCharge) rows.push(['Line charge', `${s.lineCharge.count}, blow a lane through mines and wire, 25–${s.lineCharge.range} m (${keyHint('engineer', 'Line charge')})`]);
   if (sp?.marksman) rows.push(['Marksman', 'picks officers first, then crews and observers; a shot gives little away']);
   if (s.repair) rows.push(['Repairs', `vehicles within ${s.repair.range} m, mends blown tracks`]);
   if (s.heal) rows.push(['Heals', `wounded infantry within ${s.heal.range} m`]);
@@ -262,9 +262,9 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.atgm) rows.push(['Missile', `${s.atgm.count} per vehicle, out to ${s.atgm.range} m`]);
   if (s.stealth) rows.push(['Stealth', `spotted at ${Math.round(s.stealth * 100)} % of the usual range; holds fire while hidden`]);
   if (s.binoculars) rows.push(['Binoculars', `sight ×1.25 when standing still`]);
-  if (s.carries) rows.push(['Carries', `${s.carries.count}-man rifle squad (${keyOf('unload')} unloads)`]);
-  if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
-  if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
+  if (s.carries) rows.push(['Carries', `${s.carries.count}-man rifle squad (${keyHint('unload', 'Unload')} unloads)`]);
+  if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyHint('smoke', 'the Smoke order')})`]);
+  if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyHint('smoke', 'the Smoke order')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
   if (armed && year() >= 1900) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
@@ -626,7 +626,7 @@ export class MainMenu {
     const own = { 1945: CODEX45, 1806: CODEX1806 }[epoch()]?.[id];
     const c = own ? { ...own, ...own.armies?.[army] } : CODEX[id]; // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
-    const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyOf(a));
+    const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyHint(a, 'its order'));
     const box = el('div', 'codex');
     for (const [label, body] of [['How to use it', c.use], ['Strong against', c.strong], ['Weak against', c.weak], ['When the enemy has it', c.counter]]) {
       if (!body) continue;

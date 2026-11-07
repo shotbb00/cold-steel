@@ -31,7 +31,7 @@ export default {
   multiplayer: true,
   budget: true,    // the menu offers the battle size (data/rules.js budget)
   deploys: true,   // opens in the deployment phase (core/GameEngine.js)
-  deployText: 'Build your army: Reinforcements to buy, Promote for ranks, Withdraw to sell back. Place it behind the gold line, then Start battle.',
+  deployText: 'Build your army with Reinforcements. Select a stack: its orders hold Promote (a rank for CP) and Withdraw (sold back). Place it behind the gold line, then Start battle.',
 
   setup(game) {
     const me = game.playerFaction;
