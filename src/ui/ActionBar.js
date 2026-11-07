@@ -8,6 +8,8 @@
 import { POWERS_1806 } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
+import { promoteCost } from '../modes/pitched.js';
+import { RANKS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
@@ -36,6 +38,7 @@ const ACTIONS = [
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
   { cmd: 'refill', label: 'Refill', icon: 'reinforce', key: 'refill', cost: (g) => [...g.commands.selected].reduce((a, s) => a + (s.missing && s.supplied ? refillCost(s) : 0), 0), tip: (g) => ([...g.commands.selected].some((s) => s.missing && !s.supplied) ? 'New men for the missing: only near the base or a set-up command post' : 'New men fill the squad\'s empty places'), when: (sel, g) => !!g.modeState?.cp && sel.some((s) => s.missing > 0) },
+  { cmd: 'promote', label: 'Promote', icon: 'reinforce', key: 'promote', tip: 'A pitched battle\'s setup: one rank up for its price (30 % of the stack\'s cost)', when: (sel, g) => !!g.modeState?.setup && g.mode?.budget && sel.some((s) => s.rank + 1 < RANKS.length), cost: (g) => [...g.commands.selected].reduce((a, s) => a + (promoteCost(g, s) ?? 0), 0) },
   { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
   ...['line', 'column', 'square', 'skirmish'].map((f) => ({
     cmd: `form:${f}`, label: f[0].toUpperCase() + f.slice(1), icon: `form${f[0].toUpperCase()}${f.slice(1)}`, key: 'formation',

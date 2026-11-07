@@ -489,13 +489,13 @@ export class EffectsSystem {
 
   /** A volley's powder smoke (1806): a loose grey-white bank along the front of the line, drifting off on the wind. */
   powderBank(x, y, z, yaw, width) {
-    const n = Math.max(4, Math.round(width / 1.6));
+    const n = Math.max(1, Math.round(width / 1.6)); // (a man's own share of the bank: one or two puffs)
     const ax = Math.cos(yaw), az = -Math.sin(yaw), fx = Math.sin(yaw), fz = Math.cos(yaw);
     for (let i = 0; i < n; i++) {
-      const s = (i / (n - 1) - 0.5) * width + rnd(-0.6, 0.6), ahead = rnd(1.5, 4.5);
+      const s = (n > 1 ? (i / (n - 1) - 0.5) * width : 0) + rnd(-0.6, 0.6), ahead = rnd(1.5, 4.5);
       this.smoke.spawn(x + ax * s + fx * ahead, y + rnd(1, 1.8), z + az * s + fz * ahead, {
         vx: fx * rnd(0.3, 0.9), vy: rnd(0.1, 0.35), vz: fz * rnd(0.3, 0.9), size: rnd(1.6, 2.6), grow: 1.3,
-        life: rnd(6, 9), alpha: 0.34, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
+        life: rnd(6, 9), alpha: 0.26, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
       });
     }
   }

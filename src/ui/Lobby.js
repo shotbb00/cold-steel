@@ -247,7 +247,7 @@ export class Lobby {
   /** The same battle rules as single player (the economy rows for point-capture modes). */
   renderRules() {
     if (!this.rulesBox) return;
-    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.sendLobby()));
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.sendLobby(), !!MODES[this.choice.mode]?.budget));
     // versus: nobody plays the AI, so its difficulty doesn't count
     if (!this.choice.coop) this.rulesBox.querySelector('.cond-row')?.remove();
   }

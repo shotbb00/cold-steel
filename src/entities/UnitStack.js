@@ -945,7 +945,8 @@ export class UnitStack {
     const c = this.charging;
     const t = c.target;
     // horses won't go into a square: they swerve off it, and the riders lose heart
-    if (this.stats.cavalry && t.stats.square && Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z) < 16) {
+    const square = t.stats.square && this.world.time >= (t.formedAt ?? 0); // (a square still forming is caught half-made: no refusal, the full shock)
+    if (this.stats.cavalry && square && Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z) < 16) {
       this.morale = Math.max(0, this.morale - 0.15);
       const a = Math.atan2(this.centroid.x - t.centroid.x, this.centroid.z - t.centroid.z);
       this.endCharge();
@@ -959,8 +960,8 @@ export class UnitStack {
     if (!c.shocked && d < 30) {
       // the bayonets coming on: the target's nerve takes the blow (a square shrugs off foot)
       c.shocked = true;
-      const steady = t.stats.square && armyDoctrine(t.army, 'squares'); // (Saxony's squares don't flinch)
-      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (steady ? 0 : t.stats.square ? 0.4 : 1));
+      const steady = square && armyDoctrine(t.army, 'squares'); // (Saxony's squares don't flinch)
+      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (steady ? 0 : square ? 0.4 : 1));
       this.bark(this.units.find((u) => u.alive), 'flank', 1);
     }
   }
@@ -1143,10 +1144,9 @@ export class UnitStack {
     if (waiting < Math.max(1, loaded.length * 0.6) && this.world.time - this.volleyFirst < 3) return false;
     for (const m of this.units) if (m.volleyWait) { m.volleyWait = false; m.volleyGo = true; m.burstTimer = Math.random() * 0.25; }
     this.volleyFirst = null;
-    const c = this.centroid, f = this.facing ?? 0;
-    const front = this.units.filter((m) => m.alive);
-    const wide = front.length ? Math.max(...front.map((m) => Math.hypot(m.pos.x - c.x, m.pos.z - c.z))) : 4;
-    this.services.effects?.powderBank(c.x, this.world.terrain.heightAt(c.x, c.z), c.z, f, Math.max(6, wide * 2)); // (a haze: it doesn't blind like a screen)
+    // the powder smoke in front of each man who fires — where the muskets are (one bank across the
+    // company's spread drew a long line over empty ground when the men were strung out)
+    for (const m of this.units) if (m.volleyGo && Math.random() < 0.5) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (every other man: two lines' smoke shouldn't wall off the fight) // (a haze: it doesn't blind like a screen)
     return false;
   }
 

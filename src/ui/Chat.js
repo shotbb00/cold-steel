@@ -9,7 +9,7 @@
 //            A pulsing ring on the ground and on the minimap for PING_LIFE seconds, and a chat
 //            line. ChatBox.attach(link, names) also gives the lobby the same chat (no pings).
 import * as THREE from 'three';
-import { keys } from '../core/Keys.js';
+import { keys, touchScreen } from '../core/Keys.js';
 
 const LINES = 8;
 const FADE_AFTER = 14;     // seconds a message stays visible while the line is closed
@@ -108,7 +108,7 @@ export class BattleChat {
     if (!net?.link) return;
     const names = game.netNames ?? {};
     this.box = new ChatBox(document.getElementById('hud'), { link: net.link, me: names.me ?? 'You', peer: names.peer ?? 'Your friend' });
-    this.box.add('', game.coop ? 'Chat with Enter · Alt + click marks a spot for your teammate, Alt + right-click marks danger' : 'Chat with Enter', 'system');
+    if (!touchScreen()) this.box.add('', game.coop ? 'Chat with Enter · Alt + click marks a spot for your teammate, Alt + right-click marks danger' : 'Chat with Enter', 'system'); // (keys: not on a phone)
     game.bus.on('key', ({ code }) => {
       if (game.ended || this.box.isOpen) return;
       if (keys.is(code, 'chat')) this.box.open();

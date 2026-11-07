@@ -66,7 +66,7 @@ import { RangeIndicators } from '../ui/RangeIndicators.js';
 import { NetHost } from '../net/NetHost.js';
 import { NetClient } from '../net/NetClient.js';
 import { BabylonView } from '../render/babylon/BabylonView.js';
-import { keys } from './Keys.js';
+import { keys, touchScreen, keyOf } from './Keys.js';
 import { rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { BattleChat } from '../ui/Chat.js';
 import { WeatherChange } from '../systems/WeatherChange.js';
@@ -211,7 +211,7 @@ export class GameEngine {
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
-    this.deploys = !!campaign && mode.id !== 'bootcamp';
+    this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
@@ -508,7 +508,7 @@ export class GameEngine {
     if (this.net) return this.bus.emit('toast', 'Direct control is single player only — multiplayer is fought from the command view');
     if (this.player.active) return this.player.release();
     const stack = [...this.commands.selected].find((s) => s.alive);
-    if (!stack) return this.bus.emit('toast', 'Select one of your stacks, then press Tab to take control');
+    if (!stack) return this.bus.emit('toast', touchScreen() ? 'Select one of your stacks, then tap Control' : `Select one of your stacks, then press ${keyOf('toggleView')} to take control`);
     this.takeControl(stack);
   }
 

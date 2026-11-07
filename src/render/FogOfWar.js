@@ -135,7 +135,7 @@ export class FogOfWar {
     const cond = this.game.conditions;
     const flares = this.game.flares;
     const base = (st.sight ?? 100) * (st.binoculars && !u.moving ? 1.25 : 1);
-    const range = base * (cond ? cond.sightFor(st, u.faction, false) : 1) + TARGET_H * 4;
+    const range = (base * (cond ? cond.sightFor(st, u.faction, false) : 1) + TARGET_H * 4) * 1.1; // (a little past the spotting range, VisibilitySystem.isSeen: what your men spot is drawn, not left in the dark)
     // under a flare's light the night range doesn't apply
     const litRange = flares?.list.length ? base * cond.sightFor(st, u.faction, true) + TARGET_H * 4 : range;
     const far = Math.max(range, litRange);
