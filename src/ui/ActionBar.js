@@ -36,6 +36,13 @@ const ACTIONS = [
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
   { cmd: 'refill', label: 'Refill', icon: 'reinforce', key: 'refill', cost: (g) => [...g.commands.selected].reduce((a, s) => a + (s.missing && s.supplied ? refillCost(s) : 0), 0), tip: (g) => ([...g.commands.selected].some((s) => s.missing && !s.supplied) ? 'New men for the missing: only near the base or a set-up command post' : 'New men fill the squad\'s empty places'), when: (sel, g) => !!g.modeState?.cp && sel.some((s) => s.missing > 0) },
   { cmd: 'withdraw', label: 'Withdraw', icon: 'withdraw', key: 'withdraw', tip: 'Back to base and off the field: its slot is free at once, half its price comes back (less for damage)', when: (sel, g) => !!g.modeState?.cp && sel.some((s) => !s.stats.structure && s.type.id !== 'crew') },
+  ...['line', 'column', 'square', 'skirmish'].map((f) => ({
+    cmd: `form:${f}`, label: f[0].toUpperCase() + f.slice(1), icon: `form${f[0].toUpperCase()}${f.slice(1)}`, key: 'formation',
+    tip: { line: 'Two ranks: every musket fires — the most firepower', column: 'Six files deep: faster on the march and for the charge; only the front rank fires', square: 'Facing out on all sides: cavalry can\'t break in — but guns tear it apart', skirmish: 'A loose screen in cover, each man firing when ready' }[f],
+    when: (sel) => sel.some((s) => s.stats.formations),
+    on: (sel) => sel.some((s) => s.form === f),
+  })),
+  { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Bayonets: the company runs at the nearest enemy it can see and fights hand to hand', when: (sel) => sel.some((s) => s.stats.formations) },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 
@@ -63,7 +70,8 @@ export class ActionBar {
     this.timer = 0;
     this.buildSupport();
     game.bus.on('selection', () => this.render(true));
-    game.bus.on('order', () => setTimeout(() => this.render(true), 0)); // a job placed: its Cancel button at once
+    game.bus.on('order', () => setTimeout(() => this.render(true), 0));
+    this.formTick = setInterval(() => { if (game.commands?.selected?.size) this.render(); }, 500); // (a formation finishing: its button lights) // a job placed: its Cancel button at once
   }
 
   buildSupport() {
@@ -120,16 +128,17 @@ export class ActionBar {
   render(force = false) {
     const g = this.game;
     const sel = [...g.commands.selected].filter((s) => s.alive);
-    const shown = ACTIONS.filter((a) => a.when(sel, g));
+    const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
+    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')));
     // only touch the DOM when what's shown changed
-    const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}`).join('|');
+    const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}`).join('|');
     if (!force && key === this.key) return;
     this.key = key;
     this.el.replaceChildren(...shown.map((a) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;
-      b.className = 'act';
+      b.className = a.on?.(sel) ? 'act on' : 'act';
       b.dataset.cmd = a.cmd;
       const label = value(a.label, g);
       const cost = value(a.cost, g);

@@ -18,6 +18,7 @@
 //   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
 import { unitCost } from '../data/doctrine.js';
+import { enemyOf } from '../data/factions.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -135,6 +136,18 @@ export class Orders {
         const b = g.buildings.list[cmd.b];
         if (!b || b.collapsed) return null;
         for (const s of mine(cmd.s)) if (s.usesCover) g.buildings.garrison(s, b, Number.isFinite(cmd.face) ? cmd.face : null);
+        return null;
+      }
+      case 'form': // 1806: line / column / square / skirmish (data/formations.js)
+        for (const s of mine(cmd.s)) s.setForm(cmd.f);
+        return null;
+      case 'charge': { // 1806: the bayonet charge on a stack (cmd.at), or the nearest enemy in sight
+        for (const s of mine(cmd.s)) {
+          const target = (cmd.at != null && g.world.stackById(cmd.at)) || g.world.stacksOf(enemyOf(faction))
+            .filter((e) => e.alive && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < 160)
+            .sort((a, b) => Math.hypot(a.centroid.x - s.centroid.x, a.centroid.z - s.centroid.z) - Math.hypot(b.centroid.x - s.centroid.x, b.centroid.z - s.centroid.z))[0];
+          s.startCharge(target);
+        }
         return null;
       }
       case 'leave':

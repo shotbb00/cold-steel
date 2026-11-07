@@ -35,6 +35,8 @@ export const ACTIONS = [
   { id: 'lift', label: 'Air assault', ctx: 'command', key: 'KeyP' },
   { id: 'cap', label: 'Fighter patrol', ctx: 'command', key: 'KeyI' },
   { id: 'recon', label: 'Recon flight', ctx: 'command', key: 'KeyO' },
+  { id: 'formation', label: 'Formation (1806 foot: line → column → square → skirmish)', ctx: 'command', key: 'KeyF' },
+  { id: 'charge', label: 'Bayonet charge (1806 foot)', ctx: 'command', key: 'KeyY' },
   { id: 'barrage', label: 'Barrage (Soviet preparatory barrage / NVA Feuerwalze)', ctx: 'command', key: 'KeyZ' },
   { id: 'turnLeft', label: 'Turn left (placing, air runs)', ctx: 'command', key: 'KeyQ', targeting: true },
   { id: 'turnRight', label: 'Turn right (placing, air runs)', ctx: 'command', key: 'KeyE', targeting: true },

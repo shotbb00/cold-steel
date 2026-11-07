@@ -7,6 +7,7 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
@@ -160,7 +161,10 @@ export class CommandSystem {
       return;
     }
     if (this.game.deployment?.on && (keys.is(code, 'startBattle') || code === 'Enter')) return this.game.deployment.start(); // systems/Deployment.js
-    if (keys.is(code, 'hold')) this.runCommand('hold');
+    const drilled = [...this.selected].some((s) => s.alive && s.stats.formations); // (1806 foot: F and Y are theirs)
+    if (drilled && keys.is(code, 'formation')) this.runCommand('form:next');
+    else if (drilled && keys.is(code, 'charge')) this.runCommand('charge');
+    else if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
@@ -205,6 +209,19 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'hold', s: ids(this.selected) });
       for (const s of this.selected) this.addMarker(s.centroid, 'hold');
       this.game.bus.emit('order', { kind: 'hold' });
+    } else if (cmd.startsWith('form:') || cmd === 'charge') { // 1806 foot: formation, bayonet charge
+      const foot = [...this.selected].filter((s) => s.alive && s.stats.formations);
+      if (!foot.length) return this.game.bus.emit('toast', 'Select a company of foot first');
+      if (cmd === 'charge') {
+        this.game.orders.issue({ t: 'charge', s: ids(foot) });
+        this.game.bus.emit('order', { kind: 'attack' });
+        return;
+      }
+      let f = cmd.slice(5);
+      if (f === 'next') f = FORM_ORDER[(FORM_ORDER.indexOf(foot[0].form) + 1) % FORM_ORDER.length];
+      this.game.orders.issue({ t: 'form', s: ids(foot), f });
+      this.game.bus.emit('order', { kind: 'form' });
+      this.game.bus.emit('toast', `${FORMS[f].label}`);
     } else if (cmd === 'control') {
       this.game.toggleView();
     } else if (cmd.startsWith('build:')) {

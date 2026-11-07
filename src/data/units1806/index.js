@@ -25,6 +25,7 @@ const MUSKET = {
   damage: 120, spread: 0.03, boltSpeed: 300, boltSize: 0.5, tracer: 0,
   magSize: 1, reloadTime: 17,   // three rounds a minute, from a drilled company
   stance: 'stand', drill: true, leash: 0, volley: true, weapon: 'musket',
+  formations: true, bayonet: 110,   // line / column / square / skirmish (data/formations.js); the bayonet hand to hand
   breakMorale: 0.22, playerFireInterval: 17,
   muzzle: { x: 0.2, y: 1.335, z: 1.3 },
 };

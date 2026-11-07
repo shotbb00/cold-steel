@@ -23,6 +23,7 @@
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
+import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
 import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
@@ -152,6 +153,7 @@ export class UnitStack {
       this.units.push(u);
     }
     this.aliveCount = count;
+    if (this.stats.formations) this.setForm('line', true); // (1806: a company arrives in line)
     this.hadOfficer = type.kind === 'infantry' && count >= 8 && !type.stats.structure; // a rifle platoon has a leader
     if (this.hadOfficer) this.units[0].officer = true;
     this.led = false;
@@ -323,8 +325,9 @@ export class UnitStack {
     const s = Math.sin(this.facing);
     const wx = this.usesCover ? u.wander.x : 0; // the idle shuffle is for men: a parked vehicle stays put (and keeps its facing)
     const wy = this.usesCover ? u.wander.y : 0;
-    const ox = u.offset.x * LOOSENESS + wx;
-    const oy = u.offset.y * LOOSENESS + wy;
+    const loose = this.form ? 1 : LOOSENESS; // (1806 formations: the exact places)
+    const ox = u.offset.x * loose + wx;
+    const oy = u.offset.y * loose + wy;
     out.set(this.anchor.x + ox * c + oy * s, 0, this.anchor.z - ox * s + oy * c);
     this.fitSlot(u, out);
     this.onDeck(out);
@@ -425,6 +428,7 @@ export class UnitStack {
       }
       this.updateMorale(dt);
       this.updateCentroid();
+      if (this.form) this.updateForm(dt);
     }
     // (the renderer is updated by GameEngine after the simulation step)
   }
@@ -588,6 +592,7 @@ export class UnitStack {
     const scan = Math.sin(this.world.time * 0.35 + u.phase * 3) * 0.7;
     if (this.usesCover) {
       const desired = u.airTarget ? u.airYaw : u.target ? u.aimYaw
+        : this.form && this.stats.drill ? this.facing + (this.stats.square ? u.faceOut ?? 0 : 0)
         : u.alertT > 0 ? u.alertYaw
           : u.moving ? u.moveYaw
             : (u.atCover ? Math.atan2(u.coverSpot.dirX, u.coverSpot.dirZ) : this.facing) + scan;
@@ -831,7 +836,7 @@ export class UnitStack {
     if (u.working && !u.target && !pinned) { wantCrouch = 1; wantProne = 0; } // kneeling, digging
     const settled = u.prone > 0.85 || u.prone < 0.1; // can't shoot while dropping or getting up
 
-    if (u.target && !reloading && u.mag > 0 && !fleeing && settled && this.deployed(u)) {
+    if (u.target && !reloading && u.mag > 0 && !fleeing && settled && this.deployed(u) && this.formReady(u)) {
       if (u.burstLeft > 0) {
         u.peekT = 0.35;
         u.burstTimer -= dt;
@@ -875,6 +880,67 @@ export class UnitStack {
     }
     this.applyPosture(u, wantCrouch, wantProne, dt);
     u.reloadAnim += ((reloading || u.working ? 1 : 0) - u.reloadAnim) * Math.min(1, dt * 6);
+  }
+
+  // ------------------------------------------------------------------ 1806: formations and the charge
+
+  /** Form `form` (data/formations.js): the men walk to their new places; no firing until it's done. */
+  setForm(form, instant = false) {
+    const F = FORMS[form];
+    if (!F || !this.stats.formations || this.form === form) return false;
+    this.formBase ??= this.stats;
+    const base = this.formBase;
+    this.form = form;
+    this.stats = { ...base, ...F.stats, speed: base.speed * (F.speed ?? 1) };
+    this._specialistStats = null;
+    this.packForm();
+    this.formedAt = instant ? 0 : this.world.time + FORM_TIME;
+    for (const u of this.units) { u.stats = this.unitStats(u.index); u.volleyWait = false; u.volleyGo = false; }
+    this.volleyFirst = null;
+    return true;
+  }
+
+  /** The places of the living men in the formation (closing the ranks over the fallen). */
+  packForm() {
+    const alive = this.units.filter((u) => u.alive);
+    const offs = formOffsets(this.form, alive.length, this.type.formation.spacing);
+    alive.forEach((u, i) => { u.offset.set(offs[i].x, offs[i].y); u.formRow = offs[i].row; u.faceOut = offs[i].out; });
+    this.packedFor = alive.length;
+  }
+
+  /** May `u` fire now? Not while re-forming or charging; a column only from its front rank. */
+  formReady(u) {
+    if (!this.form) return true;
+    return this.world.time >= this.formedAt && !this.charging && (!this.stats.frontOnly || !u.formRow);
+  }
+
+  updateForm(dt) {
+    if (this.aliveCount !== this.packedFor && this.world.time >= (this.repackAt ?? 0)) { this.packForm(); this.repackAt = this.world.time + 4; } // close up every few seconds
+    const c = this.charging;
+    if (!c) return;
+    const t = c.target;
+    if (!t.alive || t.ai.state === AIState.RETREAT || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
+    if ((c.steer -= dt) <= 0) { c.steer = 0.5; this.ai.moveTo({ x: t.centroid.x, z: t.centroid.z }, { ordered: true }); }
+    const d = Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z);
+    if (!c.shocked && d < 30) {
+      // the bayonets coming on: the target's nerve takes the blow (a square shrugs off foot)
+      c.shocked = true;
+      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (t.stats.square ? 0.4 : 1));
+      this.bark(this.units.find((u) => u.alive), 'flank', 1);
+    }
+  }
+
+  /** The bayonet charge on `target`: at the run, no firing; men within reach fight hand to hand (ai/SoldierAI.js). */
+  startCharge(target) {
+    if (!this.form || !target?.alive || this.charging) return false;
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + 45, shock: this.doctrineShock ?? 1 };
+    this.ai.moveTo({ x: target.centroid.x, z: target.centroid.z }, { ordered: true });
+    return true;
+  }
+
+  endCharge() {
+    this.charging = null;
+    if (this.alive) this.ai.defend();
   }
 
   /**
@@ -1502,7 +1568,7 @@ export class UnitStack {
     this.world.cover.release(u);
     this.aliveCount--;
     this.renderer.done = false;
-    this.morale = Math.max(0, this.morale - (0.1 + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
+    this.morale = Math.max(0, this.morale - ((this.form ? 0.035 : 0.1) + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
     if (u.officer) {
       this.morale = Math.max(0, this.morale - OFFICER_DOWN * (1 - 0.15 * this.rank));
       const w = this.units.find((m) => m.alive);

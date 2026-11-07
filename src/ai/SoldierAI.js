@@ -33,8 +33,20 @@ export function thinkSoldier(u, stack, world, interval) {
   if (threat && !u.threat) stack.bark(u, 'contact', 0.3);
   u.threat = threat;
 
+  // 1806 bayonets: an enemy within reach is struck (a hit or a parry, every think)
+  if (s.bayonet && threat && !u.window && dist2DSq(u.pos, threat.pos) < 1.9 * 1.9 && Math.random() < 0.55) {
+    threat.receiveDamage(s.bayonet * (0.6 + Math.random() * 0.7), stack, 0, null, 0.05);
+  }
+  // charging: the ranks break into the enemy, each man for the nearest
+  if (stack.charging && threat && dist2DSq(u.pos, threat.pos) < 14 * 14) {
+    if (u.coverSpot) cover.release(u);
+    u.dest.set(threat.pos.x, threat.pos.y, threat.pos.z);
+    u.run = true;
+    return;
+  }
   // Drilled foot (1806 line infantry): every man keeps his place in the ranks — no cover, no shuffle.
   if (s.drill && !u.window) {
+    u.run = !!stack.charging;
     if (u.coverSpot) cover.release(u);
     u.wander.set(0, 0);
     stack.slotPosition(u, u.dest);

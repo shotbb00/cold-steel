@@ -136,6 +136,28 @@ export class FrontlineDirector {
     this.support();
     if (this.opts.attack) this.offensive();
     else this.probe();
+    this.drill();
+  }
+
+  /**
+   * 1806 foot (stats.formations): column for the march, line to fight, square when horsemen come
+   * close; and the bayonets into an enemy that is close and wavering, or caught reloading.
+   */
+  drill() {
+    const foes = this.game.world.stacksOf(enemyOf(this.faction)).filter((e) => e.alive);
+    for (const s of this.myStacks()) {
+      if (!s.stats.formations || s.charging || s.ai.state === AIState.RETREAT) continue;
+      const near = (r, test = () => true) => foes.filter((e) => test(e) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < r);
+      const marching = s.moveTarget && Math.hypot(s.moveTarget.x - s.centroid.x, s.moveTarget.z - s.centroid.z) > 70 && !near(160).length;
+      const horse = near(90, (e) => e.stats.cavalry).length > 0;
+      const want = horse ? 'square' : s.type.light ? 'skirmish' : marching ? 'column' : 'line';
+      if (s.form !== want) { s.setForm(want); continue; }
+      const close = near(45, (e) => e.usesCover && e.units.some((u) => u.alive && u.spotted))[0];
+      if (close && !horse && s.morale > 0.5) {
+        const reloading = close.units.filter((u) => u.alive && u.reloadT > 0).length > close.aliveCount * 0.5;
+        if (close.morale < 0.55 || reloading) s.startCharge(close);
+      }
+    }
   }
 
   /** May this side go for point `p` now? */

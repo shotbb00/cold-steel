@@ -3,6 +3,11 @@ import { epoch } from '../data/epoch.js';
 // reinforcements, the touch bar), a few fine-line ones where a silhouette would read worse.
 // icon(name) → the <svg> markup; colour and size come from CSS (.ico, .ico.line in style.css).
 const FILLED = {
+  formLine: '<rect x="2" y="11" width="28" height="4" rx="1"/><rect x="2" y="17" width="28" height="4" rx="1"/>',
+  formColumn: '<rect x="10" y="4" width="12" height="24" rx="1.5"/>',
+  formSquare: '<path fill-rule="evenodd" d="M5 5h22v22H5zM10 10v12h12V10z"/>',
+  formSkirmish: '<circle cx="6" cy="10" r="2.6"/><circle cx="16" cy="8" r="2.6"/><circle cx="26" cy="11" r="2.6"/><circle cx="10" cy="21" r="2.6"/><circle cx="21" cy="22" r="2.6"/>',
+  charge: '<path d="M27.5 2.5l2 2-11 11-2-2z"/><path d="M16 14.5l1.5 1.5-12 12-3.5 1.5 1.5-3.5z"/><rect x="14" y="16" width="4" height="2" transform="rotate(-45 16 17)"/>',
   sandbags: '<rect x="1.5" y="21.5" width="9" height="7" rx="3"/><rect x="11.5" y="21.5" width="9" height="7" rx="3"/><rect x="21.5" y="21.5" width="9" height="7" rx="3"/><rect x="6.5" y="13.5" width="9" height="7" rx="3"/><rect x="16.5" y="13.5" width="9" height="7" rx="3"/><rect x="11.5" y="5.5" width="9" height="7" rx="3"/>',
   trench: '<path d="M1 15h7l3.5 11h9L24 15h7v14H1z"/><rect x="1.5" y="10.5" width="7" height="4" rx="1.6"/><rect x="23.5" y="12" width="6" height="2.5" rx="1"/>',
   mines: '<path fill-rule="evenodd" d="M4 18.5C4 16 9.4 14 16 14s12 2 12 4.5v3.5c0 2.5-5.4 4.5-12 4.5S4 24.5 4 22zm12 2.2c5 0 9-1 9-2.2s-4-2.2-9-2.2-9 1-9 2.2 4 2.2 9 2.2z"/><rect x="13" y="10" width="6" height="5.5" rx="1"/><path d="M0 24.5h32V30H0z" opacity="0.45"/>',
