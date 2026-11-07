@@ -736,6 +736,10 @@ body.tactical #reinforce { display: flex; }
 }
 .rw-tabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
 .rw-body section[hidden] { display: none; }
+/* only the cards scroll: the header (close, CP) and the tabs stay put */
+#reinforce-window:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
+.rw-head, .rw-tabs { flex: none; }
+.rw-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 #reinforce-window { top: 96px; right: auto; left: 50%; transform: translateX(-50%); bottom: auto; height: min(460px, calc(100vh - 330px)); max-height: none; } /* one size for every tab, above the dock */
 .rw-text { align-self: start; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rw-why { grid-column: 1 / -1; color: #ff8a78; font-size: 11.5px; }
