@@ -166,6 +166,7 @@ export class ReinforceWindow {
   toggle(on = !this.open) {
     if (this.state.noReinforcements) on = false;
     this.root.hidden = !on;
+    this.shown = null;
     if (on) this.update();
   }
 
@@ -177,6 +178,11 @@ export class ReinforceWindow {
     const mine = g.world.stacksOf(me).filter((s) => g.mine(s));
     const count = forces(g, me).length;
     const full = count >= this.state.maxStacks;
+    // runs every frame: touch the DOM only when something shown has changed (rewriting it each frame
+    // made the cards change height mid-scroll on phones: the list jumped and the header flickered)
+    const key = `${cp}|${count}|${this.last}|${mine.map((s) => s.type.id).sort().join()}`;
+    if (key === this.shown) return;
+    this.shown = key;
     this.cp.textContent = `${cp} CP`;
     // the roads, named as the field looks from where the camera is (left, centre, right), and how long each is busy
     const screenX = (r) => this._p.set(r.x, 0, r.z).project(g.camera).x;
