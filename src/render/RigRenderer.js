@@ -10,6 +10,7 @@
 import { epoch } from '../data/epoch.js';
 import * as THREE from 'three';
 import { paintMaterial, MERDC } from './paint.js';
+import { compactRig, addImpostor } from './compactRig.js';
 
 const materialCache = new Map();
 const WRECK = new THREE.MeshStandardMaterial({ color: 0x2a2624, vertexColors: true, roughness: 1, metalness: 0 });
@@ -43,6 +44,22 @@ function materialsFor(army, glowColor) {
 
 const _p = new THREE.Vector3();
 
+const COMPACT = new Set(['cavalry', 'gun', 'wagon']);
+const LOD_FAR = 90;  // m from the camera: a horse and rider beyond it is drawn as one piece, not animated (LOD_NEAR back)
+const LOD_NEAR = 80;
+/** A rig through its poses (render/compactRig.js): every gait, limbered and not, firing, traversed, set up, unloaded — what moves stays a part of its own. */
+function probe(rig, u, look) {
+  const base = { ...u, vel: { x: 0, z: 0 }, towing: false, recoil: 0, turretYaw: u.yaw, deployK: 0, dropped: false, laying: false, alive: true };
+  const runs = [{ v: 1.5 }, { v: 4 }, { v: 6.5 }, { v: 11 }, { v: 0 }, { towing: true, v: 2 }, { towing: true, v: 5 }, { recoil: 1 }, { turretYaw: u.yaw + 0.3 }, { deployK: 1 }, { dropped: true }, { laying: true }];
+  let t = 0;
+  for (const r of runs) {
+    const f = { ...base, ...r, vel: { x: r.v ?? 0, z: 0 } };
+    for (let i = 0; i < 24; i++) rig.animate(f, 1 / 24, (t += 1 / 24), null);
+    look();
+  }
+  for (let i = 0; i < 24; i++) rig.animate(base, 1 / 24, (t += 1 / 24), null); // (back at rest)
+}
+
 export class RigRenderer {
   constructor(stack, scene) {
     this.stack = stack;
@@ -53,8 +70,16 @@ export class RigRenderer {
     const special = stack.type.specialistModels?.[stack.army] ?? stack.type.specialistModels?.[stack.faction] ?? null;
     const specials = stack.type.specialist?.count ?? 0;
     this.mats = materialsFor(stack.army ?? stack.faction, stack.glowColor);
+    // 1806 horse, gun, wagon: ~54 parts each — the still ones merged and shared (or phones give out), and a horse and rider a single piece from afar
+    this.make = (fn, u) => {
+      const rig = fn(this.mats);
+      if (!COMPACT.has(stack.kind)) return rig;
+      compactRig(rig, (look) => probe(rig, u, look));
+      if (stack.kind === 'cavalry') addImpostor(rig);
+      return rig;
+    };
     this.rigs = stack.units.map((u) => {
-      const rig = (special && u.index < specials ? special : build)(this.mats);
+      const rig = this.make(special && u.index < specials ? special : build, u);
       rig.root.position.copy(u.pos);
       rig.root.rotation.y = u.yaw;
       scene.add(rig.root);
@@ -69,7 +94,7 @@ export class RigRenderer {
       },
       onHoof: (pos, gait) => { // 1806: a hoof set down — louder and dustier the faster
         const fast = gait === 'gallop' ? 1 : gait === 'canter' ? 0.75 : gait === 'trot' ? 0.55 : 0.32;
-        s.audio?.play('hoof', pos, { volume: fast, rate: 0.9 + Math.random() * 0.25, throttle: 0.04 });
+        if (fast < 0.7) s.audio?.play('hoof', pos, { volume: fast, rate: 0.95 + Math.random() * 0.1, throttle: 0.06 }); // (canter and gallop: the squadron's gallop recording, AudioSystem.updateHooves)
         if (fast > 0.7 && Math.random() < 0.25) s.effects.dust(pos, 0.5);
       },
     };
@@ -90,7 +115,7 @@ export class RigRenderer {
       rig.root.visible = u.visible !== false || rig.dead;
       if (u.alive && rig.dead) { // brought back (1806: a dismounted trooper caught a horse and remounted) — a fresh rig
         rig.root.removeFromParent();
-        this.rigs[i] = this.build(this.mats);
+        this.rigs[i] = this.make(this.build, u);
         this.rigs[i].root.position.copy(u.pos);
         this.scene.add(this.rigs[i].root);
         continue;
@@ -99,9 +124,18 @@ export class RigRenderer {
         animating = true;
         rig.root.position.copy(u.pos);
         rig.root.rotation.y = u.yaw;
+        if (rig.impostor) { // far off: the one-piece stand-in, nothing to animate
+          const cam = this.stack.services.game?.camera?.position;
+          const d = cam ? Math.hypot(cam.x - u.pos.x, cam.y - u.pos.y, cam.z - u.pos.z) : 0;
+          const far = rig.impostor.visible ? d > LOD_NEAR : d > LOD_FAR;
+          rig.impostor.visible = far;
+          rig.detail.visible = !far;
+          if (far) continue;
+        }
         rig.animate(u, dt, t, this.ctx);
         continue;
       }
+      if (rig.impostor?.visible) { rig.impostor.visible = false; rig.detail.visible = true; } // (the fall is the detailed rig's)
       if (!rig.dead && (this.stack.stats.cavalry || this.stack.stats.loose || this.stack.stats.gun || this.stack.stats.wagon)) { // 1806 horse and rider, a loose horse, gun and team: they fall (models/napCavalry.js, napGuns.js), nothing burns
         rig.dead = true;
         rig.fate = u.fate;

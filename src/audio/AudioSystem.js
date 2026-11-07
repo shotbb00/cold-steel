@@ -44,7 +44,9 @@ const WIND = 0.11;         // the wind bed; halved while the guns are talking
 const BED = 0.2;           // the distant battle at its loudest
 const BED_FILL = 90;       // weighted shots in the last ~20 s for the bed to be about two-thirds up
 const SHOT_WEIGHT = { cannon: 3, arty: 5, mlrs: 5, katyusha: 5, nebelwerfer: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
-const QUIET_FOR = 18;      // seconds without gunfire before birds come back
+const QUIET_FOR = 18;
+const GALLOP_RANGE = 160; // m: squadrons heard at the gallop…
+const GALLOP_STACKS = 3;  // …the nearest this many, a loop each      // seconds without gunfire before birds come back
 const BUILD_SLICE_MS = 6;  // main-thread time per background synthesis slice
 
 /** Stereo impulse response: a few discrete early echoes, then a decaying diffuse tail. */
@@ -484,6 +486,35 @@ export class AudioSystem {
 
   // ---------------------------------------------------------------- ambience, foley
 
+  /**
+   * 1806 horse at the canter and the gallop: the gallop recording, looped, one per squadron (the
+   * nearest GALLOP_STACKS within GALLOP_RANGE), at its middle, louder and a touch quicker the faster
+   * it rides. Walk and trot are single hoof beats (render/RigRenderer.js onHoof).
+   */
+  updateHooves() {
+    this.gallops ??= new Map();
+    if (!this.samples?.samples.gallop) return; // (until the recording is in: no silent stand-in loops kept)
+    const near = [];
+    for (const s of this.game.world.stacks) {
+      if (!s.alive || !(s.stats.cavalry || s.stats.loose)) continue;
+      const d = this.distanceTo(s.centroid);
+      if (d < GALLOP_RANGE) near.push([s, d]);
+    }
+    near.sort((a, b) => a[1] - b[1]);
+    const keep = new Set(near.slice(0, GALLOP_STACKS).map(([s]) => s));
+    for (const [s, ch] of this.gallops) if (!keep.has(s)) { ch.stop(); this.gallops.delete(s); }
+    for (const s of keep) {
+      const alive = s.units.filter((u) => u.alive);
+      const v = alive.reduce((a, u) => a + Math.hypot(u.vel.x, u.vel.z), 0) / (alive.length || 1);
+      const k = Math.min(1, Math.max(0, (v - 4.2) / 5));                 // from the canter (~4.8 m/s) to the charge
+      let ch = this.gallops.get(s);
+      if (!ch) { if (k <= 0) continue; ch = this.loop('gallop', s.centroid, 0, 14); this.gallops.set(s, ch); }
+      ch.setPos({ x: s.centroid.x, y: s.anchor?.y ?? 0, z: s.centroid.z });
+      ch.setRate(0.92 + 0.16 * k);
+      ch.setGain(k * Math.min(1, 0.35 + alive.length / 12) * 0.9);   // (a full squadron louder than a few)
+    }
+  }
+
   /** Lulls get their sounds back: birds in the hedges, a crow somewhere over the fields. */
   updateAmbience(now) {
     if (now - this.lastLoud < QUIET_FOR || now < this.nextAmbient) return;
@@ -540,6 +571,7 @@ export class AudioSystem {
     this.updateBed(step);
     this.updateIndoors();
     this.updateMachines(step);
+    this.updateHooves();
     this.updateAmbience(this.game.world.time);
   }
 
