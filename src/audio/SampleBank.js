@@ -11,7 +11,7 @@
 //   • loops (keys the game plays as loops: engines, tracks, rotors, wind, rain): the end is
 //     crossfaded into the start so the loop doesn't click
 //   • files load in the background after the synth bank, a few at a time
-const LOOPS = /^(engine\.|tracks\.|rotor\.|traverse$|wind$|rain$|jet$)/;
+const LOOPS = /^(engine\.|tracks\.|rotor\.|traverse$|wind$|rain$|jet$|gallop$)/;
 const PEAK_WINDOW = 0.05;  // s: the loudness measure
 const LOOP_FADE = 0.12;    // s: crossfade at the loop point
 const PARALLEL = 4;
