@@ -7,6 +7,7 @@ import huenfeld from './huenfeld.ts';
 import thuringianForest from './thuringianForest.ts';
 import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
+import jena from './jena.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -16,6 +17,7 @@ export const MAPS = {
   [thuringianForest.id]: thuringianForest,
   [hersfeldAirbase.id]: hersfeldAirbase,
   [monteKali.id]: monteKali,
+  [jena.id]: jena,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;
@@ -37,3 +39,12 @@ export function forEpoch(year) {
 export function getMap(id) {
   return MAPS[id] ?? MAPS[DEFAULT_MAP];
 }
+
+/** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only), its own maps first. */
+export function mapsFor(ep) {
+  const all = Object.values(MAPS).filter((m) => !m.epochs || m.epochs.includes(ep));
+  return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
+}
+
+/** `id` if `ep` has that map, else the epoch's first map. */
+export const mapIn = (id, ep) => (mapsFor(ep).some((m) => m.id === id) ? id : mapsFor(ep)[0].id);

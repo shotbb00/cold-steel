@@ -124,7 +124,8 @@ const dismounted = {
 const guns = (size) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildFieldGun({ army, size })]));
 const GUN = {
   armor: 0, hp: 320, turnRate: 0.7, turretRate: 0.5, radius: 1.6, height: 1.8, eyeHeight: 1.7, aimHeight: 1, fov: 2.4, nightSight: undefined,
-  sight: 450, aggroRange: 750, fireCooldown: 1, aimTime: 1.2,   // (an officer with a telescope over open ground) burst: 1, burstInterval: 0, magSize: 1, spread: 0.01, boltSpeed: 240,
+  sight: 450, aggroRange: 750, fireCooldown: 1, aimTime: 1.2,   // (an officer with a telescope over open ground)
+  burst: 1, burstInterval: 0, magSize: 1, spread: 0.01, boltSpeed: 240,
   boltSize: 1.3, tracer: 1, weapon: 'cannon', vsArmor: 1, pierce: 0, splash: 0, traverse: 0.35, noStabilizer: true, breakMorale: 0.28,
 };
 const gunType = (id, size, o) => ({

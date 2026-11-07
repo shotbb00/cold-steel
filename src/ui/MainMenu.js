@@ -7,7 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, DEFAULT_MAP } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -253,7 +253,7 @@ export class MainMenu {
   constructor(root, { onDeploy }) {
     this.root = root;
     this.onDeploy = onDeploy;
-    this.choice = { mode: DEFAULT_MODE, map: DEFAULT_MAP, side: 'nato', time: 'day', weather: 'overcast', rules: loadRules() };
+    this.choice = { mode: DEFAULT_MODE, map: mapsFor(epoch())[0].id, side: 'nato', time: 'day', weather: 'overcast', rules: loadRules() };
     this.unit = { id: 'rifles', faction: 'nato', army: 'us', pose: 'idle' };
     this.build();
     this.open(takeMenuTab() ?? 'battle');
@@ -373,8 +373,9 @@ export class MainMenu {
     const where = el('div', 'map-pick');
     const chips = el('div', 'map-chips');
     chips.setAttribute('role', 'radiogroup');
+    c.map = mapIn(c.map, epoch());
     const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
-    for (const m of Object.values(MAPS)) {
+    for (const m of mapsFor(epoch())) {
       const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
       b.type = 'button';
       b.setAttribute('role', 'radio');
@@ -393,6 +394,9 @@ export class MainMenu {
     // which side
     const sides = el('div', 'side-pick');
     const sideText = {
+      1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
+      1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
+    }[epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
