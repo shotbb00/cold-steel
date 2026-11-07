@@ -101,7 +101,7 @@ export class ReinforceWindow {
     // the kit the next rifle squads bring (data/kits.js; same price)
     game.reinforceKit = null;
     const kitSeg = root.querySelector('.rw-kit .seg');
-    root.querySelector('.rw-kit').hidden = epoch() !== '1985' || !types.some(takesKit); // (the kits are 1985's: LAWs, Panzerfaust 44)
+    root.querySelector('.rw-kit').hidden = !types.some(takesKit); // (the rifle squads of 1985 and 1945: the types with kitModels)
     for (const [id, kit] of Object.entries(KITS)) {
       const b = document.createElement('button');
       b.type = 'button';

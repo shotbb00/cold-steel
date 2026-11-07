@@ -289,7 +289,7 @@ export class MainMenu {
     const year = el('div', 'seg menu-epoch');
     for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
       const soon = !EPOCHS[e.id];
-      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.name);
+      const b = el('button', soon ? 'soon' : e.id === epoch() ? 'on' : '', soon ? `${e.name}<small>soon</small>` : e.beta ? `${e.name}<small>beta</small>` : e.name);
       b.type = 'button';
       b.title = soon ? `${e.title} — coming soon` : e.title;
       if (soon) b.disabled = true;

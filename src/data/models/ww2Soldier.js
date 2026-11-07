@@ -123,6 +123,14 @@ function weapon(kind, army, c) {
           ...pair((s) => P.box(0.01, 0.01, 0.06, { x: 0.17, y: 1.56 + s * 0.05, z: 1.05, color: STEEL })),     // the ring sight
         ],
         muzzle: { x: 0.17, y: 1.56, z: 1.05 } };
+    case 'pzf':
+      return { // Panzerfaust 60: the thin tube under the arm, the fat warhead in front, the flip-up sight
+        parts: [
+          P.cyl(0.024, 0.024, 0.8, { x: 0.17, y: 1.5, z: 0.32, rx: Math.PI / 2, color: 0x5a5c40 }, 8),
+          P.cyl(0.06, 0.026, 0.2, { x: 0.17, y: 1.5, z: 0.8, rx: Math.PI / 2, color: 0x3c3f30 }, 10),
+          P.box(0.012, 0.05, 0.012, { x: 0.17, y: 1.55, z: 0.58, color: STEEL }),
+        ],
+        muzzle: { x: 0.17, y: 1.5, z: 0.92 } };
     case 'mortar':
       return { // 81 / 82 mm: the tube on its bipod and the square baseplate
         parts: [

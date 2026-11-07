@@ -170,6 +170,8 @@ export interface UnitType {
   specialist?: { count: number; stats: Partial<UnitStats>; armyStats?: Record<string, Partial<UnitStats>> };
   models: Partial<PerFaction<ModelBuilder>>;
   specialistModels?: Partial<PerFaction<ModelBuilder>>;
+  /** a squad kit's weapon in the riflemen's hands (data/kits.js): kitModels[weapon][faction or army] */
+  kitModels?: Record<string, Record<string, ModelBuilder>>;
   weaponSound?: string;
   engine?: string | PerFaction<string>;
   tracks?: string;

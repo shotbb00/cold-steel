@@ -30,6 +30,11 @@ const rifles = derive(T.rifles, {
     fj: { fireCooldown: 1.1, magSize: 20, reloadTime: 3, playerFireInterval: 0.15, lightAT: 1, hp: 115, breakMorale: 0.1 }, // FG 42; they hold longer
   },
   models: men(),
+  // the kits (data/kits.js): bazookas for the GIs, Panzerfausts for the Germans — and for the Red Army, which used captured ones by the thousand in 1945; Thompson, PPSh, MP 40 for the assault
+  kitModels: {
+    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }) },
+    smg: men({ weapon: 'smg' }),
+  },
   variants: {
     nato: { name: 'Rifle Squad', weapon: 'M1 Garand, BAR', text: 'The GI rifle squad: the semi-automatic Garand gives every man more shots than the enemy, the BAR the base of fire.' },
     sov: { name: 'Rifle Section', weapon: 'Mosin-Nagant, PPSh-41, DP-28', text: 'The Red Army’s riflemen, rifles and sub-machine guns together: dangerous in the assault, many of them.' },

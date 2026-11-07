@@ -212,9 +212,18 @@ export class UnitStack {
     this.stats = { ...this.stats, ...kit.stats(this.stats) };
     this._specialistStats = null;
     this.lightAT = this.stats.lightAT ?? 0;
+    // the riflemen it re-arms (not the squad's specialist: its MG gunner keeps the MG)
+    const carry = kit.carry;
+    let left = carry?.count ?? 0;
     for (const u of this.units) {
       u.stats = this.unitStats(u.index);
       u.grenades = u.stats.grenades ?? 0;
+      const specialist = u.index < (this.type.specialist?.count ?? 0);
+      u.kitWeapon = carry && !specialist && left-- > 0 ? carry.weapon : null;
+    }
+    if (carry && this.renderer) { // the new weapons in their hands (the renderer was built with the stack, before its kit)
+      this.renderer.dispose();
+      this.renderer = createRenderer(this, this.services.scene);
     }
   }
 
@@ -1379,6 +1388,7 @@ export class UnitStack {
     const s = u.stats;
     const t = u.target;
     if (!s.lightAT || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only
+    if (this.kit === 'at' && u.kitWeapon !== 'at') return false; // the anti-tank kit: its launchers are in three men's hands
     this.lightAT ??= s.lightAT;
     return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
   }

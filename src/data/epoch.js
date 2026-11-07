@@ -18,7 +18,7 @@ const DOCTRINE_1985 = { ...DOCTRINE };
 
 export const EPOCHS = {
   1806: {
-    id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
+    id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806 (beta)', beta: true, // (still being balanced: shown as beta in the year picker and the titles)
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
     sides: { nato: 'France', pact: 'Prussia' },
     armies: {
