@@ -156,7 +156,13 @@ export class FrontlineDirector {
       if (!s.stats.formations || s.charging || s.ai.state === AIState.RETREAT) continue;
       const near = (r, test = () => true) => foes.filter((e) => test(e) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < r);
       const marching = s.moveTarget && Math.hypot(s.moveTarget.x - s.centroid.x, s.moveTarget.z - s.centroid.z) > 70 && !near(160).length;
-      const horse = near(110, (e) => e.stats.cavalry && !e.stats.loose).length > 0 || near(220, (e) => e.stats.cavalry && !!e.charging).length > 0; // (a charge comes on at the gallop: form in time)
+      // horse in sight: square — once the officers have seen it and given the word (1–3.5 s: drill, not foresight; a charge
+      // spotted at the edge of sight is ~10 s off, forming takes 6: sometimes the square is ready, sometimes it isn't)
+      const seen = (e) => e.stats.cavalry && !e.stats.loose && e.units.some((u) => u.alive && u.spotted);
+      const threat = near(80, seen).length > 0 || near(150, (e) => seen(e) && !!e.charging).length > 0;
+      if (!threat) s.squareAt = null;
+      else s.squareAt ??= this.now + 1 + Math.random() * 2.5;
+      const horse = threat && this.now >= s.squareAt;
       const want = horse ? 'square' : s.type.light ? 'skirmish' : marching ? 'column' : 'line';
       if (s.form !== want) { s.setForm(want); continue; }
       const close = near(45, (e) => e.usesCover && e.units.some((u) => u.alive && u.spotted))[0];
