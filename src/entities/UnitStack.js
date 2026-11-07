@@ -991,7 +991,7 @@ export class UnitStack {
         const d = dist2DSq(u.pos, o.pos);
         if (d < bd) { bd = d; best = o; }
       }
-      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7), this, 0, null, 1);
+      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1);
     }
   }
 

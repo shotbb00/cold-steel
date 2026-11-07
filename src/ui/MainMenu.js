@@ -302,10 +302,10 @@ export class MainMenu {
     // the map table beside a battle being set up or about to be fought (single player, multiplayer,
     // boot camp, the campaign's next battle); units and settings on the plain table
     if (id === 'battle') this.sheet?.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side, true, 'menu');
-    else if (id === 'bootcamp') this.sheet?.show(MAPS['fulda-gap'] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
+    else if (id === 'bootcamp') this.sheet?.show(MAPS[chapterBattle('basics').map] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
-    else if ((id === 'bootcamp' || id === 'campaign') && epoch() === '1806') { // (1806 is being built: battles first)
+    else if (id === 'campaign' && epoch() === '1806') { // (1806 is being built: battles first)
       this.panel.append(el('h2', '', id === 'campaign' ? 'Campaign' : 'Boot camp'), el('p', 'mp-lead', `The 1806 ${id === 'campaign' ? 'campaign' : 'boot camp'} is coming — for now, 1806 has single-player and multiplayer battles.`));
     } else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
@@ -447,7 +447,7 @@ export class MainMenu {
   bootcampPanel() {
     const p = this.panel;
     p.append(el('h2', '', 'Boot camp'));
-    p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base on the Fulda Gap, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
+    p.append(el('p', 'mp-lead', 'New to Cold Steel? Guided exercises near your base, a few minutes each, nothing to lose. Start with the basics, then take the chapters in any order.'));
     const done = chaptersDone();
     const list = el('div', 'bc-chapters');
     chapters().forEach((c, i) => {

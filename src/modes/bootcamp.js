@@ -9,6 +9,9 @@
 // 1945 (data/epoch.js) runs the same lessons with its own aircraft and vehicles (the *_1945 steps:
 // strike plane, recon plane, smoke discharger, half-track) and a chapter of its own: tanks that stop
 // to fire, the paradrop, Time on Target. Its chapters are ticked off separately.
+// 1806 runs on Jena with companies: the basics retold, then formations (column, line and volley,
+// square against cavalry, the bayonet), horse and guns, and the support powers (grand battery,
+// cavalry reserve, the Guard) with direct control. Also ticked off on its own.
 // The chapter comes in as the battle rule `chapter`; finished chapters are remembered
 // (localStorage) for the menu's ticks. Each step lists its tasks and ticks them off as you do
 // them; the next step starts by itself (or Skip). The enemies it sets up are targets — they shoot
@@ -27,7 +30,7 @@ import { rememberBattle, requestReplay } from '../core/replay.js';
 import { epoch } from '../data/epoch.js';
 
 const ww2 = () => epoch() === '1945';
-const doneKey = () => (ww2() ? 'coldsteel.bootcamp.1945' : 'coldsteel.bootcamp');
+const doneKey = () => (epoch() === '1985' ? 'coldsteel.bootcamp' : `coldsteel.bootcamp.${epoch()}`);
 const near = (s, p, r) => s?.alive && Math.hypot(s.centroid.x - p.x, s.centroid.z - p.z) < r;
 const mineOf = (g, test) => g.world.stacksOf(g.playerFaction).find(test);
 
@@ -481,6 +484,212 @@ const TOT = {
   tasks: [['Fire a Time on Target on the machine gun', (g) => (g.barrage.readyAt[g.playerFaction] ?? 0) > 0]],
 };
 
+// ------------------------------------------------------------------ 1806
+
+/** Formed and finished forming: the men stand in their new places. */
+const formed = (s, form) => s?.alive && s.form === form && s.world.time >= s.formedAt;
+/** A battery that has fired since it was set up (a gun reloads after each round). */
+const gunFired = (s) => s?.units.some((u) => u.alive && !u.towing && u.reloadT > 0);
+const me = (g) => g.playerFaction;
+/** How far `s` stands ahead of its base (spot's `ahead`) and to the side. */
+function placeOf(game, s) {
+  const base = game.map.bases[game.playerFaction], f = -Math.sign(base.z) || 1;
+  return { ahead: (s.centroid.z - base.z) * f, side: (base.x - s.centroid.x) * f };
+}
+
+const SELECT_1806 = as1945(SELECT, {
+  touch: 'Your troops fight in <b>companies</b> — some two dozen men, a squadron of horse, a battery of two guns. <b>Tap</b> your line company to select it. To pick up several, hold a finger still for a moment, then drag a box around them.',
+  text: 'Your troops fight in <b>companies</b> — some two dozen men, a squadron of horse, a battery of two guns. <b>Left-click</b> your line company to select it (or drag a box around it). <kbd data-key="selectAll"></kbd> selects everything you have.',
+  tasks: [['Select the line company', SELECT.tasks[0][1]]],
+});
+const MOVE_1806 = as1945(MOVE, {
+  touch: 'With the company selected, <b>tap</b> the ground to send it there. It marches in its formation and halts in it.',
+  text: 'With the company selected, <b>right-click</b> on the ground to send it there. It marches in its formation and halts in it.',
+  tasks: [['Move the company into the marked ring', MOVE.tasks[0][1]]],
+});
+const FACE_1806 = as1945(FACE, {
+  touch: 'A line fires to its front, so where it faces is everything. <b>Hold</b> a finger on the ground, then <b>drag</b>: the arrow shows the way the company will face when it gets there.',
+  text: 'A line fires to its front, so where it faces is everything. <b>Right-click and drag</b> on the ground: the arrow shows the way the company will face when it gets there. A right-drag right next to the company just turns it.',
+  tasks: [['Move the company with a right-drag, choosing its facing', FACE.tasks[0][1]]],
+});
+const CONTACT_1806 = as1945(CONTACT, {
+  touch: 'An enemy company has come up ahead. Muskets reach little more than a hundred paces: your men wait until the enemy is in range, then the company fires <b>together</b>, a volley, and reloads behind its smoke. To pick the target, select the company and <b>tap the enemy</b>. The amber bar over a company is its nerve wavering — a company that breaks runs.',
+  text: 'An enemy company has come up ahead. Muskets reach little more than a hundred paces: your men wait until the enemy is in range, then the company fires <b>together</b>, a volley, and reloads behind its smoke. To pick the target, select the company and <b>right-click the enemy</b>. The amber bar over a company is its nerve wavering — a company that breaks runs.',
+  start(game, ctx) {
+    ctx.enemy = target(game, 'rifles', spot(game, 150, -60), 'Prussian detachment');
+    ctx.enemy.morale = 0.7; // (a detachment out front, not a formed company: it breaks sooner)
+    ctx.alive0 = ctx.enemy.aliveCount;
+    game.tutorial.highlight(ctx.enemy);
+    game.bus.emit('toast', 'Enemy infantry ahead!');
+  },
+  tasks: [
+    ['Order an attack on the enemy company', CONTACT.tasks[0][1]],
+    ['Break it', (g, c) => CONTACT.tasks[1][1](g, c) || c.enemy.aliveCount <= c.alive0 / 2],
+  ],
+});
+const POINT_1806 = as1945(POINT, {
+  text: 'Battles are fought over <b>control points</b> — villages, heights, crossroads. Only foot can take one: men inside the ring swing it toward your side — the more of them, the faster — and nobody gains it while both sides are inside. Cavalry rides through but holds nothing. Move the company into the ring and hold it until the flag is yours.',
+});
+
+const COLUMN = {
+  title: 'Column of march',
+  touch: 'A company stands in one of four <b>formations</b>. The column — six files deep — marches faster and hits harder in a charge, but only its front rank can fire. Select the company and tap <b>Column</b> in Orders (the men take a few seconds to re-form, and can\'t fire meanwhile), then march it into the ring.',
+  text: 'A company stands in one of four <b>formations</b>. The column — six files deep — marches faster and hits harder in a charge, but only its front rank can fire. Select the company and press <kbd data-key="formation"></kbd> until it shows Column (or the Column button in Orders) — the men take a few seconds to re-form, and can\'t fire meanwhile — then march it into the ring.',
+  start(game, ctx) {
+    ctx.at = spot(game, 160, 40);
+    ctx.ring = game.tutorial.marker(ctx.at, 10);
+    game.tutorial.highlight(ctx.squad);
+  },
+  tasks: [
+    ['Form column', (g, c) => formed(c.squad, 'column')],
+    ['March the column into the ring', (g, c) => c.squad.form === 'column' && near(c.squad, c.at, 12)],
+  ],
+  end(game, ctx) { ctx.ring.remove(); },
+};
+
+const LINE = {
+  title: 'Line and volley',
+  touch: 'To fight, deploy into <b>line</b>: two ranks, every musket firing — the most fire a company can give. An enemy company is coming on. Tap <b>Line</b> in Orders and let them come into range: your men fire by volleys on their own. (<b>Skirmish</b> order, the fourth, is for light troops: a loose screen in hedges and woods, each man firing when ready.)',
+  text: 'To fight, deploy into <b>line</b>: two ranks, every musket firing — the most fire a company can give. An enemy company is coming on. Press <kbd data-key="formation"></kbd> until the company shows Line (or the Line button) and let them come into range: your men fire by volleys on their own. (<b>Skirmish</b> order, the fourth, is for light troops: a loose screen in hedges and woods, each man firing when ready.)',
+  start(game, ctx) {
+    ctx.enemy = target(game, 'rifles', spot(game, 270, 40), 'Prussian company');
+    ctx.enemy.ai.moveTo(spot(game, 245, 40), { hold: true, ordered: false });
+    ctx.alive0 = ctx.enemy.aliveCount;
+    game.tutorial.highlight(ctx.enemy);
+  },
+  tasks: [
+    ['Deploy into line', (g, c) => formed(c.squad, 'line')],
+    ['Bring the enemy under your volleys', (g, c) => c.squad.form === 'line' && (c.enemy.aliveCount < c.alive0 || !c.enemy.alive)],
+  ],
+};
+
+const SQUARE = {
+  title: 'Form square!',
+  touch: 'Enemy <b>cavalry</b>! Horse catches a line or a column in the open and rides it down. The answer is the <b>square</b>: the men face out on all sides behind their bayonets, and horses will not go into it. Tap <b>Square</b> in Orders — now, it takes a few seconds. (A square is a fat target for guns: break it up once the horse has gone.)',
+  text: 'Enemy <b>cavalry</b>! Horse catches a line or a column in the open and rides it down. The answer is the <b>square</b>: the men face out on all sides behind their bayonets, and horses will not go into it. Press <kbd data-key="formation"></kbd> until it shows Square (or the Square button) — now, it takes a few seconds. (A square is a fat target for guns: break it up once the horse has gone.)',
+  start(game, ctx) {
+    ctx.cav = target(game, 'tank', spot(game, 330, -40), 'Prussian cuirassiers');
+    game.tutorial.highlight(ctx.cav);
+    game.bus.emit('toast', 'Cavalry!');
+  },
+  update(game, ctx) {
+    if (!ctx.charged && formed(ctx.squad, 'square')) ctx.charged = ctx.cav.startCharge(ctx.squad); // (they wait for you: they charge the square)
+  },
+  tasks: [
+    ['Form square', (g, c) => formed(c.squad, 'square') || c.charged],
+    ['Let the charge break on the square', (g, c) => c.charged && !c.cav.charging],
+  ],
+};
+
+const BAYONET = {
+  title: 'The bayonet',
+  touch: 'A shaken enemy is finished with the <b>bayonet</b>. Form column again — it hits hardest — then select the company and tap <b>Charge!</b>: the men go in at the run, without firing, and the shock as they close breaks the enemy\'s nerve.',
+  text: 'A shaken enemy is finished with the <b>bayonet</b>. Form column again — it hits hardest — then select the company and press <kbd data-key="charge"></kbd> (or Charge! in Orders): the men go in at the run, without firing, and the shock as they close breaks the enemy\'s nerve.',
+  start(game, ctx) {
+    const p = placeOf(game, ctx.squad);
+    ctx.enemy = target(game, 'rifles', spot(game, p.ahead + 70, p.side), 'Shaken company'); // (within a charge's reach)
+    ctx.enemy.morale = 0.55;
+    game.tutorial.highlight(ctx.enemy);
+  },
+  update(game, ctx) { if (ctx.squad.charging) ctx.went = true; if (ctx.squad.charging?.shocked) ctx.shocked = true; },
+  tasks: [
+    ['Charge with the bayonet', (g, c) => c.went],
+    ['Close with the enemy', (g, c) => c.shocked || !c.enemy.alive || c.enemy.ai.state === AIState.RETREAT],
+  ],
+};
+
+const CAVALRY = {
+  title: 'The cavalry charge',
+  touch: 'A squadron of <b>cuirassiers</b> has joined you. Cavalry is fast, sees far, and its charge wrecks infantry caught out of square — but horses are big targets and won\'t face a square or a battery\'s canister. An enemy line stands in the open: select the squadron and tap <b>Charge!</b> In battle, wait for the moment: a line busy with your foot, guns limbered, a square broken by your guns.',
+  text: 'A squadron of <b>cuirassiers</b> has joined you. Cavalry is fast, sees far, and its charge wrecks infantry caught out of square — but horses are big targets and won\'t face a square or a battery\'s canister. An enemy line stands in the open: select the squadron and press <kbd data-key="charge"></kbd> (or Charge! in Orders). In battle, wait for the moment: a line busy with your foot, guns limbered, a square broken by your guns.',
+  start(game, ctx) {
+    ctx.cav = game.spawnStack('tank', me(game), spot(game, 60, -70), facing(game), 'Cuirassiers');
+    ctx.enemy = target(game, 'rifles', spot(game, 200, -70), 'Prussian line');
+    game.tutorial.highlight(ctx.cav);
+  },
+  update(game, ctx) { if (ctx.cav.charging) ctx.went = true; if (ctx.cav.charging?.shocked) ctx.shocked = true; },
+  tasks: [
+    ['Charge the enemy line', (g, c) => c.went],
+    ['Ride into it', (g, c) => c.shocked || !c.enemy.alive || c.enemy.ai.state === AIState.RETREAT],
+  ],
+};
+
+const HORSES = {
+  title: 'Horse and rider',
+  text: 'A trooper can fall and leave his horse running loose — it bolts from the firing, then wanders the field, and can be shot in the crossfire. If the horse falls, the rider fights on foot; a dismounted man near a loose horse of his side climbs back into the saddle. A squadron that has lost its horses is finished as cavalry: bring it back out of the fight. Select the squadron to go on.',
+  start(game, ctx) { ctx.cav = mineOf(game, (s) => s.alive && s.stats.cavalry && !s.stats.loose); game.tutorial.highlight(ctx.cav); },
+  tasks: [['Select the squadron', (g, c) => !c.cav || g.commands.selected.has(c.cav)]],
+};
+
+const GUNS = {
+  title: 'The guns',
+  touch: 'A <b>foot battery</b> has come up, its guns hitched behind the horses. Move it into the ring: when it halts the gunners unhitch and lay the guns, which takes a while — they can\'t fire until it\'s done, and must limber up again to move. At long range they fire roundshot that skips through the ranks; close in, <b>canister</b>, a spray of balls that sweeps the ground in front. An enemy company stands up the field.',
+  text: 'A <b>foot battery</b> has come up, its guns hitched behind the horses. Move it into the ring: when it halts the gunners unhitch and lay the guns, which takes a while — they can\'t fire until it\'s done, and must limber up again to move. At long range they fire roundshot that skips through the ranks; close in, <b>canister</b>, a spray of balls that sweeps the ground in front. An enemy company stands up the field.',
+  start(game, ctx) {
+    ctx.guns = ensure(game, 'artillery', 30, 70, 'Foot battery');
+    ctx.at = spot(game, 110, 70);
+    ctx.ring = game.tutorial.marker(ctx.at, 10);
+    ctx.enemy = target(game, 'rifles', spot(game, 380, 70), 'Prussian company');
+    game.tutorial.highlight(ctx.guns);
+  },
+  tasks: [
+    ['Bring the battery into the ring', (g, c) => near(c.guns, c.at, 12)],
+    ['Unlimber and open fire', (g, c) => gunFired(c.guns)],
+  ],
+  end(game, ctx) { ctx.ring.remove(); },
+};
+
+const BATTERY = {
+  title: 'Grand battery',
+  touch: 'The support powers of 1806 are troops, not aircraft. The <b>grand battery</b>: every gun of yours that can reach the spot fires three rounds on it at once — the blow that opens a hole in a line. Open <b>Orders</b>, tap <b>Grand battery</b>, then tap the enemy company. Support powers cost command points and need time to come round again.',
+  text: 'The support powers of 1806 are troops, not aircraft. The <b>grand battery</b>: every gun of yours that can reach the spot fires three rounds on it at once — the blow that opens a hole in a line. Press <kbd data-key="barrage"></kbd> (or the Grand battery button), then click the enemy company. Support powers cost command points and need time to come round again.',
+  start(game, ctx) {
+    game.modeState.cp[me(game)] += 130;
+    ctx.guns = ensure(game, 'artillery', 110, 70, 'Foot battery');
+    ctx.enemy = game.world.stacksOf(enemyOf(me(game))).find((s) => s.alive && s.type.id === 'rifles') ?? target(game, 'rifles', spot(game, 380, 70), 'Prussian company');
+    game.tutorial.show(ctx.enemy);
+  },
+  tasks: [['Fire the grand battery on the enemy', (g) => g.powers.cooldownLeft(me(g), 'battery') > 0]],
+};
+
+const RESERVE = {
+  title: 'The cavalry reserve',
+  touch: 'The <b>cavalry charge</b>: a squadron of heavy horse from the reserve rides in from behind your lines, charges the enemy nearest the spot you pick, and rides off the field again. Tap <b>Cavalry charge</b> in Orders, then tap the enemy company. Don\'t send it at a square.',
+  text: 'The <b>cavalry charge</b>: a squadron of heavy horse from the reserve rides in from behind your lines, charges the enemy nearest the spot you pick, and rides off the field again. Press <kbd data-key="jet"></kbd> (or the Cavalry charge button), then click the enemy company. Don\'t send it at a square.',
+  start(game, ctx) {
+    game.modeState.cp[me(game)] += 270;
+    ctx.enemy = game.world.stacksOf(enemyOf(me(game))).find((s) => s.alive && s.type.id === 'rifles') ?? target(game, 'rifles', spot(game, 300, 0), 'Prussian company');
+    game.tutorial.show(ctx.enemy);
+  },
+  tasks: [['Send in the cavalry reserve', (g) => g.powers.cooldownLeft(me(g), 'reserve') > 0]],
+};
+
+const GUARD = {
+  title: 'The Guard',
+  touch: 'Once a battle you can send in <b>the Guard</b>: two veteran companies of the reserve march up from your base to the spot. They are the best troops you have, and you get them once — keep them for the moment that decides the day. Tap <b>The Guard</b> in Orders, then tap the ring.',
+  text: 'Once a battle you can send in <b>the Guard</b>: two veteran companies of the reserve march up from your base to the spot. They are the best troops you have, and you get them once — keep them for the moment that decides the day. Press <kbd data-key="lift"></kbd> (or The Guard button), then click the ring.',
+  start(game, ctx) {
+    game.modeState.cp[me(game)] += 360;
+    ctx.at = spot(game, 180, -40);
+    ctx.ring = game.tutorial.marker(ctx.at, 14);
+  },
+  tasks: [
+    ['Call up the Guard', (g) => g.powers.cooldownLeft(me(g), 'guard') > 0],
+    ['Bring them to the ring', (g, c) => g.world.stacksOf(me(g)).some((s) => s.type.id === 'guard' && near(s, c.at, 30))],
+  ],
+  end(game, ctx) { ctx.ring.remove(); },
+};
+
+const CONTROL_1806 = as1945(CONTROL, {
+  touch: CONTROL.touch.replace('the rifle squad', 'the line company'),
+  text: CONTROL.text.replace('the rifle squad', 'the line company').replace('The rest of the squad keeps fighting around you.', 'The rest of the company keeps fighting around you. A musket takes a long while to load: make each ball count.'),
+  tasks: [
+    ['Take control of a soldier', CONTROL.tasks[0][1]],
+    ['Fire two shots', (g, c) => c.shots >= 2],
+    ['Go back to the command view', (g, c) => c.took && c.shots >= 2 && !g.player.active],
+  ],
+});
+
 // ------------------------------------------------------------------ chapters
 
 export const CHAPTERS = [
@@ -511,8 +720,19 @@ const CHAPTERS_1945 = [
     outro: CHAPTERS[CHAPTERS.length - 1].outro },
 ];
 
+const CHAPTERS_1806 = [
+  { id: 'basics', title: 'Basics', blurb: 'The camera, selecting and moving a company, facing, a first volley, taking ground.', steps: [CAMERA, SELECT_1806, MOVE_1806, FACE_1806, CONTACT_1806, POINT_1806],
+    outro: 'That is the core of command. Next: <b>Formations</b> — line, column, square, and the bayonet.' },
+  { id: 'formations', title: 'Formations', blurb: 'Column of march, line and volley, square against cavalry, the bayonet charge.', steps: [COLUMN, LINE, SQUARE, BAYONET],
+    outro: 'Line beats column in a firefight, column beats line with the bayonet, square beats horse — and guns beat square. Next: <b>Horse and guns</b>.' },
+  { id: 'arms', title: 'Horse and guns', blurb: 'The cavalry charge, horse and rider, a foot battery unlimbering.', steps: [CAVALRY, HORSES, GUNS],
+    outro: 'Foot, horse and guns together: each covers what the others can\'t. Last: <b>Command</b>.' },
+  { id: 'command', title: 'Command', blurb: 'The grand battery, the cavalry reserve, the Guard, fighting in person.', steps: [BATTERY, RESERVE, GUARD, CONTROL_1806],
+    outro: 'That is boot camp done. In battle the enemy plays the same game: it masses its guns, keeps its horse for the moment, and forms square when yours comes. Try a <b>Frontline</b> battle on Jena on Recruit, and look up any unit in the <b>Units</b> tab of the menu.' },
+];
+
 /** This war's chapters. */
-export const chapters = () => (ww2() ? CHAPTERS_1945 : CHAPTERS);
+export const chapters = () => ({ 1945: CHAPTERS_1945, 1806: CHAPTERS_1806 }[epoch()] ?? CHAPTERS);
 
 /** Chapters finished on this browser (the menu ticks them). */
 export function chaptersDone() {
@@ -526,7 +746,7 @@ function markDone(id) {
 }
 
 /** The battle that runs boot camp chapter `id` (also what the menu deploys). */
-export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
+export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: epoch() === '1806' ? 'jena' : 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
 
 export default {
   id: 'bootcamp',
@@ -540,10 +760,10 @@ export default {
     const foe = enemyOf(me);
     const all = chapters();
     const chapter = all.find((c) => c.id === game.rules?.chapter) ?? all[0];
-    const squad = game.spawnStack('rifles', me, spot(game, 40, -20), facing(game), '1st Squad');
+    const squad = game.spawnStack('rifles', me, spot(game, 40, -20), facing(game), epoch() === '1806' ? '1st Company' : '1st Squad');
     const at = spot(game, 330, -30);
     const state = {
-      points: new ControlPoints(game, [{ id: 'A', name: 'Hill 214', x: at.x, z: at.z, radius: 14, owner: null }]),
+      points: new ControlPoints(game, [{ id: 'A', name: epoch() === '1806' ? 'Dornberg' : 'Hill 214', x: at.x, z: at.z, radius: 14, owner: null }]),
       cp: { [me]: 0, [foe]: 0 },
       strength: { [me]: 1000, [foe]: 1000 },
       maxStrength: 1000,
@@ -570,5 +790,7 @@ export default {
   update(game, dt) {
     game.frontlineHud.update();
     game.tutorial.update(dt);
+    // 1806: the targets' volleys do no harm but still shake nerves — your companies don't break in training
+    if (epoch() === '1806') for (const s of game.world.stacksOf(game.playerFaction)) if (s.morale < 0.5) s.morale = 0.5;
   },
 };
