@@ -32,7 +32,7 @@ export function forEpoch(year) {
   for (const m of Object.values(MAPS)) {
     if (!m.ww2) continue;
     m.base ??= { description: m.description, points: Object.fromEntries((m.points ?? []).map((p) => [p.id, p.name])) };
-    const w = year === '1945' ? m.ww2 : null;
+    const w = year !== '1985' ? m.ww2 : null; // (no inner-German border before 1945 either)
     m.description = w?.description ?? m.base.description;
     for (const p of m.points ?? []) p.name = w?.points?.[p.id] ?? m.base.points[p.id];
   }
