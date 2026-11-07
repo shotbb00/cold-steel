@@ -325,7 +325,7 @@ export class AudioSystem {
   weapon(faction, kind, pos, indoors = false, army = null, last = false) {
     this.lastLoud = this.game.world.time;
     this.intensity += SHOT_WEIGHT[kind] ?? 1;
-    const volume = { flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.95, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
+    const volume = { flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
     // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
     const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
     let key = `${faction}.${kind}`;
@@ -334,7 +334,7 @@ export class AudioSystem {
       key = (last && this.sound(`${own}.last`) ? `${own}.last` : this.sound(own) ? own : key);
     }
     // (a flamethrower's takes overlap into one roar)
-    this.play(key, pos, { volume, throttle: (kind === 'flame' ? 0.9 : kind === 'cannon' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });
+    this.play(key, pos, { volume, throttle: (kind === 'flame' ? 0.9 : kind === 'nebelwerfer' ? 2.5 : kind === 'cannon' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });
   }
 
   // ---------------------------------------------------------------- loops

@@ -51,14 +51,19 @@ import { STRUCTURES, structureCost } from '../systems/Construction.js';
 
 const THINK = 4;
 const BUILD_ORDER = [
-  'rifles', 'scouts', 'mgTeam', 'atTeam', 'engineers', 'mortar', 'ifv', 'observers', 'sniper', 'artillery', 'cbRadar', 'rifles', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
+  'mgTeam', 'tank', 'atTeam', 'scouts', 'mortar', 'ifv', 'engineers', 'observers', 'artillery', 'sniper', 'cbRadar', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
   'reconVehicle', 'aa', 'mgTeam', 'tankDestroyer', 'ifv', 'spMortar', 'ambulance', 'atTeam', 'heavyTank', 'rifles', 'recovery',
   'rockets', 'sam', 'tank',
 ];
 const CAPS = {
-  tank: 2, mgTeam: 3, atTeam: 3, artillery: 1, aa: 1, mortar: 2, ifv: 2, scouts: 2, engineers: 1, observers: 1, manpads: 2,
-  reconVehicle: 1, tankDestroyer: 1, spMortar: 1, ambulance: 1, heavyTank: 1, recovery: 1, rockets: 1, sam: 1,
+  tank: 4, mgTeam: 3, atTeam: 3, artillery: 1, aa: 1, mortar: 2, ifv: 3, scouts: 2, engineers: 1, observers: 1, manpads: 2,
+  reconVehicle: 2, tankDestroyer: 2, spMortar: 1, ambulance: 1, heavyTank: 2, recovery: 1, rockets: 1, sam: 1, cev: 1,
 };
+// armour: the share of its fighting stacks the AI keeps in vehicles, and what it buys to get there
+// (in turn, saving up for each — the rifle squads don't get to spend that money first)
+const ARMOUR_SHARE = 0.4;
+const ARMOUR_ORDER = ['tank', 'ifv', 'tank', 'tankDestroyer', 'ifv', 'heavyTank', 'tank', 'reconVehicle', 'tankDestroyer', 'cev', 'heavyTank'];
+const VEHICLE = new Set(['tank', 'heavyTank', 'ifv', 'tankDestroyer', 'reconVehicle', 'cev']);
 const MAX_EXPANDERS = 3;            // stacks out claiming neutral points at once
 const OP_GAP = [45, 90];            // seconds between launching one operation and the next
 const FIRST_ASSAULT = 110;          // seconds before the first offensive
@@ -165,24 +170,43 @@ export class FrontlineDirector {
     if (kampf && this.myStacks().filter((s) => s.type.id === 'kampfgruppe').length < 4 && this.state.cp[this.faction] >= kampf.cost * 3) this.state.buy(this.faction, 'kampfgruppe');
     const mine = this.myStacks().filter((s) => !s.type.uncapped);
     if (mine.length >= this.state.maxStacks) return;
-    // every other purchase is a rifle squad while the army is short of men to take points with
+    const army = this.game.armyOf(this.faction);
+    const cp = this.state.cp[this.faction];
+    const allowed = (id) => !this.state.allow || this.state.allow(getUnitType(id));
+    const capped = (id) => CAPS[id] !== undefined && mine.filter((s) => s.type.id === id).length >= CAPS[id];
     const squads = mine.filter((s) => ASSAULT.has(s.type.id)).length;
-    this.riflesNext = !this.riflesNext;
-    if (this.riflesNext && squads < 4 + Math.ceil(this.points.length / 2) && (!this.state.allow || this.state.allow(getUnitType('rifles')))) {
-      if (this.state.cp[this.faction] >= unitCost(getUnitType('rifles'), this.game.armyOf(this.faction))) this.state.buy(this.faction, 'rifles');
-      else this.riflesNext = false; // saving up: it's still the rifles' turn next time
-      return;
-    }
-    for (let tries = 0; tries < BUILD_ORDER.length; tries++) {
-      const id = BUILD_ORDER[this.buildIndex % BUILD_ORDER.length];
-      const barred = this.state.allow && !this.state.allow(getUnitType(id)); // e.g. infantry only
-      const capped = barred || (CAPS[id] !== undefined && mine.filter((s) => s.type.id === id).length >= CAPS[id]);
-      if (capped) { this.buildIndex++; continue; }
-      if (this.state.cp[this.faction] >= unitCost(getUnitType(id), this.game.armyOf(this.faction))) {
-        this.state.buy(this.faction, id);
-        this.buildIndex++;
+    const rifles = () => { if (cp >= unitCost(getUnitType('rifles'), army)) this.state.buy(this.faction, 'rifles'); };
+    // a floor of men to take points with comes first…
+    if (squads < 3 && allowed('rifles')) return rifles();
+    // …then three kinds of purchase take turns: armour (while under its share of the fighting
+    // stacks), rifle squads (while the line is short of men), and the build order (MGs, mortars,
+    // guns, support). Each saves up for its own next item; the turn passes only once it has bought
+    // — so the cheap squads never spend what the tank was being saved for.
+    const fighting = mine.filter(fighter);
+    const vehicles = fighting.filter((s) => VEHICLE.has(s.type.id)).length;
+    const next = (order, key) => { // the next item of `order` that may be bought, from this[key]
+      for (let tries = 0; tries < order.length; tries++) {
+        const id = order[(this[key] ?? 0) % order.length];
+        if (allowed(id) && !capped(id)) return id;
+        this[key] = (this[key] ?? 0) + 1;
       }
-      return; // save up for the next item in the order
+      return null;
+    };
+    const kinds = [
+      () => (vehicles < ARMOUR_SHARE * Math.max(fighting.length, 5) ? [next(ARMOUR_ORDER, 'armourIndex'), 'armourIndex'] : null),
+      () => (squads < 3 + Math.ceil(this.points.length / 3) && allowed('rifles') ? ['rifles', null] : null),
+      () => [next(BUILD_ORDER, 'buildIndex'), 'buildIndex'],
+    ];
+    for (let k = 0; k < kinds.length; k++) {
+      const turn = ((this.buyTurn ?? 0) + k) % kinds.length;
+      const [id, key] = kinds[turn]() ?? [];
+      if (!id) continue; // nothing wanted of this kind now: the next kind's turn
+      if (cp >= unitCost(getUnitType(id), army)) {
+        this.state.buy(this.faction, id);
+        if (key) this[key] = (this[key] ?? 0) + 1;
+        this.buyTurn = turn + 1;
+      }
+      return; // bought, or saving up for it
     }
   }
 
