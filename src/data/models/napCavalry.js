@@ -129,7 +129,7 @@ export function buildCavalry({ army = 'fr', kind = 'heavy', mounted = true } = {
   return {
     root,
     muzzle,
-    animate(u, dt) {
+    animate(u, dt, t, ctx) {
       const v = Math.hypot(u.vel.x, u.vel.z);
       // the gait for the speed, with a little slack so it doesn't flicker between two
       const up = { halt: 0.35, walk: 2.4, trot: 4.8, canter: 7.5 }, down = { walk: 0.2, trot: 1.9, canter: 4.2, gallop: 6.8 };
@@ -138,7 +138,7 @@ export function buildCavalry({ army = 'fr', kind = 'heavy', mounted = true } = {
       while (i < 4 && v > up[order[i]]) i++;
       while (i > 0 && v < down[order[i]]) i--;
       gait = order[i];
-      horse.update(dt, gait);
+      horse.update(dt, gait, ctx?.onHoof && ((L) => ctx.onHoof(root.position, gait)));
     },
     die(time, dt) {
       const fate = this.fate ?? 'both';

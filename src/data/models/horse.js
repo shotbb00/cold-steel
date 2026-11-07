@@ -163,7 +163,7 @@ export function buildHorse({ coat = 'bay', saddle = false } = {}) {
     return [a1, a2 - a1];
   }
 
-  function update(dt, gaitName = name) {
+  function update(dt, gaitName = name, onHoof = null) { // onHoof(leg): a hoof set down (cavalry: its sound)
     if (gaitName !== name && GAITS[gaitName]) { from = { ...cur, off: [...offs] }; to = GAITS[gaitName]; blend = 0; name = gaitName; }
     blend = Math.min(1, blend + dt / BLEND);
     const k = smooth(blend);
@@ -194,6 +194,8 @@ export function buildHorse({ coat = 'bay', saddle = false } = {}) {
     for (const L of legs) {
       // where the hoof is (root space): planted and sliding back under the body, or carried forward
       let p = (phase - offs[L.i] + 1) % 1;
+      if (moving && onHoof && L.prevP != null && p < L.prevP - 0.5) onHoof(L);
+      L.prevP = p;
       let hz = L.hoofZ, hy = 0, flex;
       if (!moving || p < cur.duty) {
         const s = moving ? p / cur.duty : 0.5;

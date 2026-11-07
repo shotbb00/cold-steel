@@ -30,7 +30,7 @@ const FAR = 110;           // metres beyond which shots switch to their '.far' v
 // How far a sound carries: its reference distance in metres (full level inside it). A rifle shot
 // fades within a few hundred metres, a howitzer is heard across the whole map.
 const CARRY = {
-  rifle: 8, musket: 12, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
+  rifle: 8, musket: 12, hoof: 5, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
   explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
 };
 const carry = (key) => CARRY[key.replace(/^(\d{4}\.\w+\.|nato\.|pact\.)/, '').replace(/\.(far|last)$/, '')] ?? 6;

@@ -895,10 +895,18 @@ export class UnitStack {
     this.formBase ??= this.stats;
     const base = this.formBase;
     this.form = form;
-    this.stats = { ...base, ...F.stats, speed: base.speed * (F.speed ?? 1) };
+    // the armies' signatures (data/epoch.js, 1806): France's quick columns and skirmishers, Prussia's drilled line and slow re-forming
+    const pas = form === 'column' && armyDoctrine(this.army, 'pasDeCharge');
+    const pel = form === 'line' && armyDoctrine(this.army, 'peloton');
+    const tir = form === 'skirmish' && armyDoctrine(this.army, 'tirailleurs');
+    this.stats = {
+      ...base, ...F.stats, speed: base.speed * (F.speed ?? 1) * (pas?.speed ?? 1),
+      ...(pel ? { reloadTime: base.reloadTime * pel.reload, spread: base.spread * pel.spread } : {}),
+      ...(tir ? { stealth: (base.stealth ?? 1) / tir.stealth, suppressPower: (base.suppressPower ?? 1) * tir.suppress } : {}),
+    };
     this._specialistStats = null;
     this.packForm();
-    this.formedAt = instant ? 0 : this.world.time + FORM_TIME;
+    this.formedAt = instant ? 0 : this.world.time + FORM_TIME * (armyDoctrine(this.army, 'cuirassiers')?.form ?? 1);
     for (const u of this.units) { u.stats = this.unitStats(u.index); u.volleyWait = false; u.volleyGo = false; }
     this.volleyFirst = null;
     return true;
@@ -940,7 +948,8 @@ export class UnitStack {
     if (!c.shocked && d < 30) {
       // the bayonets coming on: the target's nerve takes the blow (a square shrugs off foot)
       c.shocked = true;
-      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (t.stats.square ? 0.4 : 1));
+      const steady = t.stats.square && armyDoctrine(t.army, 'squares'); // (Saxony's squares don't flinch)
+      t.morale = Math.max(0, t.morale - 0.3 * (c.shock ?? 1) * (steady ? 0 : t.stats.square ? 0.4 : 1));
       this.bark(this.units.find((u) => u.alive), 'flank', 1);
     }
   }
@@ -949,7 +958,8 @@ export class UnitStack {
   startCharge(target) {
     if (!(this.form || this.stats.cavalry) || this.stats.loose || !target?.alive || this.charging) return false;
     const cav = this.stats.cavalry;
-    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (this.doctrineShock ?? 1) };
+    const perk = cav ? (this.type.id === 'tank' && armyDoctrine(this.army, 'cuirassiers')) : armyDoctrine(this.army, 'pasDeCharge'); // (Prussia's cuirassiers, France's pas de charge)
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
     if (cav) { // at the gallop
       this.chargeBase = this.stats;
       this.stats = { ...this.stats, speed: cav.chargeSpeed };
@@ -1699,6 +1709,7 @@ export class UnitStack {
     this.aliveCount--;
     this.renderer.done = false;
     if (this.stats.cavalry) this.unhorse(u); // 1806: the horse, the rider or both
+    if (this.form === 'square' && armyDoctrine(this.army, 'squares')) this.morale = Math.max(this.morale, (this.stats.breakMorale ?? 0) + 0.05); // Saxony's squares hold
     this.morale = Math.max(0, this.morale - ((this.form || this.stats.cavalry ? 0.035 : 0.1) + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
     if (u.officer) {
       this.morale = Math.max(0, this.morale - OFFICER_DOWN * (1 - 0.15 * this.rank));

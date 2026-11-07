@@ -67,6 +67,11 @@ export class RigRenderer {
         s.effects.dust(pos, 1.6 * size);
         s.audio?.play('stomp', pos, { volume: 0.8 * size, throttle: 0.05 });
       },
+      onHoof: (pos, gait) => { // 1806: a hoof set down — louder and dustier the faster
+        const fast = gait === 'gallop' ? 1 : gait === 'canter' ? 0.75 : gait === 'trot' ? 0.55 : 0.32;
+        s.audio?.play('hoof', pos, { volume: fast, rate: 0.9 + Math.random() * 0.25, throttle: 0.04 });
+        if (fast > 0.7 && Math.random() < 0.25) s.effects.dust(pos, 0.5);
+      },
     };
     this.done = false;
   }

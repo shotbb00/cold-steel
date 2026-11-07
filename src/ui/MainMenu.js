@@ -12,7 +12,7 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
-import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
+import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
@@ -153,7 +153,7 @@ const el = (tag, cls, html) => {
   return e;
 };
 
-const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', hover: 'Hover', fly: 'Fly' };
+const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', trot: 'Trot', canter: 'Canter', gallop: 'Gallop', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
@@ -621,7 +621,7 @@ export class MainMenu {
     const type = UNIT_TYPES[id];
     this.preview.show(id, faction, army);
     this.preview.setPose(this.unit.pose);
-    const poses = type.kind === 'infantry' ? INFANTRY_POSES : VEHICLE_POSES;
+    const poses = type.kind === 'infantry' ? INFANTRY_POSES : type.kind === 'cavalry' ? CAVALRY_POSES : VEHICLE_POSES;
     this.poses.replaceChildren();
     for (const pose of poses) {
       const b = el('button', pose === this.unit.pose ? 'on' : '', POSE_LABEL[pose]);

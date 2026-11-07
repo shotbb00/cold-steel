@@ -13,6 +13,7 @@ import { buildAircraft, airType } from '../systems/AirStrike.js';
 
 export const INFANTRY_POSES = ['idle', 'aim', 'kneel', 'prone', 'walk', 'run', 'reload'];
 export const VEHICLE_POSES = ['idle', 'traverse', 'drive', 'fire'];
+export const CAVALRY_POSES = ['idle', 'walk', 'trot', 'canter', 'gallop']; // (1806: the horse's gaits, in place)
 export const AIRCRAFT_POSES = ['hover', 'fly'];
 
 const FLAT = {
@@ -163,6 +164,7 @@ export class UnitPreview {
       if (pose === 'run') Object.assign(u, { gait: 1, moving: true, run: true });
       if (pose === 'reload') Object.assign(u, { reloadT: 2, reloadAnim: 1, crouch: 0.85 });
       if (pose === 'drive') Object.assign(u, { gait: 1, moving: true });
+      if (this.stack.stats?.cavalry) u.vel?.set(0, 0, { walk: 1.7, trot: 4, canter: 6.5, gallop: 12 }[pose] ?? 0); // (the rig reads its gait from the speed)
     }
   }
 
