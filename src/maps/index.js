@@ -8,6 +8,7 @@ import thuringianForest from './thuringianForest.ts';
 import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
 import jena from './jena.ts';
+import auerstedt from './auerstedt.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -18,6 +19,7 @@ export const MAPS = {
   [hersfeldAirbase.id]: hersfeldAirbase,
   [monteKali.id]: monteKali,
   [jena.id]: jena,
+  [auerstedt.id]: auerstedt,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;

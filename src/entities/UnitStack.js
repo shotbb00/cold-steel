@@ -113,6 +113,8 @@ export class UnitStack {
     if (cav) this.stats = { ...this.stats, sight: (this.stats.sight ?? 100) * cav.sight };
     const walze = ARTILLERY.has(type.id) && armyDoctrine(this.army, 'walze'); // the NVA's Feuerwalze reloads faster
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
+    const quick = this.stats.gun && this.stats.towed && armyDoctrine(this.army, 'quickGuns'); // Bavaria's reformed artillery unlimbers sooner
+    if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
     this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
