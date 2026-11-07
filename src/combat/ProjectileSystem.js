@@ -142,7 +142,7 @@ export class ProjectileSystem {
             target.receiveDamage(b.damage, b.source, b.pierce, b.dir, b.vsArmor);
             b.source?.noteHit?.();
           }
-          const armored = target.stack && !target.stack.usesCover;
+          const armored = target.stack && !target.stack.usesCover && !target.stack.stats.cavalry; // (1806 horses: flesh, not plate)
           if (!b.splash) {
             this.effects.impact(_hit, armored ? 'armor' : 'flesh');
             this.audio?.play(armored ? 'impact.armor' : 'impact.flesh', _hit, { volume: armored ? 0.6 : 0.4, throttle: 0.04 });

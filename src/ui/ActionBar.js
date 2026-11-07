@@ -42,7 +42,7 @@ const ACTIONS = [
     when: (sel) => sel.some((s) => s.stats.formations),
     on: (sel) => sel.some((s) => s.form === f),
   })),
-  { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Bayonets: the company runs at the nearest enemy it can see and fights hand to hand', when: (sel) => sel.some((s) => s.stats.formations) },
+  { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Foot: bayonets, at the run. Horse: at the gallop, sabres out. At the nearest enemy in sight — horses will not go into a square', when: (sel) => sel.some((s) => s.stats.formations || (s.stats.cavalry && !s.stats.loose)) },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 

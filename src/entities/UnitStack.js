@@ -429,6 +429,10 @@ export class UnitStack {
       this.updateMorale(dt);
       this.updateCentroid();
       if (this.form) this.updateForm(dt);
+      if (this.charging) this.updateCharge(dt);
+      if (this.stats.cavalry && !this.stats.loose) this.updateSabres(dt);
+      if (this.stats.loose) this.updateLoose(dt);
+      if (this.stats.dismounted) this.updateDismounted(dt);
     }
     // (the renderer is updated by GameEngine after the simulation step)
   }
@@ -914,11 +918,22 @@ export class UnitStack {
     return this.world.time >= this.formedAt && !this.charging && (!this.stats.frontOnly || !u.formRow);
   }
 
-  updateForm(dt) {
+  updateForm() {
     if (this.aliveCount !== this.packedFor && this.world.time >= (this.repackAt ?? 0)) { this.packForm(); this.repackAt = this.world.time + 4; } // close up every few seconds
+  }
+
+  updateCharge(dt) {
     const c = this.charging;
-    if (!c) return;
     const t = c.target;
+    // horses won't go into a square: they swerve off it, and the riders lose heart
+    if (this.stats.cavalry && t.stats.square && Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z) < 16) {
+      this.morale = Math.max(0, this.morale - 0.15);
+      const a = Math.atan2(this.centroid.x - t.centroid.x, this.centroid.z - t.centroid.z);
+      this.endCharge();
+      this.ai.moveTo(this.world.clampToBounds({ x: t.centroid.x + Math.sin(a) * 70, z: t.centroid.z + Math.cos(a) * 70 }), { ordered: false });
+      this.services.tell?.(this.faction, `${this.name}: the horses won't face the square`);
+      return;
+    }
     if (!t.alive || t.ai.state === AIState.RETREAT || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
     if ((c.steer -= dt) <= 0) { c.steer = 0.5; this.ai.moveTo({ x: t.centroid.x, z: t.centroid.z }, { ordered: true }); }
     const d = Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z);
@@ -932,15 +947,130 @@ export class UnitStack {
 
   /** The bayonet charge on `target`: at the run, no firing; men within reach fight hand to hand (ai/SoldierAI.js). */
   startCharge(target) {
-    if (!this.form || !target?.alive || this.charging) return false;
-    this.charging = { target, steer: 0, shocked: false, until: this.world.time + 45, shock: this.doctrineShock ?? 1 };
+    if (!(this.form || this.stats.cavalry) || this.stats.loose || !target?.alive || this.charging) return false;
+    const cav = this.stats.cavalry;
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (this.doctrineShock ?? 1) };
+    if (cav) { // at the gallop
+      this.chargeBase = this.stats;
+      this.stats = { ...this.stats, speed: cav.chargeSpeed };
+      for (const u of this.units) u.stats = this.stats;
+    }
     this.ai.moveTo({ x: target.centroid.x, z: target.centroid.z }, { ordered: true });
     return true;
   }
 
   endCharge() {
     this.charging = null;
+    if (this.chargeBase) { this.stats = this.chargeBase; this.chargeBase = null; for (const u of this.units) u.stats = this.stats; }
     if (this.alive) this.ai.defend();
+  }
+
+  /** Sabres: a trooper strikes at the enemy within reach — hard at the gallop, less in a mêlée. */
+  updateSabres(dt) {
+    const cav = this.stats.cavalry;
+    if (!cav?.sabre) return;
+    const rate = this.charging ? 1.5 : 0.7;
+    for (const u of this.units) {
+      if (!u.alive || Math.random() > rate * dt) continue;
+      let best = null, bd = (cav.reach + 0.6) ** 2;
+      for (const o of this.world.neighbors(u.pos, cav.reach + 0.6, _near)) {
+        if (!o.alive || o.faction === this.faction || o.stack.stats.loose) continue;
+        if (o.stack.stats.square && this.world.time >= (o.stack.formedAt ?? 0) && Math.random() > 0.15) continue; // a formed square: the horses won't close on its bayonets
+        const d = dist2DSq(u.pos, o.pos);
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7), this, 0, null, 1);
+    }
+  }
+
+  // ------------------------------------------------------------------ 1806: horse and rider
+
+  /**
+   * A trooper is down: the rider, the horse, or both (u.fate, for the rig's fall). A horse that
+   * lives runs on as a loose horse; a rider who lives gets up and goes on foot. Host only (the
+   * new stacks reach a guest by their spawn).
+   */
+  unhorse(u) {
+    if (this.stats.loose) { u.fate = 'horse'; return; }
+    const r = Math.random();
+    u.fate = r < 0.4 ? 'rider' : r < 0.75 ? 'horse' : 'both';
+    const g = this.services.game;
+    if (!g || g.net?.isClient || u.fate === 'both') return;
+    const side = { x: Math.cos(u.yaw), z: -Math.sin(u.yaw) };
+    if (u.fate === 'rider') {
+      const h = g.spawnStack('looseHorse', this.faction, { x: u.pos.x, z: u.pos.z }, u.yaw, 'Loose horse');
+      if (h) { h.autonomous = true; h.panicUntil = this.world.time + 8 + Math.random() * 6; }
+    } else {
+      const m = g.spawnStack('dismounted', this.faction, { x: u.pos.x + side.x * 1.4, z: u.pos.z + side.z * 1.4 }, u.yaw, `${this.name}: unhorsed`);
+      if (m) { m.autonomous = true; m.origin = this; m.originType = this.type.id; }
+    }
+  }
+
+  /** A loose horse: it bolts from fire and from the enemy, then wanders and grazes. */
+  updateLoose(dt) {
+    if ((this.looseT = (this.looseT ?? 0) - dt) > 0) return;
+    this.looseT = 1;
+    const u = this.units[0];
+    if (!u?.alive) return;
+    if (this.stats === this.type.stats) this.stats = { ...this.stats };
+    const threat = this.world.nearestEnemyCombatant(u.pos, this.faction, 45, false);
+    const scared = threat || this.world.time - this.lastHitTime < 3 || this.world.time < (this.panicUntil ?? 0);
+    this.stats.speed = scared ? 9 : 1.5;
+    u.stats = this.stats;
+    if (scared && (threat || this.world.time - (this.boltAt ?? -99) > 4)) {
+      this.boltAt = this.world.time;
+      const from = threat?.pos ?? this.lastAttacker?.centroid ?? { x: u.pos.x - Math.sin(u.yaw), z: u.pos.z - Math.cos(u.yaw) };
+      const a = Math.atan2(u.pos.x - from.x, u.pos.z - from.z) + (Math.random() - 0.5) * 0.8;
+      this.ai.moveTo(this.world.clampToBounds({ x: u.pos.x + Math.sin(a) * 60, z: u.pos.z + Math.cos(a) * 60 }), { ordered: false });
+    } else if (!scared && Math.random() < 0.08) { // a few steps to fresh grass
+      const a = Math.random() * Math.PI * 2;
+      this.ai.moveTo(this.world.clampToBounds({ x: u.pos.x + Math.sin(a) * 8, z: u.pos.z + Math.cos(a) * 8 }), { ordered: false });
+    }
+  }
+
+  /** A trooper on foot: to the nearest loose horse of his side and back into the saddle, else home. */
+  updateDismounted(dt) {
+    if ((this.footT = (this.footT ?? 0) - dt) > 0) return;
+    this.footT = 0.5;
+    const u = this.units[0];
+    if (!u?.alive || this.services.game?.net?.isClient) return;
+    let horse = null, hd = 80 * 80;
+    for (const h of this.world.stacksOf(this.faction)) {
+      if (!h.stats.loose || !h.alive) continue;
+      const d = dist2DSq(h.units[0].pos, u.pos);
+      if (d < hd) { hd = d; horse = h; }
+    }
+    if (horse && hd < 2.5 * 2.5) return this.remount(horse);
+    if (horse) { this.ai.moveTo({ x: horse.units[0].pos.x, z: horse.units[0].pos.z }, { ordered: false }); u.run = true; return; }
+    if (!this.homeward) { // no horse about: back to his own lines
+      this.homeward = true;
+      const base = this.world.bases?.[this.faction];
+      if (base) this.ai.moveTo(this.world.clampToBounds({ x: base.x, z: base.z }), { ordered: false });
+    }
+  }
+
+  /** Back in the saddle: into his own squadron's empty place if it still rides, else a squadron of one. */
+  remount(horse) {
+    const g = this.services.game;
+    const at = horse.units[0].pos;
+    const o = this.origin;
+    const slot = o?.alive && o.units.find((m) => !m.alive);
+    if (slot) {
+      slot.alive = true;
+      slot.hp = slot.maxHp;
+      slot.fate = null;
+      slot.pos.set(at.x, at.y, at.z);
+      slot.dest.copy(slot.pos);
+      o.aliveCount++;
+      o.renderer.done = false;
+      if (o.form) o.packForm();
+    } else if (this.originType) {
+      const s = g.spawnStack(this.originType, this.faction, { x: at.x, z: at.z }, horse.units[0].yaw, this.name.replace(': unhorsed', ''), { count: 1 });
+      if (s && o?.owner) s.owner = o.owner;
+    }
+    g.removeStack(horse);
+    g.removeStack(this);
+    g.tell?.(this.faction, 'A trooper caught a loose horse and is back in the saddle');
   }
 
   /**
@@ -1536,8 +1666,8 @@ export class UnitStack {
       }
       const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
-      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure) this.hitPart(u, facing);
-      if (u.hp <= 0) u.recoverable = Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
+      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
+      if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);
     }
@@ -1568,14 +1698,15 @@ export class UnitStack {
     this.world.cover.release(u);
     this.aliveCount--;
     this.renderer.done = false;
-    this.morale = Math.max(0, this.morale - ((this.form ? 0.035 : 0.1) + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
+    if (this.stats.cavalry) this.unhorse(u); // 1806: the horse, the rider or both
+    this.morale = Math.max(0, this.morale - ((this.form || this.stats.cavalry ? 0.035 : 0.1) + 0.3 / this.units.length) * (1 - 0.15 * this.rank) * this.nerve);
     if (u.officer) {
       this.morale = Math.max(0, this.morale - OFFICER_DOWN * (1 - 0.15 * this.rank));
       const w = this.units.find((m) => m.alive);
       if (w) this.bark(w, 'officer', 1, true);
       this.services.tell(this.faction, `${this.name}: the platoon leader is down!`);
     }
-    const shock = this.usesCover ? 0.02 : 0.08; // a tank brewing up rattles everyone
+    const shock = this.usesCover || this.stats.cavalry ? 0.02 : 0.08; // a tank brewing up rattles everyone (a fallen horseman, no more than a man)
     for (const o of this.world.stacksOf(this.faction)) {
       if (o !== this && dist2DSq(o.centroid, this.centroid) < 1600) o.morale = Math.max(0, o.morale - shock);
     }

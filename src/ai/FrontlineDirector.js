@@ -146,10 +146,17 @@ export class FrontlineDirector {
   drill() {
     const foes = this.game.world.stacksOf(enemyOf(this.faction)).filter((e) => e.alive);
     for (const s of this.myStacks()) {
+      if (s.stats.cavalry && !s.stats.loose && !s.charging && s.ai.state !== AIState.RETREAT && s.morale > 0.6 && this.now > (s.chargeAgain ?? 0)) {
+        // horsemen: a charge at foot that is out of square (best: in the open, on the flank, broken), then rally
+        const prey = foes.filter((e) => e.usesCover && !e.stats.square && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < 170)
+          .sort((a, b) => (a.morale + (a.form === 'line' ? 0 : 0.3)) - (b.morale + (b.form === 'line' ? 0 : 0.3)))[0];
+        if (prey && s.startCharge(prey)) s.chargeAgain = this.now + 40;
+        continue;
+      }
       if (!s.stats.formations || s.charging || s.ai.state === AIState.RETREAT) continue;
       const near = (r, test = () => true) => foes.filter((e) => test(e) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < r);
       const marching = s.moveTarget && Math.hypot(s.moveTarget.x - s.centroid.x, s.moveTarget.z - s.centroid.z) > 70 && !near(160).length;
-      const horse = near(90, (e) => e.stats.cavalry).length > 0;
+      const horse = near(110, (e) => e.stats.cavalry && !e.stats.loose).length > 0 || near(220, (e) => e.stats.cavalry && !!e.charging).length > 0; // (a charge comes on at the gallop: form in time)
       const want = horse ? 'square' : s.type.light ? 'skirmish' : marching ? 'column' : 'line';
       if (s.form !== want) { s.setForm(want); continue; }
       const close = near(45, (e) => e.usesCover && e.units.some((u) => u.alive && u.spotted))[0];

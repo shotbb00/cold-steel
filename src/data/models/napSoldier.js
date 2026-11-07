@@ -48,7 +48,7 @@ function musket(bayonet = true) {
 }
 
 /** The bicorne, worn across the head: the two cocked brims together, the crown under them. */
-function bicorne(c, plume) {
+export function bicorne(c, plume) {
   return [
     loft([[0, 1.765, -0.005, 0.1, 0.108, 2.2], [0, 1.83, -0.005, 0.098, 0.104, 2.2], [0, 1.86, -0.005, 0.07, 0.08, 2]], { color: c.hat }, 12), // crown
     loft([[-0.23, 1.835, 0, 0.025, 0.02, 2], [-0.14, 1.865, 0, 0.05, 0.055, 2], [0, 1.885, 0, 0.06, 0.085, 2], [0.14, 1.865, 0, 0.05, 0.055, 2], [0.23, 1.835, 0, 0.025, 0.02, 2]], { color: c.hat }, 10), // the brims
@@ -65,7 +65,7 @@ const bearskin = () => [
 ];
 
 /** The shako (French light infantry): flared black felt, the peak, the cords, a plume. */
-const shako = (plume) => [
+export const shako = (plume) => [
   P.cyl(0.11, 0.098, 0.2, { y: 1.85, color: BLACK }, 14),
   P.box(0.16, 0.012, 0.07, { y: 1.76, z: 0.12, rx: 0.25, color: BLACK }),
   P.cyl(0.112, 0.112, 0.02, { y: 1.935, color: 0x2a2a2a }, 14),
@@ -73,7 +73,7 @@ const shako = (plume) => [
 ];
 
 /** The Bavarian Raupenhelm: the leather skull, the brass front, the black fur crest front to back. */
-const raupenhelm = (plume) => [
+export const raupenhelm = (plume) => [
   loft([[0, 1.74, -0.01, 0.112, 0.12, 2], [0, 1.8, -0.01, 0.112, 0.12, 2], [0, 1.86, -0.012, 0.085, 0.095, 2]], { color: BLACK }, 12),
   P.box(0.18, 0.012, 0.07, { y: 1.75, z: 0.125, rx: 0.2, color: BLACK }),                                    // peak
   P.box(0.12, 0.07, 0.012, { y: 1.8, z: 0.118, color: BRASS }),                                             // the front plate

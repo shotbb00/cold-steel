@@ -16,6 +16,7 @@ import { epoch } from '../data/epoch.js';
 
 const SECTIONS = [
   ['infantry', 'Infantry'],
+  ['cavalry', 'Cavalry'],   // (1806)
   ['armour', 'Armour'],
   ['fire', 'Fire support'],
   ['airdefence', 'Air defence'],

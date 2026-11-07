@@ -55,7 +55,7 @@ export class Support {
       let job = null;       // the label's line: the most telling task this tick
       let treated = 0;
       for (const o of world.stacksOf(s.faction)) {
-        if (o === s || !o.alive || o.stats.structure || o.usesCover === repair) continue;
+        if (o === s || !o.alive || o.stats.structure || o.usesCover === repair || (repair && o.stats.cavalry)) continue; // (no one repairs a horse)
         for (const u of o.units) {
           if (!(u.alive || (repair && u.recoverable && o.alive)) || !this.needs(u, repair) || !s.units.some((m) => m.alive && dist2DSq(m.pos, u.pos) < kit.range * kit.range)) continue;
           working = true;
@@ -151,7 +151,7 @@ export class Support {
     let best = null;
     let bestD = job.seek * job.seek;
     for (const o of this.game.world.stacksOf(s.faction)) {
-      if (o === s || !o.alive || o.stats.structure || o.usesCover === repair) continue;
+      if (o === s || !o.alive || o.stats.structure || o.usesCover === repair || (repair && o.stats.cavalry)) continue;
       if (this.game.time - o.lastHitTime < 6) continue; // still under fire: wait for it to pull back
       for (const u of o.units) {
         if (!(u.alive || (repair && u.recoverable && o.alive)) || !(repair ? !u.alive || u.hp < u.maxHp * 0.8 || u.speedMul === 0 || u.gunOut || u.engineHit : u.wounded)) continue;

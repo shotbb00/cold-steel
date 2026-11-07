@@ -105,8 +105,9 @@ export function buildHorse({ coat = 'bay', saddle = false } = {}) {
   if (saddle) { // a light cavalry saddle on a shabraque, the cloth with its border, draped over the back
     const shell = (grow, lo, hi, color) => loft([[0, 1.27, -0.26, 0.31 + grow, 0.33 + grow, 2.1], [0, 1.25, -0.16, 0.33 + grow, 0.36 + grow, 2.1], [0, 1.25, 0.12, 0.335 + grow, 0.37 + grow, 2.1], [0, 1.27, 0.36, 0.32 + grow, 0.36 + grow, 2.1], [0, 1.28, 0.44, 0.31 + grow, 0.355 + grow, 2.1]],
       { color, warp: (v) => { v.y = Math.min(hi, Math.max(lo, v.y)); } }, 20);
-    body.add(mesh(B(shell(0.012, 1.16, 9, 0x7d1a1a)), mat));
-    body.add(mesh(B(shell(0.02, 1.13, 1.19, 0xd8b54a)), mat));                                                           // the border
+    const cloth = saddle.cloth ?? 0x7d1a1a, trim = saddle.trim ?? 0xd8b54a; // (an army's own: buildHorse({ saddle: { cloth, trim } }))
+    body.add(mesh(B(shell(0.012, 1.16, 9, cloth)), mat));
+    body.add(mesh(B(shell(0.02, 1.13, 1.19, trim)), mat));                                                               // the border
     body.add(mesh(B(loft([[0, 1.66, -0.13, 0.15, 0.05, 2], [0, 1.65, 0.06, 0.16, 0.05, 2], [0, 1.67, 0.26, 0.13, 0.05, 2]], { color: 0x4a2c18 }, 12)), mat)); // the seat
     body.add(mesh(B(loft([[0, 1.66, 0.28, 0.11, 0.04, 2], [0, 1.74, 0.33, 0.08, 0.035, 2]], { color: 0x4a2c18 }, 10)), mat));                         // pommel
     body.add(mesh(B(loft([[0, 1.66, -0.12, 0.13, 0.04, 2], [0, 1.74, -0.17, 0.1, 0.035, 2]], { color: 0x4a2c18 }, 10)), mat));                       // cantle

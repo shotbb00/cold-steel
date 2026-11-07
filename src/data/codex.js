@@ -273,6 +273,21 @@ export const CODEX = {
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
 // 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
 export const CODEX1806 = {
+  tank: {
+    use: 'The charge that decides the day. Keep the heavy horse back until the enemy foot is shaken, caught in line or on the move, then send it in (Charge!): at the gallop the shock alone breaks a wavering company, and the swords do the rest. Rally it after every charge.',
+    strong: 'Foot in line or column, broken troops, guns without cover', weak: 'A formed square (the horses won\'t go in), guns with canister, a long fight',
+    counter: 'Form square when it comes, and keep your guns close to the square.',
+  },
+  ifv: {
+    use: 'Horsemen who can also fight with the musket: charge like any cavalry, or hold a flank and shoot. Good against the enemy\'s light horse and his skirmishers.',
+    strong: 'Skirmishers, light cavalry, holding a flank', weak: 'Squares, massed volleys, heavy cavalry',
+    counter: 'Square against the charge; your own heavy horse against them.',
+  },
+  reconVehicle: {
+    use: 'The eyes of the army: the light horse sees farthest. Ride ahead, find the enemy, and fall back; in the battle, ride down skirmishers and pursue the broken.',
+    strong: 'Scouting, skirmishers in the open, pursuit', weak: 'Formed foot, heavy cavalry, guns',
+    counter: 'Keep your skirmishers close to formed foot; meet them with dragoons or heavy horse.',
+  },
   rifles: {
     use: 'The line: a company in two ranks, standing shoulder to shoulder. It fires by volleys — the whole company on the word, then a long reload — and every volley leaves a bank of smoke in front of it. Bring it within a hundred paces of the enemy, then fire; let the enemy waste its volley at long range.',
     strong: 'Other foot at a hundred paces, holding a line', weak: 'Artillery (a line is a long target), cavalry on its flank, being caught reloading',

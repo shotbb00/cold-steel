@@ -186,13 +186,16 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
-    [vehicle ? 'Vehicles' : 'Men', type.formation.count],
+    [s.cavalry ? 'Riders' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
     ['Cost', `${unitCost(type, army)} CP`],
     ['Speed', `${Math.round(s.speed * 3.6)} km/h`],
     ['Sight', `${s.sight} m`],
     ['Range', (sp ?? s).range <= 1 ? (s.antiAir ? 'no ground weapon' : 'unarmed') : `${(sp ?? s).minRange ? `${(sp ?? s).minRange}–` : ''}${s.gunRange ?? (sp ?? s).range} m`],
   ];
-  if (vehicle) {
+  if (s.cavalry) {
+    rows.push(['Horse and rider', 'a hit may down the horse, the rider or both']);
+    rows.push(['Charge', `${Math.round(s.cavalry.chargeSpeed * 3.6)} km/h at the gallop`]);
+  } else if (vehicle) {
     rows.push(['Hit points', s.hp]);
     rows.push(['Armour', `${Math.round(s.armor * 100)} % front · ${Math.round(s.armor * 70)} % side · ${Math.round(s.armor * 35)} % rear`]);
   } else {
@@ -202,6 +205,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const armed = w.range > 1 && (w.damage ?? 1) > 0; // ambulances, bridge layers: no gun to describe
   if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
   else if (armed && w.volley) rows.push(['Fire', `volleys, then ${w.reloadTime} s to reload`]); // (1806: the company fires together)
+  else if (armed && s.cavalry) rows.push(['Fire', `${w.range > 50 ? 'carbines' : 'pistols'}, then ${w.reloadTime} s to reload — the sabre is the weapon`]);
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
   const aa = s.antiAir ?? sp?.antiAir;
@@ -235,7 +239,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
   if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
-  if (armed) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
+  if (armed && !s.cavalry && !s.formations) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
 }
 

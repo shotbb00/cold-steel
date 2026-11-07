@@ -47,6 +47,8 @@ export class RigRenderer {
   constructor(stack, scene) {
     this.stack = stack;
     const build = stack.type.models[stack.army] ?? stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0];
+    this.build = build;
+    this.scene = scene;
     // specialists (the first type.specialist.count members) may have a model of their own
     const special = stack.type.specialistModels?.[stack.army] ?? stack.type.specialistModels?.[stack.faction] ?? null;
     const specials = stack.type.specialist?.count ?? 0;
@@ -81,6 +83,13 @@ export class RigRenderer {
       const u = units[i];
       const rig = this.rigs[i];
       rig.root.visible = u.visible !== false || rig.dead;
+      if (u.alive && rig.dead) { // brought back (1806: a dismounted trooper caught a horse and remounted) — a fresh rig
+        rig.root.removeFromParent();
+        this.rigs[i] = this.build(this.mats);
+        this.rigs[i].root.position.copy(u.pos);
+        this.scene.add(this.rigs[i].root);
+        continue;
+      }
       if (u.alive) {
         animating = true;
         rig.root.position.copy(u.pos);
@@ -88,7 +97,10 @@ export class RigRenderer {
         rig.animate(u, dt, t, this.ctx);
         continue;
       }
-      if (!rig.dead) {
+      if (!rig.dead && this.stack.stats.cavalry) { // horse and rider: they fall (models/napCavalry.js), nothing burns
+        rig.dead = true;
+        rig.fate = u.fate;
+      } else if (!rig.dead) {
         rig.dead = true;
         rig.root.traverse((o) => {
           if (o.isMesh) o.material = o.material === this.mats.glow ? DEAD_GLOW : WRECK;
