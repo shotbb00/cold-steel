@@ -273,6 +273,26 @@ export const CODEX = {
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
 // 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
 export const CODEX1806 = {
+  artillery: {
+    use: 'Two field guns. Unlimber them where they see the enemy\'s lines — on a rise, on open ground: roundshot skips through a line or a column from 700 m and kills men in every rank it passes. Let the enemy come on and switch to canister inside 200 m: one discharge empties a company. Keep foot or a square close: alone, guns are a prize for the enemy\'s horse.',
+    strong: 'Columns and lines at long range, anything close in with canister, squares', weak: 'Cavalry on its flank, skirmishers picking off the gunners, moving',
+    counter: 'Skirmishers to kill the gunners, cavalry round the flank, or close in fast while it reloads.',
+  },
+  spMortar: {
+    use: 'The heavy 12-pounders: the longest reach and the heaviest ball, but slow to move and slow to set up. Put them where they can stay: in the centre of your line, on a height.',
+    strong: 'Everything at long range, a grand battery\'s backbone', weak: 'Moving them, cavalry, skirmishers',
+    counter: 'Don\'t stand in front of them: go round, or rush them under cover of smoke and ground.',
+  },
+  rockets: {
+    use: 'Horse artillery: light guns that keep up with the cavalry, in action in seconds and limbered again before the answer comes. Bring them up close, fire a few rounds of canister, and go.',
+    strong: 'Speed, surprise, canister at close range', weak: 'Lighter shot than the foot guns, cavalry',
+    counter: 'Cavalry of your own when they limber up, or guns of your own at long range.',
+  },
+  mortar: {
+    use: 'Howitzers lob explosive shells over hedges, walls and the brow of a hill: they reach what flat-firing guns can\'t see. Use them on villages, on troops behind cover, and to set things alight.',
+    strong: 'Troops in cover and in villages, behind a rise', weak: 'Anything close (canister only), moving targets',
+    counter: 'Keep moving and spread out; send cavalry at them.',
+  },
   tank: {
     use: 'The charge that decides the day. Keep the heavy horse back until the enemy foot is shaken, caught in line or on the move, then send it in (Charge!): at the gallop the shock alone breaks a wavering company, and the swords do the rest. Rally it after every charge.',
     strong: 'Foot in line or column, broken troops, guns without cover', weak: 'A formed square (the horses won\'t go in), guns with canister, a long fight',

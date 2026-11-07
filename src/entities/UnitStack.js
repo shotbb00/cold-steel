@@ -793,7 +793,7 @@ export class UnitStack {
     }
     if (u.retarget <= 0) {
       u.retarget = (0.4 + Math.random() * 0.3 + u.suppression * 0.3) * (this.led ? LED.react : this.hadOfficer ? LEADERLESS.react : 1);
-      u.target = this.smokeMission(u) ?? this.barrageMission(u) ?? this.pickTarget(u);
+      u.target = this.smokeMission(u) ?? this.barrageMission(u) ?? this.batteryMission(u) ?? this.pickTarget(u);
     }
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
@@ -1081,6 +1081,42 @@ export class UnitStack {
     g.removeStack(horse);
     g.removeStack(this);
     g.tell?.(this.faction, 'A trooper caught a loose horse and is back in the saddle');
+  }
+
+  /**
+   * A 1806 gun's shot at `t`: canister inside its range (a spray of balls, one report), roundshot
+   * beyond (flat, low, through the ranks and bouncing). The grand battery's point counts as a target.
+   * Howitzers lob shells (fire's indirect path) unless canister range. True: handled here.
+   */
+  gunFire(u, t) {
+    const s = u.stats, G = s.gun;
+    this.muzzleWorld(u, _p);
+    const d = Math.hypot(t.pos.x - _p.x, t.pos.z - _p.z);
+    if (t.battery) this.battery.left--;
+    if (d <= G.canister && !t.battery) {
+      _v.set(t.pos.x, t.pos.y + 0.9, t.pos.z);
+      for (let i = 0; i < G.pellets; i++) this.shoot(u, _v, G.pelletSpread, { damage: G.pelletDamage, through: 1, size: 0.5, tracer: false, quiet: true, life: (G.canister * 1.4) / s.boltSpeed });
+      this.services.effects.muzzle(_p, _w, 2, 'cannon');
+      this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 4);
+      this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
+      VisibilitySystem.revealShooter(u);
+      return true;
+    }
+    if (s.indirect) return false; // the howitzer's shell: lobbed (fire)
+    // roundshot: aimed low, to strike short and skip on into the target
+    _v.set(t.pos.x, t.pos.y + 0.6, t.pos.z);
+    this.shoot(u, _v, s.spread * (1 + d / s.range), { through: G.through, bounce: G.bounce, splash: 0, tracer: true, size: 1.4 });
+    this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 5);
+    return true;
+  }
+
+  /** The grand battery's spot (systems/Powers1806.js): a pseudo-target for every gun given the order. */
+  batteryMission(u) {
+    const b = this.battery;
+    if (!b || !u.stats.gun) return null;
+    if (b.left <= 0 || this.world.time > b.until) { this.battery = null; return null; }
+    b.target ??= { pos: new THREE.Vector3(b.x, this.world.terrain.heightAt(b.x, b.z), b.z), alive: true, spotted: true, aimHeight: 0, battery: true, vel: null, stack: null };
+    return b.target;
   }
 
   /**
@@ -1561,6 +1597,7 @@ export class UnitStack {
       const smoke = !!t.smoke;
       const flare = !!t.flare;
       this.lob(u, _v.set(t.pos.x, t.pos.y, t.pos.z), smoke, flare);
+      if (t.battery) this.battery.left--; // (a howitzer of the grand battery)
       if (t === this.smokeOrder?.target) { // a mission: smoke, illumination or shells on the spot
         if (flare) this.flareRounds--; else if (smoke) this.smokeRounds--;
         const left = flare ? this.flareRounds : smoke ? this.smokeRounds : 1;
@@ -1568,6 +1605,7 @@ export class UnitStack {
       }
       return;
     }
+    if (s.gun && this.gunFire(u, t)) return; // 1806 guns: roundshot or canister
     this.muzzleWorld(u, _p);
     _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
     const dist = _v.distanceTo(_p);
@@ -1593,7 +1631,7 @@ export class UnitStack {
     this.shoot(u, _v.copy(point), spread);
   }
 
-  shoot(u, aimPoint, spread) {
+  shoot(u, aimPoint, spread, over = null) {
     const s = u.stats;
     const ambush = !u.spotted && !u.possessed; // nobody has seen us yet: the first volley counts
     if (ambush && this.world.time - (this.ambushAt ?? -Infinity) > AMBUSH.tellEvery) {
@@ -1624,7 +1662,9 @@ export class UnitStack {
       ignore: u.coverSpot?.collider ?? u.hullDown?.berm ?? null, // shoot over / around our own cover (or berm)
       tracer: !s.ignite && Math.random() < Math.min(1, (s.tracer ?? 1) * TRACERS), // (flame draws itself: ProjectileSystem)
       trail: !!s.trail,
+      ...over,
     });
+    if (over?.quiet) return; // (canister: one report for the whole load)
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);

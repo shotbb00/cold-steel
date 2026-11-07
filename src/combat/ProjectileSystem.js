@@ -55,7 +55,7 @@ export class ProjectileSystem {
   spawn({
     origin, dir, speed, damage, faction, color, size = 1, source = null, life = 1.8, ignore = null,
     splash = 0, pierce = 0, vsArmor = 1, suppress = 1, gravity = 0, target = null, whistleAt = -1, crater = 0,
-    tracer = true, trail = false, smoke = false, guide = null, flare = false, ignite = null,
+    tracer = true, trail = false, smoke = false, guide = null, flare = false, ignite = null, through = 0, bounce = 0,
   }) {
     const b = this.free.pop();
     if (!b) return null;
@@ -72,6 +72,10 @@ export class ProjectileSystem {
     b.guide = guide;   // wire-guided missile: steers toward this unit, flying nap-of-the-earth
     b.trail = trail;   // rocket: smoke trail
     b.splash = splash;
+    b.through = through;  // 1806 roundshot: men it goes on through after the first
+    b.bounce = bounce;    // …and times it bounces off the ground and flies on
+    b.hitSet = through ? (b.hitSet ?? new Set()) : null;
+    b.hitSet?.clear();
     b.pierce = pierce;
     b.vsArmor = vsArmor;   // multiplier vs vehicles (small arms barely scratch armour)
     b.suppress = suppress; // how hard near misses rattle (MGs pin)
@@ -148,7 +152,8 @@ export class ProjectileSystem {
             this.audio?.play(armored ? 'impact.armor' : 'impact.flesh', _hit, { volume: armored ? 0.6 : 0.4, throttle: 0.04 });
           }
           if (b.splash) this.detonate(b, _hit, target, !armored);
-          dead = true;
+          if (b.through > 0 && !b.splash) { b.through--; b.hitSet.add(target); b.damage *= 0.85; } // (the ball ploughs on through the file)
+          else dead = true;
         } else if (coverT >= 0) {
           _hit.copy(b.prev).lerp(b.pos, coverT);
           if (!b.splash) this.effects.impact(_hit, 'stone');
@@ -165,7 +170,17 @@ export class ProjectileSystem {
             this.audio?.play('impact.ground', b.pos, { volume: 0.35, throttle: 0.05 });
             this.suppressAround(b.pos, b.faction, 2.5, 0.1 * b.suppress);
             if (b.splash) this.detonate(b, b.pos, null);
-            dead = true;
+            if (b.bounce > 0) { // the ball skips off the ground and flies on, lower and slower
+              b.bounce--;
+              b.vel.copy(b.dir).multiplyScalar(b.speed);
+              b.vel.y = Math.abs(b.vel.y) * 0.4 + 1.5;
+              b.vel.x *= 0.7; b.vel.z *= 0.7;
+              b.speed = b.vel.length();
+              b.dir.copy(b.vel).normalize();
+              b.gravity ||= 9.8;
+              b.pos.y = gy + 0.05;
+              this.effects.dust(b.pos, 0.8);
+            } else dead = true;
           }
         }
       }
@@ -226,7 +241,7 @@ export class ProjectileSystem {
     let bestT = -1;
 
     for (const t of targets) {
-      if (!t.alive) continue;
+      if (!t.alive || b.hitSet?.has(t)) continue;
       const cx = t.pos.x;
       const cz = t.pos.z;
       if (Math.abs(b.pos.x - cx) > reach || Math.abs(b.pos.z - cz) > reach) continue;

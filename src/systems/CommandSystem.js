@@ -7,8 +7,9 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { POWERS_1806 } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
-import { epoch } from '../data/epoch.js';
+import { epoch, year } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
@@ -170,6 +171,7 @@ export class CommandSystem {
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
     else if (keys.is(code, 'mines')) this.runCommand('build:mines');
+    else if (year() < 1900 && (keys.is(code, 'barrage') || keys.is(code, 'jet') || keys.is(code, 'lift'))) this.runCommand(`power:${keys.is(code, 'barrage') ? 'battery' : keys.is(code, 'jet') ? 'reserve' : 'guard'}`); // (1806's support powers)
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
@@ -285,6 +287,11 @@ export class CommandSystem {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
       this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
+    } else if (cmd.startsWith('power:')) { // 1806: click the spot (systems/Powers1806.js)
+      const k = cmd.slice(6), g = this.game;
+      if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
+      if (!g.powers.ready(this.faction, k)) return g.bus.emit('toast', `${POWERS_1806[k].label} ${POWERS_1806[k].once ? 'already called' : `not ready (${Math.ceil(g.powers.cooldownLeft(this.faction, k))} s)`}`);
+      this.startTargeting({ kind: 'smoke', power: k });
     } else if (cmd === 'barrage') {
       const g = this.game;
       if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
@@ -491,6 +498,9 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
       this.addMarker(at, 'attack');
       this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke' && t.power) {
+      if (this.game.orders.issue({ t: 'power', k: t.power, x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');

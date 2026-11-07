@@ -102,7 +102,7 @@ export class RigRenderer {
         rig.animate(u, dt, t, this.ctx);
         continue;
       }
-      if (!rig.dead && this.stack.stats.cavalry) { // horse and rider: they fall (models/napCavalry.js), nothing burns
+      if (!rig.dead && (this.stack.stats.cavalry || this.stack.stats.gun)) { // 1806 horse and rider, gun and team: they fall (models/napCavalry.js, napGuns.js), nothing burns
         rig.dead = true;
         rig.fate = u.fate;
       } else if (!rig.dead) {

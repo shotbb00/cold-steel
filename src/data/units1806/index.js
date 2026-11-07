@@ -10,6 +10,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildNapSoldier } from '../models/napSoldier.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
+import { buildFieldGun } from '../models/napGuns.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -114,8 +115,81 @@ const dismounted = {
   variants: { nato: { name: 'Dismounted troopers', text: 'His horse went down: he looks for another, or makes his way back.' } },
 };
 
+// ------------------------------------------------------------------ artillery
+// kind 'gun': a piece and its team (models/napGuns.js), two to a battery. Limbered it moves behind
+// its horses; it unlimbers to fire (stats.towed — Bavaria's quick guns: 40 % sooner). Roundshot
+// flies flat, bounces and goes through the ranks (stats.gun.through / bounce: combat/ProjectileSystem);
+// close in it fires canister, a spray of balls. The howitzers lob shells over cover.
+const guns = (size) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildFieldGun({ army, size })]));
+const GUN = {
+  armor: 0, hp: 320, turnRate: 0.7, turretRate: 0.5, radius: 1.6, height: 1.8, eyeHeight: 1.7, aimHeight: 1, fov: 2.4, nightSight: undefined,
+  sight: 450, aggroRange: 750, fireCooldown: 1, aimTime: 1.2,   // (an officer with a telescope over open ground) burst: 1, burstInterval: 0, magSize: 1, spread: 0.01, boltSpeed: 240,
+  boltSize: 1.3, tracer: 1, weapon: 'cannon', vsArmor: 1, pierce: 0, splash: 0, traverse: 0.35, noStabilizer: true, breakMorale: 0.28,
+};
+const gunType = (id, size, o) => ({
+  id, category: 'fire', kind: 'gun', role: 'support', weaponSound: 'arty',
+  formation: { count: 2, columns: 2, spacing: 9 },
+  ...o,
+  stats: { ...GUN, ...o.stats },
+  models: guns(size),
+});
+const artillery = gunType('artillery', 'field', {
+  name: 'Foot Battery', shortName: 'Battery', cost: 240,
+  stats: { speed: 2.8, range: 700, preferredRange: 450, damage: 170, reloadTime: 18, towed: { deploy: 20 }, gun: { canister: 220, pellets: 16, pelletDamage: 75, pelletSpread: 0.07, through: 4, bounce: 2 } },
+  variants: {
+    nato: { name: 'Artillerie à pied', weapon: '8-pounder Gribeauval guns', text: 'Two French 8-pounders: roundshot that ploughs through the ranks at long range, canister that sweeps the field close in.' },
+    by: { name: 'Fußartillerie', weapon: '6-pounder guns', text: 'Bavarian foot artillery, reformed and quick to come into action.' },
+    pact: { name: 'Fußartillerie', weapon: '6-pounder guns', text: 'Prussian field guns: steady, but slow to move once unlimbered.' },
+    sx: { name: 'Fußartillerie', weapon: '8-pounder guns', text: 'The Saxon foot artillery: few guns, well served.' },
+  },
+});
+const spMortar = gunType('spMortar', 'heavy', {
+  name: 'Heavy Battery', shortName: '12-pdr', cost: 320,
+  stats: { hp: 380, speed: 2.2, range: 900, preferredRange: 600, damage: 230, reloadTime: 24, towed: { deploy: 30 }, gun: { canister: 250, pellets: 22, pelletDamage: 80, pelletSpread: 0.075, through: 5, bounce: 2 } },
+  variants: {
+    nato: { name: 'Batterie de 12', weapon: '12-pounder guns', text: '"The Emperor\'s beautiful daughters": the heavy 12-pounders that reach furthest and hit hardest — and move slowest.' },
+    by: { name: 'Schwere Batterie', weapon: '12-pounder guns', text: 'Bavaria\'s heavy guns.' },
+    pact: { name: 'Schwere Batterie', weapon: '12-pounder guns', text: 'The Prussian position guns: heavy, far-reaching, slow.' },
+    sx: { name: 'Schwere Batterie', weapon: '12-pounder guns', text: 'The Saxon heavy guns.' },
+  },
+});
+const rockets = gunType('rockets', 'horse', {
+  name: 'Horse Artillery', shortName: 'Horse guns', cost: 280,
+  stats: { speed: 4.6, range: 600, preferredRange: 380, damage: 140, reloadTime: 16, towed: { deploy: 10 }, gun: { canister: 200, pellets: 14, pelletDamage: 70, pelletSpread: 0.07, through: 3, bounce: 2 } },
+  variants: {
+    nato: { name: 'Artillerie à cheval', weapon: 'Light 6-pounders', text: 'Guns that keep up with the cavalry: every gunner mounted, in action in moments, gone again before the enemy answers.' },
+    by: { name: 'Reitende Artillerie', weapon: 'Light 6-pounders', text: 'Bavaria\'s horse artillery.' },
+    pact: { name: 'Reitende Artillerie', weapon: 'Light 6-pounders', text: 'Prussia\'s horse artillery, with the cavalry.' },
+    sx: { name: 'Reitende Artillerie', weapon: 'Light guns', text: 'Saxony\'s horse artillery.' },
+  },
+});
+const mortar = gunType('mortar', 'howitzer', {
+  name: 'Howitzers', shortName: 'Howitzers', cost: 280,
+  stats: { speed: 2.6, range: 850, minRange: 90, preferredRange: 500, damage: 190, splash: 6, reloadTime: 22, indirect: true, weapon: 'artillery', scatter: 18, towed: { deploy: 22 },
+    gun: { canister: 160, pellets: 14, pelletDamage: 70, pelletSpread: 0.08, through: 0, bounce: 0 } },
+  variants: {
+    nato: { name: 'Obusiers', weapon: '6-inch howitzers', text: 'Short guns that throw explosive shells over walls and hedges onto troops in cover — and onto villages.' },
+    by: { name: 'Haubitzen', weapon: '7-pounder howitzers', text: 'Bavarian howitzers: shells for troops behind cover.' },
+    pact: { name: 'Haubitzen', weapon: '10-pounder howitzers', text: 'Prussian howitzers: shells over cover.' },
+    sx: { name: 'Haubitzen', weapon: '8-pounder howitzers', text: 'Saxon howitzers.' },
+  },
+});
+
+// the Guard (the once-a-battle support power: systems/Powers1806.js) — not bought, called
+const guard = {
+  ...rifles, id: 'guard', hidden: true, uncapped: true, name: 'The Guard', shortName: 'Guard', cost: 0,
+  stats: { ...rifles.stats, hp: 120, breakMorale: 0.08, spread: 0.022, reloadTime: 14 },
+  models: men({ kind: 'grenadier' }),
+  variants: {
+    nato: { name: 'Grenadiers de la Garde', weapon: 'Musket, bayonet', text: 'The Old Guard: veterans of every campaign in their bearskins. They do not break.' },
+    by: { name: 'Leib-Regiment', weapon: 'Musket, bayonet', text: 'The Bavarian king\'s own regiment.' },
+    pact: { name: 'Garde', weapon: 'Musket, bayonet', text: 'The Prussian Guard regiment.' },
+    sx: { name: 'Leibgrenadiergarde', weapon: 'Musket, bayonet', text: 'The Saxon life grenadier guard.' },
+  },
+};
+
 export const TYPES_1806 = {
-  rifles, reconVehicle, ifv, tank, looseHorse, dismounted,
+  rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)
 };
 

@@ -5,7 +5,8 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { epoch } from '../data/epoch.js';
+import { POWERS_1806 } from '../systems/Powers1806.js';
+import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
@@ -54,6 +55,7 @@ const SUPPORT = [
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
+  ...Object.entries(POWERS_1806).map(([k, p]) => [`power:${k}`, p.icon, p.key, p.label, p.tip]), // 1806 (systems/Powers1806.js)
 ];
 
 function one(sel, test) {
@@ -110,6 +112,17 @@ export class ActionBar {
     const me = g.playerFaction;
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
+      if (cmd.startsWith('power:') || year() < 1900) { // 1806: its own three powers, nothing else
+        const k = cmd.startsWith('power:') ? cmd.slice(6) : null;
+        b.hidden = off || !k || year() >= 1900;
+        if (b.hidden) continue;
+        const P = POWERS_1806[k], left = g.powers.cooldownLeft(me, k);
+        const text = left === Infinity ? 'used' : left > 0 ? `${Math.ceil(left)} s` : String(P.cost);
+        if (small.textContent !== text) small.textContent = text;
+        b.classList.toggle('cooling', left > 0);
+        b.style.setProperty('--cd', left === Infinity ? '0' : left > 0 ? String(1 - left / P.cooldown) : '1');
+        continue;
+      }
       const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? doctrine(g, me, 'tot') ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target
       const kind = mass !== null ? null : cmd.slice(4) || 'heli';
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));

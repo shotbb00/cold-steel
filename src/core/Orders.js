@@ -138,6 +138,8 @@ export class Orders {
         for (const s of mine(cmd.s)) if (s.usesCover) g.buildings.garrison(s, b, Number.isFinite(cmd.face) ? cmd.face : null);
         return null;
       }
+      case 'power': // 1806: the grand battery, the cavalry reserve, the Guard (systems/Powers1806.js)
+        return g.powers.call(faction, cmd.k, cmd.x, cmd.z);
       case 'form': // 1806: line / column / square / skirmish (data/formations.js)
         for (const s of mine(cmd.s)) s.setForm(cmd.f);
         return null;

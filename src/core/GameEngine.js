@@ -11,6 +11,7 @@
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
 import { Deployment } from '../systems/Deployment.js';
+import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
@@ -180,6 +181,8 @@ export class GameEngine {
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);
+    this.powers = new Powers1806(this);   // 1806's grand battery, cavalry reserve, the Guard
+    this.systems.push(this.powers);
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets

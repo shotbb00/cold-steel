@@ -12,7 +12,7 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
-import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
+import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
 import { CampaignPanel } from './CampaignPanel.js';
@@ -153,7 +153,7 @@ const el = (tag, cls, html) => {
   return e;
 };
 
-const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', trot: 'Trot', canter: 'Canter', gallop: 'Gallop', hover: 'Hover', fly: 'Fly' };
+const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', trot: 'Trot', canter: 'Canter', gallop: 'Gallop', limbered: 'Limbered', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
@@ -186,7 +186,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const sp = type.specialist?.stats;
   const vehicle = type.kind !== 'infantry';
   const rows = [
-    [s.cavalry ? 'Riders' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
+    [s.cavalry ? 'Riders' : s.gun ? 'Guns' : vehicle ? 'Vehicles' : 'Men', type.formation.count],
     ['Cost', `${unitCost(type, army)} CP`],
     ['Speed', `${Math.round(s.speed * 3.6)} km/h`],
     ['Sight', `${s.sight} m`],
@@ -195,6 +195,8 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.cavalry) {
     rows.push(['Horse and rider', 'a hit may down the horse, the rider or both']);
     rows.push(['Charge', `${Math.round(s.cavalry.chargeSpeed * 3.6)} km/h at the gallop`]);
+  } else if (s.gun) {
+    rows.push(['Team', `limbers and unlimbers in ${s.towed?.deploy ?? 0} s`]);
   } else if (vehicle) {
     rows.push(['Hit points', s.hp]);
     rows.push(['Armour', `${Math.round(s.armor * 100)} % front · ${Math.round(s.armor * 70)} % side · ${Math.round(s.armor * 35)} % rear`]);
@@ -205,6 +207,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   const armed = w.range > 1 && (w.damage ?? 1) > 0; // ambulances, bridge layers: no gun to describe
   if (armed && w.fireCooldown < 0.2) rows.push(['Fire', `rapid fire, ${w.magSize}-round bursts`]);
   else if (armed && w.volley) rows.push(['Fire', `volleys, then ${w.reloadTime} s to reload`]); // (1806: the company fires together)
+  else if (armed && s.gun) rows.push(['Fire', `${s.indirect ? 'shells over cover' : 'roundshot through the ranks'}, canister inside ${s.gun.canister} m — ${s.reloadTime} s to reload`]);
   else if (armed && s.cavalry) rows.push(['Fire', `${w.range > 50 ? 'carbines' : 'pistols'}, then ${w.reloadTime} s to reload — the sabre is the weapon`]);
   else if (armed) rows.push(['Fire', `${w.burst > 1 ? `${w.burst}-round bursts` : 'single shots'}, every ${w.fireCooldown} s`]);
   if (s.bridgeLayer) rows.push(['Bridge', `one, laid over a river in ~20 s (${keyOf('engineer')}, maps with a river)`]);
@@ -239,7 +242,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.smoke) rows.push(['Smoke', `${s.smoke.charges} launcher salvos (${keyOf('smoke')})`]);
   if (sp?.smokeRounds) rows.push(['Smoke', `${sp.smokeRounds} smoke bombs (${keyOf('smoke')})`]);
   if (w.splash) rows.push(['Blast', `${w.splash} m radius`]);
-  if (armed && !s.cavalry && !s.formations) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
+  if (armed && !s.cavalry && !s.formations && !s.gun) rows.push(['Against armour', w.antiArmor || (w.vsArmor ?? 1) >= 0.5 ? 'effective' : 'next to nothing']);
   return rows;
 }
 
@@ -621,7 +624,7 @@ export class MainMenu {
     const type = UNIT_TYPES[id];
     this.preview.show(id, faction, army);
     this.preview.setPose(this.unit.pose);
-    const poses = type.kind === 'infantry' ? INFANTRY_POSES : type.kind === 'cavalry' ? CAVALRY_POSES : VEHICLE_POSES;
+    const poses = type.kind === 'infantry' ? INFANTRY_POSES : type.kind === 'cavalry' ? CAVALRY_POSES : type.kind === 'gun' ? GUN_POSES : VEHICLE_POSES;
     this.poses.replaceChildren();
     for (const pose of poses) {
       const b = el('button', pose === this.unit.pose ? 'on' : '', POSE_LABEL[pose]);

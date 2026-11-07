@@ -81,9 +81,9 @@ export const raupenhelm = (plume) => [
   ...(plume ? [loft([[-0.1, 1.84, 0.0, 0.02, 0.02, 2], [-0.11, 1.98, 0.0, 0.026, 0.026, 2], [-0.11, 2.05, 0.0, 0.01, 0.01, 2]], { color: plume }, 8)] : []),
 ];
 
-export function buildNapSoldier({ army = 'fr', kind = 'line' } = {}) {
+export function buildNapSoldier({ army = 'fr', kind = 'line', armed = true } = {}) {
   const c = ARMIES_1806[army] ?? ARMIES_1806.fr;
-  const w = musket();
+  const w = armed ? musket() : { parts: [], muzzle: { x: 0.2, y: 1.3, z: 0.4 } }; // (gunners: the rammer and the sponge, not a musket)
   const plume = kind === 'grenadier' ? 0xb02424 : kind === 'light' ? 0x2a7a3a : null;
   const hat = army === 'by' ? raupenhelm(plume)
     : kind === 'grenadier' && army === 'fr' ? bearskin()
