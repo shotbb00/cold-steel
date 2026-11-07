@@ -85,6 +85,8 @@ export interface UnitStats {
   cbRadar?: { range: number; arc: number; deploy: number }; // a counter-battery radar (systems/CounterBattery.js)
   airRadar?: { cover: number; detect: number; deploy: number }; // an air search radar (systems/AirStrike.js radarCovers) // damage multiplier against fortifications
   noStabilizer?: boolean;
+  /** radians either side of the hull the gun can traverse (casemates, fixed rails, towed field guns); the hull turns for the rest (UnitStack.aimGun) */
+  traverse?: number;
   /** a demolition carrier (1945's Goliath): blows up on contact with an enemy (systems/Support.js) */
   goliath?: { trigger: number; radius: number; damage: number }; // the main gun only fires standing still (UnitStack.updateHeavyWeapon; 1945 tanks)
   demolition?: boolean; // goes for bunkers, held houses and trenches first

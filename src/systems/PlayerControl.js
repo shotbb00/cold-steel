@@ -306,7 +306,7 @@ export class PlayerControl {
     u.aimYaw = aimYaw;
     u.aimPitch = cam.pitch; // the renderer raises the weapon to the crosshair
     if (infantry) u.yaw = aimYaw;
-    else u.turretYaw += clamp(angleDelta(u.turretYaw, aimYaw), -s.turretRate * 1.6 * dt, s.turretRate * 1.6 * dt);
+    else stack.aimGun(u, aimYaw, dt, 1.6); // (a casemate: the hull swings round when you stop)
     this.computeAimPoint(this.aimPoint);
 
     // --- weapon

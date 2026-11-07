@@ -594,11 +594,12 @@ export class UnitStack {
       u.yaw += angleDelta(u.yaw, desired) * Math.min(1, dt * (u.target || u.alertT > 0 ? 7 : 1.5));
     } else {
       // hull turns toward travel; the turret tracks the target (or sweeps) on its own
-      if (u.wantsMove) { /* the hull is steered in driveAlongHull */ } else if ((this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
+      const casemate = s.traverse != null && (u.target || u.airTarget); // (a fixed gun on a target: the hull answers to the gun, not the ordered facing)
+      if (u.wantsMove) { /* the hull is steered in driveAlongHull */ } else if (!casemate && (this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing) != null && this.ai.state === AIState.DEFEND) {
         u.yaw += clamp(angleDelta(u.yaw, this.ai.plannedSpots?.get(u)?.yaw ?? this.holdFacing), -s.turnRate * dt * 0.6, s.turnRate * dt * 0.6); // turn on the spot to face the order
       }
       const aim = u.airTarget ? u.airYaw : u.target ? u.aimYaw : u.alertT > 0 ? u.alertYaw : u.yaw + scan;
-      u.turretYaw += clamp(angleDelta(u.turretYaw, aim), -s.turretRate * dt, s.turretRate * dt);
+      this.aimGun(u, aim, dt, 1, !!(u.target || u.airTarget || u.alertT > 0));
       // gun elevation (AA guns follow the helicopter up; others keep a slight rise)
       const wantPitch = u.airTarget ? u.airPitch : 0.05;
       u.gunPitch = (u.gunPitch ?? 0.05) + (wantPitch - (u.gunPitch ?? 0.05)) * Math.min(1, dt * 4);
@@ -982,6 +983,22 @@ export class UnitStack {
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
     this.services.audio?.weapon(this.faction, 'rocket', _p);
     VisibilitySystem.revealShooter(u);
+  }
+
+  /**
+   * Lay the gun toward `aim` at its traverse rate (× `rate`). A gun with a narrow arc (stats.traverse,
+   * radians either side of the hull: casemates, fixed rails, field guns on their trails) stays in
+   * it, and — standing still, with `turnHull` — the hull swings round to bring the aim into it.
+   */
+  aimGun(u, aim, dt, rate = 1, turnHull = true) {
+    const s = u.stats;
+    const step = s.turretRate * rate * dt;
+    if (s.traverse == null) { u.turretYaw += clamp(angleDelta(u.turretYaw, aim), -step, step); return; }
+    const off = angleDelta(u.yaw, aim);
+    if (turnHull && !u.moving && !u.wantsMove && Math.abs(off) > s.traverse * 0.7) u.yaw += clamp(off, -s.turnRate * dt, s.turnRate * dt);
+    const want = u.yaw + clamp(angleDelta(u.yaw, aim), -s.traverse, s.traverse);
+    u.turretYaw += clamp(angleDelta(u.turretYaw, want), -step, step);
+    u.turretYaw = u.yaw + clamp(angleDelta(u.yaw, u.turretYaw), -s.traverse, s.traverse);
   }
 
   /** Tanks and guns: fire once the turret is on target. */
