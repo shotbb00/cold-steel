@@ -120,7 +120,7 @@ const RULES_KEY = 'coldsteel.rules';
 export function loadRules() {
   try { return rulesFrom(JSON.parse(localStorage.getItem(RULES_KEY) ?? 'null')); } catch { return rulesFrom(null); }
 }
-export function rulesPicker(rules, economy, onChange = () => {}) {
+export function rulesPicker(rules, economy, onChange = () => {}, budget = false) {
   const box = el('div', 'conditions rules');
   const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
@@ -128,7 +128,9 @@ export function rulesPicker(rules, economy, onChange = () => {}) {
     ['income', 'CP income', 'How fast both sides earn command points'],
     ['strength', 'Battle length', 'Front strength: how much each side can lose before its front collapses'],
     ['maxStacks', 'Stack limit', 'Units each side may have in the field'],
+    ['roadCooldown', 'Arrival cooldown', 'Each road in brings one reinforcement every 10 seconds. Off: everything you call in arrives at once'],
   );
+  if (budget) rows.push(['budget', 'Battle size', 'Command points each side builds its army with — what is left pays for support in the battle']);
   for (const [key, label, hint] of rows) {
     const row = el('div', 'cond-row');
     const l = el('span', 'cond-label', label);
@@ -498,7 +500,7 @@ export class MainMenu {
   /** The rules rows for the chosen mode (economy rows only where command points matter). */
   drawRules() {
     if (!this.rulesBox) return;
-    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.drawSummary()));
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.drawSummary(), !!MODES[this.choice.mode]?.budget));
   }
 
   card(title, text, on, pick, group, extra = '') {

@@ -211,7 +211,7 @@ export class GameEngine {
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
-    this.deploys = !!campaign && mode.id !== 'bootcamp';
+    this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and

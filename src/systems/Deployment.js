@@ -29,16 +29,23 @@ export class Deployment {
   begin() {
     const g = this.game;
     const f = g.playerFaction;
-    const base = g.world.bases[f];
-    const foe = g.world.bases[enemyOf(f)];
-    if (!base || !foe) return;
-    const d = new THREE.Vector2(foe.x - base.x, foe.z - base.z);
-    const len = d.length() || 1;
-    d.divideScalar(len);
-    const t = (p) => (p.x - base.x) * d.x + (p.z - base.z) * d.y;
-    const mine = g.world.stacksOf(f).filter((s) => !s.stats.structure);
-    const limit = (mine.length ? Math.max(...mine.map((s) => t(s.anchor))) : len * 0.35) + AHEAD;
-    this.zone = { base, d, limit, t };
+    if (!g.world.bases[f] || !g.world.bases[enemyOf(f)]) return;
+    // each side's own zone (versus: the guest's placements run here too, in its zone, not ours)
+    this.zones = {};
+    for (const side of [f, enemyOf(f)]) {
+      const base = g.world.bases[side];
+      const foe = g.world.bases[enemyOf(side)];
+      const d = new THREE.Vector2(foe.x - base.x, foe.z - base.z);
+      const len = d.length() || 1;
+      d.divideScalar(len);
+      const t = (p) => (p.x - base.x) * d.x + (p.z - base.z) * d.y;
+      const mine = g.world.stacksOf(side).filter((s) => !s.stats.structure);
+      const limit = (mine.length ? Math.max(...mine.map((s) => t(s.anchor))) : len * 0.35) + AHEAD;
+      this.zones[side] = { base, d, limit, t };
+    }
+    this.zone = this.zones[f];
+    const { base, d, limit } = this.zone;
+    if (g.mode?.deployText) this.bar.querySelector('.dp-text').textContent = g.mode.deployText;
     // the front edge of the zone, a gold line across the field
     const span = Math.max(g.world.bounds.x, g.world.bounds.z) * 3;
     const geo = new THREE.PlaneGeometry(span, 1.6, 400, 1).rotateX(-Math.PI / 2);
@@ -76,6 +83,7 @@ export class Deployment {
     this.edge?.mesh.removeFromParent();
     this.edge?.geometry.dispose();
     this.game.bus.emit('toast', 'The battle begins');
+    this.game.bus.emit('deploy:go'); // (a pitched battle: the buying is over, modes/pitched.js)
   }
 
   /** A frame while deploying: what the player needs to look and place, nothing that moves the battle. */
@@ -85,12 +93,13 @@ export class Deployment {
     g.world.refresh();
     g.visibility?.update(dt);
     for (const s of g.world.stacks) s.renderer.update(0, g.time);
+    g.frontlineHud?.update(); // (the CP and the forces while you buy: a pitched battle)
     g.stepWaiting(dt);
   }
 
   /** Put `s` at (x, z), facing the enemy (or `face`) — pulled back onto your side of the line if it was past it. */
   place(s, x, z, face = null) {
-    const { base, d, limit, t } = this.zone;
+    const { base, d, limit, t } = this.zones?.[s.faction] ?? this.zone;
     const over = t({ x, z }) - limit;
     if (over > 0) { x -= d.x * over; z -= d.y * over; }
     const p = this.game.world.clampToBounds({ x, z });

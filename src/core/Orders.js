@@ -18,6 +18,8 @@
 //   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
 import { unitCost } from '../data/doctrine.js';
+import { promoteCost } from '../modes/pitched.js';
+import { RANKS } from '../entities/UnitStack.js';
 import { enemyOf } from '../data/factions.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { planCover } from '../world/CoverPlan.js';
@@ -94,9 +96,29 @@ export class Orders {
         for (const s of mine(cmd.s)) s.ai.attack(target);
         return null;
       }
+      case 'promote': { // a pitched battle's setup: a rank for a price (modes/pitched.js)
+        const st = g.modeState;
+        if (!st?.setup) return null;
+        for (const s of mine(cmd.s)) {
+          const cost = promoteCost(g, s);
+          if (cost == null) { g.tell(faction, `${s.name} is ${RANKS[s.rank].name} already`); continue; }
+          if (!g.spend(faction, cost)) { g.tell(faction, `Not enough command points to promote ${s.name} (${cost})`); continue; }
+          s.setXp(RANKS[s.rank + 1].xp);
+          s.paid = (s.paid ?? 0) + cost;
+          g.tell(faction, `${s.name} promoted: ${RANKS[s.rank].name}`);
+        }
+        return null;
+      }
+      case 'surrender': // a pitched battle: this side gives up (the battle menu's button)
+        if (g.modeState && !g.modeState.setup) g.modeState.surrendered = faction;
+        return null;
       case 'withdraw': {
         const base = g.map.bases?.[faction];
         if (!base) return null;
+        if (g.modeState?.setup && g.mode?.budget) { // setting up a pitched battle: sold back, the whole price (and its ranks)
+          for (const s of mine(cmd.s)) { if (s.paid) g.modeState.cp[g.wallet(faction)] += s.paid; g.removeStack(s); }
+          return null;
+        }
         for (const s of mine(cmd.s)) {
           if (s.stats.structure || s.type.id === 'crew') continue;
           s.withdrawing = true;

@@ -9,8 +9,11 @@
 //   income      multiplier on both sides' command-point income
 //   strength    front strength each side starts with: how long a battle lasts
 //   maxStacks   stacks each side may have in the field (null: the map's own limit)
+//   roadCooldown  on: each road in brings one arrival every 10 s (modes/shared.js ENTRY_GAP); off: all at once
 // Multiplayer and campaign battles use the defaults.
-export const DEFAULT_RULES = { difficulty: 'normal', air: true, changingWeather: true, timePasses: true, startCp: 350, income: 1, strength: 1000, maxStacks: null };
+// and, for a pitched battle (mode.budget):
+//   budget      command points each side builds its army with (what is left pays for support)
+export const DEFAULT_RULES = { difficulty: 'normal', air: true, changingWeather: true, timePasses: true, startCp: 350, income: 1, strength: 1000, maxStacks: null, budget: 3000, roadCooldown: true };
 
 export const DIFFICULTY = {
   //            enemy aim (spread ×)  enemy income ×  first assault, gaps between operations ×
@@ -30,6 +33,8 @@ export const RULE_OPTIONS = {
   income: [[0.5, 'Low'], [1, 'Normal'], [1.5, 'High'], [2.5, 'Very high']],
   strength: [[500, 'Short'], [1000, 'Normal'], [1800, 'Long'], [3000, 'Very long']],
   maxStacks: [[8, '8'], [12, '12'], [null, 'Map'], [22, '22']],
+  budget: [[1500, 'Small'], [3000, 'Medium'], [5000, 'Large']],
+  roadCooldown: [[true, 'On'], [false, 'Off']],
 };
 
 /** Rules from a (possibly partial or old) saved choice, with every field filled. */

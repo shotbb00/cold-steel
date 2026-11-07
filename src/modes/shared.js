@@ -65,7 +65,7 @@ export function makeBuyer(game, state) {
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
     if (post && asked === null && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
-    else state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP;
+    else if (game.rules?.roadCooldown !== false) state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP; // (battle rule: off — everything bought arrives at once)
     const army = game.armyOf(faction);
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
     const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)

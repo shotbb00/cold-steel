@@ -9,6 +9,7 @@ import lanes from './lanes.js';
 import infantry from './infantry.js';
 import hill from './hill.js';
 import bootcamp from './bootcamp.js';
+import pitched from './pitched.js';
 
 export const MODES = {
   [frontline.id]: frontline,
@@ -19,6 +20,7 @@ export const MODES = {
   [recon.id]: recon,
   [lanes.id]: lanes,
   [skirmish.id]: skirmish,
+  [pitched.id]: pitched,
   [bootcamp.id]: bootcamp,   // hidden: started from the Boot camp tab
 };
 

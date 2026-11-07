@@ -18,6 +18,7 @@ export class PauseMenu {
           <button type="button" data-act="resume">Resume <kbd>Esc</kbd></button>
           <button type="button" data-act="settings">Settings</button>
           <button type="button" data-act="restart">Restart battle</button>
+          <button type="button" data-act="surrender" hidden>Surrender</button>
           <button type="button" data-act="menu">Main menu</button>
         </div>
         <div class="settings" hidden></div>
@@ -31,6 +32,11 @@ export class PauseMenu {
         this.settingsBox.hidden = !this.settingsBox.hidden;
         if (!this.settingsBox.hidden) buildSettings(this.settingsBox);
       } else if (act === 'restart') requestReplay();
+      else if (act === 'surrender') { // (a pitched battle: a second click gives up)
+        const b = e.target.closest('button');
+        if (b.dataset.armed) { game.orders.issue({ t: 'surrender' }); this.close(); }
+        else { b.dataset.armed = '1'; b.textContent = 'Really surrender?'; }
+      }
       else if (act === 'menu') { game.net?.link.close(); toMenu(); }
     });
     game.bus.on('key', ({ code }) => {
@@ -51,6 +57,10 @@ export class PauseMenu {
     this.root.querySelector('h2').textContent = online ? 'Menu' : 'Paused';
     this.root.querySelector('.pause-note').hidden = !online;
     this.root.querySelector('[data-act="restart"]').hidden = online;
+    const give = this.root.querySelector('[data-act="surrender"]');
+    give.hidden = !this.game.mode?.budget || !!this.game.modeState?.setup || this.game.ended;
+    delete give.dataset.armed;
+    give.textContent = 'Surrender';
     this.root.querySelector('[data-act="menu"]').textContent = online ? 'Leave battle' : 'Main menu';
     this.game.input.releaseLock?.();
     if (online) return;
