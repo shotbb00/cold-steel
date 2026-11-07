@@ -138,6 +138,7 @@ export const AIR_1985 = Object.fromEntries(Object.entries(KINDS).map(([k, p]) =>
 /** The helicopter run's parameters (older callers). */
 export const AIR = KINDS.heli;
 const GROUND_FIRE_RANGE = 150;
+const round2 = (n) => Math.round(n * 100) / 100; // (two decimals: the multiplayer messages, as net/NetHost.js)
 
 const _p = new THREE.Vector3();
 const _d = new THREE.Vector3();
@@ -535,7 +536,7 @@ class Sortie {
     this.dropped = true;
     this.game.air.chutes.push(new Stick(this.game, this));
     // a guest sees the same men come down (its own copy: the squad itself comes in the host's 'spawn')
-    this.game.netEvent('chute', this.faction, this.army, this.type.squad, r2(this.pos.x), r2(this.pos.y), r2(this.pos.z), r2(this.dir.x), r2(this.dir.z), r2(this.yaw));
+    this.game.netEvent('chute', this.faction, this.army, this.type.squad, round2(this.pos.x), round2(this.pos.y), round2(this.pos.z), round2(this.dir.x), round2(this.dir.z), round2(this.yaw));
     this.game.tellBoth(this.faction, `${this.type.name}: green light — the stick is out`, 'Enemy paratroopers dropping!');
   }
 

@@ -291,7 +291,7 @@ const ambulance = wagon('ambulance', 'ambulance', {
   },
 });
 const commandPost = wagon('commandPost', 'hq', {
-  name: 'Headquarters', shortName: 'HQ', cost: 160,
+  name: 'Headquarters', shortName: 'HQ', cost: 160, limit: 1, // (one a side on the field at a time)
   variants: {
     nato: { name: 'État-major', weapon: 'Aides, couriers', text: 'The marshal\'s staff: set up behind the front (the tent goes up), and your reinforcements come forward to it; troops near it hold their nerve.' },
     by: { name: 'Divisionsstab', weapon: 'Aides, couriers', text: 'The division\'s staff: reinforcements come forward to it.' },

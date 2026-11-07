@@ -9,6 +9,7 @@ import type { UnitType } from '../../types.ts';
 
 export default {
   id: 'commandPost',
+  limit: 1,               // one command post a side on the field at a time (modes/shared.js makeBuyer)
   name: 'Forward Command Post',
   shortName: 'Command post',
   category: 'support', // reinforcement window section

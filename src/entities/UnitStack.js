@@ -1146,7 +1146,7 @@ export class UnitStack {
     this.volleyFirst = null;
     // the powder smoke in front of each man who fires — where the muskets are (one bank across the
     // company's spread drew a long line over empty ground when the men were strung out)
-    for (const m of this.units) if (m.volleyGo) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (a haze: it doesn't blind like a screen)
+    for (const m of this.units) if (m.volleyGo && Math.random() < 0.5) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (every other man: two lines' smoke shouldn't wall off the fight) // (a haze: it doesn't blind like a screen)
     return false;
   }
 

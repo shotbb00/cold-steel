@@ -495,7 +495,7 @@ export class EffectsSystem {
       const s = (n > 1 ? (i / (n - 1) - 0.5) * width : 0) + rnd(-0.6, 0.6), ahead = rnd(1.5, 4.5);
       this.smoke.spawn(x + ax * s + fx * ahead, y + rnd(1, 1.8), z + az * s + fz * ahead, {
         vx: fx * rnd(0.3, 0.9), vy: rnd(0.1, 0.35), vz: fz * rnd(0.3, 0.9), size: rnd(1.6, 2.6), grow: 1.3,
-        life: rnd(6, 9), alpha: 0.34, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
+        life: rnd(6, 9), alpha: 0.26, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
       });
     }
   }
