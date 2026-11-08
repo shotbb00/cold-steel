@@ -54,13 +54,19 @@ export class Buildings {
       return this.enter(stack, b);
     }
     const free = this.windows(b).filter((s) => !s.occupant || !s.occupant.alive).length;
-    if (!free) return this.game.tell(stack.faction, `The ${b.name} is full`);
+    const squads = this.game.world.stacks.filter((o) => o !== stack && o.alive && (o.garrison === b || o.entered === b)).length;
+    if (!free || squads >= this.capacity(b)) return this.game.tell(stack.faction, `The ${b.name} is full${this.capacity(b) > 1 ? ' (two squads)' : ''}`);
     if (stack.entered) this.exit(stack);
     const door = this.door(b, stack.anchor);
     stack.ai.moveTo(door, { hold: true, ordered: this.game.isHuman(stack.faction) });
     stack.garrison = b; // after moveTo, which clears it
     stack.garrisonFace = face;
     this.game.tell(stack.faction, `${stack.name} moving into the ${b.name}`);
+  }
+
+  /** Squads a building takes: two in a big one (18 windows or more: town hall, church, station, big town houses), else one. */
+  capacity(b) {
+    return this.windows(b).length >= 18 ? 2 : 1;
   }
 
   /** The window positions of a building: its inside wall cover spots. */
@@ -72,7 +78,7 @@ export class Buildings {
    * The free windows `n` men of `faction` would man in `b`, best first: those looking most
    * squarely toward `face` (default: the enemy's side of the field), then the sides.
    */
-  pickWindows(b, n, face, faction) {
+  pickWindows(b, n, face, faction, all = false) {
     let yaw = face;
     if (yaw == null) {
       const foe = Object.entries(this.game.world.bases).find(([f]) => f !== faction)?.[1];
@@ -83,7 +89,7 @@ export class Buildings {
     const out = (w) => -(w.dirX * fx + w.dirZ * fz); // a window's spot faces the wall: out is -dir
     // front and side windows only: a man at a back window just watches the wrong way — the rest
     // wait in the room (enter()) until a new order points the squad elsewhere
-    return this.windows(b).filter((w) => (!w.occupant || !w.occupant.alive) && out(w) > -0.3).sort((a, c) => out(c) - out(a)).slice(0, n);
+    return this.windows(b).filter((w) => (!w.occupant || !w.occupant.alive) && (all || out(w) > -0.3)).sort((a, c) => out(c) - out(a)).slice(0, n);
   }
 
   /** A point just outside the building on the side facing `from`. */
@@ -114,7 +120,8 @@ export class Buildings {
   enter(s, b) {
     const cover = this.game.cover;
     const men = s.units.filter((u) => u.alive).length;
-    const free = this.pickWindows(b, men, s.garrisonFace, s.faction); // the side that matters first
+    const shared = this.game.world.stacks.some((o) => o !== s && o.alive && o.entered === b); // the second squad in: the back windows too (all round)
+    const free = this.pickWindows(b, men, s.garrisonFace, s.faction, shared); // the side that matters first
     const terrain = this.game.terrain;
     let i = 0;
     for (const u of s.units) {
