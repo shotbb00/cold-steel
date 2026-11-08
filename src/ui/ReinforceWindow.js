@@ -186,12 +186,15 @@ export class ReinforceWindow {
     const full = count >= this.state.maxStacks;
     // runs every frame: touch the DOM only when something shown has changed (rewriting it each frame
     // made the cards change height mid-scroll on phones: the list jumped and the header flickered)
-    const key = `${cp}|${count}|${this.last}|${mine.map((s) => s.type.id).sort().join()}`;
+    const cam = g.camera.matrixWorld.elements; // (its first column: the camera's right, in the world)
+    const key = `${cp}|${count}|${this.last}|${mine.map((s) => s.type.id).sort().join()}|${Math.sign(cam[0]).toFixed(0)}${Math.round(cam[0] * 4)}${Math.round(cam[2] * 4)}`; // (the roads' names follow the camera's turn)
     if (key === this.shown) return;
     this.shown = key;
     this.cp.textContent = `${cp} CP`;
     // the roads, named as the field looks from where the camera is (left, centre, right), and how long each is busy
-    const screenX = (r) => this._p.set(r.x, 0, r.z).project(g.camera).x;
+    // by the camera's right-hand direction, not the projection: the roads are at the base, usually behind
+    // the camera, and a point behind it projects mirrored — left and right came out swapped
+    const screenX = (r) => (r.x - g.camera.position.x) * cam[0] + (r.z - g.camera.position.z) * cam[2];
     const order = [...this.roads].sort((a, b) => screenX(a) - screenX(b));
     const names = order.length === 3 ? ['Left', 'Centre', 'Right'] : order.length === 2 ? ['Left', 'Right'] : order.map((_, k) => `Road ${k + 1}`);
     const free = this.state.entryFree ?? {};
