@@ -93,7 +93,10 @@ export class Orders {
         for (const s of mine(cmd.s)) s.waypoints = null;
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
-        for (const s of mine(cmd.s)) s.ai.attack(target);
+        for (const s of mine(cmd.s)) {
+          if (s.stats.cavalry && !s.stats.loose && s.startCharge(target)) continue; // 1806 horse: an attack order is a charge, after the enemy wherever it goes
+          s.ai.attack(target);
+        }
         return null;
       }
       case 'promote': { // a pitched battle's setup: a rank for a price (modes/pitched.js)
@@ -168,9 +171,9 @@ export class Orders {
       case 'charge': { // 1806: the bayonet charge on a stack (cmd.at), or the nearest enemy in sight
         for (const s of mine(cmd.s)) {
           const target = (cmd.at != null && g.world.stackById(cmd.at)) || g.world.stacksOf(enemyOf(faction))
-            .filter((e) => e.alive && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < 160)
+            .filter((e) => e.alive && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < (s.stats.cavalry ? 400 : 160))
             .sort((a, b) => Math.hypot(a.centroid.x - s.centroid.x, a.centroid.z - s.centroid.z) - Math.hypot(b.centroid.x - s.centroid.x, b.centroid.z - s.centroid.z))[0];
-          s.startCharge(target);
+          if (!s.startCharge(target)) g.tell(faction, `${s.name}: no enemy in sight to charge`);
         }
         return null;
       }

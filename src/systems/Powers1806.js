@@ -54,6 +54,15 @@ export class Powers1806 {
   }
 
   /** The edge of the field behind `f`'s base: where its reserves come from. */
+  /** Where a reserve comes on for a target at `p`: behind our base, or the nearer flank edge level with it — whichever is closer. */
+  entryFor(f, p) {
+    const g = this.game, b = g.world.bounds, back = this.edge(f), base = g.world.bases[f];
+    const homeward = Math.sign(base.z) || 1;
+    const z = Math.max(-b.z + 20, Math.min(b.z - 20, p.z + homeward * 80)); // (a little on our side of it)
+    const flanks = [{ x: -b.x + 10, z }, { x: b.x - 10, z }];
+    return [back, ...flanks].sort((a, c) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(c.x - p.x, c.z - p.z))[0];
+  }
+
   edge(f) {
     const g = this.game, base = g.world.bases[f];
     const back = Math.sign(base.z) || 1;
@@ -61,14 +70,18 @@ export class Powers1806 {
   }
 
   reserve(f, x, z) {
-    const g = this.game, from = this.edge(f);
+    const g = this.game;
+    // the enemy nearest the spot is the target: the squadron rides for it wherever it goes, from the map edge nearest it on our side or a flank
+    const target = g.world.stacksOf(enemyOf(f)).filter((e) => e.alive && !e.stats.loose && !e.stats.structure && !e.autonomous && Math.hypot(e.centroid.x - x, e.centroid.z - z) < 150)
+      .sort((a, b) => Math.hypot(a.centroid.x - x, a.centroid.z - z) - Math.hypot(b.centroid.x - x, b.centroid.z - z))[0] ?? null;
+    const from = this.entryFor(f, target ? target.centroid : { x, z });
     const s = g.spawnStack('tank', f, from, Math.atan2(x - from.x, z - from.z), 'Cavalry reserve');
     if (!s) return;
     s.autonomous = true;
     s.stats = { ...s.stats, speed: 7 }; // (up to the spot at the canter)
     for (const u of s.units) u.stats = s.stats;
-    s.ai.moveTo({ x, z }, { ordered: true });
-    this.reserves.push({ stack: s, x, z, charged: false, home: from });
+    if (!(target && s.startCharge(target))) s.ai.moveTo({ x, z }, { ordered: true });
+    this.reserves.push({ stack: s, x, z, charged: !!s.charging, home: from });
     g.tellBoth(f, 'The cavalry reserve is coming up', 'Enemy cavalry coming on!');
   }
 

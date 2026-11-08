@@ -35,7 +35,7 @@ export function thinkSoldier(u, stack, world, interval) {
 
   // 1806 bayonets: an enemy within reach is struck (a hit or a parry, every think)
   if (s.bayonet && threat && !u.window && dist2DSq(u.pos, threat.pos) < (1.5 + (threat.radius ?? 0.4)) ** 2 && Math.random() < 0.55) {
-    threat.receiveDamage(s.bayonet * (0.6 + Math.random() * 0.7) * u.damageMult, stack, 0, null, 0.05);
+    threat.receiveDamage(s.bayonet * (0.6 + Math.random() * 0.7) * u.damageMult * (threat.stack.stats.cavalry ? 0.6 : 1), stack, 0, null, 0.05); // (a rider sits high, out of the bayonet's reach)
   }
   // charging: the ranks break into the enemy, each man for the nearest
   if (stack.charging && threat && dist2DSq(u.pos, threat.pos) < 14 * 14) {

@@ -49,8 +49,8 @@ const LOD_FAR = 90;  // m from the camera: a horse and rider beyond it is drawn 
 const LOD_NEAR = 80;
 /** A rig through its poses (render/compactRig.js): every gait, limbered and not, firing, traversed, set up, unloaded — what moves stays a part of its own. */
 function probe(rig, u, look) {
-  const base = { ...u, vel: { x: 0, z: 0 }, towing: false, recoil: 0, turretYaw: u.yaw, deployK: 0, dropped: false, laying: false, alive: true };
-  const runs = [{ v: 1.5 }, { v: 4 }, { v: 6.5 }, { v: 11 }, { v: 0 }, { towing: true, v: 2 }, { towing: true, v: 5 }, { recoil: 1 }, { turretYaw: u.yaw + 0.3 }, { deployK: 1 }, { dropped: true }, { laying: true }];
+  const base = { ...u, vel: { x: 0, z: 0 }, sabreUp: false, slashT: 0, towing: false, recoil: 0, turretYaw: u.yaw, deployK: 0, dropped: false, laying: false, alive: true };
+  const runs = [{ v: 1.5 }, { v: 4 }, { v: 6.5 }, { v: 11 }, { v: 0 }, { sabreUp: true, v: 9 }, { slashT: 0.3 }, { towing: true, v: 2 }, { towing: true, v: 5 }, { recoil: 1 }, { turretYaw: u.yaw + 0.3 }, { deployK: 1 }, { dropped: true }, { laying: true }];
   let t = 0;
   for (const r of runs) {
     const f = { ...base, ...r, vel: { x: r.v ?? 0, z: 0 } };

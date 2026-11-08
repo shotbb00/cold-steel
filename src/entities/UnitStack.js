@@ -28,6 +28,7 @@ import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
 import { KITS } from '../data/kits.js';
+import { touchScreen } from '../core/Keys.js';
 import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
@@ -954,7 +955,9 @@ export class UnitStack {
       this.services.tell?.(this.faction, `${this.name}: the horses won't face the square`);
       return;
     }
-    if (!t.alive || t.ai.state === AIState.RETREAT || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
+    // a broken enemy is ridden down a while (horse ~6 s, the bayonets ~4 s), then the charge rallies
+    if (t.alive && t.ai.state === AIState.RETREAT) c.pursueUntil ??= this.world.time + (this.stats.cavalry ? 6 : 4);
+    if (!t.alive || this.world.time > (c.pursueUntil ?? Infinity) || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
     if ((c.steer -= dt) <= 0) { c.steer = 0.5; this.ai.moveTo({ x: t.centroid.x, z: t.centroid.z }, { ordered: true }); }
     const d = Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z);
     if (!c.shocked && d < 30) {
@@ -971,8 +974,11 @@ export class UnitStack {
     if (!(this.form || this.stats.cavalry) || this.stats.loose || !target?.alive || this.charging) return false;
     const cav = this.stats.cavalry;
     const perk = cav ? (this.type.id === 'tank' && armyDoctrine(this.army, 'cuirassiers')) : armyDoctrine(this.army, 'pasDeCharge'); // (Prussia's cuirassiers, France's pas de charge)
-    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
-    if (cav) { // at the gallop
+    const far = Math.hypot(target.centroid.x - this.centroid.x, target.centroid.z - this.centroid.z);
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + Math.max(cav ? 30 : 45, far / (cav?.chargeSpeed ?? 3) + 15), // (long enough to get there on the big maps)
+      shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
+    if (cav) { // at the gallop, sabres forward
+      for (const u of this.units) u.sabreUp = true;
       this.chargeBase = this.stats;
       this.stats = { ...this.stats, speed: cav.chargeSpeed };
       for (const u of this.units) u.stats = this.stats;
@@ -982,16 +988,29 @@ export class UnitStack {
   }
 
   endCharge() {
+    const t = this.charging?.target;
     this.charging = null;
+    for (const u of this.units) u.sabreUp = false;
     if (this.chargeBase) { this.stats = this.chargeBase; this.chargeBase = null; for (const u of this.units) u.stats = this.stats; }
-    if (this.alive) this.ai.defend();
+    if (!this.alive) return;
+    // horse doesn't stand about in musket range: with the enemy still on its feet close by, it rides
+    // back out of reach and re-forms there (the charge done, the squadron saved for the next one)
+    if (this.stats.cavalry && t?.alive && t.ai.state !== AIState.RETREAT) {
+      const dx = this.centroid.x - t.centroid.x, dz = this.centroid.z - t.centroid.z;
+      const d = Math.hypot(dx, dz) || 1;
+      if (d < 120) {
+        this.ai.moveTo(this.world.clampToBounds({ x: t.centroid.x + (dx / d) * 130, z: t.centroid.z + (dz / d) * 130 }), { hold: true, ordered: false });
+        return;
+      }
+    }
+    this.ai.defend();
   }
 
   /** Sabres: a trooper strikes at the enemy within reach — hard at the gallop, less in a mêlée. */
   updateSabres(dt) {
     const cav = this.stats.cavalry;
     if (!cav?.sabre) return;
-    const rate = this.charging ? 1.5 : 0.7;
+    const rate = this.charging ? 1.5 : 1; // (cuts a second in the mêlée, more at the gallop)
     for (const u of this.units) {
       if (!u.alive || Math.random() > rate * dt) continue;
       let best = null, bd = (cav.reach + 0.6) ** 2;
@@ -1001,7 +1020,7 @@ export class UnitStack {
         const d = dist2DSq(u.pos, o.pos);
         if (d < bd) { bd = d; best = o; }
       }
-      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1);
+      if (best) { best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1); u.slashT = 0.35; } // (the cut shows: models/napCavalry.js)
     }
   }
 
@@ -1146,7 +1165,8 @@ export class UnitStack {
     this.volleyFirst = null;
     // the powder smoke in front of each man who fires — where the muskets are (one bank across the
     // company's spread drew a long line over empty ground when the men were strung out)
-    for (const m of this.units) if (m.volleyGo && Math.random() < 0.5) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (every other man: two lines' smoke shouldn't wall off the fight) // (a haze: it doesn't blind like a screen)
+    const share = touchScreen() ? 0.5 : 1; // (a phone: every other man's smoke; a computer: every man's, fainter and longer — EffectsSystem.powderBank)
+    for (const m of this.units) if (m.volleyGo && Math.random() < share) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (a haze: it doesn't blind like a screen)
     return false;
   }
 
@@ -1624,6 +1644,7 @@ export class UnitStack {
     if (t.vel) _v.addScaledVector(t.vel, (dist / s.boltSpeed) * (s.marksman ? 1 : 0.7)); // lead moving targets a little (a sniper: fully)
     const spread = s.spread * u.skill
       * (1 - 0.1 * this.rank)                  // veterans shoot straighter
+      * (s.weapon === 'musket' && t.vel ? 1 + Math.min(1.2, Math.hypot(t.vel.x, t.vel.z) / 8) : 1) // (a smoothbore at a galloping horseman: far wider)
       * (1 + (0.8 * dist) / s.range)
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
