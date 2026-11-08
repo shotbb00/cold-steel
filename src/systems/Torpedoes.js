@@ -30,6 +30,7 @@ export class Torpedoes {
       this.charges.push({ x: cx + bx * back + bz * side, z: cz + bz * back - bx * side, at: now + 3 + (t.depth ?? 20) * 0.08 + Math.random() * 0.6,
         faction: src.faction, source: src, radius: dc.radius, damage: dc.damage });
     }
+    this.game.netEvent('dcs', this.charges.slice(-dc.count).map((c) => [Math.round(c.x), Math.round(c.z), Math.round((c.at - now) * 10) / 10, c.faction]));
     this.game.tell(src.faction, `${src.name}: depth charges!`);
   }
 
@@ -51,6 +52,7 @@ export class Torpedoes {
         speed: m.speed, left: m.range, damage: m.damage, wakeless: !!m.wakeless, faction: src.faction, source: src, fx: Math.random() * 0.2,
       });
     }
+    this.game.netEvent('torps', this.list.slice(-m.count).map((f) => [Math.round(f.x), Math.round(f.z), Math.round(f.dx * 1000) / 1000, Math.round(f.dz * 1000) / 1000, f.speed, Math.round(f.left), f.wakeless ? 1 : 0, f.faction]));
     this.game.audio?.play('rocket', from, { volume: 0.5, throttle: 0.5 });
     this.game.tell(src.faction, `${src.name}: torpedoes away`);
   }
@@ -75,7 +77,7 @@ export class Torpedoes {
       }
       let gone = f.left <= 0;
       if (!gone && terrain.heightAt(f.x, f.z) > f.y - 0.5) { // onto a reef or the shallows: it goes off there
-        if (!g.net?.isClient) g.effects.waterSplash?.({ x: f.x, y: f.y + RUN_DEPTH, z: f.z }, 2);
+        g.effects.waterSplash?.({ x: f.x, y: f.y + RUN_DEPTH, z: f.z }, 2);
         gone = true;
       }
       if (!gone) {
@@ -92,6 +94,16 @@ export class Torpedoes {
       }
       if (gone) this.list.splice(i, 1);
     }
+  }
+
+  /** A multiplayer guest: the host's fish and charges, to watch (no damage dealt here). */
+  remoteTorps(list) {
+    const level = this.game.world.river?.level ?? 0;
+    for (const [x, z, dx, dz, speed, left, wakeless, faction] of list) this.list.push({ x, z, y: level - RUN_DEPTH, dx, dz, speed, left, damage: 0, wakeless: !!wakeless, faction, source: null, fx: 0 });
+  }
+
+  remoteCharges(list) {
+    for (const [x, z, delay, faction] of list) this.charges.push({ x, z, at: this.game.time + delay, faction, source: null, radius: 0, damage: 0 });
   }
 
   /** Depth charges going off: a hump of white water, and every enemy boat near enough down there is hurt. */
@@ -114,7 +126,7 @@ export class Torpedoes {
           if (d > c.radius) continue;
           const k = 1 - d / c.radius;
           u.receiveDamage(c.damage * k * k * ((u.depth ?? 0) > 25 ? 0.7 : 1), c.source, 0.9, null, 1); // (a deep boat is harder to bracket)
-          if (u.alive && k > 0.4) s.shipHit(u, 0, true); // close: the hull is opened
+          if (u.alive && k > 0.4) u.leak = (u.leak ?? 0) + 0.0035 * k; // close: plates sprung, she takes water (a torpedo's hole is far worse)
         }
       }
     }

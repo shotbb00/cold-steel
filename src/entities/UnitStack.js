@@ -1797,7 +1797,7 @@ export class UnitStack {
     const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
     if (torpedo || Math.random() < 0.3 + k * 4) {
       const was = u.leak ?? 0;
-      u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : k * 0.08 + 0.002); // (a torpedo opens a destroyer up; a battleship takes several)
+      u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : Math.min(0.006, k * 0.03 + 0.002)); // (a torpedo opens a destroyer up, a battleship takes several; a shell or a charge springs a leak at most)
       if (torpedo) tell('torpedo hit — flooding!');
       else if (!was) tell('holed below the waterline');
     }

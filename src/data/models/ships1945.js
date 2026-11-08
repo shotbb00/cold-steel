@@ -7,32 +7,34 @@
 //   Kagerō (IJN):  119 m, three twin 12.7 cm mounts (one forward, two aft), a big trunked funnel
 //                  pair, two quadruple Long Lance mounts, grey with a linoleum-brown deck
 import * as THREE from 'three';
-import { P, merge } from '../units/geometry.js';
+import { P, merge, loft } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
 
 const US = { hull: 0x3a4652, deck: 0x4a5258, upper: 0x56606a, gun: 0x4e5862, black: 0x1c1e20 };
 const IJN = { hull: 0x5e6468, deck: 0x6a4a36, upper: 0x6e7478, gun: 0x5a6064, black: 0x1c1e20 };
 
-/** A hull: a long box with a fine bow and a rounded stern, freeboard `fb`, below water down to -draft. */
+/**
+ * A hull, lofted: half-breadths swept from the stern (rounded, near full beam) through the parallel
+ * midbody to a fine bow, the sheer rising forward; freeboard `fb` above the water, `draft` below.
+ * A flat deck on top follows the same outline, a dark boot-topping band runs along the waterline.
+ */
 function hull(len, beam, fb, draft, c, sheer = 1.2) {
-  const parts = [];
-  const mid = len * 0.62;
-  parts.push(P.box(beam, fb + draft, mid, { y: (fb - draft) / 2, z: -len * 0.06, color: c.hull }));
-  // the bow: tapering boxes forward, rising with the sheer
-  for (let k = 0; k < 6; k++) {
-    const t = (k + 1) / 6;
-    const w = beam * (1 - t * 0.85);
-    const zc = mid / 2 - len * 0.06 + (len * 0.32 / 6) * (k + 0.5);
-    parts.push(P.box(w, fb + draft + sheer * t, len * 0.32 / 6 + 0.05, { y: (fb - draft + sheer * t) / 2, z: zc, color: c.hull }));
+  const N = 18;
+  const breadth = (t) => (t < 0.12 ? 0.78 + 0.22 * Math.sin((t / 0.12) * Math.PI / 2) : t < 0.58 ? 1 : Math.max(0.03, 1 - ((t - 0.58) / 0.42) ** 1.7));
+  const rise = (t) => sheer * Math.max(0, (t - 0.55) / 0.45) ** 2;
+  const hullS = [];
+  const deckS = [];
+  const bootS = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const z = -len / 2 + t * len;
+    const w = (beam / 2) * breadth(t);
+    const top = fb + rise(t);
+    hullS.push([0, (top - draft) / 2, z, w, (top + draft) / 2, 4]);
+    deckS.push([0, top + 0.05, z, Math.max(0.05, w * 0.97), 0.08, 6]);
+    bootS.push([0, -0.15, z, w + 0.04, 0.3, 4]);
   }
-  // the stern: narrowing a little aft
-  for (let k = 0; k < 3; k++) {
-    const w = beam * (0.95 - k * 0.12);
-    parts.push(P.box(w, fb + draft - k * 0.4, len * 0.06 / 3 + 0.05, { y: (fb - draft + k * 0.4) / 2, z: -mid / 2 - len * 0.06 - (len * 0.06 / 3) * (k + 0.5), color: c.hull }));
-  }
-  parts.push(P.box(beam * 0.96, 0.12, len * 0.86, { y: fb + 0.06, z: 0, color: c.deck }));      // the deck
-  parts.push(P.box(beam + 0.05, 0.5, len * 0.9, { y: -0.2, color: 0x2a1c18 }));                   // the boot-topping at the waterline
-  return parts;
+  return [loft(hullS, { color: c.hull }, 12), loft(deckS, { color: c.deck }, 10), loft(bootS, { color: 0x2a1c18 }, 10)];
 }
 
 /** A gun mount: a house with its barrel(s), at deck height, trained by the rig. */
@@ -320,13 +322,14 @@ export const buildYamato = ship(() => {
 /** A submarine: the long pressure hull awash, the conning tower ("sail") with periscopes, a deck gun. */
 function boat(c, { len, beam, tower, gunZ, hangar = false }) {
   const parts = [];
-  const n = 10;
   const deck = beam * 0.13; // (she rides low: a metre of casing above the water)
-  for (let k = 0; k < n; k++) { // the hull: fuller amidships, tapering to bow and stern
-    const t = (k + 0.5) / n;
-    const w = beam * Math.sin(Math.PI * Math.min(0.95, 0.12 + t * 0.85)) ** 0.6;
-    parts.push(P.box(w, beam * 0.85, len / n + 0.05, { y: -beam * 0.3, z: -len / 2 + t * len, color: c.hull }));
+  const secs = [];
+  for (let k = 0; k <= 16; k++) { // the pressure hull: a cigar, fuller aft of amidships, fine at the bow
+    const t = k / 16;
+    const r = (beam / 2) * Math.max(0.05, Math.sin(Math.PI * Math.min(1, 0.04 + t * 0.94)) ** 0.55);
+    secs.push([0, -beam * 0.3, -len / 2 + t * len, r, r * 0.9, 2.2]);
   }
+  parts.push(loft(secs, { color: c.hull }, 12));
   parts.push(P.box(beam * 0.55, 0.25, len * 0.86, { y: deck, color: c.deck }));               // the casing deck
   parts.push(P.box(beam * 0.5, tower[1], tower[0], { y: deck + tower[1] / 2, z: tower[2], color: c.upper })); // the sail
   parts.push(P.box(beam * 0.52, 0.5, tower[0] * 0.8, { y: deck + tower[1] + 0.25, z: tower[2], color: c.black }));

@@ -195,6 +195,24 @@ export class Minimap {
       c.fillText(p.id, mx, my);
     }
 
+    // lost submarine contacts: a dashed ring and a question mark, fading
+    for (const k of game.visibility?.contacts ?? []) {
+      const [mx, my] = this.toMap(k.x, k.z);
+      c.globalAlpha = Math.max(0, 1 - (game.time - k.at) / 45);
+      c.strokeStyle = '#ff9a3c';
+      c.setLineDash([3, 3]);
+      c.beginPath();
+      c.arc(mx, my, 6, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = '#ff9a3c';
+      c.font = 'bold 9px Segoe UI, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('?', mx, my);
+      c.globalAlpha = 1;
+    }
+
     // our radars, jammers and command posts: what they cover (dashed until they work)
     this.drawAreas(c);
 

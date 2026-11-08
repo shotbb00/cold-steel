@@ -16,11 +16,14 @@
 // For the player: hidden enemies aren't drawn, labelled or orderable (`visible`), nor are
 // spotted ones standing in the fog of war; their gunfire can still be heard.
 
+import * as THREE from 'three';
 const INTERVAL = 0.25;
 const REVEAL_TIME = 3;     // seconds a shot keeps the shooter revealed
 const AWARE = 12;          // metres: noticed this close in any direction, line of sight or not
 const WOODS_CUT = 0.7;     // sight lost looking through solid forest
 const WOODS_CELL = 6;      // metres per woods grid cell
+
+const CONTACT_FADE = 45; // s a lost submarine contact stays marked
 
 export class VisibilitySystem {
   constructor(game, playerFaction) {
@@ -29,6 +32,7 @@ export class VisibilitySystem {
     this.player = playerFaction;
     this.timer = 0;
     this.enabled = true;
+    this.contacts = []; // lost submarine contacts: { x, z, at, ring } — where it was last found (fades out)
     const map = game.map;
     this.overwatch = !!map?.overwatch; // maps with a commanding height (Monte Kali): up to +50 % sight looking down
     if (map?.woods) {
@@ -76,6 +80,25 @@ export class VisibilitySystem {
     return false;
   }
 
+  /** An enemy submarine just slipped out of contact: a fading ring where it was last found (and on the minimap). */
+  lostContact(u) {
+    const level = this.world.river?.level ?? 0;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(26, 32, 40), new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false, fog: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(u.pos.x, level + 0.4, u.pos.z);
+    this.game.scene.add(ring);
+    this.contacts.push({ x: u.pos.x, z: u.pos.z, at: this.game.time, ring });
+    if (this.contacts.length > 6) this.dropContact(0);
+  }
+
+  dropContact(i) {
+    const c = this.contacts[i];
+    c.ring.removeFromParent();
+    c.ring.geometry.dispose();
+    c.ring.material.dispose();
+    this.contacts.splice(i, 1);
+  }
+
   /** Note that a unit fired (called from UnitStack.shoot). */
   static revealShooter(u) {
     u.revealT = REVEAL_TIME * (u.stats.quietShot ?? 1); // a sniper's single shot is hard to place
@@ -83,6 +106,11 @@ export class VisibilitySystem {
 
   update(dt) {
     for (const s of this.world.stacks) for (const u of s.units) if (u.revealT > 0) u.revealT -= dt;
+    for (let i = this.contacts.length - 1; i >= 0; i--) { // lost contacts fade over CONTACT_FADE s
+      const k = 1 - (this.game.time - this.contacts[i].at) / CONTACT_FADE;
+      if (k <= 0) this.dropContact(i);
+      else this.contacts[i].ring.material.opacity = 0.7 * k;
+    }
     this.timer -= dt;
     if (this.timer > 0) return;
     this.timer = INTERVAL;
@@ -95,6 +123,8 @@ export class VisibilitySystem {
         if (!u.alive) continue; // a body stays where (and as) it was last seen
         // fortifications are on everyone's maps
         u.spotted = !this.enabled || s.stats.structure || this.isSeen(u, spotters, terrain);
+        if (u.wasSpotted && !u.spotted && s.faction !== this.player && (u.depth ?? 0) > 3) this.lostContact(u); // gone under: mark where
+        u.wasSpotted = u.spotted;
         // drawn only where your fog of war is clear (render/FogOfWar.js): spotted by a shot's flash or
         // a tall hull past the edge of view, your troops may fire at it, you don't see it. A gun a
         // counter-battery radar has tracked back is shown wherever it is: that's what the radar is for
