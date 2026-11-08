@@ -796,6 +796,13 @@ export class UnitStack {
     if (s.towed) {
       u.towing = !u.setUp || this.world.time - u.setUp.at < s.towed.deploy;
       if (u.towing) { u.target = null; u.airTarget = null; return; }
+      // an anti-tank gun left in place 20 s: the crew piles a sandbag wall in front of the shield (free; it stays when they go)
+      const g = this.services.game;
+      if (s.antiArmor && !s.indirect && u.dugIn !== u.setUp && g && !g.net?.isClient && this.world.time - u.setUp.at > s.towed.deploy + 20) {
+        u.dugIn = u.setUp;
+        const site = g.construction.place('sandbags', u.pos.x + Math.sin(u.yaw) * 2.4, u.pos.z + Math.cos(u.yaw) * 2.4, u.yaw, this.faction, null, { force: true });
+        if (site) g.construction.finish(site);
+      }
     }
     u.cooldown -= dt * u.fireRateMult * (this.doc?.fire ?? 1);
     u.retarget -= dt;
