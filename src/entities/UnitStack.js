@@ -1365,13 +1365,14 @@ export class UnitStack {
     const eyeY = u.pos.y + (s.eyeHeight ?? 1.4);
     let best = null;
     let bestScore = Infinity;
-    if (s.indirect) return this.pickIndirectTarget(u);
+    if (s.indirect) return this.holdFire ? null : this.pickIndirectTarget(u); // hold fire: only what it is sent at (fire missions come before this)
     for (const e of this.world.combatants(enemyOf(this.faction))) {
       if (!e.alive || !e.spotted) continue; // you can only shoot what your side can see
       const d2 = dist2DSq(u.pos, e.pos);
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
@@ -1410,6 +1411,9 @@ export class UnitStack {
       if (!e.alive || !e.spotted) continue;
       const d = Math.sqrt(dist2DSq(u.pos, e.pos));
       if (d < s.minRange || d > s.range) continue;
+      // not on its own side's heads: no shells where friends are near the target (orders and fire missions decide for themselves)
+      const safe = Math.max(20, (s.splash ?? 4) * 3);
+      if (this.world.neighbors(e.pos, safe, _near).some((o) => o.faction === this.faction && o.alive && dist2DSq(o.pos, e.pos) < safe * safe)) continue;
       let cluster = 0;
       for (const o of this.world.neighbors(e.pos, 8, _near)) if (o.faction === foe) cluster++;
       const located = e.locatedUntil > this.world.time ? 30 : 0; // the counter-battery radar's find: the enemy's guns first

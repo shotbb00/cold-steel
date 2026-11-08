@@ -99,6 +99,9 @@ export class Orders {
         }
         return null;
       }
+      case 'holdFire': // per stack: hold fire (only the attack target) or fire at will (the default)
+        for (const s of mine(cmd.s)) { s.holdFire = !!cmd.on; for (const u of s.units) if (cmd.on && u.target) u.target = null; }
+        return null;
       case 'sprint': // foot on the move: ~10 s at the run, then winded (slower) for 20 s; no second sprint till then
         for (const s of mine(cmd.s)) {
           if (!s.usesCover || !s.moveTarget || s.sprinting) continue;

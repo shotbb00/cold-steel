@@ -168,7 +168,8 @@ export class CommandSystem {
     else if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'promote')) this.runCommand('promote');
-    else if (keys.is(code, 'sprint')) this.runCommand('sprint');
+    else if (keys.is(code, 'sprintOrder')) this.runCommand('sprint');
+    else if (keys.is(code, 'holdFire')) this.runCommand('holdFire');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
@@ -247,6 +248,13 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd === 'holdFire') {
+      const sel = [...this.selected].filter((s) => s.alive && s.stats.damage > 0);
+      if (!sel.length) return;
+      const on = !sel.every((s) => s.holdFire);
+      this.game.orders.issue({ t: 'holdFire', s: ids(sel), on: on ? 1 : 0 });
+      for (const s of sel) s.holdFire = on; // (shown at once, also on a guest's screen)
+      this.game.bus.emit('toast', on ? 'Hold fire: only at what you order them to attack' : 'Fire at will');
     } else if (cmd === 'sprint') {
       const sel = [...this.selected].filter((s) => s.alive && s.usesCover && s.moveTarget);
       if (!sel.length) return this.game.bus.emit('toast', 'Send infantry somewhere first, then sprint');
