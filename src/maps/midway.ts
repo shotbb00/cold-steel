@@ -84,7 +84,8 @@ export default {
       farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
       surface(x, z) {
         const y = height(x, z);
-        return y < 1.6 && y > -0.6 ? [0xe6dcb4, smoothstep(2.2, 0.6, y)] : null; // the beaches and the reef: coral sand (not what lies under the water: it glared through)
+        if (y >= 1.6) return null;
+        return y > -0.6 ? [0xe6dcb4, smoothstep(2.2, 0.6, y)] : [0xc4b88e, 1]; // the beaches and the reef: coral sand, and under the water a darker sand the sea tints by its depth (world/Sea.js)
       },
     },
   },
@@ -101,7 +102,7 @@ export default {
 
   decorate({ scene, terrain, cover, rand }) {
     const props = new PropBuilder({ scene, terrain, cover });
-    sea.build(scene);
+    sea.build(scene, terrain);   // (the water's depth, colour and surf from the sea floor: world/Sea.js)
     // palms on the islands, the airfield's tower and a hangar on Eastern Island
     for (let i = 0; i < 160; i++) {
       const x = (rand() * 2 - 1) * 650;

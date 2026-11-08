@@ -9,12 +9,15 @@
 //                flash) still applies
 //   WindPlugin   world/Vegetation.js — grass tufts and hedgerow leaf cards sway in the wind, by
 //                each instance's position (`wind.kind`: 'grass' bends from the root, 'leaf' lifts)
+//   WaterPlugin  world/Sea.js — the sea's colour, clearness and surf from its depth (aDepth), waves
+//                as drifting noise turned into normals
 //   TerrainPlugin world/Terrain.js — large-scale variation from the ground texture sampled at
 //                ~30× its scale (so the ground never looks tiled) and the furrows / crop rows of
 //                the fields from the `aFurrow` attribute (strength, angle, spacing)
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
 import { NOISE, CLIMATE } from '../paint.js';
+import { SEA_TIME } from '../../world/Sea.js';
 
 class GlslPlugin extends MaterialPluginBase {
   isCompatible(lang) {
@@ -232,6 +235,49 @@ export class WindPlugin extends GlslPlugin {
           float shape = ${w.shape};
           positionUpdated.x += sway * ${f(w.ax)} * shape;
           positionUpdated.z += sway * ${f(w.az)} * shape;
+        }
+        #endif`,
+    };
+  }
+}
+
+export class WaterPlugin extends GlslPlugin {
+  /** @param {object} water  { glsl } (world/Sea.js waterGlsl) */
+  constructor(material, water) {
+    WaterPlugin.pending = water; // (the shader code is asked for inside super())
+    super(material, 'Water', 175, { WATER: false });
+    this.water = water;
+    this._enable(true);
+  }
+
+  getClassName() { return 'WaterPlugin'; }
+
+  prepareDefines(defines, scene, mesh) { defines.WATER = !!mesh?.isVerticesDataPresent?.('aDepth'); }
+
+  getAttributes(attributes, scene, mesh) { if (mesh?.isVerticesDataPresent?.('aDepth')) attributes.push('aDepth'); }
+
+  getUniforms() {
+    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\n#endif\n' };
+  }
+
+  bindForSubMesh(ubo) { ubo.updateFloat('uSeaTime', SEA_TIME.value); }
+
+  getCustomCode(shaderType) {
+    if (shaderType === 'vertex') {
+      return {
+        CUSTOM_VERTEX_DEFINITIONS: '#ifdef WATER\nattribute float aDepth;\nvarying float vDepth;\n#endif\n',
+        CUSTOM_VERTEX_MAIN_END: '#ifdef WATER\nvDepth = aDepth;\n#endif\n',
+      };
+    }
+    return {
+      CUSTOM_FRAGMENT_DEFINITIONS: `#ifdef WATER\nvarying float vDepth;\n${NOISE}\n${(this.water ?? WaterPlugin.pending).glsl}\n#endif\n`,
+      CUSTOM_FRAGMENT_UPDATE_ALPHA: /* glsl */ `
+        #ifdef WATER
+        {
+          vec4 sea = seaColor(vDepth, vPositionW.xz, uSeaTime);
+          surfaceAlbedo = sea.rgb;
+          alpha *= sea.a;
+          normalW = pBumpNormal(vPositionW, normalW, seaHeight(vPositionW.xz, uSeaTime, length(vEyePosition.xyz - vPositionW)));
         }
         #endif`,
     };

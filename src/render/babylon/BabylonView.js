@@ -49,7 +49,7 @@ import '@babylonjs/core/Rendering/geometryBufferRendererSceneComponent.js';
 import { createSky } from './sky.js';
 import { createSight } from './sight.js';
 import { particleLayer, sprite, lines, points } from './extras.js';
-import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin } from './plugins.js';
+import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin, WaterPlugin } from './plugins.js';
 
 /** Vertex attributes the bridge maps to Babylon's own; anything else goes over under its own name. */
 const STANDARD = new Set(['position', 'normal', 'uv', 'color']);
@@ -564,6 +564,7 @@ export class BabylonView {
     if (tm.userData?.paint) new PaintPlugin(m, tm.userData.paint);
     if (tm.userData?.wind) new WindPlugin(m, tm.userData.wind);
     if (tm.userData?.terrain) new TerrainPlugin(m);
+    if (tm.userData?.water) { new WaterPlugin(m, tm.userData.water); m.environmentIntensity = ENV * 1.5; } // (the sky in the waves: the fresnel at a low angle)
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
     m.source = tm;
