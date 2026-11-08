@@ -101,6 +101,7 @@ export class BabylonView {
     this.meshes = new Map();     // Three object → { mesh, versions }
     this.geometries = new WeakMap();
     this.materials = new WeakMap();
+    this.waters = new Set(); // the sea's foam grids (world/Sea.js), re-sent when they change
     this.textures = new WeakMap();
     this.lights = new Map();
     this.extras = new Map();     // Three object → a native counterpart (particles, sprites, lines, points)
@@ -249,6 +250,11 @@ export class BabylonView {
       if (rec.mesh.isEnabled()) rec.mesh.setEnabled(false);
     }
     this.sky?.update(time, tCam);
+    for (const w of this.waters) {
+      if (w.foam.texture.version === w.foamVersion) continue;
+      w.babylonFoam.update(w.foam.texture.image.data);
+      w.foamVersion = w.foam.texture.version;
+    }
     if (this.fow && this.fow.texture.version !== this.fowVersion) {
       this.fow.babylonTexture.update(this.fow.texture.image.data);
       this.fowVersion = this.fow.texture.version;
@@ -564,7 +570,16 @@ export class BabylonView {
     if (tm.userData?.paint) new PaintPlugin(m, tm.userData.paint);
     if (tm.userData?.wind) new WindPlugin(m, tm.userData.wind);
     if (tm.userData?.terrain) new TerrainPlugin(m);
-    if (tm.userData?.water) { new WaterPlugin(m, tm.userData.water); m.environmentIntensity = ENV * 1.5; } // (the sky in the waves: the fresnel at a low angle)
+    if (tm.userData?.water) {
+      const w = tm.userData.water;
+      if (!w.babylonFoam) {   // the foam grid: re-sent when world/SeaFoam.js writes it (like the fog of war)
+        const t = w.foam.texture;
+        w.babylonFoam = RawTexture.CreateRTexture(t.image.data, t.image.width, t.image.height, this.scene, false, false, Texture.BILINEAR_SAMPLINGMODE, Engine.TEXTURETYPE_UNSIGNED_BYTE);
+        w.babylonFoam.wrapU = w.babylonFoam.wrapV = Texture.CLAMP_ADDRESSMODE;
+        w.foamVersion = t.version;
+        this.waters.add(w);
+      }
+      new WaterPlugin(m, w); m.environmentIntensity = ENV * 1.5; } // (the sky in the waves: the fresnel at a low angle)
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
     m.source = tm;

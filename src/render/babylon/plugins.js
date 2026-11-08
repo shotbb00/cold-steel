@@ -257,10 +257,17 @@ export class WaterPlugin extends GlslPlugin {
   getAttributes(attributes, scene, mesh) { if (mesh?.isVerticesDataPresent?.('aDepth')) attributes.push('aDepth'); }
 
   getUniforms() {
-    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\n#endif\n' };
+    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform vec4 foamBox;\n#endif\n' };
   }
 
-  bindForSubMesh(ubo) { ubo.updateFloat('uSeaTime', SEA_TIME.value); }
+  getSamplers(samplers) { samplers.push('foamMap'); }
+
+  bindForSubMesh(ubo) {
+    ubo.updateFloat('uSeaTime', SEA_TIME.value);
+    const b = this.water.foam.box;
+    ubo.updateFloat4('foamBox', b.x, b.y, b.z, b.w);
+    ubo.setTexture('foamMap', this.water.babylonFoam);
+  }
 
   getCustomCode(shaderType) {
     if (shaderType === 'vertex') {
@@ -270,11 +277,13 @@ export class WaterPlugin extends GlslPlugin {
       };
     }
     return {
-      CUSTOM_FRAGMENT_DEFINITIONS: `#ifdef WATER\nvarying float vDepth;\n${NOISE}\n${(this.water ?? WaterPlugin.pending).glsl}\n#endif\n`,
+      CUSTOM_FRAGMENT_DEFINITIONS: `#ifdef WATER\nvarying float vDepth;\nuniform sampler2D foamMap;\n${NOISE}\n${(this.water ?? WaterPlugin.pending).glsl}\n#endif\n`,
       CUSTOM_FRAGMENT_UPDATE_ALPHA: /* glsl */ `
         #ifdef WATER
         {
-          vec4 sea = seaColor(vDepth, vPositionW.xz, uSeaTime);
+          vec2 fuv = (vPositionW.xz - foamBox.xy) * foamBox.zw;
+          float wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(foamMap, fuv).r;
+          vec4 sea = seaColor(vDepth, vPositionW.xz, uSeaTime, wake);
           surfaceAlbedo = sea.rgb;
           alpha *= sea.a;
           normalW = pBumpNormal(vPositionW, normalW, seaHeight(vPositionW.xz, uSeaTime, length(vEyePosition.xyz - vPositionW)));

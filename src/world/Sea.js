@@ -31,7 +31,7 @@ export function waterGlsl(deep) {
         + pNoise(vec3(p * 0.6 - vec2(0.15, 0.22) * t, t * 0.5 + 5.3)) * 0.1) * far;   // chop
     return h;
   }
-  vec4 seaColor(float d, vec2 p, float t) {
+  vec4 seaColor(float d, vec2 p, float t, float wake) {
     vec3 shallow = vec3(0.02, 0.46, 0.42);
     vec3 mid = vec3(0.014, 0.16, 0.19);
     vec3 deep = vec3(${f(deep.r)}, ${f(deep.g)}, ${f(deep.b)});
@@ -43,8 +43,12 @@ export function waterGlsl(deep) {
     float n = pNoise(vec3(p * 0.12, t * 0.35)) * 0.6 + pNoise(vec3(p * 0.5, t * 0.8 + 3.0)) * 0.4;
     float foam = band * smoothstep(0.42, 0.72, n + band * 0.25);
     // a few whitecaps out on the open sea
-    float cap = smoothstep(0.84, 0.9, pNoise(vec3(p * 0.03 + vec2(0.012, 0.008) * t, t * 0.05))) * smoothstep(0.55, 0.75, pNoise(vec3(p * 0.35, t * 0.6)));
-    foam = max(foam, cap * 0.32 * smoothstep(10.0, 20.0, d));
+    float cap = smoothstep(0.86, 0.92, pNoise(vec3(p * 0.03 + vec2(0.012, 0.008) * t, t * 0.05))) * smoothstep(0.68, 0.82, pNoise(vec3(p * 0.9, t * 0.9)));
+    foam = max(foam, cap * 0.28 * smoothstep(10.0, 20.0, d));
+    // wakes (world/SeaFoam.js): churned, paler water, white foam through it, broken up
+    float wn = pNoise(vec3(p * 0.3, t * 0.7 + 7.0)) * 0.65 + pNoise(vec3(p * 1.1, t * 1.3 + 2.0)) * 0.35;
+    c = mix(c, c * 1.4 + vec3(0.02, 0.07, 0.07), smoothstep(0.03, 0.35, wake) * 0.7);
+    foam = max(foam, smoothstep(0.3, 0.8, wake * (0.55 + 0.9 * wn)));
     c = mix(c, vec3(0.72, 0.78, 0.78), foam);
     return vec4(c, max(a, foam));
   }`;
@@ -70,20 +74,29 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
     /** The sheet over the map (its depth from `terrain`), and the open ocean round it out past the far plane. */
     build(scene, terrain = null) {
       const deep = new THREE.Color(color);
+      // the foam grid (world/SeaFoam.js writes it), over the map
+      const N = 1024;
+      const data = new Uint8Array(N * N);
+      const texture = new THREE.DataTexture(data, N, N, THREE.RedFormat);
+      texture.magFilter = texture.minFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      this.foam = { texture, data, n: N, box: new THREE.Vector4(-size / 2, -size / 2, 1 / size, 1 / size) };
       const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.38, metalness: 0, transparent: true });
       const glsl = waterGlsl(deep);
       mat.onBeforeCompile = (sh) => {
         sh.uniforms.uSeaTime = SEA_TIME;
+        sh.uniforms.uFoam = { value: this.foam.texture };
+        sh.uniforms.uFoamBox = { value: this.foam.box };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nattribute float aDepth;\nvarying float vDepth;\nvarying vec3 vSeaW;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDepth = aDepth;\nvSeaW = (modelMatrix * vec4(position, 1.0)).xyz;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
-          .replace('#include <color_fragment>', '#include <color_fragment>\nvec4 sea = seaColor(vDepth, vSeaW.xz, uSeaTime);\ndiffuseColor.rgb = sea.rgb;\ndiffuseColor.a *= sea.a;')
+          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nuniform sampler2D uFoam;\nuniform vec4 uFoamBox;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
+          .replace('#include <color_fragment>', '#include <color_fragment>\nvec2 fuv = (vSeaW.xz - uFoamBox.xy) * uFoamBox.zw;\nfloat wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(uFoam, fuv).r;\nvec4 sea = seaColor(vDepth, vSeaW.xz, uSeaTime, wake);\ndiffuseColor.rgb = sea.rgb;\ndiffuseColor.a *= sea.a;')
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = pBumpNormal(-vViewPosition, normal, seaHeight(vSeaW.xz, uSeaTime, length(vViewPosition)));');
       };
       mat.customProgramCacheKey = () => `sea:${color}`;
-      mat.userData.water = { glsl };   // (render/babylon/BabylonView.js → WaterPlugin)
+      mat.userData.water = { glsl, foam: this.foam };   // (render/babylon/BabylonView.js → WaterPlugin)
       const depthOf = (x, z) => (terrain ? Math.max(0, level - terrain.heightAt(x, z)) : 60);
       // the map: a grid fine enough for the reef and the beaches (~25 m)
       const n = 240;
