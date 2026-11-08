@@ -72,6 +72,7 @@ export class UnitPreview {
     Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
     sun.shadow.bias = -0.0005;
     scene.add(sun);
+    this.sun = sun;
     const rim = new THREE.DirectionalLight(0xb8c4d0, 0.6);
     rim.position.set(6, 4, -8);
     scene.add(rim);
@@ -79,6 +80,7 @@ export class UnitPreview {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
+    this.ground = ground;
 
     this.orbit = { yaw: 0.7, pitch: 0.28, zoom: 1, target: new THREE.Vector3(0, 1, 0), idle: 0 };
     this.fit = { w: 2, h: 1.2 }; // half-extents (m) the camera keeps in frame
@@ -136,7 +138,36 @@ export class UnitPreview {
     this.orbit.target.set(0, vehicle ? 1.2 : 0.9, 0);
     this.orbit.zoom = 1;
     this.fit = vehicle ? { w: 4.4, h: 2.1 } : { w: 0.55 + n * 0.5, h: 1.1 };
+    if (type.stats?.naval) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships: framed by their size)
     this.setPose('idle');
+  }
+
+  /**
+   * Frame what's shown by its real size: a tank and a 267 m carrier both fill the view. The ground,
+   * the sun's shadow box and the far plane grow with it (anything up to tank size keeps the old framing).
+   */
+  fitTo(roots) {
+    const box = new THREE.Box3();
+    for (const r of roots) box.expandByObject(r);
+    if (box.isEmpty()) return;
+    const size = box.getSize(new THREE.Vector3());
+    const c = box.getCenter(new THREE.Vector3());
+    const half = Math.max(size.x, size.z) / 2;
+    if (half <= 4.4) return;
+    this.orbit.target.set(c.x, c.y, c.z);
+    this.fit = { w: half * 0.95, h: Math.max(2.1, size.y * 0.6) };
+    this.scaleStage(half / 8);
+  }
+
+  /** The ground disc, shadow box and far plane at `k` times their size for a small vehicle. */
+  scaleStage(k) {
+    this.ground.scale.setScalar(Math.max(1, k * 1.3));
+    const sc = this.sun.shadow.camera;
+    Object.assign(sc, { left: -9 * k, right: 9 * k, top: 9 * k, bottom: -9 * k, far: 40 * Math.max(1, k) });
+    this.sun.position.set(-6 * Math.max(1, k), 10 * Math.max(1, k), 7 * Math.max(1, k));
+    sc.updateProjectionMatrix();
+    this.camera.far = 200 * Math.max(1, k);
+    this.camera.updateProjectionMatrix();
   }
 
   /** Show an aircraft of support power `kind` ('heli', 'jet', 'lift') for `faction`, in the air. */
@@ -214,6 +245,7 @@ export class UnitPreview {
     this.stack = null;
     this.aircraft?.rig.root.removeFromParent();
     this.aircraft = null;
+    this.scaleStage(1); // (back to tank-size staging after a ship)
   }
 
   dispose() {

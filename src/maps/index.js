@@ -48,9 +48,21 @@ export function getMap(id) {
   return MAPS[id] ?? MAPS[DEFAULT_MAP];
 }
 
-/** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only), its own maps first. */
-export function mapsFor(ep) {
-  const all = Object.values(MAPS).filter((m) => !m.wip && (!m.epochs || m.epochs.includes(ep))); // (wip: not offered yet)
+/**
+ * Where the battle is fought (the menu's second picker, under the years): on land, at sea — and,
+ * later, on a coast (landings: land and sea together). A map's `theatre` (land unless it says).
+ */
+export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal', soon: true }];
+let theatreNow = 'land';
+export const theatre = () => theatreNow;
+export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id && !t.soon) ? id : 'land'; }
+/** Does year `ep` have any map in theatre `th`? (the picker greys out the empty ones) */
+export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && (m.theatre ?? 'land') === th && (!m.epochs || m.epochs.includes(ep)));
+
+/** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
+export function mapsFor(ep, th = theatreNow) {
+  if (!hasTheatre(ep, th)) th = 'land'; // (a year with no sea yet: its land)
+  const all = Object.values(MAPS).filter((m) => !m.wip && (m.theatre ?? 'land') === th && (!m.epochs || m.epochs.includes(ep))); // (wip: not offered yet)
   return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
 }
 

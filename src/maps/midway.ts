@@ -48,6 +48,7 @@ export default {
   name: 'Midway',
   description: 'Open Pacific around the atoll: a reef ring no ship can cross, the islands with their airfield in the middle, shoals out on the water.',
   epochs: ['1945'],
+  theatre: 'sea',          // the menu's Sea battles (maps/index.js THEATRES)
   modes: ['frontline'],   // (the sea zones; Pitched battle, King of the Hill and Skirmish at sea come later)
   fow: 0.5,
   sides: { nato: 'United States', pact: 'Japan' },          // unseen water only half as dark (render/FogOfWar.js)

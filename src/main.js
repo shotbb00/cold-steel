@@ -8,7 +8,7 @@ import { settings } from './core/Settings.js';
 import { setEpoch, epoch } from './data/epoch.js';
 import { GameEngine } from './core/GameEngine.js';
 import { GAME } from './data/game.js';
-import { getMap, forEpoch } from './maps/index.js';
+import { getMap, forEpoch, setTheatre } from './maps/index.js';
 import { getMode } from './modes/index.js';
 import { MainMenu } from './ui/MainMenu.js';
 import { MenuMusic } from './audio/MenuMusic.js';
@@ -34,6 +34,7 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
 const params = new URLSearchParams(location.search);
 const replay = takeReplay();
 setEpoch(params.get('epoch') ?? replay?.epoch ?? settings.get('epoch')); // the war the menu and the battle are set in (data/epoch.js)
+setTheatre(settings.get('theatre')); // land or sea (maps/index.js): which maps the menu offers
 forEpoch(epoch()); // its map texts and point names (maps/index.js)
 if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather'), armies: { nato: params.get('nato'), pact: params.get('pact') }, epoch: params.get('epoch') });
 else if (replay) start(replay);

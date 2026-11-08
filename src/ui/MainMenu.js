@@ -7,7 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, mapsFor, mapIn } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -176,7 +176,9 @@ const el = (tag, cls, html) => {
 
 const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone', walk: 'Walk', run: 'Run', reload: 'Reload', traverse: 'Traverse', drive: 'Drive', fire: 'Fire', trot: 'Trot', canter: 'Canter', gallop: 'Gallop', limbered: 'Limbered', hover: 'Hover', fly: 'Fly' };
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
-const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane' }; // (no jets yet: data/epoch.js)
+const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane', diveBomb: 'Dive bomber', torpBomb: 'Torpedo bomber', navCap: 'Carrier fighter', navScout: 'Scout plane' }; // (no jets yet: data/epoch.js)
+/** The sea's two navies in the units list (one army per side there: the US Navy, the Imperial Navy). */
+const NAVY_NAME = { nato: 'US Navy', pact: 'Imperial Navy' };
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
 const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
 const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
@@ -299,6 +301,19 @@ export class MainMenu {
       year.append(b);
     }
     side.append(year);
+    // where it's fought (maps/index.js THEATRES): land, sea — coastal (landings) to come; a year with no sea yet greys it out
+    const where = el('div', 'seg menu-epoch menu-theatre');
+    for (const t of THEATRES) {
+      const none = !t.soon && !hasTheatre(epoch(), t.id);
+      const on = !t.soon && t.id === (hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+      const b = el('button', t.soon || none ? 'soon' : on ? 'on' : '', t.soon ? `${t.name}<small>soon</small>` : t.name);
+      b.type = 'button';
+      b.title = t.soon ? `${t.name} — landings, land and sea together: coming soon` : none ? `${t.name} — not in this war yet` : `${t.name} battles`;
+      if (t.soon || none) b.disabled = true;
+      else b.addEventListener('click', () => { if (on) return; settings.set('theatre', t.id); location.reload(); });
+      where.append(b);
+    }
+    side.append(where);
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
@@ -371,7 +386,11 @@ export class MainMenu {
     const modes = el('div', 'map-chips');
     modes.setAttribute('role', 'radiogroup');
     const modeAbout = el('p', 'map-about', MODES[c.mode]?.description ?? '');
-    for (const m of Object.values(MODES).filter((m) => !m.hidden)) {
+    // the modes this theatre's maps are fought in (a map's `modes`: at sea, Frontline for now)
+    const here = mapsFor(epoch());
+    const fits = (m) => here.some((x) => !x.modes || x.modes.includes(m.id));
+    if (!fits(MODES[c.mode] ?? {})) c.mode = Object.values(MODES).find((m) => !m.hidden && fits(m))?.id ?? c.mode;
+    for (const m of Object.values(MODES).filter((m) => !m.hidden && fits(m))) {
       const b = el('button', `map-chip${c.mode === m.id ? ' on' : ''}`, m.name);
       b.type = 'button';
       b.setAttribute('role', 'radio');
@@ -421,15 +440,17 @@ export class MainMenu {
 
     // which side
     const sides = el('div', 'side-pick');
+    const atSea = theatre() === 'sea' && hasTheatre(epoch(), 'sea'); // (the navies, not the armies)
     const sideText = {
       1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
+      sea: { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
-    }[epoch()] ?? {
+    }[atSea ? 'sea' : epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
     for (const f of ['nato', 'pact']) {
-      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${FACTIONS[f].name}</b><span>${sideText[f]}</span>`);
+      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? NAVY_NAME[f] : FACTIONS[f].name}</b><span>${sideText[f]}</span>`);
       b.type = 'button';
       b.setAttribute('aria-pressed', String(c.side === f));
       b.addEventListener('click', () => {
@@ -439,7 +460,8 @@ export class MainMenu {
       });
       sides.append(b);
     }
-    q('Which side', sides, armiesPicker(c));
+    if (atSea) c.armies = armiesFrom(); // (at sea: one navy a side, no army to pick)
+    q('Which side', sides, ...(atSea ? [] : [armiesPicker(c)]));
 
     // conditions and rules: one sentence, the controls folded away until asked for
     const more = el('div', 'setup-more');
@@ -545,7 +567,10 @@ export class MainMenu {
     p.append(el('h2', '', 'Units'));
     const wrap = el('div', 'units');
     const list = el('div', 'unit-list');
-    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden);
+    // the theatre's roster (the picker under the years): at sea the warships and the carriers' aircraft, on land the rest
+    const sea = theatre() === 'sea' && hasTheatre(epoch(), 'sea');
+    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !!t.stats?.naval === sea);
+    if (!types.some((t) => t.id === this.unit.id)) this.unit.id = types[0]?.id ?? this.unit.id;
     const labels = []; // the army's own names on the list
     const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name
     for (const t of types) {
@@ -562,7 +587,7 @@ export class MainMenu {
       list.append(b);
     }
     // the support powers' aircraft
-    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off)) { // (this war's: data/epoch.js)
+    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off && !!KINDS[k].sea === sea)) { // (this war's: data/epoch.js; the theatre's)
       const id = `air:${kind}`;
       const b = el('button', id === this.unit.id ? 'on air' : 'air', airLabel(kind));
       b.type = 'button';
@@ -575,8 +600,10 @@ export class MainMenu {
       list.append(b);
     }
     const sideToggle = el('div', 'seg faction-seg');
-    for (const a of Object.values(ARMIES)) { // every army's own roster
-      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, a.name);
+    const armies = Object.values(ARMIES).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i); // (at sea: one navy a side)
+    if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
+    for (const a of armies) { // every army's own roster
+      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? NAVY_NAME[a.faction] ?? a.name : a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
@@ -619,7 +646,7 @@ export class MainMenu {
     }
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', ARMIES[army]?.name ?? FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? NAVY_NAME[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', a.name));
     if (a.weapon) this.info.append(el('p', 'unit-weapon', a.weapon));
     if (a.text) this.info.append(el('p', 'unit-text', a.text));
@@ -675,7 +702,7 @@ export class MainMenu {
     const v = forArmy(type.variants, army, faction) ?? { name: type.name, weapon: '', text: '' };
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', ARMIES[army]?.name ?? FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? NAVY_NAME[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', v.name));
     if (v.weapon) this.info.append(el('p', 'unit-weapon', v.weapon));
     if (v.text) this.info.append(el('p', 'unit-text', v.text));

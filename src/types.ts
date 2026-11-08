@@ -289,6 +289,7 @@ export interface MapDef {
   fow?: number;           // how dark unseen ground gets, 0…1 (render/FogOfWar.js; a sea map: lighter)
   sides?: { nato?: string; pact?: string }; // the map's own names for the sides (the epoch's otherwise)
   modes?: string[];        // only these modes (the menu offers it with them; main.js start falls back to the first)
+  theatre?: 'land' | 'sea' | 'coastal'; // where it's fought: the menu's picker under the years (land unless it says)
   climate?: 'winter' | 'desert'; // whitewash and snow smocks, or sand paint and khaki (render/paint.js CLIMATE)
   /** 1945's own description and point names (maps/index.js forEpoch) */
   ww2?: { description?: string; points?: Record<string, string> };
