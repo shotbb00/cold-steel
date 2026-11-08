@@ -1141,6 +1141,7 @@ export class UnitStack {
       for (let i = 0; i < G.pellets; i++) this.shoot(u, _v, G.pelletSpread, { damage: G.pelletDamage, through: 1, size: 0.5, tracer: false, quiet: true, life: (G.canister * 1.4) / s.boltSpeed });
       this.services.effects.muzzle(_p, _w, 2, 'cannon');
       this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 4);
+      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
       this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
       VisibilitySystem.revealShooter(u);
       return true;
@@ -1223,6 +1224,7 @@ export class UnitStack {
         size: 0.9, source: this, life: len / 700 + 0.3, tracer: Math.random() < 0.6,
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
+      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
       this.services.audio?.weapon(this.faction, this.weaponSound, _p);
       const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
@@ -1266,6 +1268,7 @@ export class UnitStack {
     air.missile(_p, h, this.faction, aa);
     _w.subVectors(h.pos, _p).normalize();
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, aa.sound ?? 'sam', _p);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1288,6 +1291,7 @@ export class UnitStack {
       tracer: true, trail: true, guide: t,
     });
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, 'rocket', _p);
     VisibilitySystem.revealShooter(u);
   }
@@ -1449,6 +1453,7 @@ export class UnitStack {
       suppress: 2, ignore: u.coverSpot?.collider ?? null, tracer: true, trail: true,
     });
     this.services.effects.muzzle(_p, _w, 1.2, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, 'rocket', _p, u.atCover && !!u.coverSpot?.interior);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1529,6 +1534,7 @@ export class UnitStack {
       tracer: !!s.trail, trail: !!s.trail && !smoke && !flare, smoke, flare,
     });
     this.services.effects.muzzle(_p, _w, 1, s.muzzleKind ?? 'artillery');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
     VisibilitySystem.revealShooter(u);
     if (!smoke && !flare) this.services.game?.counterBattery?.fired(this, u); // an enemy radar may track it back
@@ -1712,6 +1718,7 @@ export class UnitStack {
     });
     if (over?.quiet) return; // (canister: one report for the whole load)
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;

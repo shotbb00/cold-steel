@@ -277,6 +277,17 @@ export class Minimap {
       }
     }
 
+    // where the fighting is: a pulsing ring on stacks that fired in the last few seconds (yours, and the enemy's you can see)
+    const t = game.world.time;
+    c.strokeStyle = 'rgba(255,120,60,0.85)';
+    for (const s of game.world.stacks) {
+      if (!s.alive || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
+      const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
+      c.beginPath();
+      c.arc(mx, my, 6 + 4 * ((t * 1.5 + s.id * 0.37) % 1), 0, Math.PI * 2);
+      c.stroke();
+    }
+
     // helicopter runs: yours from the call, the enemy's once it shows up
     for (const s of game.air.sorties) {
       const mine = s.faction === game.playerFaction;
