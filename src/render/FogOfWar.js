@@ -118,7 +118,7 @@ export class FogOfWar {
     while (this.queue.length) {
       const [u, facing] = this.queue.pop();
       if (u.alive) this.cast(u, facing);
-      if (performance.now() - t0 > budget) return;
+      if (this.queue.length && performance.now() - t0 > budget) return; // (the last one done: the picture goes up now, or the next begin() threw it away)
     }
     const done = this.target;
     this.target = this.next;
@@ -129,6 +129,7 @@ export class FogOfWar {
   cast(u, facing) {
     const { cell, half, next: t } = this;
     const terrain = this.game.terrain;
+    const sea = this.game.world.river?.sea ? this.game.world.river.level : -Infinity; // (at sea the ground is the water: the sea floor's hills cast no sight shadows over it)
     const smoke = this.game.smoke;
     const smoky = smoke?.clouds?.length > 0;
     const st = u.stats;
@@ -149,6 +150,23 @@ export class FogOfWar {
       if (v > t[i]) t[i] = v;
       return true;
     };
+    // a ship at sea: the water is flat and the islands are low, so all round to her sight is seen — a disc,
+    // not rays (thousands of terrain samples a ray over kilometres: a frame's budget many times over)
+    if (sea > -Infinity && st.naval) {
+      if ((u.depth ?? 0) > 9) return; // (deep down: blind)
+      const rc = Math.ceil(range / cell);
+      const [ci, cj] = [Math.floor((u.pos.x + half) / cell), Math.floor((u.pos.z + half) / cell)];
+      for (let j = Math.max(0, cj - rc); j <= Math.min(N - 1, cj + rc); j++) {
+        for (let i = Math.max(0, ci - rc); i <= Math.min(N - 1, ci + rc); i++) {
+          const d = Math.hypot(i - ci, j - cj) * cell;
+          if (d > range) continue;
+          const v = Math.min(1, (range - d) / 10 + 0.15);
+          const k = j * N + i;
+          if (v > t[k]) t[k] = v;
+        }
+      }
+      return;
+    }
     // all-round awareness
     const r = Math.ceil(AWARE / cell);
     for (let dz = -r; dz <= r; dz++) {
@@ -168,7 +186,7 @@ export class FogOfWar {
         const x = u.pos.x + sx * d;
         const z = u.pos.z + sz * d;
         if (smoky && smoke.inside(x, z)) break;
-        const ground = terrain.heightAt(x, z);
+        const ground = Math.max(sea, terrain.heightAt(x, z));
         const reach = d <= range ? range : flares.lit(x, z) ? litRange : 0;
         if (reach && (ground + TARGET_H - eye) / d >= maxSlope) {
           if (!mark(x, z, Math.min(1, (reach - d) / 10 + 0.15))) break;
