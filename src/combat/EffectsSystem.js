@@ -484,6 +484,17 @@ export class EffectsSystem {
     if (Math.random() < 0.3) this.smoke.spawn(pos.x, pos.y + 0.8, pos.z, { vy: rnd(1.5, 3), size: rnd(1, 1.8), grow: 1.6, life: rnd(1.5, 2.5), alpha: 0.7, color: SMOKE_BLACK, drag: 1, wind: 0.5 });
   }
 
+  /**
+   * A fresh crater smouldering: a thin grey wisp for `duration` s, no flame. At most SMOULDER_MAX at once
+   * (fewer on a phone): the oldest gives way to a new one.
+   */
+  smoulder(pos, duration = 35, size = 1) {
+    const max = touchScreen() ? 5 : 12;
+    const now = this.emitters.filter((e) => e.kind === 'smoulder');
+    if (now.length >= max) this.emitters.splice(this.emitters.indexOf(now[0]), 1);
+    this.emitters.push({ kind: 'smoulder', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
+  }
+
   burn(pos, duration = 40, size = 1) {
     this.emitters.push({ kind: 'burn', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
   }
@@ -542,6 +553,18 @@ export class EffectsSystem {
       e.t += dt;
       if (e.t > e.duration) { this.emitters.splice(i, 1); continue; }
       if (e.kind === 'screen') { this.updateScreen(e, dt); continue; }
+      if (e.kind === 'smoulder') { // a wisp now and then, thinning out
+        const k = 1 - e.t / e.duration;
+        e.acc += dt * (0.8 + 1.2 * k);
+        while (e.acc >= 1) {
+          e.acc -= 1;
+          this.smoke.spawn(e.pos.x + rnd(-0.6, 0.6) * e.size, e.pos.y + 0.2, e.pos.z + rnd(-0.6, 0.6) * e.size, {
+            vx: rnd(-0.2, 0.2), vy: rnd(0.8, 1.4), vz: rnd(-0.2, 0.2), size: rnd(0.6, 1) * e.size, grow: 2.2,
+            life: rnd(6, 9), alpha: 0.16 + 0.18 * k, color: 0x6e6c68, drag: 0.4, wind: 1.6,
+          });
+        }
+        continue;
+      }
       const k = 1 - e.t / e.duration;  // dies down over time
       e.acc += dt * (4 + 8 * k);
       while (e.acc >= 1) {

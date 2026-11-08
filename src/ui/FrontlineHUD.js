@@ -44,7 +44,7 @@ export class FrontlineHUD {
 
     const panel = document.createElement('div');
     panel.id = 'reinforce';
-    panel.innerHTML = `<div class="rf-info"><b class="rf-cp"></b><span class="rf-stacks" title="Stacks in the field / limit"></span></div>
+    panel.innerHTML = `<div class="rf-info"><b class="rf-cp"></b><span class="rf-rate" title="Command points coming in per minute"></span><span class="rf-stacks" title="Stacks in the field / limit"></span></div>
       <button type="button" tabindex="-1" class="rf-open">${icon('reinforce')}<span>Reinforce</span><kbd data-key="reinforce"></kbd></button>`;
     // its own bar beside the orders, bottom right: the points stay in sight with the orders folded away
     const orders = document.getElementById('command-panel');
@@ -54,6 +54,7 @@ export class FrontlineHUD {
     dock.append(panel, orders);
     if (state.noReinforcements) panel.hidden = true; // e.g. Recon raid: you have what you came with
     this.cpText = panel.querySelector('.rf-cp');
+    this.rateText = panel.querySelector('.rf-rate');
     this.stacksText = panel.querySelector('.rf-stacks');
     this.window = new ReinforceWindow(game, state);
     panel.querySelector('.rf-open').addEventListener('click', (e) => { e.currentTarget.blur(); this.window.toggle(); });
@@ -83,8 +84,17 @@ export class FrontlineHUD {
       this.statusEl.textContent = status;
       this.statusEl.hidden = !status;
     }
-    const myCp = Math.floor(cp[this.game.wallet(this.me, this.game.myOwner)]); // co-op: your own
-    this.cpText.textContent = `${myCp} CP`;
+    const raw = cp[this.game.wallet(this.me, this.game.myOwner)] ?? 0; // co-op: your own
+    const myCp = Math.floor(raw);
+    if (this.cpText.textContent !== `${myCp} CP`) this.cpText.textContent = `${myCp} CP`;
+    // what comes in per minute: the rise of the CP over the last ~10 s (what is spent doesn't count) — every
+    // mode pays its own way (points, bounties, reserves), so it is measured, not worked out
+    const now = this.game.time;
+    const dt = now - (this.rateT ?? now);
+    if (dt > 0 && this.lastCp != null) this.cpRate = (this.cpRate ?? 0) + (Math.max(0, raw - this.lastCp) / dt - (this.cpRate ?? 0)) * Math.min(1, dt / 10);
+    if (dt > 0 || this.lastCp == null) { this.rateT = now; this.lastCp = raw; }
+    const rate = `+${Math.round((this.cpRate ?? 0) * 60)}/min`;
+    if (this.rateText.textContent !== rate) this.rateText.textContent = rate;
     const stacks = forces(this.game, this.me).length; // what counts toward the limit (bailed-out crews don't)
     const full = stacks >= this.state.maxStacks;
     this.stacksText.textContent = `${stacks}/${this.state.maxStacks} stacks`;
