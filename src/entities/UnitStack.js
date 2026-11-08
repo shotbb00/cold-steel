@@ -1292,7 +1292,7 @@ export class UnitStack {
         size: 0.9, source: this, life: len / 700 + 0.3, tracer: Math.random() < 0.6,
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
-      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
+      // (no minimap pulse for flak: the fighting it shows is on the ground and the water)
       this.services.audio?.weapon(this.faction, this.weaponSound, _p);
       const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
@@ -1336,7 +1336,7 @@ export class UnitStack {
     air.missile(_p, h, this.faction, aa);
     _w.subVectors(h.pos, _p).normalize();
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
-    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
+    // (no minimap pulse for flak)
     this.services.audio?.weapon(this.faction, aa.sound ?? 'sam', _p);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;

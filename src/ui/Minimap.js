@@ -300,6 +300,8 @@ export class Minimap {
     c.strokeStyle = 'rgba(255,120,60,0.85)';
     for (const s of game.world.stacks) {
       if (!s.alive || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
+      // yours: only while it fights something you can see (not blind at a sonar contact, a sound, a flash)
+      if (s.faction === game.playerFaction && !s.units.some((u) => u.alive && u.target?.alive !== false && u.target?.visible === true)) continue;
       const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
       c.beginPath();
       c.arc(mx, my, 6 + 4 * ((t * 1.5 + s.id * 0.37) % 1), 0, Math.PI * 2);
