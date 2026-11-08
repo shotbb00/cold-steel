@@ -19,6 +19,14 @@
   --table: #151912;   /* the map table behind the menu */
   --ink: #cfc9ad;     /* map ink */
 }
+/* scrollbars: thin, in the panels' line colour, on every scrolling list and window (Chrome, Edge and
+   Firefox take these two; older Safari the -webkit- ones below) */
+* { scrollbar-width: thin; scrollbar-color: rgba(190, 200, 170, 0.35) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(190, 200, 170, 0.3); border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(224, 180, 90, 0.7); background-clip: padding-box; }
+::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { display: none; }
 
 * { box-sizing: border-box; }
 
