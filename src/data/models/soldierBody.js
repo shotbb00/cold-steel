@@ -8,7 +8,7 @@
 // models report (hips at 0.96 m, 0.48 m leg segments, shoulders at 1.47 m), so the animation in
 // render/StackRenderer.js is unchanged.
 import * as THREE from 'three';
-import { P, loft, limb, pair } from '../units/geometry.js';
+import { P, loft, limb, pair, markSkin } from '../units/geometry.js';
 
 export const SKIN = 0xb38f74;   // weathered, outdoors skin (the instance tint varies it per man)
 const EYE = 0x2a2420;
@@ -51,6 +51,7 @@ export function head(skin = SKIN) {
   const lip = '#' + sk.clone().lerp(new THREE.Color(0x8a4a40), 0.45).getHexString();
   const dark = '#' + sk.clone().multiplyScalar(0.78).getHexString();
   const H = (c) => parseInt(String(c).slice(1), 16);
+  markSkin(skin, H(lip), H(dark));
   const skull = loft([
     [0, 1.58, 0.0, 0.054, 0.058, 2],
     [0, 1.625, 0.002, 0.056, 0.06, 2],              // neck
@@ -149,6 +150,7 @@ const vrot = (v, k, t) => {
  */
 function hand(at, dir, palm, skin, glove, side = 1) {
   const c = glove ?? skin;
+  if (!glove) markSkin(skin);
   const d = vnorm(dir);
   const n = vnorm(palm);
   const w = vnorm(vcross(n, d)).map((v) => v * side);        // across the knuckles

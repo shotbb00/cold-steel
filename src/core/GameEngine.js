@@ -10,6 +10,7 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { WINTER } from '../render/paint.js';
 import { Deployment } from '../systems/Deployment.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
@@ -85,6 +86,7 @@ export class GameEngine {
    */
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
+    WINTER.value = map.winter ? 1 : 0; // white paint and snow smocks (render/paint.js)
     this.mode = mode;
     // the size the picture is drawn at: the container, not innerWidth/innerHeight — on an iPhone
     // Safari's sliding toolbar makes those differ, and every label placed by them drifts (onResize)

@@ -9,6 +9,7 @@ import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
+import stalingrad from './stalingrad.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -20,6 +21,7 @@ export const MAPS = {
   [monteKali.id]: monteKali,
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
+  [stalingrad.id]: stalingrad,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;

@@ -152,6 +152,7 @@ export class PropBuilder {
     this.materials = new Map();
     this.lights = [];
     this.rockGeos = [0, 1, 2, 3].map((i) => makeRockGeometry(500 + i));
+    this.lowRocks = [0, 1, 2, 3].map((i) => makeRockGeometry(600 + i, 0)); // ~60 vertices, not ~960: broken wall tops and building rubble (a city of them adds up)
 
     const stone = makeDetailTextures({ seed: 11, scale: 4, base: 0.78, contrast: 0.45, bump: 4 });
     this.materials.set('stone', new THREE.MeshStandardMaterial({ vertexColors: true, map: stone.map, normalMap: stone.normalMap, roughness: 0.93 }));
@@ -242,14 +243,14 @@ export class PropBuilder {
   }
 
   /** Small loose stones, purely visual. */
-  rubble(x, z, size) {
+  rubble(x, z, size, low = false) {
     const r = this.rand;
     _m.compose(
       _p.set(x, this.terrain.heightAt(x, z) + size * 0.2, z),
       _q.setFromEuler(_e.set(r() * 3, r() * 3, r() * 3)),
       _s.set(size, size * (0.5 + r() * 0.4), size * (0.8 + r() * 0.4)),
     );
-    this.push('rock', this.rockGeos[Math.floor(r() * 4)], _m, this.stoneTint());
+    this.push('rock', (low ? this.lowRocks : this.rockGeos)[Math.floor(r() * 4)], _m, this.stoneTint());
   }
 
   /** Broken stone column (high cover). */
@@ -518,7 +519,7 @@ export class PropBuilder {
   /** @param {any} b @param {number} cx @param {number} cz @param {number} len @param {number} ry @param {any} o */
   buildingWall(b, cx, cz, len, ry, {
     height, storeys = 1, t = 0.4, color, key = 'plaster', doors = [], bay = 2.6, windows = true, ruin = 0, keep = null,
-    sill = 0.95, head = 2.25, frame = 0xd8d0bc, shutters = 0, profile = null,
+    sill = 0.95, head = 2.25, frame = 0xd8d0bc, shutters = 0, profile = null, upper = false,
   }) {
     const r = this.rand;
     const sh = height / storeys;
@@ -579,7 +580,18 @@ export class PropBuilder {
       if (door) continue;                            // the doorway is the way in, not cover
       const [wx, wz] = PropBuilder.local(b.x, b.z, b.yaw, lx, lz);
       const solid = top < height ? Math.min(top, 2.4) : windows ? Math.min(sill + 0.05, 2.4) : Math.min(top, 2.4);
-      b.colliders.push(this.cover.addBox({ x: wx, z: wz, yaw: b.yaw + ry, length: bw, thickness: t, height: solid }));
+      const collider = this.cover.addBox({ x: wx, z: wz, yaw: b.yaw + ry, length: bw, thickness: t, height: solid });
+      b.colliders.push(collider);
+      // upstairs windows men can fight from (1st and 2nd floor, where the wall still stands): spots
+      // of their own (not the ground's cover map), at the floor's height (u.window.floor)
+      if (upper && windows) {
+        const [ix, iz] = PropBuilder.local(b.x, b.z, b.yaw, ...at(along, -(t / 2 + 0.45)));
+        const [ox, oz] = PropBuilder.local(0, 0, b.yaw, nx * out, nz * out);
+        for (let st = 1; st <= Math.min(2, storeys - 1); st++) {
+          if (top < (st + 1) * sh) break;
+          (b.upper ??= []).push({ x: ix, y: b.ground, z: iz, dirX: ox, dirZ: oz, collider, occupant: null, interior: b, floor: st * sh });
+        }
+      }
     }
   }
 
@@ -592,7 +604,7 @@ export class PropBuilder {
       const [wx, wz] = PropBuilder.local(b.x, b.z, b.yaw, ax, az);
       _m.compose(_p.set(wx, b.ground + top - 0.05, wz), _q.setFromEuler(_e.set((r() - 0.5) * 0.5, b.yaw + ry + (r() - 0.5) * 0.4, (r() - 0.5) * 0.5)),
         _s.set(w * (0.28 + r() * 0.15), 0.22 + r() * 0.25, t * (0.55 + r() * 0.2)));
-      this.push('rock', this.rockGeos[Math.floor(r() * 4)], _m, color);
+      this.push('rock', this.lowRocks[Math.floor(r() * 4)], _m, color);
     }
   }
 
@@ -672,6 +684,43 @@ export class PropBuilder {
     }
     this.endBuilding();
     return b;
+  }
+
+  /**
+   * A gutted apartment block (Stalingrad): `storeys` of sooty plaster or brick, no roof, a share
+   * `ruin` of the bays shot down to a rubble line, one floor slab left hanging, rubble inside and
+   * at its feet. Occupiable like any building (its windows are the firing spots).
+   */
+  ruinBlock({ x, z, yaw, width = 24, depth = 12, storeys = 4, ruin = 0.35, name = 'apartment block' }) {
+    const r = this.rand;
+    const b = this.beginBuilding(name, x, z, yaw, width, depth);
+    const brick = r() < 0.35;
+    const color = brick ? new THREE.Color().setHSL(0.03, 0.35, 0.3 + r() * 0.06).getHex() : new THREE.Color().setHSL(0.1, 0.12, 0.42 + r() * 0.12).getHex(); // soot-grey plaster or burnt brick
+    b.plaster = color;
+    const h = storeys * 3.1;
+    this.shell(b, { height: h, storeys, t: 0.45, color, key: brick ? 'stone' : 'plaster', ruin, bay: 3.3, upper: true, front: [(r() - 0.5) * width * 0.5], back: [(r() - 0.5) * width * 0.5], frame: 0x5a564e });
+    for (let st = 1; st <= Math.min(2, storeys - 1); st++) { // what is left of the floors: a ledge along the walls (the upstairs windows' footing)
+      const y = st * 3.1;
+      this.piece('plain', b, 0, y, depth / 2 - 1.1, width - 0.9, 0.2, 1.4, 0x4a4640);
+      this.piece('plain', b, 0, y, -depth / 2 + 1.1, width - 0.9, 0.2, 1.4, 0x4a4640);
+      this.piece('plain', b, width / 2 - 1.1, y, 0, 1.4, 0.2, depth - 3.6, 0x4a4640);
+      this.piece('plain', b, -width / 2 + 1.1, y, 0, 1.4, 0.2, depth - 3.6, 0x4a4640);
+    }
+    this.piece('stone', b, 0, 0.1, 0, width + 0.24, 0.5, depth + 0.24, 0x55504a);           // plinth
+    if (storeys > 3) this.piece('plain', b, -width * 0.2, (storeys - 1) * 3.1, 0, width * 0.55, 0.22, depth - 0.5, 0x4a4640, 0, 0, (r() - 0.5) * 0.12); // a top floor still half there
+    for (let k = 0; k < 3; k++) this.rubbleIn(b, (r() - 0.5) * width * 0.8, (r() - 0.5) * depth * 0.7, 0.6 + r() * 0.7);
+    this.endBuilding();
+    for (let k = 0; k < 2; k++) { // and outside, where the walls came down
+      const [rx, rz] = PropBuilder.local(x, z, yaw, (r() - 0.5) * width, (r() < 0.5 ? -1 : 1) * (depth / 2 + 1 + r() * 2));
+      this.rubble(rx, rz, 0.5 + r() * 0.6, true);
+    }
+    return b;
+  }
+
+  /** A heap of masonry inside building `b` (its own mesh: it goes with the building). */
+  rubbleIn(b, lx, lz, size) {
+    const [wx, wz] = PropBuilder.local(b.x, b.z, b.yaw, lx, lz);
+    this.rubble(wx, wz, size, true);
   }
 
   /** The town church: a stone nave, a square tower with a slate spire. */

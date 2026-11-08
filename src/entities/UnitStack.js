@@ -744,7 +744,7 @@ export class UnitStack {
     // climbing a low wall: up on it while over it
     const up = this.climb ? this.world.cover.climbHeight(u.pos.x, u.pos.z, u.radius * 0.6, this.climb) : 0;
     u.climbY = (u.climbY ?? 0) + (up - (u.climbY ?? 0)) * Math.min(1, dt * 10);
-    u.pos.y = this.world.terrain.heightAt(u.pos.x, u.pos.z) + u.climbY;
+    u.pos.y = this.world.terrain.heightAt(u.pos.x, u.pos.z) + (u.window?.floor ?? u.climbY); // (an upstairs window: its floor, systems/Buildings.js)
     const speed = Math.hypot(u.vel.x, u.vel.z);
     u.moving = speed > 0.5;
     // where and since when it has stayed put (the idle shuffle of a metre or two doesn't count)
