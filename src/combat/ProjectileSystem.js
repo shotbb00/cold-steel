@@ -248,7 +248,7 @@ export class ProjectileSystem {
     let bestT = -1;
 
     for (const t of targets) {
-      if (!t.alive || b.hitSet?.has(t)) continue;
+      if (!t.alive || b.hitSet?.has(t) || (t.depth ?? 0) > 2) continue; // (a submarine under the surface: the water takes the shell)
       const cx = t.pos.x;
       const cz = t.pos.z;
       if (Math.abs(b.pos.x - cx) > reach || Math.abs(b.pos.z - cz) > reach) continue;

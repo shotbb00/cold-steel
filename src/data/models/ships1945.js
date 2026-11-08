@@ -316,3 +316,50 @@ export const buildYamato = ship(() => {
     ],
   };
 });
+
+/** A submarine: the long pressure hull awash, the conning tower ("sail") with periscopes, a deck gun. */
+function boat(c, { len, beam, tower, gunZ, hangar = false }) {
+  const parts = [];
+  const n = 10;
+  const deck = beam * 0.13; // (she rides low: a metre of casing above the water)
+  for (let k = 0; k < n; k++) { // the hull: fuller amidships, tapering to bow and stern
+    const t = (k + 0.5) / n;
+    const w = beam * Math.sin(Math.PI * Math.min(0.95, 0.12 + t * 0.85)) ** 0.6;
+    parts.push(P.box(w, beam * 0.85, len / n + 0.05, { y: -beam * 0.3, z: -len / 2 + t * len, color: c.hull }));
+  }
+  parts.push(P.box(beam * 0.55, 0.25, len * 0.86, { y: deck, color: c.deck }));               // the casing deck
+  parts.push(P.box(beam * 0.5, tower[1], tower[0], { y: deck + tower[1] / 2, z: tower[2], color: c.upper })); // the sail
+  parts.push(P.box(beam * 0.52, 0.5, tower[0] * 0.8, { y: deck + tower[1] + 0.25, z: tower[2], color: c.black }));
+  for (const [dz, h] of [[-0.6, 5.5], [0.8, 4.5]]) parts.push(P.cyl(0.12, 0.15, h, { y: deck + tower[1] + h / 2, z: tower[2] + dz, color: c.black }, 6)); // periscopes
+  parts.push(P.box(0.9, 1.1, 1.4, { y: deck + 0.6, z: gunZ, color: c.gun }));                     // deck gun
+  parts.push(P.cyl(0.1, 0.12, 3.2, { y: deck + 1, z: gunZ + 1.8, rx: Math.PI / 2, color: c.black }, 6));
+  if (hangar) parts.push(P.cyl(1.5, 1.5, 9, { y: deck + 1.4, z: tower[2] + 8, rx: Math.PI / 2, color: c.upper }, 10)); // the I-boat's floatplane hangar
+  return merge(parts);
+}
+
+/** A boat as a rig: no mounts to train, it just rides the swell (lightly: it's low in the water). */
+function sub(describe) {
+  let geo = null;
+  return (mats) => {
+    geo ??= describe();
+    const root = new THREE.Group();
+    const body = new THREE.Group();
+    root.add(body);
+    meshAdder(body)(geo, mats.body);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0, 40);
+    body.add(muzzle);
+    const phase = Math.random() * 10;
+    return {
+      root,
+      muzzle,
+      animate(u, dt, t) {
+        const awash = (u.depth ?? 0) < 1 ? 1 : 0.2;
+        body.rotation.set(Math.sin(t * 0.6 + phase) * 0.01 * awash + (u.trim ?? 0), 0, Math.sin(t * 0.45 + phase) * 0.03 * awash + (u.list ?? 0));
+      },
+    };
+  };
+}
+
+export const buildGato = sub(() => boat(US, { len: 95, beam: 8.3, tower: [12, 4.2, 6], gunZ: 16 }));
+export const buildB1 = sub(() => boat({ ...IJN, deck: 0x4a4e52 }, { len: 108, beam: 9.3, tower: [11, 4.6, 4], gunZ: -16, hangar: true }));

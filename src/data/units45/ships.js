@@ -7,7 +7,11 @@
 // width; a torpedo mount (`torpedo`) fires a spread to whichever beam the target is on
 // (systems/Torpedoes.js). `at`: where the shells leave, in the ship's frame (bow +z).
 // `hull`: length and beam, for torpedoes and the damage parts.
-import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato } from '../models/ships1945.js';
+// Submarines (`submarine`): surfaced, at periscope depth or deep (entities/UnitStack.js shipUpkeep);
+// submerged they're seen only by a ship's `sonar` (or the periscope close by, or a torpedo shot:
+// systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
+// periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
+import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1 } from '../models/ships1945.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: undefined, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -15,6 +19,9 @@ const AFT = Math.PI;
 
 /** A gun mount. */
 const gun = (at, facing, o) => ({ at, facing, arc: 4.6, spread: 0.01, splash: 4, pierce: 0.3, shell: 900, size: 1.8, ...o });
+/** Depth charges: a pattern dropped over a found submarine (systems/Torpedoes.js charges). */
+const DC = (o) => ({ count: 5, reload: 18, radius: 40, damage: 1100, ...o });
+
 /** A torpedo mount: a spread to the beam the target is on. */
 const torps = (at, o) => ({ at, torpedo: true, arc: 2.2, count: 4, range: 1500, speed: 22, damage: 2600, reload: 90, ...o });
 
@@ -33,7 +40,7 @@ const DD_JP = { range: 2400, reload: 4.5, damage: 260, splash: 4, pierce: 0.3 };
 export const frigate = ship({
   id: 'frigate', name: 'Escort', shortName: 'Escort', cost: 280,
   hull: { length: 93, beam: 11 },
-  stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
+  stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, sonar: 950, depthCharges: DC({ count: 6, reload: 14 }), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
   mounts: {
     nato: [gun([0, 6, 38], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 8, 31], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 6, -26], AFT, { range: 1700, reload: 3, damage: 150 })],
     pact: [gun([0, 6, 32], FWD, { range: 1700, reload: 3.5, damage: 170 }), gun([0, 6, -22], AFT, { range: 1700, reload: 4, damage: 2 * 170 / 1.6 })],
@@ -49,7 +56,7 @@ export const frigate = ship({
 export const destroyer = ship({
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 450,
   hull: { length: 115, beam: 12 },
-  stats: { hp: 4200, armor: 0.2, speed: 16, accel: 0.12, turnRate: 0.09, turretRate: 0.5, radius: 7, height: 10, sight: 2600, range: 2400, aggroRange: 2400, preferredRange: 1600, leash: 60, damage: 220, fireCooldown: 3.5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3 },
+  stats: { hp: 4200, armor: 0.2, speed: 16, accel: 0.12, turnRate: 0.09, turretRate: 0.5, radius: 7, height: 10, sight: 2600, sonar: 800, depthCharges: DC(), range: 2400, aggroRange: 2400, preferredRange: 1600, leash: 60, damage: 220, fireCooldown: 3.5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3 },
   mounts: {
     nato: [gun([0, 7, 48], FWD, FIVE_INCH), gun([0, 10, 41], FWD, FIVE_INCH), gun([0, 10, -20], AFT, FIVE_INCH), gun([0, 7, -38], AFT, FIVE_INCH), gun([0, 7, -47], AFT, FIVE_INCH),
       torps([0, 7, 0], { count: 5, range: 1400, speed: 22 }), torps([0, 7, -9], { count: 5, range: 1400, speed: 22 })],
@@ -105,4 +112,25 @@ export const battleship = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship };
+const TUBES = (at, facing, o) => torps(at, { facing, arc: 0.9, ...o }); // a submarine's bow or stern tubes: aimed with the boat
+
+export const submarine = ship({
+  id: 'submarine', name: 'Submarine', shortName: 'Submarine', cost: 500, limit: 2,
+  hull: { length: 95, beam: 8.3 },
+  stats: {
+    submarine: { submerged: 4.2, dive: 1.4, periscope: 6, deep: 40 }, hp: 2400, armor: 0.1, speed: 10, accel: 0.1, turnRate: 0.11, turretRate: 0.6, radius: 5, height: 6, eyeHeight: 8,
+    sight: 1800, hearing: 2400, range: 1600, aggroRange: 1600, preferredRange: 1100, leash: 60, damage: 180, fireCooldown: 6, spread: 0.014, boltSpeed: 800, boltSize: 1.2, splash: 3, pierce: 0.2,
+  },
+  mounts: {
+    nato: [TUBES([0, -1, 44], 0, { count: 4, range: 1500, speed: 22, damage: 2600, reload: 50 }), TUBES([0, -1, -44], Math.PI, { count: 2, range: 1500, speed: 22, damage: 2600, reload: 60 }), gun([0, 4.5, 16], 0, { range: 1200, reload: 5, damage: 160, splash: 3, surfaced: true, arc: 5.2 })],
+    pact: [TUBES([0, -1, 50], 0, { count: 6, range: 2200, speed: 25, damage: 3200, reload: 70, wakeless: true }), gun([0, 5, -16], Math.PI, { range: 1200, reload: 6, damage: 190, splash: 3, surfaced: true, arc: 5.2 })],
+  },
+  camera: { distance: 80, height: 22, shoulder: 0 },
+  models: { nato: buildGato, pact: buildB1 },
+  variants: {
+    nato: { name: 'Gato-class submarine', weapon: '10 torpedo tubes, deck gun', text: 'The US fleet submarine: long range, good radar, ten tubes. Deadly from periscope depth — and helpless if a destroyer finds it.' },
+    pact: { name: 'Type B1 submarine (I-boat)', weapon: '6 bow tubes (Long Lance), deck gun, floatplane', text: 'The big Japanese ocean submarine, with the oxygen torpedo and its own scout plane in a hangar on deck.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine };

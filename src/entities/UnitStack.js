@@ -491,6 +491,13 @@ export class UnitStack {
 
   updateAnchor(dt) {
     const s = this.stats;
+    if (s.naval) { // a ship is its own stack: the anchor rides on it, and it steers along the route itself (SoldierAI)
+      const u = this.units[0];
+      if (u?.alive) { this.anchor.x = u.pos.x; this.anchor.z = u.pos.z; }
+      if (this.moveTarget && Math.hypot(this.anchor.x - this.moveTarget.x, this.anchor.z - this.moveTarget.z) < 25 + s.radius) { this.moveTarget = null; this.route = null; }
+      this.anchor.y = this.world.terrain.heightAt(this.anchor.x, this.anchor.z);
+      return;
+    }
     if (this.moveTarget && this.deploySeconds && this.units.some((u) => u.alive && (u.deployK ?? 0) > 0)) return; // still packing up
     if (this.moveTarget) {
       const goal = this.routeTarget();
@@ -601,7 +608,12 @@ export class UnitStack {
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
     if (u.engineHit) maxSpeed *= PARTS.engine;
-    if (s.naval) { this.shipUpkeep(u, dt); if (!u.alive) return; maxSpeed *= 1 - (u.flood ?? 0) * 0.6; }
+    if (s.naval) {
+      this.shipUpkeep(u, dt);
+      if (!u.alive) return;
+      maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
+      if (s.submarine) maxSpeed = Math.min(maxSpeed, (u.depth ?? 0) > 2 ? s.submarine.submerged : maxSpeed) * (this.silent ? 0.5 : 1); // under the surface: on the batteries (silent running: slower still)
+    }
     if (u.speedMul === 0 && !this.usesCover && this.world.time - this.lastHitTime > PARTS.calm && (u.fixT = (u.fixT ?? 0) + dt) > PARTS.fix) {
       u.speedMul = 0.95; // the crew got the track back on
       this.services.tell(this.faction, `${this.name}: tracks mended`);
@@ -780,7 +792,7 @@ export class UnitStack {
       u.pos.z = pz;
       u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
     }
-    u.pos.y = (w?.level ?? 0) - (u.sink ?? 0);
+    u.pos.y = (w?.level ?? 0) - (u.sink ?? 0) - (u.depth ?? 0);
     u.climbY = 0;
     const speed = Math.hypot(u.vel.x, u.vel.z);
     u.moving = speed > 0.5;
@@ -1423,12 +1435,14 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if ((e.depth ?? 0) > 3 && !s.depthCharges) continue; // a submarine under the surface: only depth charges reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
+      if (s.depthCharges && (e.depth ?? 0) > 3) score -= 600; // the escort's job: the boat it has found
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
@@ -1712,12 +1726,22 @@ export class UnitStack {
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
     if (!t) return;
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
+    const depth = u.depth ?? 0;
+    if (depth > 9) return; // a submarine deep down: blind and can't shoot
+    // a boat with nowhere ordered to go brings its bow tubes round onto the target (it turns only with way on)
+    if (u.stats.submarine && !this.moveTarget && Math.abs(angleDelta(u.yaw, u.turretYaw)) > 0.35 && (this.aimT = (this.aimT ?? 0) - dt) <= 0) {
+      this.aimT = 6;
+      this.ai.moveTo({ x: u.pos.x + Math.sin(u.turretYaw) * 220, z: u.pos.z + Math.cos(u.turretYaw) * 220 }, { ordered: false });
+    }
+    const under = (t.depth ?? 0) > 3; // the target is a submerged submarine: guns and torpedoes are no use, depth charges are
+    if (under) { this.huntSub(u, t, d, dt); return; }
     const rel = angleDelta(u.yaw, u.turretYaw);
     const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
     for (const m of this.shipMounts(u)) {
       m.cd -= dt;
-      if (m.out || m.cd > 0 || d > m.range) continue;
-      if (m.torpedo ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
+      if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
+      const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
+      if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
       this.mountWorld(u, m.at, _p);
       if (m.torpedo) {
@@ -1742,6 +1766,25 @@ export class UnitStack {
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
     }
+  }
+
+  /**
+   * A found submarine under the surface: a ship with depth charges runs in over it (unless the player
+   * has it on another errand) and drops a pattern where it is (systems/Torpedoes.js charges).
+   */
+  huntSub(u, t, d, dt) {
+    const dc = u.stats.depthCharges;
+    if (!dc) return;
+    if ((!this.ai.ordered || this.ai.state === AIState.ATTACK) && (this.chaseT = (this.chaseT ?? 0) - dt) <= 0) {
+      this.chaseT = 3;
+      this.ai.moveTo({ x: t.pos.x + (t.vel?.x ?? 0) * 8, z: t.pos.z + (t.vel?.z ?? 0) * 8 }, { ordered: false });
+    }
+    u.dcLeft ??= dc.count;
+    if ((u.dcCd = (u.dcCd ?? 0) - dt) > 0 || u.dcLeft <= 0 || d > 60) return;
+    u.dcCd = dc.reload;
+    u.dcLeft--;
+    this.services.game?.torpedoes?.dropCharges(this, u, t, dc);
+    if (u.dcLeft === 0) this.services.tell(this.faction, `${this.name}: out of depth charges`);
   }
 
   /**
@@ -1795,6 +1838,15 @@ export class UnitStack {
         this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1);
         return;
       }
+    }
+    const sm = u.stats.submarine;
+    if (sm) { // dive or come up toward the ordered depth (never below the sea floor); badly holed, she has to surface
+      u.depthMode ??= 'periscope';
+      const floor = (this.world.river?.level ?? 0) - this.world.terrain.heightAt(u.pos.x, u.pos.z) - 5;
+      let want = u.depthMode === 'surface' ? 0 : u.depthMode === 'deep' ? sm.deep : sm.periscope;
+      if ((u.flood ?? 0) > 0.5) { want = 0; if (u.depthMode !== 'surface') { u.depthMode = 'surface'; this.services.tell(this.faction, `${this.name}: flooding — forced to surface!`); } }
+      want = Math.max(0, Math.min(want, floor));
+      u.depth = (u.depth ?? 0) + clamp(want - (u.depth ?? 0), -sm.dive * dt, sm.dive * dt);
     }
     if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
     for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;

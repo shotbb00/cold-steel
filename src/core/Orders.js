@@ -112,6 +112,12 @@ export class Orders {
         g.tell(faction, `The ${b.name} is ${up.label} now`);
         return null;
       }
+      case 'subDepth': // a submarine: surface / periscope / deep (UnitStack.shipUpkeep)
+        for (const s of mine(cmd.s)) if (s.stats.submarine) for (const u of s.units) u.depthMode = cmd.d;
+        return null;
+      case 'silent': // a submarine: silent running — half the speed, half as easy to hear
+        for (const s of mine(cmd.s)) if (s.stats.submarine) s.silent = !!cmd.on;
+        return null;
       case 'holdFire': // per stack: hold fire (only the attack target) or fire at will (the default)
         for (const s of mine(cmd.s)) { s.holdFire = !!cmd.on; for (const u of s.units) if (cmd.on && u.target) u.target = null; }
         return null;

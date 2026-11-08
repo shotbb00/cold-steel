@@ -62,6 +62,10 @@ export function thinkSoldier(u, stack, world, interval) {
 
   // Tanks and guns don't hide: they hold their place in the formation and let the
   // turret do the work.
+  if (stack.stats.naval) { // a ship: straight along its route, or stop where it is
+    if (stack.moveTarget) { const r = stack.routeTarget(); u.dest.set(r.x, u.pos.y, r.z); } else u.dest.copy(u.pos);
+    return;
+  }
   if (!stack.usesCover) {
     const pos = ai.plannedSpots?.get(u); // a dug-in vehicle position the order gave it
     const doz = u.dozing;                // a combat engineer vehicle digging: back and forth over the pit

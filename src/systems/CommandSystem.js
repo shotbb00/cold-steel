@@ -254,6 +254,15 @@ export class CommandSystem {
       const s = [...this.selected].find((st) => st.alive && st.entered);
       if (!s) return this.game.bus.emit('toast', 'Select a squad in a house');
       this.game.orders.issue({ t: 'houseUpgrade', s: s.id, k: cmd.slice(6) });
+    } else if (cmd.startsWith('sub:')) { // a submarine's depth, or silent running
+      const subs = [...this.selected].filter((s) => s.alive && s.stats.submarine);
+      if (!subs.length) return this.game.bus.emit('toast', 'Select a submarine');
+      const k = cmd.slice(4);
+      if (k === 'silent') {
+        const on = !subs.every((s) => s.silent);
+        this.game.orders.issue({ t: 'silent', s: ids(subs), on: on ? 1 : 0 });
+        for (const s of subs) s.silent = on;
+      } else this.game.orders.issue({ t: 'subDepth', s: ids(subs), d: k });
     } else if (cmd === 'holdFire') {
       const sel = [...this.selected].filter((s) => s.alive && s.stats.damage > 0);
       if (!sel.length) return;

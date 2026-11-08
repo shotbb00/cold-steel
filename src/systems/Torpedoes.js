@@ -13,6 +13,24 @@ export class Torpedoes {
   constructor(game) {
     this.game = game;
     this.list = [];
+    this.charges = []; // depth charges sinking to their depth: { x, z, at, faction, source, radius, damage }
+  }
+
+  /**
+   * A pattern from ship `src` (unit `u`) over submarine `t`: rolled off the stern and thrown either
+   * side, laid round where the sonar puts the boat (some 15 m out, either way), set for its depth.
+   */
+  dropCharges(src, u, t, dc) {
+    const now = this.game.time;
+    const bx = Math.sin(u.yaw), bz = Math.cos(u.yaw);
+    const cx = t.pos.x + (Math.random() - 0.5) * 30, cz = t.pos.z + (Math.random() - 0.5) * 30;
+    for (let i = 0; i < dc.count; i++) {
+      const side = (i - (dc.count - 1) / 2) * 14;   // across the track
+      const back = ((i % 2) - 0.5) * 16;             // along it
+      this.charges.push({ x: cx + bx * back + bz * side, z: cz + bz * back - bx * side, at: now + 3 + (t.depth ?? 20) * 0.08 + Math.random() * 0.6,
+        faction: src.faction, source: src, radius: dc.radius, damage: dc.damage });
+    }
+    this.game.tell(src.faction, `${src.name}: depth charges!`);
   }
 
   /** A spread from `from` (world) at target unit `t`, by stack `src`'s mount `m` { count, speed, range, damage, wakeless }. */
@@ -38,6 +56,7 @@ export class Torpedoes {
   }
 
   update(dt) {
+    if (this.charges.length) this.updateCharges();
     if (!this.list.length) return;
     const g = this.game;
     const terrain = g.terrain;
@@ -72,6 +91,32 @@ export class Torpedoes {
         }
       }
       if (gone) this.list.splice(i, 1);
+    }
+  }
+
+  /** Depth charges going off: a hump of white water, and every enemy boat near enough down there is hurt. */
+  updateCharges() {
+    const g = this.game;
+    const now = g.time;
+    const level = g.world.river?.level ?? 0;
+    for (let i = this.charges.length - 1; i >= 0; i--) {
+      const c = this.charges[i];
+      if (now < c.at) continue;
+      this.charges.splice(i, 1);
+      g.effects.waterSplash?.({ x: c.x, y: level, z: c.z }, 2.6);
+      g.audio?.play('explosion.big', { x: c.x, y: level, z: c.z }, { volume: 0.7, throttle: 0.15 });
+      if (g.net?.isClient) continue;
+      for (const s of g.world.stacksOf(enemyOf(c.faction))) {
+        if (!s.stats.submarine) continue;
+        for (const u of s.units) {
+          if (!u.alive) continue;
+          const d = Math.hypot(u.pos.x - c.x, u.pos.z - c.z);
+          if (d > c.radius) continue;
+          const k = 1 - d / c.radius;
+          u.receiveDamage(c.damage * k * k * ((u.depth ?? 0) > 25 ? 0.7 : 1), c.source, 0.9, null, 1); // (a deep boat is harder to bracket)
+          if (u.alive && k > 0.4) s.shipHit(u, 0, true); // close: the hull is opened
+        }
+      }
     }
   }
 

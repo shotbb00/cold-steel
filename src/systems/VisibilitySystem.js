@@ -53,6 +53,29 @@ export class VisibilitySystem {
     return sum / 5;
   }
 
+  /**
+   * A submarine under the surface: a ship's sonar finds it within its range (half as far if the boat
+   * runs silent, or the hunter goes too fast to listen); a periscope is seen close by, from a ship's
+   * bridge; and its torpedoes' tracks lead back to it for a while.
+   */
+  underwater(u, spotters, terrain) {
+    const periscope = (u.depth ?? 0) < 9;
+    const now = this.game.time;
+    for (const o of spotters) {
+      const os = o.stats;
+      const d = Math.hypot(o.pos.x - u.pos.x, o.pos.z - u.pos.z);
+      if (u.revealT > 0 && d < 1400) return true;
+      if (os.sonar && (o.depth ?? 0) < 1) {
+        const fast = Math.hypot(o.vel?.x ?? 0, o.vel?.z ?? 0) > 12;
+        const range = os.sonar * (u.stack.silent ? 0.5 : 1) * (fast ? 0.5 : 1);
+        if (d < range) { u.contactAt = now; return true; }
+        if (now - (u.contactAt ?? -99) < 10 && d < os.sonar * 1.3) return true; // contact held a while: where it was, where it was heading
+      }
+      if (periscope && d < 350 && os.naval && terrain.lineOfSight(o.pos.x, o.pos.y + (os.eyeHeight ?? 1.5), o.pos.z, u.pos.x, (this.world.river?.level ?? 0) + 1, u.pos.z)) return true;
+    }
+    return false;
+  }
+
   /** Note that a unit fired (called from UnitStack.shoot). */
   static revealShooter(u) {
     u.revealT = REVEAL_TIME * (u.stats.quietShot ?? 1); // a sniper's single shot is hard to place
@@ -89,6 +112,7 @@ export class VisibilitySystem {
 
   isSeen(u, spotters, terrain) {
     if (u.locatedUntil > this.game.time) return true; // tracked back by a counter-battery radar (systems/CounterBattery.js)
+    if ((u.depth ?? 0) > 3) return this.underwater(u, spotters, terrain);
     const smoke = this.game.smoke;
     const cond = this.game.conditions;
     const lit = this.game.flares?.lit(u.pos.x, u.pos.z) ?? false;
@@ -97,6 +121,10 @@ export class VisibilitySystem {
     const rest = (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1) * (!u.moving && this.game.construction?.underNet(u.pos.x, u.pos.z, u.faction) ? 0.5 : 1); // a camouflage net: half as far
     for (const o of spotters) {
       const os = o.stats;
+      if ((o.depth ?? 0) > 9) { // a boat deep down sees nothing — but hears the screws of a ship under way
+        if (u.stack.stats.naval && u.moving && (u.pos.x - o.pos.x) ** 2 + (u.pos.z - o.pos.z) ** 2 < (os.hearing ?? 0) ** 2) return true;
+        continue;
+      }
       // a sniper's scope (stats.scope: the share of that cover it sees past) finds men lying low
       const conceal = (os.scope ? 1 - (1 - posture) * (1 - os.scope) : posture) * rest;
       const base = (os.sight ?? 100) * (os.binoculars && !o.moving ? 1.25 : 1);
