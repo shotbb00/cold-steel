@@ -59,7 +59,7 @@ export class FogOfWar {
 
   update(dt, force = false) {
     // at night the dark is already doing much of the job: unseen ground is dimmed less
-    this.uniforms.fowAmount.value = this.game.visibility.enabled === false ? 0 : this.game.conditions?.night ? 0.6 : 1;
+    this.uniforms.fowAmount.value = this.game.visibility.enabled === false ? 0 : (this.game.conditions?.night ? 0.6 : 1) * (this.game.map.fow ?? 1); // (a sea map: lighter — most of a 5 km sea is out of sight)
     this.timer -= dt;
     if (force) this.compute();
     else if (this.queue.length) this.work();

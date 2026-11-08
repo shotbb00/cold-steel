@@ -11,6 +11,7 @@ import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
 import stalingrad from './stalingrad.ts';
 import elAlamein from './elAlamein.ts';
+import midway from './midway.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -24,6 +25,7 @@ export const MAPS = {
   [auerstedt.id]: auerstedt,
   [stalingrad.id]: stalingrad,
   [elAlamein.id]: elAlamein,
+  [midway.id]: midway,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;
@@ -48,7 +50,7 @@ export function getMap(id) {
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only), its own maps first. */
 export function mapsFor(ep) {
-  const all = Object.values(MAPS).filter((m) => !m.epochs || m.epochs.includes(ep));
+  const all = Object.values(MAPS).filter((m) => !m.wip && (!m.epochs || m.epochs.includes(ep))); // (wip: not offered yet)
   return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
 }
 

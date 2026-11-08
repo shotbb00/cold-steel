@@ -26,7 +26,10 @@ const POINT_INCOME = 1.1;     // CP / s per held point
 const START_STRENGTH = 1000;
 const BLEED = 0.6;            // strength / s per point of difference
 const LOSS_SHARE = 0.2;       // fraction of a unit's cost removed from strength when it dies
-const MAX_STACKS = 12;        // per side, unless the map sets maxStacks
+const MAX_STACKS = 12;
+
+/** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
+const seaAllow = (game, allow) => (t) => !!t.stats?.naval === !!game.world.river?.sea && (!allow || allow(t));        // per side, unless the map sets maxStacks
 
 export default {
   id: 'frontline',
@@ -54,7 +57,7 @@ export default {
       strength: { [game.playerFaction]: strength, [foe]: strength },
       maxStrength: strength,
       maxStacks: R.maxStacks ?? map.maxStacks ?? MAX_STACKS,
-      allow: this.allow ?? null,
+      allow: seaAllow(game, this.allow),
       income: { [game.playerFaction]: R.income ?? 1, [foe]: (R.income ?? 1) * (DIFFICULTY[R.difficulty]?.income ?? 1) },
     };
     state.buy = makeBuyer(game, state);
@@ -83,7 +86,7 @@ export default {
       strength: { [me]: this.strength ?? START_STRENGTH, [foe]: this.strength ?? START_STRENGTH },
       maxStrength: this.strength ?? START_STRENGTH,
       maxStacks: map.maxStacks ?? MAX_STACKS,
-      allow: this.allow ?? null,
+      allow: seaAllow(game, this.allow),
       build: { [me]: 0, [foe]: 0 }, support: { [me]: 0, [foe]: 0 }, // (the host's numbers arrive)
     };
     state.sides = new ControlPoints(game, sideObjectiveDefs(game, state.points.points));

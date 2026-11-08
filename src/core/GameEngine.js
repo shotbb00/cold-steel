@@ -116,7 +116,7 @@ export class GameEngine {
     if (RENDERER === 'three') container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(62, this.view.w / this.view.h, 0.1, 2000);
+    this.camera = new THREE.PerspectiveCamera(62, this.view.w / this.view.h, map.camera?.near ?? 0.1, map.camera?.far ?? 2000); // (a sea map sees further — and starts further: depth precision for shoals under the surface km away)
     // Babylon mirrors the Three scene graph and draws it (render/babylon/BabylonView.js)
     this.babylon = RENDERER === 'babylon'
       ? new BabylonView(container, { scene: this.scene, camera: this.camera }, { exposure: this.conditions.theme.exposure ?? 1.1, theme: this.conditions.theme })
@@ -139,7 +139,8 @@ export class GameEngine {
     if (!this.cover.finalized) this.cover.finalize(map.bounds);
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
-    this.world.river = map.river ?? null; // water that stops and slows
+    this.world.river = map.river ?? null; // water that stops and slows (a sea map: world/Sea.js)
+    this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
@@ -158,6 +159,7 @@ export class GameEngine {
     this.projectiles.flares = this.flares;
     this.world.flares = this.flares;
     this.cameraManager = new CameraManager(this.camera, this.input, { bounds: map.bounds, terrain: this.terrain, cover: this.cover });
+    if (map.camera?.maxHeight) this.cameraManager.tactical.maxHeight = map.camera.maxHeight; // (a 5 km sea: zoom out much further)
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;

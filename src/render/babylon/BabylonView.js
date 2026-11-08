@@ -560,6 +560,7 @@ export class BabylonView {
       if (m.albedoTexture) m.useAlphaFromAlbedoTexture = true;
     }
     if (tm.blending === 2) m.alphaMode = Engine.ALPHA_ADD; // THREE.AdditiveBlending
+    if (tm.userData?.matte) { m.specularIntensity = 0; m.environmentIntensity = 0; m.reflectionColor?.set?.(0, 0, 0); } // (the open sea: a 25 km² flat sheet throws the sun's highlight up as a white blot)
     if (tm.userData?.paint) new PaintPlugin(m, tm.userData.paint);
     if (tm.userData?.wind) new WindPlugin(m, tm.userData.wind);
     if (tm.userData?.terrain) new TerrainPlugin(m);

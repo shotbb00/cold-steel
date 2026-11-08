@@ -19,21 +19,26 @@ const MAX = 200000;        // cells searched at most (then: as near as it got); 
 export const LOCAL = 6000;
 const WEIGHT = 1.15;       // a little greedy: much less searching for paths a few % longer
 const SNAP = 10;           // m searched round a blocked start or goal for open ground
+/** Ships (UnitStack `naval`): pass this as `foot` — only water at least SHIP_DEPTH deep, cover ignored. */
+export const SHIP = 'ship';
+export const SHIP_DEPTH = 4;
 
 export class NavGrid {
   constructor(world) {
     const { bounds } = world;
     this.world = world;
+    this.cell = world.navCell ?? CELL; // (a sea map: coarser — 5 km at 1 m would be hundreds of MB)
     this.ox = -bounds.x;
     this.oz = -bounds.z;
-    this.nx = Math.ceil((bounds.x * 2) / CELL) + 1;
-    this.nz = Math.ceil((bounds.z * 2) / CELL) + 1;
+    this.nx = Math.ceil((bounds.x * 2) / this.cell) + 1;
+    this.nz = Math.ceil((bounds.z * 2) / this.cell) + 1;
     const n = this.nx * this.nz;
     this.seedAll = new Float32Array(n).fill(Infinity);
     this.seedTall = new Float32Array(n).fill(Infinity);
     this.dAll = new Float32Array(n);
     this.dTall = new Float32Array(n);
     this.dWater = new Float32Array(n);
+    this.dShore = new Float32Array(n); // ships: how far to water too shallow for a hull (SHIP_DEPTH)
     // A* scratch, reused (`stamp` marks what belongs to the current search)
     this.g = new Float32Array(n);
     this.f = new Float32Array(n);
@@ -59,7 +64,7 @@ export class NavGrid {
     for (let j = j0; j <= j1; j++) {
       for (let i = i0; i <= i1; i++) {
         const k = j * this.nx + i;
-        const d = cover._distTo(c, this.ox + i * CELL, this.oz + j * CELL);
+        const d = cover._distTo(c, this.ox + i * this.cell, this.oz + j * this.cell);
         if (d < this.seedAll[k]) this.seedAll[k] = d;
         if (tall && d < this.seedTall[k]) this.seedTall[k] = d;
       }
@@ -95,7 +100,9 @@ export class NavGrid {
     const terrain = this.world.terrain;
     for (let j = 0, k = 0; j < this.nz; j++) {
       for (let i = 0; i < this.nx; i++, k++) {
-        d[k] = w && w.level - terrain.heightAt(this.ox + i * CELL, this.oz + j * CELL) > w.deep ? 0 : Infinity;
+        const depth = w ? w.level - terrain.heightAt(this.ox + i * this.cell, this.oz + j * this.cell) : 0;
+        d[k] = w && depth > w.deep ? 0 : Infinity;
+        this.dShore[k] = depth < SHIP_DEPTH ? 0 : Infinity;
       }
     }
     this.waterDirty = true;
@@ -107,9 +114,9 @@ export class NavGrid {
     if (!this.dirty) return;
     this.dAll.set(this.seedAll);
     this.dTall.set(this.seedTall);
-    chamfer(this.dAll, this.nx, this.nz);
-    chamfer(this.dTall, this.nx, this.nz);
-    if (this.waterDirty) chamfer(this.dWater, this.nx, this.nz);
+    chamfer(this.dAll, this.nx, this.nz, this.cell);
+    chamfer(this.dTall, this.nx, this.nz, this.cell);
+    if (this.waterDirty) { chamfer(this.dWater, this.nx, this.nz, this.cell); chamfer(this.dShore, this.nx, this.nz, this.cell); }
     this.waterDirty = false;
     this.dirty = false;
     this.version++;
@@ -118,8 +125,8 @@ export class NavGrid {
   // ---------------------------------------------------------------- queries
 
   cellOf(x, z) {
-    const i = Math.round((x - this.ox) / CELL);
-    const j = Math.round((z - this.oz) / CELL);
+    const i = Math.round((x - this.ox) / this.cell);
+    const j = Math.round((z - this.oz) / this.cell);
     return [Math.max(0, Math.min(this.nx - 1, i)), Math.max(0, Math.min(this.nz - 1, j))];
   }
 
@@ -130,6 +137,7 @@ export class NavGrid {
 
   /** May a body of radius r (men: `foot`) stand in cell k? */
   open(k, foot, r) {
+    if (foot === SHIP) return this.dShore[k] >= r;
     return (foot ? this.dTall : this.dAll)[k] >= r && this.dWater[k] >= WATER_CLEAR;
   }
 
@@ -142,6 +150,7 @@ export class NavGrid {
   clearance(x, z, foot) {
     this.ensure();
     const k = this.index(x, z);
+    if (foot === SHIP) return this.dShore[k];
     return Math.min((foot ? this.dTall : this.dAll)[k], this.dWater[k]);
   }
 
@@ -149,7 +158,8 @@ export class NavGrid {
   visible(a, b, foot, r) {
     this.ensure();
     const l = Math.hypot(b.x - a.x, b.z - a.z);
-    for (let s = Math.min(0.5, l); s <= l; s += 0.5) {
+    const step = foot === SHIP ? this.cell : 0.5;
+    for (let s = Math.min(step, l); s <= l; s += step) {
       if (!this.open(this.index(a.x + ((b.x - a.x) * s) / l, a.z + ((b.z - a.z) * s) / l), foot, r)) return false;
     }
     return l < 0.5 || this.open(this.index(b.x, b.z), foot, r);
@@ -160,7 +170,7 @@ export class NavGrid {
     const k0 = this.index(x, z);
     if (this.open(k0, foot, r)) return k0;
     const [ci, cj] = this.cellOf(x, z);
-    for (let ring = 1; ring <= SNAP / CELL; ring++) {
+    for (let ring = 1; ring <= (foot === SHIP ? 40 : SNAP / this.cell); ring++) { // (a ship sent onto land: the nearest water deep enough, further out)
       let best = -1;
       let bd = Infinity;
       for (let j = cj - ring; j <= cj + ring; j++) {
@@ -177,7 +187,7 @@ export class NavGrid {
   }
 
   point(k) {
-    return { x: this.ox + (k % this.nx) * CELL, z: this.oz + Math.floor(k / this.nx) * CELL };
+    return { x: this.ox + (k % this.nx) * this.cell, z: this.oz + Math.floor(k / this.nx) * this.cell };
   }
 
   /**
@@ -194,13 +204,13 @@ export class NavGrid {
     const goal = this.snap(to.x, to.z, foot, r);
     if (start < 0) return null;
     const nx = this.nx;
-    const d = foot ? this.dTall : this.dAll;
+    const d = foot === SHIP ? this.dShore : foot ? this.dTall : this.dAll;
     const gi = goal >= 0 ? goal % nx : this.cellOf(to.x, to.z)[0];
     const gj = goal >= 0 ? Math.floor(goal / nx) : this.cellOf(to.x, to.z)[1];
     const h = (k) => {
       const dx = Math.abs((k % nx) - gi);
       const dz = Math.abs(Math.floor(k / nx) - gj);
-      return (Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz)) * CELL;
+      return (Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz)) * this.cell;
     };
     const stamp = ++this.stamp;
     const { g, f, seen, shut } = this;
@@ -229,8 +239,8 @@ export class NavGrid {
           const m = nj * nx + ni;
           if (shut[m] === stamp || !this.open(m, foot, r)) continue;
           if (di && dj && (!this.open(j * nx + ni, foot, r) || !this.open(nj * nx + i, foot, r))) continue; // no cutting corners
-          let cost = (di && dj ? Math.SQRT2 : 1) * CELL * (1 + Math.max(0, r + 1.5 - d[m]) * WALL_COST);
-          if (foot && this.dAll[m] < r) cost *= LOW_COST;
+          let cost = (di && dj ? Math.SQRT2 : 1) * this.cell * (1 + Math.max(0, r + 1.5 - d[m]) * WALL_COST);
+          if (foot === true && this.dAll[m] < r) cost *= LOW_COST;
           const ng = g[k] + cost;
           if (seen[m] === stamp && ng >= g[m]) continue;
           seen[m] = stamp;
@@ -266,7 +276,7 @@ export class NavGrid {
 }
 
 /** Two-pass chamfer distance (orthogonal CELL, diagonal √2·CELL) over `d`, seeded in place. */
-function chamfer(d, nx, nz) {
+function chamfer(d, nx, nz, CELL) {
   const D = CELL * Math.SQRT2;
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {

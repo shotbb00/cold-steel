@@ -21,6 +21,7 @@ const SECTIONS = [
   ['fire', 'Fire support'],
   ['airdefence', 'Air defence'],
   ['support', 'Support'],
+  ['naval', 'Warships'],   // (the open-sea maps)
   ['other', 'Other'],
 ];
 

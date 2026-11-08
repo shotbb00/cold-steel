@@ -33,7 +33,7 @@ import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
-import { CLIMB, LOCAL } from '../world/Nav.js';
+import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
@@ -232,6 +232,9 @@ export class UnitStack {
   get sprinting() { return this.moveTarget && (this.sprintUntil ?? 0) > this.world.time; }
   get winded() { return (this.windedUntil ?? 0) > this.world.time && !this.sprinting; }
 
+  /** How this stack routes (world/Nav.js): men, vehicles — or a ship, deep water only. */
+  get navFoot() { return this.stats.naval ? SHIP : this.usesCover; }
+
   get usesCover() {
     return this.kind === 'infantry';
   }
@@ -370,7 +373,7 @@ export class UnitStack {
   fitSlot(u, out) {
     const nav = this.world.nav;
     const a = this.anchor;
-    if (!nav || nav.visible(a, out, this.usesCover, u.radius)) return;
+    if (!nav || nav.visible(a, out, this.navFoot, u.radius)) return;
     const x = out.x - a.x;
     const z = out.z - a.z;
     let lo = 0;
@@ -378,7 +381,7 @@ export class UnitStack {
     for (let i = 0; i < 5; i++) {
       const m = (lo + hi) / 2;
       _p.set(a.x + x * m, 0, a.z + z * m);
-      if (nav.visible(a, _p, this.usesCover, u.radius)) lo = m; else hi = m;
+      if (nav.visible(a, _p, this.navFoot, u.radius)) lo = m; else hi = m;
     }
     out.set(a.x + x * lo, 0, a.z + z * lo);
   }
@@ -478,7 +481,7 @@ export class UnitStack {
     if (!nav) return { x: t.x, z: t.z, last: true };
     let r = this.route;
     if (!r || r.version !== nav.version || Math.hypot(r.to.x - t.x, r.to.z - t.z) > 2) {
-      const p = nav.path(this.anchor, t, this.usesCover, this.stats.radius);
+      const p = nav.path(this.anchor, t, this.navFoot, this.stats.radius);
       r = this.route = { to: { x: t.x, z: t.z }, version: nav.version, pts: p?.pts ?? [{ x: t.x, z: t.z }], i: 0 };
     }
     while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < 1.5) r.i++;
@@ -531,7 +534,7 @@ export class UnitStack {
     // really narrow (a hedge along the road isn't): single file while moving, and back into the
     // formation only once it's open for a while — every change strings the men out again
     const nav = this.world.nav;
-    const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
+    const room = nav ? nav.clearance(a.x, a.z, this.navFoot) : Infinity;
     if (!this.moveTarget || this.units.length < 2 || this.form) this.column = false; // (1806: a formed company keeps its ranks — the slots squeeze in round trees and walls, fitSlot)
     else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
@@ -548,6 +551,16 @@ export class UnitStack {
     if (want < 0.05) { w.set(0, 0, 0); return; }
     const s = u.stats;
     const heading = Math.atan2(w.x, w.z);
+    if (s.naval) { // a ship: the rudder bites only with way on, and it keeps going round the turn
+      const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
+      const diff = angleDelta(u.yaw, heading);
+      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit ? 0.3 : 1);
+      u.yaw += clamp(diff, -rate * dt, rate * dt);
+      u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
+      const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
+      w.set(Math.sin(u.yaw) * speed, 0, Math.cos(u.yaw) * speed);
+      return;
+    }
     let diff = angleDelta(u.yaw, heading);
     const back = Math.abs(diff) > REVERSE.angle && d < REVERSE.within; // just behind: reverse into it
     if (back) diff = angleDelta(u.yaw, heading + Math.PI);
@@ -611,7 +624,7 @@ export class UnitStack {
       if (!this.moveTarget && dDest < PARKED) _w.set(0, 0, 0); // arrived: a small correction isn't worth turning the hull for
       this.driveAlongHull(u, _w, d, dt);
     }
-    u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
+    u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : s.naval ? s.accel ?? 0.25 : 2.5))); // vehicles accelerate gently, ships slowly (way on, way off)
     if (!this.usesCover && !freeing) { // …and only along the hull: no skating sideways while the old heading blends out
       const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), along = u.vel.x * fx + u.vel.z * fz;
       u.vel.set(fx * along, 0, fz * along);
@@ -659,9 +672,9 @@ export class UnitStack {
     if (!nav || u.ghostT > 0) return dest;
     if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
       u.navT = 0.3 + Math.random() * 0.2;
-      if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.usesCover, u.radius)) u.path = null;
+      if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.navFoot, u.radius)) u.path = null;
       else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > 2) {
-        const p = nav.path(u.pos, dest, this.usesCover, u.radius, LOCAL);
+        const p = nav.path(u.pos, dest, this.navFoot, u.radius, LOCAL);
         u.path = p && { to: { x: dest.x, z: dest.z }, version: nav.version, pts: p.pts, i: 0, reached: p.reached };
       }
     }
@@ -728,6 +741,7 @@ export class UnitStack {
     const pz = u.pos.z;
     u.pos.x += u.vel.x * dt;
     u.pos.z += u.vel.z * dt;
+    if (s.naval) { this.floatBody(u, px, pz, dt); return; }
     if (!(u.ghostT > 0)) this.world.cover.resolveCircle(u.pos, u.radius * 0.85, this.climb); // ghostT: climbing through
     this.world.clampToBounds(u.pos);
     this.onDeck(u.pos, true); // nobody pushed off the side of a bridge
@@ -752,6 +766,26 @@ export class UnitStack {
 
     u.gait += (Math.min(1, speed / (s.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
     u.walkPhase += dt * speed * (Math.PI / (s.stride ?? 1.1));
+    if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
+  }
+
+  /** A ship: deep water only (running onto a reef or the shallows stops it), afloat at the sea's level. */
+  floatBody(u, px, pz, dt) {
+    const w = this.world.river?.water;
+    this.world.clampToBounds(u.pos);
+    const nav = this.world.nav;
+    if (nav && !nav.passable(u.pos.x, u.pos.z, SHIP, 0) && nav.passable(px, pz, SHIP, 0)) {
+      u.pos.x = px;
+      u.pos.z = pz;
+      u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
+    }
+    u.pos.y = (w?.level ?? 0) - (u.sink ?? 0);
+    u.climbY = 0;
+    const speed = Math.hypot(u.vel.x, u.vel.z);
+    u.moving = speed > 0.5;
+    if (!u.setUp || (u.pos.x - u.setUp.x) ** 2 + (u.pos.z - u.setUp.z) ** 2 > SET_UP_SLACK * SET_UP_SLACK) u.setUp = { x: u.pos.x, z: u.pos.z, at: this.world.time };
+    u.gait = Math.min(1, speed / this.stats.speed);
+    u.walkPhase += dt * speed;
     if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
   }
 

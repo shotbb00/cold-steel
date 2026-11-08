@@ -108,8 +108,9 @@ export class Ambience {
       }
     }
 
+    const sea = !!g.world.river?.sea; // (open sea: no guns firing beyond the horizon, no villages burning)
     // ---- artillery on the horizon
-    if (t >= this.nextArty) {
+    if (t >= this.nextArty && !sea) {
       this.nextArty = t + rand(ARTY_GAP);
       this.salvo();
     }
@@ -132,7 +133,7 @@ export class Ambience {
     }
 
     // ---- burning villages beyond the edge
-    if (!this.fires.length) this.placeFires();
+    if (!this.fires.length && !sea) this.placeFires();
     for (const f of this.fires) {
       if (t < f.renew) continue;
       f.renew = t + 55;
