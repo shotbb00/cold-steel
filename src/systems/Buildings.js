@@ -78,7 +78,7 @@ export class Buildings {
 
   /** The window positions of a building: its inside wall cover spots. */
   windows(b) {
-    return (b.windows ??= this.game.cover.spots.filter((s) => s.interior === b));
+    return (b.windows ??= [...this.game.cover.spots.filter((s) => s.interior === b), ...(b.upper ?? [])]); // (upper floors: Props.buildingWall `upper`)
   }
 
   /**
@@ -93,7 +93,7 @@ export class Buildings {
     }
     const fx = Math.sin(yaw);
     const fz = Math.cos(yaw);
-    const out = (w) => -(w.dirX * fx + w.dirZ * fz); // a window's spot faces the wall: out is -dir
+    const out = (w) => -(w.dirX * fx + w.dirZ * fz) + (w.floor ?? 0) * 0.02; // a window's spot faces the wall: out is -dir (upstairs: a little better, it sees further)
     // front and side windows only: a man at a back window just watches the wrong way — the rest
     // wait in the room (enter()) until a new order points the squad elsewhere
     return this.windows(b).filter((w) => (!w.occupant || !w.occupant.alive) && (all || out(w) > -0.3)).sort((a, c) => out(c) - out(a)).slice(0, n);
@@ -229,7 +229,8 @@ export class Buildings {
       const reach = Math.hypot(b.w, b.d) / 2 + radius;
       const d = Math.hypot(point.x - b.x, point.z - b.z);
       if (d > reach) continue;
-      b.hp -= damage * (d < reach - radius ? 1 : 0.5);
+      const held = this.game.world.stacks.some((s) => s.entered === b && s.alive); // a garrison shores it up, puts out fires: it lasts twice as long
+      b.hp -= damage * (d < reach - radius ? 1 : 0.5) * (held ? 0.5 : 1);
       this.game.effects.dust(point, 2.5);
       if (b.hp <= 0) this.collapse(b);
     }

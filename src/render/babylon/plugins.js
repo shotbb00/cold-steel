@@ -14,7 +14,7 @@
 //                the fields from the `aFurrow` attribute (strength, angle, spacing)
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
-import { NOISE } from '../paint.js';
+import { NOISE, CLIMATE } from '../paint.js';
 
 class GlslPlugin extends MaterialPluginBase {
   isCompatible(lang) {
@@ -102,8 +102,10 @@ export class PaintPlugin extends GlslPlugin {
         { name: 'uCamo0', size: 3, type: 'vec3' }, { name: 'uCamo1', size: 3, type: 'vec3' },
         { name: 'uCamo2', size: 3, type: 'vec3' }, { name: 'uCamo3', size: 3, type: 'vec3' },
         { name: 'uMud', size: 3, type: 'vec3' }, { name: 'uCamoScale', size: 1, type: 'float' }, { name: 'uWear', size: 1, type: 'float' },
+        { name: 'uClimate', size: 1, type: 'float' }, { name: 'uSmock', size: 1, type: 'float' },
+        { name: 'uClimateCover', size: 1, type: 'float' }, { name: 'uClimateSmock', size: 1, type: 'float' }, { name: 'uClimateColor', size: 3, type: 'vec3' },
       ],
-      fragment: '#ifdef PAINT\nuniform vec3 uCamo0, uCamo1, uCamo2, uCamo3, uMud;\nuniform float uCamoScale, uWear;\n#endif\n',
+      fragment: '#ifdef PAINT\nuniform vec3 uCamo0, uCamo1, uCamo2, uCamo3, uMud;\nuniform float uCamoScale, uWear, uClimate, uSmock, uClimateCover, uClimateSmock;\nuniform vec3 uClimateColor;\n#endif\n',
     };
   }
 
@@ -113,6 +115,12 @@ export class PaintPlugin extends GlslPlugin {
     ubo.updateFloat3('uMud', p.mud.r, p.mud.g, p.mud.b);
     ubo.updateFloat('uCamoScale', p.scale);
     ubo.updateFloat('uWear', p.wear);
+    ubo.updateFloat('uClimate', CLIMATE.amount.value);
+    ubo.updateFloat('uClimateCover', CLIMATE.cover.value);
+    ubo.updateFloat('uClimateSmock', CLIMATE.smock.value);
+    const cc = CLIMATE.color.value;
+    ubo.updateFloat3('uClimateColor', cc.r, cc.g, cc.b);
+    ubo.updateFloat('uSmock', p.smock ? 1 : 0);
   }
 
   getCustomCode(shaderType) {
@@ -152,6 +160,13 @@ export class PaintPlugin extends GlslPlugin {
           float g = clamp(vPaint.y * (0.55 + 0.9 * (n2 - 0.35)), 0.0, 1.0);
           surfaceAlbedo = mix(surfaceAlbedo, uMud * vTint, g * 0.85);
           surfaceAlbedo *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
+          if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
+            float sf = pSurf(vPaint.x);
+            float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
+            float wash = smoothstep(0.32, 0.58, pFbm(pp * 0.7 + vec3(3.1, 0.0, 5.7)));
+            float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
+            surfaceAlbedo = mix(surfaceAlbedo, uClimateColor * vTint, uClimate * paintable * k);
+          }
           #ifdef PAINT_SURF
             normalW = pBumpNormal(vPositionW, normalW, pBump(pSurf(vPaint.x), vPaintPos));
           #endif

@@ -17,6 +17,25 @@ import * as THREE from 'three';
 export const WOODLAND = [0x56603b, 0x5b4630, 0x22231d, 0x8a7d57]; // green, brown, black, sand
 export const MERDC = [0x4c5a36, 0x5d4a33, 0x262624, 0x857a58];
 
+/**
+ * A map's `climate` (core/GameEngine.js → setClimate): a tint over paint and canvas — patchy on vehicles
+ * (`cover` … 0.9 of it, worn through in places), nearly all over soldiers' clothing (`smock`). Winter:
+ * whitewash and snow smocks; desert: sand paint and khaki drill. Metal, rubber, skin and glass keep their own.
+ */
+export const CLIMATE = { amount: { value: 0 }, color: { value: new THREE.Color() }, cover: { value: 0 }, smock: { value: 0 } };
+const CLIMATES = {
+  winter: { color: [0.72, 0.73, 0.72], cover: 0.35, smock: 0.82 },
+  desert: { color: [0.5, 0.38, 0.2], cover: 0.6, smock: 0.62 },
+};
+export function setClimate(name) {
+  const c = CLIMATES[name];
+  CLIMATE.amount.value = c ? 1 : 0;
+  if (!c) return;
+  CLIMATE.color.value.setRGB(...c.color);
+  CLIMATE.cover.value = c.cover;
+  CLIMATE.smock.value = c.smock;
+}
+
 export const NOISE = /* glsl */ `
   float pHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   float pNoise(vec3 x) {
@@ -56,8 +75,13 @@ export const NOISE = /* glsl */ `
  * @param {object} o  { colors: 4 hex (camo), scale: pattern frequency per metre, mud: hex, wear,
  *                      surfaces: per-part roughness / metalness / relief from `surf` }
  */
-export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false } = {}) {
+export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false } = {}) {
   const uniforms = {
+    uClimate: CLIMATE.amount,
+    uClimateColor: CLIMATE.color,
+    uClimateCover: CLIMATE.cover,
+    uClimateSmock: CLIMATE.smock,
+    uSmock: { value: smock ? 1 : 0 },
     uCamo: { value: colors.map((c) => new THREE.Color(c)) },
     uCamoScale: { value: scale },
     uMud: { value: new THREE.Color(mud) },
@@ -85,7 +109,8 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
         uniform vec3 uCamo[4];
-        uniform float uCamoScale, uWear;
+        uniform float uCamoScale, uWear, uClimate, uSmock, uClimateCover, uClimateSmock;
+        uniform vec3 uClimateColor;
         uniform vec3 uMud;
         varying vec2 vPaint;
         varying vec3 vPaintPos;
@@ -105,7 +130,14 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
         }
         float g = clamp(vPaint.y * (0.55 + 0.9 * (n2 - 0.35)), 0.0, 1.0);
         diffuseColor.rgb = mix(diffuseColor.rgb, uMud * vTint, g * 0.85);
-        diffuseColor.rgb *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);`)
+        diffuseColor.rgb *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
+        if (uClimate > 0.0) { // the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
+          float sf = pSurf(vPaint.x);
+          float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
+          float wash = smoothstep(0.32, 0.58, pFbm(pp * 0.7 + vec3(3.1, 0.0, 5.7)));
+          float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
+          diffuseColor.rgb = mix(diffuseColor.rgb, uClimateColor * vTint, uClimate * paintable * k);
+        }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
         #ifdef PAINT_SURF
           vec2 surfRM = pSurfRM(pSurf(vPaint.x), pNoise(pp * 3.7));
@@ -121,8 +153,8 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
           normal = pBumpNormal(-vViewPosition, normal, pBump(pSurf(vPaint.x), vPaintPos));
         #endif`);
   };
-  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}`;
+  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}`;
   // the same paint for the Babylon renderer (render/babylon/plugins.js PaintPlugin)
-  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces };
+  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock };
   return mat;
 }

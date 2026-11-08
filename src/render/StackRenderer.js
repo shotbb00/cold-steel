@@ -26,7 +26,7 @@ import { lerp, angleDelta, TAU } from '../core/math.js';
 import { paintMaterial, WOODLAND } from './paint.js';
 import { lod } from '../data/units/geometry.js';
 
-const bodyMaterial = paintMaterial(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, metalness: 0.05, roughness: 0.85 }), { colors: WOODLAND, scale: 15, wear: 0.18, surfaces: true }); // M81 blotches at their real size; cloth weave (soldierBody finish)
+const bodyMaterial = paintMaterial(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, metalness: 0.05, roughness: 0.85 }), { colors: WOODLAND, scale: 15, wear: 0.18, surfaces: true, smock: true }); // M81 blotches at their real size; cloth weave (soldierBody finish)
 const FLASH = new THREE.Color(0.35, 0.3, 0.28); // hit: a dark jolt, not a glow
 const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
 const modelCache = new Map();
