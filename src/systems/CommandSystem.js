@@ -168,6 +168,7 @@ export class CommandSystem {
     else if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'promote')) this.runCommand('promote');
+    else if (keys.is(code, 'sprint')) this.runCommand('sprint');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
@@ -246,6 +247,10 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd === 'sprint') {
+      const sel = [...this.selected].filter((s) => s.alive && s.usesCover && s.moveTarget);
+      if (!sel.length) return this.game.bus.emit('toast', 'Send infantry somewhere first, then sprint');
+      this.game.orders.issue({ t: 'sprint', s: ids(sel) });
     } else if (cmd === 'promote') {
       const sel = [...this.selected].filter((s) => s.alive && !s.stats.structure);
       if (!sel.length) return this.game.bus.emit('toast', 'Select the stacks to promote');
@@ -694,6 +699,10 @@ export class CommandSystem {
     }
     this.moveGroup([...this.selected], p, { hold });
     this.addMarker(p, hold ? 'hold' : 'move');
+    // the same spot ordered twice in quick succession: at the run
+    const now = performance.now();
+    if (this.lastMove && now - this.lastMove.time < 400 && Math.hypot(x - this.lastMove.x, y - this.lastMove.y) < 24) { this.lastMove = null; this.runCommand('sprint'); }
+    else this.lastMove = { time: now, x, y };
   }
 
   /** Right-drag: move the selection to `p0` and hold there facing toward `p1`. */

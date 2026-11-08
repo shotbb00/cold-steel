@@ -84,7 +84,7 @@ export function thinkSoldier(u, stack, world, interval) {
   // Following the player counts as marching only while the leader is actually on the move.
   const marching = !!stack.moveTarget && dist2DSq(anchor, stack.moveTarget) > 16
     && !(ai.state === AIState.FOLLOW && !ai.leader?.moving);
-  u.run = !!threat && ((u.wounded && !u.atCover) || (marching && ai.ordered)); // ordered moves under fire: sprint
+  u.run = (marching && stack.sprinting) || (!!threat && ((u.wounded && !u.atCover) || (marching && ai.ordered))); // a sprint order, or ordered moves under fire
 
   // a mortar man with something to fire at (a fire mission, smoke, a flare) sets up where he
   // stands and stays at the tube until the squad is ordered on — no shuffling to a formation

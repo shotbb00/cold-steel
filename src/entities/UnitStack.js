@@ -228,6 +228,10 @@ export class UnitStack {
     }
   }
 
+  /** Foot on a sprint order (core/Orders.js 'sprint'): at the run while it lasts, then winded a while. */
+  get sprinting() { return this.moveTarget && (this.sprintUntil ?? 0) > this.world.time; }
+  get winded() { return (this.windedUntil ?? 0) > this.world.time && !this.sprinting; }
+
   get usesCover() {
     return this.kind === 'infantry';
   }
@@ -485,7 +489,7 @@ export class UnitStack {
         for (const u of this.units) if (u.alive && !u.possessed) { lag += Math.hypot(u.pos.x - u.dest.x, u.pos.z - u.dest.z); n++; }
         lag = n ? lag / n : 0;
         const k = clamp(1.4 - lag / (8 + this.footprint * 0.3), 0.15, 1);
-        const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : 1) * k;
+        const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : this.sprinting ? 1.5 : 1) * (this.winded ? 0.8 : 1) * k;
         this.anchor.addScaledVector(_v, Math.min(d, speed * dt) / d);
         if (!this.faceTarget) this.turnToward(Math.atan2(_v.x, _v.z), dt);
       }
@@ -557,6 +561,7 @@ export class UnitStack {
     let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
+    if (this.winded) maxSpeed *= 0.8;
     // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
     // tents go up, the vehicle kit's `deploy`), and when ordered off they pack up first, standing
     // still, in PACK of that time — they only work fully set up

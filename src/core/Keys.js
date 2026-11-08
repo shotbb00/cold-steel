@@ -30,6 +30,7 @@ export const ACTIONS = [
   { id: 'leave', label: 'Leave a building', ctx: 'command', key: 'KeyE' },
   { id: 'cancelJob', label: 'Cancel a build order', ctx: 'command', key: 'Backspace', alt: 'Delete' },
   { id: 'withdraw', label: 'Withdraw to base (frees its slot)', ctx: 'command', key: 'KeyR' },
+  { id: 'sprint', label: 'Sprint (infantry on the move)', ctx: 'command', key: 'Period' },
   { id: 'promote', label: 'Promote (pitched battle setup)', ctx: 'command', key: 'Comma' },
   { id: 'heli', label: 'Helicopter', ctx: 'command', key: 'KeyY' },
   { id: 'jet', label: 'Jet gun run', ctx: 'command', key: 'KeyJ' },
