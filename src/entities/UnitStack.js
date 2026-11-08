@@ -1594,7 +1594,14 @@ export class UnitStack {
     const flare = o?.kind === 'flare';
     const he = o?.kind === 'he'; // shells on the spot: a fire mission called through binoculars (systems/PlayerControl.js)
     if (!o || !u.stats.indirect || (he ? 1 : flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
+    if (o.until && this.world.time > o.until) { this.smokeOrder = null; return null; } // sustained fire: its time is up
     o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare && !he, flare };
+    if (o.area) { // sustained fire: each aim at another point of the area
+      const a = Math.random() * Math.PI * 2;
+      const r = o.area * Math.sqrt(Math.random());
+      const p = o.target.pos;
+      p.x = o.x + Math.sin(a) * r; p.z = o.z + Math.cos(a) * r; p.y = this.world.terrain.heightAt(p.x, p.z);
+    }
     return o.target;
   }
 

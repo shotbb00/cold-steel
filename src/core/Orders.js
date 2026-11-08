@@ -70,6 +70,7 @@ export class Orders {
           s.waypoints = null;
           if (s.moveTarget) { s.anchor.x = s.centroid.x; s.anchor.z = s.centroid.z; } // stop here, not at the end of the formation's slide
           s.ai.defend();
+          s.smokeOrder = null; // (a fire mission, sustained fire: off)
           // vehicles halt each where it stands, not back into formation (ai/SoldierAI.js reads plannedSpots)
           if (!s.usesCover) s.ai.plannedSpots = new Map(s.units.filter((u) => u.alive).map((u) => [u, { x: u.pos.x, z: u.pos.z }]));
         }
@@ -214,10 +215,12 @@ export class Orders {
         const guns = mine(cmd.s).filter((s) => !s.barrage && tubes(s).some((u) => Math.hypot(cmd.x - u.pos.x, cmd.z - u.pos.z) <= u.stats.range));
         for (const s of guns) {
           s.ai.halt(); // (as for smoke: they stop, set up and fire)
-          s.smokeOrder = { x: cmd.x, z: cmd.z, left: Math.min(12, 3 * tubes(s).length), kind: 'he' };
+          s.smokeOrder = cmd.m === 'area' // sustained fire: a minute on the area, scattered over it (Stop ends it)
+            ? { x: cmd.x, z: cmd.z, left: Infinity, kind: 'he', area: 25, until: g.world.time + 60 }
+            : { x: cmd.x, z: cmd.z, left: Math.min(cmd.m === 'salvo' ? 16 : 12, (cmd.m === 'salvo' ? 4 : 3) * tubes(s).length), kind: 'he' }; // a salvo: four rounds a tube
           for (const u of s.units) u.retarget = 0;
         }
-        g.tell(faction, guns.length ? `Fire mission: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
+        g.tell(faction, guns.length ? `${cmd.m === 'area' ? 'Sustained fire' : cmd.m === 'salvo' ? 'Salvo' : 'Fire mission'}: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
         return null;
       }
       case 'flare':
