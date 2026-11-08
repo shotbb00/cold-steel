@@ -160,6 +160,9 @@ export class PaintPlugin extends GlslPlugin {
           float g = clamp(vPaint.y * (0.55 + 0.9 * (n2 - 0.35)), 0.0, 1.0);
           surfaceAlbedo = mix(surfaceAlbedo, uMud * vTint, g * 0.85);
           surfaceAlbedo *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
+          #ifdef PAINT_SURF
+            surfaceAlbedo = pShip(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
+          #endif
           if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
             float sf = pSurf(vPaint.x);
             float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;

@@ -24,7 +24,7 @@ const _c = new THREE.Color();
  * everything else paint.
  * It rides in paint.x as camo + 2 × surface index.
  */
-export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth'];
+export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth', 'plate', 'deck', 'flight']; // (plate, deck, flight: ships' steel and planking, render/paint.js pShip)
 const GLASS_TINTS = new Set([0x1b2126, 0x14181a, 0x1a1d1c, 0x2a3a44, 0x2a2232]);
 const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236]);
 const SKIN_TINTS = new Set();
