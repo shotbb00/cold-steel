@@ -37,7 +37,11 @@ export function setClimate(name) {
 }
 
 export const NOISE = /* glsl */ `
-  float pHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  // a lattice corner's value: whole-number arithmetic only (a permutation polynomial mod 289), so a
+  // corner shared by two cells hashes the same in both however the GPU's compiler regroups (i + 1) * k
+  // — a fractional hash got it a hair different, and wave normals made every cell edge a line
+  float pPerm(float x) { return mod((x * 34.0 + 1.0) * x, 289.0); }
+  float pHash(vec3 p) { p = mod(p, 289.0); return pPerm(pPerm(pPerm(p.x) + p.y) + p.z) * (1.0 / 289.0); }
   float pNoise(vec3 x) {
     vec3 i = floor(x), f = fract(x);
     f = f * f * (3.0 - 2.0 * f);

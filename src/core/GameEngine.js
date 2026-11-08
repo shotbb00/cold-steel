@@ -166,6 +166,7 @@ export class GameEngine {
     this.world.flares = this.flares;
     this.cameraManager = new CameraManager(this.camera, this.input, { bounds: map.bounds, terrain: this.terrain, cover: this.cover });
     if (map.camera?.maxHeight) this.cameraManager.tactical.maxHeight = map.camera.maxHeight; // (a 5 km sea: zoom out much further)
+    if (map.river?.sea) this.cameraManager.waterLevel = map.river.level; // (never down to the sea floor)
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;

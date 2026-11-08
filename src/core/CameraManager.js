@@ -97,6 +97,9 @@ export class CameraManager {
     return out.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
   }
 
+  /** What the camera keeps above: the ground, or at sea the water over it (`waterLevel`, set by GameEngine). */
+  groundAt(x, z) { return Math.max(this.terrain.heightAt(x, z), this.waterLevel ?? -Infinity); }
+
   /** Aim direction flattened onto the ground (for WASD movement). */
   flatForward(out) {
     return out.set(-Math.sin(this.action.yaw), 0, -Math.cos(this.action.yaw));
@@ -173,7 +176,7 @@ export class CameraManager {
         const x = this._pivot.x - this._fwd.x * d;
         const y = this._pivot.y - this._fwd.y * d;
         const z = this._pivot.z - this._fwd.z * d;
-        if (y < this.terrain.heightAt(x, z) + 0.45) { clear = Math.max(1.2, d - 0.5); break; }
+        if (y < this.groundAt(x, z) + 0.45) { clear = Math.max(1.2, d - 0.5); break; }
       }
       if (this.cover) {
         // …and the same for walls, columns and pylons
@@ -187,13 +190,13 @@ export class CameraManager {
       const maxStep = (clear < this._boom ? 9 : 3) * dt;
       this._boom += clamp(clear - this._boom, -maxStep, maxStep);
       this._actionPos.copy(this._pivot).addScaledVector(this._fwd, -this._boom);
-      const floor = this.terrain.heightAt(this._actionPos.x, this._actionPos.z) + 0.4;
+      const floor = this.groundAt(this._actionPos.x, this._actionPos.z) + 0.4;
       if (this._actionPos.y < floor) this._actionPos.y = floor;
       this._actionLook.copy(this._pivot).addScaledVector(this._fwd, 30);
     }
 
     const tc = this.tactical;
-    tc.groundY += (this.terrain.heightAt(tc.target.x, tc.target.z) - tc.groundY) * Math.min(1, dt * 3);
+    tc.groundY += (this.groundAt(tc.target.x, tc.target.z) - tc.groundY) * Math.min(1, dt * 3);
     const back = tc.height * tc.tilt;
     this._tacPos.set(tc.target.x + Math.sin(tc.orbit) * back * tc.facing, tc.groundY + tc.height, tc.target.z + Math.cos(tc.orbit) * back * tc.facing);
     this._tacLook.set(tc.target.x, tc.groundY, tc.target.z);
