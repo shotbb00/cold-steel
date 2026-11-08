@@ -21,7 +21,7 @@ const men = (o = {}) => ({
 
 /** Smoothbore musket and drill, shared by the foot. */
 const MUSKET = {
-  hp: 100, grenades: 0, lightAT: 0, nightSight: undefined,
+  hp: 100, grenades: 0, lightAT: 0, nightSight: undefined, smoke: undefined,
   speed: 1.6,              // the marching pace (the charge runs ~1.6×)
   sight: 110, range: 80, aggroRange: 85, preferredRange: 50,   // (the game's scale: a 1985 rifle squad sees 70 m and shoots 90; massed coloured coats are seen a little further, the musket reaches less)
   fireCooldown: 0.5, aimTime: 0.5, burst: 1, burstInterval: 0,
@@ -249,7 +249,7 @@ const observers = foot('observers', 'officer', {
   name: 'Artillery Officers', shortName: 'Officers', cost: 120,
   formation: { count: 2, columns: 2, spacing: 3 },
   specialist: undefined, specialistModels: undefined,
-  stats: { ...T.observers.stats, drill: false, volley: false, stance: 'crouch', leash: 6, formations: false, sight: 180, range: 1, damage: 0 },
+  stats: { ...T.observers.stats, drill: false, volley: false, stance: 'crouch', leash: 6, formations: false, sight: 180, range: 1, damage: 0, smoke: undefined },
   variants: {
     nato: { name: 'Officiers d\'artillerie', weapon: 'Telescope, sword', text: 'Gunner officers with telescopes on a height: every gun and howitzer of yours lands tight on what they can see.' },
     by: { name: 'Artillerieoffiziere', weapon: 'Telescope, sword', text: 'Artillery officers with their telescopes.' },

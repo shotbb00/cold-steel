@@ -716,6 +716,9 @@ body.touch .sel-all { min-height: 34px; padding: 0 12px; }
 #reinforce { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; }
 body.tactical #reinforce { display: flex; }
 .rf-info { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rf-rate { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-pools { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-pools[hidden] { display: none; }
 .rf-cp { font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
 .rf-stacks { margin: 0; font-variant-numeric: tabular-nums; }
 .rf-open { display: flex; align-items: center; gap: 6px; padding: 6px 10px; }

@@ -9,6 +9,7 @@ import { POWERS_1806 } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
+import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
@@ -18,12 +19,18 @@ import { icon, silhouette } from './Icons.js';
 
 const ACTIONS = [
   { cmd: 'hold', label: 'Stop', icon: 'stop', key: 'hold', tip: 'Stop where they are and hold the spot', when: (sel) => sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
+  { cmd: 'holdFire', label: (g) => ([...g.commands.selected].some((s) => s.holdFire) ? 'Holding fire' : 'Hold fire'), icon: 'stop', key: 'holdFire', tip: 'Hold fire: they shoot only at what you order them to attack (or at an enemy right on top of them). Again: fire at will', when: (sel) => sel.some((s) => s.stats.damage > 0 && !s.stats.structure), on: (sel) => sel.some((s) => s.holdFire) },
+  { cmd: 'sprint', label: 'Sprint', icon: 'charge', key: 'sprintOrder', tip: 'Infantry on the move runs for 10 s, then is winded (slower) for 20 s. With a mouse: give the move order twice', when: (sel) => sel.some((s) => s.usesCover && s.moveTarget && !s.stats.structure), on: (sel) => sel.some((s) => s.sprinting) },
   { cmd: 'waypoints', label: (g) => (g.commands.queueing ? 'Waypoints on' : 'Waypoints'), icon: 'place', key: 'waypoints', tip: 'Each order adds a waypoint to the route instead of replacing it (with a mouse: Shift+right-click)', when: (sel) => document.body.classList.contains('touch') && sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },
   { cmd: 'build:sandbags', label: 'Sandbags', icon: 'sandbags', key: 'sandbags', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.sandbags), tip: 'A chest-high bag wall: cover from the front', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:trench', label: 'Trench', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.trench), tip: 'Dig a trench: shelter from every direction', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.wire), tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:revetment', label: 'Dig in', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.revetment), tip: 'The blade digs a vehicle position: any vehicle in it is hull down behind the berm', when: (sel) => one(sel, (s) => s.stats.dozer) },
   { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.mines), tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:mgNest', label: 'MG nest', icon: 'sandbags', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.mgNest), tip: 'A horseshoe of sandbags: two men fire from it, covered front and sides', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:bunker', label: 'Bunker', icon: 'trench', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.bunker), tip: 'Logs and earth, a roof overhead: three men fire through the slit, sheltered all round. Slow to build', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:tankTraps', label: 'Tank traps', icon: 'wire', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.tankTraps), tip: 'Steel hedgehogs: no vehicle gets through — they have to go round. Infantry climbs over', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:camoNet', label: 'Camo net', icon: 'place', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.camoNet), tip: 'A camouflage net: whoever stands still under it is spotted from half as far', when: (sel) => one(sel, (s) => s.usesCover) },
   {
     cmd: 'engineer', icon: 'engineer', key: 'engineer',
     label: (g) => (g.map.bridgeAt ? 'Clear / blow' : 'Clear'),
@@ -32,8 +39,10 @@ const ACTIONS = [
   },
   { cmd: 'engineer', label: 'Line charge', icon: 'mines', key: 'engineer', tip: 'Fire the rocket-towed hose: it blows a lane through minefields and wire', when: (sel) => sel.some((s) => s.stats.lineCharge && (s.units[0].lineCharges ?? s.stats.lineCharge.count) > 0), count: (sel) => sel.reduce((a, s) => a + (s.stats.lineCharge ? s.units[0].lineCharges ?? s.stats.lineCharge.count : 0), 0) },
   { cmd: 'bridge', label: 'Lay bridge', icon: 'bridge', key: 'engineer', tip: 'Bridge layer: click the river — it drives to the bank and lays a crossing', when: (sel) => sel.some((s) => s.stats.bridgeLayer && !s.units[0].dropped) },
-  { cmd: 'smoke', label: 'Smoke', icon: 'smoke', key: 'smoke', tip: 'Vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
+  { cmd: 'smoke', label: 'Smoke', icon: 'smoke', key: 'smoke', tip: 'Infantry throws a smoke grenade ahead, vehicles pop their launchers; mortars: click where to lay the screen', when: (sel) => sel.some((s) => s.smokeLeft > 0 || s.smokeRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.smokeLeft || 0) + (s.smokeRounds || 0), 0) },
   { cmd: 'flare', label: 'Flare', icon: 'flare', key: 'flare', tip: 'Illumination: light the ground for half a minute', when: (sel, g) => g.conditions?.night && sel.some((s) => s.flareRounds > 0), count: (sel) => sel.reduce((a, s) => a + (s.flareRounds || 0), 0) },
+  { cmd: 'salvo', label: 'Salvo', icon: 'flare', key: 'salvo', tip: 'Click a spot: four rounds from every tube on it', when: (sel) => sel.some((s) => s.stats.indirect) },
+  { cmd: 'sustain', label: 'Sustained fire', icon: 'flare', key: 'sustain', tip: 'Click an area: a minute of shells scattered across it (Stop ends it)', when: (sel) => sel.some((s) => s.stats.indirect), on: (sel) => sel.some((s) => s.smokeOrder?.area) },
   { cmd: 'barrage', label: 'Feuerwalze', icon: 'flare', key: 'barrage', tip: 'Creeping barrage: click where it starts — the shells walk forward ahead of your advance', when: (sel) => sel.some((s) => s.stats.indirect && armyDoctrine(s.army, 'walze')) },
   { cmd: 'unload', label: 'Unload', icon: 'unload', key: 'unload', tip: 'The squad climbs out behind the vehicles', when: (sel) => sel.some((s) => s.passengers > 0) },
   { cmd: 'cancelJob', label: 'Cancel job', icon: 'cancel', key: 'cancelJob', tip: 'Call off the build order: the blueprint goes and the command points come back', when: (sel, g) => sel.some((s) => g.construction.sites.some((site) => site.stackId === s.id)) },
@@ -47,6 +56,8 @@ const ACTIONS = [
     on: (sel) => sel.some((s) => s.form === f),
   })),
   { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Foot: bayonets, at the run. Horse: at the gallop, sabres out. At the nearest enemy in sight — horses will not go into a square', when: (sel) => sel.some((s) => s.stats.formations || (s.stats.cavalry && !s.stats.loose)) },
+  { cmd: 'house:sandbag', label: 'Sandbag house', icon: 'sandbags', key: 'none', cost: () => HOUSE_UPGRADES.sandbag.cost, tip: 'Sandbags along the walls of the house this squad holds: the men at its windows take much less (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.fortified) },
+  { cmd: 'house:aid', label: 'Aid station', icon: 'reinforce', key: 'none', cost: () => HOUSE_UPGRADES.aid.cost, tip: 'Make the house this squad holds an aid station: a medic jeep stays posted there and drives out to wounded squads (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.aid) },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 
@@ -145,7 +156,7 @@ export class ActionBar {
     const g = this.game;
     const sel = [...g.commands.selected].filter((s) => s.alive);
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
-    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && (a.cmd === 'build:wire' || a.cmd === 'build:mines'))); // (1806: no wire, no mines)
+    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && ['build:wire', 'build:mines', 'build:mgNest', 'build:bunker', 'build:tankTraps', 'build:camoNet'].includes(a.cmd))); // (1806: none of the modern works)
     // only touch the DOM when what's shown changed
     const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}`).join('|');
     if (!force && key === this.key) return;

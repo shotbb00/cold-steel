@@ -39,7 +39,7 @@ export class Barrage {
     if (!m) return false;
     if (g.air.limit[faction] === 0) return g.tell(faction, 'No support in this battle') ?? false;
     if (!this.ready(faction)) return g.tell(faction, `Barrage not ready (${Math.ceil(this.cooldownLeft(faction))} s)`) ?? false;
-    if (!g.spend(faction, m.cost)) return g.tell(faction, `Not enough command points for the barrage (${m.cost})`) ?? false;
+    if (!g.spendFrom('support', faction, m.cost)) return g.tell(faction, `Not enough ${g.poolName('support')} for the barrage (${m.cost})`) ?? false;
     this.readyAt[faction] = g.time + m.cooldown;
     this.active.push({ faction, x, z, r: m.radius, start: g.time + FLIGHT, end: g.time + FLIGHT + m.duration, acc: 0 });
     g.tell(faction, `Preparatory barrage — the guns open up in ${FLIGHT} s`);
@@ -66,7 +66,7 @@ export class Barrage {
       }
     }
     if (!tubes.length) return g.tell(faction, 'Time on Target: no guns or mortars in range') ?? false;
-    if (!g.spend(faction, t.cost)) return g.tell(faction, `Not enough command points for Time on Target (${t.cost})`) ?? false;
+    if (!g.spendFrom('support', faction, t.cost)) return g.tell(faction, `Not enough ${g.poolName('support')} for Time on Target (${t.cost})`) ?? false;
     this.readyAt[faction] = g.time + t.cooldown;
     const T = t.flight;
     for (const { s, u, d } of tubes) {

@@ -300,7 +300,11 @@ export class ProjectileSystem {
       if (!this.cosmetic && b.crater >= 0.3) this.onCrater?.(point, r, b.crater); // trees down, crater cover (GameEngine.blastTerrain)
     }
     const onGround = Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5;
-    if (onGround && size >= 0.8) this.world.terrain.scorch(point.x, point.z, r * 0.7 + 1, 0.45); // the blast leaves a black mark
+    if (onGround && size >= 0.8) {
+      const t = this.world.terrain;
+      t.scorch(point.x, point.z, Math.max(r * 0.7 + 1, t.cell * 1.6), 0.55); // the blast leaves a black mark — for the rest of the battle (at least a ground cell and a half: on the big maps it was a dot)
+      if (size >= 1.3) this.effects.smoulder?.({ x: point.x, y: t.heightAt(point.x, point.z), z: point.z }, 25 + Math.random() * 20, Math.min(2, size * 0.8)); // a big one smoulders a while
+    }
     if (onGround && !this.cosmetic) this.fire?.ignite(point.x, point.z, b.ignite ?? 0.045 * size); // dry grass may catch — now and then (was 0.18: a salvo set the field alight; flame rounds bring their own b.ignite)
     // small HE (autocannon rounds) pops quieter and runs together: a burst of them mustn't flood the mix
     this.audio?.play(size > 1.5 ? 'explosion.big' : 'explosion', point, size < 0.8 ? { volume: 0.5, throttle: 0.12 } : { volume: 0.75, throttle: 0.05 });

@@ -152,7 +152,7 @@ export class HUD {
       const top = document.createElement('div');
       top.className = 'sel-top';
       top.append(span('sel-name', s.name), span('sel-type', `${s.type.shortName} · ${s.aliveCount}/${s.units.length}`));
-      box.replaceChildren(top, span('sel-state', `${s.ai.state} · ${s.moraleWord}`), bar(s));
+      box.replaceChildren(top, span('sel-state', `${s.stateText} · ${s.moraleWord}`), bar(s));
       box.insertAdjacentHTML('afterbegin', silhouette(s.type.id, artKey(s.type, s.army, s.faction), 'sel-sil'));
       return;
     }

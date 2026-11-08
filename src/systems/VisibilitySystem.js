@@ -94,7 +94,7 @@ export class VisibilitySystem {
     const lit = this.game.flares?.lit(u.pos.x, u.pos.z) ?? false;
     const inBuilding = u.atCover && u.coverSpot?.interior;
     const posture = inBuilding ? 0.45 : u.prone > 0.7 ? 0.45 : u.crouch > 0.6 && u.atCover ? 0.6 : 1;
-    const rest = (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1);
+    const rest = (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1) * (!u.moving && this.game.construction?.underNet(u.pos.x, u.pos.z, u.faction) ? 0.5 : 1); // a camouflage net: half as far
     for (const o of spotters) {
       const os = o.stats;
       // a sniper's scope (stats.scope: the share of that cover it sees past) finds men lying low

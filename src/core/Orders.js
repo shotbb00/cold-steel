@@ -19,6 +19,7 @@
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
+import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { enemyOf } from '../data/factions.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
@@ -70,6 +71,7 @@ export class Orders {
           s.waypoints = null;
           if (s.moveTarget) { s.anchor.x = s.centroid.x; s.anchor.z = s.centroid.z; } // stop here, not at the end of the formation's slide
           s.ai.defend();
+          s.smokeOrder = null; // (a fire mission, sustained fire: off)
           // vehicles halt each where it stands, not back into formation (ai/SoldierAI.js reads plannedSpots)
           if (!s.usesCover) s.ai.plannedSpots = new Map(s.units.filter((u) => u.alive).map((u) => [u, { x: u.pos.x, z: u.pos.z }]));
         }
@@ -93,9 +95,34 @@ export class Orders {
         for (const s of mine(cmd.s)) s.waypoints = null;
         const target = g.world.stackById(cmd.target);
         if (!target?.alive || target.faction === faction) return null;
-        for (const s of mine(cmd.s)) s.ai.attack(target);
+        for (const s of mine(cmd.s)) {
+          if (s.stats.cavalry && !s.stats.loose && s.startCharge(target)) continue; // 1806 horse: an attack order is a charge, after the enemy wherever it goes
+          s.ai.attack(target);
+        }
         return null;
       }
+      case 'houseUpgrade': { // the house a squad holds: sandbags or an aid station, from the building budget (systems/Buildings.js)
+        const s = own(cmd.s);
+        const b = s?.entered;
+        const up = HOUSE_UPGRADES[cmd.k];
+        if (!b || !up) return g.tell(faction, 'Put a squad in the house first');
+        if (cmd.k === 'sandbag' ? b.fortified : b.aid) return g.tell(faction, `The ${b.name} is ${up.label} already`);
+        if (!g.spendFrom('build', faction, up.cost)) return g.tell(faction, `Not enough ${g.poolName('build')} (${up.cost})`);
+        g.buildings.upgrade(b, cmd.k, faction);
+        g.tell(faction, `The ${b.name} is ${up.label} now`);
+        return null;
+      }
+      case 'holdFire': // per stack: hold fire (only the attack target) or fire at will (the default)
+        for (const s of mine(cmd.s)) { s.holdFire = !!cmd.on; for (const u of s.units) if (cmd.on && u.target) u.target = null; }
+        return null;
+      case 'sprint': // foot on the move: ~10 s at the run, then winded (slower) for 20 s; no second sprint till then
+        for (const s of mine(cmd.s)) {
+          if (!s.usesCover || !s.moveTarget || s.sprinting) continue;
+          if ((s.windedUntil ?? 0) > g.world.time) { g.tell(faction, `${s.name} is still out of breath`); continue; }
+          s.sprintUntil = g.world.time + 10;
+          s.windedUntil = s.sprintUntil + 20;
+        }
+        return null;
       case 'promote': { // a pitched battle's setup: a rank for a price (modes/pitched.js)
         const st = g.modeState;
         if (!st?.setup) return null;
@@ -139,9 +166,9 @@ export class Orders {
         if (def.layer && s.units[0]?.dropped) return g.tell(faction, `${s.name} has already laid its bridge`);
         if (cmd.k === 'demolish' && !g.map.bridgeAt?.(cmd.x, cmd.z)) return g.tell(faction, 'No bridge there to blow');
         const cost = structureCost(g, faction, def);
-        if (!g.spend(faction, cost)) return g.tell(faction, `Not enough command points (${cost})`);
+        if (!g.spendFrom('build', faction, cost)) return g.tell(faction, `Not enough ${g.poolName('build')} (${cost})`);
         if (!g.construction.place(cmd.k, cmd.x, cmd.z, cmd.yaw, faction, s)) {
-          g.refund(faction, cost);
+          g.refundTo('build', faction, cost);
           g.tell(faction, def.layer ? 'Pick a spot on the river, away from the other crossings' : "Can't build there");
         }
         return null;
@@ -168,9 +195,9 @@ export class Orders {
       case 'charge': { // 1806: the bayonet charge on a stack (cmd.at), or the nearest enemy in sight
         for (const s of mine(cmd.s)) {
           const target = (cmd.at != null && g.world.stackById(cmd.at)) || g.world.stacksOf(enemyOf(faction))
-            .filter((e) => e.alive && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < 160)
+            .filter((e) => e.alive && e.units.some((u) => u.alive && u.spotted) && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < (s.stats.cavalry ? 400 : 160))
             .sort((a, b) => Math.hypot(a.centroid.x - s.centroid.x, a.centroid.z - s.centroid.z) - Math.hypot(b.centroid.x - s.centroid.x, b.centroid.z - s.centroid.z))[0];
-          s.startCharge(target);
+          if (!s.startCharge(target)) g.tell(faction, `${s.name}: no enemy in sight to charge`);
         }
         return null;
       }
@@ -180,7 +207,7 @@ export class Orders {
       case 'popSmoke':
         for (const s of mine(cmd.s)) {
           const u = s.units.find((v) => v.alive);
-          s.ai.halt();
+          if (!s.usesCover) s.ai.halt(); // (a squad throws its grenade on the move)
           if (u) s.popSmoke(u);
         }
         return null;
@@ -200,10 +227,12 @@ export class Orders {
         const guns = mine(cmd.s).filter((s) => !s.barrage && tubes(s).some((u) => Math.hypot(cmd.x - u.pos.x, cmd.z - u.pos.z) <= u.stats.range));
         for (const s of guns) {
           s.ai.halt(); // (as for smoke: they stop, set up and fire)
-          s.smokeOrder = { x: cmd.x, z: cmd.z, left: Math.min(12, 3 * tubes(s).length), kind: 'he' };
+          s.smokeOrder = cmd.m === 'area' // sustained fire: a minute on the area, scattered over it (Stop ends it)
+            ? { x: cmd.x, z: cmd.z, left: Infinity, kind: 'he', area: 25, until: g.world.time + 60 }
+            : { x: cmd.x, z: cmd.z, left: Math.min(cmd.m === 'salvo' ? 16 : 12, (cmd.m === 'salvo' ? 4 : 3) * tubes(s).length), kind: 'he' }; // a salvo: four rounds a tube
           for (const u of s.units) u.retarget = 0;
         }
-        g.tell(faction, guns.length ? `Fire mission: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
+        g.tell(faction, guns.length ? `${cmd.m === 'area' ? 'Sustained fire' : cmd.m === 'salvo' ? 'Salvo' : 'Fire mission'}: ${guns.map((s) => s.name).join(', ')}` : 'Fire mission: no guns in range');
         return null;
       }
       case 'flare':

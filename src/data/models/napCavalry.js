@@ -70,15 +70,21 @@ function trooper(army, kind) {
     ...cfg.hat(c),
   ];
   // the arms forward to the reins; the sabre held at the slope against the right shoulder
-  const arms = [
-    ...armsHold({ sleeve: c.coat, cuff: c.facing }),
-    P.box(0.012, 0.75, 0.03, { x: 0.2, y: 1.62, z: 0.12, rx: -0.35, color: STEEL }),
-    P.box(0.07, 0.02, 0.04, { x: 0.2, y: 1.27, z: 0.25, color: BRASS }),                                         // the hilt
+  const arms = [...armsHold({ sleeve: c.coat, cuff: c.facing })];
+  // the sabre on its own, about the hand (SABRE_HAND): up at the slope, forward at the charge, swung in the mêlée (rider())
+  const sabre = [
+    P.box(0.024, 0.8, 0.014, { x: 0, y: 0.37, z: -0.13, rx: -0.35, color: STEEL }),                            // the blade
+    P.box(0.08, 0.025, 0.045, { x: 0, y: 0, z: 0, color: BRASS }),                                              // the hilt
   ];
-  return { torso, arms, thigh: [thighPart({ color: c.breeches })], shin: shinPart({ color: c.breeches, boot: BLACK, bootTop: 0.48, blouse: false }), cfg };
+  const sabreAbs = [ // (the same in the hand of a man on foot, buildCavalryFoot)
+    P.box(0.024, 0.8, 0.014, { x: 0.2, y: 1.64, z: 0.12, rx: -0.35, color: STEEL }),
+    P.box(0.08, 0.025, 0.045, { x: 0.2, y: 1.27, z: 0.25, color: BRASS }),
+  ];
+  return { torso, arms, sabre, sabreAbs, thigh: [thighPart({ color: c.breeches })], shin: shinPart({ color: c.breeches, boot: BLACK, bootTop: 0.48, blouse: false }), cfg };
 }
 
-const SEAT = { y: 1.66, z: 0.05 };          // the saddle seat (horse space)
+const SEAT = { y: 1.66, z: 0.05 };
+const SABRE_HAND = { x: 0.2, y: 1.27, z: 0.25 }; // (torso space: the right hand at the reins)          // the saddle seat (horse space)
 const material = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
 
 /** The rider seated, as a group to sit on the horse's body (or to lie on the ground when he falls). */
@@ -90,6 +96,10 @@ function rider(army, kind) {
   const body = new THREE.Mesh(merge([...p.torso, ...p.arms]), mat);
   body.position.set(0, lift, SEAT.z);
   g.add(body);
+  const sabre = new THREE.Group();
+  sabre.position.set(SABRE_HAND.x, lift + SABRE_HAND.y, SEAT.z + SABRE_HAND.z);
+  sabre.add(new THREE.Mesh(merge(p.sabre), mat));
+  g.add(sabre);
   for (const s of [-1, 1]) {
     const hip = new THREE.Group();
     hip.position.set(s * 0.14, SEAT.y, SEAT.z + 0.02);
@@ -103,7 +113,7 @@ function rider(army, kind) {
     g.add(hip);
   }
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-  return { group: g, cfg: p.cfg };
+  return { group: g, cfg: p.cfg, sabre };
 }
 
 const COATS = ['bay', 'bay', 'chestnut', 'black', 'grey'];
@@ -116,8 +126,11 @@ export function buildCavalry({ army = 'fr', kind = 'heavy', mounted = true } = {
   const horse = buildHorse({ coat: coats[Math.floor(Math.random() * coats.length)], saddle: { cloth: cfg.cloth, trim: cfg.trim } });
   const root = horse.root;
   let man = null;
+  let sabre = null;
   if (mounted) {
-    man = rider(army, kind).group;
+    const r = rider(army, kind);
+    man = r.group;
+    sabre = r.sabre;
     man.position.y = -1.2;                    // (the horse's body group sits at y 1.2)
     horse.body.add(man);
   }
@@ -139,6 +152,12 @@ export function buildCavalry({ army = 'fr', kind = 'heavy', mounted = true } = {
       while (i > 0 && v < down[order[i]]) i--;
       gait = order[i];
       horse.update(dt, gait, ctx?.onHoof && ((L) => ctx.onHoof(root.position, gait)));
+      if (sabre) { // at the slope; forward at the charge; a cut when he strikes (u.slashT, UnitStack.updateSabres)
+        const cut = u.slashT > 0 ? Math.sin(Math.min(1, 1 - u.slashT / 0.35) * Math.PI) : 0;
+        const want = (u.sabreUp ? 1.15 : 0) + cut * 0.9; // (positive: the point forward)
+        sabre.rotation.x += (want - sabre.rotation.x) * Math.min(1, dt * (cut ? 18 : 6));
+        if (u.slashT > 0) u.slashT -= dt;
+      }
     },
     die(time, dt) {
       const fate = this.fate ?? 'both';
@@ -164,7 +183,7 @@ export function buildCavalryFoot({ army = 'fr', kind = 'heavy' } = {}) {
   const p = trooper(army, kind);
   return {
     torso: finish(merge(p.torso)),
-    arms: finish(merge(p.arms)),
+    arms: finish(merge([...p.arms, ...p.sabreAbs])),
     glow: null,
     thigh: finish(merge(p.thigh), false),
     shin: finish(merge(p.shin), false),

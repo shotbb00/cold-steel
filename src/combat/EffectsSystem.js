@@ -14,6 +14,7 @@
 //   burn(pos, duration, size)         – keep a wreck burning and smoking
 import * as THREE from 'three';
 import { wind } from '../world/Wind.js';
+import { touchScreen } from '../core/Keys.js';
 
 const MAX_SMOKE = 3000;
 const MAX_FIRE = 1500;
@@ -483,19 +484,35 @@ export class EffectsSystem {
     if (Math.random() < 0.3) this.smoke.spawn(pos.x, pos.y + 0.8, pos.z, { vy: rnd(1.5, 3), size: rnd(1, 1.8), grow: 1.6, life: rnd(1.5, 2.5), alpha: 0.7, color: SMOKE_BLACK, drag: 1, wind: 0.5 });
   }
 
+  /**
+   * A fresh crater smouldering: a thin grey wisp for `duration` s, no flame. At most SMOULDER_MAX at once
+   * (fewer on a phone): the oldest gives way to a new one.
+   */
+  smoulder(pos, duration = 35, size = 1) {
+    const max = touchScreen() ? 5 : 12;
+    const now = this.emitters.filter((e) => e.kind === 'smoulder');
+    if (now.length >= max) this.emitters.splice(this.emitters.indexOf(now[0]), 1);
+    this.emitters.push({ kind: 'smoulder', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
+  }
+
   burn(pos, duration = 40, size = 1) {
     this.emitters.push({ kind: 'burn', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size, acc: 0 });
   }
 
-  /** A volley's powder smoke (1806): a loose grey-white bank along the front of the line, drifting off on the wind. */
+  /**
+   * A volley's powder smoke (1806): a loose grey-white bank along the front of the line, drifting off on
+   * the wind. On a computer it lingers longer, bigger and fainter — a haze over the field as it fills
+   * with fighting (the 1806 tester's wish); phones keep the lighter, shorter smoke.
+   */
   powderBank(x, y, z, yaw, width) {
+    const pc = !touchScreen();
     const n = Math.max(1, Math.round(width / 1.6)); // (a man's own share of the bank: one or two puffs)
     const ax = Math.cos(yaw), az = -Math.sin(yaw), fx = Math.sin(yaw), fz = Math.cos(yaw);
     for (let i = 0; i < n; i++) {
       const s = (n > 1 ? (i / (n - 1) - 0.5) * width : 0) + rnd(-0.6, 0.6), ahead = rnd(1.5, 4.5);
       this.smoke.spawn(x + ax * s + fx * ahead, y + rnd(1, 1.8), z + az * s + fz * ahead, {
-        vx: fx * rnd(0.3, 0.9), vy: rnd(0.1, 0.35), vz: fz * rnd(0.3, 0.9), size: rnd(1.6, 2.6), grow: 1.3,
-        life: rnd(6, 9), alpha: 0.26, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
+        vx: fx * rnd(0.3, 0.9), vy: rnd(0.1, 0.35), vz: fz * rnd(0.3, 0.9), size: pc ? rnd(1.9, 3) : rnd(1.6, 2.6), grow: pc ? 1.7 : 1.3,
+        life: pc ? rnd(11, 17) : rnd(6, 9), alpha: pc ? 0.2 : 0.26, color: 0xd8d6ce, drag: 0.5, wind: 0.9,
       });
     }
   }
@@ -536,6 +553,18 @@ export class EffectsSystem {
       e.t += dt;
       if (e.t > e.duration) { this.emitters.splice(i, 1); continue; }
       if (e.kind === 'screen') { this.updateScreen(e, dt); continue; }
+      if (e.kind === 'smoulder') { // a wisp now and then, thinning out
+        const k = 1 - e.t / e.duration;
+        e.acc += dt * (0.8 + 1.2 * k);
+        while (e.acc >= 1) {
+          e.acc -= 1;
+          this.smoke.spawn(e.pos.x + rnd(-0.6, 0.6) * e.size, e.pos.y + 0.2, e.pos.z + rnd(-0.6, 0.6) * e.size, {
+            vx: rnd(-0.2, 0.2), vy: rnd(0.8, 1.4), vz: rnd(-0.2, 0.2), size: rnd(0.6, 1) * e.size, grow: 2.2,
+            life: rnd(6, 9), alpha: 0.16 + 0.18 * k, color: 0x6e6c68, drag: 0.4, wind: 1.6,
+          });
+        }
+        continue;
+      }
       const k = 1 - e.t / e.duration;  // dies down over time
       e.acc += dt * (4 + 8 * k);
       while (e.acc >= 1) {

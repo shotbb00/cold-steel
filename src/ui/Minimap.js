@@ -179,7 +179,7 @@ export class Minimap {
     c.lineWidth = 1;
 
     // control points
-    for (const p of game.modeState?.points?.points ?? []) {
+    for (const p of [...(game.modeState?.points?.points ?? []), ...(game.modeState?.sides?.points ?? [])]) { // (and the side objectives: systems/Economy.js)
       const [mx, my] = this.toMap(p.x, p.z);
       const r = (p.radius / (2 * this.bx)) * this.w + 2;
       c.beginPath();
@@ -275,6 +275,17 @@ export class Minimap {
         c.strokeRect(mx - size - 2, my - size - 2, size * 2 + 4, size * 2 + 4);
         c.lineWidth = 1;
       }
+    }
+
+    // where the fighting is: a pulsing ring on stacks that fired in the last few seconds (yours, and the enemy's you can see)
+    const t = game.world.time;
+    c.strokeStyle = 'rgba(255,120,60,0.85)';
+    for (const s of game.world.stacks) {
+      if (!s.alive || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
+      const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
+      c.beginPath();
+      c.arc(mx, my, 6 + 4 * ((t * 1.5 + s.id * 0.37) % 1), 0, Math.PI * 2);
+      c.stroke();
     }
 
     // helicopter runs: yours from the call, the enemy's once it shows up

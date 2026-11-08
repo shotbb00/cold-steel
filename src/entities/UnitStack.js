@@ -28,6 +28,7 @@ import { barkLine } from '../data/barks.js';
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
 import { KITS } from '../data/kits.js';
+import { touchScreen } from '../core/Keys.js';
 import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
@@ -227,6 +228,10 @@ export class UnitStack {
     }
   }
 
+  /** Foot on a sprint order (core/Orders.js 'sprint'): at the run while it lasts, then winded a while. */
+  get sprinting() { return this.moveTarget && (this.sprintUntil ?? 0) > this.world.time; }
+  get winded() { return (this.windedUntil ?? 0) > this.world.time && !this.sprinting; }
+
   get usesCover() {
     return this.kind === 'infantry';
   }
@@ -241,6 +246,21 @@ export class UnitStack {
     let max = 0;
     for (const u of this.units) { hp += u.hp; max += u.maxHp; }
     return max ? hp / max : 0;
+  }
+
+  /** A heavy weapon (artillery, a tank's main gun): seconds till every gun of it is loaded again (0: ready). Others: null. */
+  get reloadLeft() {
+    const s = this.stats;
+    if (this.usesCover || !(s.indirect || s.fireCooldown >= 3)) return null;
+    let left = 0;
+    for (const u of this.units) if (u.alive) left = Math.max(left, u.reloadT > 0 ? u.reloadT : u.cooldown / ((u.fireRateMult || 1) * (this.doc?.fire ?? 1)));
+    return left;
+  }
+
+  /** The label's state line, with the reload count of your own heavy weapons. */
+  get stateText() {
+    const left = this.reloadLeft;
+    return left > 0.5 && this.services.game?.mine?.(this) ? `${this.ai.state} · Reload ${Math.ceil(left)} s` : this.ai.state;
   }
 
   get moraleWord() {
@@ -484,7 +504,7 @@ export class UnitStack {
         for (const u of this.units) if (u.alive && !u.possessed) { lag += Math.hypot(u.pos.x - u.dest.x, u.pos.z - u.dest.z); n++; }
         lag = n ? lag / n : 0;
         const k = clamp(1.4 - lag / (8 + this.footprint * 0.3), 0.15, 1);
-        const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : 1) * k;
+        const speed = s.speed * (this.ai.state === AIState.RETREAT ? 1.45 : this.sprinting ? 1.5 : 1) * (this.winded ? 0.8 : 1) * k;
         this.anchor.addScaledVector(_v, Math.min(d, speed * dt) / d);
         if (!this.faceTarget) this.turnToward(Math.atan2(_v.x, _v.z), dt);
       }
@@ -556,6 +576,7 @@ export class UnitStack {
     let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
+    if (this.winded) maxSpeed *= 0.8;
     // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
     // tents go up, the vehicle kit's `deploy`), and when ordered off they pack up first, standing
     // still, in PACK of that time — they only work fully set up
@@ -790,6 +811,13 @@ export class UnitStack {
     if (s.towed) {
       u.towing = !u.setUp || this.world.time - u.setUp.at < s.towed.deploy;
       if (u.towing) { u.target = null; u.airTarget = null; return; }
+      // an anti-tank gun left in place 20 s: the crew piles a sandbag wall in front of the shield (free; it stays when they go)
+      const g = this.services.game;
+      if (s.antiArmor && !s.indirect && u.pitAt !== u.setUp && g && !g.net?.isClient && this.world.time - u.setUp.at > s.towed.deploy + 20) {
+        u.pitAt = u.setUp;
+        const site = g.construction.place('sandbags', u.pos.x + Math.sin(u.yaw) * 2.4, u.pos.z + Math.cos(u.yaw) * 2.4, u.yaw, this.faction, null, { force: true });
+        if (site) g.construction.finish(site);
+      }
     }
     u.cooldown -= dt * u.fireRateMult * (this.doc?.fire ?? 1);
     u.retarget -= dt;
@@ -887,7 +915,7 @@ export class UnitStack {
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
     if (u.target) u.calmT = 0;
-    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; this.smokeLeft = this.stats.smoke?.charges ?? 0; } // grenades, rockets and smoke from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -954,7 +982,9 @@ export class UnitStack {
       this.services.tell?.(this.faction, `${this.name}: the horses won't face the square`);
       return;
     }
-    if (!t.alive || t.ai.state === AIState.RETREAT || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
+    // a broken enemy is ridden down a while (horse ~6 s, the bayonets ~4 s), then the charge rallies
+    if (t.alive && t.ai.state === AIState.RETREAT) c.pursueUntil ??= this.world.time + (this.stats.cavalry ? 6 : 4);
+    if (!t.alive || this.world.time > (c.pursueUntil ?? Infinity) || this.world.time > c.until || this.morale < (this.stats.breakMorale ?? 0)) { this.endCharge(); return; }
     if ((c.steer -= dt) <= 0) { c.steer = 0.5; this.ai.moveTo({ x: t.centroid.x, z: t.centroid.z }, { ordered: true }); }
     const d = Math.hypot(t.centroid.x - this.centroid.x, t.centroid.z - this.centroid.z);
     if (!c.shocked && d < 30) {
@@ -971,8 +1001,11 @@ export class UnitStack {
     if (!(this.form || this.stats.cavalry) || this.stats.loose || !target?.alive || this.charging) return false;
     const cav = this.stats.cavalry;
     const perk = cav ? (this.type.id === 'tank' && armyDoctrine(this.army, 'cuirassiers')) : armyDoctrine(this.army, 'pasDeCharge'); // (Prussia's cuirassiers, France's pas de charge)
-    this.charging = { target, steer: 0, shocked: false, until: this.world.time + (cav ? 30 : 45), shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
-    if (cav) { // at the gallop
+    const far = Math.hypot(target.centroid.x - this.centroid.x, target.centroid.z - this.centroid.z);
+    this.charging = { target, steer: 0, shocked: false, until: this.world.time + Math.max(cav ? 30 : 45, far / (cav?.chargeSpeed ?? 3) + 15), // (long enough to get there on the big maps)
+      shock: (cav?.shock ? cav.shock / 0.3 : 1) * (perk?.shock ?? 1) };
+    if (cav) { // at the gallop, sabres forward
+      for (const u of this.units) u.sabreUp = true;
       this.chargeBase = this.stats;
       this.stats = { ...this.stats, speed: cav.chargeSpeed };
       for (const u of this.units) u.stats = this.stats;
@@ -982,16 +1015,29 @@ export class UnitStack {
   }
 
   endCharge() {
+    const t = this.charging?.target;
     this.charging = null;
+    for (const u of this.units) u.sabreUp = false;
     if (this.chargeBase) { this.stats = this.chargeBase; this.chargeBase = null; for (const u of this.units) u.stats = this.stats; }
-    if (this.alive) this.ai.defend();
+    if (!this.alive) return;
+    // horse doesn't stand about in musket range: with the enemy still on its feet close by, it rides
+    // back out of reach and re-forms there (the charge done, the squadron saved for the next one)
+    if (this.stats.cavalry && t?.alive && t.ai.state !== AIState.RETREAT) {
+      const dx = this.centroid.x - t.centroid.x, dz = this.centroid.z - t.centroid.z;
+      const d = Math.hypot(dx, dz) || 1;
+      if (d < 120) {
+        this.ai.moveTo(this.world.clampToBounds({ x: t.centroid.x + (dx / d) * 130, z: t.centroid.z + (dz / d) * 130 }), { hold: true, ordered: false });
+        return;
+      }
+    }
+    this.ai.defend();
   }
 
   /** Sabres: a trooper strikes at the enemy within reach — hard at the gallop, less in a mêlée. */
   updateSabres(dt) {
     const cav = this.stats.cavalry;
     if (!cav?.sabre) return;
-    const rate = this.charging ? 1.5 : 0.7;
+    const rate = this.charging ? 1.5 : 1; // (cuts a second in the mêlée, more at the gallop)
     for (const u of this.units) {
       if (!u.alive || Math.random() > rate * dt) continue;
       let best = null, bd = (cav.reach + 0.6) ** 2;
@@ -1001,7 +1047,7 @@ export class UnitStack {
         const d = dist2DSq(u.pos, o.pos);
         if (d < bd) { bd = d; best = o; }
       }
-      if (best) best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1);
+      if (best) { best.receiveDamage(cav.sabre * (0.6 + Math.random() * 0.7) * u.damageMult, this, 0, null, 1); u.slashT = 0.35; } // (the cut shows: models/napCavalry.js)
     }
   }
 
@@ -1110,6 +1156,7 @@ export class UnitStack {
       for (let i = 0; i < G.pellets; i++) this.shoot(u, _v, G.pelletSpread, { damage: G.pelletDamage, through: 1, size: 0.5, tracer: false, quiet: true, life: (G.canister * 1.4) / s.boltSpeed });
       this.services.effects.muzzle(_p, _w, 2, 'cannon');
       this.services.effects.powderBank?.(_p.x, this.world.terrain.heightAt(_p.x, _p.z), _p.z, u.turretYaw, 4);
+      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
       this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
       VisibilitySystem.revealShooter(u);
       return true;
@@ -1146,7 +1193,8 @@ export class UnitStack {
     this.volleyFirst = null;
     // the powder smoke in front of each man who fires — where the muskets are (one bank across the
     // company's spread drew a long line over empty ground when the men were strung out)
-    for (const m of this.units) if (m.volleyGo && Math.random() < 0.5) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (every other man: two lines' smoke shouldn't wall off the fight) // (a haze: it doesn't blind like a screen)
+    const share = touchScreen() ? 0.5 : 1; // (a phone: every other man's smoke; a computer: every man's, fainter and longer — EffectsSystem.powderBank)
+    for (const m of this.units) if (m.volleyGo && Math.random() < share) this.services.effects?.powderBank(m.pos.x, m.pos.y, m.pos.z, m.yaw, 1.6); // (a haze: it doesn't blind like a screen)
     return false;
   }
 
@@ -1191,6 +1239,7 @@ export class UnitStack {
         size: 0.9, source: this, life: len / 700 + 0.3, tracer: Math.random() < 0.6,
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
+      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
       this.services.audio?.weapon(this.faction, this.weaponSound, _p);
       const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
@@ -1234,6 +1283,7 @@ export class UnitStack {
     air.missile(_p, h, this.faction, aa);
     _w.subVectors(h.pos, _p).normalize();
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, aa.sound ?? 'sam', _p);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1256,6 +1306,7 @@ export class UnitStack {
       tracer: true, trail: true, guide: t,
     });
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, 'rocket', _p);
     VisibilitySystem.revealShooter(u);
   }
@@ -1329,19 +1380,21 @@ export class UnitStack {
     const eyeY = u.pos.y + (s.eyeHeight ?? 1.4);
     let best = null;
     let bestScore = Infinity;
-    if (s.indirect) return this.pickIndirectTarget(u);
+    if (s.indirect) return this.holdFire ? null : this.pickIndirectTarget(u); // hold fire: only what it is sent at (fire missions come before this)
     for (const e of this.world.combatants(enemyOf(this.faction))) {
       if (!e.alive || !e.spotted) continue; // you can only shoot what your side can see
       const d2 = dist2DSq(u.pos, e.pos);
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
+      else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
       if (e.stack.stats.airRadar) score -= 25;     // the radar first: it is the enemy's air defence's eyes
       if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches
@@ -1373,6 +1426,9 @@ export class UnitStack {
       if (!e.alive || !e.spotted) continue;
       const d = Math.sqrt(dist2DSq(u.pos, e.pos));
       if (d < s.minRange || d > s.range) continue;
+      // not on its own side's heads: no shells where friends are near the target (orders and fire missions decide for themselves)
+      const safe = Math.max(20, (s.splash ?? 4) * 3);
+      if (this.world.neighbors(e.pos, safe, _near).some((o) => o.faction === this.faction && o.alive && dist2DSq(o.pos, e.pos) < safe * safe)) continue;
       let cluster = 0;
       for (const o of this.world.neighbors(e.pos, 8, _near)) if (o.faction === foe) cluster++;
       const located = e.locatedUntil > this.world.time ? 30 : 0; // the counter-battery radar's find: the enemy's guns first
@@ -1416,6 +1472,7 @@ export class UnitStack {
       suppress: 2, ignore: u.coverSpot?.collider ?? null, tracer: true, trail: true,
     });
     this.services.effects.muzzle(_p, _w, 1.2, 'rocket');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, 'rocket', _p, u.atCover && !!u.coverSpot?.interior);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1496,6 +1553,7 @@ export class UnitStack {
       tracer: !!s.trail, trail: !!s.trail && !smoke && !flare, smoke, flare,
     });
     this.services.effects.muzzle(_p, _w, 1, s.muzzleKind ?? 'artillery');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p);
     VisibilitySystem.revealShooter(u);
     if (!smoke && !flare) this.services.game?.counterBattery?.fired(this, u); // an enemy radar may track it back
@@ -1536,7 +1594,14 @@ export class UnitStack {
     const flare = o?.kind === 'flare';
     const he = o?.kind === 'he'; // shells on the spot: a fire mission called through binoculars (systems/PlayerControl.js)
     if (!o || !u.stats.indirect || (he ? 1 : flare ? this.flareRounds : this.smokeRounds) <= 0) return null;
+    if (o.until && this.world.time > o.until) { this.smokeOrder = null; return null; } // sustained fire: its time is up
     o.target ??= { pos: { x: o.x, y: this.world.terrain.heightAt(o.x, o.z), z: o.z }, alive: true, spotted: true, aimHeight: 0, stack: { kind: 'infantry' }, smoke: !flare && !he, flare };
+    if (o.area) { // sustained fire: each aim at another point of the area
+      const a = Math.random() * Math.PI * 2;
+      const r = o.area * Math.sqrt(Math.random());
+      const p = o.target.pos;
+      p.x = o.x + Math.sin(a) * r; p.z = o.z + Math.cos(a) * r; p.y = this.world.terrain.heightAt(p.x, p.z);
+    }
     return o.target;
   }
 
@@ -1583,15 +1648,15 @@ export class UnitStack {
     }
   }
 
-  /** Vehicle smoke grenade launchers: a screen between `u` and the threat (dir: incoming shot). */
+  /** Smoke grenade launchers (vehicles) or thrown smoke grenades (infantry): a screen between `u` and the threat (dir: incoming shot). */
   popSmoke(u, dir = null) {
     if (this.smokeLeft <= 0 || this.world.time < (this.smokeReadyAt ?? 0)) return false;
     this.smokeLeft--;
     this.smokeReadyAt = this.world.time + 8;
-    let yaw = u.turretYaw;
+    let yaw = this.usesCover ? u.yaw : u.turretYaw;
     if (dir) yaw = Math.atan2(-dir.x, -dir.z); // toward where the shot came from
     const d = 12;
-    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, { radius: 9, duration: 40 });
+    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, this.usesCover ? { radius: 7, duration: 30 } : { radius: 9, duration: 40 });
     this.services.tell?.(this.faction, `${this.name}: smoke!`);
     return true;
   }
@@ -1624,6 +1689,7 @@ export class UnitStack {
     if (t.vel) _v.addScaledVector(t.vel, (dist / s.boltSpeed) * (s.marksman ? 1 : 0.7)); // lead moving targets a little (a sniper: fully)
     const spread = s.spread * u.skill
       * (1 - 0.1 * this.rank)                  // veterans shoot straighter
+      * (s.weapon === 'musket' && t.vel ? 1 + Math.min(1.2, Math.hypot(t.vel.x, t.vel.z) / 8) : 1) // (a smoothbore at a galloping horseman: far wider)
       * (1 + (0.8 * dist) / s.range)
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
@@ -1678,6 +1744,7 @@ export class UnitStack {
     });
     if (over?.quiet) return; // (canister: one report for the whole load)
     this.services.effects.muzzle(_p, _w, this.usesCover ? 1 : 1.5, s.weapon ?? 'rifle');
+    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
     this.services.audio?.weapon(this.faction, s.weaponSound ?? this.weaponSound, _p, u.atCover && !!u.coverSpot?.interior, this.army, u.mag === 1);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1711,7 +1778,7 @@ export class UnitStack {
       // Infantry: a solid hit is usually decisive — down, or wounded if lucky. Wounded men
       // don't survive a second one. Small grazes (splash edges, beam spill) just wear on them.
       if (u.atCover && this.dugIn) amount *= 0.75; // entrenched defenders are harder to hurt
-      if (u.atCover && u.coverSpot?.interior) amount *= 0.6; // inside, behind brick walls
+      if (u.atCover && u.coverSpot?.interior) amount *= u.coverSpot.interior.fortified ? 0.36 : 0.6; // inside, behind brick walls (and sandbags: Buildings.upgrade)
       if (amount >= 35) {
         const pDown = u.wounded ? 1 : u.possessed ? 0.45 : 0.7;
         amount = Math.random() < pDown ? u.hp + 1 : Math.max(0, u.hp - this.stats.hp * 0.3);
@@ -1740,6 +1807,11 @@ export class UnitStack {
     if (source && source.faction !== this.faction && source.alive) {
       this.lastAttacker = source;
       this.lastHitTime = this.world.time;
+      // infantry hit in the attack, on the move or pinned: a smoke grenade toward the shooter
+      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !this.garrison && (this.ai.state === AIState.ATTACK || this.moveTarget || u.suppression > 0.7)) {
+        const from = source.centroid ?? source.pos;
+        if (from) this.popSmoke(u, { x: u.pos.x - from.x, z: u.pos.z - from.z });
+      }
     }
     if (u.hp > 0) {
       if (u.wounded && !u.woundedBarked) {

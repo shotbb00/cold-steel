@@ -168,6 +168,8 @@ export class CommandSystem {
     else if (keys.is(code, 'hold')) this.runCommand('hold');
     else if (keys.is(code, 'withdraw')) this.runCommand('withdraw');
     else if (keys.is(code, 'promote')) this.runCommand('promote');
+    else if (keys.is(code, 'sprintOrder')) this.runCommand('sprint');
+    else if (keys.is(code, 'holdFire')) this.runCommand('holdFire');
     else if (keys.is(code, 'sandbags')) this.runCommand('build:sandbags');
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
@@ -179,6 +181,8 @@ export class CommandSystem {
     else if (keys.is(code, 'cap')) this.runCommand('air:cap');
     else if (keys.is(code, 'recon')) this.runCommand('air:recon');
     else if (keys.is(code, 'barrage')) this.runCommand('barrage');
+    else if (keys.is(code, 'salvo')) this.runCommand('salvo');
+    else if (keys.is(code, 'sustain')) this.runCommand('sustain');
     else if (keys.is(code, 'cancelJob')) this.runCommand('cancelJob');
     else if (keys.is(code, 'smoke')) this.runCommand('smoke');
     else if (keys.is(code, 'unload')) this.runCommand('unload');
@@ -246,6 +250,21 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd.startsWith('house:')) {
+      const s = [...this.selected].find((st) => st.alive && st.entered);
+      if (!s) return this.game.bus.emit('toast', 'Select a squad in a house');
+      this.game.orders.issue({ t: 'houseUpgrade', s: s.id, k: cmd.slice(6) });
+    } else if (cmd === 'holdFire') {
+      const sel = [...this.selected].filter((s) => s.alive && s.stats.damage > 0);
+      if (!sel.length) return;
+      const on = !sel.every((s) => s.holdFire);
+      this.game.orders.issue({ t: 'holdFire', s: ids(sel), on: on ? 1 : 0 });
+      for (const s of sel) s.holdFire = on; // (shown at once, also on a guest's screen)
+      this.game.bus.emit('toast', on ? 'Hold fire: only at what you order them to attack' : 'Fire at will');
+    } else if (cmd === 'sprint') {
+      const sel = [...this.selected].filter((s) => s.alive && s.usesCover && s.moveTarget);
+      if (!sel.length) return this.game.bus.emit('toast', 'Send infantry somewhere first, then sprint');
+      this.game.orders.issue({ t: 'sprint', s: ids(sel) });
     } else if (cmd === 'promote') {
       const sel = [...this.selected].filter((s) => s.alive && !s.stats.structure);
       if (!sel.length) return this.game.bus.emit('toast', 'Select the stacks to promote');
@@ -283,7 +302,7 @@ export class CommandSystem {
       const vehicles = sel.filter((s) => s.smokeLeft > 0);
       const mortars = sel.filter((s) => s.smokeRounds > 0);
       if (mortars.length) return this.startTargeting({ kind: 'smoke', stacks: mortars });
-      if (!vehicles.length) return this.game.bus.emit('toast', 'Select vehicles with smoke launchers, or a mortar team');
+      if (!vehicles.length) return this.game.bus.emit('toast', 'Select infantry or vehicles with smoke, or a mortar team');
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       const air = cmd.slice(4) || 'heli';
@@ -297,6 +316,10 @@ export class CommandSystem {
       if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
       if (!g.powers.ready(this.faction, k)) return g.bus.emit('toast', `${POWERS_1806[k].label} ${POWERS_1806[k].once ? 'already called' : `not ready (${Math.ceil(g.powers.cooldownLeft(this.faction, k))} s)`}`);
       this.startTargeting({ kind: 'smoke', power: k });
+    } else if (cmd === 'salvo' || cmd === 'sustain') {
+      const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect);
+      if (!guns.length) return this.game.bus.emit('toast', 'Select artillery, rocket launchers or mortars');
+      this.startTargeting({ kind: 'smoke', fire: cmd === 'salvo' ? 'salvo' : 'area', stacks: guns });
     } else if (cmd === 'barrage') {
       const g = this.game;
       if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
@@ -352,10 +375,12 @@ export class CommandSystem {
       geo.rotateX(-Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
       t.ghost = t.decal.mesh;
-      if (t.barrage || t.walze) t.decal.mesh.material.color.set(0xe0904a);
+      if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
       const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
       t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
+        : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
+        : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
       // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
@@ -508,6 +533,9 @@ export class CommandSystem {
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.fire) {
+      this.game.orders.issue({ t: 'fireMission', s: ids(t.stacks), x: p.x, z: p.z, m: t.fire });
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.walze) {
       this.game.orders.issue({ t: 'walze', s: ids(t.stacks), x: p.x, z: p.z });
@@ -694,6 +722,10 @@ export class CommandSystem {
     }
     this.moveGroup([...this.selected], p, { hold });
     this.addMarker(p, hold ? 'hold' : 'move');
+    // the same spot ordered twice in quick succession: at the run
+    const now = performance.now();
+    if (this.lastMove && now - this.lastMove.time < 400 && Math.hypot(x - this.lastMove.x, y - this.lastMove.y) < 24) { this.lastMove = null; this.runCommand('sprint'); }
+    else this.lastMove = { time: now, x, y };
   }
 
   /** Right-drag: move the selection to `p0` and hold there facing toward `p1`. */

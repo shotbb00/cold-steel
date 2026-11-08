@@ -18,6 +18,7 @@ import { enemyOf, FACTIONS } from '../data/factions.js';
 import { makeBuyer } from './shared.js';
 import { getUnitType } from '../data/units/index.js';
 import { DIFFICULTY } from '../data/rules.js';
+import { Economy, sideObjectiveDefs } from '../systems/Economy.js';
 
 const START_CP = 350;
 const BASE_INCOME = 1.5;      // CP / s regardless of points
@@ -59,7 +60,7 @@ export default {
     state.buy = makeBuyer(game, state);
     if (this.air === false) for (const f of [game.playerFaction, foe]) game.air.limit[f] = 0;
     game.modeState = state;
-    game.systems.push(points);
+    game.systems.push(points, new Economy(game, state)); // the building and support budgets, the side objectives
     if (!game.net || game.coop) game.systems.push(new FrontlineDirector(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
     game.frontlineHud = new FrontlineHUD(game, state);
 
@@ -83,7 +84,9 @@ export default {
       maxStrength: this.strength ?? START_STRENGTH,
       maxStacks: map.maxStacks ?? MAX_STACKS,
       allow: this.allow ?? null,
+      build: { [me]: 0, [foe]: 0 }, support: { [me]: 0, [foe]: 0 }, // (the host's numbers arrive)
     };
+    state.sides = new ControlPoints(game, sideObjectiveDefs(game, state.points.points));
     if (this.air === false) for (const f of [me, foe]) game.air.limit[f] = 0;
     game.modeState = state;
     game.frontlineHud = new FrontlineHUD(game, state);
@@ -98,6 +101,7 @@ export default {
 
   clientUpdate(game) {
     game.modeState.points.flutter(game.time);
+    game.modeState.sides?.flutter(game.time);
     game.frontlineHud.update();
   },
 
