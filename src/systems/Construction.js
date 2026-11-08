@@ -6,8 +6,6 @@
 //              front, earth mound behind; trench positions shelter from every direction
 //   wire     – concertina coils: enemy infantry crossing slows to a crawl; vehicles flatten it
 //   mgNest   – a horseshoe of sandbags: covered front and sides, two firing positions inside
-//   bunker   – log walls too high to climb, a roof of logs and earth, a way in at the back;
-//              three firing positions behind the front wall (sheltered all round)
 //   tankTraps – a row of steel hedgehogs: no vehicle gets through (they go round), men climb over
 //   camoNet  – a net on poles: whoever stands still under it is spotted from half as far
 //   mines    – a mixed field (anti-personnel and anti-tank): invisible to the enemy until the
@@ -49,7 +47,6 @@ export const STRUCTURES = {
   wire: { id: 'wire', name: 'Wire', cost: 20, work: 45, length: 10, width: 1.4 },
   mines: { id: 'mines', name: 'Minefield', cost: 40, work: 70, length: 14, width: 9, mines: 8 },
   mgNest: { id: 'mgNest', name: 'MG nest', cost: 25, work: 80, length: 3.6, width: 3 },
-  bunker: { id: 'bunker', name: 'Bunker', cost: 60, work: 220, length: 5, width: 4.4 },
   tankTraps: { id: 'tankTraps', name: 'Tank traps', cost: 20, work: 50, length: 8, width: 1.6 },
   camoNet: { id: 'camoNet', name: 'Camouflage net', cost: 15, work: 30, length: 8, width: 7 },
   clear: { id: 'clear', name: 'Clearing', cost: 0, work: 40, length: 12, width: 12, action: true, engineers: true },
@@ -290,14 +287,6 @@ export class Construction {
         const [x, z] = this.local(site, sx * 1.65, 0);
         this.bagRows({ x, z, yaw: site.yaw + Math.PI / 2 }, 0, 2.4, 4, parts);
       }
-    } else if (site.kind === 'bunker') {
-      const g = (lx, lz) => { const [x, z] = this.local(site, lx, lz); return { x, z, y: terrain.heightAt(x, z) }; };
-      const wall = (lx, lz, w, d) => { const p = g(lx, lz); parts.push(P.box(w, 1.3, d, { x: p.x, y: p.y + 0.6, z: p.z, ry: site.yaw, color: LOG })); };
-      wall(0, 2, 5, 0.5); wall(-2.25, 0, 0.5, 4.4); wall(2.25, 0, 0.5, 4.4); wall(-1.7, -2, 1.6, 0.5); wall(1.7, -2, 1.6, 0.5);
-      for (const [lx, lz] of [[-2.25, 2], [2.25, 2], [-2.25, -2], [2.25, -2]]) { const p = g(lx, lz); parts.push(P.cyl(0.14, 0.14, 2.1, { x: p.x, y: p.y + 1.05, z: p.z, color: LOG })); } // posts (the slit between wall and roof)
-      const c = g(0, 0);
-      parts.push(P.box(5.6, 0.3, 5, { x: c.x, y: c.y + 2.05, z: c.z, ry: site.yaw, color: LOG }));
-      parts.push(P.sphere(1, { x: c.x, y: c.y + 2.2, z: c.z, ry: site.yaw, sx: 2.9, sy: 0.45, sz: 2.6, color: EARTH }, 10, 6)); // earth on the roof
     } else if (site.kind === 'tankTraps') {
       const n = Math.max(2, Math.round(site.def.length / 1.9));
       for (let i = 0; i < n; i++) {
@@ -448,7 +437,6 @@ export class Construction {
     else if (site.kind === 'wire') this.buildWire(site);
     else if (site.kind === 'mines') this.buildMines(site);
     else if (site.kind === 'mgNest') this.buildNest(site);
-    else if (site.kind === 'bunker') this.buildBunker(site);
     else if (site.kind === 'tankTraps') this.buildTraps(site);
     else if (site.kind === 'camoNet') this.buildNet(site);
     else this.buildSandbags(site);
@@ -560,17 +548,6 @@ export class Construction {
     for (const sx of [-1, 1]) { const [x, z] = this.local(site, sx * 1.65, 0); cover.addBox({ x, z, yaw: site.yaw + Math.PI / 2, length: 2.4, thickness: 0.6, height: 1.05, spots: false }); }
     const [sx, sz] = this.local(site, 0, 0.45);
     cover.addTrenchSpots({ x: sx, z: sz, yaw: site.yaw, length: 2.6, collider: front, spacing: 1.3 });
-  }
-
-  /** Bunker: walls too high to climb (in by the back), three positions behind the front wall. */
-  buildBunker(site) {
-    const cover = this.game.cover;
-    site.mesh = this.addMesh(this.partsFor(site));
-    const box = (lx, lz, length, turn = 0) => { const [x, z] = this.local(site, lx, lz); return cover.addBox({ x, z, yaw: site.yaw + turn, length, thickness: 0.5, height: 1.3, spots: false }); };
-    const front = box(0, 2, 5);
-    box(-2.25, 0, 4.4, Math.PI / 2); box(2.25, 0, 4.4, Math.PI / 2); box(-1.7, -2, 1.6); box(1.7, -2, 1.6);
-    const [sx, sz] = this.local(site, 0, 1.25);
-    cover.addTrenchSpots({ x: sx, z: sz, yaw: site.yaw, length: 3.9, collider: front, spacing: 1.3 });
   }
 
   /** Tank traps: one low steel line — vehicles are stopped by any cover (world/Nav.js), men climb what is this low. */
