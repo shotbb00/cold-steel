@@ -45,6 +45,8 @@ const rifles = derive(T.rifles, {
 
 const atTeam = derive(T.atTeam, {
   models: men({ weapon: 'at' }),
+  specialist: { count: 2, stats: { ...rifles.stats, lightAT: 0, weapon: undefined, splash: 0, trail: undefined, antiArmor: undefined }, armyStats: Object.fromEntries(Object.entries(rifles.factionStats).map(([k, v]) => [k, { ...v, lightAT: 0 }])) }, // the two riflemen with the squads' rifles
+  specialistModels: men(),
   factionStats: { sov: { damage: T.atTeam.stats.damage * 0.6, range: 90, magSize: 5, reloadTime: 4, fireCooldown: 2, playerFireInterval: 1 } }, // the PTRS: a semi-automatic anti-tank rifle, not a rocket
   variants: {
     nato: { name: 'Bazooka Team', weapon: 'M9 bazooka, 2.36 in', text: 'The bazooka: a light rocket that stops a Panzer IV from the side — not a Panther from the front.' },

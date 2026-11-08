@@ -798,8 +798,8 @@ export class UnitStack {
       if (u.towing) { u.target = null; u.airTarget = null; return; }
       // an anti-tank gun left in place 20 s: the crew piles a sandbag wall in front of the shield (free; it stays when they go)
       const g = this.services.game;
-      if (s.antiArmor && !s.indirect && u.dugIn !== u.setUp && g && !g.net?.isClient && this.world.time - u.setUp.at > s.towed.deploy + 20) {
-        u.dugIn = u.setUp;
+      if (s.antiArmor && !s.indirect && u.pitAt !== u.setUp && g && !g.net?.isClient && this.world.time - u.setUp.at > s.towed.deploy + 20) {
+        u.pitAt = u.setUp;
         const site = g.construction.place('sandbags', u.pos.x + Math.sin(u.yaw) * 2.4, u.pos.z + Math.cos(u.yaw) * 2.4, u.yaw, this.faction, null, { force: true });
         if (site) g.construction.finish(site);
       }
@@ -1374,6 +1374,7 @@ export class UnitStack {
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
+      else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
       if (e.stack.stats.airRadar) score -= 25;     // the radar first: it is the enemy's air defence's eyes
       if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches

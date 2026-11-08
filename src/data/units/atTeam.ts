@@ -1,7 +1,8 @@
-// Anti-tank team: three men with shoulder-fired launchers — NATO Carl Gustaf, Pact RPG-7.
+// Anti-tank team: a gunner with a shoulder-fired launcher — NATO Carl Gustaf, Pact RPG-7 — and two
+// riflemen covering him (members 0 and 1, the `specialist`s: their rifles override the launcher).
 // Slow rockets with a smoke trail, a long aim and a reload after every shot, but a shaped
 // charge that defeats tank armour (especially from the side or rear). They hunt vehicles
-// first and can still blast infantry in cover.
+// first; at men only in a house, a trench or close by (UnitStack.pickTarget).
 import rifles from './vanguard.ts';
 import { buildNatoSoldier } from '../models/natoSoldier.js';
 import { buildPactSoldier } from '../models/pactSoldier.js';
@@ -47,6 +48,8 @@ export default {
     playerFireInterval: 1,
   },
 
+  specialist: { count: 2, stats: { ...rifles.stats, lightAT: 0, weapon: undefined, splash: 0, trail: undefined, antiArmor: undefined } },
+  specialistModels: { nato: () => buildNatoSoldier(), pact: () => buildPactSoldier(), bw: () => buildBwSoldier(), nva: () => buildNvaSoldier() },
   models: { nato: () => buildNatoSoldier({ weapon: 'at' }), pact: () => buildPactSoldier({ weapon: 'at' }),
     bw: () => buildBwSoldier({ weapon: 'at' }), nva: () => buildNvaSoldier({ weapon: 'at' }) },
   weaponSound: 'rocket',
