@@ -5,6 +5,11 @@
 //   trench   – the ground is actually dug out (units inside stand lower), sandbag parapet in
 //              front, earth mound behind; trench positions shelter from every direction
 //   wire     – concertina coils: enemy infantry crossing slows to a crawl; vehicles flatten it
+//   mgNest   – a horseshoe of sandbags: covered front and sides, two firing positions inside
+//   bunker   – log walls too high to climb, a roof of logs and earth, a way in at the back;
+//              three firing positions behind the front wall (sheltered all round)
+//   tankTraps – a row of steel hedgehogs: no vehicle gets through (they go round), men climb over
+//   camoNet  – a net on poles: whoever stands still under it is spotted from half as far
 //   mines    – a mixed field (anti-personnel and anti-tank): invisible to the enemy until the
 //              first blast; infantry and vehicles moving through risk setting one off (a vehicle
 //              hit is immobilised if it survives); a limited number of mines per field. The
@@ -43,6 +48,10 @@ export const STRUCTURES = {
   trench: { id: 'trench', name: 'Trench', cost: 30, work: 140, length: 9, width: 3.2 },
   wire: { id: 'wire', name: 'Wire', cost: 20, work: 45, length: 10, width: 1.4 },
   mines: { id: 'mines', name: 'Minefield', cost: 40, work: 70, length: 14, width: 9, mines: 8 },
+  mgNest: { id: 'mgNest', name: 'MG nest', cost: 25, work: 80, length: 3.6, width: 3 },
+  bunker: { id: 'bunker', name: 'Bunker', cost: 60, work: 220, length: 5, width: 4.4 },
+  tankTraps: { id: 'tankTraps', name: 'Tank traps', cost: 20, work: 50, length: 8, width: 1.6 },
+  camoNet: { id: 'camoNet', name: 'Camouflage net', cost: 15, work: 30, length: 8, width: 7 },
   clear: { id: 'clear', name: 'Clearing', cost: 0, work: 40, length: 12, width: 12, action: true, engineers: true },
   demolish: { id: 'demolish', name: 'Demolition charges', cost: 30, work: 55, length: 8, width: 7, action: true, engineers: true },
   revetment: { id: 'revetment', name: 'Vehicle position', cost: 25, work: 22, length: 4.6, width: 8, dozer: true },
@@ -71,6 +80,9 @@ const REACH = 9;          // metres: soldiers this close to a site work on it
 const BAG = 0xb8a57a;
 const BAG_DARK = 0x8f7d57;
 const EARTH = 0x4a3a2c;
+const LOG = 0x5b4632;
+const NET = 0x627048;
+const netMat = new THREE.MeshStandardMaterial({ color: NET, roughness: 1, alphaHash: true, opacity: 0.7, side: THREE.DoubleSide }); // dithered: you still see your men under it
 
 const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
 const ghostMat = new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0.28, depthWrite: false });
@@ -272,6 +284,32 @@ export class Construction {
         const y = terrain.heightAt(x, z) + 0.45;
         parts.push(P.torus(0.45, 0.012, { x, y, z, ry: site.yaw + Math.PI / 2 + 0.15, rz: (r() - 0.5) * 0.2, color: STEEL }, 14));
       }
+    } else if (site.kind === 'mgNest') {
+      this.bagRows(site, 1.2, site.def.length, 4, parts);          // the front
+      for (const sx of [-1, 1]) {                                  // and the sides, back along local z
+        const [x, z] = this.local(site, sx * 1.65, 0);
+        this.bagRows({ x, z, yaw: site.yaw + Math.PI / 2 }, 0, 2.4, 4, parts);
+      }
+    } else if (site.kind === 'bunker') {
+      const g = (lx, lz) => { const [x, z] = this.local(site, lx, lz); return { x, z, y: terrain.heightAt(x, z) }; };
+      const wall = (lx, lz, w, d) => { const p = g(lx, lz); parts.push(P.box(w, 1.3, d, { x: p.x, y: p.y + 0.6, z: p.z, ry: site.yaw, color: LOG })); };
+      wall(0, 2, 5, 0.5); wall(-2.25, 0, 0.5, 4.4); wall(2.25, 0, 0.5, 4.4); wall(-1.7, -2, 1.6, 0.5); wall(1.7, -2, 1.6, 0.5);
+      for (const [lx, lz] of [[-2.25, 2], [2.25, 2], [-2.25, -2], [2.25, -2]]) { const p = g(lx, lz); parts.push(P.cyl(0.14, 0.14, 2.1, { x: p.x, y: p.y + 1.05, z: p.z, color: LOG })); } // posts (the slit between wall and roof)
+      const c = g(0, 0);
+      parts.push(P.box(5.6, 0.3, 5, { x: c.x, y: c.y + 2.05, z: c.z, ry: site.yaw, color: LOG }));
+      parts.push(P.sphere(1, { x: c.x, y: c.y + 2.2, z: c.z, ry: site.yaw, sx: 2.9, sy: 0.45, sz: 2.6, color: EARTH }, 10, 6)); // earth on the roof
+    } else if (site.kind === 'tankTraps') {
+      const n = Math.max(2, Math.round(site.def.length / 1.9));
+      for (let i = 0; i < n; i++) {
+        const [x, z] = this.local(site, -site.def.length / 2 + (i + 0.5) * (site.def.length / n), 0);
+        const y = terrain.heightAt(x, z) + 0.5;
+        for (let k = 0; k < 3; k++) parts.push(P.box(0.13, 1.7, 0.13, { x, y, z, ry: site.yaw + k * (Math.PI * 2 / 3), rz: -0.955, color: STEEL })); // a Czech hedgehog: three girders at right angles, standing on their ends
+      }
+    } else if (site.kind === 'camoNet') {
+      for (const [lx, lz] of [[-3.6, -3.1], [3.6, -3.1], [-3.6, 3.1], [3.6, 3.1], [0, 0]]) {
+        const [x, z] = this.local(site, lx, lz);
+        parts.push(P.cyl(0.05, 0.05, lx || lz ? 2.4 : 2.8, { x, y: terrain.heightAt(x, z) + (lx || lz ? 1.2 : 1.4), z, color: LOG }));
+      }
     } else if (site.kind === 'mines') {
       const r = mulberry(site.id * 631 + 7);
       for (let i = 0; i < 16; i++) {
@@ -409,6 +447,10 @@ export class Construction {
     else if (site.kind === 'revetment') this.buildRevetment(site);
     else if (site.kind === 'wire') this.buildWire(site);
     else if (site.kind === 'mines') this.buildMines(site);
+    else if (site.kind === 'mgNest') this.buildNest(site);
+    else if (site.kind === 'bunker') this.buildBunker(site);
+    else if (site.kind === 'tankTraps') this.buildTraps(site);
+    else if (site.kind === 'camoNet') this.buildNet(site);
     else this.buildSandbags(site);
     this.structures.push(site);
     this.game.netEvent('built', site.id);
@@ -507,6 +549,56 @@ export class Construction {
   buildSandbags(site) {
     site.mesh = this.addMesh(this.partsFor(site));
     this.game.cover.addStructureBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 0.6, height: 0.95 });
+  }
+
+  /** MG nest: the bag walls (low enough to climb), two positions inside behind the front. */
+  buildNest(site) {
+    const cover = this.game.cover;
+    site.mesh = this.addMesh(this.partsFor(site));
+    const [fx, fz] = this.local(site, 0, 1.2);
+    const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: site.def.length, thickness: 0.6, height: 1.05, spots: false });
+    for (const sx of [-1, 1]) { const [x, z] = this.local(site, sx * 1.65, 0); cover.addBox({ x, z, yaw: site.yaw + Math.PI / 2, length: 2.4, thickness: 0.6, height: 1.05, spots: false }); }
+    const [sx, sz] = this.local(site, 0, 0.45);
+    cover.addTrenchSpots({ x: sx, z: sz, yaw: site.yaw, length: 2.6, collider: front, spacing: 1.3 });
+  }
+
+  /** Bunker: walls too high to climb (in by the back), three positions behind the front wall. */
+  buildBunker(site) {
+    const cover = this.game.cover;
+    site.mesh = this.addMesh(this.partsFor(site));
+    const box = (lx, lz, length, turn = 0) => { const [x, z] = this.local(site, lx, lz); return cover.addBox({ x, z, yaw: site.yaw + turn, length, thickness: 0.5, height: 1.3, spots: false }); };
+    const front = box(0, 2, 5);
+    box(-2.25, 0, 4.4, Math.PI / 2); box(2.25, 0, 4.4, Math.PI / 2); box(-1.7, -2, 1.6); box(1.7, -2, 1.6);
+    const [sx, sz] = this.local(site, 0, 1.25);
+    cover.addTrenchSpots({ x: sx, z: sz, yaw: site.yaw, length: 3.9, collider: front, spacing: 1.3 });
+  }
+
+  /** Tank traps: one low steel line — vehicles are stopped by any cover (world/Nav.js), men climb what is this low. */
+  buildTraps(site) {
+    site.mesh = this.addMesh(this.partsFor(site));
+    this.game.cover.addBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 1.3, height: 0.9, spots: false });
+  }
+
+  /** Camouflage net: the poles and the net (see-through enough that you still find your own men under it). */
+  buildNet(site) {
+    site.mesh = this.addMesh(this.partsFor(site));
+    const geo = new THREE.PlaneGeometry(site.def.length + 1, site.def.width + 1, 8, 8);
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const k = Math.hypot(pos.getX(i) / (site.def.length / 2), pos.getZ(i) / (site.def.width / 2)); pos.setY(i, 0.4 - 0.35 * Math.min(1.4, k) ** 2 + (Math.random() - 0.5) * 0.12); } // it sags off the middle pole
+    geo.computeVertexNormals();
+    const net = new THREE.Mesh(geo, netMat);
+    net.position.set(site.x, this.game.terrain.heightAt(site.x, site.z) + 2.4, site.z);
+    net.rotation.y = site.yaw;
+    site.mesh.add(net); // (the merged mesh sits at the origin: world coordinates)
+  }
+
+  /** Is (x, z) under one of `faction`'s camouflage nets? (systems/VisibilitySystem.js) */
+  underNet(x, z, faction) {
+    for (const s of this.structures) {
+      if (s.kind === 'camoNet' && s.faction === faction && this.within({ x: s.x, z: s.z, yaw: s.yaw, hx: s.def.length / 2, hz: s.def.width / 2 }, x, z)) return true;
+    }
+    return false;
   }
 
   /** A vehicle position: the pit (ramped at the back), the spoil berm in front, and its cover. */

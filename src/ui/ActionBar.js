@@ -26,6 +26,10 @@ const ACTIONS = [
   { cmd: 'build:wire', label: 'Wire', icon: 'wire', key: 'wire', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.wire), tip: 'Concertina wire: enemy infantry crawls through it', when: (sel) => one(sel, (s) => s.usesCover) },
   { cmd: 'build:revetment', label: 'Dig in', icon: 'trench', key: 'trench', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.revetment), tip: 'The blade digs a vehicle position: any vehicle in it is hull down behind the berm', when: (sel) => one(sel, (s) => s.stats.dozer) },
   { cmd: 'build:mines', label: 'Mines', icon: 'mines', key: 'mines', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.mines), tip: 'A minefield the enemy can\'t see until the first blast', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:mgNest', label: 'MG nest', icon: 'sandbags', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.mgNest), tip: 'A horseshoe of sandbags: two men fire from it, covered front and sides', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:bunker', label: 'Bunker', icon: 'trench', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.bunker), tip: 'Logs and earth, a roof overhead: three men fire through the slit, sheltered all round. Slow to build', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:tankTraps', label: 'Tank traps', icon: 'wire', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.tankTraps), tip: 'Steel hedgehogs: no vehicle gets through — they have to go round. Infantry climbs over', when: (sel) => one(sel, (s) => s.usesCover) },
+  { cmd: 'build:camoNet', label: 'Camo net', icon: 'place', key: 'none', cost: (g) => structureCost(g, g.playerFaction, STRUCTURES.camoNet), tip: 'A camouflage net: whoever stands still under it is spotted from half as far', when: (sel) => one(sel, (s) => s.usesCover) },
   {
     cmd: 'engineer', icon: 'engineer', key: 'engineer',
     label: (g) => (g.map.bridgeAt ? 'Clear / blow' : 'Clear'),
@@ -149,7 +153,7 @@ export class ActionBar {
     const g = this.game;
     const sel = [...g.commands.selected].filter((s) => s.alive);
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
-    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && (a.cmd === 'build:wire' || a.cmd === 'build:mines'))); // (1806: no wire, no mines)
+    const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && ['build:wire', 'build:mines', 'build:mgNest', 'build:bunker', 'build:tankTraps', 'build:camoNet'].includes(a.cmd))); // (1806: none of the modern works)
     // only touch the DOM when what's shown changed
     const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}`).join('|');
     if (!force && key === this.key) return;
