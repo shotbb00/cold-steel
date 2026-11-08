@@ -1778,7 +1778,7 @@ export class UnitStack {
       // Infantry: a solid hit is usually decisive — down, or wounded if lucky. Wounded men
       // don't survive a second one. Small grazes (splash edges, beam spill) just wear on them.
       if (u.atCover && this.dugIn) amount *= 0.75; // entrenched defenders are harder to hurt
-      if (u.atCover && u.coverSpot?.interior) amount *= 0.6; // inside, behind brick walls
+      if (u.atCover && u.coverSpot?.interior) amount *= u.coverSpot.interior.fortified ? 0.36 : 0.6; // inside, behind brick walls (and sandbags: Buildings.upgrade)
       if (amount >= 35) {
         const pDown = u.wounded ? 1 : u.possessed ? 0.45 : 0.7;
         amount = Math.random() < pDown ? u.hp + 1 : Math.max(0, u.hp - this.stats.hp * 0.3);

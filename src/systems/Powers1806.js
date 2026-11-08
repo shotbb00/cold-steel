@@ -34,7 +34,7 @@ export class Powers1806 {
     if (!P) return false;
     if (!this.ready(f, k)) return g.tell(f, `${P.label} not ready`) ?? false;
     if (k === 'battery' && !this.gunsFor(f, x, z).length) return g.tell(f, 'Grand battery: no guns in reach') ?? false;
-    if (!g.spend(f, P.cost)) return g.tell(f, `Not enough command points (${P.cost})`) ?? false;
+    if (!g.spendFrom('support', f, P.cost)) return g.tell(f, `Not enough ${g.poolName('support')} (${P.cost})`) ?? false;
     if (P.once) this.used.add(this.key(f, k)); else this.readyAt[this.key(f, k)] = g.time + P.cooldown;
     this[k](f, x, z);
     return true;

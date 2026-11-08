@@ -179,7 +179,7 @@ export class Minimap {
     c.lineWidth = 1;
 
     // control points
-    for (const p of game.modeState?.points?.points ?? []) {
+    for (const p of [...(game.modeState?.points?.points ?? []), ...(game.modeState?.sides?.points ?? [])]) { // (and the side objectives: systems/Economy.js)
       const [mx, my] = this.toMap(p.x, p.z);
       const r = (p.radius / (2 * this.bx)) * this.w + 2;
       c.beginPath();

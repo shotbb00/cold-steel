@@ -250,6 +250,10 @@ export class CommandSystem {
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
       if (!mortars.length) return this.game.bus.emit('toast', 'Select a mortar team with illumination rounds');
       this.startTargeting({ kind: 'smoke', stacks: mortars, flare: true });
+    } else if (cmd.startsWith('house:')) {
+      const s = [...this.selected].find((st) => st.alive && st.entered);
+      if (!s) return this.game.bus.emit('toast', 'Select a squad in a house');
+      this.game.orders.issue({ t: 'houseUpgrade', s: s.id, k: cmd.slice(6) });
     } else if (cmd === 'holdFire') {
       const sel = [...this.selected].filter((s) => s.alive && s.stats.damage > 0);
       if (!sel.length) return;

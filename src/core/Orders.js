@@ -19,6 +19,7 @@
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
+import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { enemyOf } from '../data/factions.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
@@ -100,6 +101,17 @@ export class Orders {
         }
         return null;
       }
+      case 'houseUpgrade': { // the house a squad holds: sandbags or an aid station, from the building budget (systems/Buildings.js)
+        const s = own(cmd.s);
+        const b = s?.entered;
+        const up = HOUSE_UPGRADES[cmd.k];
+        if (!b || !up) return g.tell(faction, 'Put a squad in the house first');
+        if (cmd.k === 'sandbag' ? b.fortified : b.aid) return g.tell(faction, `The ${b.name} is ${up.label} already`);
+        if (!g.spendFrom('build', faction, up.cost)) return g.tell(faction, `Not enough ${g.poolName('build')} (${up.cost})`);
+        g.buildings.upgrade(b, cmd.k, faction);
+        g.tell(faction, `The ${b.name} is ${up.label} now`);
+        return null;
+      }
       case 'holdFire': // per stack: hold fire (only the attack target) or fire at will (the default)
         for (const s of mine(cmd.s)) { s.holdFire = !!cmd.on; for (const u of s.units) if (cmd.on && u.target) u.target = null; }
         return null;
@@ -154,9 +166,9 @@ export class Orders {
         if (def.layer && s.units[0]?.dropped) return g.tell(faction, `${s.name} has already laid its bridge`);
         if (cmd.k === 'demolish' && !g.map.bridgeAt?.(cmd.x, cmd.z)) return g.tell(faction, 'No bridge there to blow');
         const cost = structureCost(g, faction, def);
-        if (!g.spend(faction, cost)) return g.tell(faction, `Not enough command points (${cost})`);
+        if (!g.spendFrom('build', faction, cost)) return g.tell(faction, `Not enough ${g.poolName('build')} (${cost})`);
         if (!g.construction.place(cmd.k, cmd.x, cmd.z, cmd.yaw, faction, s)) {
-          g.refund(faction, cost);
+          g.refundTo('build', faction, cost);
           g.tell(faction, def.layer ? 'Pick a spot on the river, away from the other crossings' : "Can't build there");
         }
         return null;

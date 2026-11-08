@@ -549,6 +549,25 @@ export class GameEngine {
     this.tell(stack.faction, `${stack.name} withdrawn${this.modeState?.cp ? ` — ${back} CP back` : ''}`);
   }
 
+  /** Pay from a budget of the mode's ('build', 'support': systems/Economy.js) — CP where it has none. */
+  spendFrom(pool, faction, cost) {
+    const p = this.modeState?.[pool];
+    if (!p) return this.spend(faction, cost);
+    if (p[faction] < cost) return false;
+    p[faction] -= cost;
+    return true;
+  }
+
+  refundTo(pool, faction, cost) {
+    const p = this.modeState?.[pool];
+    if (p) p[faction] += cost; else this.refund(faction, cost);
+  }
+
+  /** What a budget is called in messages. */
+  poolName(pool) {
+    return this.modeState?.[pool] ? (pool === 'build' ? 'building budget' : 'support points') : 'command points';
+  }
+
   refund(faction, cost, owner = this.currentOwner) {
     const cp = this.modeState?.cp;
     if (cp) cp[this.wallet(faction, owner)] += cost;

@@ -7,6 +7,13 @@
 // High explosive wears a building down — tank rounds, shells, mortar bombs, rockets
 // (ProjectileSystem.detonate calls blast) — until it collapses: the walls come down to a low
 // rubble pile (still low cover), and whoever was inside is likely hurt or killed.
+import { P } from '../data/units/geometry.js';
+// House upgrades, paid from the building budget (core/Orders.js 'houseUpgrade', systems/Economy.js):
+//   sandbag – bags along the walls: the men at its windows take 40 % less (UnitStack.receiveDamage)
+//   aid     – an aid station: a medic jeep (an ambulance: systems/Support.js drives it to the wounded)
+//             stays posted at the house; lost, the next one comes AID_EVERY s later
+export const HOUSE_UPGRADES = { sandbag: { cost: 40, label: 'sandbagged' }, aid: { cost: 60, label: 'an aid station' } };
+const AID_EVERY = 90;
 const BURN = { time: 150, smoke: 0.8 }; // s a collapsed house burns; its smoke cloud × the house's size
 
 export class Buildings {
@@ -101,8 +108,47 @@ export class Buildings {
     return { x: b.x + (dx / d) * r, z: b.z + (dz / d) * r };
   }
 
+  /** Upgrade `b` for `faction` (on every machine: the host sends it on). */
+  upgrade(b, kind, faction) {
+    const g = this.game;
+    g.netEvent('house', b.index, kind, faction);
+    if (kind === 'sandbag') {
+      b.fortified = true;
+      const parts = [];
+      for (const [turn, off, len] of [[0, b.d / 2 + 0.45, b.w], [0, -(b.d / 2 + 0.45), b.w], [Math.PI / 2, b.w / 2 + 0.45, b.d], [Math.PI / 2, -(b.w / 2 + 0.45), b.d]]) {
+        g.construction.bagRows({ x: b.x, z: b.z, yaw: b.yaw + turn }, off, len, 3, parts);
+      }
+      b.bags = g.construction.addMesh(parts);
+    } else if (kind === 'aid') {
+      b.aid = { faction, next: g.time, medic: null };
+      const [x, z] = g.construction.local({ x: b.x, z: b.z, yaw: b.yaw }, 0, b.d / 2 + 0.05); // a red cross by the door
+      const y = g.terrain.heightAt(x, z) + 2.2;
+      b.sign = g.construction.addMesh([
+        P.box(1.2, 1.2, 0.05, { x, y, z, ry: b.yaw, color: 0xf2f2ee }),
+        P.box(0.85, 0.25, 0.07, { x, y, z, ry: b.yaw, color: 0xc8202a }),
+        P.box(0.25, 0.85, 0.07, { x, y, z, ry: b.yaw, color: 0xc8202a }),
+      ]);
+    }
+  }
+
+  /** Aid stations keep their medic jeep (the host only: the jeep is a stack like any other). */
+  updateAid() {
+    const g = this.game;
+    if (g.net?.isClient) return;
+    for (const b of this.list) {
+      const a = b.aid;
+      if (!a || b.collapsed || a.medic?.alive || g.time < a.next) continue;
+      if (a.medic) { a.medic = null; a.next = g.time + AID_EVERY; continue; } // lost: the next later
+      const [x, z] = g.construction.local({ x: b.x, z: b.z, yaw: b.yaw }, 0, b.d / 2 + 5);
+      a.medic = g.spawnStack('ambulance', a.faction, { x, z }, b.yaw, `${b.name} medics`);
+      a.medic.autonomous = true; // (the station's: it goes to the wounded by itself)
+      g.tell(a.faction, `Aid station in the ${b.name}: a medic jeep is ready`);
+    }
+  }
+
   /** Stacks on their way in go in once they're at the door. */
   update() {
+    this.updateAid();
     for (const s of this.game.world.stacks) {
       if (!s.alive) continue;
       // a new order (moveTo clears garrison) brings them out first

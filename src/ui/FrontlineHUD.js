@@ -44,7 +44,7 @@ export class FrontlineHUD {
 
     const panel = document.createElement('div');
     panel.id = 'reinforce';
-    panel.innerHTML = `<div class="rf-info"><b class="rf-cp"></b><span class="rf-rate" title="Command points coming in per minute"></span><span class="rf-stacks" title="Stacks in the field / limit"></span></div>
+    panel.innerHTML = `<div class="rf-info"><b class="rf-cp"></b><span class="rf-rate" title="Command points coming in per minute"></span><span class="rf-stacks" title="Stacks in the field / limit"></span></div><div class="rf-pools" hidden><span class="rf-build" title="Building budget: pays for every structure. Factories and refineries raise it"></span><span class="rf-support" title="Support points: air strikes, barrages, powers. Airfields and refineries raise them"></span></div>
       <button type="button" tabindex="-1" class="rf-open">${icon('reinforce')}<span>Reinforce</span><kbd data-key="reinforce"></kbd></button>`;
     // its own bar beside the orders, bottom right: the points stay in sight with the orders folded away
     const orders = document.getElementById('command-panel');
@@ -55,6 +55,9 @@ export class FrontlineHUD {
     if (state.noReinforcements) panel.hidden = true; // e.g. Recon raid: you have what you came with
     this.cpText = panel.querySelector('.rf-cp');
     this.rateText = panel.querySelector('.rf-rate');
+    this.pools = panel.querySelector('.rf-pools');
+    this.buildText = panel.querySelector('.rf-build');
+    this.supportText = panel.querySelector('.rf-support');
     this.stacksText = panel.querySelector('.rf-stacks');
     this.window = new ReinforceWindow(game, state);
     panel.querySelector('.rf-open').addEventListener('click', (e) => { e.currentTarget.blur(); this.window.toggle(); });
@@ -95,6 +98,13 @@ export class FrontlineHUD {
     if (dt > 0 || this.lastCp == null) { this.rateT = now; this.lastCp = raw; }
     const rate = `+${Math.round((this.cpRate ?? 0) * 60)}/min`;
     if (this.rateText.textContent !== rate) this.rateText.textContent = rate;
+    if (this.state.build) { // the two budgets (systems/Economy.js)
+      this.pools.hidden = false;
+      const b = `Build ${Math.floor(this.state.build[this.me] ?? 0)}`;
+      const s = `Support ${Math.floor(this.state.support[this.me] ?? 0)}`;
+      if (this.buildText.textContent !== b) this.buildText.textContent = b;
+      if (this.supportText.textContent !== s) this.supportText.textContent = s;
+    }
     const stacks = forces(this.game, this.me).length; // what counts toward the limit (bailed-out crews don't)
     const full = stacks >= this.state.maxStacks;
     this.stacksText.textContent = `${stacks}/${this.state.maxStacks} stacks`;

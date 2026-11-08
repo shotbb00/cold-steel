@@ -428,7 +428,7 @@ export class Construction {
       if (layer) layer.laying = false;
     }
     if (!this.game.net?.isClient) {
-      if (refund) this.game.refund(site.faction, structureCost(this.game, site.faction, site.def));
+      if (refund) this.game.refundTo('build', site.faction, structureCost(this.game, site.faction, site.def));
       this.game.netEvent('unsite', site.id);
     }
     return true;

@@ -196,6 +196,8 @@ export class NetHost {
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),
+      bud: ms?.build ? [round(ms.build), round(ms.support)] : null, // (systems/Economy.js)
+      sd: ms?.sides?.points.map((p) => [Math.round((ms.sides.home === 'nato' ? p.progress : -p.progress) * 1000) / 1000, p.owner, p.contested ? 1 : 0]) ?? null,
       pts: ms?.points?.points.map((p) => [
         Math.round((ms.points.home === 'nato' ? p.progress : -p.progress) * 1000) / 1000, p.owner, p.contested ? 1 : 0, p.locked ? 1 : 0,
       ]) ?? null,

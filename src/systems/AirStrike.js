@@ -935,8 +935,8 @@ export class AirStrike {
       return false;
     }
     const terms = this.terms(faction, kind);
-    if (!game.spend(faction, terms.cost)) {
-      game.tell(faction, `Not enough command points for the ${p.label.toLowerCase()} (${terms.cost})`);
+    if (!game.spendFrom('support', faction, terms.cost)) {
+      game.tell(faction, `Not enough ${game.poolName('support')} for the ${p.label.toLowerCase()} (${terms.cost})`);
       return false;
     }
     this.readyAt[this.key(faction, kind)] = game.time + terms.cooldown;

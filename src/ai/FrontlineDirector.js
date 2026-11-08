@@ -113,6 +113,11 @@ export class FrontlineDirector {
     this.lastAssault = 0;
   }
 
+  /** Room for support? With a support budget (systems/Economy.js) the call itself checks the price; else keep CP back for troops. */
+  supportOver(cp) {
+    return this.state.support ? true : this.state.cp[this.faction] > cp;
+  }
+
   get points() {
     return this.state.points.points;
   }
@@ -414,9 +419,9 @@ export class FrontlineDirector {
         });
         if (!gathered && this.now - op.since < 70) return;
         this.game.air.call(this.faction, t.x, t.z); // a strafing run ahead of the assault (if affordable and ready)
-        if (doctrine(this.game, this.faction, 'mass') && this.game.barrage.ready(this.faction) && this.state.cp[this.faction] > 300) this.game.barrage.call(this.faction, t.x, t.z); // the Soviet preparatory barrage
+        if (doctrine(this.game, this.faction, 'mass') && this.game.barrage.ready(this.faction) && this.supportOver(300)) this.game.barrage.call(this.faction, t.x, t.z); // the Soviet preparatory barrage
         for (const s of this.myStacks()) if (s.stats.indirect && !s.barrage) s.startBarrage(t.x, t.z); // the NVA's Feuerwalze (others: nothing)
-        if (this.state.cp[this.faction] > 450) {
+        if (this.supportOver(450)) {
           const lz = this.offsetTowardBase(t, 35);
           this.game.air.call(this.faction, lz.x, lz.z, null, 'lift'); // and a squad landed right behind it
         }
@@ -518,7 +523,7 @@ export class FrontlineDirector {
     const frontierDist = (p) => Math.min(...from.map((q) => Math.hypot(q.x - p.x, q.z - p.z)));
 
     // the nearest few points we don't own in free sectors; pick the most weakly held
-    const candidates = this.points.filter((p) => p.owner !== this.faction && this.canTarget(p) && !busySectors.includes(p.sector ?? 'all'))
+    const candidates = [...this.points, ...(this.state.sides?.points ?? [])].filter((p) => p.owner !== this.faction && this.canTarget(p) && !busySectors.includes(p.sector ?? 'all')) // (the side objectives too: systems/Economy.js)
       .sort((a, b) => frontierDist(a) - frontierDist(b))
       .slice(0, 3)
       .map((p) => ({ p, defence: near(p, 80) + Math.random() * 60 }))
@@ -746,7 +751,7 @@ export class FrontlineDirector {
   harass() {
     const air = this.game.air;
     // the jets: a gun run on spotted enemy armour near our front
-    if (air.ready(this.faction, 'jet') && this.state.cp[this.faction] >= 340) {
+    if (air.ready(this.faction, 'jet') && this.supportOver(340)) {
       const armour = this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => !s.usesCover && !s.stats.structure
         && s.units.some((u) => u.alive && u.spotted)
         && this.points.some((p) => p.owner === this.faction && Math.hypot(s.centroid.x - p.x, s.centroid.z - p.z) < 200));
@@ -757,7 +762,7 @@ export class FrontlineDirector {
     }
     // enemy strike aircraft over the field: fighters up over our nearest point
     const raid = air.sorties.find((s) => s.faction !== this.faction && s.airborne && s.kind !== 'cap');
-    if (raid && air.ready(this.faction, 'cap') && this.state.cp[this.faction] >= 260) {
+    if (raid && air.ready(this.faction, 'cap') && this.supportOver(260)) {
       const near = this.points.filter((p) => p.owner === this.faction).sort((a, b) => Math.hypot(a.x - raid.target.x, a.z - raid.target.z) - Math.hypot(b.x - raid.target.x, b.z - raid.target.z))[0];
       if (near && air.call(this.faction, near.x, near.z, null, 'cap')) return true;
     }

@@ -311,6 +311,7 @@ export class NetClient {
         break;
       }
       case 'toast': g.bus.emit('toast', e[1]); break;
+      case 'house': { const b = g.buildings.list[e[1]]; if (b) g.buildings.upgrade(b, e[2], e[3]); break; } // (systems/Buildings.js)
       case 'site': g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true, stackId: e[7] ?? null }); break;
       case 'unsite': {
         const site = g.construction.sites.find((s) => s.id === e[1]);
@@ -405,6 +406,8 @@ export class NetClient {
     if (ms) {
       if (m.cp) Object.assign(ms.cp, m.cp);
       if (m.str) Object.assign(ms.strength, m.str);
+      if (m.bud && ms.build) { Object.assign(ms.build, m.bud[0]); Object.assign(ms.support, m.bud[1]); }
+      if (m.sd && ms.sides) m.sd.forEach(([progress, owner, contested], i) => { const p = ms.sides.points[i]; if (p) ms.sides.apply(p, progress, owner, !!contested); });
       if (m.pts) m.pts.forEach(([progress, owner, contested, locked], i) => {
         const p = ms.points.points[i];
         if (p) ms.points.apply(p, progress, owner, !!contested, !!locked);
