@@ -32,6 +32,7 @@ function mark(kind, x, y, z, r, up = false) {
   const bar = (w, h, color, dy) => (up ? P.box(w, 0.02, h, { x, y: y + dy, z, color }) : P.box(0.02, h, w, { x: x + Math.sign(x) * dy, y, z, color }));
   if (kind === 'us') return [disc(r, 0x22325c), disc(r * 0.6, WHITE, 0.012), bar(r * 2.6, r * 0.35, WHITE, 0.006)];
   if (kind === 'sov') return [disc(r, WHITE), disc(r * 0.85, 0xa8231c, 0.012)];
+  if (kind === 'jp') return [disc(r, 0xb01e28)]; // the hinomaru
   return [bar(r * 2, r * 0.6, WHITE, 0), bar(r * 0.6, r * 2, WHITE, 0), bar(r * 1.7, r * 0.3, 0x141414, 0.012), bar(r * 0.3, r * 1.7, 0x141414, 0.012)];
 }
 
@@ -257,3 +258,29 @@ export const buildFjAr234 = (mats) => mountMulti('ar234', mats, () => M([
   ...pair((s) => mark('de', s * 0.6, 2.25, -3.2, 0.32)),
   ...pair((s) => mark('de', s * 5.0, 2.88, -0.6, 0.35, true)),
 ]), { props: [], door: [0, 1.6, 2.0] });
+
+// ---------------------------------------------------------------- the Pacific: carrier aircraft
+// One build, the type's proportions: `len` nose to tail, `span`, a radial cowl, the canopy (`long`:
+// a two- or three-seat greenhouse), a `deep` belly (the Avenger's bomb bay and turret), colour and markings.
+function navy({ len, span, color, nat, chord = 1.4, deep = 0, long = 0 }) {
+  const n = len / 2;
+  return M([
+    body([[n, 1.95, 0.6, 0.62], [n - 0.8, 1.95, 0.66, 0.68], [n - 2.6, 1.98, 0.56, 0.68 + deep], [0, 2.0, 0.46, 0.62 + deep], [-n * 0.55, 2.05, 0.28, 0.42], [-n, 2.1, 0.1, 0.2]], { color, ...C }),
+    P.cyl(0.5, 0.5, 0.02, { y: 1.95, z: n + 0.01, rx: Math.PI / 2, color: HOLE }, 16),
+    body([[n - 2.4, 2.5, 0.05, 0.05], [n - 2.9, 2.75, 0.3, 0.28], [n - 3.6 - long, 2.8, 0.3, 0.28], [n - 4.2 - long, 2.62, 0.18, 0.12]], { color: GLASS }),
+    ...pair((s) => surface([[s * 0.5, 1.5, 0.4, chord, 0.18], [s * span / 2, 1.7, -0.2, chord * 0.45, 0.05]], { color, ...C })),
+    ...pair((s) => surface([[s * 0.2, 2.15, -n + 0.6, 0.65, 0.06], [s * span * 0.17, 2.15, -n + 0.35, 0.35, 0.03]], { color, ...C })),
+    fin([[2.2, -n + 0.8, 0.9, 0.06], [3.3, -n + 0.4, 0.6, 0.04], [3.6, -n + 0.2, 0.3, 0.03]], { color, ...C }),
+    ...pair((s) => mark(nat, s * span * 0.36, 1.66, -0.3, 0.42, true)),
+    ...pair((s) => mark(nat, s * 0.42, 2.05, -n * 0.5, 0.36)),
+  ]);
+}
+const SEA_BLUE = 0x2e3d52;
+const IJN_GREEN = 0x3c4a34;
+const navyMount = (key, o, prop = {}) => (mats) => mount(key, mats, () => navy(o), { gun: [o.span * 0.2, 1.5, 1], pods: [[0, 1.1, 0.6]], prop: [0, 1.95, o.len / 2 + 0.1], blades: 3, r: 1.7, ...prop });
+export const buildUsHellcat = navyMount('f6f', { len: 10.2, span: 13.1, color: SEA_BLUE, nat: 'us', chord: 1.7, deep: 0.08 });
+export const buildUsHelldiver = navyMount('sb2c', { len: 11.2, span: 15.2, color: SEA_BLUE, nat: 'us', chord: 1.8, long: 1.2 });
+export const buildUsAvenger = navyMount('tbf', { len: 12.2, span: 16.5, color: SEA_BLUE, nat: 'us', chord: 1.9, deep: 0.3, long: 1.8 });
+export const buildJpZero = navyMount('a6m', { len: 9.1, span: 12, color: IJN_GREEN, nat: 'jp', chord: 1.5 });
+export const buildJpVal = navyMount('d3a', { len: 10.2, span: 14.4, color: IJN_GREEN, nat: 'jp', chord: 1.7, long: 1.2 }, { blades: 3 });
+export const buildJpJill = navyMount('b6n', { len: 10.9, span: 14.9, color: IJN_GREEN, nat: 'jp', chord: 1.75, long: 1.8 }, { blades: 4 });

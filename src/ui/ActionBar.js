@@ -72,6 +72,10 @@ const SUPPORT = [
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
+  ['air:diveBomb', 'jet', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],
+  ['air:torpBomb', 'heli', 'heli', 'Torpedo bombers', 'From the carrier: low over the water, a torpedo into the ship nearest the spot'],
+  ['air:navCap', 'fighter', 'cap', 'Fighter cover', 'From the carrier: fighters circle the spot and go for enemy aircraft'],
+  ['air:navScout', 'recon', 'recon', 'Scout flight', 'From the carrier: a long search leg — every ship it sees shows on your map'],
   ...Object.entries(POWERS_1806).map(([k, p]) => [`power:${k}`, p.icon, p.key, p.label, p.tip]), // 1806 (systems/Powers1806.js)
 ];
 
@@ -108,7 +112,7 @@ export class ActionBar {
       const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
       const me = this.game.playerFaction;
       const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
-      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
+      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind && KINDS[kind]?.sea ? icon(ic) : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
       b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small><kbd data-key="${key}">${keyOf(key)}</kbd>`;
       return { b, cmd, small: b.querySelector('small') };
     });
@@ -150,7 +154,8 @@ export class ActionBar {
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
-      b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off); // (not in this war: data/epoch.js)
+      b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
+        || (mass !== null ? !!g.world.river?.sea : !!KINDS[kind]?.sea !== !!g.world.river?.sea); // (at sea: the carrier missions only)
       if (mass?.id === 'tot' && b.querySelector('.sup-name').textContent !== 'Time on Target') { b.querySelector('.sup-name').textContent = 'Time on Target'; b.title = 'Time on Target — every gun in range fires one salvo; all the shells land at the same moment'; }
     }
   }

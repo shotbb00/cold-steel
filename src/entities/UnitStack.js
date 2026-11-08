@@ -1716,6 +1716,7 @@ export class UnitStack {
   /** A ship's fight: one target for the whole ship; every mount bearing on it fires on its own. */
   updateShipWeapons(u, dt) {
     const s = u.stats;
+    if (s.antiAir && (u.depth ?? 0) < 1) this.engageAir(u, dt); // the 40 mm and 20 mm at aircraft, whatever the main guns do
     u.retarget -= dt;
     if (u.target && (!u.target.alive || !u.target.spotted || dist2DSq(u.pos, u.target.pos) > s.range * s.range * 1.21)) u.target = null;
     if (u.retarget <= 0) {

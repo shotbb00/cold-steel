@@ -132,6 +132,31 @@ export const KINDS = {
     swath: 170,        // m either side of the track the cameras take in
     hold: 30,          // s what they found stays located
   },
+  // the Pacific (the open-sea maps): launched from the side's carrier (AirStrike.call: no carrier, no
+  // missions), the strikes going for the enemy ship nearest the spot and following it (Sortie.trackShip)
+  navCap: {
+    sea: true, label: 'Fighter cover', key: 'I', cost: 110, cooldown: 80, delay: 6,
+    approach: 0, cruiseAlt: 260, attackAlt: 260, cruiseSpeed: 140, attackSpeed: 120,
+    rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0,
+    orbit: 320, station: 90, aam: { count: 6, range: 1100, speed: 480, pk: 0.45, hits: 99, every: 3 },
+  },
+  diveBomb: {
+    sea: true, label: 'Dive bombers', key: 'J', cost: 170, cooldown: 75, delay: 6,
+    approach: 0, cruiseAlt: 420, attackAlt: 70, cruiseSpeed: 95, attackSpeed: 120,
+    rocketsFrom: 240, gunFrom: 0, gunTo: -40, runLength: 0, turn: 0.6, pitchDown: 0.55,
+  },
+  torpBomb: {
+    sea: true, label: 'Torpedo bombers', key: 'Y', cost: 190, cooldown: 90, delay: 6,
+    approach: 0, cruiseAlt: 120, attackAlt: 22, cruiseSpeed: 85, attackSpeed: 75,
+    rocketsFrom: 900, gunFrom: 0, gunTo: -60,   // (no rockets: the run begins 900 m out) runLength: 0, turn: 0.7, pitchDown: 0.02,
+    drop: 650,   // m: the torpedo goes in this far from the ship
+  },
+  navScout: {
+    sea: true, label: 'Scout flight', key: 'O', cost: 70, cooldown: 60, delay: 6,
+    approach: 0, cruiseAlt: 300, attackAlt: 260, cruiseSpeed: 110, attackSpeed: 105,
+    rocketsFrom: 900, gunFrom: 0, gunTo: -900, runLength: 1800, turn: 0, pitchDown: 0,
+    swath: 600, hold: 40,
+  },
 };
 /** The 1985 aircraft per kind (data/epoch.js puts an epoch's own into KINDS[kind].aircraft, and sets `off` on kinds it has none for). */
 export const AIR_1985 = Object.fromEntries(Object.entries(KINDS).map(([k, p]) => [k, p.aircraft]));
@@ -218,6 +243,41 @@ class Sortie {
     this.speed = this.p.cruiseSpeed;
     this.homeT = 0;
     this.landT = 0;
+    if (this.p.sea) this.fromCarrier();
+  }
+
+  /** A carrier mission: off the deck of the side's carrier, straight for the spot — and onto the enemy ship nearest it. */
+  fromCarrier() {
+    const g = this.game;
+    const cv = g.world.stacksOf(this.faction).find((s) => s.stats.carrier && s.units[0]?.alive)?.units[0];
+    if (cv) {
+      this.pos.set(cv.pos.x, (g.world.river?.level ?? 0) + 25, cv.pos.z);
+      this.yaw = Math.atan2(this.target.x - cv.pos.x, this.target.z - cv.pos.z);
+      this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+      this.side.set(this.dir.z, 0, -this.dir.x);
+    }
+    if (this.kind === 'diveBomb' || this.kind === 'torpBomb') {
+      let best = 450;
+      for (const s of g.world.stacksOf(enemyOf(this.faction))) {
+        if (!s.stats.naval) continue;
+        for (const u of s.units) {
+          const d = u.alive && (u.depth ?? 0) < 3 ? Math.hypot(u.pos.x - this.target.x, u.pos.z - this.target.z) : Infinity;
+          if (d < best) { best = d; this.ship = u; }
+        }
+      }
+    }
+  }
+
+  /** On the way in and in the attack, the strike follows its ship (turning onto it until the run begins). */
+  trackShip() {
+    const u = this.ship;
+    if (!u?.alive || (this.state !== 'ingress' && this.state !== 'attack')) return;
+    this.target.set(u.pos.x + (u.vel?.x ?? 0) * 2, u.pos.y + 3, u.pos.z + (u.vel?.z ?? 0) * 2);
+    if (this.state === 'ingress') {
+      this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
+      this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+      this.side.set(this.dir.z, 0, -this.dir.x);
+    }
   }
 
   /** Flying and visible to radar: everything between appearing and being shot down. */
@@ -251,8 +311,8 @@ class Sortie {
     this.game.scene.add(rig.root);
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
-    const what = this.kind === 'lift' ? 'inbound with the assault squad' : this.kind === 'recon' ? 'inbound — starting the photo run' : 'on station — starting its run';
-    if (this.kind !== 'cap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
+    const what = this.kind === 'lift' ? 'inbound with the assault squad' : this.kind === 'recon' || this.kind === 'navScout' ? 'inbound — starting the photo run' : this.p.sea ? 'off the deck — inbound' : 'on station — starting its run';
+    if (this.kind !== 'cap' && this.kind !== 'navCap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
   }
 
   update(dt) {
@@ -263,7 +323,8 @@ class Sortie {
     }
     if (this.state === 'done') return;
     if (this.state === 'down') return this.updateCrash(dt);
-    if (this.kind === 'cap') return this.patrol(dt);
+    if (this.kind === 'cap' || this.kind === 'navCap') return this.patrol(dt);
+    this.trackShip();
     const p = this.p;
     const terrain = game.terrain;
     const d = this.toGo;
@@ -282,7 +343,7 @@ class Sortie {
       }
       if (this.state === 'attack' && d < p.gunTo - 15) {
         this.state = 'break';
-        if (this.kind === 'recon') {
+        if (this.kind === 'recon' || this.kind === 'navScout') {
           const n = this.found?.size ?? 0;
           game.tell(this.faction, n ? `${this.type.name} recon: ${n} enemy position${n > 1 ? 's' : ''} photographed — on your map for ${p.hold} s` : `${this.type.name} recon: nothing found along the run`);
         }
@@ -337,8 +398,13 @@ class Sortie {
     this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
     this.place(dt);
 
+    if (this.kind === 'torpBomb' && this.state === 'attack' && !this.dropped && this.ship?.alive && d < p.drop) { // the fish goes in, then away low over the water
+      this.dropped = true;
+      if (!game.net?.isClient) game.torpedoes?.launch(this, _p.set(this.pos.x, game.world.river?.level ?? 0, this.pos.z), this.ship, this.type.torpedo);
+      this.state = 'break';
+    }
     if (this.state === 'attack' || this.state === 'land') {
-      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon') this.photograph(dt); else this.fireWeapons(dt, d);
+      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon' || this.kind === 'navScout') this.photograph(dt); else if (this.kind !== 'torpBomb') this.fireWeapons(dt, d);
     }
     this.fireT -= dt;
     const exposed = this.state === 'attack' || this.state === 'land' || (this.state === 'ingress' && d < p.rocketsFrom + 120);
@@ -358,7 +424,7 @@ class Sortie {
     for (const s of g.world.stacks) {
       if (s.faction === this.faction || !s.alive) continue;
       for (const u of s.units) {
-        if (!u.alive || (u.pos.x - this.pos.x) ** 2 + (u.pos.z - this.pos.z) ** 2 > r2) continue;
+        if (!u.alive || (u.depth ?? 0) > 3 || (u.pos.x - this.pos.x) ** 2 + (u.pos.z - this.pos.z) ** 2 > r2) continue; // (a submarine under the surface: not from the air)
         u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + this.p.hold);
         (this.found ??= new Set()).add(s);
       }
@@ -394,7 +460,7 @@ class Sortie {
       if ((this.aamT = (this.aamT ?? 0) - dt) <= 0 && this.aamLeft > 0) {
         this.aamT = 1;
         const t = g.air.nearestThreat(this.faction, this.pos, p.aam.range);
-        if (t && t.kind !== 'cap') { // (fighters don't duel: they hunt the strike aircraft)
+        if (t && t.kind !== 'cap' && t.kind !== 'navCap') { // (fighters don't duel: they hunt the strike aircraft)
           this.aamT = p.aam.every;
           this.aamLeft--;
           const guns = this.type.guns; // 1945: no missiles — the fighter dives on it, guns firing
@@ -920,6 +986,11 @@ export class AirStrike {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
+    if (!!p.sea !== !!game.world.river?.sea) return false; // (the carrier missions at sea, the land's air support on land)
+    if (p.sea && !game.world.stacksOf(faction).some((s) => s.stats.carrier && s.units[0]?.alive)) {
+      game.tell(faction, 'No carrier: no aircraft to launch');
+      return false;
+    }
     if (p.orbit) { // a patrol circle stays over the battlefield: its centre at least `orbit` in from the edges
       const b = game.map.bounds ?? { x: 1e4, z: 1e4 };
       x = Math.max(-Math.max(0, b.x - p.orbit), Math.min(Math.max(0, b.x - p.orbit), x));

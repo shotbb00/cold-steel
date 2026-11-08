@@ -11,11 +11,14 @@
 // submerged they're seen only by a ship's `sonar` (or the periscope close by, or a torpedo shot:
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
-import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1 } from '../models/ships1945.js';
+import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku } from '../models/ships1945.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: undefined, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
 const AFT = Math.PI;
+
+/** Anti-aircraft fire (UnitStack.engageAir): 40 mm and 20 mm along the decks; the bigger the ship, the more of it. */
+const AA = (range, hitNear, hitFar) => ({ antiAir: { range, optical: 1, rate: 2.4, burst: 6, pause: 0.4, hitNear: hitNear * 0.3, hitFar: hitFar * 0.3 } }); // (a wall of tracer — few hits: most strikes got through to drop)
 
 /** A gun mount. */
 const gun = (at, facing, o) => ({ at, facing, arc: 4.6, spread: 0.01, splash: 4, pierce: 0.3, shell: 900, size: 1.8, ...o });
@@ -40,7 +43,7 @@ const DD_JP = { range: 2400, reload: 4.5, damage: 260, splash: 4, pierce: 0.3 };
 export const frigate = ship({
   id: 'frigate', name: 'Escort', shortName: 'Escort', cost: 280,
   hull: { length: 93, beam: 11 },
-  stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, sonar: 950, depthCharges: DC({ count: 6, reload: 14 }), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
+  stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, sonar: 950, depthCharges: DC({ count: 6, reload: 14 }), ...AA(600, 0.12, 0.03), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
   mounts: {
     nato: [gun([0, 6, 38], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 8, 31], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 6, -26], AFT, { range: 1700, reload: 3, damage: 150 })],
     pact: [gun([0, 6, 32], FWD, { range: 1700, reload: 3.5, damage: 170 }), gun([0, 6, -22], AFT, { range: 1700, reload: 4, damage: 2 * 170 / 1.6 })],
@@ -56,7 +59,7 @@ export const frigate = ship({
 export const destroyer = ship({
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 450,
   hull: { length: 115, beam: 12 },
-  stats: { hp: 4200, armor: 0.2, speed: 16, accel: 0.12, turnRate: 0.09, turretRate: 0.5, radius: 7, height: 10, sight: 2600, sonar: 800, depthCharges: DC(), range: 2400, aggroRange: 2400, preferredRange: 1600, leash: 60, damage: 220, fireCooldown: 3.5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3 },
+  stats: { hp: 4200, armor: 0.2, speed: 16, accel: 0.12, turnRate: 0.09, turretRate: 0.5, radius: 7, height: 10, sight: 2600, sonar: 800, depthCharges: DC(), ...AA(700, 0.18, 0.04), range: 2400, aggroRange: 2400, preferredRange: 1600, leash: 60, damage: 220, fireCooldown: 3.5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3 },
   mounts: {
     nato: [gun([0, 7, 48], FWD, FIVE_INCH), gun([0, 10, 41], FWD, FIVE_INCH), gun([0, 10, -20], AFT, FIVE_INCH), gun([0, 7, -38], AFT, FIVE_INCH), gun([0, 7, -47], AFT, FIVE_INCH),
       torps([0, 7, 0], { count: 5, range: 1400, speed: 22 }), torps([0, 7, -9], { count: 5, range: 1400, speed: 22 })],
@@ -77,7 +80,7 @@ const TWENTY_CM = { range: 3000, reload: 10, damage: 560, splash: 7, pierce: 0.5
 export const cruiser = ship({
   id: 'cruiser', name: 'Heavy Cruiser', shortName: 'Cruiser', cost: 750, limit: 3,
   hull: { length: 205, beam: 21 },
-  stats: { hp: 11000, armor: 0.45, speed: 15, accel: 0.08, turnRate: 0.065, turretRate: 0.3, radius: 10, height: 16, sight: 3000, range: 3000, aggroRange: 3000, preferredRange: 2200, leash: 80, damage: 700, fireCooldown: 9, spread: 0.009, boltSpeed: 950, boltSize: 2.6, splash: 7, pierce: 0.55 },
+  stats: { hp: 11000, armor: 0.45, speed: 15, accel: 0.08, turnRate: 0.065, turretRate: 0.3, radius: 10, height: 16, sight: 3000, ...AA(850, 0.26, 0.06), range: 3000, aggroRange: 3000, preferredRange: 2200, leash: 80, damage: 700, fireCooldown: 9, spread: 0.009, boltSpeed: 950, boltSize: 2.6, splash: 7, pierce: 0.55 },
   mounts: {
     nato: [gun([0, 10, 74], FWD, EIGHT_INCH), gun([0, 13, 60], FWD, EIGHT_INCH), gun([0, 10, -62], AFT, EIGHT_INCH)],
     pact: [gun([0, 9, 78], FWD, TWENTY_CM), gun([0, 12, 67], FWD, TWENTY_CM), gun([0, 9, 56], FWD, TWENTY_CM), gun([0, 12, -52], AFT, TWENTY_CM), gun([0, 9, -64], AFT, TWENTY_CM),
@@ -98,7 +101,7 @@ const SECONDARY = (at, facing) => gun(at, facing, { range: 2200, reload: 4, dama
 export const battleship = ship({
   id: 'battleship', name: 'Battleship', shortName: 'Battleship', cost: 1300, limit: 1,
   hull: { length: 262, beam: 33 },
-  stats: { hp: 26000, armor: 0.7, speed: 15, accel: 0.06, turnRate: 0.05, turretRate: 0.2, radius: 14, height: 30, sight: 3600, range: 4000, aggroRange: 4000, preferredRange: 3000, leash: 100, damage: 2400, fireCooldown: 30, spread: 0.008, boltSpeed: 1000, boltSize: 4, splash: 12, pierce: 0.8 },
+  stats: { hp: 26000, armor: 0.7, speed: 15, accel: 0.06, turnRate: 0.05, turretRate: 0.2, radius: 14, height: 30, sight: 3600, ...AA(950, 0.32, 0.07), range: 4000, aggroRange: 4000, preferredRange: 3000, leash: 100, damage: 2400, fireCooldown: 30, spread: 0.008, boltSpeed: 1000, boltSize: 4, splash: 12, pierce: 0.8 },
   factionStats: { pact: { hp: 30000, armor: 0.75, speed: 13.5 } },   // Yamato: the heaviest armour afloat, slower
   mounts: {
     nato: [gun([0, 13, 96], FWD, SIXTEEN_INCH), gun([0, 17, 78], FWD, SIXTEEN_INCH), gun([0, 13, -78], AFT, SIXTEEN_INCH), SECONDARY([11, 12, 20], Math.PI / 2), SECONDARY([-11, 12, 20], -Math.PI / 2), SECONDARY([11, 12, -20], Math.PI / 2), SECONDARY([-11, 12, -20], -Math.PI / 2)],
@@ -133,4 +136,24 @@ export const submarine = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine };
+export const carrier = ship({
+  id: 'carrier', name: 'Aircraft Carrier', shortName: 'Carrier', cost: 1200, limit: 1,
+  hull: { length: 267, beam: 28 },
+  stats: {
+    carrier: true,   // its side's carrier missions launch from its deck (systems/AirStrike.js: the sea kinds)
+    hp: 22000, armor: 0.35, speed: 16, accel: 0.06, turnRate: 0.05, turretRate: 0.4, radius: 15, height: 32, eyeHeight: 30, sight: 3200, ...AA(950, 0.3, 0.07),
+    range: 2200, aggroRange: 2200, preferredRange: 2600, leash: 100, damage: 220, fireCooldown: 4, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3,
+  },
+  mounts: {
+    nato: [gun([15, 17, 28], FWD, FIVE_INCH), gun([15, 17, 52], FWD, FIVE_INCH), gun([15, 17, -14], AFT, FIVE_INCH), gun([15, 17, -36], AFT, FIVE_INCH)],
+    pact: [gun([-14, 10, 70], FWD, DD_JP), gun([14, 10, 60], FWD, DD_JP), gun([-14, 10, -60], AFT, DD_JP), gun([14, 10, -70], AFT, DD_JP)],
+  },
+  camera: { distance: 220, height: 70, shoulder: 0 },
+  models: { nato: buildEssex, pact: buildShokaku },
+  variants: {
+    nato: { name: 'Essex-class carrier', weapon: 'Hellcats, Helldivers, Avengers', text: 'The fleet carrier that won the Pacific war: her air group strikes far beyond any gun. Lose her, and the planes go with her.' },
+    pact: { name: 'Shōkaku-class carrier', weapon: 'Zeros, Vals, Jills', text: 'The best carriers of the Kidō Butai: fast, with a strong air group. Thin-skinned against bombs.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier };

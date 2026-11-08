@@ -366,3 +366,46 @@ function sub(describe) {
 
 export const buildGato = sub(() => boat(US, { len: 95, beam: 8.3, tower: [12, 4.2, 6], gunZ: 16 }));
 export const buildB1 = sub(() => boat({ ...IJN, deck: 0x4a4e52 }, { len: 108, beam: 9.3, tower: [11, 4.6, 4], gunZ: -16, hangar: true }));
+
+/** An aircraft carrier: the hull, the hangar under a long flight deck, the island to starboard, aircraft parked aft. */
+function flattop(c, { len, beam, fb, draft, deck, islandZ, funnel = 'stack' }) {
+  const dy = fb + 7.5;   // the flight deck's height
+  const plane = (x, z, yaw) => [P.box(1.2, 1, 10, { x, y: dy + 1, z, ry: yaw, color: c.plane }), P.box(12, 0.25, 1.8, { x, y: dy + 1.3, z: z + 1.2 * Math.cos(yaw), ry: yaw, color: c.plane })];
+  return merge([
+    ...hull(len, beam, fb, draft, c, 1.4),
+    P.box(beam * 0.92, 7.5, len * 0.78, { y: fb + 3.75, z: -len * 0.02, color: c.upper }),              // the hangar
+    P.box(beam * 1.15, 0.6, len * 0.95, { y: dy, z: 0, color: deck }),                                    // the flight deck (overhanging)
+    ...[-1, 1].map((s) => P.box(0.2, 0.1, len * 0.9, { x: s * beam * 0.2, y: dy + 0.32, color: 0xd8d6cc })), // deck lines
+    P.box(5, 9, 22, { x: beam * 0.55, y: dy + 4.5, z: islandZ, color: c.upper }),                       // the island
+    P.box(5.2, 1, 6, { x: beam * 0.55, y: dy + 8, z: islandZ + 6, color: 0x2a3036 }),
+    funnel === 'stack'
+      ? P.box(4.4, 8, 9, { x: beam * 0.55, y: dy + 12, z: islandZ - 4, color: c.upper })
+      : P.cyl(1.8, 2.2, 9, { x: beam * 0.62, y: fb + 2, z: islandZ - 10, rz: -1.2, color: c.upper }, 10), // the IJN's funnels, turned down over the side
+    P.cyl(0.4, 0.5, 14, { x: beam * 0.55, y: dy + 15, z: islandZ + 4, color: c.black }, 6),
+    ...[-0.32, -0.2, -0.08].flatMap((k, i) => plane((i % 2 ? 5 : -5), len * k - 30, Math.PI)),
+  ]);
+}
+
+/** A carrier as a rig: rides the swell, its deck-edge mounts train like a ship's. */
+const carrier = (describe) => ship(() => {
+  const d = describe();
+  return { fixed: d.fixed, mounts: d.mounts };
+});
+
+export const buildEssex = carrier(() => {
+  const c = { ...US, plane: 0x2e3d52 };
+  const g = mount(c, { w: 4, h: 2.6, d: 4.6, barrels: 2, len: 5, cal: 0.15 });
+  return {
+    fixed: flattop(c, { len: 267, beam: 28, fb: 9, draft: 8, deck: 0x3e4650, islandZ: 10 }),
+    mounts: [{ geo: g, at: [15, 17, 28], arc: 4 }, { geo: g, at: [15, 17, 52], arc: 4 }, { geo: g, at: [15, 17, -14], aft: true, arc: 4 }, { geo: g, at: [15, 17, -36], aft: true, arc: 4 }],
+  };
+});
+
+export const buildShokaku = carrier(() => {
+  const c = { ...IJN, plane: 0x3c4a34 };
+  const g = mount(c, { w: 3.8, h: 2.4, d: 4.4, barrels: 2, len: 5, cal: 0.14 });
+  return {
+    fixed: flattop(c, { len: 257, beam: 26, fb: 8.5, draft: 8.8, deck: 0x8a6a4a, islandZ: 40, funnel: 'down' }),
+    mounts: [{ geo: g, at: [-14, 10, 70], arc: 4 }, { geo: g, at: [14, 10, 60], arc: 4 }, { geo: g, at: [-14, 10, -60], aft: true, arc: 4 }, { geo: g, at: [14, 10, -70], aft: true, arc: 4 }],
+  };
+});
