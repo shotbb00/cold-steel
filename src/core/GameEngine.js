@@ -15,6 +15,7 @@ import { Deployment } from '../systems/Deployment.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
+import { Torpedoes } from '../systems/Torpedoes.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
@@ -100,7 +101,8 @@ export class GameEngine {
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
-    this.systems = [new Doctrine(this)]; // extra per-frame systems (game modes add theirs); the armies' doctrine
+    this.torpedoes = new Torpedoes(this); // (the sea: systems/Torpedoes.js)
+    this.systems = [new Doctrine(this), this.torpedoes]; // extra per-frame systems (game modes add theirs); the armies' doctrine
     this.ended = false;
     this.time = 0;
 

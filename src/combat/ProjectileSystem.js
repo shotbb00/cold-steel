@@ -163,8 +163,15 @@ export class ProjectileSystem {
           if (b.splash) this.detonate(b, _hit, null);
           dead = true;
         } else {
-          const gy = terrain.heightAt(b.pos.x, b.pos.z);
-          if (b.pos.y <= gy) {
+          const sea = this.world.river?.sea ? this.world.river.level : -Infinity; // (the open sea: rounds burst at the surface, not on the sea floor)
+          const ground = terrain.heightAt(b.pos.x, b.pos.z);
+          const gy = Math.max(ground, sea);
+          if (b.pos.y <= gy && gy === sea && ground < sea) {
+            b.pos.y = sea;
+            this.effects.waterSplash?.(b.pos, Math.max(0.4, (b.splash || 1) / 4));
+            if (b.splash) this.detonate(b, b.pos, null, false, true);
+            dead = true;
+          } else if (b.pos.y <= gy) {
             b.pos.y = gy;
             if (!b.splash) this.effects.impact(b.pos, 'ground');
             this.audio?.play('impact.ground', b.pos, { volume: 0.35, throttle: 0.05 });
@@ -271,7 +278,7 @@ export class ProjectileSystem {
   }
 
   /** Shell burst: falloff damage to enemies around the impact (the direct-hit target excluded). */
-  detonate(b, point, directTarget, ground = true) {
+  detonate(b, point, directTarget, ground = true, water = false) {
     const foe = enemyOf(b.faction);
     const r = b.splash;
     if (!this.cosmetic) {
@@ -284,6 +291,7 @@ export class ProjectileSystem {
       this.suppressAround(point, b.faction, r * 2.2, 0.6);
       this.buildings?.blast(point, b.damage, r);
     }
+    if (water) return; // (in the sea: the splash is all there is to see)
     if (b.ignite) { // a flamethrower's fuel: it burns where it lands, nothing goes bang
       this.effects.flameSplash?.(point);
       if (!this.cosmetic && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) this.fire?.ignite(point.x, point.z, b.ignite);

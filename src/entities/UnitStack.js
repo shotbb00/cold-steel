@@ -554,7 +554,7 @@ export class UnitStack {
     if (s.naval) { // a ship: the rudder bites only with way on, and it keeps going round the turn
       const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
       const diff = angleDelta(u.yaw, heading);
-      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit ? 0.3 : 1);
+      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1);
       u.yaw += clamp(diff, -rate * dt, rate * dt);
       u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
       const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
@@ -601,6 +601,7 @@ export class UnitStack {
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
     if (u.engineHit) maxSpeed *= PARTS.engine;
+    if (s.naval) { this.shipUpkeep(u, dt); if (!u.alive) return; maxSpeed *= 1 - (u.flood ?? 0) * 0.6; }
     if (u.speedMul === 0 && !this.usesCover && this.world.time - this.lastHitTime > PARTS.calm && (u.fixT = (u.fixT ?? 0) + dt) > PARTS.fix) {
       u.speedMul = 0.95; // the crew got the track back on
       this.services.tell(this.faction, `${this.name}: tracks mended`);
@@ -840,6 +841,7 @@ export class UnitStack {
 
   updateWeapon(u, dt) {
     const s = u.stats;
+    if (s.naval) return this.updateShipWeapons(u, dt);
     // a towed gun: hitched to its truck while it moves, and it takes `towed.deploy` s from
     // stopping to being unhitched and laid — no shooting until then (the renderer shows the truck)
     if (s.towed) {
@@ -1682,6 +1684,128 @@ export class UnitStack {
     }
   }
 
+
+  // ------------------------------------------------------------------ ships (stats.naval)
+
+  /** The mounts of a ship (data/units45/ships.js `mounts`, per side), each with its own reload and state. */
+  shipMounts(u) {
+    const m = this.type.mounts;
+    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false })));
+  }
+
+  /** Where a mount's rounds leave: its place in the ship's frame (bow +z) turned with the hull. */
+  mountWorld(u, at, out) {
+    const c = Math.cos(u.yaw), s = Math.sin(u.yaw);
+    return out.set(u.pos.x + at[0] * c + at[2] * s, u.pos.y + at[1], u.pos.z - at[0] * s + at[2] * c);
+  }
+
+  /** A ship's fight: one target for the whole ship; every mount bearing on it fires on its own. */
+  updateShipWeapons(u, dt) {
+    const s = u.stats;
+    u.retarget -= dt;
+    if (u.target && (!u.target.alive || !u.target.spotted || dist2DSq(u.pos, u.target.pos) > s.range * s.range * 1.21)) u.target = null;
+    if (u.retarget <= 0) {
+      u.retarget = 1 + Math.random() * 0.6;
+      u.target = this.pickTarget(u);
+    }
+    const t = u.target;
+    u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
+    if (!t) return;
+    const d = Math.sqrt(dist2DSq(u.pos, t.pos));
+    const rel = angleDelta(u.yaw, u.turretYaw);
+    const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
+    for (const m of this.shipMounts(u)) {
+      m.cd -= dt;
+      if (m.out || m.cd > 0 || d > m.range) continue;
+      if (m.torpedo ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
+      m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
+      this.mountWorld(u, m.at, _p);
+      if (m.torpedo) {
+        this.services.game?.torpedoes?.launch(this, _p, t, m);
+        continue;
+      }
+      // the shell: led onto where the target will be, spread growing with the range
+      _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
+      if (t.vel) _v.addScaledVector(t.vel, d / m.shell);
+      _w.subVectors(_v, _p).normalize();
+      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank);
+      _w.x += (Math.random() - 0.5) * spread * 2;
+      _w.y += (Math.random() - 0.5) * spread * 0.6;
+      _w.z += (Math.random() - 0.5) * spread * 2;
+      _w.normalize();
+      this.services.projectiles.spawn({
+        origin: _p, dir: _w, speed: m.shell, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor,
+        size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: true,
+      });
+      this.services.effects.muzzle(_p, _w, m.size, 'artillery');
+      this.services.audio?.weapon(this.faction, m.damage > 1000 ? 'artillery' : this.weaponSound, _p);
+      this.firedAt = this.world.time;
+      VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /**
+   * A hit on a ship that didn't sink it: below the waterline it leaks (flooding: UnitStack.shipUpkeep),
+   * and now and then it knocks something out — the engines, the rudder, a mount, the bridge — or
+   * starts a fire. `torpedo`: a hole in the hull for certain.
+   */
+  shipHit(u, dealt, torpedo = false) {
+    const k = dealt / u.maxHp;
+    const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
+    if (torpedo || Math.random() < 0.3 + k * 4) {
+      const was = u.leak ?? 0;
+      u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : k * 0.08 + 0.002); // (a torpedo opens a destroyer up; a battleship takes several)
+      if (torpedo) tell('torpedo hit — flooding!');
+      else if (!was) tell('holed below the waterline');
+    }
+    if (Math.random() > Math.min(0.55, 0.06 + k * 5)) return;
+    const now = this.world.time;
+    const r = Math.random();
+    if (r < 0.2) { u.engineHit = true; u.engineFix = now + 60; tell('engine room hit — losing speed'); }
+    else if (r < 0.32) { u.rudderHit = now + 40; tell('rudder jammed'); }
+    else if (r < 0.62) {
+      const up = this.shipMounts(u).filter((m) => !m.out);
+      const m = up[Math.floor(Math.random() * up.length)];
+      if (m) { m.out = true; m.fixAt = Math.random() < 0.5 ? now + 60 : Infinity; tell(m.torpedo ? 'torpedo mount wrecked' : 'a gun mount knocked out'); }
+    } else if (r < 0.72) { u.bridgeHit = now + 30; tell('bridge hit'); }
+    else { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.35); tell('fire aboard'); }
+  }
+
+  /**
+   * A ship's own upkeep: water comes in through the leaks and the pumps fight it; fires burn and the
+   * crews put them out (or don't: a big one can reach the magazine); damage gets mended. Flooding
+   * settles the ship, lists and trims it (the model) and slows it; when it's full, it goes down.
+   */
+  shipUpkeep(u, dt) {
+    const now = this.world.time;
+    if (u.leak > 0) {
+      u.flood = (u.flood ?? 0) + u.leak * dt;
+      u.leak = Math.max(0, u.leak - dt * 0.00045);   // damage control: the holes get plugged, one by one
+    } else if (u.flood > 0) u.flood = Math.max(0, u.flood - dt * 0.002); // …and pumped out
+    if (u.blaze > 0) {
+      u.hp -= u.blaze * u.maxHp * 0.0025 * dt;
+      u.blaze = Math.min(1, Math.max(0, u.blaze + (u.blaze > 0.65 ? 0.008 : -0.02) * dt)); // a small fire is put out, a big one spreads
+      if ((u.burnFx = (u.burnFx ?? 0) - dt) <= 0) {
+        u.burnFx = 6;
+        this.services.effects.burn({ x: u.pos.x, y: u.pos.y + 6, z: u.pos.z }, 8, 0.8 + u.blaze * 1.5);
+      }
+      if (u.blaze > 0.85 && Math.random() < dt * 0.01) { // the fire reaches a magazine
+        this.services.effects.explosion({ x: u.pos.x, y: u.pos.y + 8, z: u.pos.z }, 4, { ground: false, fire: 3 });
+        this.services.tell(this.faction, `${this.name}: the magazine has gone up!`);
+        this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1);
+        return;
+      }
+    }
+    if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
+    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;
+    const f = u.flood ?? 0;
+    u.listSide ??= Math.random() < 0.5 ? -1 : 1;
+    u.list = f * 0.22 * u.listSide;
+    u.trim = f * 0.03;
+    u.sink = f * 2.5;
+    if (f >= 1 || u.hp <= 0) this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1); // (no more buoyancy: she goes down)
+  }
+
   /** Smoke grenade launchers (vehicles) or thrown smoke grenades (infantry): a screen between `u` and the threat (dir: incoming shot). */
   popSmoke(u, dir = null) {
     if (this.smokeLeft <= 0 || this.world.time < (this.smokeReadyAt ?? 0)) return false;
@@ -1822,14 +1946,15 @@ export class UnitStack {
       // Armour: rifles barely scratch it; directional plating (front 1x, side 0.7x, rear 0.35x).
       let armor = this.stats.armor;
       let facing = 1;
-      if (dir) {
+      if (dir && !this.stats.naval) { // (a ship: one belt all round)
         const len = Math.hypot(dir.x, dir.z) || 1;
         facing = -(dir.x * Math.sin(u.yaw) + dir.z * Math.cos(u.yaw)) / len; // 1 = hit head-on
         armor *= facing > 0.5 ? 1 : facing > -0.5 ? 0.7 : 0.35;
       }
       const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
-      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
+      if (this.stats.naval) { if (u.hp > 0) this.shipHit(u, dealt); } // (flooding, fires, parts)
+      else if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
       if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);

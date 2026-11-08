@@ -1,0 +1,93 @@
+// Torpedoes: fired in a spread from a ship's torpedo mount (entities/UnitStack.js updateShipWeapons)
+// at where the target will be, they run straight at their own speed just under the surface until
+// they hit a ship (anywhere along its length and beam: data/units45/ships.js `hull`), run onto a
+// reef or the shallows, or run out of range. A hit holes the hull (UnitStack.shipHit: flooding).
+// The wake shows where one runs — the US Mark 15's bubbles plainly, the Japanese Long Lance
+// (oxygen-driven, `wakeless`) hardly at all. The host runs them (a client sees the hits).
+import { enemyOf } from '../data/factions.js';
+
+const SPREAD = 0.045;   // rad between the fish of one spread
+const RUN_DEPTH = 0.4;  // m under the surface
+
+export class Torpedoes {
+  constructor(game) {
+    this.game = game;
+    this.list = [];
+  }
+
+  /** A spread from `from` (world) at target unit `t`, by stack `src`'s mount `m` { count, speed, range, damage, wakeless }. */
+  launch(src, from, t, m) {
+    // where the target will be when the fish gets there (two rounds of the intercept are enough)
+    let tx = t.pos.x, tz = t.pos.z;
+    for (let i = 0; i < 2; i++) {
+      const time = Math.hypot(tx - from.x, tz - from.z) / m.speed;
+      tx = t.pos.x + (t.vel?.x ?? 0) * time;
+      tz = t.pos.z + (t.vel?.z ?? 0) * time;
+    }
+    const yaw = Math.atan2(tx - from.x, tz - from.z);
+    const level = this.game.world.river?.level ?? 0;
+    for (let i = 0; i < m.count; i++) {
+      const a = yaw + (i - (m.count - 1) / 2) * SPREAD + (Math.random() - 0.5) * 0.01;
+      this.list.push({
+        x: from.x + Math.sin(a) * 6, z: from.z + Math.cos(a) * 6, y: level - RUN_DEPTH, dx: Math.sin(a), dz: Math.cos(a),
+        speed: m.speed, left: m.range, damage: m.damage, wakeless: !!m.wakeless, faction: src.faction, source: src, fx: Math.random() * 0.2,
+      });
+    }
+    this.game.audio?.play('rocket', from, { volume: 0.5, throttle: 0.5 });
+    this.game.tell(src.faction, `${src.name}: torpedoes away`);
+  }
+
+  update(dt) {
+    if (!this.list.length) return;
+    const g = this.game;
+    const terrain = g.terrain;
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const f = this.list[i];
+      const step = f.speed * dt;
+      f.x += f.dx * step;
+      f.z += f.dz * step;
+      f.left -= step;
+      // the wake: bubbles behind it (a Long Lance's barely there)
+      if ((f.fx -= dt) <= 0) {
+        f.fx = f.wakeless ? 0.6 : 0.12;
+        g.effects.smoke.spawn(f.x - f.dx * 4, f.y + 0.5, f.z - f.dz * 4, {
+          vx: 0, vy: 0.2, vz: 0, size: f.wakeless ? 0.8 : 1.4, grow: 0.8, life: f.wakeless ? 2 : 5, alpha: f.wakeless ? 0.12 : 0.5, color: 0xeef4f6, drag: 1, wind: 0.1,
+        });
+      }
+      let gone = f.left <= 0;
+      if (!gone && terrain.heightAt(f.x, f.z) > f.y - 0.5) { // onto a reef or the shallows: it goes off there
+        if (!g.net?.isClient) g.effects.waterSplash?.({ x: f.x, y: f.y + RUN_DEPTH, z: f.z }, 2);
+        gone = true;
+      }
+      if (!gone) {
+        const hit = this.shipAt(f);
+        if (hit) {
+          g.effects.waterSplash?.({ x: f.x, y: f.y + RUN_DEPTH, z: f.z }, 3.5);
+          g.audio?.play('explosion.big', hit.pos, { volume: 1 });
+          if (!g.net?.isClient) {
+            hit.receiveDamage(f.damage, f.source, 0.7, { x: f.dx, z: f.dz }, 1);
+            if (hit.alive) hit.stack.shipHit(hit, 0, true);
+          }
+          gone = true;
+        }
+      }
+      if (gone) this.list.splice(i, 1);
+    }
+  }
+
+  /** The enemy ship whose hull the torpedo `f` is inside, if any. */
+  shipAt(f) {
+    for (const s of this.game.world.stacksOf(enemyOf(f.faction))) {
+      if (!s.stats.naval || !s.type.hull) continue;
+      const { length, beam } = s.type.hull;
+      for (const u of s.units) {
+        if (!u.alive || (u.depth ?? 0) > 8) continue; // (a submarine deep down: under it)
+        const dx = f.x - u.pos.x, dz = f.z - u.pos.z;
+        const along = dx * Math.sin(u.yaw) + dz * Math.cos(u.yaw);
+        const across = dx * Math.cos(u.yaw) - dz * Math.sin(u.yaw);
+        if (Math.abs(along) < length / 2 && Math.abs(across) < beam / 2 + 0.8) return u;
+      }
+    }
+    return null;
+  }
+}

@@ -488,6 +488,18 @@ export class EffectsSystem {
    * A fresh crater smouldering: a thin grey wisp for `duration` s, no flame. At most SMOULDER_MAX at once
    * (fewer on a phone): the oldest gives way to a new one.
    */
+  /** A shell or torpedo bursting in the sea: a white column of spray that falls back, and foam. */
+  waterSplash(pos, size = 1) {
+    const n = Math.round(8 + size * 6);
+    for (let i = 0; i < n; i++) {
+      this.smoke.spawn(pos.x + rnd(-1, 1) * size, pos.y + 0.3, pos.z + rnd(-1, 1) * size, {
+        vx: rnd(-1.5, 1.5) * size, vy: rnd(6, 16) * Math.sqrt(size), vz: rnd(-1.5, 1.5) * size, size: rnd(0.8, 1.6) * size, grow: 1.6,
+        life: rnd(1.4, 2.6), alpha: rnd(0.55, 0.85), color: 0xf2f6f8, drag: 1.2, wind: 0.4,
+      });
+    }
+    this.smoke.spawn(pos.x, pos.y + 0.2, pos.z, { vx: 0, vy: 0.1, vz: 0, size: 3 * size, grow: 2, life: 6, alpha: 0.4, color: 0xe8f0f2, drag: 1, wind: 0.2 }); // the foam ring
+  }
+
   smoulder(pos, duration = 35, size = 1) {
     const max = touchScreen() ? 5 : 12;
     const now = this.emitters.filter((e) => e.kind === 'smoulder');
