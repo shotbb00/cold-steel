@@ -102,7 +102,10 @@ export class NavGrid {
       for (let i = 0; i < this.nx; i++, k++) {
         const depth = w ? w.level - terrain.heightAt(this.ox + i * this.cell, this.oz + j * this.cell) : 0;
         d[k] = w && depth > w.deep ? 0 : Infinity;
-        this.dShore[k] = depth < SHIP_DEPTH ? 0 : Infinity;
+        // ships: the shallowest spot in the cell, not its centre (on a steep reef that's metres apart)
+        const x0 = this.ox + i * this.cell, z0 = this.oz + j * this.cell, hc = this.cell / 2;
+        const shoal = !w || depth < SHIP_DEPTH ? depth : Math.min(depth, ...[[-hc, -hc], [hc, -hc], [-hc, hc], [hc, hc]].map(([dx, dz]) => w.level - terrain.heightAt(x0 + dx, z0 + dz)));
+        this.dShore[k] = shoal < SHIP_DEPTH ? 0 : Infinity;
       }
     }
     this.waterDirty = true;

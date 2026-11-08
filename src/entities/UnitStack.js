@@ -787,7 +787,12 @@ export class UnitStack {
     const w = this.world.river?.water;
     this.world.clampToBounds(u.pos);
     const nav = this.world.nav;
-    if (nav && !nav.passable(u.pos.x, u.pos.z, SHIP, 0) && nav.passable(px, pz, SHIP, 0)) {
+    // the shallows: her middle keeps her own radius off them (as her route does), her bow (some nine radii
+    // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
+    const fx = Math.sin(u.yaw) * u.radius * 9, fz = Math.cos(u.yaw) * u.radius * 9;
+    const closes = (cNew, cOld, r) => cNew < r && cNew < cOld;
+    if (nav && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
+      || closes(nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), nav.clearance(px + fx, pz + fz, SHIP), 0.5))) {
       u.pos.x = px;
       u.pos.z = pz;
       u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
