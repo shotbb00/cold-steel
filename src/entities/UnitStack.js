@@ -900,7 +900,7 @@ export class UnitStack {
     }
     if (!u.target && !reloading && u.mag < s.magSize * 0.5) this.startReload(u); // top up in a lull
     if (u.target) u.calmT = 0;
-    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; } // grenades and rockets from the platoon's stock
+    else if ((u.calmT = (u.calmT ?? 0) + dt) > GRENADE.refill * (this.nearSupply ?? 1)) { u.grenades = s.grenades ?? 0; this.lightAT = s.lightAT ?? 0; this.smokeLeft = this.stats.smoke?.charges ?? 0; } // grenades, rockets and smoke from the platoon's stock
 
     if (u.peekT > 0) {
       u.peekT -= dt;
@@ -1622,15 +1622,15 @@ export class UnitStack {
     }
   }
 
-  /** Vehicle smoke grenade launchers: a screen between `u` and the threat (dir: incoming shot). */
+  /** Smoke grenade launchers (vehicles) or thrown smoke grenades (infantry): a screen between `u` and the threat (dir: incoming shot). */
   popSmoke(u, dir = null) {
     if (this.smokeLeft <= 0 || this.world.time < (this.smokeReadyAt ?? 0)) return false;
     this.smokeLeft--;
     this.smokeReadyAt = this.world.time + 8;
-    let yaw = u.turretYaw;
+    let yaw = this.usesCover ? u.yaw : u.turretYaw;
     if (dir) yaw = Math.atan2(-dir.x, -dir.z); // toward where the shot came from
     const d = 12;
-    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, { radius: 9, duration: 40 });
+    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, this.usesCover ? { radius: 7, duration: 30 } : { radius: 9, duration: 40 });
     this.services.tell?.(this.faction, `${this.name}: smoke!`);
     return true;
   }
@@ -1781,6 +1781,11 @@ export class UnitStack {
     if (source && source.faction !== this.faction && source.alive) {
       this.lastAttacker = source;
       this.lastHitTime = this.world.time;
+      // infantry hit in the attack, on the move or pinned: a smoke grenade toward the shooter
+      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !this.garrison && (this.ai.state === AIState.ATTACK || this.moveTarget || u.suppression > 0.7)) {
+        const from = source.centroid ?? source.pos;
+        if (from) this.popSmoke(u, { x: u.pos.x - from.x, z: u.pos.z - from.z });
+      }
     }
     if (u.hp > 0) {
       if (u.wounded && !u.woundedBarked) {

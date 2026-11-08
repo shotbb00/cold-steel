@@ -288,7 +288,7 @@ export class CommandSystem {
       const vehicles = sel.filter((s) => s.smokeLeft > 0);
       const mortars = sel.filter((s) => s.smokeRounds > 0);
       if (mortars.length) return this.startTargeting({ kind: 'smoke', stacks: mortars });
-      if (!vehicles.length) return this.game.bus.emit('toast', 'Select vehicles with smoke launchers, or a mortar team');
+      if (!vehicles.length) return this.game.bus.emit('toast', 'Select infantry or vehicles with smoke, or a mortar team');
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       const air = cmd.slice(4) || 'heli';

@@ -23,6 +23,7 @@ export default {
     hp: 100,              // one solid hit is usually enough
     grenades: 2,          // hand grenades per man (UnitStack GRENADE)
     lightAT: 2,           // light anti-tank rockets the squad carries (UnitStack LAW)
+    smoke: { charges: 2 }, // smoke grenades: thrown toward the shooter when hit in the attack or pinned (UnitStack.receiveDamage), or on order
     armor: 0,
     speed: 3.3,           // walking pace, m/s (runs ~1.6x)
     radius: 0.45,         // hit / body radius

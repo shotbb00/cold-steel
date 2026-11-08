@@ -191,7 +191,7 @@ export class Orders {
       case 'popSmoke':
         for (const s of mine(cmd.s)) {
           const u = s.units.find((v) => v.alive);
-          s.ai.halt();
+          if (!s.usesCover) s.ai.halt(); // (a squad throws its grenade on the move)
           if (u) s.popSmoke(u);
         }
         return null;
