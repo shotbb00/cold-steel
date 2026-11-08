@@ -160,23 +160,54 @@ body.tactical #command-panel { display: block; }
 .banner-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 /* ---------- stack labels ---------- */
+/* one-line tags (src/ui/StackLabels.js): symbol, callsign, count, chips when something is wrong;
+   a hairline of health under it, an amber one for suppression; a reload ring round the symbol */
 .stack-label {
-  position: absolute; left: 0; top: 0; min-width: 96px;
-  padding: 3px 6px; background: rgba(12, 14, 10, 0.62); border: 1px solid var(--line);
-  font-size: 12px; font-weight: 600; white-space: nowrap; will-change: transform;
+  --side: var(--ally);
+  position: absolute; left: 0; top: 0; display: inline-flex; flex-direction: column; gap: 1px;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap; will-change: transform;
 }
-.stack-label.ally { border-left: 2px solid var(--ally); }
-.stack-label.enemy { border-left: 2px solid var(--enemy); }
-.stack-label.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 195, 90, 0.45); }
-.sl-head { display: flex; justify-content: space-between; gap: 8px; }
-.sl-count { color: var(--muted); }
-.sl-bar { height: 3px; margin: 2px 0; background: rgba(255, 255, 255, 0.1); }
-.sl-bar i { display: block; height: 100%; }
-.stack-label.ally .sl-bar i { background: var(--ally); }
-.stack-label.enemy .sl-bar i { background: var(--enemy); }
-.sl-state { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.stack-label.enemy { --side: var(--enemy); }
+.stack-label.partner { --side: var(--partner); }
+.sl-row {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px 2px 4px;
+  background: rgba(12, 14, 10, 0.66); border: 1px solid rgba(190, 200, 170, 0.16);
+}
+.stack-label.selected .sl-row { border-color: var(--gold); box-shadow: 0 0 8px rgba(255, 195, 90, 0.4); }
+.stack-label.partner .sl-name { color: var(--partner); }
+.sl-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sl-count:empty { display: none; }
+.sl-bar { height: 2px; margin: 0 1px; background: rgba(255, 255, 255, 0.12); }
+.sl-bar i { display: block; height: 100%; background: var(--side); }
+.sl-sup { height: 2px; margin: 0 1px; }
+.sl-sup i { display: block; height: 100%; width: 0; background: #e0a43a; transition: width 0.25s; }
+.stack-label:not(.suppressed) .sl-sup { display: none; }
+/* the symbol: frame and sign in the side's colour; rank stars under it; the reload ring round it */
+.sl-sym { position: relative; display: inline-grid; place-items: center; flex: none; }
+.sl-glyph svg { display: block; overflow: visible; }
+.sl-glyph .frame { fill: rgba(12, 14, 10, 0.8); stroke: var(--side); stroke-width: 1.6; }
+.sl-glyph .sign { stroke: var(--side); stroke-width: 1.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sl-glyph .sign .fill { fill: var(--side); stroke: none; }
+.sl-rank { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); font-size: 8px; line-height: 1; letter-spacing: -1px; color: var(--gold); text-shadow: 0 0 2px #000; font-style: normal; }
+.sl-rank:empty { display: none; }
+.sl-sym { margin: 0 2px; }
+.sl-ring {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; display: none;
+  background: conic-gradient(var(--gold) var(--p, 0%), rgba(255, 255, 255, 0.22) 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 83%); mask: radial-gradient(closest-side, transparent 80%, #000 83%);
+}
+.sl-sym.loading .sl-ring, .sl-sym.fire .sl-ring { display: block; }
+.sl-sym.fire .sl-ring { background: #fff4c8; }
+.sl-sym.fire .frame { stroke: #fff4c8; }
+/* chips: only when something is wrong (or a support vehicle at work) */
+.sl-chips { display: inline-flex; gap: 3px; }
+.sl-chips:empty { display: none; }
+.sl-chip { font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 1px 5px; color: #17140c; background: #e0a43a; }
+.sl-chip.hot { background: #f08a3c; }
+.sl-chip.bad { background: #ff5a48; color: #fff; }
+.sl-chip.flash { animation: sl-flash 0.8s steps(2) infinite; }
+.sl-chip.job { background: transparent; color: #8fe0a4; border: 1px solid rgba(143, 224, 164, 0.5); letter-spacing: 0.04em; text-transform: none; font-size: 10.5px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 #labels:not(.tactical) .stack-label { opacity: 0.8; transform-origin: bottom center; }
-#labels:not(.tactical) .sl-state { display: none; }
 
 #select-box {
   position: fixed; z-index: 6; pointer-events: none;
@@ -340,9 +371,6 @@ body.online .sp-only { display: none; }
 @keyframes rl-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 body:not(.tactical) #radio-log { opacity: 0.75; }
 
-/* stack label rank (veterancy) */
-.sl-rank { color: var(--gold); margin-right: 3px; letter-spacing: -1px; font-size: 10px; }
-.sl-rank:empty { display: none; }
 
 /* after-action report (src/ui/AfterAction.js) */
 .aar { width: min(980px, 100%); margin: 0 0 22px; padding: 16px 18px; background: rgba(12, 13, 10, 0.86); border: 1px solid var(--line); border-top: 3px solid var(--gold); text-align: left; }
@@ -380,11 +408,6 @@ body:not(.night) .night-only { display: none; }
 .fl-status[hidden] { display: none; }
 .fl-point.locked { opacity: 0.35; }
 
-/* co-op: your partner's stacks, in their own colour */
-.stack-label.partner { border-color: rgba(79, 214, 160, 0.45); border-left-color: var(--partner); }
-.stack-label.partner .sl-name { color: var(--partner); }
-.stack-label.partner .sl-bar i { background: var(--partner); }
-.stack-label.partner .sl-name::after { content: ' · partner'; color: var(--partner); font-weight: 400; opacity: 0.8; }
 
 /* occupied-house badges (src/ui/BuildingMarkers.js) */
 .bld-mark {
@@ -403,29 +426,14 @@ body:not(.night) .night-only { display: none; }
 .bld-mark button[hidden] { display: none; }
 
 /* lane waves (modes/lanes.js): just a small name tag */
-.stack-label.wave { min-width: 0; padding: 1px 5px; font-size: 10.5px; opacity: 0.7; }
-.stack-label.wave .sl-state, .stack-label.wave .sl-count { display: none; }
-.stack-label.wave .sl-bar { height: 2px; }
+.stack-label.wave { font-size: 10.5px; opacity: 0.7; }
+.stack-label.wave .sl-count, .stack-label.wave .sl-chips { display: none; }
 
 /* support powers on cooldown (src/ui/ActionBar.js) */
 .cmd-buttons.support button.cooling { opacity: 0.55; }
 
-/* suppression and morale on the stack labels (src/ui/StackLabels.js) */
-.sl-sup { height: 2px; margin: 0 0 2px; background: transparent; }
-.sl-sup i { display: block; height: 100%; width: 0; background: #e0a43a; transition: width 0.25s; }
-.stack-label[data-morale="shaken"] .sl-morale { color: #e8c060; }
-.stack-label[data-morale="wavering"] .sl-morale { color: #f08a3c; }
-.stack-label[data-morale="broken"] .sl-morale { color: #ff5a48; animation: sl-flash 0.8s steps(2) infinite; }
-.stack-label[data-morale="dug-in"] .sl-morale { color: #b8d89a; }
-#labels:not(.tactical) .stack-label.pinned .sl-pinned { margin-left: 0; }
-.sl-pinned { display: none; margin-left: 6px; padding: 0 4px; background: #e0a43a; color: #17140c; font-weight: 700; letter-spacing: 0.06em; }
-.stack-label.pinned .sl-pinned { display: inline-block; animation: sl-flash 1s steps(2) infinite; }
-.stack-label.pinned { border-left-color: #e0a43a; }
-#labels:not(.tactical) .stack-label.pinned .sl-state { display: block; }
-#labels:not(.tactical) .stack-label.pinned .sl-ai, #labels:not(.tactical) .stack-label.pinned .sl-sep,
-#labels:not(.tactical) .stack-label.pinned .sl-morale { display: none; }
 @keyframes sl-flash { 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .sl-pinned, .stack-label[data-morale="broken"] .sl-morale { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sl-chip.flash { animation: none; } }
 
 /* direct control under fire: the edges of the view close in (src/ui/HUD.js) */
 #suppress-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0;
@@ -621,7 +629,7 @@ body.touch #vitals { left: 50%; right: auto; bottom: 8px; top: auto; transform: 
 
 body.touch .rw-close { min-width: 44px; min-height: 44px; font-size: 30px; margin: -10px -10px -10px auto; }
 /* the platoon leader (entities/UnitStack.js officers): LT while he lives, struck through once he's down */
-.sl-off { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--gold); margin-right: 4px; }
+.sl-off { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--gold); }
 .sl-off:empty { display: none; }
 .sl-off.lost { color: var(--muted); text-decoration: line-through; }
 #tutorial .tu-next { font-size: 15px; padding: 9px 16px; letter-spacing: 0.04em; } /* the closing card's Next chapter */
@@ -820,10 +828,8 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
 #touch-bar .tb-place { border-color: rgba(143, 233, 255, 0.7); color: #bff4ff; }
 #touch-bar .tb-place .ico { stroke: #bff4ff; }
 
-/* support at work (src/systems/Support.js): what the vehicle is doing, a badge on whoever it treats */
-.sl-job { display: none; margin-top: 2px; font-size: 10.5px; color: #8fe0a4; letter-spacing: 0.04em; white-space: nowrap; }
-.stack-label.working .sl-job { display: block; }
-.sl-care { font-weight: 700; margin-right: 4px; }
+/* a badge on whoever a support vehicle treats (src/systems/Support.js) */
+.sl-care { font-weight: 700; }
 .sl-care:empty { display: none; }
 .sl-care.heal { color: #6dff9a; }
 .sl-care.repair { color: #ffc060; }
