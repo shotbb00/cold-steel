@@ -10,6 +10,7 @@ import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
 import stalingrad from './stalingrad.ts';
+import elAlamein from './elAlamein.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -22,6 +23,7 @@ export const MAPS = {
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
   [stalingrad.id]: stalingrad,
+  [elAlamein.id]: elAlamein,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;

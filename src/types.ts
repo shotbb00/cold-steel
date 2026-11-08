@@ -283,7 +283,7 @@ export interface MapDef {
   description: string;
   /** only these epochs (maps/index.js mapsFor) */
   epochs?: string[];
-  winter?: boolean; // snow: whitewashed vehicles, soldiers in snow smocks (render/paint.js WINTER)
+  climate?: 'winter' | 'desert'; // whitewash and snow smocks, or sand paint and khaki (render/paint.js CLIMATE)
   /** 1945's own description and point names (maps/index.js forEpoch) */
   ww2?: { description?: string; points?: Record<string, string> };
   size: number;

@@ -723,6 +723,49 @@ export class PropBuilder {
     this.rubble(wx, wz, size, true);
   }
 
+  /**
+   * A North African house: mud-brick walls in sun-bleached plaster, small windows, a flat roof with
+   * a low parapet (`dome`: a little domed shrine on top, the mosque). Occupiable.
+   */
+  flatHouse({ x, z, yaw, width = 8, depth = 7, storeys = 1, name = 'house', dome = false }) {
+    const r = this.rand;
+    const b = this.beginBuilding(name, x, z, yaw, width, depth);
+    const plaster = new THREE.Color().setHSL(0.1 + r() * 0.03, 0.22 + r() * 0.12, 0.66 + r() * 0.1).getHex();
+    b.plaster = plaster;
+    const h = storeys * 3;
+    this.shell(b, { height: h, storeys, t: 0.5, color: plaster, bay: 3, sill: 1.2, head: 2.1, frame: 0x8a7a5a, front: [(r() - 0.5) * width * 0.4] });
+    this.piece('plaster', b, 0, h + 0.1, 0, width + 0.3, 0.25, depth + 0.3, plaster);                  // the flat roof
+    for (const [lx, lz, sx, sz] of [[0, depth / 2, width + 0.3, 0.3], [0, -depth / 2, width + 0.3, 0.3], [width / 2, 0, 0.3, depth], [-width / 2, 0, 0.3, depth]]) {
+      this.piece('plaster', b, lx, h + 0.5, lz, sx, 0.6, sz, plaster);                                  // parapet
+    }
+    if (dome) {
+      const [dx, dz] = PropBuilder.local(x, z, yaw, 0, 0);
+      _m.compose(_p.set(dx, b.ground + h + 0.2, dz), _q.identity(), _s.set(width * 0.3, width * 0.3, width * 0.3));
+      this.push('plaster', new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), _m, 0xe8e0cc);
+    }
+    this.endBuilding();
+    return b;
+  }
+
+  /** A date palm: a leaning, ringed trunk and a crown of drooping fronds (cover at the foot). */
+  palm({ x, z, height = 9 }) {
+    const r = this.rand;
+    const g = this.terrain.heightAt(x, z);
+    const lean = (r() - 0.5) * 0.25;
+    const ly = r() * Math.PI * 2;
+    const tx = x + Math.sin(ly) * Math.sin(lean) * height;
+    const tz = z + Math.cos(ly) * Math.sin(lean) * height;
+    _m.compose(_p.set((x + tx) / 2, g + height / 2, (z + tz) / 2), _q.setFromEuler(_e.set(Math.cos(ly) * lean, 0, -Math.sin(ly) * lean)), _s.set(1, 1, 1));
+    this.push('plain', new THREE.CylinderGeometry(0.18, 0.28, height, 7), _m, 0x6a5a40);
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2 + r() * 0.4;
+      _m.compose(_p.set(tx + Math.sin(a) * 1.6, g + height - 0.4, tz + Math.cos(a) * 1.6), _q.setFromEuler(_e.set(0.2 + r() * 0.3, a, 0, 'YXZ')), _s.set(1.1, 0.06, 3.8));
+      this.push('plain', UNIT_BOX, _m, r() < 0.5 ? 0x4e6a2e : 0x5f7434);
+    }
+    _e.order = 'XYZ'; // (the shared Euler: back to the default for everyone else)
+    this.cover.addCylinder({ x, z, radius: 0.3, height: 3 });
+  }
+
   /** The town church: a stone nave, a square tower with a slate spire. */
   church({ x, z, yaw }) {
     const b = this.beginBuilding('church', x, z, yaw, 9, 18);

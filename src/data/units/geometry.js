@@ -28,7 +28,7 @@ export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth'];
 const GLASS_TINTS = new Set([0x1b2126, 0x14181a, 0x1a1d1c, 0x2a3a44, 0x2a2232]);
 const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236]);
 const SKIN_TINTS = new Set();
-/** Skin colours (data/models/soldierBody.js): matte, and never whitewashed (render/paint.js uWinter). */
+/** Skin colours (data/models/soldierBody.js): matte, and never whitewashed (render/paint.js CLIMATE). */
 export const markSkin = (...cs) => cs.forEach((c) => SKIN_TINTS.add(c));
 function surfaceOf(color, camo) {
   if (color === null || camo) return 0;
