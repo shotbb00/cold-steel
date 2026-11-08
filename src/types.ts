@@ -287,6 +287,8 @@ export interface MapDef {
   navCell?: number;       // routing cell, m (world/Nav.js; a sea map: coarser)
   camera?: { maxHeight?: number; near?: number; far?: number }; // a big map: zoom out further, see further
   fow?: number;           // how dark unseen ground gets, 0…1 (render/FogOfWar.js; a sea map: lighter)
+  sides?: { nato?: string; pact?: string }; // the map's own names for the sides (the epoch's otherwise)
+  modes?: string[];        // only these modes (the menu offers it with them; main.js start falls back to the first)
   climate?: 'winter' | 'desert'; // whitewash and snow smocks, or sand paint and khaki (render/paint.js CLIMATE)
   /** 1945's own description and point names (maps/index.js forEpoch) */
   ww2?: { description?: string; points?: Record<string, string> };

@@ -13,6 +13,7 @@
 import { epoch } from '../data/epoch.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineDirector } from '../ai/FrontlineDirector.js';
+import { SeaDirector } from '../ai/SeaDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 import { makeBuyer } from './shared.js';
@@ -64,7 +65,8 @@ export default {
     if (this.air === false) for (const f of [game.playerFaction, foe]) game.air.limit[f] = 0;
     game.modeState = state;
     game.systems.push(points, new Economy(game, state)); // the building and support budgets, the side objectives
-    if (!game.net || game.coop) game.systems.push(new FrontlineDirector(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
+    const Director = game.world.river?.sea ? SeaDirector : FrontlineDirector; // (at sea: the admiral, ai/SeaDirector.js)
+    if (!game.net || game.coop) game.systems.push(new Director(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
     game.frontlineHud = new FrontlineHUD(game, state);
 
     game.bus.on('unit:death', ({ stack }) => {

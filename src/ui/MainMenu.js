@@ -380,6 +380,7 @@ export class MainMenu {
         c.mode = m.id;
         for (const o of modes.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
         modeAbout.textContent = m.description;
+        this.fitMaps?.();
         this.drawRules();
         this.drawSummary();
       });
@@ -394,8 +395,10 @@ export class MainMenu {
     chips.setAttribute('role', 'radiogroup');
     c.map = mapIn(c.map, epoch());
     const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
+    const mapChips = [];
     for (const m of mapsFor(epoch())) {
       const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
+      mapChips.push([b, m]);
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(c.map === m.id));
@@ -409,6 +412,12 @@ export class MainMenu {
     }
     where.append(chips, about);
     q('Where', where);
+    // a map fought only in some modes (Midway: Frontline) is offered only with those
+    this.fitMaps = () => {
+      for (const [b, m] of mapChips) b.hidden = !!m.modes && !m.modes.includes(c.mode);
+      if (mapChips.find(([, m]) => m.id === c.map)?.[0].hidden) mapChips.find(([b]) => !b.hidden)?.[0].click();
+    };
+    this.fitMaps();
 
     // which side
     const sides = el('div', 'side-pick');

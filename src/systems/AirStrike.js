@@ -317,6 +317,11 @@ class Sortie {
 
   update(dt) {
     const game = this.game;
+    if (this.p.sea && !this.orphan && !game.world.stacksOf(this.faction).some((s) => s.stats.carrier && s.units[0]?.alive)) { // the carrier is gone
+      this.orphan = true;
+      if (this.state === 'inbound') { this.state = 'done'; return; }  // (still on her deck: lost with her)
+      game.tell(this.faction, `${this.type.name}: our carrier is gone — finishing the run, then ditching`);
+    }
     if (this.state === 'inbound') {
       if (game.time >= this.appearAt) this.spawn();
       return;
@@ -375,6 +380,7 @@ class Sortie {
     } else if (this.state === 'break' || this.state === 'home') {
       alt = this.type.paradrop ? PARA.alt + 20 : p.cruiseAlt + (this.kind === 'jet' ? 60 : 12);
       if (this.kind === 'lift') wantSpeed = p.cruiseSpeed;
+      if (this.orphan && this.state === 'home' && this.homeT > 3) { this.shotDown(true); return; } // nowhere to land: into the sea
       if (p.turn && this.turned < Math.PI) {
         const step = Math.min(Math.PI - this.turned, dt * p.turn);
         this.turned += step;
@@ -479,6 +485,7 @@ class Sortie {
       this.state = 'home';
       if ((this.homeT += dt) > 9) return this.finish();
     }
+    if (this.orphan && this.state === 'attack' && (this.stationT += dt * 2) > p.station) { this.shotDown(true); return; } // (fighters with no deck: on until the fuel's gone, then into the sea)
     this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     const wantSpeed = this.state === 'attack' ? p.attackSpeed : p.cruiseSpeed;
     this.speed += (wantSpeed - this.speed) * Math.min(1, dt * 0.6);
@@ -680,11 +687,12 @@ class Sortie {
     this.game.tell(this.faction, this.kind === 'lift' ? `${this.type.name} hit — aborting the landing` : `${this.type.name} hit — aborting the run`);
   }
 
-  shotDown() {
+  shotDown(ditch = false) {
     this.state = 'down';
-    this.fall = { vy: 0, spin: this.kind === 'jet' ? 0.6 : 2.5 + Math.random() * 2 };
+    this.fall = { vy: 0, spin: ditch ? 0.3 : this.kind === 'jet' ? 0.6 : 2.5 + Math.random() * 2 };
     const lost = this.kind === 'lift' && !this.dropped ? ' — the squad aboard is lost' : '';
-    this.game.tellBoth(this.faction, `${this.type.name} shot down!${lost}`, `Enemy ${this.type.name} shot down!`);
+    if (ditch) this.game.tell(this.faction, `${this.type.name} ditched in the sea`);
+    else this.game.tellBoth(this.faction, `${this.type.name} shot down!${lost}`, `Enemy ${this.type.name} shot down!`);
     this.game.bus.emit('heli:down', { faction: this.faction, name: this.type.name });
   }
 

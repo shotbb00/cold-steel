@@ -38,7 +38,7 @@ const ship = (o) => ({
 });
 
 const FIVE_INCH = { range: 2400, reload: 3.5, damage: 220, splash: 4, pierce: 0.3 };
-const DD_JP = { range: 2400, reload: 4.5, damage: 260, splash: 4, pierce: 0.3 };
+const DD_JP = { range: 2400, reload: 4.5, damage: 440, splash: 4.5, pierce: 0.3 }; // (a twin mount: both shells in one salvo)
 
 export const frigate = ship({
   id: 'frigate', name: 'Escort', shortName: 'Escort', cost: 280,
@@ -46,7 +46,7 @@ export const frigate = ship({
   stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, sonar: 950, depthCharges: DC({ count: 6, reload: 14 }), ...AA(600, 0.12, 0.03), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
   mounts: {
     nato: [gun([0, 6, 38], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 8, 31], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 6, -26], AFT, { range: 1700, reload: 3, damage: 150 })],
-    pact: [gun([0, 6, 32], FWD, { range: 1700, reload: 3.5, damage: 170 }), gun([0, 6, -22], AFT, { range: 1700, reload: 4, damage: 2 * 170 / 1.6 })],
+    pact: [gun([0, 6, 32], FWD, { range: 1700, reload: 3, damage: 200 }), gun([0, 6, -22], AFT, { range: 1700, reload: 4, damage: 320 })], // (the aft one a twin)
   },
   camera: { distance: 80, height: 26, shoulder: 0 },
   models: { nato: buildBuckley, pact: buildKaibokan },

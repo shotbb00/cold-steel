@@ -26,7 +26,8 @@ export class ControlPoints {
 
   build(d) {
     const { scene, terrain } = this.game;
-    const y = terrain.heightAt(d.x, d.z);
+    const sea = this.game.world.river?.sea ? this.game.world.river.level : null; // (a sea zone: a buoy at the surface, its ring on the water)
+    const y = sea ?? terrain.heightAt(d.x, d.z);
     const radius = d.radius ?? 16;
     const flagMat = new THREE.MeshStandardMaterial({ color: NEUTRAL, emissive: NEUTRAL, emissiveIntensity: 0.25, side: THREE.DoubleSide });
     const ringMat = new THREE.MeshBasicMaterial({ color: NEUTRAL, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false });
@@ -40,8 +41,20 @@ export class ControlPoints {
     flagPivot.add(flag);
     const ringGeo = new THREE.RingGeometry(0.97, 1, 96);
     ringGeo.rotateX(-Math.PI / 2);
-    const ring = new GroundDecal(ringGeo, ringMat, terrain, 0.25);
-    ring.place(d.x, d.z, radius);
+    let ring;
+    if (sea !== null) {
+      ring = { mesh: new THREE.Mesh(ringGeo, ringMat) };
+      ring.mesh.scale.setScalar(radius);
+      ring.mesh.position.set(d.x, sea + 0.3, d.z);
+      const buoy = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.5, 3, 12), new THREE.MeshStandardMaterial({ color: 0xb8322a, roughness: 0.7 }));
+      buoy.position.set(d.x, sea + 0.6, d.z);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(1.16, 1.3, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.7 }));
+      band.position.set(d.x, sea + 1.2, d.z);
+      scene.add(buoy, band);
+    } else {
+      ring = new GroundDecal(ringGeo, ringMat, terrain, 0.25);
+      ring.place(d.x, d.z, radius);
+    }
     scene.add(pole, flagPivot, ring.mesh);
     this.game.cover.addCylinder({ x: d.x, z: d.z, radius: 0.25, height: 10, spots: false }); // solid to bolts and the camera
     const owner = d.owner ?? null;
@@ -100,11 +113,13 @@ export class ControlPoints {
       }
       let home = 0;
       let foe = 0;
+      const sea = !!this.game.world.river?.sea;
       for (const s of this.game.world.stacks) {
-        if (!s.alive || !s.usesCover) continue; // vehicles can't take ground
+        if (!s.alive || (sea ? !s.stats.naval : !s.usesCover)) continue; // vehicles can't take ground (at sea: warships take the zones)
         for (const u of s.units) {
-          if (!u.alive || (u.pos.x - p.x) ** 2 + (u.pos.z - p.z) ** 2 > p.radius * p.radius) continue;
-          if (s.faction === this.home) home++; else foe++;
+          if (!u.alive || (u.depth ?? 0) > 1 || (u.pos.x - p.x) ** 2 + (u.pos.z - p.z) ** 2 > p.radius * p.radius) continue; // (a submarine under the surface: no)
+          const n = sea ? 4 : 1; // a warship counts as a squad of four
+          if (s.faction === this.home) home += n; else foe += n;
         }
       }
       p.counts = { [this.home]: home, [this.foe]: foe };

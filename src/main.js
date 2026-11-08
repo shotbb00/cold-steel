@@ -25,7 +25,9 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
   if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies, epoch: epoch() });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
-  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
+  const m = getMap(map);
+  if (m.modes && !m.modes.includes(mode)) mode = m.modes[0]; // (a map fought only in some modes: Midway's sea zones, Frontline)
+  const game = new GameEngine(document.getElementById('app'), { map: m, mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
   window.game = game; // handy for poking at the simulation from the dev console
 }
 

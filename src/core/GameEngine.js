@@ -30,6 +30,7 @@ import { CameraManager, CameraMode } from './CameraManager.js';
 import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
+import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType } from '../data/units/index.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
@@ -88,6 +89,9 @@ export class GameEngine {
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
     setClimate(map.climate); // winter whitewash, desert sand paint (render/paint.js)
+    const sides = { ...EPOCHS[epoch()]?.sides, ...map.sides }; // (a map may name its own sides: the Pacific's United States and Japan)
+    if (sides.nato) FACTIONS.nato.name = sides.nato;
+    if (sides.pact) FACTIONS.pact.name = sides.pact;
     this.mode = mode;
     // the size the picture is drawn at: the container, not innerWidth/innerHeight — on an iPhone
     // Safari's sliding toolbar makes those differ, and every label placed by them drifts (onResize)

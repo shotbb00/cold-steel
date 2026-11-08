@@ -103,6 +103,7 @@ export class FrontlineHUD {
       const b = `Build ${Math.floor(this.state.build[this.me] ?? 0)}`;
       const s = `Support ${Math.floor(this.state.support[this.me] ?? 0)}`;
       if (this.buildText.textContent !== b) this.buildText.textContent = b;
+      this.buildText.hidden = !!this.game.world.river?.sea; // (at sea: nothing to build)
       if (this.supportText.textContent !== s) this.supportText.textContent = s;
     }
     const stacks = forces(this.game, this.me).length; // what counts toward the limit (bailed-out crews don't)

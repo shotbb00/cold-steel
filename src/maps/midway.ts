@@ -2,7 +2,7 @@
 // in the middle — a ring of reef round a shallow lagoon no ship can cross, Sand Island and Eastern
 // Island inside it with the airfield — and sandbanks and shoals out on the open water. The US Navy
 // comes in from the south (+z), the Imperial Navy from the north. Ships only (data/units45/ships.js).
-// `wip`: out of the menus until the sea battles can be played (?map=midway still loads it).
+// Frontline only for now (`modes`): the five zones are held by warships on the surface (systems/ControlPoints.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea } from '../world/Sea.js';
@@ -48,8 +48,9 @@ export default {
   name: 'Midway',
   description: 'Open Pacific around the atoll: a reef ring no ship can cross, the islands with their airfield in the middle, shoals out on the water.',
   epochs: ['1945'],
-  wip: true,
-  fow: 0.5,          // unseen water only half as dark (render/FogOfWar.js)
+  modes: ['frontline'],   // (the sea zones; Pitched battle, King of the Hill and Skirmish at sea come later)
+  fow: 0.5,
+  sides: { nato: 'United States', pact: 'Japan' },          // unseen water only half as dark (render/FogOfWar.js)
   size: SIZE,
   segments: 400,
   bounds: { x: HALF, z: HALF },
@@ -93,8 +94,8 @@ export default {
   points,
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -150, z: 2150, facing: Math.PI }, { unit: 'destroyer', x: 150, z: 2200, facing: Math.PI }],
-    pact: [{ unit: 'destroyer', x: 150, z: -2150, facing: 0 }, { unit: 'destroyer', x: -150, z: -2200, facing: 0 }],
+    nato: [{ unit: 'destroyer', x: -300, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2100, facing: Math.PI }, { unit: 'frigate', x: 0, z: 2150, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 2300, facing: Math.PI }],
+    pact: [{ unit: 'destroyer', x: 300, z: -2100, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }, { unit: 'frigate', x: 0, z: -2150, facing: 0 }, { unit: 'cruiser', x: 0, z: -2300, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {
