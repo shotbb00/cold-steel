@@ -248,6 +248,21 @@ export class UnitStack {
     return max ? hp / max : 0;
   }
 
+  /** A heavy weapon (artillery, a tank's main gun): seconds till every gun of it is loaded again (0: ready). Others: null. */
+  get reloadLeft() {
+    const s = this.stats;
+    if (this.usesCover || !(s.indirect || s.fireCooldown >= 3)) return null;
+    let left = 0;
+    for (const u of this.units) if (u.alive) left = Math.max(left, u.reloadT > 0 ? u.reloadT : u.cooldown / ((u.fireRateMult || 1) * (this.doc?.fire ?? 1)));
+    return left;
+  }
+
+  /** The label's state line, with the reload count of your own heavy weapons. */
+  get stateText() {
+    const left = this.reloadLeft;
+    return left > 0.5 && this.services.game?.mine?.(this) ? `${this.ai.state} · Reload ${Math.ceil(left)} s` : this.ai.state;
+  }
+
   get moraleWord() {
     if (this.ai?.state === AIState.RETREAT) return 'Broken';
     if (!this.usesCover) { // a machine: what is knocked out

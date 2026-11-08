@@ -73,7 +73,8 @@ export class StackLabels {
       const pct = Math.round(stack.hpRatio * 100);
       this.set(item, 'pct', pct, () => (item.fill.style.width = `${pct}%`));
       this.set(item, 'count', stack.aliveCount * 100 + (stack.passengers ?? 0), () => (item.count.textContent = `${stack.aliveCount}/${stack.units.length}${stack.passengers ? ` · ${stack.passengers} inside` : ''}`));
-      this.set(item, 'ai', stack.ai.state, () => (item.ai.textContent = stack.ai.state));
+      const state = stack.stateText;
+      this.set(item, 'ai', state, () => (item.ai.textContent = state));
       const word = stack.moraleWord;
       this.set(item, 'morale', word, () => {
         item.morale.textContent = word;
