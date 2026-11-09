@@ -133,7 +133,10 @@ export const KINDS = {
     hold: 30,          // s what they found stays located
   },
   // the Pacific (the open-sea maps): launched from the side's carrier (AirStrike.call: no carrier, no
-  // missions), the strikes going for the enemy ship nearest the spot and following it (Sortie.trackShip)
+  // missions), the strikes going for the enemy ship nearest the spot and following it (Sortie.trackShip).
+  // The deck cycle: each carrier has her hangar (stats.carrier.airGroup: flights of each kind); a launch
+  // takes one off her deck after it has been spotted (DECK: s — a strike longer, and a hit then sets her
+  // on fire); back aboard it is rearmed in REARM s; shot down, it is gone for good
   navCap: {
     sea: true, label: 'Fighter cover', key: 'I', cost: 110, cooldown: 80, delay: 6,
     approach: 0, cruiseAlt: 260, attackAlt: 260, cruiseSpeed: 140, attackSpeed: 120,
@@ -162,6 +165,8 @@ export const KINDS = {
 export const AIR_1985 = Object.fromEntries(Object.entries(KINDS).map(([k, p]) => [k, p.aircraft]));
 /** The helicopter run's parameters (older callers). */
 export const AIR = KINDS.heli;
+const DECK = { strike: 22, light: 8 }; // s spotting the deck before a launch: a bomber strike, fighters or a scout
+const REARM = 60;                        // s to refuel and rearm a flight back aboard
 const GROUND_FIRE_RANGE = 150;
 const round2 = (n) => Math.round(n * 100) / 100; // (two decimals: the multiplayer messages, as net/NetHost.js)
 
@@ -246,10 +251,10 @@ class Sortie {
     if (this.p.sea) this.fromCarrier();
   }
 
-  /** A carrier mission: off the deck of the side's carrier, straight for the spot — and onto the enemy ship nearest it. */
+  /** A carrier mission: off the deck of its carrier, straight for the spot — and onto the enemy ship nearest it. */
   fromCarrier() {
     const g = this.game;
-    const cv = g.world.stacksOf(this.faction).find((s) => s.stats.carrier && s.units[0]?.alive)?.units[0];
+    const cv = this.cvUnit?.alive ? this.cvUnit : g.world.stacksOf(this.faction).find((s) => s.stats.carrier && s.units[0]?.alive)?.units[0];
     if (cv) {
       this.pos.set(cv.pos.x, (g.world.river?.level ?? 0) + 25, cv.pos.z);
       this.yaw = Math.atan2(this.target.x - cv.pos.x, this.target.z - cv.pos.z);
@@ -721,6 +726,7 @@ class Sortie {
 
   finish(wreck = false) {
     this.state = 'done';
+    this.wrecked = wreck; // (shot down or ditched: not coming back aboard)
     this.loop.stop();
     this.siren?.stop();
     if (!wreck) this.rig.root.removeFromParent();
@@ -995,9 +1001,16 @@ export class AirStrike {
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
     if (!!p.sea !== !!game.world.river?.sea) return false; // (the carrier missions at sea, the land's air support on land)
-    if (p.sea && !game.world.stacksOf(faction).some((s) => s.stats.carrier && s.units[0]?.alive)) {
-      game.tell(faction, 'No carrier: no aircraft to launch');
-      return false;
+    let deck = null;
+    if (p.sea) { // off a carrier with a flight of this kind aboard and her deck free
+      const carriers = game.world.stacksOf(faction).filter((s) => s.stats.carrier && s.units[0]?.alive);
+      if (!carriers.length) { game.tell(faction, 'No carrier: no aircraft to launch'); return false; }
+      const now = game.world.time;
+      const has = carriers.filter((s) => this.hangar(s.units[0])[kind] > 0);
+      if (!has.length) { game.tell(faction, `No ${p.label.toLowerCase()} left aboard — they're up, rearming or lost`); return false; }
+      const free = has.filter((s) => !(s.units[0].deckBusy > now)).sort((a, b) => this.hangar(b.units[0])[kind] - this.hangar(a.units[0])[kind]);
+      if (!free.length) { game.tell(faction, `${has[0].name}: her deck is busy — ${Math.ceil(has[0].units[0].deckBusy - now)} s`); return false; }
+      deck = free[0];
     }
     if (p.orbit) { // a patrol circle stays over the battlefield: its centre at least `orbit` in from the edges
       const b = game.map.bounds ?? { x: 1e4, z: 1e4 };
@@ -1031,6 +1044,20 @@ export class AirStrike {
     const heading = yaw ?? this.defaultYaw(faction, x, z);
     const sortie = new Sortie(game, faction, x, z, heading, this.nextId++, kind, game.currentOwner ?? null);
     if (jam) sortie.appearAt += JAM.delay;
+    if (deck) { // off her deck: spotted first (a strike longer), the flight out of her hangar
+      const cu = deck.units[0];
+      const spot = kind === 'diveBomb' || kind === 'torpBomb' ? DECK.strike : DECK.light;
+      this.hangar(cu)[kind]--;
+      cu.deckBusy = game.world.time + spot;
+      if (spot === DECK.strike) cu.deckSpot = game.world.time + spot; // (bombs, torpedoes and fuel on deck: a hit now sets her ablaze — UnitStack.shipHit)
+      sortie.cvUnit = cu;
+      sortie.appearAt += Math.max(0, spot - p.delay);
+      game.tell(faction, `${deck.name}: ${name} spotting on deck — airborne in ${spot} s (${this.hangar(cu)[kind]} more aboard)`);
+      game.bus.emit('airstrike', { faction, x, z, kind });
+      this.sorties.push(sortie);
+      game.netEvent('air', sortie.id, faction, x, z, heading, kind);
+      return true;
+    }
     this.sorties.push(sortie);
     game.netEvent('air', sortie.id, faction, x, z, heading, kind);
     game.tell(faction, jam ? `Radio jammed — ${name} tasked, but late (${p.delay + JAM.delay} s) and off the mark` : `${name} tasked — on station in ${p.delay} s`);
@@ -1104,12 +1131,37 @@ export class AirStrike {
     }
   }
 
+  /** A carrier unit's hangar: flights of each kind aboard (from her stats.carrier.airGroup the first time). */
+  hangar(u) {
+    return (u.hangar ??= { ...(u.stack?.stats.carrier?.airGroup ?? u.stats?.carrier?.airGroup ?? { navCap: 3, diveBomb: 2, torpBomb: 2, navScout: 1 }) });
+  }
+
+  /** Flights of `kind` aboard `faction`'s carriers (the support buttons show it). */
+  aboard(faction, kind) {
+    let n = 0;
+    for (const s of this.game.world.stacksOf(faction)) if (s.stats.carrier && s.units[0]?.alive) n += this.hangar(s.units[0])[kind] ?? 0;
+    return n;
+  }
+
   update(dt) {
     this.updateRadars(dt);
+    const now = this.game.world.time;
     for (let i = this.sorties.length - 1; i >= 0; i--) {
       const s = this.sorties[i];
       s.update(dt);
-      if (s.state === 'done') this.sorties.splice(i, 1);
+      if (s.state !== 'done') continue;
+      if (s.cvUnit && !s.wrecked && s.cvUnit.alive && s.state === 'done' && s.launched !== false) (s.cvUnit.rearm ??= []).push({ kind: s.kind, at: now + REARM }); // back aboard: rearmed in a while
+      this.sorties.splice(i, 1);
+    }
+    for (const st of this.game.world.stacks) { // flights rearmed: back in the hangar
+      const u = st.stats.carrier && st.units[0];
+      if (!u?.alive || !u.rearm?.length) continue;
+      for (let i = u.rearm.length - 1; i >= 0; i--) {
+        if (u.rearm[i].at > now) continue;
+        const { kind } = u.rearm.splice(i, 1)[0];
+        this.hangar(u)[kind] = (this.hangar(u)[kind] ?? 0) + 1;
+        this.game.tell(st.faction, `${st.name}: ${KINDS[kind]?.label ?? kind} rearmed and ready`);
+      }
     }
     this.updateChutes(dt);
     for (let i = this.missiles.length - 1; i >= 0; i--) {

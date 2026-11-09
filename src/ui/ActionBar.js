@@ -158,7 +158,8 @@ export class ActionBar {
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const text = left > 0 ? `${left} s` : String(mass !== null ? mass.cost ?? '' : terms.cost);
+      const aboard = kind && KINDS[kind]?.sea ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers)
+      const text = left > 0 ? `${left} s` : aboard === 0 ? 'none aboard' : `${mass !== null ? mass.cost ?? '' : terms.cost}${aboard != null ? ` · ${aboard}` : ''}`;
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);

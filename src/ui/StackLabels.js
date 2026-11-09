@@ -76,7 +76,7 @@ export function callsign(stack) {
   const name = stack.name;
   if (callsignCache.has(name)) return callsignCache.get(name);
   const num = name.match(/\s(\d+)$/)?.[1] ?? '';
-  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^USS /, ''); // (a warship: her name)
+  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|SS) /, ''); // (a ship: her name)
   const cls = base.match(/^(\S+?)-class\b/);
   if (cls) base = cls[1];
   else {
@@ -87,7 +87,7 @@ export function callsign(stack) {
     if (words.length === 2 && DESIGNATION.test(words[0]) && /^[A-Z][a-z]/.test(words[1]) && !GENERIC.test(words[1])) base = words[1]; // a designation and a name: the name
     if (/escort$/.test(base) && base.split(' ').length > 1) base = base.split(' ')[0]; // Kaibōkan escort
   }
-  if (base.length > 15) base = stack.type.shortName ?? base.split(' ')[0];
+  if (base.length > 18) base = stack.type.shortName ?? base.split(' ')[0];
   const out = num ? `${base} ${num}` : base;
   callsignCache.set(name, out);
   return out;

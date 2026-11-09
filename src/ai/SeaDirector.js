@@ -19,8 +19,8 @@ import { unitCost } from '../data/doctrine.js';
 
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
-const ORDER = ['destroyer', 'frigate', 'cruiser', 'destroyer', 'submarine', 'carrier', 'destroyer', 'battleship', 'cruiser', 'frigate', 'submarine', 'destroyer'];
-const VALUE = { carrier: 5, battleship: 4, cruiser: 3, destroyer: 2, frigate: 1, submarine: 1 };
+const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer'];
+const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
 export class SeaDirector {
   constructor(game, faction, state, { tempo = 1, hunt = false, holdUntil = null } = {}) {
@@ -100,15 +100,24 @@ export class SeaDirector {
       const u = s.units[0];
       if (!u?.alive || s.ai.ordered) continue; // (a player's ships in co-op are theirs to steer)
       const d = (p) => Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
-      if (s.type.id === 'carrier') { // back by home, a little toward the fight
+      if (s.stats.carrier) { // back by home, a little toward the fight
         const want = { x: home.x + (target.x - home.x) * 0.15, z: home.z + (target.z - home.z) * 0.15 };
         if (d(want) > 250 && !s.moveTarget) this.move(s, want.x, want.z);
         continue;
       }
       if (s.stats.submarine) { this.submarine(s, u, target); continue; }
-      if (s.type.id === 'frigate' && !escort && fleet.some((o) => o.type.id === 'carrier')) { // one escort stays with the carrier
+      if (s.stats.landing) { // a transport: to the nearest zone we hold (her landing parties bring in CP there), and stays
+        const held = this.points.filter((p) => p.owner === this.faction && !p.contested).sort((a, b) => d(a) - d(b))[0];
+        if (held && d(held) > held.radius * 0.5 && !s.moveTarget) this.move(s, held.x, held.z);
+        continue;
+      }
+      if (s.stats.smallCraft) { // a PT boat: a torpedo run at the biggest enemy ship within reach (at night from anywhere), else with the fleet
+        const prey = this.foes().filter((f) => f.units[0]?.spotted && (VALUE[f.type.id] ?? 0) >= 2 && (night || d(f.centroid) < 2500)).sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0) || d(a.centroid) - d(b.centroid))[0];
+        if (prey) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - prey.centroid.x, s.moveTarget.z - prey.centroid.z) > 150) this.move(s, prey.centroid.x, prey.centroid.z); continue; }
+      }
+      if (s.type.id === 'frigate' && !escort && fleet.some((o) => o.stats.carrier)) { // one escort stays with the carrier
         escort = s;
-        const cv = fleet.find((o) => o.type.id === 'carrier').units[0];
+        const cv = fleet.find((o) => o.stats.carrier).units[0];
         if (d(cv.pos) > 400 && !s.moveTarget) this.move(s, cv.pos.x + 200, cv.pos.z + (home.z > 0 ? -150 : 150));
         continue;
       }

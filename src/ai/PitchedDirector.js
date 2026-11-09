@@ -19,7 +19,7 @@ import { SeaDirector } from './SeaDirector.js';
 import { getUnitType } from '../data/units/index.js';
 
 // at sea: the fleet it buys, in this order (within the class limits), and where each class goes
-const FLEET = ['destroyer', 'cruiser', 'destroyer', 'frigate', 'battleship', 'submarine', 'carrier', 'destroyer', 'cruiser', 'frigate', 'submarine', 'destroyer', 'cruiser', 'destroyer'];
+const FLEET = ['destroyer', 'cruiser', 'destroyer', 'lightCruiser', 'ptBoat', 'frigate', 'battleship', 'submarine', 'carrier', 'destroyer', 'cruiser', 'escortCarrier', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'lightCruiser', 'destroyer'];
 
 const RESERVE = 0.12;       // of the budget kept for support
 const HOLD = [35, 70];      // s standing before it advances

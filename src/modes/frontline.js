@@ -28,6 +28,7 @@ const START_STRENGTH = 1000;
 const BLEED = 0.6;            // strength / s per point of difference
 const LOSS_SHARE = 0.2;       // fraction of a unit's cost removed from strength when it dies
 const MAX_STACKS = 12;
+const LANDING_CP = 0.6;       // CP / s for each transport in a zone its side holds (the sea maps)
 
 /** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
 const seaAllow = (game, allow) => (t) => !!t.stats?.naval === !!game.world.river?.sea && (!allow || allow(t));        // per side, unless the map sets maxStacks
@@ -118,6 +119,8 @@ export default {
     const theirs = state.points.owned(foe);
     state.cp[me] += dt * (BASE_INCOME + POINT_INCOME * mine) * (state.income?.[me] ?? 1);
     state.cp[foe] += dt * (BASE_INCOME + POINT_INCOME * theirs) * (state.income?.[foe] ?? 1);
+    // at sea: transports in a zone their side holds (landing parties ashore) bring in command points
+    for (const f of [me, foe]) state.cp[f] += dt * LANDING_CP * state.points.points.reduce((n, p) => n + (p.owner !== f ? 0 : game.world.stacksOf(f).filter((s) => s.alive && s.stats.landing && (s.centroid.x - p.x) ** 2 + (s.centroid.z - p.z) ** 2 < p.radius * p.radius).length), 0);
     if (mine > theirs) state.strength[foe] -= (mine - theirs) * BLEED * dt;
     else if (theirs > mine) state.strength[me] -= (theirs - mine) * BLEED * dt;
     game.frontlineHud.update();

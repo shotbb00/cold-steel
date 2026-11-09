@@ -70,7 +70,7 @@ const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
 // gunnery at sea (UnitStack.fireControl): a firing solution builds over SOLUTION s of shooting at one target
 // (radar-directed US guns faster); until then the shells fall long or short, up to RANGE_ERR of the range,
 // walking onto her; her sharp turns and changes of speed spoil it
-const SOLUTION = { nato: 14, pact: 22 };
+const SOLUTION = { nato: 16, pact: 19 }; // (US radar fire control a little quicker; in a soak AI v AI 14 vs 22 swung battles 8:3)
 const SEARCHLIGHT = 2200; // m a ship's searchlight reaches at night
 const DC_FOCUS = 2.2; // damage control where the captain puts it (UnitStack.shipUpkeep)…
 const DC_ELSE = 0.55; // …and everywhere else meanwhile
@@ -130,7 +130,7 @@ function shipName(type, faction, world) {
   const i = used.get(key) ?? 0;
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
-  return faction === 'nato' ? `USS ${n}` : n;
+  return faction === 'nato' && !n.startsWith('SS ') ? `USS ${n}` : n; // (a merchantman is SS already)
 }
 
 export class UnitStack {
@@ -657,6 +657,7 @@ export class UnitStack {
       if (!u.alive) return;
       maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
       maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
+      if (s.smallCraft) maxSpeed *= 1 - ((this.services.game?.seaState ?? 1) - 1) * 0.55; // (a PT boat in a rough sea: pounding, half speed)
       if (!u.possessed) {
         this.keepStation(u, dt);
         const m = this.stationSpeed(u);
@@ -2101,6 +2102,11 @@ export class UnitStack {
   shipHit(u, dealt, torpedo = false) {
     const k = dealt / u.maxHp;
     const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
+    if (u.deckSpot > this.world.time) { // a carrier caught with her strike spotted on deck: armed and fuelled planes go up in flames
+      u.blaze = Math.max(u.blaze ?? 0, 0.8);
+      u.deckSpot = 0;
+      tell('hit with armed planes on deck — she\'s burning!');
+    }
     if (torpedo || Math.random() < 0.3 + k * 4) {
       const was = u.leak ?? 0;
       u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : Math.min(0.006, k * 0.03 + 0.002)); // (a torpedo opens a destroyer up, a battleship takes several; a shell or a charge springs a leak at most)

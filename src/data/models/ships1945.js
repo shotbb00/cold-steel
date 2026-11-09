@@ -52,7 +52,7 @@ const breadth = (t) => (t < 0.12 ? 0.78 + 0.22 * Math.sin((t / 0.12) * Math.PI /
  * Returns the parts and the hull's measure (`top(z)`: the deck there, `side(z, y)`: the half-breadth
  * at that height) so the rest of the kit can sit on it.
  */
-function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = true } = {}) {
+function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = true, fittings = true } = {}) {
   const N = 40;
   const at = (t) => ({ z: -len / 2 + t * len, w: (beam / 2) * breadth(t), top: fb + sheer * Math.max(0, (t - 0.55) / 0.45) ** 2 });
   const tz = (z) => Math.min(1, Math.max(0, (z + len / 2) / len));
@@ -81,6 +81,7 @@ function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = tru
       }
       for (const z of every(-len / 2 + 3, len / 2 - 4, 3)) parts.push(P.box(0.06, 1.05, 0.06, { x: s * (at(tz(z)).w - 0.15), y: top(z) + 0.53, z, color: c.upper, surf: 'metal' }));
     }
+    if (!fittings) continue; // (a motor torpedo boat: no portholes, no anchors in hawses)
     // portholes: a row along the forward half, under the deck edge
     for (const z of every(len * 0.08, len * 0.36, 1.8)) {
       const y = top(z) - 1.3;
@@ -93,7 +94,7 @@ function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = tru
     parts.push(P.cyl(0.45, 0.45, 0.6, { x: s * (side(za, top(za) - 0.5) - 0.2), y: top(za) - 0.5, z: za + 0.6, rz: Math.PI / 2, color: BLACK }, 8));
     parts.push(P.box(0.5, 0.25, 6, { x: s * 1.2, y: top(za + 3) + 0.15, z: za - 3, color: BLACK }));                  // the cable on deck
   }
-  parts.push(...[-1, 1].map((s) => P.cyl(0.55, 0.65, 0.9, { x: s * 1.2, y: top(len * 0.36) + 0.45, z: len * 0.36, color: c.gun }, 10))); // the windlass capstans
+  if (fittings) parts.push(...[-1, 1].map((s) => P.cyl(0.55, 0.65, 0.9, { x: s * 1.2, y: top(len * 0.36) + 0.45, z: len * 0.36, color: c.gun }, 10))); // the windlass capstans
   return { parts, top, side, len };
 }
 
@@ -738,7 +739,7 @@ export const buildB1 = sub(() => submarine({ ...IJN, deck: 0x4a4e52 }, { len: 10
  * deck with its markings and elevators, catwalks and AA sponsons along the edges, the island to
  * starboard with its mast and radar, the air group parked aft with wings folded.
  */
-function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', number = null, mark, aaN = 4, aaCal = 0.07 }) {
+function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', number = null, mark, aaN = 4, aaCal = 0.07, island = true }) {
   const dy = fb + 7.5;   // the flight deck's height
   const fw = beam * 1.15;
   const parts = [
@@ -751,14 +752,16 @@ function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', nu
     ...[-1, 1].map((s) => P.box(0.25, 0.05, len * 0.9, { x: s * (fw / 2 - 0.6), y: dy + 0.32, color: WHITE })),
     ...[len * 0.3, 0, -len * 0.28].map((z) => P.box(13, 0.04, 14, { y: dy + 0.31, z, color: 0x34383c })),  // the elevators
     ...every(-len * 0.45, -len * 0.3, 3).map((z) => P.box(fw * 0.8, 0.06, 0.12, { y: dy + 0.33, z, color: BLACK })), // arresting wires
-    // the island
-    box(5, 9, 22, { x: beam * 0.55, y: dy + 4.5, z: islandZ, color: c.upper }),
-    box(6.5, 2.5, 8, { x: beam * 0.55, y: dy + 10, z: islandZ + 6, color: c.upper }),
-    ...windows(beam * 0.55, dy + 10.6, islandZ + 6, 6.5, 8),
-    box(3, 2, 3, { x: beam * 0.55, y: dy + 12.3, z: islandZ + 7, color: c.upper }),
-    ...mast(c, beam * 0.55, dy + 11.2, islandZ + 2, 12, { tripod: true, radar: 'sk', yard: 8 }),
-    aa(c, beam * 0.55, dy + 9, islandZ - 9, { n: aaN, cal: aaCal, ry: Math.PI }),
-    aa(c, beam * 0.55, dy + 9, islandZ + 13, { n: aaN, cal: aaCal }),
+    // the island (a flush-decked conversion has none: a small bridge under the deck's fore edge)
+    ...(island ? [
+      box(5, 9, 22, { x: beam * 0.55, y: dy + 4.5, z: islandZ, color: c.upper }),
+      box(6.5, 2.5, 8, { x: beam * 0.55, y: dy + 10, z: islandZ + 6, color: c.upper }),
+      ...windows(beam * 0.55, dy + 10.6, islandZ + 6, 6.5, 8),
+      box(3, 2, 3, { x: beam * 0.55, y: dy + 12.3, z: islandZ + 7, color: c.upper }),
+      ...mast(c, beam * 0.55, dy + 11.2, islandZ + 2, 12, { tripod: true, radar: 'sk', yard: 8 }),
+      aa(c, beam * 0.55, dy + 9, islandZ - 9, { n: aaN, cal: aaCal, ry: Math.PI }),
+      aa(c, beam * 0.55, dy + 9, islandZ + 13, { n: aaN, cal: aaCal }),
+    ] : [box(beam * 0.7, 2.4, 4, { y: dy - 1.6, z: len * 0.47, color: c.upper }), ...windows(0, dy - 1.4, len * 0.47, beam * 0.7, 4)]),
     ...(fun === 'stack'
       ? funnel(c, beam * 0.55, dy + 9, islandZ - 4, 2.6, 7, 0.08, { oval: 1.6 })
       : [cyl(1.8, 2.2, 9, { x: beam * 0.62, y: fb + 2, z: islandZ - 10, rz: -1.2, color: c.upper }, 10), P.cyl(1.82, 1.82, 0.6, { x: beam * 0.62 + 4.2, y: fb + 0.4, z: islandZ - 10, rz: -1.2, color: BLACK }, 10)]), // the IJN's funnels, turned down over the side
@@ -806,3 +809,141 @@ export const buildShokaku = carrier(() => {
     mounts: [{ geo: g, at: [-14, 10, 70], arc: 4 }, { geo: g, at: [14, 10, 60], arc: 4 }, { geo: g, at: [-14, 10, -60], aft: true, arc: 4 }, { geo: g, at: [14, 10, -70], aft: true, arc: 4 }],
   };
 });
+
+// ---------------------------------------------------------------- torpedo boats
+// Elco 80-foot PT boat (US, 24 m: four torpedoes in roll-off tubes, twin .50s, a 40 mm aft); the Imperial
+// Navy's Gyoraitei (18 m: two torpedoes, a 25 mm). Plywood hulls, no armour — fast and fragile.
+function torpedoBoat(c, { len, beam, fb, number = null, tubes, twin50 }) {
+  const H = hull(len, beam, fb, 1.3, c, 0.6, { rails: false, fittings: false });
+  const parts = [...H.parts];
+  if (number) parts.push(...bowNumber(H, number, 0.8));
+  parts.push(box(beam * 0.5, 1.5, len * 0.22, { y: fb + 0.75, z: len * 0.08, color: c.upper }));      // the charthouse
+  parts.push(...windows(0, fb + 1.2, len * 0.08, beam * 0.5, len * 0.22));
+  parts.push(P.cyl(0.06, 0.08, 4.2, { y: fb + 3.4, z: len * 0.02, color: BLACK }, 5), P.box(1.6, 0.06, 0.06, { y: fb + 4.8, z: len * 0.02, color: BLACK })); // the mast
+  for (const [x, z] of tubes) parts.push(P.cyl(0.27, 0.27, 5.6, { x, y: fb + 0.45, z, rx: Math.PI / 2, color: c.upper, surf: 'plate' }, 10), P.cyl(0.3, 0.3, 0.3, { x, y: fb + 0.45, z: z - 2.8, rx: Math.PI / 2, color: BLACK }, 10));
+  if (twin50) for (const sd of [-1, 1]) parts.push(cyl(0.55, 0.55, 0.9, { x: sd * 1.3, y: fb + 0.45, z: len * -0.04, color: c.upper }, 10), P.cyl(0.04, 0.05, 1.6, { x: sd * 1.3 - 0.12, y: fb + 1.2, z: len * -0.04 + 0.7, rx: Math.PI / 2 - 0.3, color: BLACK }, 5), P.cyl(0.04, 0.05, 1.6, { x: sd * 1.3 + 0.12, y: fb + 1.2, z: len * -0.04 + 0.7, rx: Math.PI / 2 - 0.3, color: BLACK }, 5));
+  parts.push(box(1, 0.6, 1.2, { y: fb + 0.3, z: -len * 0.45, color: c.gun }));                          // the smoke generator
+  return { fixed: merge(parts), mounts: [{ geo: aa(c, 0, 0, 0, { n: 1, cal: 0.07, len: 3, tub: false }), at: [0, fb, -len * 0.3], aft: true, arc: 5 }] };
+}
+export const buildElcoPT = ship(() => torpedoBoat({ ...US, hull: 0x3d5243, deck: 0x46584a, upper: 0x506050, gun: 0x4c5a4c }, { len: 24.4, beam: 6.3, fb: 1.7, number: '109', tubes: [[-2.4, 3.5], [2.4, 3.5], [-2.4, -4.5], [2.4, -4.5]], twin50: true }));
+export const buildGyoraitei = ship(() => torpedoBoat(IJN, { len: 18, beam: 4.3, fb: 1.4, tubes: [[-1.6, -1], [1.6, -1]], twin50: false }));
+
+// ---------------------------------------------------------------- light cruisers
+export const buildCleveland = ship(() => {
+  const c = US;
+  const fb = 7;
+  const H = hull(186, 20, fb, 7.5, c, 1.6);
+  const t3 = turret(c, { w: 7, h: 3.2, d: 8, barrels: 3, len: 9, cal: 0.22 });
+  const five = mount(c, { w: 4, h: 2.6, d: 4.6, barrels: 2, len: 5, cal: 0.15 });
+  const kingfisher = airplane(0x3c4c60, { span: 11, len: 10, floats: true });
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...bowNumber(H, '55', 2.6),
+      ...[52, -52].map((z) => box(9, 3, 10, { y: fb + 1.5, z, color: c.upper })),       // the superfiring turrets' barbettes
+      box(13, 4.5, 24, { y: fb + 2.25, z: 30, color: c.upper }),
+      box(10, 5, 11, { y: fb + 7, z: 31, color: c.upper }),
+      ...windows(0, fb + 8.8, 31, 10, 11),
+      box(4.5, 2.6, 4.5, { y: fb + 10.8, z: 30, color: c.upper }),
+      ...mast(c, 0, fb + 9.5, 26, 14, { tripod: true, radar: 'sk', yard: 9 }),
+      box(12, 4, 44, { y: fb + 2, z: -6, color: c.upper }),
+      ...funnel(c, 0, fb + 4, 8, 2.6, 9, 0.06, { oval: 1.3 }),
+      ...funnel(c, 0, fb + 4, -12, 2.6, 9, 0.06, { oval: 1.3 }),
+      ...mast(c, 0, fb + 4, -24, 12, { radar: 'sg', yard: 7 }),
+      ...[-1, 1].flatMap((sd) => [20, 0, -16].map((z) => five.clone().rotateY(sd * Math.PI / 2).translate(sd * 4, fb + 4, z))),
+      ...[-1, 1].flatMap((sd) => [24, 4, -22].map((z) => aa(c, sd * 5.4, fb + 4, z, { ry: sd * Math.PI / 2 }))),
+      ...[-1, 1].flatMap((sd) => every(-30, 20, 10).map((z) => oerlikon(c, sd * (H.side(z, fb) - 1), fb, z, sd * Math.PI / 2))),
+      ...[-1, 1].map((sd) => catapult(c, sd * 4.5, fb + 0.1, -74, sd * 0.5, kingfisher)),
+      ...crane(c, 0, fb, -86, 9, 11, Math.PI),
+      ...[-1, 1].map((sd) => boat(c, sd * 7.2, fb + 4, -20, 8, sd)),
+    ]),
+    mounts: [
+      { geo: t3, at: [0, H.top(66), 66], arc: 5 },
+      { geo: t3, at: [0, fb + 3, 52], arc: 5 },
+      { geo: t3, at: [0, fb + 3, -52], aft: true, arc: 5 },
+      { geo: t3, at: [0, fb, -66], aft: true, arc: 5 },
+    ],
+  };
+});
+
+export const buildAgano = ship(() => {
+  const c = IJN;
+  const fb = 6.5;
+  const H = hull(174, 15.2, fb, 5.6, c, 2.4);
+  const t2 = turret(c, { w: 6, h: 3, d: 7.5, barrels: 2, len: 9, cal: 0.21 });
+  const jake = airplane(0x4a5a40, { span: 14, len: 11, floats: true, mark: 0xb02020 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      box(8, 2.8, 9, { y: fb + 1.4, z: 50, color: c.upper }),                              // No. 2's barbette
+      box(10, 4.5, 16, { y: fb + 2.25, z: 30, color: c.upper }),
+      box(8, 5, 9, { y: fb + 7, z: 30, color: c.upper }),
+      ...windows(0, fb + 8.6, 30, 8, 9),
+      box(7, 1.4, 2, { y: fb + 10.4, z: 30, color: c.gun }),
+      box(3, 1.6, 0.3, { y: fb + 11.8, z: 31, color: c.upper }), ...grid(0, fb + 11.8, 31.2, 2.8, 1.4, BLACK, 4),
+      ...mast(c, 0, fb + 4.5, 24, 15, { tripod: true, rake: 0.12, yard: 8 }),
+      ...funnel(c, 0, fb + 3, 4, 2.6, 10, 0.3, { oval: 1.5 }),
+      box(8.5, 3.4, 40, { y: fb + 1.7, z: -8, color: c.upper }),
+      ...[-1, 1].flatMap((sd) => [10, -4, -18].map((z) => aa(c, sd * 3.6, fb + 3.4, z, { n: 3, ry: sd * Math.PI / 2, cal: 0.05, len: 2.4 }))),
+      catapult(c, 0, fb + 3.4, -18, 0.8, jake),
+      ...crane(c, 0, fb + 3.4, -28, 8, 9, Math.PI),
+      ...[-1, 1].map((sd) => boat(c, sd * 5.8, fb + 3.4, 6, 7, sd)),
+    ]),
+    mounts: [
+      { geo: t2, at: [0, H.top(60), 60], arc: 5 },
+      { geo: t2, at: [0, fb + 2.8, 50], arc: 5 },
+      { geo: t2, at: [0, fb, -58], aft: true, arc: 5 },
+    ],
+    torps: [{ geo: torpedoMount(c, 4), at: [0, fb + 0.2, -38] }, { geo: torpedoMount(c, 4), at: [0, fb + 0.2, -46] }],
+  };
+});
+
+// ---------------------------------------------------------------- escort carriers
+export const buildCasablanca = carrier(() => {
+  const c = { ...US, plane: 0x2e3d52 };
+  const len = 156, beam = 19.9, fb = 6;
+  const H = hull(len, beam, fb, 6.3, c, 1.0, { rails: false });
+  const g = mount(c, { w: 3.6, h: 2.4, d: 4.2, barrels: 1, len: 5, cal: 0.15 });
+  return {
+    fixed: flattop(c, H, { len, beam, fb, deck: 0x6a665a, islandZ: 22, funnel: 'down', number: '73', mark: WHITE, aaN: 2 }),
+    mounts: [{ geo: g, at: [0, fb + 7.5 + 0.4, -len * 0.47], aft: true, arc: 3 }],
+  };
+});
+
+export const buildTaiyo = carrier(() => {
+  const c = { ...IJN, plane: 0x3c4a34 };
+  const len = 180, beam = 22.5, fb = 7;
+  const H = hull(len, beam, fb, 7.7, c, 1.2, { rails: false });
+  const g = mount(c, { w: 3.8, h: 2.4, d: 4.4, barrels: 2, len: 5, cal: 0.14 });
+  return {
+    fixed: flattop(c, H, { len, beam, fb, deck: 0x8a6a4a, islandZ: 30, funnel: 'down', mark: 0xb02020, aaN: 3, aaCal: 0.05, island: false }),
+    mounts: [{ geo: g, at: [-12, fb + 4, 50], arc: 4 }, { geo: g, at: [12, fb + 4, -50], aft: true, arc: 4 }],
+  };
+});
+
+// ---------------------------------------------------------------- transports
+// a Liberty ship (US, 135 m) or a Maru (the Imperial Army's transports, 130 m): the house amidships, the
+// funnel, three masts with their derricks over the hatches; a gun on the stern; the Maru carries
+// landing barges (daihatsu) on her hatches
+function transport(c, { len, beam, fb, houseZ, gunAft, barges, band }) {
+  const H = hull(len, beam, fb, 8, c, 1.1);
+  const parts = [...H.parts];
+  parts.push(box(beam * 0.8, 3, 16, { y: fb + 1.5, z: houseZ, color: c.upper }), box(beam * 0.6, 3, 10, { y: fb + 4.5, z: houseZ + 1, color: c.upper }), box(beam * 0.45, 2.4, 5, { y: fb + 7.2, z: houseZ + 3, color: c.upper }));
+  parts.push(...windows(0, fb + 7.6, houseZ + 3, beam * 0.45, 5));
+  parts.push(...funnel(c, 0, fb + 6, houseZ - 4, 1.8, 7, 0.05));
+  if (band) parts.push(P.cyl(1.86, 1.86, 1, { y: fb + 11, z: houseZ - 4.4, color: band }, 14));
+  for (const z of [len * 0.32, len * 0.18, -len * 0.18, -len * 0.32]) {
+    parts.push(P.box(beam * 0.5, 0.5, 9, { y: H.top(z) + 0.25, z, color: 0x2e3236 }));                          // the hatch, its cover
+    if (barges) parts.push(box(3, 1.4, 8, { y: H.top(z) + 1.2, z, color: c.boat }));
+  }
+  for (const z of [len * 0.25, -len * 0.25, -len * 0.42]) {
+    const t = H.top(z);
+    parts.push(strut([0, t, z], [0, t + 16, z], 0.3, c.upper), P.box(5, 0.15, 0.15, { y: t + 12, z, color: BLACK }));
+    for (const sd of [-1, 1]) parts.push(strut([sd * 0.6, t + 1.5, z], [sd * 1.2, t + 3, z + (z > 0 ? 9 : -9)], 0.12, c.upper));          // the derricks
+  }
+  parts.push(cyl(2, 2, 1, { y: H.top(-len * 0.46) + 0.5, z: -len * 0.46, color: c.upper }, 14));                 // the gun tub aft
+  parts.push(...[-1, 1].map((sd) => oerlikon(c, sd * beam * 0.35, fb + 3, houseZ + 6, sd * Math.PI / 2)));
+  return { fixed: merge(parts), mounts: [{ geo: mount(c, { w: 2.6, h: 2, d: 3, barrels: 1, len: 4.4, cal: 0.13 }), at: [0, H.top(-len * 0.46) + 1, -len * 0.46], aft: true, arc: 4 }] };
+}
+export const buildLiberty = ship(() => transport({ ...US, hull: 0x626c74, upper: 0x7a828a }, { len: 135, beam: 17.3, fb: 6, houseZ: -6, gunAft: true }));
+export const buildMaru = ship(() => transport({ ...IJN, hull: 0x5e625c, upper: 0x7a7c76, boat: 0x6e706a }, { len: 130, beam: 17, fb: 6.2, houseZ: -10, gunAft: true, barges: true, band: 0xb02020 }));

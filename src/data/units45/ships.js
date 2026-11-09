@@ -11,7 +11,7 @@
 // submerged they're seen only by a ship's `sonar` (or the periscope close by, or a torpedo shot:
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
-import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku } from '../models/ships1945.js';
+import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -148,7 +148,7 @@ export const carrier = ship({
   names: { nato: ['Essex', 'Yorktown', 'Intrepid', 'Hornet', 'Franklin', 'Lexington', 'Bunker Hill', 'Wasp'], pact: ['Shōkaku', 'Zuikaku'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 267, beam: 28 },
   stats: {
-    carrier: true,   // its side's carrier missions launch from its deck (systems/AirStrike.js: the sea kinds)
+    carrier: { airGroup: { navCap: 4, diveBomb: 3, torpBomb: 3, navScout: 2 } }, // its hangar: flights of each kind (systems/AirStrike.js: launched off her deck, rearmed when they're back, lost when shot down)
     hp: 22000, armor: 0.35, speed: 16, accel: 0.06, turnRate: 0.05, turretRate: 0.4, radius: 15, height: 32, eyeHeight: 30, sight: 3200, ...AA(950, 0.3, 0.07),
     range: 2200, aggroRange: 2200, preferredRange: 2600, leash: 100, damage: 220, fireCooldown: 4, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3,
   },
@@ -164,4 +164,80 @@ export const carrier = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier };
+export const ptBoat = ship({
+  id: 'ptBoat', name: 'Torpedo Boat', shortName: 'PT boat', cost: 140,
+  names: { nato: ['PT-109', 'PT-131', 'PT-137', 'PT-490', 'PT-491', 'PT-493', 'PT-523', 'PT-524', 'PT-130', 'PT-132'], pact: ['Gyoraitei 14', 'Gyoraitei 15', 'Gyoraitei 16', 'Gyoraitei 17', 'Gyoraitei 18', 'Gyoraitei 19', 'Gyoraitei 20', 'Gyoraitei 21'] }, // her own name (UnitStack shipName)
+  hull: { length: 24, beam: 6.3 },
+  stats: { hp: 420, armor: 0, speed: 21, accel: 0.45, turnRate: 0.32, turretRate: 1, radius: 3, height: 3, eyeHeight: 4, sight: 1500, stealth: 0.6, smokeGen: SMOKE_GEN, smallCraft: true, ...AA(500, 0.12, 0.02), range: 1000, aggroRange: 1100, preferredRange: 700, leash: 40, damage: 60, fireCooldown: 1.2, spread: 0.02, boltSpeed: 800, boltSize: 0.8, splash: 1, pierce: 0.1 },
+  mounts: {
+    nato: [torps([0, 2, 6], { facing: FWD, arc: 0.7, count: 4, range: 1100, speed: 18, damage: 2400, reload: 9999 }), gun([0, 3, -7], AFT, { range: 1000, reload: 1.2, damage: 60, splash: 1, shell: 800, size: 0.8, arc: 5 })],
+    pact: [torps([0, 2, 0], { facing: FWD, arc: 0.7, count: 2, range: 1400, speed: 22, damage: 2800, reload: 9999 }), gun([0, 2.6, -5], AFT, { range: 900, reload: 1.4, damage: 50, splash: 1, shell: 800, size: 0.8, arc: 5 })],
+  },
+  camera: { distance: 40, height: 12, shoulder: 0 },
+  models: { nato: buildElcoPT, pact: buildGyoraitei },
+  variants: {
+    nato: { name: 'Elco PT boat', weapon: '4 torpedoes, 40 mm, twin .50s', text: 'Fast, small and made of plywood: in at 40 knots behind its smoke, four torpedoes, and away. Nothing armoured about it — and a rough sea slows it badly.' },
+    pact: { name: 'Gyoraitei torpedo boat', weapon: '2 torpedoes, 25 mm', text: 'The Imperial Navy\'s small torpedo boat: a dash in with two torpedoes. Fragile, and lost in a rough sea.' },
+  },
+});
+
+const SIX_INCH = { range: 2600, reload: 6, damage: 380, splash: 5, pierce: 0.45, shell: 920, size: 2.2, spread: 0.01 };
+const FIFTEEN_CM = { range: 2600, reload: 7, damage: 340, splash: 5, pierce: 0.45, shell: 920, size: 2.2, spread: 0.01 };
+
+export const lightCruiser = ship({
+  id: 'lightCruiser', name: 'Light Cruiser', shortName: 'Light cruiser', cost: 600, limit: 3,
+  names: { nato: ['Cleveland', 'Columbia', 'Montpelier', 'Denver', 'Santa Fe', 'Birmingham', 'Mobile', 'Biloxi', 'Houston', 'Miami'], pact: ['Agano', 'Noshiro', 'Yahagi', 'Sakawa'] }, // her own name (UnitStack shipName)
+  hull: { length: 186, beam: 20 },
+  stats: { flareRounds: 10, hp: 8500, armor: 0.35, speed: 16, accel: 0.09, turnRate: 0.07, turretRate: 0.35, radius: 9, height: 14, sight: 2900, ...AA(800, 0.24, 0.05), range: 2600, aggroRange: 2600, preferredRange: 1900, leash: 70, damage: 380, fireCooldown: 6, spread: 0.01, boltSpeed: 920, boltSize: 2.2, splash: 5, pierce: 0.45 },
+  mounts: {
+    nato: [gun([0, 9, 66], FWD, SIX_INCH), gun([0, 12, 52], FWD, SIX_INCH), gun([0, 12, -52], AFT, SIX_INCH), gun([0, 9, -66], AFT, SIX_INCH)],
+    pact: [gun([0, 8.5, 60], FWD, FIFTEEN_CM), gun([0, 11.5, 50], FWD, FIFTEEN_CM), gun([0, 8.5, -58], AFT, FIFTEEN_CM),
+      torps([0, 7, -38], { count: 4, range: 2200, speed: 25, damage: 3200, reload: 140, wakeless: true }), torps([0, 7, -46], { count: 4, range: 2200, speed: 25, damage: 3200, reload: 140, wakeless: true })],
+  },
+  camera: { distance: 135, height: 42, shoulder: 0 },
+  models: { nato: buildCleveland, pact: buildAgano },
+  variants: {
+    nato: { name: 'Cleveland-class light cruiser', weapon: '12 × 6-inch, 12 × 5-inch', text: 'Lighter than a heavy cruiser but quick-firing: twelve 6-inch guns throw a storm of shells at destroyers and cruisers alike.' },
+    pact: { name: 'Agano-class light cruiser', weapon: '6 × 15 cm, 8 Long Lance torpedoes', text: 'The Imperial Navy\'s destroyer flotilla leader: fast, with the Long Lance — it leads the night torpedo attack.' },
+  },
+});
+
+export const escortCarrier = ship({
+  id: 'escortCarrier', name: 'Escort Carrier', shortName: 'Escort carrier', cost: 650, limit: 1,
+  names: { nato: ['Gambier Bay', 'Casablanca', 'Liscome Bay', 'St. Lo', 'Kalinin Bay', 'White Plains', 'Fanshaw Bay', 'Kitkun Bay'], pact: ['Taiyō', 'Un\'yō', 'Chūyō'] }, // her own name (UnitStack shipName)
+  hull: { length: 156, beam: 19.9 },
+  stats: {
+    carrier: { escort: true, airGroup: { navCap: 3, diveBomb: 0, torpBomb: 2, navScout: 1 } }, // a small hangar: fighters, torpedo bombers, a scout
+    hp: 9000, armor: 0.15, speed: 10, accel: 0.06, turnRate: 0.06, turretRate: 0.4, radius: 9, height: 22, eyeHeight: 20, sight: 2800, smokeGen: SMOKE_GEN, ...AA(800, 0.2, 0.05),
+    range: 1800, aggroRange: 1800, preferredRange: 2400, leash: 80, damage: 220, fireCooldown: 5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3,
+  },
+  mounts: {
+    nato: [gun([0, 14, -76], AFT, { ...FIVE_INCH, range: 1800, arc: 3 })],
+    pact: [gun([-12, 11, 50], FWD, DD_JP), gun([12, 11, -50], AFT, DD_JP)],
+  },
+  camera: { distance: 160, height: 52, shoulder: 0 },
+  models: { nato: buildCasablanca, pact: buildTaiyo },
+  variants: {
+    nato: { name: 'Casablanca-class escort carrier', weapon: 'Wildcats, Avengers', text: 'A small, slow carrier built on a merchant hull: fighters and torpedo bombers for the convoy, and a target that can\'t take much.' },
+    pact: { name: 'Taiyō-class escort carrier', weapon: 'Zeros, Jills', text: 'A liner turned carrier, flush-decked with no island: a handful of planes for the convoys.' },
+  },
+});
+
+export const transport = ship({
+  id: 'transport', name: 'Transport', shortName: 'Transport', cost: 220,
+  names: { nato: ['SS Jeremiah O\'Brien', 'SS John W. Brown', 'SS Robert E. Peary', 'SS Stephen Hopkins', 'SS Patrick Henry', 'SS Booker T. Washington'], pact: ['Kinugasa Maru', 'Sado Maru', 'Hirokawa Maru', 'Yamaura Maru', 'Nagara Maru', 'Arizona Maru'] }, // her own name (UnitStack shipName)
+  hull: { length: 135, beam: 17.3 },
+  stats: { landing: true, hp: 7000, armor: 0.1, speed: 8.5, accel: 0.05, turnRate: 0.05, turretRate: 0.4, radius: 8, height: 14, sight: 2200, ...AA(500, 0.1, 0.02), range: 1600, aggroRange: 1600, preferredRange: 1400, leash: 60, damage: 120, fireCooldown: 6, spread: 0.014, boltSpeed: 800, boltSize: 1.4, splash: 3, pierce: 0.2 },
+  mounts: {
+    nato: [gun([0, 9, -64], AFT, { range: 1600, reload: 6, damage: 120, splash: 3, arc: 4 })],
+    pact: [gun([0, 9, -62], AFT, { range: 1500, reload: 6, damage: 110, splash: 3, arc: 4 })],
+  },
+  camera: { distance: 110, height: 36, shoulder: 0 },
+  models: { nato: buildLiberty, pact: buildMaru },
+  variants: {
+    nato: { name: 'Liberty ship transport', weapon: 'one 4-inch gun, 20 mm', text: 'Troops and stores for the islands: barely armed and slow — but the landing parties she carries hold a zone, and bring in command points while they hold it.' },
+    pact: { name: 'Army transport (Maru)', weapon: 'one gun, landing barges', text: 'The Imperial Army\'s troopship with its landing barges: slow and soft, but the men aboard hold a zone and bring in command points.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport };
