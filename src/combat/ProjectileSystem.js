@@ -288,7 +288,7 @@ export class ProjectileSystem {
     const r = b.splash;
     if (!this.cosmetic) {
       for (const u of this.world.neighbors(point, r + 3, _near)) {
-        if (u === directTarget || u.faction !== foe || !u.alive) continue;
+        if (u === directTarget || u.faction !== foe || !u.alive || (u.depth ?? 0) > 2) continue; // (a submarine under the surface: the water takes the blast too)
         const d = Math.hypot(u.pos.x - point.x, u.pos.y + u.height * 0.4 - point.y, u.pos.z - point.z) - u.radius;
         if (d > r) continue;
         u.receiveDamage(b.damage * 0.75 * (1 - Math.max(0, d) / r), b.source, b.pierce, null, b.vsArmor);

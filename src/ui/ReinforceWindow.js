@@ -21,7 +21,11 @@ const SECTIONS = [
   ['fire', 'Fire support'],
   ['airdefence', 'Air defence'],
   ['support', 'Support'],
-  ['naval', 'Warships'],   // (the open-sea maps)
+  ['line', 'Battle line'],   // (the open-sea maps: ships by their `fleet`, data/units45/ships.js)
+  ['carrier', 'Carriers'],
+  ['escort', 'Escorts'],
+  ['under', 'Submarines & support'],
+  ['naval', 'Warships'],
   ['other', 'Other'],
 ];
 
@@ -51,6 +55,16 @@ const damageRow = (type) => {
     const cav = type.stats.cavalry && !type.stats.loose;
     const v = { inf: cav ? 3 : d.inf, horse: cav ? 2 : d.inf };
     return `<span class="rw-dmg">${[['inf', 'Foot'], ['horse', 'Horse']].map(([k, label]) => { const [mark, word] = GRADE[v[k]]; return `<span class="g${v[k]}" title="Against ${label.toLowerCase()}: ${word}">${label}<b>${mark}</b></span>`; }).join('')}</span>`;
+  }
+  if (type.category === 'naval') { // at sea: against ships (guns, torpedoes), submarines (depth charges) and aircraft (the AA)
+    const st = type.stats, ms = Object.values(type.mounts ?? {}).flat();
+    const aa = st.antiAir?.hitNear ?? 0;
+    const v = {
+      ships: ms.some((m) => m.torpedo) || st.damage >= 700 ? 3 : st.damage >= 200 ? 2 : st.damage > 0 ? 1 : 0,
+      subs: st.depthCharges ? (st.sonar >= 500 ? 3 : 2) : 0,
+      air: aa >= 0.075 ? 3 : aa >= 0.05 ? 2 : aa > 0 ? 1 : 0,
+    };
+    return `<span class="rw-dmg">${[['ships', 'Ships'], ['subs', 'Subs'], ['air', 'Air']].map(([k, label]) => { const [mark, word] = GRADE[v[k]]; return `<span class="g${v[k]}" title="Against ${k === 'subs' ? 'submarines' : k === 'air' ? 'aircraft' : 'ships'}: ${word}">${label}<b>${mark}</b></span>`; }).join('')}</span>`;
   }
   return `<span class="rw-dmg">${[['inf', 'Inf'], ['armour', 'Arm'], ['air', 'Air']].map(([k, label]) => {
     const [mark, word] = GRADE[d[k]];
@@ -118,7 +132,7 @@ export class ReinforceWindow {
     }
     this.cards = [];
     for (const [cat, title] of SECTIONS) {
-      const list = types.filter((t) => (SECTIONS.some(([c]) => c === t.category) ? t.category : 'other') === cat);
+      const list = types.filter((t) => (SECTIONS.some(([c]) => c === (t.fleet ?? t.category)) ? t.fleet ?? t.category : 'other') === cat);
       if (!list.length) continue;
       const sec = document.createElement('section');
       sec.innerHTML = '<div class="rw-cards"></div>';

@@ -176,7 +176,7 @@ export class ActionBar {
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
     const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && ['build:wire', 'build:mines', 'build:mgNest', 'build:tankTraps', 'build:camoNet'].includes(a.cmd))); // (1806: none of the modern works)
     // only touch the DOM when what's shown changed
-    const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}`).join('|');
+    const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}:${typeof a.label === 'function' ? a.label(g) : ''}`).join('|'); // (a label that changes: the engine order, hold fire)
     if (!force && key === this.key) return;
     this.key = key;
     this.el.replaceChildren(...shown.map((a) => {

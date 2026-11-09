@@ -14,6 +14,7 @@ import { Material } from '@babylonjs/core/Materials/material.js';
 import { Effect } from '@babylonjs/core/Materials/effect.js';
 import { Engine } from '@babylonjs/core/Engines/engine.js';
 import { Color3 } from '@babylonjs/core/Maths/math.color.js';
+import { Matrix, Quaternion } from '@babylonjs/core/Maths/math.vector.js';
 
 Effect.ShadersStore.csParticleVertexShader = /* glsl */ `
   precision highp float;
@@ -224,3 +225,46 @@ export function points(view, o) {
   return { mesh, update() {} };
 }
 
+
+Effect.ShadersStore.csBeamVertexShader = /* glsl */ `
+  precision highp float;
+  attribute vec3 position;
+  uniform mat4 world, viewProjection;
+  varying float vK;
+  void main() {
+    vK = 0.004 + 0.05 * pow(1.0 - position.z, 3.0); // (local z runs 0..1 along the beam: bright at the lamp)
+    gl_Position = viewProjection * world * vec4(position, 1.0);
+  }`;
+Effect.ShadersStore.csBeamFragmentShader = /* glsl */ `
+  precision highp float;
+  varying float vK;
+  void main() { gl_FragColor = vec4(vec3(1.0, 0.95, 0.8) * vK, 1.0); }`;
+
+/** A light beam (systems/Searchlights.js): a dim fading glow added to the night, nothing else (the PBR conversion drew it opaque). */
+export function beam(view, o) {
+  const scene = view.scene;
+  const mesh = new Mesh(`beam${o.id}`, scene);
+  const g = o.geometry;
+  const pos = g.attributes.position;
+  const vd = new VertexData();
+  vd.positions = pos.array;
+  vd.indices = g.index ? g.index.array : Uint32Array.from({ length: pos.count }, (_, i) => i);
+  vd.applyToMesh(mesh);
+  mesh.isPickable = false;
+  mesh.alphaIndex = 3;
+  mesh.rotationQuaternion = new Quaternion();
+  const mat = new ShaderMaterial(mesh.name, scene, { vertex: 'csBeam', fragment: 'csBeam' }, { attributes: ['position'], uniforms: ['world', 'viewProjection'], needAlphaBlending: true });
+  mat.backFaceCulling = false;
+  mat.disableDepthWrite = true;
+  mat.alphaMode = Engine.ALPHA_ONEONE;
+  mesh.material = mat;
+  const m = new Matrix();
+  return {
+    mesh,
+    update() {
+      o.updateMatrixWorld();
+      Matrix.FromArrayToRef(o.matrixWorld.elements, 0, m);
+      m.decompose(mesh.scaling, mesh.rotationQuaternion, mesh.position);
+    },
+  };
+}

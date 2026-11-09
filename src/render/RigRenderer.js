@@ -112,7 +112,7 @@ export class RigRenderer {
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
       const rig = this.rigs[i];
-      rig.root.visible = u.visible !== false || rig.dead;
+      rig.root.visible = u.visible !== false || (rig.dead && !this.stack.stats.naval); // (a wreck stays to be found; a ship going down out of sight is never seen — u.visible stays as it was when she was last seen)
       if (u.alive && rig.dead) { // brought back (1806: a dismounted trooper caught a horse and remounted) — a fresh rig
         rig.root.removeFromParent();
         this.rigs[i] = this.make(this.build, u);
