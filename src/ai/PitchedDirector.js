@@ -41,6 +41,7 @@ export class PitchedDirector {
   constructor(game, faction, state) {
     this.game = game;
     this.faction = faction;
+    this.bot = true; // (systems/AutoFlares.js: a bot fires its own flares)
     this.state = state;
     const names = Object.keys(STYLES);
     this.style = names[Math.floor(Math.random() * names.length)];

@@ -101,6 +101,7 @@ export class FrontlineDirector {
   constructor(game, faction, state, opts = {}) {
     this.game = game;
     this.faction = faction;
+    this.bot = true; // (systems/AutoFlares.js: a bot fires its own flares)
     this.state = state;      // mode state: { points, cp, buy() }
     this.opts = { attack: true, buy: true, expand: true, targetable: null, firstAssault: FIRST_ASSAULT, tempo: 1, ...opts };
     this.tempo = this.opts.tempo;   // difficulty (data/rules.js): < 1 attacks sooner and more often

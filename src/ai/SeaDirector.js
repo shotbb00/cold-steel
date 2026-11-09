@@ -26,6 +26,7 @@ export class SeaDirector {
   constructor(game, faction, state, { tempo = 1, hunt = false, holdUntil = null } = {}) {
     this.game = game;
     this.faction = faction;
+    this.bot = true; // (systems/AutoFlares.js: a bot fires its own flares)
     this.state = state;
     this.tempo = tempo;
     this.hunt = hunt;

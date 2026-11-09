@@ -19,6 +19,7 @@ import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
 import { Squalls } from '../systems/Squalls.js';
 import { Searchlights } from '../systems/Searchlights.js';
+import { AutoFlares } from '../systems/AutoFlares.js';
 import { SEA_STATE } from '../world/Sea.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
@@ -202,7 +203,7 @@ export class GameEngine {
     this.air = new AirStrike(this);
     this.support = new Support(this);
     this.powers = new Powers1806(this);   // 1806's grand battery, cavalry reserve, the Guard
-    this.systems.push(this.powers);
+    this.systems.push(this.powers, new AutoFlares(this)); // (and flares of their own at night for the player's mortars and ships)
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
