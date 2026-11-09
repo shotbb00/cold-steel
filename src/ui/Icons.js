@@ -18,6 +18,9 @@ const FILLED = {
   assault: '<rect x="2" y="3" width="28" height="1.4"/><rect x="15.2" y="4.2" width="1.6" height="2.8"/><path d="M3 9.8h7.5l2.2-2.6h9.5c3.4 0 6.3 1.8 6.8 4.6-.6 2.4-3.4 3.6-6.8 3.6H12l-1.8-2.6H3z"/><rect x="2.2" y="7" width="1.6" height="6"/><path d="M16 17l6 6.5h-4V30h-4v-6.5h-4z"/>',
   fighter: '<path d="M16 2l2.2 9 11.3 9.5v3L18 19.5l-.8 5.5 3.3 2.6V30L16 28.6 11.5 30v-2.4l3.3-2.6-.8-5.5-11.5 4v-3L13.8 11z"/>',
   recon: '<path fill-rule="evenodd" d="M16 8C9 8 4 12.5 1.5 16 4 19.5 9 24 16 24s12-4.5 14.5-8C28 12.5 23 8 16 8zm0 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
+  // the carrier's strike aircraft: a plane in a steep dive, its bomb falling away ahead; a plane low and level, the torpedo slung under it over the waves
+  diveBomb: '<g transform="rotate(135 12.5 12.5) translate(0.5 0.5) scale(0.75)"><path d="M16 2l2.2 9 11.3 9.5v3L18 19.5l-.8 5.5 3.3 2.6V30L16 28.6 11.5 30v-2.4l3.3-2.6-.8-5.5-11.5 4v-3L13.8 11z"/></g><ellipse cx="26" cy="26" rx="2" ry="4" transform="rotate(-45 26 26)"/><path d="M21.6 23.6l2-2 1.4 1.4-2 2z"/><path d="M3 13.5h4.5v1.6H3zM13.5 3h1.6v4.5h-1.6z" opacity="0.6"/>',
+  torpBomb: '<path d="M1.5 8.5h3.2l3.2 3.5h16.6c2.8 0 5 .9 6 2.2-1 1.3-3.2 2-6 2H7.2L1.5 14.3z"/><path d="M11.5 15.6h9l-2.8 3.2h-3.6z"/><rect x="8.5" y="19.6" width="15" height="2.3" rx="1.15"/><path d="M6 19.1l2.6 1.7v.5L6 23z"/><path d="M1 27.4c2.5-1.6 4.5-1.6 7 0s4.5 1.6 7 0 4.5-1.6 7 0 4.5 1.6 7 0V30H1z" opacity="0.5"/>',
   reinforce: '<path d="M16 5l12 9v4.5L16 9.5 4 18.5V14z"/><path d="M16 14l12 9v4.5l-12-9-12 9V23z"/>',
   chat: '<path d="M5 7h22v14H14l-6 5v-5H5z"/>',
   pause: '<rect x="8" y="6" width="5.5" height="20"/><rect x="18.5" y="6" width="5.5" height="20"/>',

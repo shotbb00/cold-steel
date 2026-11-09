@@ -12,6 +12,7 @@
 //     sky and particles are left alone.
 // It's a picture of your units' view, not of the rules' exact result (target posture and
 // cover aren't counted): enemies outside it are hidden, enemies inside may still be prone in cover.
+import { airEyes } from '../systems/VisibilitySystem.js';
 import * as THREE from 'three';
 
 const N = 256;
@@ -110,6 +111,7 @@ export class FogOfWar {
         this.queue.push([u, facing]);
       }
     }
+    for (const e of airEyes(g, g.playerFaction)) this.queue.push([e, 0]); // (your aircraft in the air: views of their own)
     if (!this.queue.length) this.target.fill(0);
   }
 
