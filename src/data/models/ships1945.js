@@ -169,10 +169,16 @@ function mast(c, x, y, z, h, { tripod = false, yard = 8, rake = 0, radar = null,
   g.push(box(2.6, 0.2, 2.6, { x: px, y: py, z: pz, color: c.upper }), P.box(2.6, 0.5, 0.05, { x: px, y: py + 0.3, z: pz + 1.3, color: c.upper, surf: 'metal' }));
   const [yx, yy, yz] = at(0.82);
   g.push(P.box(yard, 0.14, 0.14, { x: yx, y: yy, z: yz, color: BLACK }), P.box(yard * 0.6, 0.1, 0.1, { x: yx, y: yy - 1.2, z: yz, color: BLACK }));
-  if (radar === 'sk') g.push(...grid(top[0], top[1] + 2.6, top[2] + 0.6, 5, 5, BLACK, 6));
-  if (radar === 'sc') g.push(...grid(top[0], top[1] + 1.4, top[2] + 0.4, 3.2, 2.2, BLACK, 4));
-  if (radar === 'sg') g.push(box(1.8, 0.6, 0.7, { x: top[0], y: top[1] + 0.5, z: top[2], color: c.upper }), P.cyl(0.1, 0.1, 1.2, { x: top[0], y: top[1] + 1.2, z: top[2], color: BLACK }, 5));
-  if (radar === 'mattress') g.push(box(3.4, 1.8, 0.3, { x: top[0], y: top[1] + 1.2, z: top[2] + 0.5, color: c.upper }), ...grid(top[0], top[1] + 1.2, top[2] + 0.7, 3.2, 1.6, BLACK, 4));
+  if (radar === 'sk') g.push(...grid(top[0], top[1] + 2.4, top[2] + 0.6, 5, 5, BLACK, 6));
+  if (radar === 'sc') g.push(...grid(top[0], top[1] + 1.1, top[2] + 0.4, 3.2, 2.2, BLACK, 4));
+  if (radar === 'sg') g.push(box(1.8, 0.6, 0.7, { x: top[0], y: top[1] + 0.3, z: top[2], color: c.upper }), P.cyl(0.1, 0.1, 1.2, { x: top[0], y: top[1] + 1.2, z: top[2], color: BLACK }, 5));
+  if (radar === 'mattress') g.push(box(3.4, 1.8, 0.3, { x: top[0], y: top[1] + 0.85, z: top[2] + 0.5, color: c.upper }), ...grid(top[0], top[1] + 0.85, top[2] + 0.7, 3.2, 1.6, BLACK, 4));
+  // a grid stands a little forward of the mast: a bracket out to it at the masthead
+  const bracket = (dz, y) => P.box(0.12, 0.12, dz + 0.1, { x: top[0], y, z: top[2] + dz / 2, color: BLACK, surf: 'metal' });
+  if (radar === 'sk') g.push(bracket(0.6, top[1] - 0.1));
+  if (radar === 'sc') g.push(bracket(0.4, top[1] - 0.05));
+  if (radar === 'mattress') g.push(bracket(0.5, top[1] - 0.1));
+  if (radar === 'ladder') g.push(bracket(0.5, top[1] - 0.2));
   if (radar === 'ladder') g.push(...grid(top[0], top[1] - 0.5, top[2] + 0.5, 1.2, 4, BLACK, 3));
   return g;
 }
@@ -346,7 +352,7 @@ export const buildFletcher = ship(() => {
     ...[-1, 1].map((s) => box(2.4, 0.3, 3, { x: s * 4.6, y: fb + 5.9, z: 30, color: c.upper })),   // bridge wings
     box(3, 2, 3, { y: fb + 7.2, z: 28, color: c.upper }),            // the Mk 37 director
     cyl(0.4, 0.4, 4.6, { y: fb + 7.6, z: 28, rz: Math.PI / 2, color: c.gun }, 8),   // its rangefinder
-    ...mast(c, 0, fb + 6.2, 25, 12, { tripod: true, radar: 'sc', yard: 7 }),
+    ...mast(c, 0, fb + 3, 25, 15.2, { tripod: true, radar: 'sc', yard: 7 }), // (behind the bridge: on the deckhouse roof, not in the air at the bridge's height)
     box(8, 2.6, 26, { y: fb + 1.3, z: 4, color: c.upper }),          // midships deckhouse
     ...funnel(c, 0, fb + 2.6, 12, 1.8, 7, 0.12, { oval: 1.3 }),
     ...funnel(c, 0, fb + 2.6, -2, 1.8, 6.5, 0.12, { oval: 1.3 }),
@@ -354,7 +360,7 @@ export const buildFletcher = ship(() => {
     box(8, 2.6, 16, { y: fb + 1.3, z: -22, color: c.upper }),        // after deckhouse (mount 3 on it)
     aa(c, 0, fb + 2.6, -27, { n: 2, ry: Math.PI }),                  // the twin 40s
     ...[-1, 1].map((s) => aa(c, s * 3.4, fb, -10, { n: 2, ry: s * Math.PI / 2 })),
-    ...[-1, 1].flatMap((s) => [24, 20].map((z) => oerlikon(c, s * 4, fb + 3, z, s * Math.PI / 2))),
+    ...[-1, 1].flatMap((s) => [24, 22].map((z) => oerlikon(c, s * 4, fb + 3, z, s * Math.PI / 2))), // (both on the forward deckhouse's roof)
     ...[-1, 1].map((s) => boat(c, s * 4.8, fb + 0.2, 8, 7.5, s)),
     ...[-1, 1].flatMap((s) => [raft(s * 4.2, fb + 1.6, -22), ...vent(c, s * 2.6, fb + 2.6, 0)]),
     ...depthCharges(c, H, -55, 3),
