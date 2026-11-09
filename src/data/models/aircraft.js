@@ -17,7 +17,7 @@
 import * as THREE from 'three';
 import { P, merge, pair, limb } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
-import { body, surface, fin, blades, rocketPod, missile } from './airKit.js';
+import { body, onSkin, surface, fin, blades, rocketPod, missile } from './airKit.js';
 
 const GREY = 0x4d5547;      // A-10 "Lizard" dark grey-green
 const GREY_DK = 0x353b31;
@@ -132,16 +132,17 @@ export function buildPactSu25(mats) {
 // ---------------------------------------------------------------- UH-60A
 
 let UH60 = null;
+// the low, wide cabin and nose; the boom running back to the tail pylon: [z, y, half-width, half-height, squareness]
+const UH60_HULL = [
+  [3.95, 1.2, 0.28, 0.28, 2.6], [3.55, 1.3, 0.72, 0.55, 2.8], [2.8, 1.48, 0.98, 0.8, 3], [1.8, 1.58, 1.1, 0.95, 3.2],
+  [-1.4, 1.58, 1.1, 0.95, 3.2], [-2.4, 1.8, 0.86, 0.72, 3], [-3.4, 2.05, 0.46, 0.46, 2.4], [-8.2, 2.3, 0.26, 0.32, 2.4], [-8.9, 2.4, 0.18, 0.22, 2.4],
+];
 export function buildNatoUH60(mats) {
   UH60 ??= {
     body: merge([
-      // the low, wide cabin and nose; the boom running back to the tail pylon
-      body([
-        [3.95, 1.2, 0.28, 0.28, 2.6], [3.55, 1.3, 0.72, 0.55, 2.8], [2.8, 1.48, 0.98, 0.8, 3], [1.8, 1.58, 1.1, 0.95, 3.2],
-        [-1.4, 1.58, 1.1, 0.95, 3.2], [-2.4, 1.8, 0.86, 0.72, 3], [-3.4, 2.05, 0.46, 0.46, 2.4], [-8.2, 2.3, 0.26, 0.32, 2.4], [-8.9, 2.4, 0.18, 0.22, 2.4],
-      ], { color: OD }),
+      body(UH60_HULL, { color: OD }),
       // windscreen and the cockpit's chin windows, cabin and door windows
-      ...pair((s) => P.box(0.85, 0.62, 0.04, { x: s * 0.42, y: 2.06, z: 3.08, rx: -0.4, ry: s * 0.22, rz: -s * 0.38, color: GLASS })), // (on the nose's skin, which is 2.1 m up here)
+      ...pair((s) => onSkin(UH60_HULL, s * 0.42, 3.0, 0.72, 0.62, { color: GLASS }, 0.05)), // (laid on the nose's skin, to its slope and curve)
       ...pair((s) => P.box(0.04, 0.55, 0.85, { x: s * 1.06, y: 1.8, z: 2.55, ry: s * -0.12, color: GLASS })),
       ...pair((s) => P.box(0.5, 0.3, 0.04, { x: s * 0.45, y: 0.9, z: 3.3, rx: 0.5, color: GLASS })),
       ...pair((s) => P.box(0.04, 0.5, 0.7, { x: s * 1.12, y: 1.85, z: 1.0, color: GLASS })),

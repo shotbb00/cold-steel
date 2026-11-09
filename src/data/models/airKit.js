@@ -7,9 +7,31 @@
 //   blades    n rotor blades from the hub out to radius r, tapering at the tips
 //   rocketPod a UB-32 / B-8 / M261 pod: tube, rounded nose ring, dark front, from z0 forward to z1
 //   missile   a slim missile with its cruciform fins, nose at z1
+import * as THREE from 'three';
 import { P, loft, merge } from '../units/geometry.js';
 
 export const body = (sections, { x = 0, ...o } = {}, radial = 14) => loft(sections.map(([z, y, w, d, e = 2.3]) => [x, y, z, w, d, e]), o, radial);
+
+/**
+ * A flat panel — a window, a hatch — laid on the top of a body() of those `sections` at (x, z): `w`
+ * across, `h` along the skin, turned to the slope and the curve there and lifted `lift` off it.
+ */
+export function onSkin(sections, x, z, w, h, opts = {}, lift = 0.015) {
+  const at = (zz) => {
+    let i = 0;
+    while (i < sections.length - 2 && zz < sections[i + 1][0]) i++;
+    const a = sections[i], b = sections[i + 1], k = Math.min(1, Math.max(0, (a[0] - zz) / (a[0] - b[0] || 1)));
+    return [1, 2, 3, 4].map((j) => (a[j] ?? 2.3) + ((b[j] ?? 2.3) - (a[j] ?? 2.3)) * k);
+  };
+  const top = (xx, zz) => { const [y, hw, hh, e] = at(zz); return y + hh * Math.max(0, 1 - Math.abs(xx / hw) ** e) ** (1 / e); };
+  const d = 0.05;
+  const tx = new THREE.Vector3(2 * d, top(x + d, z) - top(x - d, z), 0).normalize();
+  const tz = new THREE.Vector3(0, top(x, z + d) - top(x, z - d), 2 * d).normalize();
+  const n = new THREE.Vector3().crossVectors(tz, tx).normalize();
+  tz.crossVectors(tx, n);
+  const m = new THREE.Matrix4().makeBasis(tx, n, tz).setPosition(new THREE.Vector3(x, top(x, z), z).addScaledVector(n, lift));
+  return P.box(w, 0.03, h, opts).applyMatrix4(m);
+}
 
 // (wings and fins keep every section lying fore and aft, however swept: their roots and tips stay square to the airflow)
 export const surface = (sections, o = {}) => loft(sections.map(([x, y, z, c, t]) => [x, y, z, c, t, 1.7]), { ...o, axes: [[0, 0, 1], [0, 1, 0]] }, 10);
