@@ -123,9 +123,28 @@ export class FogOfWar {
       if (u.alive) this.cast(u, facing);
       if (this.queue.length && performance.now() - t0 > budget) return; // (the last one done: the picture goes up now, or the next begin() threw it away)
     }
+    this.markLocated();
     const done = this.target;
     this.target = this.next;
     this.next = done;
+  }
+
+  /** An enemy everyone can see for now (her own searchlight, a recon photo, a counter-battery fix: VisibilitySystem `located`): clear ground round her, so she isn't drawn in the dark. */
+  markLocated() {
+    const g = this.game, { cell, half, next: t } = this;
+    for (const s of g.world.stacks) {
+      if (!s.alive || s.faction === g.playerFaction) continue;
+      for (const u of s.units) {
+        if (!u.alive || !(u.locatedUntil > g.time)) continue;
+        const r = Math.max(40, (s.type.hull?.length ?? 0) * 0.7), n = Math.ceil(r / cell);
+        const cx = Math.floor((u.pos.x + half) / cell), cz = Math.floor((u.pos.z + half) / cell);
+        for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
+          const ix = cx + dx, iz = cz + dz;
+          if (ix < 0 || iz < 0 || ix >= N || iz >= N || (dx * dx + dz * dz) * cell * cell > r * r) continue;
+          t[iz * N + ix] = 1;
+        }
+      }
+    }
   }
 
   /** Mark what unit `u`, looking along `facing`, can see. */

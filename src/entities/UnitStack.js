@@ -2018,6 +2018,7 @@ export class UnitStack {
     const t = u.target;
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
     this.shine(u, t);
+    for (const m of this.shipMounts(u)) if (m.cd > 0) m.cd -= dt; // (the guns reload whether or not there's a target)
     if (!t) return;
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
     const depth = u.depth ?? 0;
@@ -2032,7 +2033,6 @@ export class UnitStack {
     const rel = angleDelta(u.yaw, u.turretYaw);
     const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
     for (const m of this.shipMounts(u)) {
-      m.cd -= dt;
       if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
