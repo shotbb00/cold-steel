@@ -268,11 +268,11 @@ function navy({ len, span, color, nat, chord = 1.4, deep = 0, long = 0 }) {
     body([[n, 1.95, 0.6, 0.62], [n - 0.8, 1.95, 0.66, 0.68], [n - 2.6, 1.98, 0.56, 0.68 + deep], [0, 2.0, 0.46, 0.62 + deep], [-n * 0.55, 2.05, 0.28, 0.42], [-n, 2.1, 0.1, 0.2]], { color, ...C }),
     P.cyl(0.5, 0.5, 0.02, { y: 1.95, z: n + 0.01, rx: Math.PI / 2, color: HOLE }, 16),
     body([[n - 2.4, 2.5, 0.05, 0.05], [n - 2.9, 2.75, 0.3, 0.28], [n - 3.6 - long, 2.8, 0.3, 0.28], [n - 4.2 - long, 2.62, 0.18, 0.12]], { color: GLASS }),
-    ...pair((s) => surface([[s * 0.5, 1.5, 0.4, chord, 0.18], [s * span / 2, 1.7, -0.2, chord * 0.45, 0.05]], { color, ...C })),
-    ...pair((s) => surface([[s * 0.2, 2.15, -n + 0.6, 0.65, 0.06], [s * span * 0.17, 2.15, -n + 0.35, 0.35, 0.03]], { color, ...C })),
+    ...pair((s) => surface([[s * 0.3, 1.5, 0.4, chord, 0.18], [s * span / 2, 1.7, -0.2, chord * 0.45, 0.05]], { color, ...C })),   // (roots inside the fuselage: no gap)
+    ...pair((s) => surface([[s * 0.05, 2.15, -n + 0.6, 0.65, 0.06], [s * span * 0.17, 2.15, -n + 0.35, 0.35, 0.03]], { color, ...C })),
     fin([[2.2, -n + 0.8, 0.9, 0.06], [3.3, -n + 0.4, 0.6, 0.04], [3.6, -n + 0.2, 0.3, 0.03]], { color, ...C }),
     ...pair((s) => mark(nat, s * span * 0.36, 1.66, -0.3, 0.42, true)),
-    ...pair((s) => mark(nat, s * 0.42, 2.05, -n * 0.5, 0.36)),
+    ...pair((s) => mark(nat, s * 0.31, 2.05, -n * 0.5, 0.3)),   // on the fuselage's side (0.3 m out there)
   ]);
 }
 const SEA_BLUE = 0x2e3d52;

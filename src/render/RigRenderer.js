@@ -35,7 +35,7 @@ function materialsFor(army, glowColor) {
   if (!materialCache.has(key)) {
     const camo = epoch() === '1945' ? ARMY_CAMO_1945[army] : ARMY_CAMO[army];
     materialCache.set(key, {
-      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
+      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true, weather: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
     });
   }

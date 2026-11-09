@@ -102,6 +102,21 @@ export const NOISE = /* glsl */ `
     c *= 0.9 + 0.2 * pFbm(p * 0.12 + 1.7);   // weathered, scrubbed, stained
     return c;
   }
+  // a vehicle's paint in the field (option weather, painted armour only), in model-space metres: big soft
+  // patches sun-faded or touched up, rain and dirt streaks running down the plates, and up close — where a
+  // pixel is small enough to show them, so nothing shimmers far off — chips knocked out of the paint
+  vec3 pWeather(vec3 c, float s, vec3 p) {
+    if (s > 0.5) return c;
+    vec3 w = fwidth(p);
+    float near = 1.0 - smoothstep(0.012, 0.05, max(max(w.x, w.y), w.z));
+    float l = dot(c, vec3(0.3, 0.55, 0.15));
+    c = mix(c, mix(c, vec3(l), 0.35) * 1.45, smoothstep(0.47, 0.55, pFbm(p * 0.7 + 11.0)) * 0.8);   // sun-faded patches
+    float st = pNoise(vec3((p.x + p.z) * 9.0, p.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((p.x - p.z) * 1.6, p.y * 0.3, 9.0)));
+    c *= 1.0 - smoothstep(0.25, 0.5, st) * 0.45;                                                     // rain and dirt streaks
+    c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * 0.55);          // dust caught on the plates
+    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.72, 0.78, pNoise(p * 21.0)) * near * 0.85);    // chips
+    return c;
+  }
   // bump by screen derivatives: pos and n in the same space
   vec3 pBumpNormal(vec3 pos, vec3 n, float h) {
     vec3 dpdx = dFdx(pos), dpdy = dFdy(pos);
@@ -116,7 +131,7 @@ export const NOISE = /* glsl */ `
  * @param {object} o  { colors: 4 hex (camo), scale: pattern frequency per metre, mud: hex, wear,
  *                      surfaces: per-part roughness / metalness / relief from `surf` }
  */
-export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false } = {}) {
+export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false, weather = false } = {}) {
   const uniforms = {
     uClimate: CLIMATE.amount,
     uClimateColor: CLIMATE.color,
@@ -129,6 +144,7 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
     uWear: { value: wear },
   };
   if (surfaces) mat.defines = { ...mat.defines, PAINT_SURF: '' };
+  if (weather) mat.defines = { ...mat.defines, PAINT_WEATHER: '' };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -175,6 +191,9 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
         #ifdef PAINT_SURF
           diffuseColor.rgb = pShip(diffuseColor.rgb, pSurf(vPaint.x), vPaintPos);
         #endif
+        #ifdef PAINT_WEATHER
+          diffuseColor.rgb = pWeather(diffuseColor.rgb, pSurf(vPaint.x), vPaintPos);
+        #endif
         if (uClimate > 0.0) { // the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
           float sf = pSurf(vPaint.x);
           float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -197,8 +216,8 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
           normal = pBumpNormal(-vViewPosition, normal, pBump(pSurf(vPaint.x), vPaintPos));
         #endif`);
   };
-  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}`;
+  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}:${weather}`;
   // the same paint for the Babylon renderer (render/babylon/plugins.js PaintPlugin)
-  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock };
+  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock, weather };
   return mat;
 }

@@ -83,7 +83,7 @@ export class FowPlugin extends GlslPlugin {
 export class PaintPlugin extends GlslPlugin {
   /** @param {object} paint  { colors: 4 × Three Color (linear), scale, mud (Three Color), wear } */
   constructor(material, paint) {
-    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false });
+    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false });
     this.paint = paint;
     this._enable(true);
   }
@@ -93,6 +93,7 @@ export class PaintPlugin extends GlslPlugin {
   prepareDefines(defines, scene, mesh) {
     defines.PAINT = !!mesh?.isVerticesDataPresent?.('paint');
     defines.PAINT_SURF = defines.PAINT && !!this.paint.surfaces;
+    defines.PAINT_WEATHER = defines.PAINT && !!this.paint.weather;
   }
 
   getAttributes(attributes, scene, mesh) {
@@ -165,6 +166,9 @@ export class PaintPlugin extends GlslPlugin {
           surfaceAlbedo *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
           #ifdef PAINT_SURF
             surfaceAlbedo = pShip(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
+          #endif
+          #ifdef PAINT_WEATHER
+            surfaceAlbedo = pWeather(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
           #endif
           if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
             float sf = pSurf(vPaint.x);

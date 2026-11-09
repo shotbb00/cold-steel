@@ -37,7 +37,7 @@ const torps = (at, o) => ({ at, torpedo: true, arc: 2.2, count: 4, range: 1500, 
  */
 const RANGE = 0.55;
 const SCALED = ['range', 'aggroRange', 'preferredRange', 'sight', 'sonar', 'hearing'];
-const near = (o) => { const r = { ...o }; for (const k of SCALED) if (r[k]) r[k] *= RANGE; return r; };
+const near = (o) => { const r = { ...o }; for (const k of SCALED) if (r[k]) r[k] = Math.round(r[k] * RANGE / 5) * 5; return r; }; // (to 5 m: shown in the unit card)
 
 /** One warship class: the shared parts, the class's own, the two navies' mounts. */
 const ship = (o) => ({

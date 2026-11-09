@@ -129,6 +129,7 @@ function bowNumber(H, text, h = 2.2) {
 function aa(c, x, y, z, { n = 4, ry = 0, tub = true, cal = 0.07, len = 3.2 } = {}) {
   const g = [];
   if (tub) g.push(cyl(1.5 + n * 0.12, 1.5 + n * 0.12, 1.1, { y: 0.55, color: c.upper }, 14));
+  else g.push(P.cyl(0.22, 0.3, 0.8, { y: 0.4, color: c.gun, surf: 'metal' }, 8)); // (no tub: on a pedestal)
   g.push(box(0.5 + n * 0.32, 0.9, 1.3, { y: 1.2, color: c.gun }));
   for (let i = 0; i < n; i++) g.push(P.cyl(cal, cal * 1.2, len, { x: (i - (n - 1) / 2) * 0.32, y: 1.8, z: len * 0.38, rx: Math.PI / 2 - 0.5, color: BLACK, surf: 'metal' }, 6));
   return merge(g).rotateY(ry).translate(x, y, z);
@@ -159,10 +160,10 @@ function grid(x, y, z, w, h, color = BLACK, n = 5) {
   return g;
 }
 /** A mast: a pole (or a tripod with two raked legs), a platform, yards, a radar on top. */
-function mast(c, x, y, z, h, { tripod = false, yard = 8, rake = 0, radar = null } = {}) {
+function mast(c, x, y, z, h, { tripod = false, yard = 8, rake = 0, radar = null, legsY = y } = {}) { // legsY: where the tripod's legs stand (a deck below the mast's foot)
   const top = [x, y + h, z - Math.sin(rake) * h];
   const g = [strut([x, y, z], top, 0.32, c.upper)];
-  if (tripod) for (const s of [-1, 1]) g.push(strut([x + s * h * 0.2, y, z - h * 0.28], [top[0], y + h * 0.75, z - Math.sin(rake) * h * 0.75], 0.24, c.upper));
+  if (tripod) for (const s of [-1, 1]) g.push(strut([x + s * h * 0.2, legsY, z - h * 0.28], [top[0], y + h * 0.75, z - Math.sin(rake) * h * 0.75], 0.24, c.upper));
   const at = (k) => [x, y + h * k, z - Math.sin(rake) * h * k];
   const [px, py, pz] = at(0.62);
   g.push(box(2.6, 0.2, 2.6, { x: px, y: py, z: pz, color: c.upper }), P.box(2.6, 0.5, 0.05, { x: px, y: py + 0.3, z: pz + 1.3, color: c.upper, surf: 'metal' }));
@@ -771,7 +772,10 @@ function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', nu
       box(5, 0.5, 5.4, { x: s * (fw / 2 + 2.2), y: dy - 1.85, z, color: c.upper }), strut([s * (fw / 2 + 3.8), dy - 2, z], [s * (beam * 0.46), dy - 6, z], 0.15, c.upper)])),
     ...[-1, 1].flatMap((s) => every(-len * 0.36, len * 0.34, 12).map((z) => oerlikon(c, s * (fw / 2 + 1.6), dy - 0.9, z + 5, s * Math.PI / 2))),
   ];
-  if (number) parts.push(...numerals(number, 14, (u, v, du, dv) => P.box(du, 0.05, dv, { x: 3.8 - u, y: dy + 0.34, z: len * 0.36 + v, color: WHITE })));
+  if (number) { // centred on the deck and sized to it (an escort carrier's deck is narrow)
+    const h = Math.min(14, fw * 0.45), w = number.length * h * 0.55 + (number.length - 1) * h * 0.28;
+    parts.push(...numerals(number, h, (u, v, du, dv) => P.box(du, 0.05, dv, { x: w / 2 - u, y: dy + 0.34, z: len * 0.36 + v, color: WHITE })));
+  }
   // the air group, spotted aft with wings folded, two lines
   const plane = airplane(c.plane, { span: 12.5, len: 10, fold: true, mark });
   for (const [i, z] of every(-len * 0.44, -len * 0.18, 9).entries()) {
@@ -845,7 +849,7 @@ export const buildCleveland = ship(() => {
       box(10, 5, 11, { y: fb + 7, z: 31, color: c.upper }),
       ...windows(0, fb + 8.8, 31, 10, 11),
       box(4.5, 2.6, 4.5, { y: fb + 10.8, z: 30, color: c.upper }),
-      ...mast(c, 0, fb + 9.5, 26, 14, { tripod: true, radar: 'sk', yard: 9 }),
+      ...mast(c, 0, fb + 9.5, 26, 14, { tripod: true, radar: 'sk', yard: 9, legsY: fb + 4.5 }), // (its legs behind the bridge, on the deckhouse below)
       box(12, 4, 44, { y: fb + 2, z: -6, color: c.upper }),
       ...funnel(c, 0, fb + 4, 8, 2.6, 9, 0.06, { oval: 1.3 }),
       ...funnel(c, 0, fb + 4, -12, 2.6, 9, 0.06, { oval: 1.3 }),
@@ -930,7 +934,7 @@ function transport(c, { len, beam, fb, houseZ, gunAft, barges, band }) {
   const parts = [...H.parts];
   parts.push(box(beam * 0.8, 3, 16, { y: fb + 1.5, z: houseZ, color: c.upper }), box(beam * 0.6, 3, 10, { y: fb + 4.5, z: houseZ + 1, color: c.upper }), box(beam * 0.45, 2.4, 5, { y: fb + 7.2, z: houseZ + 3, color: c.upper }));
   parts.push(...windows(0, fb + 7.6, houseZ + 3, beam * 0.45, 5));
-  parts.push(...funnel(c, 0, fb + 6, houseZ - 4, 1.8, 7, 0.05));
+  parts.push(...funnel(c, 0, fb + 3, houseZ - 4, 1.8, 10, 0.05)); // (standing on the lower house: the upper one ends beside it)
   if (band) parts.push(P.cyl(1.86, 1.86, 1, { y: fb + 11, z: houseZ - 4.4, color: band }, 14));
   for (const z of [len * 0.32, len * 0.18, -len * 0.18, -len * 0.32]) {
     parts.push(P.box(beam * 0.5, 0.5, 9, { y: H.top(z) + 0.25, z, color: 0x2e3236 }));                          // the hatch, its cover
