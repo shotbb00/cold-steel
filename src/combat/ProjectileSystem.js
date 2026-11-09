@@ -173,6 +173,7 @@ export class ProjectileSystem {
               this.effects.shellSplash?.(b.pos, b.splash);
               if (this.world.river.foam) stampFoam(this.world.river.foam, b.pos.x, b.pos.z, 6 + b.splash * 1.5, 230);
             } else this.effects.waterSplash?.(b.pos, Math.max(0.4, (b.splash || 1) / 4));
+            if ((b.splash || 0) >= 3) this.audio?.play(b.splash >= 9 ? 'splash.big' : 'splash', b.pos, { volume: Math.min(1, 0.55 + b.splash / 20), throttle: 0.08 }); // (a shell short: the column going up)
             if (b.splash) this.detonate(b, b.pos, null, false, true);
             dead = true;
           } else if (b.pos.y <= gy) {

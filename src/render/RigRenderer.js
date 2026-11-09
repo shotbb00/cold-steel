@@ -148,6 +148,7 @@ export class RigRenderer {
         rig.root.getWorldPosition(_p);
         _p.y += this.stack.stats.height * 0.4;
         s.effects.explosion(_p, 2.5, { ground: false, fire: 2.5 });
+        s.audio?.play('ship.sink', _p, { volume: 1, throttle: 1 }); // her hull groaning, steam and air going up
         s.effects.burn(_p, 30, 2.5);
         s.audio?.play('explosion.big', _p, { volume: 1 });
       } else if (!rig.dead) {

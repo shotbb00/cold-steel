@@ -53,7 +53,7 @@ export class Torpedoes {
       });
     }
     this.game.netEvent('torps', this.list.slice(-m.count).map((f) => [Math.round(f.x), Math.round(f.z), Math.round(f.dx * 1000) / 1000, Math.round(f.dz * 1000) / 1000, f.speed, Math.round(f.left), f.wakeless ? 1 : 0, f.faction]));
-    this.game.audio?.play('rocket', from, { volume: 0.5, throttle: 0.5 });
+    this.game.audio?.play('torpedo.launch', from, { volume: 0.8, throttle: 0.5 });
     this.game.tell(src.faction, `${src.name}: torpedoes away`);
   }
 
@@ -84,7 +84,8 @@ export class Torpedoes {
         const hit = this.shipAt(f);
         if (hit) {
           g.effects.waterSplash?.({ x: f.x, y: f.y + RUN_DEPTH, z: f.z }, 3.5);
-          g.audio?.play('explosion.big', hit.pos, { volume: 1 });
+          g.audio?.play('depthcharge', hit.pos, { volume: 1 });       // under her keel: the deep blow…
+          g.audio?.play('splash.big', hit.pos, { volume: 1, throttle: 0 }); // …and the column thrown over her
           if (!g.net?.isClient) {
             hit.receiveDamage(f.damage, f.source, 0.7, { x: f.dx, z: f.dz }, 1);
             if (hit.alive) hit.stack.shipHit(hit, 0, true);
@@ -116,7 +117,8 @@ export class Torpedoes {
       if (now < c.at) continue;
       this.charges.splice(i, 1);
       g.effects.waterSplash?.({ x: c.x, y: level, z: c.z }, 2.6);
-      g.audio?.play('explosion.big', { x: c.x, y: level, z: c.z }, { volume: 0.7, throttle: 0.15 });
+      g.audio?.play('depthcharge', { x: c.x, y: level, z: c.z }, { volume: 0.85, throttle: 0.15 });
+      g.audio?.play('splash', { x: c.x, y: level, z: c.z }, { volume: 0.6, throttle: 0.15 });
       if (g.net?.isClient) continue;
       for (const s of g.world.stacksOf(enemyOf(c.faction))) {
         if (!s.stats.submarine) continue;

@@ -32,6 +32,8 @@ const FAR = 110;           // metres beyond which shots switch to their '.far' v
 const CARRY = {
   rifle: 8, musket: 12, hoof: 5, 'horse.neigh': 14, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
   explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
+  // the sea: a big gun is heard right across it, a ping or a klaxon only near the boat
+  naval: 70, navalHeavy: 110, splash: 26, 'splash.big': 42, depthcharge: 46, 'torpedo.launch': 14, 'sonar.ping': 22, klaxon: 18, 'ship.sink': 40, 'impact.ship': 30,
 };
 const carry = (key) => CARRY[key.replace(/^(\d{4}\.\w+\.|nato\.|pact\.)/, '').replace(/\.(far|last)$/, '')] ?? 6;
 const CULL = 40;           // sounds beyond this many reference distances are skipped (rifle: 320 m)
@@ -40,10 +42,11 @@ const MACHINE_CHANNELS = 4;
 const MACHINE_RANGE = 120;
 const MACHINE_REF = 5;    // engines are far quieter than guns: they fade sooner
 const ENGINE_LEVEL = { 'engine.turbine': 0.55 }; // gas turbines: a hiss, not a roar — kept well under the diesels
-const WIND = 0.11;         // the wind bed; halved while the guns are talking
+const WIND = 0.11;
+const SEA = 0.13;           // the open sea's bed (open-sea maps), times the sea state         // the wind bed; halved while the guns are talking
 const BED = 0.2;           // the distant battle at its loudest
 const BED_FILL = 90;       // weighted shots in the last ~20 s for the bed to be about two-thirds up
-const SHOT_WEIGHT = { cannon: 3, arty: 5, mlrs: 5, katyusha: 5, nebelwerfer: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
+const SHOT_WEIGHT = { naval: 3, navalHeavy: 6, cannon: 3, arty: 5, mlrs: 5, katyusha: 5, nebelwerfer: 5, mortar: 3, rocket: 2, autocannon: 1.5 };
 const QUIET_FOR = 18;
 const GALLOP_RANGE = 160; // m: squadrons heard at the gallop…
 const GALLOP_STACKS = 3;  // …the nearest this many, a loop each      // seconds without gunfire before birds come back
@@ -181,6 +184,7 @@ export class AudioSystem {
         const [key, make] = queue.shift();
         this.bank[key] = make();
         if (key === 'wind') this.startWind();
+        if (key === 'sea' && this.game.world.river?.sea) this.startSea();
       }
       if (queue.length) setTimeout(step, 0);
       else this.ready = true;
@@ -194,6 +198,14 @@ export class AudioSystem {
     this.windGain = new GainNode(ctx, { gain: WIND });
     wind.connect(this.windGain).connect(this.outdoor);
     wind.start();
+  }
+
+  /** At sea: the swell breaking all round, under the wind — louder in a rough sea and close to the water. */
+  startSea() {
+    const src = new AudioBufferSourceNode(this.ctx, { buffer: this.bank.sea, loop: true });
+    this.seaGain = new GainNode(this.ctx, { gain: 0 });
+    src.connect(this.seaGain).connect(this.outdoor);
+    src.start();
   }
 
   unlock() {
@@ -331,7 +343,7 @@ export class AudioSystem {
   weapon(faction, kind, pos, indoors = false, army = null, last = false) {
     this.lastLoud = this.game.world.time;
     this.intensity += SHOT_WEIGHT[kind] ?? 1;
-    const volume = { musket: 0.6, flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
+    const volume = { naval: 0.9, navalHeavy: 1, musket: 0.6, flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
     // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
     const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
     let key = `${faction}.${kind}`;
@@ -340,7 +352,7 @@ export class AudioSystem {
       key = (last && this.sound(`${own}.last`) ? `${own}.last` : this.sound(own) ? own : key);
     }
     // (a flamethrower's takes overlap into one roar)
-    this.play(key, pos, { volume, throttle: (kind === 'flame' ? 0.9 : kind === 'nebelwerfer' ? 2.5 : kind === 'cannon' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });
+    this.play(key, pos, { volume, throttle: (kind === 'flame' ? 0.9 : kind === 'nebelwerfer' ? 2.5 : kind === 'cannon' || kind === 'naval' || kind === 'navalHeavy' ? 0.06 : kind === 'autocannon' ? 0.05 : 0.025) * near, room: indoors ? 0.5 : 0 });
   }
 
   // ---------------------------------------------------------------- loops
@@ -568,6 +580,7 @@ export class AudioSystem {
     if (!this.running) return;
     this.updateListener();
     if (this.windGain) set(this.windGain.gain, this.game.world.time - this.lastLoud < QUIET_FOR ? WIND * 0.5 : WIND, this.ctx.currentTime, 1.5);
+    if (this.seaGain) set(this.seaGain.gain, SEA * (this.game.seaState ?? 1) * (1 - 0.7 * Math.min(1, Math.max(0, (this.listenerPos.y - 20) / 600))), this.ctx.currentTime, 1.5);
     this.updateBed(step);
     this.updateIndoors();
     this.updateMachines(step);

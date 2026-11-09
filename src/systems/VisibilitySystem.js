@@ -72,7 +72,11 @@ export class VisibilitySystem {
       if (os.sonar && (o.depth ?? 0) < 1) {
         const fast = Math.hypot(o.vel?.x ?? 0, o.vel?.z ?? 0) > 12;
         const range = os.sonar * (u.stack.silent ? 0.5 : 1) * (fast ? 0.5 : 1);
-        if (d < range) { u.contactAt = now; return true; }
+        if (d < range) {
+          u.contactAt = now;
+          if (!(o.pingAt > now - 3.5)) { o.pingAt = now; this.game.audio?.play('sonar.ping', o.pos, { volume: 0.7, throttle: 0.5 }); } // the hunter's sonar, holding the contact
+          return true;
+        }
         if (now - (u.contactAt ?? -99) < 10 && d < os.sonar * 1.3) return true; // contact held a while: where it was, where it was heading
       }
       if (periscope && d < 350 && os.naval && terrain.lineOfSight(o.pos.x, o.pos.y + (os.eyeHeight ?? 1.5), o.pos.z, u.pos.x, (this.world.river?.level ?? 0) + 1, u.pos.z)) return true;

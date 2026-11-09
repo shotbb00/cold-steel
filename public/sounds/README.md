@@ -34,3 +34,4 @@ in `sounds.json` under the key they replace:
 | Soldiers | `nato.reload` `pact.reload` · `death` · `step.0` – `step.3` (footsteps: grass, long grass, stones, soft earth) |
 | Radio and UI | `nato.radio` `pact.radio` (a short transmission) · `nato.horn` `pact.horn` (objective taken, new wave) · `order` `click` `ready` `hurt` `whoosh` |
 | Ambience | `wind` `rain` (loops) · `birds` `crow` · `flare.pop` |
+| Sea | `nato.naval` `pact.naval` (5- and 6-inch) · `nato.navalHeavy` `pact.navalHeavy` (8-inch and up) · `splash` `splash.big` (a shell short) · `torpedo.launch` · `depthcharge` (also a torpedo hit, under the keel) · `impact.ship` (a shell striking a hull) · `ship.sink` · `sonar.ping` · `klaxon` (a submarine diving) · loops: `engine.ship` `wash` (bow wave) `sea` (the open sea) |

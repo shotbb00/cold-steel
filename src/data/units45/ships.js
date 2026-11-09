@@ -43,7 +43,7 @@ const near = (o) => { const r = { ...o }; for (const k of SCALED) if (r[k]) r[k]
 const ship = (o) => ({
   category: 'naval', kind: 'vehicle', role: 'fighter',
   formation: { count: 1, columns: 1, spacing: 0 },
-  weaponSound: 'cannon', engine: 'engine.diesel',
+  weaponSound: 'naval', engine: 'engine.ship', tracks: 'wash', // (audio: the screws' beat, the bow wave for tracks)
   ...o,
   stats: near({ ...NAVAL, weapon: 'cannon', ...o.stats }),
   ...(o.mounts && { mounts: Object.fromEntries(Object.entries(o.mounts).map(([side, list]) => [side, list.map(near)])) }),

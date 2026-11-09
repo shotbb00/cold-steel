@@ -439,12 +439,169 @@ function katyusha(ctx) {
   });
 }
 
+// ---------------------------------------------------------------- the sea
+
+/**
+ * Water thrown up — a shell short, a torpedo or a charge: the thump of it going in, the roar of the
+ * column climbing (a bright hiss over a low rush), then the spray pattering back down.
+ */
+function splash(ctx, { dur = 2.8, thumpF = 50, thump = 1, roar = 1, rain = 0.6, lp = 1300 }) {
+  return makeBuffer(ctx, dur, (d, sr, n) => {
+    let hi = 0, lo = 0, lo2 = 0, ph = 0, drop = 0;
+    const aH = lpCoef(lp, sr), aL = lpCoef(260, sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const w = Math.random() * 2 - 1;
+      ph += (TAU * thumpF * (1 - Math.min(0.5, t * 2))) / sr;
+      let s = thump * Math.sin(ph) * Math.exp(-t * 9);
+      hi += aH * (w - hi);
+      s += roar * hi * 3 * Math.min(1, t / 0.07) * Math.exp(-t * 2.4);
+      lo += aL * (w - lo);
+      lo2 += aL * (lo - lo2);
+      s += roar * lo2 * 9 * Math.min(1, t / 0.15) * Math.exp(-t * 1.5);
+      if (t > 0.45 && Math.random() < 0.025 * Math.exp(-((t - 1.3) ** 2) / 0.6)) drop = 0.4 + Math.random() * 0.6; // the spray falling back
+      drop *= 0.965;
+      s += rain * drop * w;
+      d[i] = Math.tanh(s * 1.3 * attack(t, 0.002));
+    }
+  });
+}
+
+/** A sonar's ping: a pure tone struck hard and ringing out, with the faint echo coming back. */
+function ping(ctx) {
+  return makeBuffer(ctx, 2.6, (d, sr, n) => {
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      ph += (TAU * (1320 - 20 * Math.min(1, t))) / sr;
+      const tone = (te) => (te < 0 ? 0 : Math.min(1, te / 0.004) * Math.exp(-te * 2.6));
+      d[i] = Math.sin(ph) * (tone(t) + 0.3 * tone(t - 0.42)) + (Math.random() * 2 - 1) * 0.015 * Math.exp(-t * 3);
+    }
+  });
+}
+
+/** A submarine's diving alarm: the klaxon's two-tone "ah-oo-gah", twice. */
+function klaxon(ctx) {
+  return makeBuffer(ctx, 2.1, (d, sr, n) => {
+    let ph = 0;
+    const bp = bandpass(900, 3, sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const k = t % 1.05;                                  // each blast 0.8 s, a gap after
+      const on = k < 0.8 ? Math.min(1, k / 0.03) * Math.min(1, (0.8 - k) / 0.05) : 0;
+      ph += (TAU * (300 + 140 * Math.min(1, k / 0.45))) / sr; // the pitch climbing: "ah-oo"
+      const saw = 2 * (ph / TAU - Math.floor(ph / TAU + 0.5));
+      d[i] = Math.tanh((saw * 0.6 + bp(saw) * 1.6) * 1.8) * on;
+    }
+  });
+}
+
+/**
+ * A seamless loop: `next(t)` is run on past the end for `fade` s and that tail is crossfaded into the
+ * start, so the last sample runs straight into the first (no click where it repeats).
+ */
+function seamless(ctx, dur, next, fade = 0.15) {
+  return makeBuffer(ctx, dur, (d, sr, n) => {
+    const f = Math.floor(sr * fade);
+    const tail = new Float32Array(f);
+    for (let i = 0; i < n + f; i++) {
+      const v = next(i / sr, sr);
+      if (i < n) d[i] = v; else tail[i - n] = v;
+    }
+    for (let i = 0; i < f; i++) { const k = i / f; d[i] = d[i] * k + tail[i] * (1 - k); }
+  });
+}
+
+/** A ship under way (loop): the slow beat of the screws through the hull, the machinery's hum. */
+function shipEngine(ctx) {
+  let ph = 0, lp = 0, lp2 = 0;
+  return seamless(ctx, 2, (t, sr) => {
+    const a = lpCoef(140, sr);
+    ph += (TAU * 42) / sr;
+    const beat = 0.65 + 0.35 * Math.sin(TAU * 3 * t);   // three blade beats a second
+    lp += a * (Math.random() * 2 - 1 - lp);
+    lp2 += a * (lp - lp2);
+    return (Math.sin(ph) * 0.5 + Math.sin(ph * 2) * 0.2 + lp2 * 14) * beat;
+  });
+}
+
+/** White water (loop): a bow wave or wake — hiss over a low rush, surging a little. */
+function wash(ctx, dur = 4) {
+  let hi = 0, lo = 0;
+  return seamless(ctx, dur, (t, sr) => {
+    const w = Math.random() * 2 - 1;
+    const surge = 0.7 + 0.3 * Math.sin((TAU * 2 * t) / dur) * Math.sin((TAU * 3 * t) / dur + 1);
+    hi += lpCoef(2200, sr) * (w - hi);
+    lo += lpCoef(380, sr) * (w - lo);
+    return (hi * 0.5 + lo * 2.2) * surge;
+  });
+}
+
+/** The open sea (loop): swells breaking and running out, unhurried, each one a little different. */
+function sea(ctx, dur = 12) {
+  let lp = 0, lp2 = 0;
+  const waves = Array.from({ length: 5 }, (_, k) => ({ at: (k / 5) * dur + Math.random() * 1.2, len: 2.2 + Math.random() * 1.6, lvl: 0.6 + Math.random() * 0.4 }));
+  return seamless(ctx, dur, (t, sr) => {
+    let env = 0.25;
+    for (const w of waves) {
+      const k = ((t - w.at + dur * 2) % dur) / w.len;    // (wrapping: it loops)
+      if (k < 1) env += w.lvl * Math.sin(Math.PI * Math.min(1, k * 2.5)) * (1 - k) ** 1.5;
+    }
+    const a = lpCoef(380 + 1100 * Math.min(1, env), sr);
+    lp += a * (Math.random() * 2 - 1 - lp);
+    lp2 += a * (lp - lp2);
+    return lp2 * env;
+  }, 0.3);
+}
+
+/** A ship going down: the hull groaning as it bends, steam roaring out, air bubbling up. */
+function sinking(ctx) {
+  return makeBuffer(ctx, 8, (d, sr, n) => {
+    let ph = 0, lp = 0, hi = 0, bub = 0, bubF = 400, bubPh = 0;
+    const bp = bandpass(140, 4, sr);
+    const aL = lpCoef(220, sr), aH = lpCoef(3000, sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const w = Math.random() * 2 - 1;
+      const f = 38 + 18 * Math.sin(t * 0.9) + 9 * Math.sin(t * 2.3 + 1);   // the groan wandering
+      ph += (TAU * f) / sr;
+      const saw = 2 * (ph / TAU - Math.floor(ph / TAU + 0.5));
+      const swell = Math.max(0, Math.sin(t * 1.3)) ** 2 * Math.min(1, t / 0.5) * Math.exp(-t * 0.12);
+      let s = bp(saw) * 3 * swell;
+      lp += aL * (w - lp);
+      s += lp * 5 * (0.4 + 0.6 * Math.exp(-t * 0.6));                        // the rush of it
+      hi += aH * (w - hi);
+      s += hi * 0.6 * Math.exp(-t * 0.8);                                  // steam
+      if (t > 0.8 && Math.random() < 0.0015) { bub = 0.6 + Math.random() * 0.4; bubF = 280 + Math.random() * 600; }
+      bub *= 0.9993;
+      bubPh += (TAU * bubF * (1 + (1 - bub) * 0.8)) / sr;                     // each bubble rising in pitch
+      s += bub * Math.sin(bubPh) * 0.5;
+      d[i] = Math.tanh(s * 1.2 * attack(t, 0.05));
+    }
+  });
+}
+
+/** A heavy shell striking a ship: the burst, and the hull ringing like a struck bell. */
+function shipStrike(ctx) {
+  return makeBuffer(ctx, 2.2, (d, sr, n) => {
+    const parts = [[173, 1], [409, 0.7], [688, 0.55], [1127, 0.4], [1630, 0.25]];
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      let s = (Math.random() * 2 - 1) * Math.exp(-t * 60) * 1.2;
+      for (const [f, a] of parts) s += a * Math.sin(TAU * f * t) * Math.exp(-t * (2 + f / 400));
+      d[i] = Math.tanh(s * attack(t, 0.0008));
+    }
+  });
+}
+
 /**
  * The sound definitions: key → () => AudioBuffer. Building every buffer at once takes a
  * second or two of main-thread time, so AudioSystem builds them a few at a time while the
  * game loads (most urgent first: the order below).
  */
 export function soundDefinitions(ctx) {
+  const navalGun = () => gunshot(ctx, { dur: 4.5, crack: 1.2, crackDecay: 300, body: 1.3, bodyLP: 800, bodyDecay: 7, thump: 1.8, thumpF: 42, tail: 1.1, tailLP: 230, tailDecay: 0.7, drive: 2.4 });        // a destroyer's 5-inch: the roll goes on over the water
+  const navalHeavy = () => gunshot(ctx, { dur: 6.5, crack: 1.3, crackDecay: 220, body: 1.5, bodyLP: 520, bodyDecay: 4.5, thump: 2.1, thumpF: 27, tail: 1.4, tailLP: 160, tailDecay: 0.45, drive: 2.7 }); // 8- to 18-inch: a thunderclap
   return {
     // --- small arms
     // M16A2 (5.56 mm): sharp, bright crack, lighter body
@@ -759,5 +916,18 @@ export function soundDefinitions(ctx) {
       }
       loopify(d, sr, n, 0.1);
     }),
+    // --- the sea (ships' guns, water, the boats under it): last, the land maps need them least
+    'nato.naval': navalGun, 'pact.naval': navalGun, 'nato.navalHeavy': navalHeavy, 'pact.navalHeavy': navalHeavy,
+    splash: () => splash(ctx, {}),
+    'splash.big': () => splash(ctx, { dur: 4, thumpF: 34, thump: 1.3, roar: 1.3, rain: 0.8, lp: 1000 }),
+    'torpedo.launch': () => splash(ctx, { dur: 1.6, thumpF: 70, thump: 1.4, roar: 0.45, rain: 0.25, lp: 800 }), // compressed air, the fish going in
+    depthcharge: () => blast(ctx, { dur: 4, thumpF: 21, rumble: 1.6, rumbleDecay: 0.9, debris: 0, crack: 0, lp: 170 }), // under water: felt more than heard
+    'sonar.ping': () => ping(ctx),
+    klaxon: () => klaxon(ctx),
+    'engine.ship': () => shipEngine(ctx),
+    wash: () => wash(ctx),
+    sea: () => sea(ctx),
+    'ship.sink': () => sinking(ctx),
+    'impact.ship': () => shipStrike(ctx),
   };
 }

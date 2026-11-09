@@ -177,7 +177,13 @@ export class Orders {
         }
         return null;
       case 'subDepth': // a submarine: surface / periscope / deep (UnitStack.shipUpkeep)
-        for (const s of mine(cmd.s)) if (s.stats.submarine) for (const u of s.units) u.depthMode = cmd.d;
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.submarine) continue;
+          for (const u of s.units) {
+            if (cmd.d !== 'surface' && (u.depthMode ?? 'periscope') === 'surface' && u.alive) g.audio?.play('klaxon', u.pos, { volume: 0.8, throttle: 1 }); // dive, dive!
+            u.depthMode = cmd.d;
+          }
+        }
         return null;
       case 'silent': // a submarine: silent running — half the speed, half as easy to hear
         for (const s of mine(cmd.s)) if (s.stats.submarine) s.silent = !!cmd.on;
