@@ -465,7 +465,7 @@ export class AudioSystem {
       const busy = u.cooldown > 0 || !!u.target; // the gunner's foot on it in a fight
       ch.engine.setRate(0.8 + 0.5 * k + (busy ? 0.05 : 0));
       ch.engine.setGain((0.16 + 0.24 * k) * ch.level);
-      ch.tracks.setRate(0.45 + 1.05 * k);
+      ch.tracks.setRate(ch.s.stats.naval ? 1 : 0.45 + 1.05 * k); // (a ship's bow wash: louder with speed, never pitched up)
       ch.tracks.setGain(k > 0.05 ? 0.1 + 0.28 * k : 0);
       const turn = dt > 0 ? Math.abs(angleDelta(ch.turretYaw, u.turretYaw)) / dt : 0;
       ch.turretYaw = u.turretYaw;

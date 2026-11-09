@@ -533,7 +533,7 @@ function wash(ctx, dur = 4) {
     const surge = 0.7 + 0.3 * Math.sin((TAU * 2 * t) / dur) * Math.sin((TAU * 3 * t) / dur + 1);
     hi += lpCoef(2200, sr) * (w - hi);
     lo += lpCoef(380, sr) * (w - lo);
-    return (hi * 0.5 + lo * 2.2) * surge;
+    return (hi * 0.08 + lo * 2.2) * surge; // (the low rush; the hiss over it read as a high bubbling)
   });
 }
 
@@ -554,10 +554,10 @@ function sea(ctx, dur = 12) {
   }, 0.3);
 }
 
-/** A ship going down: the hull groaning as it bends, steam roaring out, air bubbling up. */
+/** A ship going down: the hull groaning as it bends, steam roaring out. */
 function sinking(ctx) {
   return makeBuffer(ctx, 8, (d, sr, n) => {
-    let ph = 0, lp = 0, hi = 0, bub = 0, bubF = 400, bubPh = 0;
+    let ph = 0, lp = 0, hi = 0;
     const bp = bandpass(140, 4, sr);
     const aL = lpCoef(220, sr), aH = lpCoef(3000, sr);
     for (let i = 0; i < n; i++) {
@@ -572,10 +572,6 @@ function sinking(ctx) {
       s += lp * 5 * (0.4 + 0.6 * Math.exp(-t * 0.6));                        // the rush of it
       hi += aH * (w - hi);
       s += hi * 0.6 * Math.exp(-t * 0.8);                                  // steam
-      if (t > 0.8 && Math.random() < 0.0015) { bub = 0.6 + Math.random() * 0.4; bubF = 280 + Math.random() * 600; }
-      bub *= 0.9993;
-      bubPh += (TAU * bubF * (1 + (1 - bub) * 0.8)) / sr;                     // each bubble rising in pitch
-      s += bub * Math.sin(bubPh) * 0.5;
       d[i] = Math.tanh(s * 1.2 * attack(t, 0.05));
     }
   });
