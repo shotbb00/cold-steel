@@ -25,6 +25,21 @@ const WOODS_CELL = 6;      // metres per woods grid cell
 
 const CONTACT_FADE = 45; // s a lost submarine contact stays marked
 
+/**
+ * A side's aircraft in the air see too: from up there all round, a scout far, the rest some way (they
+ * are busy) — as spotters for isSeen and as views for the fog of war (render/FogOfWar.js).
+ */
+export function airEyes(game, faction) {
+  const eyes = [];
+  for (const s of game.air?.sorties ?? []) {
+    if (s.faction !== faction || !s.airborne || !s.pos) continue;
+    const scout = s.kind === 'navScout' || s.kind === 'recon';
+    eyes.push({ pos: s.pos, faction, alive: true, moving: false, yaw: s.yaw ?? 0, turretYaw: s.yaw ?? 0, depth: 0, stack: { usesCover: false },
+      stats: { sight: scout ? 1200 : 600, eyeHeight: 0, fov: 6.3, naval: true } });
+  }
+  return eyes;
+}
+
 export class VisibilitySystem {
   constructor(game, playerFaction) {
     this.game = game;
@@ -121,7 +136,8 @@ export class VisibilitySystem {
 
     const terrain = this.world.terrain;
     for (const s of this.world.stacks) {
-      const spotters = this.world.combatants(s.faction === this.player ? this.enemyOfPlayer() : this.player);
+      const watcher = s.faction === this.player ? this.enemyOfPlayer() : this.player;
+      const spotters = [...this.world.combatants(watcher), ...airEyes(this.game, watcher)];
       let any = false;
       for (const u of s.units) {
         if (!u.alive) continue; // a body stays where (and as) it was last seen

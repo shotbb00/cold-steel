@@ -138,18 +138,18 @@ export const KINDS = {
   // takes one off her deck after it has been spotted (DECK: s — a strike longer, and a hit then sets her
   // on fire); back aboard it is rearmed in REARM s; shot down, it is gone for good
   navCap: {
-    sea: true, label: 'Fighter cover', key: 'I', cost: 110, cooldown: 80, delay: 6,
+    sea: true, flight: 4, label: 'Fighter cover', key: 'I', cost: 110, cooldown: 80, delay: 6,
     approach: 0, cruiseAlt: 260, attackAlt: 260, cruiseSpeed: 140, attackSpeed: 120,
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0,
     orbit: 320, station: 90, aam: { count: 6, range: 1100, speed: 480, pk: 0.45, hits: 99, every: 3 },
   },
   diveBomb: {
-    sea: true, label: 'Dive bombers', key: 'J', cost: 170, cooldown: 75, delay: 6,
+    sea: true, flight: 3, label: 'Dive bombers', key: 'J', cost: 170, cooldown: 75, delay: 6,
     approach: 0, cruiseAlt: 420, attackAlt: 70, cruiseSpeed: 95, attackSpeed: 120,
     rocketsFrom: 240, gunFrom: 0, gunTo: -40, runLength: 0, turn: 0.6, pitchDown: 0.55,
   },
   torpBomb: {
-    sea: true, label: 'Torpedo bombers', key: 'Y', cost: 190, cooldown: 90, delay: 6,
+    sea: true, flight: 3, label: 'Torpedo bombers', key: 'Y', cost: 190, cooldown: 90, delay: 6,
     approach: 0, cruiseAlt: 120, attackAlt: 22, cruiseSpeed: 85, attackSpeed: 75,
     rocketsFrom: 900, gunFrom: 0, gunTo: -60,   // (no rockets: the run begins 900 m out) runLength: 0, turn: 0.7, pitchDown: 0.02,
     drop: 650,   // m: the torpedo goes in this far from the ship
@@ -205,6 +205,10 @@ function deckOf(u) {
   const c = u.stack.stats.carrier ?? {};
   return { top: u.pos.y + (c.deck ?? 16), len: c.deckLen ?? 240, fx: Math.sin(u.yaw), fz: Math.cos(u.yaw), v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
 }
+
+// a flight's wingmen off the leader: [side, back, down] in metres — a vee, the fourth in the slot
+const WING = [[-14, 12, 1.5], [14, 12, 1.5], [0, 24, 3]];
+const TRAIL = 26; // m between them in line on the deck, on the take-off run and the approach
 
 function spin(rig, type, dt, k = 1) {
   if (rig.rotor) rig.rotor.rotation.y += dt * type.rotorSpeed * k;
@@ -316,16 +320,50 @@ class Sortie {
     return _d.subVectors(this.target, this.pos).setY(0).dot(this.dir);
   }
 
+  /** The aircraft: the leader's rig and (a carrier mission flies as a flight) its wingmen's, lost one by one as it takes damage. */
+  build() {
+    if (this.rig) return;
+    this.rig = buildAircraft(this.kind, this.faction, this.army);
+    this.game.scene.add(this.rig.root);
+    this.wing = Array.from({ length: (this.p.flight ?? 1) - 1 }, () => { const w = buildAircraft(this.kind, this.faction, this.army); this.game.scene.add(w.root); return w; });
+  }
+
+  /**
+   * While she spots the flight for launch: the planes ranged on her after deck, one behind the other — seen
+   * there from the moment it is ordered (and their paint compiled before they roll).
+   */
+  spotOnDeck() {
+    const cv = this.cvUnit;
+    if (!cv?.alive || !this.game.scene) return;
+    this.build();
+    const d = deckOf(cv);
+    this.deckS = -d.len * 0.12;
+    this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+    this.yaw = cv.yaw;
+    this.pitch = 0;
+    this.roll = 0;
+    this.dir.set(d.fx, 0, d.fz);
+    this.side.set(d.fz, 0, -d.fx);
+    this.state = 'inbound';
+    this.placeDeck();
+  }
+
+  /** The flight on her deck, in line astern of the leader (the leader's rig where the sortie is). */
+  placeDeck() {
+    this.rig.root.position.copy(this.pos);
+    this.rig.root.rotation.set(0, this.yaw, 0, 'YXZ');
+    this.wing.forEach((w, i) => { w.root.position.set(this.pos.x - this.dir.x * TRAIL * (i + 1), this.pos.y, this.pos.z - this.dir.z * TRAIL * (i + 1)); w.root.rotation.set(0, this.yaw, 0, 'YXZ'); });
+  }
+
   spawn() {
-    const rig = buildAircraft(this.kind, this.faction, this.army);
-    this.rig = rig;
-    this.game.scene.add(rig.root);
+    this.build();
+    const rig = this.rig;
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
     if (this.p.sea && this.cvUnit?.alive) { // off her deck: from the after end, rolling forward along it, up over the bow
       const d = deckOf(this.cvUnit);
       this.state = 'takeoff';
-      this.deckS = -d.len * 0.36;
+      this.deckS = -d.len * 0.12; // (from where she spotted it: the after deck, the wingmen behind)
       this.rollV = 0;
       this.place(0);
     }
@@ -338,10 +376,11 @@ class Sortie {
     const game = this.game;
     if (this.p.sea && !this.orphan && !game.world.stacksOf(this.faction).some((s) => s.stats.carrier && s.units[0]?.alive)) { // the carrier is gone
       this.orphan = true;
-      if (this.state === 'inbound') { this.state = 'done'; return; }  // (still on her deck: lost with her)
+      if (this.state === 'inbound') { this.state = 'done'; this.rig?.root.removeFromParent(); for (const w of this.wing ?? []) w.root.removeFromParent(); return; }  // (still on her deck: lost with her)
       game.tell(this.faction, `${this.type.name}: our carrier is gone — finishing the run, then ditching`);
     }
     if (this.state === 'inbound') {
+      if (this.p.sea && this.cvUnit?.alive && game.time < this.appearAt) this.spotOnDeck(); // (on her deck, spotted for launch)
       if (game.time >= this.appearAt) this.spawn();
       return;
     }
@@ -427,7 +466,7 @@ class Sortie {
 
     if (this.kind === 'torpBomb' && this.state === 'attack' && !this.dropped && this.ship?.alive && d < p.drop) { // the fish goes in, then away low over the water
       this.dropped = true;
-      if (!game.net?.isClient) game.torpedoes?.launch(this, _p.set(this.pos.x, game.world.river?.level ?? 0, this.pos.z), this.ship, this.type.torpedo);
+      if (!game.net?.isClient) game.torpedoes?.launch(this, _p.set(this.pos.x, game.world.river?.level ?? 0, this.pos.z), this.ship, { ...this.type.torpedo, count: 1 + (this.wing?.length ?? 0) }); // (each plane of the flight its fish)
       this.state = 'break';
     }
     if (this.state === 'attack' || this.state === 'land') {
@@ -598,9 +637,34 @@ class Sortie {
     r.root.position.copy(this.pos);
     r.root.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
     spin(r, this.type, dt);
+    this.placeWing(dt);
     this.loop.setPos(this.pos);
     this.siren?.setPos(this.pos);
     if (this.siren && this.state !== 'attack') { this.siren.stop(); this.siren = null; }
+  }
+
+  /**
+   * The wingmen: in a vee behind the leader in the air, in line behind it on the deck, the take-off run and the
+   * approach. Damage takes them first: one goes down in flames for each share of the flight's strength lost.
+   */
+  placeWing(dt) {
+    if (!this.wing?.length) return;
+    const n = this.wing.length + 1;
+    const keep = Math.max(0, Math.ceil((this.hp / this.type.hp) * n) - 1);
+    while (this.wing.length > keep) {
+      const w = this.wing.pop();
+      this.game.effects.explosion(w.root.position, 0.6, { ground: false, fire: 1.2 });
+      this.game.effects.trail?.(w.root.position, this.dir);
+      w.root.removeFromParent();
+      if (this.hp > 0 && this.faction === this.game.playerFaction) this.game.tell(this.faction, `${this.type.name}: one of the flight shot down`); // (the whole flight down: shotDown says it)
+    }
+    const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
+    this.wing.forEach((w, i) => {
+      const [sx, bk, dn] = line ? [0, TRAIL * (i + 1), 0] : WING[i] ?? [0, 24 + i * 12, 3];
+      w.root.position.set(this.pos.x + this.side.x * sx - this.dir.x * bk, this.pos.y - dn, this.pos.z + this.side.z * sx - this.dir.z * bk);
+      w.root.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
+      spin(w, this.type, dt);
+    });
   }
 
   fireWeapons(dt, d) {
@@ -821,6 +885,8 @@ class Sortie {
     this.wrecked = wreck; // (shot down or ditched: not coming back aboard)
     this.loop.stop();
     this.siren?.stop();
+    for (const w of this.wing ?? []) w.root.removeFromParent();
+    this.wing = [];
     if (!wreck) this.rig.root.removeFromParent();
     else this.rig.root.traverse((o) => { if (o.isMesh) o.material = WRECK; });
   }
@@ -1235,7 +1301,20 @@ export class AirStrike {
     return n;
   }
 
+  /** Once, at the start: every aircraft this battle can call is compiled for the renderer before it is first seen (render/babylon/BabylonView.js warm). */
+  warm() {
+    const g = this.game;
+    if (this.warmed || !g.babylon) return;
+    this.warmed = true;
+    const sea = !!g.world.river?.sea;
+    for (const [kind, p] of Object.entries(KINDS)) {
+      if (p.off || !!p.sea !== sea) continue;
+      for (const f of ['nato', 'pact']) { try { g.babylon.warm(buildAircraft(kind, f, g.armyOf(f)).root); } catch { /* (a kind this war has no aircraft for) */ } }
+    }
+  }
+
   update(dt) {
+    this.warm();
     this.updateRadars(dt);
     const now = this.game.world.time;
     for (let i = this.sorties.length - 1; i >= 0; i--) {

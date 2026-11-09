@@ -238,6 +238,7 @@ const STONE_DUST = 0x9a958c;
 const SMOKE_GREY = 0x6b6862;
 const SMOKE_BLACK = 0x2a2725;
 const FIRE = 0xffa040;
+const FLAK = 0x161616; // a heavy AA shell's burst: oily black
 const FLASH = 0xffe2a8;
 const SPARK = 0xffc060;
 const BLOOD = 0x5a1410;
@@ -403,6 +404,16 @@ export class EffectsSystem {
    * High-explosive burst. `size` ~1 is a tank round or rocket, ~2 a 155 mm shell. Ground
    * bursts throw a column of dark earth and clods; air bursts / vehicle hits skip the dirt.
    */
+  /** A heavy AA shell bursting in the air: a brief flash, then a ragged black puff that hangs there, drifting. */
+  flak(pos) {
+    this.fire.spawn(pos.x, pos.y, pos.z, { size: 3.2, grow: 0.5, life: 0.07, color: FLASH, bright: 2.2 });
+    for (let i = 0; i < 6; i++) {
+      this.smoke.spawn(pos.x + rnd(-1.2, 1.2), pos.y + rnd(-1, 1), pos.z + rnd(-1.2, 1.2), {
+        vx: rnd(-1.5, 1.5), vy: rnd(-0.3, 0.6), vz: rnd(-1.5, 1.5), size: rnd(4.8, 7.2), grow: 1.3, life: rnd(4.5, 7), alpha: 0.9, color: FLAK, drag: 1.5, wind: 0.6,
+      });
+    }
+  }
+
   explosion(pos, size = 1, { ground = true, fire = 1, soot = !ground } = {}) {
     const F = this.fire;
     const S = this.smoke;

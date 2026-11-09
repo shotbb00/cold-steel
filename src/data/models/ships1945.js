@@ -782,12 +782,7 @@ function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', nu
     const h = Math.min(14, fw * 0.45), w = number.length * h * 0.55 + (number.length - 1) * h * 0.28;
     parts.push(...numerals(number, h, (u, v, du, dv) => P.box(du, 0.05, dv, { x: w / 2 - u, y: dy + 0.34, z: len * 0.36 + v, color: WHITE })));
   }
-  // the air group, spotted aft with wings folded, two lines
-  const plane = airplane(c.plane, { span: 12.5, len: 10, fold: true, mark });
-  for (const [i, z] of every(-len * 0.44, -len * 0.18, 9).entries()) {
-    for (const x of i % 2 ? [-7, 3] : [-3, 7]) parts.push(plane.clone().translate(x, dy + 0.3, z));
-  }
-  parts.push(airplane(c.plane, { span: 12.5, len: 10, mark }).translate(-2, dy + 0.3, len * 0.12)); // one spotted for launch
+  // (the flight deck kept clear: the air group is below, and every flight is seen taking off and landing on it — systems/AirStrike.js)
   return merge(parts);
 }
 

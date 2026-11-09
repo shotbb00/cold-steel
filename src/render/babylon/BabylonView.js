@@ -598,6 +598,23 @@ export class BabylonView {
     return m;
   }
 
+  /**
+   * Compile the shaders of a model's materials now, before it is first seen — an aircraft type the battle
+   * will bring: a new paint variant takes seconds to compile, and until then the model doesn't draw (only
+   * its shadow). The compiled materials are kept for the real ones; the stand-in meshes go.
+   */
+  warm(root) {
+    root.updateMatrixWorld(true);
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const rec = this.makeMesh(o);
+      if (!rec) return;
+      this.hold(rec.material); // (never released: every later mesh of this kind reuses it)
+      rec.mesh.setEnabled(false);
+      rec.material.forceCompilation(rec.mesh, () => rec.mesh.dispose(false, false));
+    });
+  }
+
   release(m) {
     if (--m.users > 0) return;
     this.materials.delete(m.source);

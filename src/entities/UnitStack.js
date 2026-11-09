@@ -1527,6 +1527,17 @@ export class UnitStack {
     // no radar of its own: the gunner's eyes, unless an air search radar of ours covers this spot
     const covered = air?.radarCovers?.(this.faction, u.pos);
     const reach = aa.range * (covered ? RADAR_BONUS : aa.optical ?? 1);
+    if (this.stats.naval) { // her heavy AA (the 5-inch): further out than the 40s, black bursts round the planes long before they close
+      u.flakT = (u.flakT ?? 0) - dt;
+      const far = u.flakT <= 0 && air?.nearestThreat(this.faction, u.pos, aa.range * 1.8);
+      if (far) {
+        u.flakT = 0.5 + Math.random() * 0.6;
+        const r = 12 + Math.random() * 35, a = Math.random() * Math.PI * 2;
+        _v.set(far.pos.x + Math.cos(a) * r, far.pos.y + (Math.random() - 0.3) * 20, far.pos.z + Math.sin(a) * r);
+        this.services.effects.flak?.(_v);
+        this.services.audio?.play('explosion.far', _v, { volume: 0.3, throttle: 0.25 });
+      }
+    }
     const h = air?.nearestThreat(this.faction, u.pos, reach);
     u.airTarget = h;
     if (!h) return false;
@@ -1535,7 +1546,7 @@ export class UnitStack {
     const dist = Math.hypot(dx, dz);
     u.airYaw = Math.atan2(dx, dz);
     u.airPitch = Math.atan2(h.pos.y - (u.pos.y + 2), dist);
-    if (Math.abs(angleDelta(u.turretYaw, u.airYaw)) > 0.08) return true; // still slewing
+    if (!this.stats.naval && Math.abs(angleDelta(u.turretYaw, u.airYaw)) > 0.08) return true; // still slewing (a ship's AA is all round her: no turret to wait for)
     // burst / pause cycle
     u.aaCycle = (u.aaCycle ?? 0) + dt;
     if (u.aaCycle > aa.burst + aa.pause) u.aaCycle = 0;
@@ -1544,6 +1555,11 @@ export class UnitStack {
     while (u.aaT <= 0) {
       u.aaT += 1 / aa.rate;
       this.muzzleWorld(u, _p);
+      if (this.stats.naval) { // a ship's AA: the 40s and 20s along her whole length, not one muzzle
+        const hl = this.hullOf(u, _seg);
+        const t = Math.random();
+        _p.set(hl[0] + (hl[2] - hl[0]) * t + (Math.random() - 0.5) * hl[4], u.pos.y + (this.stats.height ?? 10) * 0.55, hl[1] + (hl[3] - hl[1]) * t + (Math.random() - 0.5) * hl[4]);
+      }
       // lead: where it will be when the round gets there
       const flight = Math.hypot(h.pos.x - _p.x, h.pos.y - _p.y, h.pos.z - _p.z) / 700;
       _v.copy(h.pos).addScaledVector(h.velocity, flight);
@@ -1558,7 +1574,7 @@ export class UnitStack {
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
       // (no minimap pulse for flak: the fighting it shows is on the ground and the water)
-      this.services.audio?.weapon(this.faction, this.weaponSound, _p);
+      this.services.audio?.weapon(this.faction, this.stats.naval ? 'aa' : this.weaponSound, _p); // (a ship's AA: the AA guns' bark, not her main battery)
       const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
       u.recoil = 1;
