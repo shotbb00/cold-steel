@@ -83,7 +83,7 @@ export class FowPlugin extends GlslPlugin {
 export class PaintPlugin extends GlslPlugin {
   /** @param {object} paint  { colors: 4 × Three Color (linear), scale, mud (Three Color), wear } */
   constructor(material, paint) {
-    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false });
+    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false });
     this.paint = paint;
     this._enable(true);
   }
@@ -94,6 +94,7 @@ export class PaintPlugin extends GlslPlugin {
     defines.PAINT = !!mesh?.isVerticesDataPresent?.('paint');
     defines.PAINT_SURF = defines.PAINT && !!this.paint.surfaces;
     defines.PAINT_WEATHER = defines.PAINT && !!this.paint.weather;
+    defines.PAINT_AIR = defines.PAINT && this.paint.weather === 'air';
   }
 
   getAttributes(attributes, scene, mesh) {

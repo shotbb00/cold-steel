@@ -110,10 +110,20 @@ export const NOISE = /* glsl */ `
     vec3 w = fwidth(p);
     float near = 1.0 - smoothstep(0.012, 0.05, max(max(w.x, w.y), w.z));
     float l = dot(c, vec3(0.3, 0.55, 0.15));
-    c = mix(c, mix(c, vec3(l), 0.35) * 1.45, smoothstep(0.47, 0.55, pFbm(p * 0.7 + 11.0)) * 0.8);   // sun-faded patches
-    float st = pNoise(vec3((p.x + p.z) * 9.0, p.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((p.x - p.z) * 1.6, p.y * 0.3, 9.0)));
-    c *= 1.0 - smoothstep(0.25, 0.5, st) * 0.45;                                                     // rain and dirt streaks
-    c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * 0.55);          // dust caught on the plates
+    #ifdef PAINT_AIR
+      const float fadeK = 0.25, dustK = 0.14, streakK = 0.22; // (an aircraft: kept up better than a tank in the field, no dust on its skin)
+    #else
+      const float fadeK = 0.8, dustK = 0.55, streakK = 0.45;
+    #endif
+    c = mix(c, mix(c, vec3(l), 0.35) * 1.45, smoothstep(0.47, 0.55, pFbm(p * 0.7 + 11.0)) * fadeK);   // sun-faded patches
+    #ifdef PAINT_AIR
+      vec3 q = p.xzy; // an aircraft's streaks run back along the airflow (z), not down
+    #else
+      vec3 q = p;
+    #endif
+    float st = pNoise(vec3((q.x + q.z) * 9.0, q.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((q.x - q.z) * 1.6, q.y * 0.3, 9.0)));
+    c *= 1.0 - smoothstep(0.25, 0.5, st) * streakK;                                                   // rain and dirt streaks
+    c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * dustK);          // dust caught on the plates
     c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6);     // chips (few: more read as noise)
     return c;
   }
@@ -144,7 +154,7 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
     uWear: { value: wear },
   };
   if (surfaces) mat.defines = { ...mat.defines, PAINT_SURF: '' };
-  if (weather) mat.defines = { ...mat.defines, PAINT_WEATHER: '' };
+  if (weather) mat.defines = { ...mat.defines, PAINT_WEATHER: '', ...(weather === 'air' && { PAINT_AIR: '' }) }; // ('air': streaks along the airflow)
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader

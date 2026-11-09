@@ -184,7 +184,7 @@ function materialsFor(kind, faction, army) {
   if (!materials[key]) {
     const type = airType(kind, faction, army);
     materials[key] = {
-      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.2, roughness: 0.65 }), { ...type.paint, wear: 0.2, surfaces: true, weather: true }),
+      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.2, roughness: 0.65 }), { ...type.paint, wear: 0.2, surfaces: true, weather: 'air' }),
       glow: new THREE.MeshStandardMaterial({ color: FACTIONS[faction].marking, roughness: 0.7 }),
     };
   }
