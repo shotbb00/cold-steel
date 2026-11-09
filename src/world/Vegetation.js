@@ -226,7 +226,7 @@ function crownCardGeometry() {
  *   Returns { update(dt, t) } (the wind in the leaf cards).
  */
 /** @param {any} o  options, untyped until this file moves to TypeScript */
-export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid = [], count = 260, broadleaf = 0.55, autumn = 0.7, forest = null }) {
+export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid = [], count = 260, broadleaf = 0.55, autumn = 0.7, forest = null, maxY = 32, size = 1 }) {
   const trunks = instanced(trunkGeometry(), new THREE.MeshStandardMaterial({ color: 0x3b2e25, roughness: 1 }), count);
   const spruces = instanced(spruceGeometry(), new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9 }), count);
   const spruceCardMat = new THREE.MeshStandardMaterial({ map: spruceTexture(rand), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.95, color: 0xffffff });
@@ -264,10 +264,10 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
     if (inLane && rand() > 0.06 + wood) continue; // the battle lane stays mostly open
     const y = terrain.heightAt(x, z);
     terrain.normalAt(x, z, _n);
-    if (_n.y < 0.78 || y > 32) continue;
+    if (_n.y < 0.78 || y > maxY) continue;
     if (!isFree(cover, avoid, x, z, 2)) continue;
 
-    const H = 5 + rand() * 7;
+    const H = (5 + rand() * 7) * size;
     const w = 0.8 + rand() * 0.5;
     const yaw = rand() * TAU;
     _q.setFromAxisAngle(Y_AXIS, yaw);

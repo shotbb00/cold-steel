@@ -112,7 +112,7 @@ export class SeaDirector {
         continue;
       }
       if (s.stats.smallCraft) { // a PT boat: a torpedo run at the biggest enemy ship within reach (at night from anywhere), else with the fleet
-        const prey = this.foes().filter((f) => f.units[0]?.spotted && (VALUE[f.type.id] ?? 0) >= 2 && (night || d(f.centroid) < 2500)).sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0) || d(a.centroid) - d(b.centroid))[0];
+        const prey = this.foes().filter((f) => f.units[0]?.spotted && (VALUE[f.type.id] ?? 0) >= 2 && (night || d(f.centroid) < 1400)).sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0) || d(a.centroid) - d(b.centroid))[0];
         if (prey) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - prey.centroid.x, s.moveTarget.z - prey.centroid.z) > 150) this.move(s, prey.centroid.x, prey.centroid.z); continue; }
       }
       if (s.type.id === 'frigate' && !escort && fleet.some((o) => o.stats.carrier)) { // one escort stays with the carrier
@@ -136,7 +136,7 @@ export class SeaDirector {
         g.orders.run(this.faction, { t: 'flare', s: [s.id], x: Math.round(u.target.pos.x), z: Math.round(u.target.pos.z) }, 'ai');
       }
       if (night && this.faction === 'pact' && !s.stats.submarine) {
-        const shine = !!u.target && d(u.target.pos) < 1800 && s.id % 3 === 0;
+        const shine = !!u.target && d(u.target.pos) < 1000 && s.id % 3 === 0;
         if (!!s.searchlight !== shine) g.orders.run(this.faction, { t: 'searchlight', s: [s.id], on: shine ? 1 : 0 }, 'ai');
       }
       // badly hurt in sight of the enemy: a destroyer or escort hides behind her own smoke

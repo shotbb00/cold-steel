@@ -20,6 +20,7 @@ const BUDGET_MS = 1.5;      // per frame
 const SWEEP_PER_FRAME = 300; // scene objects checked for new materials per frame
 const AWARE = 12;            // metres seen all round (as in VisibilitySystem)
 const TARGET_H = 1.2;        // the height that has to show over the terrain
+const SHIP_H = 6;           // at sea: a ship's upperworks that have to show over an island
 const FADE = 5;              // per second toward the new picture
 const PATCHED = Symbol('fow');
 
@@ -150,19 +151,22 @@ export class FogOfWar {
       if (v > t[i]) t[i] = v;
       return true;
     };
-    // a ship at sea: the water is flat and the islands are low, so all round to her sight is seen — a disc,
-    // not rays (thousands of terrain samples a ray over kilometres: a frame's budget many times over)
+    // a ship at sea: all round, rays over the ground's height a cell (seaGround, sampled once: terrain samples
+    // over kilometres a ray would be a frame's budget many times over) — the high islands hide what's behind
     if (sea > -Infinity && st.naval) {
       if ((u.depth ?? 0) > 9) return; // (deep down: blind)
-      const rc = Math.ceil(range / cell);
-      const [ci, cj] = [Math.floor((u.pos.x + half) / cell), Math.floor((u.pos.z + half) / cell)];
-      for (let j = Math.max(0, cj - rc); j <= Math.min(N - 1, cj + rc); j++) {
-        for (let i = Math.max(0, ci - rc); i <= Math.min(N - 1, ci + rc); i++) {
-          const d = Math.hypot(i - ci, j - cj) * cell;
-          if (d > range) continue;
-          const v = Math.min(1, (range - d) / 10 + 0.15);
-          const k = j * N + i;
-          if (v > t[k]) t[k] = v;
+      const G = (this.seaGround ??= Float32Array.from({ length: N * N }, (_, k) => Math.max(sea, terrain.heightAt((k % N + 0.5) * cell - half, (Math.floor(k / N) + 0.5) * cell - half))));
+      const rays = Math.ceil((Math.PI * 2 * range) / (cell * 1.1));
+      for (let i = 0; i < rays; i++) {
+        const a = (Math.PI * 2 * i) / rays, sx = Math.sin(a), sz = Math.cos(a);
+        let maxSlope = -Infinity;
+        for (let d = cell * 0.9; d <= range; d += cell * 0.9) {
+          const ix = Math.floor((u.pos.x + sx * d + half) / cell), iz = Math.floor((u.pos.z + sz * d + half) / cell);
+          if (ix < 0 || iz < 0 || ix >= N || iz >= N) break;
+          const k = iz * N + ix, ground = G[k];
+          if ((ground + SHIP_H - eye) / d >= maxSlope) { const v = Math.min(1, (range - d) / 10 + 0.15); if (v > t[k]) t[k] = v; }
+          const slope = (ground + 0.2 - eye) / d;
+          if (slope > maxSlope) maxSlope = slope;
         }
       }
       return;

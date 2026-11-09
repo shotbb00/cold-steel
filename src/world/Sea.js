@@ -11,6 +11,7 @@
 // them. The Babylon renderer runs the same GLSL (render/babylon/plugins.js WaterPlugin).
 import * as THREE from 'three';
 import { NOISE } from '../render/paint.js';
+import { plantTrees } from './Vegetation.js';
 
 /** The waves' clock: read every frame by both renderers. */
 export const SEA_TIME = { get value() { return (performance.now() / 1000) % 20000; } };
@@ -54,6 +55,38 @@ export function waterGlsl(deep) {
     c = mix(c, vec3(0.72, 0.78, 0.78), foam);
     return vec4(c, max(a, foam));
   }`;
+}
+
+/**
+ * A high coast's ground (the sea maps): d metres inside its coastline (negative: out at sea, the shelf).
+ * A beach `beach` m deep, then a cliff — high enough to hide a ship's hull and her fire from the far side
+ * (terrain.lineOfSight) — and jungle hills behind it rising toward `top`. n (0..1: the map's noise, a few
+ * hundred metres across) makes the cliffs lower or higher and the hills and valleys behind them.
+ */
+export function shore(d, top, n = 0.5, beach = 25) {
+  if (d <= 0) return -1.5 + d * 0.13;
+  const c = Math.min(1, Math.max(0, (d - beach) / 30));
+  const cliff = top * (0.2 + 0.3 * n);
+  return 1.6 + d * 0.01 + c * c * (3 - 2 * c) * cliff + Math.min(Math.max(0, d - beach - 30) * 0.1, top * 0.7) * (0.25 + 1.5 * n * n);
+}
+
+/** A round high island: d metres inside its coast, r its radius — a shore() rising to a peak `top` high. */
+export function island(d, r, top, n = 0.5, beach = 15) {
+  if (d <= 0) return shore(d, top);
+  return shore(d, top * 0.55, n, beach) + top * 0.5 * Math.min(1, d / r) ** 1.4;
+}
+
+/** The ground colour for the land above the beaches (map theme.terrain.surface): jungle green, the cliffs left rock. */
+export function jungleTint(height, x, z, y) {
+  if (y < 2.6) return null;
+  const g = Math.hypot(height(x + 3, z) - height(x - 3, z), height(x, z + 3) - height(x, z - 3)) / 6;
+  return [0x3d5c2a, Math.min(1, (y - 2.6) / 1.5) * (1 - Math.min(1, Math.max(0, (g - 0.55) / 0.5)))];
+}
+
+/** Jungle on the land above the beaches (Vegetation.plantTrees: broadleaf, green): call before cover.finalize. */
+export function jungle({ scene, terrain, cover, rand, half, count = 4000 }) {
+  return plantTrees({ scene, terrain, cover, rand, area: { x: half, z: half }, lane: 0, count, broadleaf: 1, autumn: 0, maxY: 400, size: 1.7,
+    avoid: [{ test: (x, z) => terrain.heightAt(x, z) < 3 }] });
 }
 
 /** @param {{ level?: number, size: number, color?: number }} o  color: the deep water */

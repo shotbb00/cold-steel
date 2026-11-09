@@ -5,7 +5,7 @@
 // of Savo, at night. Ships only (data/units45/ships.js). Night and clear by default (map.conditions).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createSea } from '../world/Sea.js';
+import { createSea, shore, island, jungle, jungleTint } from '../world/Sea.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const SIZE = 6000;
@@ -13,24 +13,23 @@ const HALF = 2500;
 const noise = createNoise2D(1942_08);
 const sea = createSea({ level: 0, size: SIZE, color: 0x173f55 });
 
-/** Land rising inland from its coast (d: metres inside the coast, negative out at sea), and the shelf off it. */
-function coast(d: number, x: number, z: number, hills = 30) {
-  if (d > 0) return 1.6 + Math.min(d * 0.05, hills) + fbm(noise, x * 0.004, z * 0.004, 3) * hills * 0.35;
-  return -1.5 + d * 0.13; // (deep a few hundred metres out)
+/** Land rising inland from its coast (d: metres inside the coast, negative out at sea): a beach, cliffs, jungle hills. */
+function coast(d: number, x: number, z: number, top = 50) {
+  return shore(d, top, fbm(noise, x * 0.004, z * 0.004, 3) * 0.5 + 0.5, 20 + 60 * (fbm(noise, x * 0.003 + 4, z * 0.003, 2) * 0.5 + 0.5));
 }
 
 function height(x: number, z: number) {
   let h = -44 + fbm(noise, x * 0.0007, z * 0.0007, 4) * 8;
   // Guadalcanal: the whole south edge
   const gz = 1650 + 120 * Math.sin(x * 0.0013) + fbm(noise, x * 0.002, 9.1, 2) * 90;
-  h = Math.max(h, coast(z - gz, x, z, 45));
+  h = Math.max(h, coast(z - gz, x, z, 140));
   // Florida Island and Tulagi: the north-east
   const fx = (x - 1500) / 1400, fz = (z + 2350) / 650;
   const fd = (1 - Math.hypot(fx, fz)) * 650 + fbm(noise, x * 0.003, z * 0.003, 2) * 90;
-  h = Math.max(h, coast(fd, x, z, 35));
+  h = Math.max(h, coast(fd, x, z, 110));
   // Savo Island: a volcanic cone
   const sd = 420 - Math.hypot(x + 1250, z + 900) + fbm(noise, x * 0.005, z * 0.005, 2) * 40;
-  h = Math.max(h, sd > 0 ? 1.6 + sd * 0.2 : -1.5 + sd * 0.13);
+  h = Math.max(h, island(sd, 420, 150, fbm(noise, x * 0.006, z * 0.006, 2) * 0.5 + 0.5));
   return h;
 }
 
@@ -84,7 +83,7 @@ export default {
       farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
       surface(x: number, z: number) {
         const y = height(x, z);
-        if (y >= 3) return null;
+        if (y >= 3) return jungleTint(height, x, z, y);
         return y > -0.6 ? [0xd9cfa6, Math.min(1, (3 - y) / 2.4)] : [0x7a7660, 1]; // the black-sand beaches, volcanic grey under the water
       },
     },
@@ -108,10 +107,11 @@ export default {
       const x = (rand() * 2 - 1) * HALF;
       const z = rand() < 0.75 ? 1600 + rand() * 600 : -900 + (rand() * 2 - 1) * 450;
       const y = height(x, z);
-      if (y > 1.8 && y < 9) props.palm({ x, z, height: 8 + rand() * 6 });
+      if (y > 1.8 && y < 3.5) props.palm({ x, z, height: 8 + rand() * 6 });
     }
     props.finish();
+    const trees = jungle({ scene, terrain, cover, rand, half: HALF });
     cover.finalize({ x: HALF, z: HALF });
-    return { buildings: props.buildings, update() {} };
+    return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },
 } satisfies MapDef;

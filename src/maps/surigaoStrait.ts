@@ -5,7 +5,7 @@
 // Ships only (data/units45/ships.js). Night by default (map.conditions).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createSea } from '../world/Sea.js';
+import { createSea, shore, island, jungle, jungleTint } from '../world/Sea.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const SIZE = 6000;
@@ -14,9 +14,8 @@ const noise = createNoise2D(1944_10);
 const sea = createSea({ level: 0, size: SIZE, color: 0x163c50 });
 
 /** Land rising inland from its coast (d: metres inside the coast, negative out at sea), and the shelf off it. */
-function coast(d: number, x: number, z: number, hills = 40) {
-  if (d > 0) return 1.6 + Math.min(d * 0.06, hills) + fbm(noise, x * 0.004, z * 0.004, 3) * hills * 0.4;
-  return -1.5 + d * 0.14;
+function coast(d: number, x: number, z: number, top = 130) {
+  return shore(d, top, fbm(noise, x * 0.004, z * 0.004, 3) * 0.5 + 0.5, 20 + 60 * (fbm(noise, x * 0.003 + 4, z * 0.003, 2) * 0.5 + 0.5));
 }
 
 /** Half the strait's width at z: narrow in the middle, opening out into Leyte Gulf (north) and the Mindanao Sea (south). */
@@ -33,7 +32,7 @@ function height(x: number, z: number) {
   const w = halfWidth(z) + fbm(noise, x * 0.002, z * 0.002, 2) * 90;
   h = Math.max(h, coast((x - bend) - w, x, z), coast(-(x - bend) - w, x, z)); // Dinagat to the east, Leyte to the west
   const hd = 150 - Math.hypot(x + 320, (z - 650) * 1.4) + fbm(noise, x * 0.01, z * 0.01, 2) * 25; // Hibuson Island
-  h = Math.max(h, hd > 0 ? 1.6 + hd * 0.12 : -1.5 + hd * 0.14);
+  h = Math.max(h, island(hd, 150, 55, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 12));
   return h;
 }
 
@@ -87,7 +86,7 @@ export default {
       farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
       surface(x: number, z: number) {
         const y = height(x, z);
-        if (y >= 3) return null;
+        if (y >= 3) return jungleTint(height, x, z, y);
         return y > -0.6 ? [0xd6caa0, Math.min(1, (3 - y) / 2.4)] : [0x8a8264, 1];
       },
     },
@@ -110,10 +109,11 @@ export default {
       const x = (rand() * 2 - 1) * HALF;
       const z = (rand() * 2 - 1) * HALF;
       const y = height(x, z);
-      if (y > 1.8 && y < 8) props.palm({ x, z, height: 8 + rand() * 6 });
+      if (y > 1.8 && y < 3.5) props.palm({ x, z, height: 8 + rand() * 6 });
     }
     props.finish();
+    const trees = jungle({ scene, terrain, cover, rand, half: HALF });
     cover.finalize({ x: HALF, z: HALF });
-    return { buildings: props.buildings, update() {} };
+    return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },
 } satisfies MapDef;

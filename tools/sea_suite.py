@@ -18,8 +18,10 @@ BASE = sys.argv[4] if len(sys.argv) > 4 else 'http://localhost:5173'  # (a build
 SETUP = r"""() => { const g = game; g.renderer.setAnimationLoop?.(null); g.end = () => { window.__ended = true; };
   const D = g.systems.find((s) => typeof s.submarine === 'function' && typeof s.objective === 'function'); // (the admiral: by what it does — a build minifies class names)
   if (D) g.systems.push(new D.constructor(g, g.playerFaction, g.modeState, {})); // the player's side played by the bot too
-  window.__t = { aground: new Map(), worstAground: 0, overlaps: 0, nan: 0, steps: [], sunk: { nato: 0, pact: 0 }, spawned: { nato: 0, pact: 0 } };
-  g.bus.on('stack:destroyed', (s) => { if (s.stats.naval) __t.sunk[s.faction]++; });
+  window.__t = { aground: new Map(), worstAground: 0, overlaps: 0, nan: 0, steps: [], sunk: { nato: 0, pact: 0 }, spawned: { nato: 0, pact: 0 }, log: [], ov: [] };
+  const id = (s) => s?.type?.id ?? s?.type?.name ?? '?';
+  g.bus.on('stack:destroyed', (s) => { if (s.stats.naval) { __t.sunk[s.faction]++; __t.log.push(`${Math.round(g.world.time)} ${s.faction} ${id(s)} sunk by ${id(s.lastAttacker)}`); } });
+  g.bus.on('stack:spawned', (s) => { if (s.stats?.naval) __t.log.push(`${Math.round(g.world.time)} +${s.faction} ${id(s)}`); });
   return !!D;
 }"""
 
@@ -49,7 +51,8 @@ RUN = r"""(secs) => {
       const [sa, ua] = ships[a], [sb, ub] = ships[b];
       if (Math.abs(ua.pos.x - ub.pos.x) > 300 || Math.abs(ua.pos.z - ub.pos.z) > 300) continue;
       const A = sa.hullOf(ua, seg), B = sb.hullOf(ub, seg2);
-      if (near(A, B) < A[4] + B[4] - 1.5) t.overlaps++;
+      const d = near(A, B);
+      if (d < A[4] + B[4] - 1.5) { t.overlaps++; if (t.ov.length < 10) t.ov.push(`${Math.round(g.world.time)} ${sa.type.id}/${sb.type.id} ${(A[4] + B[4] - d).toFixed(1)}m ${sa.faction === sb.faction ? 'same' : 'foes'} moving ${!!sa.moveTarget}/${!!sb.moveTarget}`); }
     }
     if (window.__ended) break;
   }
@@ -76,6 +79,8 @@ with sync_playwright() as p:
         if r['ended']:
             break
     t = pg.evaluate("(() => { const s = [...__t.steps].sort((a, b) => a - b); const q = (k) => +s[Math.floor(s.length * k)].toFixed(2); return { nan: __t.nan, overlaps: __t.overlaps, worstAgroundSeconds: __t.worstAground, stepMs: { median: q(0.5), p95: q(0.95), max: +s[s.length - 1].toFixed(1) } }; })()")
+    for line in pg.evaluate("[...__t.log, ...__t.ov.map((o) => 'overlap ' + o)]"):
+        print('  ', line)
     b.close()
 print('RESULT', t, 'errors:', len(errs))
 for e in errs[:5]:

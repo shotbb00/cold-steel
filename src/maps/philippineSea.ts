@@ -4,7 +4,7 @@
 // escort carrier and its screen. Ships only (data/units45/ships.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createSea } from '../world/Sea.js';
+import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const SIZE = 6000;
@@ -14,6 +14,8 @@ const sea = createSea({ level: 0, size: SIZE, color: 0x15476a });
 
 // the atolls: [x, z, radius] — a reef ring awash round a shallow lagoon, a few palms on its islets
 const ATOLLS = [[-1300, -700, 230], [1350, 800, 200], [250, -1550, 150], [-250, 1450, 150]];
+// two volcanic islands either side of the open sea, cliffs and jungle up to a cone: [x, z, radius]
+const VOLCANOES = [[-700, 450, 320], [700, -450, 320]];
 
 function height(x: number, z: number) {
   let h = -46 + fbm(noise, x * 0.0006, z * 0.0006, 4) * 8;
@@ -25,6 +27,7 @@ function height(x: number, z: number) {
     const slope = d >= r ? -1.2 - (d - r) * 0.17 : -Infinity;                       // the outer slope down to the deep
     h = Math.max(h, lagoon, slope, ring > 0.03 ? 0.5 * ring - 0.1 + islet : -Infinity); // (the reef only near the ring)
   }
+  for (const [vx, vz, r] of VOLCANOES) h = Math.max(h, island(r - Math.hypot(x - vx, z - vz) + fbm(noise, x * 0.005, z * 0.005, 2) * 60, r, 160, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5));
   return h;
 }
 
@@ -74,11 +77,11 @@ export default {
     rimColor: 0xe0eef8,
     rimIntensity: 0.3,
     terrain: {
-      grass: '#8ea05a', grassAlt: '#9aa864', dryGrass: '#d8cc9a', dirt: '#cdbf90', rock: '#9a9488',
+      grass: '#5a7a40', grassAlt: '#668448', dryGrass: '#a8a070', dirt: '#cdbf90', rock: '#9a9488',
       farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
       surface(x: number, z: number) {
         const y = height(x, z);
-        if (y >= 1.6) return null;
+        if (y >= 1.6) return jungleTint(height, x, z, y);
         return y > -0.6 ? [0xe6dcb4, 1] : [0xc4b88e, 1]; // coral sand, above and under the water
       },
     },
@@ -90,7 +93,7 @@ export default {
   points,
 
   spawns: {
-    nato: [{ unit: 'escortCarrier', x: 0, z: 2350, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 350, z: 2100, facing: Math.PI }, { unit: 'lightCruiser', x: 0, z: 1950, facing: Math.PI }],
+    nato: [{ unit: 'escortCarrier', x: 0, z: 2350, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 350, z: 2100, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 1950, facing: Math.PI }],
     pact: [{ unit: 'escortCarrier', x: 0, z: -2350, facing: 0 }, { unit: 'destroyer', x: 350, z: -2100, facing: 0 }, { unit: 'destroyer', x: -350, z: -2100, facing: 0 }, { unit: 'cruiser', x: 0, z: -1950, facing: 0 }],
   },
 
@@ -105,7 +108,8 @@ export default {
       }
     }
     props.finish();
+    const trees = jungle({ scene, terrain, cover, rand, half: HALF, count: 2500 });
     cover.finalize({ x: HALF, z: HALF });
-    return { buildings: props.buildings, update() {} };
+    return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },
 } satisfies MapDef;

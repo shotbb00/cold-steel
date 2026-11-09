@@ -30,13 +30,23 @@ const SMOKE_GEN = { last: 60, cooldown: 120 };
 /** A torpedo mount: a spread to the beam the target is on. */
 const torps = (at, o) => ({ at, torpedo: true, arc: 2.2, count: 4, range: 1500, speed: 22, damage: 2600, reload: 90, ...o });
 
+/**
+ * The sea maps are 5 km across: the real ranges below would have the fleets shooting from one edge to the
+ * other. Every gun, torpedo, sight, sonar and hearing range is taken down to this share of them (not the
+ * anti-aircraft fire, nor the planes' strike radius), so ships have to close and manoeuvre.
+ */
+const RANGE = 0.55;
+const SCALED = ['range', 'aggroRange', 'preferredRange', 'sight', 'sonar', 'hearing'];
+const near = (o) => { const r = { ...o }; for (const k of SCALED) if (r[k]) r[k] *= RANGE; return r; };
+
 /** One warship class: the shared parts, the class's own, the two navies' mounts. */
 const ship = (o) => ({
   category: 'naval', kind: 'vehicle', role: 'fighter',
   formation: { count: 1, columns: 1, spacing: 0 },
   weaponSound: 'cannon', engine: 'engine.diesel',
   ...o,
-  stats: { ...NAVAL, weapon: 'cannon', ...o.stats },
+  stats: near({ ...NAVAL, weapon: 'cannon', ...o.stats }),
+  ...(o.mounts && { mounts: Object.fromEntries(Object.entries(o.mounts).map(([side, list]) => [side, list.map(near)])) }),
 });
 
 const FIVE_INCH = { range: 2400, reload: 3.5, damage: 220, splash: 4, pierce: 0.3 };

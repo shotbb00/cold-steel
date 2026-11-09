@@ -68,10 +68,11 @@ export const SHIP_SPEEDS = { slow: { k: 0.35, noise: 0.5, name: 'Slow' }, half: 
 const ZIGZAG = { period: 40, swing: 0.5 }; // s a leg pair, rad off the course each way
 const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
 // gunnery at sea (UnitStack.fireControl): a firing solution builds over SOLUTION s of shooting at one target
-// (radar-directed US guns faster); until then the shells fall long or short, up to RANGE_ERR of the range,
-// walking onto her; her sharp turns and changes of speed spoil it
-const SOLUTION = { nato: 16, pact: 19 }; // (US radar fire control a little quicker; in a soak AI v AI 14 vs 22 swung battles 8:3)
-const SEARCHLIGHT = 2200; // m a ship's searchlight reaches at night
+// until then the shells fall long or short, up to RANGE_ERR of the range, walking onto her; her sharp turns
+// and changes of speed spoil it. The same for both navies: in AI-v-AI soaks on mirrored Midway even 16 vs 19
+// gave the US 9:1 (the US radar edge is its night sight, NAVAL nightSight)
+const SOLUTION = { nato: 17, pact: 17 };
+const SEARCHLIGHT = 1200; // m a ship's searchlight reaches at night (the sea's game scale: data/units45/ships.js RANGE)
 const DC_FOCUS = 2.2; // damage control where the captain puts it (UnitStack.shipUpkeep)…
 const DC_ELSE = 0.55; // …and everywhere else meanwhile
 const RANGE_ERR = 0.07;
@@ -1028,20 +1029,6 @@ export class UnitStack {
   floatBody(u, px, pz, dt) {
     const w = this.world.river?.water;
     this.world.clampToBounds(u.pos);
-    // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
-    this.eachHull(u, 0, (o, d, beams) => {
-      const min = beams + 2;
-      if (d >= min) return;
-      let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
-      let nl = Math.hypot(nx, nz);
-      if (nl < 1e-3) { nx = u.pos.x - o.pos.x; nz = u.pos.z - o.pos.z; nl = Math.hypot(nx, nz) || 1; }
-      nx /= nl; nz /= nl;
-      const k = (min - d) * (Math.hypot(o.vel.x, o.vel.z) > 0.3 ? 0.5 : 1); // (half each when both are under way; all of it against a ship lying still)
-      u.pos.x += nx * k;
-      u.pos.z += nz * k;
-      const vn = u.vel.x * nx + u.vel.z * nz;
-      if (vn < 0) { u.vel.x -= nx * vn; u.vel.z -= nz * vn; }
-    });
     const nav = this.world.nav;
     // the shallows: her middle keeps her own radius off them (as her route does), her bow (some nine radii
     // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
@@ -1053,6 +1040,26 @@ export class UnitStack {
       u.pos.z = pz;
       u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
     }
+    // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
+    // (after the shallows: a ship stopped by them still gets out of another's way — turning on the spot
+    // beside a shoal she would otherwise swing her hull into her neighbour's) — but never shoved onto them:
+    // that push is the other ship's to make (a ship stopped there lies still, so she takes all of it)
+    this.eachHull(u, 0, (o, d, beams) => {
+      const min = beams + 2;
+      if (d >= min) return;
+      let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
+      let nl = Math.hypot(nx, nz);
+      if (nl < 1e-3) { nx = u.pos.x - o.pos.x; nz = u.pos.z - o.pos.z; nl = Math.hypot(nx, nz) || 1; }
+      nx /= nl; nz /= nl;
+      const k = (min - d) * (Math.hypot(o.vel.x, o.vel.z) > 0.3 ? 0.5 : 1); // (half each when both are under way; all of it against a ship lying still)
+      const vn = u.vel.x * nx + u.vel.z * nz;
+      if (vn < 0) { u.vel.x -= nx * vn; u.vel.z -= nz * vn; } // (always: pinned against a shoal she still mustn't drive on into her)
+      const qx = u.pos.x + nx * k, qz = u.pos.z + nz * k;
+      if (nav && (closes(nav.clearance(qx, qz, SHIP), nav.clearance(u.pos.x, u.pos.z, SHIP), u.radius)
+        || closes(nav.clearance(qx + fx, qz + fz, SHIP), nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), 0.5))) return;
+      u.pos.x = qx;
+      u.pos.z = qz;
+    });
     u.pos.y = (w?.level ?? 0) - (u.sink ?? 0) - (u.depth ?? 0);
     u.climbY = 0;
     const speed = Math.hypot(u.vel.x, u.vel.z);

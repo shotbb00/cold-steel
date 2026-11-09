@@ -5,7 +5,7 @@
 // Frontline only for now (`modes`): the five zones are held by warships on the surface (systems/ControlPoints.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createSea } from '../world/Sea.js';
+import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
 import { smoothstep } from '../core/math.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
@@ -17,7 +17,9 @@ const noise = createNoise2D(1942);
 const sea = createSea({ level: 0, size: SIZE, color: 0x1e5a78 });
 
 // sandbanks and shoals: [x, z, radius] (point-mirrored pairs)
-const SHOALS = [[-1500, 600, 160], [1500, -600, 160], [900, 1400, 120], [-900, -1400, 120], [-1900, -300, 200], [1900, 300, 200]];
+const SHOALS = [[-1500, 600, 160], [1500, -600, 160], [900, 1400, 120], [-900, -1400, 120]];
+// two rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius]
+const PINNACLES = [[-1950, -350, 230], [1950, 350, 230]];
 
 function height(x, z) {
   let h = -38 + fbm(noise, x * 0.0008, z * 0.0008, 4) * 10;                 // the open ocean floor (deep enough everywhere)
@@ -31,6 +33,7 @@ function height(x, z) {
     h += (ih + fbm(noise, x * 0.01, z * 0.01, 2) * 1.5 - h) * k;
   }
   for (const [sx, sz, sr] of SHOALS) h += (-3 - h) * smoothstep(sr, sr * 0.4, Math.hypot(x - sx, z - sz)); // just under the surface: too shallow for any keel (world/Nav.js SHIP_DEPTH)
+  for (const [px, pz, pr] of PINNACLES) h = Math.max(h, island(pr - Math.hypot(x - px, z - pz) + fbm(noise, x * 0.006, z * 0.006, 2) * 45, pr, 110, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 10));
   return h;
 }
 
@@ -84,7 +87,7 @@ export default {
       farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
       surface(x, z) {
         const y = height(x, z);
-        if (y >= 1.6) return null;
+        if (y >= 1.6) return jungleTint(height, x, z, y);
         return y > -0.6 ? [0xe6dcb4, smoothstep(2.2, 0.6, y)] : [0xc4b88e, 1]; // the beaches and the reef: coral sand, and under the water a darker sand the sea tints by its depth (world/Sea.js)
       },
     },
@@ -112,7 +115,8 @@ export default {
     props.controlTower({ x: 420, z: -200, yaw: 0.3 });
     props.timberHangar({ x: 470, z: -150, yaw: 0.3 });
     props.finish();
+    const trees = jungle({ scene, terrain, cover, rand, half: HALF, count: 2000 });
     cover.finalize({ x: HALF, z: HALF });
-    return { buildings: props.buildings, update() {} };
+    return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },
 } satisfies MapDef;
