@@ -48,7 +48,7 @@ import '@babylonjs/core/Rendering/prePassRendererSceneComponent.js';
 import '@babylonjs/core/Rendering/geometryBufferRendererSceneComponent.js';
 import { createSky } from './sky.js';
 import { createSight } from './sight.js';
-import { particleLayer, sprite, lines, points } from './extras.js';
+import { particleLayer, sprite, lines, points, beam } from './extras.js';
 import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin, WaterPlugin } from './plugins.js';
 
 /** Vertex attributes the bridge maps to Babylon's own; anything else goes over under its own name. */
@@ -225,7 +225,7 @@ export class BabylonView {
     this.syncCamera(tCam);
     tScene.traverseVisible((o) => {
       if (o.isLight) this.syncLight(o);
-      else if (o.userData.babylon === 'particles' || o.isSprite || o.isLineSegments || o.isPoints) this.syncExtra(o);
+      else if (o.userData.babylon === 'particles' || o.userData.babylon === 'beam' || o.isSprite || o.isLineSegments || o.isPoints) this.syncExtra(o);
       else if (o.isMesh) this.syncMesh(o);
       else if (o.isLine) this.skip(o.type);
     });
@@ -292,6 +292,7 @@ export class BabylonView {
     let rec = this.extras.get(o);
     if (!rec) {
       rec = o.userData.babylon === 'particles' ? particleLayer(this, o.userData.layer)
+        : o.userData.babylon === 'beam' ? beam(this, o)
         : o.isSprite ? sprite(this, o)
           : o.isLineSegments ? lines(this, o)
             : points(this, o);
