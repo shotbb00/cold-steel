@@ -111,9 +111,9 @@ export const NOISE = /* glsl */ `
     float near = 1.0 - smoothstep(0.012, 0.05, max(max(w.x, w.y), w.z));
     float l = dot(c, vec3(0.3, 0.55, 0.15));
     #ifdef PAINT_AIR
-      const float fadeK = 0.25, dustK = 0.14, streakK = 0.22; // (an aircraft: kept up better than a tank in the field, no dust on its skin)
+      const float fadeK = 0.25, dustK = 0.14, streakK = 0.22, chipK = 0.2; // (an aircraft: kept up better than a tank in the field, no dust on its skin)
     #else
-      const float fadeK = 0.8, dustK = 0.55, streakK = 0.45;
+      const float fadeK = 0.8, dustK = 0.55, streakK = 0.45, chipK = 1.0;
     #endif
     c = mix(c, mix(c, vec3(l), 0.35) * 1.45, smoothstep(0.47, 0.55, pFbm(p * 0.7 + 11.0)) * fadeK);   // sun-faded patches
     #ifdef PAINT_AIR
@@ -124,7 +124,7 @@ export const NOISE = /* glsl */ `
     float st = pNoise(vec3((q.x + q.z) * 9.0, q.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((q.x - q.z) * 1.6, q.y * 0.3, 9.0)));
     c *= 1.0 - smoothstep(0.25, 0.5, st) * streakK;                                                   // rain and dirt streaks
     c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * dustK);          // dust caught on the plates
-    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6);     // chips (few: more read as noise)
+    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6 * chipK);     // chips (few: more read as noise)
     return c;
   }
   // bump by screen derivatives: pos and n in the same space

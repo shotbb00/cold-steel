@@ -127,7 +127,7 @@ export function buildBwAlphaJet(mats) {
       body([[1.6, 2.35, 0.28, 0.2], [-1.0, 2.3, 0.25, 0.18], [-3.5, 2.2, 0.15, 0.1]], { color: LW, ...C }),
       // the Larzac engines along the fuselage sides: intakes beside the rear seat, nozzles under the fin
       ...pair((s) => body([[2.6, 1.65, 0.25, 0.4, 2.5], [2.3, 1.65, 0.35, 0.48], [-1.5, 1.65, 0.38, 0.5], [-3.2, 1.7, 0.3, 0.35], [-3.6, 1.72, 0.22, 0.25]], { x: s * 0.55, color: LW, ...C })),
-      ...pair((s) => P.box(0.4, 0.62, 0.04, { x: s * 0.62, y: 1.65, z: 2.62, color: HOLE })),
+      ...pair((s) => P.box(0.34, 0.52, 0.004, { x: s * 0.62, y: 1.65, z: 2.603, color: HOLE })),
       ...pair((s) => P.cyl(0.2, 0.2, 0.04, { x: s * 0.55, y: 1.72, z: -3.62, rx: Math.PI / 2, color: HOLE }, 10)),
       // the swept shoulder wing with anhedral, the tailplane, the fin
       ...pair((s) => surface([[s * 0.3, 2.2, 0.45, 1.3, 0.13], [s * 2.5, 2.08, -0.7, 0.9, 0.08], [s * 4.55, 1.93, -1.8, 0.55, 0.05]], { color: LW, ...C })),

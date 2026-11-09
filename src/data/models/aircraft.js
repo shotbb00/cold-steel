@@ -103,7 +103,7 @@ export function buildPactSu25(mats) {
       body([[3.7, 0.9, 0.25, 0.18], [1.0, 0.95, 0.3, 0.22], [-3.0, 0.8, 0.22, 0.15]], { color: SU_GREEN, ...C }),
       // engines in nacelles along the fuselage: intakes beside the cockpit, nozzles at the tail
       ...pair((s) => body([[2.6, 0.02, 0.42, 0.5, 3], [2.4, 0.02, 0.5, 0.58, 2.6], [0.0, 0.02, 0.52, 0.6, 2.4], [-3.4, 0.08, 0.45, 0.5], [-4.4, 0.12, 0.36, 0.38]], { x: s * 0.95, color: SU_GREEN, ...C })),
-      ...pair((s) => P.box(0.6, 0.7, 0.04, { x: s * 0.97, y: 0.02, z: 2.61, color: HOLE })),
+      ...pair((s) => P.box(0.50, 0.59, 0.004, { x: s * 0.97, y: 0.02, z: 2.593, color: HOLE })),
       ...pair((s) => P.cyl(0.32, 0.32, 0.04, { x: s * 0.95, y: 0.12, z: -4.42, rx: Math.PI / 2, color: HOLE }, 12)),
       // the swept, tapered shoulder wing, a little anhedral; the split airbrake pods at the tips
       ...pair((s) => surface([[s * 0.9, 0.55, 0.5, 1.7, 0.18], [s * 3.6, 0.47, -0.4, 1.25, 0.13], [s * 7.0, 0.36, -1.45, 0.72, 0.07]], { color: SU_GREEN, ...C })),

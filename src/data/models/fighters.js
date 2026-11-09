@@ -63,9 +63,9 @@ export const buildNatoF15 = (mats) => mount('f15', mats, () => ({
     body([[9.7, 1.95, 0.04, 0.04], [9.1, 1.95, 0.32, 0.32], [7.8, 1.95, 0.55, 0.56], [6.2, 2.0, 0.66, 0.72], [4.6, 2.05, 0.72, 0.78], [3.0, 2.05, 0.8, 0.78, 2.6]], { color: US_GREY, ...C }),
     // the wide flat centre body between the engines, out to the tail
     body([[3.6, 2.15, 0.7, 0.6, 3], [1.0, 2.1, 1.3, 0.62, 3.4], [-3.0, 2.0, 1.6, 0.6, 3.6], [-6.5, 1.95, 1.5, 0.55, 3.2], [-8.8, 1.9, 1.3, 0.5, 3]], { color: US_GREY, ...C }),
-    // the square intakes on either side of the cockpit, running back into the engine bays
+    // the square intakes on either side of the cockpit, running back into the engine bays (the openings: thin and flush, inside a lip of the intake wall)
     ...pair((s) => body([[4.4, 1.8, 0.45, 0.62, 5], [3.4, 1.8, 0.55, 0.7, 5], [-1.5, 1.8, 0.55, 0.68, 4.5], [-5.0, 1.82, 0.5, 0.6, 3.5]], { x: s * 1.2, color: US_GREY, ...C })),
-    ...pair((s) => P.box(0.9, 1.15, 0.04, { x: s * 1.2, y: 1.8, z: 4.42, color: HOLE })),
+    ...pair((s) => P.box(0.76, 0.97, 0.004, { x: s * 1.2, y: 1.8, z: 4.403, color: HOLE })),
     // the two engines' nozzles
     ...pair((s) => P.cyl(0.52, 0.48, 0.8, { x: s * 0.68, y: 1.9, z: -9.2, rx: Math.PI / 2, color: DARK }, 14)),
     ...pair((s) => P.cyl(0.42, 0.42, 0.02, { x: s * 0.68, y: 1.9, z: -9.61, rx: Math.PI / 2, color: HOLE }, 14)),
@@ -94,7 +94,7 @@ export const buildPactMiG23 = (mats) => mount('mig23', mats, () => ({
     P.cyl(0.4, 0.4, 0.02, { y: 1.95, z: -8.11, rx: Math.PI / 2, color: HOLE }, 14),
     // the D-shaped intakes behind the cockpit, splitter plates inboard
     ...pair((s) => body([[4.1, 1.85, 0.35, 0.58, 3], [3.0, 1.85, 0.42, 0.65, 3], [-1.5, 1.88, 0.42, 0.62, 3], [-4.0, 1.9, 0.3, 0.5, 2.6]], { x: s * 0.85, color: SOV_GREY, ...C })),
-    ...pair((s) => P.box(0.6, 1.05, 0.04, { x: s * 0.92, y: 1.85, z: 4.12, color: HOLE })),
+    ...pair((s) => P.box(0.50, 0.88, 0.004, { x: s * 0.92, y: 1.85, z: 4.103, color: HOLE })),
     ...pair((s) => P.box(0.03, 1.1, 0.9, { x: s * 0.5, y: 1.85, z: 4.2, color: SOV_GREY })),
     // canopy, dorsal spine
     body([[6.0, 2.4, 0.05, 0.05], [5.4, 2.65, 0.34, 0.3], [4.6, 2.72, 0.36, 0.32], [4.1, 2.6, 0.25, 0.2]], { color: GLASS }),
@@ -127,7 +127,7 @@ function phantom(color, recon) {
       ...(recon ? [...pair((s) => P.box(0.02, 0.3, 0.5, { x: s * 0.6, y: 1.8, z: 8.2, color: GLASS })), P.box(0.4, 0.02, 0.5, { y: 1.27, z: 7.6, color: GLASS })] : []), // camera windows
       // the intakes and their splitter plates, the J79 nozzles under the tail
       ...pair((s) => body([[4.6, 1.85, 0.4, 0.62, 3.2], [3.4, 1.85, 0.48, 0.7, 3.2], [-1.0, 1.82, 0.48, 0.66, 3], [-3.6, 1.78, 0.38, 0.55, 2.6]], { x: s * 1.0, color, ...C })),
-      ...pair((s) => P.box(0.7, 1.1, 0.04, { x: s * 1.08, y: 1.85, z: 4.62, color: HOLE })),
+      ...pair((s) => P.box(0.59, 0.92, 0.004, { x: s * 1.08, y: 1.85, z: 4.603, color: HOLE })),
       ...pair((s) => P.box(0.04, 1.3, 1.1, { x: s * 0.56, y: 1.87, z: 4.6, color })),
       ...pair((s) => P.cyl(0.46, 0.42, 1.2, { x: s * 0.58, y: 1.72, z: -5.2, rx: Math.PI / 2, color: DARK }, 14)),
       ...pair((s) => P.cyl(0.38, 0.38, 0.02, { x: s * 0.58, y: 1.72, z: -5.81, rx: Math.PI / 2, color: HOLE }, 14)),
@@ -187,7 +187,7 @@ export const buildPactMiG25 = (mats) => mount('mig25', mats, () => ({
     ...[9.6, 8.9, 8.2].map((z) => P.box(0.3, 0.02, 0.35, { y: 1.39, z, color: GLASS })),
     // the huge wedge intakes, running back into the engine nacelles and the nozzles
     ...pair((s) => body([[5.6, 1.95, 0.6, 0.85, 5], [3.0, 1.95, 0.75, 0.95, 5], [-4.0, 1.95, 0.8, 0.92, 4], [-9.0, 2.0, 0.75, 0.8, 3], [-12.0, 2.0, 0.68, 0.68, 2.4]], { x: s * 1.05, color: MIG25, ...C })),
-    ...pair((s) => P.box(1.15, 1.6, 0.04, { x: s * 1.1, y: 1.95, z: 5.62, color: HOLE })),
+    ...pair((s) => P.box(0.97, 1.34, 0.004, { x: s * 1.1, y: 1.95, z: 5.603, color: HOLE })),
     ...pair((s) => P.cyl(0.58, 0.58, 0.02, { x: s * 1.05, y: 2.0, z: -12.01, rx: Math.PI / 2, color: HOLE }, 14)),
     // the small canopy
     body([[7.6, 2.7, 0.05, 0.05], [7.0, 2.95, 0.35, 0.3], [6.3, 2.98, 0.37, 0.3], [5.7, 2.85, 0.28, 0.2]], { color: GLASS }),

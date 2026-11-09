@@ -8,7 +8,7 @@
 // Markings in fixed colours: the US star, the Soviet red star, the Balkenkreuz (no swastika).
 // Contract: aircraft.js.
 import * as THREE from 'three';
-import { P, merge, pair } from '../units/geometry.js';
+import { P, merge, pair, loft } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
 import { body, surface, fin } from './airKit.js';
 
@@ -40,7 +40,10 @@ function mark(kind, x, y, z, r, up = false) {
 function propeller(n, r, color = 0x1e1e1c) {
   return M([
     P.cyl(0.02, 0.24, 0.7, { z: 0.05, rx: Math.PI / 2, color: 0x3a3c36 }, 12), // (the spinner reaches back into the cowl)
-    ...Array.from({ length: n }, (_, k) => P.box(0.2, r, 0.04, { color }).translate(0, r / 2, 0).rotateZ((k / n) * Math.PI * 2)),
+    // each blade: a round shank out of the hub, widest a third of the way out, tapering to a rounded tip,
+    // set at its pitch to the airflow
+    ...Array.from({ length: n }, (_, k) => loft([[0, r * 0.1, 0, 0.05, 0.05, 2], [0, r * 0.22, 0, 0.08, 0.035, 2], [0, r * 0.38, 0, 0.13, 0.03, 2.2], [0, r * 0.7, 0, 0.11, 0.022, 2.2], [0, r * 0.93, 0, 0.075, 0.016, 2], [0, r, 0, 0.025, 0.01, 2]], { color, surf: 'paint' }, 8)
+      .rotateY(0.35).rotateZ((k / n) * Math.PI * 2)),
   ]);
 }
 
