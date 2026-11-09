@@ -276,7 +276,7 @@ export class StackLabels {
       }
       if (ship && (s.state === 'ingress' || s.state === 'attack')) marked.add(ship);
       // its tag
-      const text = s.state === 'inbound' ? 'on deck' : s.state === 'ingress' ? (what ? `→ ${what}` : 'inbound') : s.state === 'attack' ? 'attacking' : s.state === 'down' ? 'shot down' : s.state === 'done' ? '' : 'returning';
+      const text = s.state === 'inbound' ? 'on deck' : s.state === 'takeoff' ? 'taking off' : s.state === 'landing' || s.state === 'rollout' ? 'landing' : s.state === 'ingress' ? (what ? `→ ${what}` : 'inbound') : s.state === 'attack' ? 'attacking' : s.state === 'down' ? 'shot down' : s.state === 'done' ? '' : 'returning';
       this.set(a, 'text', text, () => { a.chip.textContent = text; a.el.classList.toggle('lost', s.state === 'down'); });
       const v = this._v.set(s.pos.x, s.pos.y + 6, s.pos.z);
       v.project(g.camera);

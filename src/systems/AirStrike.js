@@ -200,6 +200,12 @@ export function buildAircraft(kind, faction, army) {
 export const buildHelicopter = (faction) => buildAircraft('heli', faction);
 
 /** Spin rotors (helicopters) — jets have none. */
+/** A carrier's flight deck in the world: its height, length, her heading and her way (for take-off and landing). */
+function deckOf(u) {
+  const c = u.stack.stats.carrier ?? {};
+  return { top: u.pos.y + (c.deck ?? 16), len: c.deckLen ?? 240, fx: Math.sin(u.yaw), fz: Math.cos(u.yaw), v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
+}
+
 function spin(rig, type, dt, k = 1) {
   if (rig.rotor) rig.rotor.rotation.y += dt * type.rotorSpeed * k;
   if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70 * k;
@@ -287,7 +293,7 @@ class Sortie {
 
   /** Flying and visible to radar: everything between appearing and being shot down. */
   get airborne() {
-    return this.state === 'ingress' || this.state === 'attack' || this.state === 'land' || this.state === 'break' || this.state === 'home';
+    return this.state === 'ingress' || this.state === 'attack' || this.state === 'land' || this.state === 'break' || this.state === 'home' || this.state === 'landing';
   }
 
   /** For kill credit (systems/BattleStats.js). */
@@ -316,6 +322,13 @@ class Sortie {
     this.game.scene.add(rig.root);
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
+    if (this.p.sea && this.cvUnit?.alive) { // off her deck: from the after end, rolling forward along it, up over the bow
+      const d = deckOf(this.cvUnit);
+      this.state = 'takeoff';
+      this.deckS = -d.len * 0.36;
+      this.rollV = 0;
+      this.place(0);
+    }
     const what = this.kind === 'lift' ? 'inbound with the assault squad' : this.kind === 'recon' || this.kind === 'navScout' ? 'inbound — starting the photo run' : this.p.sea ? 'off the deck — inbound' : 'on station — starting its run';
     if (this.p.sea) this.game.tell(enemyOf(this.faction), `Enemy ${this.type.name} inbound!`); // (yours: ui/StackLabels.updateAir says it, with its target)
     else if (this.kind !== 'cap' && this.kind !== 'navCap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
@@ -334,6 +347,8 @@ class Sortie {
     }
     if (this.state === 'done') return;
     if (this.state === 'down') return this.updateCrash(dt);
+    if (this.state === 'takeoff') return this.takeoff(dt);
+    if (this.p.sea && !this.orphan && this.cvUnit?.alive && (this.state === 'home' || this.state === 'landing' || this.state === 'rollout')) return this.recover(dt);
     if (this.kind === 'cap' || this.kind === 'navCap') return this.patrol(dt);
     this.trackShip();
     const p = this.p;
@@ -499,6 +514,82 @@ class Sortie {
     this.pos.y += (g.terrain.heightAt(this.pos.x, this.pos.z) + p.cruiseAlt - this.pos.y) * Math.min(1, dt);
     this.pitch += (0 - this.pitch) * Math.min(1, dt * 2);
     this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
+    this.place(dt);
+  }
+
+  /** The take-off: rolling up her deck, faster and faster, off the bow and climbing away; then for the target. */
+  takeoff(dt) {
+    const cv = this.cvUnit;
+    if (!cv?.alive) { this.state = 'ingress'; return; }
+    const d = deckOf(cv);
+    this.rollV = Math.min(this.p.cruiseSpeed, this.rollV + 11 * dt);
+    this.speed = this.rollV;
+    if (this.deckS < d.len * 0.48) { // on the deck, carried along with her
+      this.deckS += this.rollV * dt;
+      this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+      this.yaw = cv.yaw;
+      this.pitch = 0;
+      this.roll = 0;
+    } else { // off the bow: climbing away on her heading, then round for the target
+      this.pos.x += (d.fx * this.rollV) * dt;
+      this.pos.z += (d.fz * this.rollV) * dt;
+      this.pos.y += 7 * dt;
+      this.pitch += (-0.2 - this.pitch) * Math.min(1, dt * 3);
+      if (this.pos.y > d.top + 18) {
+        this.state = 'ingress';
+        this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
+      }
+    }
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    this.side.set(this.dir.z, 0, -this.dir.x);
+    this.place(dt);
+  }
+
+  /**
+   * Home to her: round to a point astern, down her wake onto the after end of the flight deck, the wire
+   * stops it, and it is struck below (finish: rearmed in a while). She keeps steaming: it follows her.
+   */
+  recover(dt) {
+    const cv = this.cvUnit;
+    const d = deckOf(cv);
+    const level = this.game.world.river?.level ?? 0;
+    const turn = (want, rate) => {
+      let a = want - this.yaw;
+      a = Math.atan2(Math.sin(a), Math.cos(a));
+      const step = Math.max(-rate * dt, Math.min(rate * dt, a));
+      this.yaw += step;
+      this.roll += (-step / dt * 0.6 - this.roll) * Math.min(1, dt * 2);
+    };
+    if (this.state === 'rollout') { // on the deck: the arrester wire takes the way off
+      this.rollV = Math.max(0, this.rollV - 22 * dt);
+      this.deckS += this.rollV * dt;
+      this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+      this.yaw = cv.yaw;
+      this.pitch = 0;
+      this.roll = 0;
+      this.place(dt);
+      if (this.rollV <= 0) this.finish();
+      return;
+    }
+    if (this.state === 'home') { // to a point some way astern of her, at circuit height
+      const ax = cv.pos.x - d.fx * 700, az = cv.pos.z - d.fz * 700;
+      turn(Math.atan2(ax - this.pos.x, az - this.pos.z), 0.7);
+      this.speed += (this.p.cruiseSpeed - this.speed) * Math.min(1, dt);
+      this.pos.y += (level + 60 - this.pos.y) * Math.min(1, dt);
+      this.pitch += (0 - this.pitch) * Math.min(1, dt * 2);
+      if (Math.hypot(ax - this.pos.x, az - this.pos.z) < 160) this.state = 'landing';
+    } else { // the approach: down her wake, slowing, onto the deck's after end
+      const tx = cv.pos.x - d.fx * d.len * 0.36, tz = cv.pos.z - d.fz * d.len * 0.36;
+      const dist = Math.hypot(tx - this.pos.x, tz - this.pos.z);
+      turn(Math.atan2(tx - this.pos.x, tz - this.pos.z), 1.1);
+      this.speed += (d.v + Math.max(14, Math.min(this.p.cruiseSpeed, dist * 0.09)) - this.speed) * Math.min(1, dt * 1.5);
+      this.pos.y += (d.top + 1 + dist * 0.07 - this.pos.y) * Math.min(1, dt * 2);
+      this.pitch += (-0.06 - this.pitch) * Math.min(1, dt * 2);
+      if (dist < 9) { this.state = 'rollout'; this.deckS = -d.len * 0.36; this.rollV = Math.max(8, this.speed - d.v); }
+    }
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    this.side.set(this.dir.z, 0, -this.dir.x);
+    this.pos.addScaledVector(this.dir, this.speed * dt);
     this.place(dt);
   }
 
