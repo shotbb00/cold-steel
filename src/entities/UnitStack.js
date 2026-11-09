@@ -2338,8 +2338,12 @@ export class UnitStack {
     if (source && source.faction !== this.faction && source.alive) {
       this.lastAttacker = source;
       this.lastHitTime = this.world.time;
-      // infantry hit in the attack, on the move or pinned: a smoke grenade toward the shooter
-      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !this.garrison && (this.ai.state === AIState.ATTACK || this.moveTarget || u.suppression > 0.7)) {
+      // infantry hit out in the open — in the attack, on the move, or pinned with nothing to hide behind: a
+      // smoke grenade toward the shooter. Never from a house or from behind good cover: there the smoke
+      // only hides the enemy coming across the open toward them
+      const housed = this.garrison || this.entered || u.coverSpot?.interior;
+      const exposed = this.moveTarget || this.ai.state === AIState.ATTACK || (u.suppression > 0.7 && !u.atCover);
+      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !housed && exposed) {
         const from = source.centroid ?? source.pos;
         if (from) this.popSmoke(u, { x: u.pos.x - from.x, z: u.pos.z - from.z });
       }

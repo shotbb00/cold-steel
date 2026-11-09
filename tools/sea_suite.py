@@ -5,7 +5,7 @@ hull needs, world/Nav.js SHIP_DEPTH) for more than a few seconds, two hulls over
 error. Also reports how the battle went and what a simulation step costs (CPU, ms).
 Needs the dev server (npx vite --port 5173).
 
-  py -I tools/sea_suite.py [map] [minutes] [mode]
+  py -I tools/sea_suite.py [map] [minutes] [mode] [base url]
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -13,9 +13,10 @@ from playwright.sync_api import sync_playwright
 MAP = sys.argv[1] if len(sys.argv) > 1 else 'midway'
 MINUTES = float(sys.argv[2]) if len(sys.argv) > 2 else 15
 MODE = sys.argv[3] if len(sys.argv) > 3 else 'frontline'
+BASE = sys.argv[4] if len(sys.argv) > 4 else 'http://localhost:5173'  # (a build on its own port: npx vite preview --port 5174 — not reloaded while you edit)
 
 SETUP = r"""() => { const g = game; g.renderer.setAnimationLoop?.(null); g.end = () => { window.__ended = true; };
-  const D = g.systems.find((s) => s.constructor.name === 'SeaDirector');
+  const D = g.systems.find((s) => typeof s.submarine === 'function' && typeof s.objective === 'function'); // (the admiral: by what it does — a build minifies class names)
   if (D) g.systems.push(new D.constructor(g, g.playerFaction, g.modeState, {})); // the player's side played by the bot too
   window.__t = { aground: new Map(), worstAground: 0, overlaps: 0, nan: 0, steps: [], sunk: { nato: 0, pact: 0 }, spawned: { nato: 0, pact: 0 } };
   g.bus.on('stack:destroyed', (s) => { if (s.stats.naval) __t.sunk[s.faction]++; });
@@ -63,7 +64,7 @@ with sync_playwright() as p:
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)[:300]))
     pg.on('console', lambda c: c.type == 'error' and errs.append(c.text[:300]))
-    pg.goto(f'http://localhost:5173/?mode={MODE}&map={MAP}&epoch=1945&side=nato&time=day&weather=clear', timeout=600000)
+    pg.goto(f'{BASE}/?mode={MODE}&map={MAP}&epoch=1945&side=nato&time=day&weather=clear', timeout=600000)
     pg.wait_for_function("window.game && !document.getElementById('loading')", timeout=600000)
     print('bot on both sides:', pg.evaluate(SETUP))
     left = MINUTES * 60
