@@ -317,7 +317,8 @@ class Sortie {
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
     const what = this.kind === 'lift' ? 'inbound with the assault squad' : this.kind === 'recon' || this.kind === 'navScout' ? 'inbound — starting the photo run' : this.p.sea ? 'off the deck — inbound' : 'on station — starting its run';
-    if (this.kind !== 'cap' && this.kind !== 'navCap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
+    if (this.p.sea) this.game.tell(enemyOf(this.faction), `Enemy ${this.type.name} inbound!`); // (yours: ui/StackLabels.updateAir says it, with its target)
+    else if (this.kind !== 'cap' && this.kind !== 'navCap') this.game.tellBoth(this.faction, `${this.type.name} ${what}`, `Enemy ${this.type.name} inbound!`); // (the patrol reports on station)
   }
 
   update(dt) {

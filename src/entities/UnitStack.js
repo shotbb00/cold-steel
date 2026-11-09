@@ -2176,7 +2176,7 @@ export class UnitStack {
       u.depth = (u.depth ?? 0) + clamp(want - (u.depth ?? 0), -sm.dive * dt, sm.dive * dt);
     }
     if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
-    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;
+    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) { m.out = false; this.services.tell(this.faction, `${this.name}: ${m.torpedo ? 'torpedo mount' : 'gun mount'} back in action`); }
     const f = u.flood ?? 0;
     u.listSide ??= Math.random() < 0.5 ? -1 : 1;
     u.list = f * 0.22 * u.listSide * (1 - (u.counterK ?? 0));
