@@ -158,7 +158,7 @@ export const carrier = ship({
   names: { nato: ['Essex', 'Yorktown', 'Intrepid', 'Hornet', 'Franklin', 'Lexington', 'Bunker Hill', 'Wasp'], pact: ['Shōkaku', 'Zuikaku'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 267, beam: 28 },
   stats: {
-    carrier: { airGroup: { navCap: 4, diveBomb: 3, torpBomb: 3, navScout: 2 } }, // its hangar: flights of each kind (systems/AirStrike.js: launched off her deck, rearmed when they're back, lost when shot down)
+    carrier: { deck: 16.3, deckLen: 250, airGroup: { navCap: 4, diveBomb: 3, torpBomb: 3, navScout: 2 } }, // (deck: the flight deck's height and length, for take-off and landing) // its hangar: flights of each kind (systems/AirStrike.js: launched off her deck, rearmed when they're back, lost when shot down)
     hp: 22000, armor: 0.35, speed: 16, accel: 0.06, turnRate: 0.05, turretRate: 0.4, radius: 15, height: 32, eyeHeight: 30, sight: 3200, ...AA(950, 0.3, 0.07),
     range: 2200, aggroRange: 2200, preferredRange: 2600, leash: 100, damage: 220, fireCooldown: 4, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3,
   },
@@ -217,7 +217,7 @@ export const escortCarrier = ship({
   names: { nato: ['Gambier Bay', 'Casablanca', 'Liscome Bay', 'St. Lo', 'Kalinin Bay', 'White Plains', 'Fanshaw Bay', 'Kitkun Bay'], pact: ['Taiyō', 'Un\'yō', 'Chūyō'] }, // her own name (UnitStack shipName)
   hull: { length: 156, beam: 19.9 },
   stats: {
-    carrier: { escort: true, airGroup: { navCap: 3, diveBomb: 0, torpBomb: 2, navScout: 1 } }, // a small hangar: fighters, torpedo bombers, a scout
+    carrier: { escort: true, deck: 13.8, deckLen: 150, airGroup: { navCap: 3, diveBomb: 0, torpBomb: 2, navScout: 1 } }, // a small hangar: fighters, torpedo bombers, a scout
     hp: 9000, armor: 0.15, speed: 10, accel: 0.06, turnRate: 0.06, turretRate: 0.4, radius: 9, height: 22, eyeHeight: 20, sight: 2800, smokeGen: SMOKE_GEN, ...AA(800, 0.2, 0.05),
     range: 1800, aggroRange: 1800, preferredRange: 2400, leash: 80, damage: 220, fireCooldown: 5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3,
   },

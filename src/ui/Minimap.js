@@ -319,6 +319,16 @@ export class Minimap {
       c.stroke();
       if (s.state === 'inbound') continue;
       const [hx, hy] = this.toMap(s.pos.x, s.pos.z);
+      if (mine && (s.state === 'ingress' || s.state === 'attack')) { // yours on its way: a dashed line to what it's going for
+        c.save();
+        c.setLineDash([3, 3]);
+        c.strokeStyle = 'rgba(255, 179, 71, 0.8)';
+        c.beginPath();
+        c.moveTo(hx, hy);
+        c.lineTo(tx, ty);
+        c.stroke();
+        c.restore();
+      }
       c.fillStyle = mine ? this.ally : this.foe;
       c.beginPath();
       c.arc(hx, hy, 3, 0, Math.PI * 2);

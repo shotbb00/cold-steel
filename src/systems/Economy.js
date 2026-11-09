@@ -9,6 +9,9 @@ import { enemyOf } from '../data/factions.js';
 
 /** Per minute; `start` at the beginning of the battle. */
 export const BUDGETS = { build: { start: 150, base: 5 }, support: { start: 200, base: 40 } };
+// at sea there are no airfields or refineries to take, and the carriers' hangars, decks and rearming already
+// ration the air group: the support budget comes in three times as fast there
+const SEA_SUPPORT = 3;
 export const SIDE_OBJECTIVES = [
   { id: '✈', name: 'Airfield', from: [-0.88, -0.4], support: 30, build: 0 },
   { id: '⛽', name: 'Refinery', from: [0.4, 0.88], support: 15, build: 3 },
@@ -65,7 +68,7 @@ export class Economy {
       const held = state.sides.points.filter((p) => p.owner === f).map((p) => BY_ID[p.id]);
       const k = (dt / 60) * (state.income?.[f] ?? 1);
       state.build[f] += k * (BUDGETS.build.base + held.reduce((a, p) => a + p.build, 0));
-      state.support[f] += k * (BUDGETS.support.base + held.reduce((a, p) => a + p.support, 0));
+      state.support[f] += k * (BUDGETS.support.base * (game.world.river?.sea ? SEA_SUPPORT : 1) + held.reduce((a, p) => a + p.support, 0));
     }
   }
 }

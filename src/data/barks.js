@@ -17,6 +17,10 @@ const LINES = {
     bail: ['Bail out, bail out!', 'We\'re hit, get out!', 'Out, out, out!'],
     officer: ['The LT\'s down!', 'Lieutenant\'s hit!', 'We lost the lieutenant!', 'Who\'s in charge?!'],
     straddle: ['Straddle!', 'We have the range!', 'Splashes all round her!', 'On target — fire for effect!'],
+    // a ship's (UnitStack.bark maps hit / wounded / contact to these at sea)
+    shipHit: ['We’re hit!', 'Hit amidships!', 'Shell aboard aft!', 'Fire on the boat deck!', 'Damage control, forward!'],
+    shipBad: ['She’s taking water!', 'Flooding forward!', 'We’re listing!', 'All hands to damage control!', 'Can’t hold her much longer!'],
+    shipContact: ['Ships in sight!', 'Smoke on the horizon!', 'Radar contact!', 'Enemy ships, bearing two-seven-zero!'],
   },
   pact: {
     contact: ['Protivnik!', 'Vizhu vraga!', 'Kontakt!', 'Vrag vperedi!'],
@@ -52,6 +56,9 @@ const LINES = {
 // the Imperial Japanese Navy's ships (Japanese, in transliteration)
 LINES.ja = {
   straddle: ['Kyōsa!', 'Kyori yoshi!', 'Meichū!', 'Utechi-kata, tsuzuke!'],
+  shipHit: ['Hidan!', 'Kanpan ni hidan!', 'Kasai hassei!', 'Kōbu ni meichū!'],
+  shipBad: ['Shinsui!', 'Keisha shite iru!', 'Haisui isoge!', 'Ōkyū shūri!'],
+  shipContact: ['Teki-kan miyu!', 'Teki kantai hakken!', 'Kokuen miyu!'],
 };
 const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja' };
 

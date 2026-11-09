@@ -25,6 +25,8 @@ import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
 import { barkLine } from '../data/barks.js';
+/** What a ship's crew calls out instead of the soldiers' lines (data/barks.js); the rest it doesn't. */
+const SHIP_BARK = { hit: 'shipHit', wounded: 'shipBad', contact: 'shipContact', straddle: 'straddle' };
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
 import { KITS } from '../data/kits.js';
@@ -2108,7 +2110,6 @@ export class UnitStack {
    */
   shipHit(u, dealt, torpedo = false) {
     const k = dealt / u.maxHp;
-    if (!torpedo && k > 0.02) this.services.audio?.play('impact.ship', u.pos, { volume: Math.min(1, 0.5 + k * 6), throttle: 0.2 }); // the hull rings
     const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
     if (u.deckSpot > this.world.time) { // a carrier caught with her strike spotted on deck: armed and fuelled planes go up in flames
       u.blaze = Math.max(u.blaze ?? 0, 0.8);
@@ -2177,7 +2178,7 @@ export class UnitStack {
       u.depth = (u.depth ?? 0) + clamp(want - (u.depth ?? 0), -sm.dive * dt, sm.dive * dt);
     }
     if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
-    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;
+    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) { m.out = false; this.services.tell(this.faction, `${this.name}: ${m.torpedo ? 'torpedo mount' : 'gun mount'} back in action`); }
     const f = u.flood ?? 0;
     u.listSide ??= Math.random() < 0.5 ? -1 : 1;
     u.list = f * 0.22 * u.listSide * (1 - (u.counterK ?? 0));
@@ -2465,6 +2466,7 @@ export class UnitStack {
   // ------------------------------------------------------------------ voice
 
   bark(u, kind, chance = 1, priority = false) {
+    if (this.stats.naval) { kind = SHIP_BARK[kind]; if (!kind) return; } // (a ship's crew: no legs, medics or magazines)
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;

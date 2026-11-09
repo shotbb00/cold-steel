@@ -237,6 +237,63 @@ export class StackLabels {
       const sel = commands.selected.has(stack);
       this.set(item, 'sel', sel, () => item.el.classList.toggle('selected', sel));
     }
+    this.updateAir(tactical, w, h);
+  }
+
+  /**
+   * Your air missions: a tag over each flight — what it is, what it's doing, what it's after — the enemy
+   * ship it's going for marked on her tag, and a word in the log as it lifts off, goes in, comes back
+   * aboard or is lost. (The planes are small and fast: without this you can't tell where they are.)
+   */
+  updateAir(tactical, w, h) {
+    const g = this.game;
+    this.air ??= new Map();
+    const marked = new Set();
+    const seen = new Set();
+    for (const s of g.air.sorties) {
+      if (s.faction !== g.playerFaction) continue;
+      seen.add(s);
+      let a = this.air.get(s);
+      if (!a) {
+        const el = document.createElement('div');
+        el.className = 'stack-label ally air-tag';
+        el.innerHTML = '<div class="sl-row"><span class="sl-plane">✈</span><span class="sl-name"></span><span class="sl-chips"><span class="sl-chip job"></span></span></div>';
+        this.root.appendChild(el);
+        a = { el, name: el.querySelector('.sl-name'), chip: el.querySelector('.sl-chip'), state: null, last: {} };
+        a.name.textContent = s.type.name;
+        this.air.set(s, a);
+      }
+      const ship = s.ship?.alive ? s.ship.stack : null;
+      const what = ship ? ship.name : null;
+      // the log, as it changes
+      if (s.state !== a.state) {
+        const was = a.state;
+        a.state = s.state;
+        const from = s.cvUnit?.stack?.name;
+        if (s.state === 'ingress' && was !== 'ingress') g.tell(s.faction, `${s.type.name} airborne${from ? ` off ${from}` : ''}${what ? ` — going for ${what}` : ''}`);
+        else if (s.state === 'attack') g.tell(s.faction, `${s.type.name} attacking${what ? ` ${what}` : ''}`);
+        else if (s.state === 'home' && was !== 'home') g.tell(s.faction, `${s.type.name} heading home`);
+      }
+      if (ship && (s.state === 'ingress' || s.state === 'attack')) marked.add(ship);
+      // its tag
+      const text = s.state === 'inbound' ? 'on deck' : s.state === 'takeoff' ? 'taking off' : s.state === 'landing' || s.state === 'rollout' ? 'landing' : s.state === 'ingress' ? (what ? `→ ${what}` : 'inbound') : s.state === 'attack' ? 'attacking' : s.state === 'down' ? 'shot down' : s.state === 'done' ? '' : 'returning';
+      this.set(a, 'text', text, () => { a.chip.textContent = text; a.el.classList.toggle('lost', s.state === 'down'); });
+      const v = this._v.set(s.pos.x, s.pos.y + 6, s.pos.z);
+      v.project(g.camera);
+      const show = s.state !== 'inbound' && s.state !== 'done' && v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+      this.set(a, 'display', show, () => (a.el.style.display = show ? '' : 'none'));
+      if (show) a.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
+    }
+    for (const [s, a] of this.air) if (!seen.has(s)) {
+      if (s.p?.sea && !s.wrecked && a.state !== 'down' && a.state !== 'inbound') g.tell(s.faction, `${s.type.name} back aboard`); // (landed: the sortie is over)
+      a.el.remove();
+      this.air.delete(s);
+    }
+    // the enemy ships your strikes are going for
+    for (const [stack, item] of this.items) {
+      const on = marked.has(stack);
+      this.set(item, 'airTarget', on, () => item.el.classList.toggle('air-target', on));
+    }
   }
 
   /** A damaged ship of yours: the damage-control buttons under her tag (Orders damageControl). */
@@ -246,9 +303,12 @@ export class StackLabels {
     const now = this.game.world.time;
     const flood = (u.leak ?? 0) > 0 || (u.flood ?? 0) > 0.03 ? Math.round((u.flood ?? 0) * 100) : -1;
     const fire = (u.blaze ?? 0) > 0.02 ? Math.round(u.blaze * 100) : -1;
-    const broken = (u.engineHit ? 1 : 0) + (u.rudderHit > now ? 1 : 0) + (u.bridgeHit > now ? 1 : 0) + (u.mounts ?? []).filter((m) => m.out).length;
+    // what the repair parties can mend (a wrecked mount is gone for good: not on the button), and how long the next one takes
+    const fixes = [u.engineHit ? u.engineFix : null, u.rudderHit > now ? u.rudderHit : null, u.bridgeHit > now ? u.bridgeHit : null, ...(u.mounts ?? []).filter((m) => m.out && Number.isFinite(m.fixAt)).map((m) => m.fixAt)].filter((t) => t != null);
+    const broken = fixes.length;
+    const next = broken ? Math.max(1, Math.ceil(Math.min(...fixes) - now)) : 0;
     const list = Math.abs(u.list ?? 0) > 0.03 && u.counterK == null;
-    const key = `${flood}|${fire}|${broken}|${list}|${u.dc ?? ''}`;
+    const key = `${flood}|${fire}|${broken}|${next}|${list}|${u.dc ?? ''}`;
     this.set(item, 'dc', key, () => {
       const any = flood >= 0 || fire >= 0 || broken > 0 || list;
       item.dc.hidden = !any;
@@ -272,7 +332,7 @@ export class StackLabels {
       const parts = [];
       if (flood >= 0) parts.push(btn('flood', 'Pumps', `${flood}%`, 'Damage control on the flooding first: plug the holes, pump her out'));
       if (fire >= 0) parts.push(btn('fire', 'Fire', `${fire}%`, 'Every hose on the fire: even a big one dies down'));
-      if (broken > 0) parts.push(btn('repair', 'Repair', `${broken}`, 'The repair parties first: engines, rudder, bridge, the guns'));
+      if (broken > 0) parts.push(btn('repair', 'Repair', `${broken} · ${next} s`, 'The repair parties first: engines, rudder, bridge, the guns — the next one mended in the time shown, sooner with them on it'));
       if (list) parts.push(btn('counter', 'Counter-flood', '', 'Flood her other side: she comes upright and shoots straight again — at the price of more water in her'));
       item.dc.replaceChildren(...parts);
     });

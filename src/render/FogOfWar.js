@@ -121,9 +121,32 @@ export class FogOfWar {
       if (u.alive) this.cast(u, facing);
       if (this.queue.length && performance.now() - t0 > budget) return; // (the last one done: the picture goes up now, or the next begin() threw it away)
     }
+    this.markSpotted(this.next);
     const done = this.target;
     this.target = this.next;
     this.next = done;
+  }
+
+  /**
+   * An enemy you see but your views don't reach — a ship whose gun flashes gave her away far out, one a
+   * scout or a star shell found — gets a clear patch round her: she isn't drawn sitting in the dark.
+   */
+  markSpotted(t) {
+    const g = this.game, { cell, half } = this;
+    for (const s of g.world.stacks) {
+      if (!s.alive || s.faction === g.playerFaction) continue;
+      const r = s.stats.naval ? 70 : 14;
+      for (const u of s.units) {
+        if (!u.alive || !u.spotted || (u.depth ?? 0) > 3) continue;
+        const rc = Math.ceil(r / cell), ci = Math.floor((u.pos.x + half) / cell), cj = Math.floor((u.pos.z + half) / cell);
+        for (let j = Math.max(0, cj - rc); j <= Math.min(N - 1, cj + rc); j++) {
+          for (let i = Math.max(0, ci - rc); i <= Math.min(N - 1, ci + rc); i++) {
+            const v = Math.min(0.85, (r - Math.hypot(i - ci, j - cj) * cell) / 15);
+            if (v > t[j * N + i]) t[j * N + i] = v;
+          }
+        }
+      }
+    }
   }
 
   /** Mark what unit `u`, looking along `facing`, can see. */
