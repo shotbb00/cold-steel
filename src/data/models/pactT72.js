@@ -43,13 +43,16 @@ function geometry(m1 = false) {
       glacis.push(P.box(0.36, 0.09, 0.3, { x: -1.05 + col * 0.35, y: 1.42 - (1.42 - 0.97) * t + 0.05, z: 2.35 + 1.1 * t, rx: ga, color: ERA }));
     }
   }
+  const dome = turretDome();
+  const { edge, roof } = dome.userData; // (bricks, boxes and dischargers set on its surface)
   const era = [];
   for (let i = 0; i < 11; i++) {
     const a = -0.95 + (i / 10) * 1.9;
     if (Math.abs(a) < 0.16) continue; // the gun goes here
     for (const yy of [0.32, 0.56]) {
       if (yy > 0.5 && Math.abs(a) > 0.75) continue;
-      era.push(P.box(0.36, 0.2, 0.26, { x: Math.sin(a) * 1.5, y: yy, z: Math.cos(a) * 1.62 + 0.1, ry: a, rx: yy > 0.5 ? -0.35 : 0, color: ERA }));
+      const r = edge(a, yy, 0.1) + 0.08; // (the brick's inner face just into the casting)
+      era.push(P.box(0.36, 0.2, 0.26, { x: Math.sin(a) * r, y: yy, z: Math.cos(a) * r + 0.1, ry: a, rx: yy > 0.5 ? -0.35 : 0, color: ERA }));
     }
   }
   const skirts = [];
@@ -94,7 +97,7 @@ function geometry(m1 = false) {
       P.box(0.5, 0.08, 0.45, { y: 1.44, z: 2.15, color: GREEN_DK }),                          // driver's hatch
     ]), 1.25, 0.3),
     turret: grime(merge([
-      turretDome(),
+      dome,
       ...(m1 ? [] : era),
       P.cyl(0.36, 0.4, 0.28, { x: 0.58, y: 0.92, z: -0.35, color: GREEN }, 14),                // commander's cupola (right)
       P.cyl(0.3, 0.3, 0.05, { x: 0.58, y: 1.08, z: -0.35, color: GREEN_DK }, 14),
@@ -102,14 +105,14 @@ function geometry(m1 = false) {
       P.box(0.18, 0.12, 0.02, { x: -0.62, y: 1.0, z: 0.76, color: GLASS }),                  // gunner's sight window
       P.cyl(0.15, 0.15, 0.02, { x: 0.58, y: 0.62, z: 1.52, rx: Math.PI / 2, color: 0x2a2232 }, 14), // IR searchlight lens
       // 902A smoke grenade launchers, a bank either side of the mantlet
-      ...pair((s) => merge([0, 1, 2, 3].map((k) => P.cyl(0.04, 0.04, 0.22, { x: s * (0.95 + k * 0.12), y: 0.7, z: 1.15 - k * 0.12, rx: -1.0, color: STEEL }, 8)))),
+      ...pair((s) => merge([0, 1, 2, 3].map((k) => P.cyl(0.04, 0.04, 0.22, { x: s * (0.95 + k * 0.12), y: roof(0.95 + k * 0.12, 1.15 - k * 0.12) + 0.06, z: 1.15 - k * 0.12, rx: -1.0, color: STEEL }, 8)))),
       P.box(0.12, 0.14, 0.4, { x: 0.58, y: 1.13, z: -0.15, color: STEEL }),                    // NSVT receiver
       P.cyl(0.025, 0.025, 1.0, { x: 0.58, y: 1.15, z: 0.45, rx: Math.PI / 2, color: STEEL }, 6),
       P.cyl(0.32, 0.32, 0.06, { x: -0.6, y: 0.83, z: -0.3, color: GREEN_DK }, 14),            // gunner's hatch
       P.box(0.3, 0.32, 0.4, { x: -0.62, y: 0.95, z: 0.55, color: GREEN_DK }),                 // gunner's sight
       P.cyl(0.18, 0.18, 0.32, { x: 0.58, y: 0.62, z: 1.35, rx: Math.PI / 2, color: STEEL }, 14), // L-4 searchlight
       P.cyl(0.08, 0.08, 1.9, { x: -0.95, y: 0.55, z: -1.7, rz: Math.PI / 2, ry: 0.3, color: GREEN_DK }, 8), // snorkel
-      ...pair((s) => P.box(0.3, 0.32, 0.75, { x: s * 1.32, y: 0.32, z: -1.2, ry: -s * 0.35, color: GREEN_DK })), // turret stowage
+      ...pair((s) => P.box(0.3, 0.32, 0.75, { x: s * (edge(Math.PI / 2, 0.32, -1.2) + 0.1), y: 0.32, z: -1.2, ry: -s * 0.35, color: GREEN_DK })), // turret stowage, against its sides
       P.box(0.8, 0.5, 0.4, { y: 0.42, z: 1.7, color: GREEN }),                                // mantlet
       P.box(0.66, 0.4, 0.25, { y: 0.44, z: 1.95, color: 0x4d5236 }),                           // canvas mantlet cover
     ]), 0.9, 0.0, 0.4),

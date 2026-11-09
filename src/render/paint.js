@@ -114,7 +114,7 @@ export const NOISE = /* glsl */ `
     float st = pNoise(vec3((p.x + p.z) * 9.0, p.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((p.x - p.z) * 1.6, p.y * 0.3, 9.0)));
     c *= 1.0 - smoothstep(0.25, 0.5, st) * 0.45;                                                     // rain and dirt streaks
     c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * 0.55);          // dust caught on the plates
-    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.72, 0.78, pNoise(p * 21.0)) * near * 0.85);    // chips
+    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6);     // chips (few: more read as noise)
     return c;
   }
   // bump by screen derivatives: pos and n in the same space

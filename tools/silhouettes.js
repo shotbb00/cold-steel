@@ -81,7 +81,7 @@ window.silhouettes = (year = '1985') => {
       units.forEach((u, i) => { u.pos.set(0, 0, (i - (units.length - 1) / 2) * 1.1); u.yaw = u.turretYaw = u.aimYaw = 0; });
       preview.setPose(preview.vehicle ? 'idle' : 'aim');
       Object.assign(preview.orbit, { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 }); // from the left: the front faces right
-      preview.fit = preview.vehicle ? { w: 4.6, h: 2.4 } : { w: 2.2, h: 1.1 };
+      if (!type.stats?.naval) preview.fit = preview.vehicle ? { w: 4.6, h: 2.4 } : { w: 2.2, h: 1.1 }; // (a ship keeps the preview's framing: her size)
       for (let i = 0; i < 3; i++) preview.frame(); // let the poses settle
       out[`${type.id}-${prefix}${key}`] = trim(preview.canvas);
     }
