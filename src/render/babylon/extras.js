@@ -232,7 +232,7 @@ Effect.ShadersStore.csBeamVertexShader = /* glsl */ `
   uniform mat4 world, viewProjection;
   varying float vK;
   void main() {
-    vK = 0.004 + 0.05 * pow(1.0 - position.z, 3.0); // (local z runs 0..1 along the beam: bright at the lamp)
+    vK = 0.006 + 0.16 * pow(1.0 - position.z, 4.0); // (local z runs 0..1 along the beam: bright at the lamp)
     gl_Position = viewProjection * world * vec4(position, 1.0);
   }`;
 Effect.ShadersStore.csBeamFragmentShader = /* glsl */ `

@@ -20,7 +20,7 @@ const BAND = 0.2;            // half-width of the drawn lines, metres
 const mat = (color, opacity) => new THREE.MeshBasicMaterial({
   color, transparent: true, opacity, depthWrite: false, depthTest: false, toneMapped: false, side: THREE.DoubleSide,
 });
-const RING = mat(0xffffff, 0.2);
+const RING = mat(0xffffff, 0.3);
 const MISSILE_RING = mat(0xffd9a0, 0.1);
 const AIR_RING = mat(0x9fd2ff, 0.22);       // reach against aircraft
 const AIR_FAINT = mat(0x9fd2ff, 0.09);
@@ -54,7 +54,8 @@ const STEP = 3;      // m between vertices along a ring
 const RADIAL = 8;    // m between rings of vertices across a disc
 
 function ringGeometry(r) {
-  return flat(new THREE.RingGeometry(r - BAND, r + BAND, Math.min(1440, Math.max(64, Math.round((r * Math.PI * 2) / STEP))), 1));
+  const b = Math.max(BAND, r * 0.0012); // (a ship's 2 km reach, seen from high up: a line you can see)
+  return flat(new THREE.RingGeometry(r - b, r + b, Math.min(1440, Math.max(64, Math.round((r * Math.PI * 2) / STEP))), 1));
 }
 
 /** A filled disc (or, with `arc`, a sector centred on +z) of radius r. */
