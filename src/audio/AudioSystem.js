@@ -33,7 +33,7 @@ const CARRY = {
   rifle: 8, musket: 12, hoof: 5, 'horse.neigh': 14, mg: 9, aa: 12, autocannon: 14, rocket: 18, sam: 20, mortar: 26, cannon: 34, mlrs: 50, katyusha: 50, nebelwerfer: 50, flame: 7, arty: 64,
   explosion: 30, 'explosion.big': 50, 'flare.pop': 20, 'smoke.pop': 10, stomp: 20,
   // the sea: a big gun is heard right across it, a ping or a klaxon only near the boat
-  naval: 70, navalHeavy: 110, splash: 26, 'splash.big': 42, depthcharge: 46, 'torpedo.launch': 14, 'sonar.ping': 22, klaxon: 18, 'ship.sink': 40, 'impact.ship': 30,
+  naval: 70, navalHeavy: 110, splash: 26, 'splash.big': 42, depthcharge: 46, 'torpedo.launch': 14, 'sonar.ping': 22, klaxon: 18, 'ship.sink': 40,
 };
 const carry = (key) => CARRY[key.replace(/^(\d{4}\.\w+\.|nato\.|pact\.)/, '').replace(/\.(far|last)$/, '')] ?? 6;
 const CULL = 40;           // sounds beyond this many reference distances are skipped (rifle: 320 m)

@@ -577,19 +577,6 @@ function sinking(ctx) {
   });
 }
 
-/** A heavy shell striking a ship: the burst, and the hull ringing like a struck bell. */
-function shipStrike(ctx) {
-  return makeBuffer(ctx, 2.2, (d, sr, n) => {
-    const parts = [[173, 1], [409, 0.7], [688, 0.55], [1127, 0.4], [1630, 0.25]];
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      let s = (Math.random() * 2 - 1) * Math.exp(-t * 60) * 1.2;
-      for (const [f, a] of parts) s += a * Math.sin(TAU * f * t) * Math.exp(-t * (2 + f / 400));
-      d[i] = Math.tanh(s * attack(t, 0.0008));
-    }
-  });
-}
-
 /**
  * The sound definitions: key → () => AudioBuffer. Building every buffer at once takes a
  * second or two of main-thread time, so AudioSystem builds them a few at a time while the
@@ -924,6 +911,5 @@ export function soundDefinitions(ctx) {
     wash: () => wash(ctx),
     sea: () => sea(ctx),
     'ship.sink': () => sinking(ctx),
-    'impact.ship': () => shipStrike(ctx),
   };
 }

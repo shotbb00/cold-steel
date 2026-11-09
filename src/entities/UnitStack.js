@@ -2108,7 +2108,6 @@ export class UnitStack {
    */
   shipHit(u, dealt, torpedo = false) {
     const k = dealt / u.maxHp;
-    if (!torpedo && k > 0.02) this.services.audio?.play('impact.ship', u.pos, { volume: Math.min(1, 0.5 + k * 6), throttle: 0.2 }); // the hull rings
     const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
     if (u.deckSpot > this.world.time) { // a carrier caught with her strike spotted on deck: armed and fuelled planes go up in flames
       u.blaze = Math.max(u.blaze ?? 0, 0.8);
