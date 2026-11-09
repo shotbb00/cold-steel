@@ -87,7 +87,7 @@ export class Torpedoes {
           g.audio?.play('depthcharge', hit.pos, { volume: 1 });       // under her keel: the deep blow…
           g.audio?.play('splash.big', hit.pos, { volume: 1, throttle: 0 }); // …and the column thrown over her
           if (!g.net?.isClient) {
-            hit.receiveDamage(f.damage, f.source, 0.7, { x: f.dx, z: f.dz }, 1);
+            hit.receiveDamage(f.damage * (1 - (hit.stack.stats.armor ?? 0) * 0.5), f.source, 0.7, { x: f.dx, z: f.dz }, 1); // (a big ship's bulges and bulkheads take some of it)
             if (hit.alive) hit.stack.shipHit(hit, 0, true);
           }
           gone = true;

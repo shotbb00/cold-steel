@@ -53,6 +53,7 @@ const FIVE_INCH = { range: 2400, reload: 3.5, damage: 220, splash: 4, pierce: 0.
 const DD_JP = { range: 2400, reload: 4.5, damage: 440, splash: 4.5, pierce: 0.3 }; // (a twin mount: both shells in one salvo)
 
 export const frigate = ship({
+  fleet: 'escort', // (the reinforcement window's tab)
   id: 'frigate', name: 'Escort', shortName: 'Escort', cost: 280,
   names: { nato: ['Buckley', 'Reuben James', 'England', 'Fogg', 'Foss', 'Gantner', 'Lee Fox', 'Amesbury', 'Bates', 'Blessman', 'Ira Jeffery', 'Fechteler'], pact: ['Etorofu', 'Matsuwa', 'Sado', 'Oki', 'Mutsure', 'Iki', 'Tsushima', 'Wakamiya', 'Hirado', 'Fukae', 'Amakusa', 'Kasado'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 93, beam: 11 },
@@ -70,6 +71,7 @@ export const frigate = ship({
 });
 
 export const destroyer = ship({
+  fleet: 'escort', // (the reinforcement window's tab)
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 450,
   names: { nato: ['Johnston', 'Hoel', 'Heermann', 'Fletcher', "O'Bannon", 'Nicholas', 'Kidd', 'The Sullivans', 'Laffey', 'Aaron Ward', 'Spence', 'Charles Ausburne', 'Radford', 'Jenkins', 'Hazelwood', 'Strong'], pact: ['Yukikaze', 'Shiranui', 'Kagerō', 'Kuroshio', 'Oyashio', 'Hatsukaze', 'Natsushio', 'Amatsukaze', 'Tokitsukaze', 'Urakaze', 'Isokaze', 'Hamakaze', 'Tanikaze', 'Nowaki', 'Arashi', 'Maikaze'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 115, beam: 12 },
@@ -92,6 +94,7 @@ const EIGHT_INCH = { range: 3000, reload: 9, damage: 700, splash: 7, pierce: 0.5
 const TWENTY_CM = { range: 3000, reload: 10, damage: 560, splash: 7, pierce: 0.55, shell: 950, size: 2.6, spread: 0.009 };
 
 export const cruiser = ship({
+  fleet: 'line', // (the reinforcement window's tab)
   id: 'cruiser', name: 'Heavy Cruiser', shortName: 'Cruiser', cost: 750, limit: 3,
   names: { nato: ['Baltimore', 'Boston', 'Canberra', 'Quincy', 'Pittsburgh', 'Saint Paul', 'Columbus', 'Helena'], pact: ['Takao', 'Atago', 'Maya', 'Chōkai'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 205, beam: 21 },
@@ -114,6 +117,7 @@ const FORTY_SIX_CM = { range: 4000, reload: 36, damage: 2900, splash: 14, pierce
 const SECONDARY = (at, facing) => gun(at, facing, { range: 2200, reload: 4, damage: 220, splash: 4, pierce: 0.3, arc: 2.6 });
 
 export const battleship = ship({
+  fleet: 'line', // (the reinforcement window's tab)
   id: 'battleship', name: 'Battleship', shortName: 'Battleship', cost: 1300, limit: 1,
   names: { nato: ['Iowa', 'New Jersey', 'Missouri', 'Wisconsin'], pact: ['Yamato', 'Musashi'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 262, beam: 33 },
@@ -134,6 +138,7 @@ export const battleship = ship({
 const TUBES = (at, facing, o) => torps(at, { facing, arc: 0.9, ...o }); // a submarine's bow or stern tubes: aimed with the boat
 
 export const submarine = ship({
+  fleet: 'under', // (the reinforcement window's tab)
   id: 'submarine', name: 'Submarine', shortName: 'Submarine', cost: 500, limit: 2,
   names: { nato: ['Wahoo', 'Barb', 'Flasher', 'Harder', 'Silversides', 'Gato', 'Growler', 'Guardfish', 'Trigger', 'Bonefish'], pact: ['I-19', 'I-26', 'I-17', 'I-15', 'I-21', 'I-23', 'I-25', 'I-27', 'I-28', 'I-29'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 95, beam: 8.3 },
@@ -154,6 +159,7 @@ export const submarine = ship({
 });
 
 export const carrier = ship({
+  fleet: 'carrier', // (the reinforcement window's tab)
   id: 'carrier', name: 'Aircraft Carrier', shortName: 'Carrier', cost: 1200, limit: 1,
   names: { nato: ['Essex', 'Yorktown', 'Intrepid', 'Hornet', 'Franklin', 'Lexington', 'Bunker Hill', 'Wasp'], pact: ['Shōkaku', 'Zuikaku'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 267, beam: 28 },
@@ -175,6 +181,7 @@ export const carrier = ship({
 });
 
 export const ptBoat = ship({
+  fleet: 'escort', // (the reinforcement window's tab)
   id: 'ptBoat', name: 'Torpedo Boat', shortName: 'PT boat', cost: 140,
   names: { nato: ['PT-109', 'PT-131', 'PT-137', 'PT-490', 'PT-491', 'PT-493', 'PT-523', 'PT-524', 'PT-130', 'PT-132'], pact: ['Gyoraitei 14', 'Gyoraitei 15', 'Gyoraitei 16', 'Gyoraitei 17', 'Gyoraitei 18', 'Gyoraitei 19', 'Gyoraitei 20', 'Gyoraitei 21'] }, // her own name (UnitStack shipName)
   hull: { length: 24, beam: 6.3 },
@@ -195,6 +202,7 @@ const SIX_INCH = { range: 2600, reload: 6, damage: 380, splash: 5, pierce: 0.45,
 const FIFTEEN_CM = { range: 2600, reload: 7, damage: 340, splash: 5, pierce: 0.45, shell: 920, size: 2.2, spread: 0.01 };
 
 export const lightCruiser = ship({
+  fleet: 'line', // (the reinforcement window's tab)
   id: 'lightCruiser', name: 'Light Cruiser', shortName: 'Light cruiser', cost: 600, limit: 3,
   names: { nato: ['Cleveland', 'Columbia', 'Montpelier', 'Denver', 'Santa Fe', 'Birmingham', 'Mobile', 'Biloxi', 'Houston', 'Miami'], pact: ['Agano', 'Noshiro', 'Yahagi', 'Sakawa'] }, // her own name (UnitStack shipName)
   hull: { length: 186, beam: 20 },
@@ -213,6 +221,7 @@ export const lightCruiser = ship({
 });
 
 export const escortCarrier = ship({
+  fleet: 'carrier', // (the reinforcement window's tab)
   id: 'escortCarrier', name: 'Escort Carrier', shortName: 'Escort carrier', cost: 650, limit: 1,
   names: { nato: ['Gambier Bay', 'Casablanca', 'Liscome Bay', 'St. Lo', 'Kalinin Bay', 'White Plains', 'Fanshaw Bay', 'Kitkun Bay'], pact: ['Taiyō', 'Un\'yō', 'Chūyō'] }, // her own name (UnitStack shipName)
   hull: { length: 156, beam: 19.9 },
@@ -234,6 +243,7 @@ export const escortCarrier = ship({
 });
 
 export const transport = ship({
+  fleet: 'under', // (the reinforcement window's tab)
   id: 'transport', name: 'Transport', shortName: 'Transport', cost: 220,
   names: { nato: ['SS Jeremiah O\'Brien', 'SS John W. Brown', 'SS Robert E. Peary', 'SS Stephen Hopkins', 'SS Patrick Henry', 'SS Booker T. Washington'], pact: ['Kinugasa Maru', 'Sado Maru', 'Hirokawa Maru', 'Yamaura Maru', 'Nagara Maru', 'Arizona Maru'] }, // her own name (UnitStack shipName)
   hull: { length: 135, beam: 17.3 },

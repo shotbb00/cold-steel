@@ -299,6 +299,12 @@ export class UnitStack {
     const s = this.stats;
     if (this.usesCover || !(s.indirect || s.fireCooldown >= 3)) return null;
     let left = 0;
+    if (s.naval) { // a ship: her main battery's mounts (shipFire m.cd) — the next salvo
+      const u = this.units.find((x) => x.alive), ms = u ? this.shipMounts(u).filter((m) => !m.torpedo && !m.out) : [];
+      const top = Math.max(0, ...ms.map((m) => m.damage));
+      const cds = ms.filter((m) => m.damage === top).map((m) => Math.max(0, m.cd ?? 0));
+      return cds.length ? Math.min(...cds) : null;
+    }
     for (const u of this.units) if (u.alive) left = Math.max(left, u.reloadT > 0 ? u.reloadT : u.cooldown / ((u.fireRateMult || 1) * (this.doc?.fire ?? 1)));
     return left;
   }
@@ -2055,7 +2061,8 @@ export class UnitStack {
         origin: _p, dir: _w, speed: m.shell, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor,
         size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: true,
       });
-      this.services.effects.muzzle(_p, _w, m.size, 'artillery');
+      if (m.damage >= 120) this.services.effects.muzzle(_p, _w, m.damage >= 1500 ? 3 : m.damage >= 500 ? 2 : 1, 'naval', this.world.river?.level ?? 0); // (the big guns: a fireball and the blast on the water)
+      else this.services.effects.muzzle(_p, _w, m.size, 'artillery');
       this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
@@ -2132,9 +2139,11 @@ export class UnitStack {
       u.deckSpot = 0;
       tell('hit with armed planes on deck — she\'s burning!');
     }
-    if (torpedo || Math.random() < 0.3 + k * 4) {
+    // a big ship has more compartments to fill, a belt keeps shells out and a bulge takes the edge off a torpedo
+    const size = clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2), belt = 1 - (this.stats.armor ?? 0);
+    if (torpedo || Math.random() < (0.3 + k * 4) * belt) {
       const was = u.leak ?? 0;
-      u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : Math.min(0.006, k * 0.03 + 0.002)); // (a torpedo opens a destroyer up, a battleship takes several; a shell or a charge springs a leak at most)
+      u.leak = was + (torpedo ? 0.012 * size * (1 - (this.stats.armor ?? 0) * 0.5) : Math.min(0.006, k * 0.03 + 0.002) * size); // (a torpedo opens a destroyer up, a battleship takes several; a shell or a charge springs a leak at most)
       if (torpedo) tell('torpedo hit — flooding!');
       else if (!was) tell('holed below the waterline');
     }
@@ -2163,7 +2172,7 @@ export class UnitStack {
     const dc = (k) => (!u.dc ? 1 : u.dc === k ? DC_FOCUS : DC_ELSE);
     if (u.leak > 0) {
       u.flood = (u.flood ?? 0) + u.leak * dt;
-      u.leak = Math.max(0, u.leak - dt * 0.00045 * dc('flood'));   // damage control: the holes get plugged, one by one
+      u.leak = Math.max(0, u.leak - dt * 0.00045 * dc('flood') * clamp((this.type.hull?.length ?? 120) / 120, 1, 2)); // damage control: the holes get plugged, one by one (a big ship has the bigger crew)
     } else if (u.flood > 0) u.flood = Math.max(0, u.flood - dt * 0.002 * dc('flood')); // …and pumped out
     for (const k of ['engineFix', 'rudderHit', 'bridgeHit']) if (u[k] > now) u[k] -= dt * (dc('repair') - 1); // (the repair parties: sooner, or later)
     for (const m of u.mounts ?? []) if (m.out && Number.isFinite(m.fixAt)) m.fixAt -= dt * (dc('repair') - 1);
@@ -2176,7 +2185,7 @@ export class UnitStack {
         u.burnFx = 6;
         this.services.effects.burn({ x: u.pos.x, y: u.pos.y + 6, z: u.pos.z }, 8, 0.8 + u.blaze * 1.5);
       }
-      if (u.blaze > 0.85 && Math.random() < dt * 0.01) { // the fire reaches a magazine
+      if (u.blaze > 0.85 && Math.random() < dt * 0.01 * (1 - (this.stats.armor ?? 0) * 0.8)) { // the fire reaches a magazine (an armoured one, seldom)
         this.services.effects.explosion({ x: u.pos.x, y: u.pos.y + 8, z: u.pos.z }, 4, { ground: false, fire: 3 });
         this.services.tell(this.faction, `${this.name}: the magazine has gone up!`);
         this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1);
