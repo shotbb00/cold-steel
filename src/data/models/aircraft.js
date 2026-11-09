@@ -141,7 +141,7 @@ export function buildNatoUH60(mats) {
         [-1.4, 1.58, 1.1, 0.95, 3.2], [-2.4, 1.8, 0.86, 0.72, 3], [-3.4, 2.05, 0.46, 0.46, 2.4], [-8.2, 2.3, 0.26, 0.32, 2.4], [-8.9, 2.4, 0.18, 0.22, 2.4],
       ], { color: OD }),
       // windscreen and the cockpit's chin windows, cabin and door windows
-      ...pair((s) => P.box(0.85, 0.62, 0.04, { x: s * 0.45, y: 1.95, z: 3.05, rx: -0.62, ry: s * 0.25, color: GLASS })),
+      ...pair((s) => P.box(0.85, 0.62, 0.04, { x: s * 0.42, y: 2.06, z: 3.08, rx: -0.4, ry: s * 0.22, rz: -s * 0.38, color: GLASS })), // (on the nose's skin, which is 2.1 m up here)
       ...pair((s) => P.box(0.04, 0.55, 0.85, { x: s * 1.06, y: 1.8, z: 2.55, ry: s * -0.12, color: GLASS })),
       ...pair((s) => P.box(0.5, 0.3, 0.04, { x: s * 0.45, y: 0.9, z: 3.3, rx: 0.5, color: GLASS })),
       ...pair((s) => P.box(0.04, 0.5, 0.7, { x: s * 1.12, y: 1.85, z: 1.0, color: GLASS })),
