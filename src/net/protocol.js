@@ -1,15 +1,16 @@
 // What travels between host and client.
 //
 // Binary snapshot (15 per second, unreliable channel), little endian:
-//   u8 kind (1) · f64 host time · u16 stacks · u8 sorties
+//   u8 kind (1) · f64 host time · u16 stacks · u8 sorties · u8 q (position steps per metre: 40 on a land
+//   map, fewer on a 5 km sea map so ±2.5 km still fits an i16 — posScale)
 //   per stack:  u16 id · u8 units
-//     per unit (18 bytes): i16 x·40 · i16 z·40 · u16 yaw · u16 turret yaw · i8 gun pitch·80 ·
+//     per unit (18 bytes): i16 x·q · i16 z·q · u16 yaw · u16 turret yaw · i8 gun pitch·80 ·
 //       u8 crouch · u8 prone · u8 reload pose · u8 health · u8 flags · u16 target stack · u8 target member
 //   per sortie: u16 id · u8 faction · u8 state · f32 x, y, z · u16 yaw · i16 pitch·1e4 · i16 roll·1e4
 // Everything else is JSON on the reliable channel ({ k: kind, ... }).
 import * as THREE from 'three';
 
-export const NET_VERSION = 1;
+export const NET_VERSION = 2; // (2: the snapshot carries its position scale)
 export const SNAPSHOT_RATE = 15;   // per second
 export const STATE_RATE = 4;       // stack / economy state per second
 
@@ -27,11 +28,13 @@ const clampI16 = (v) => Math.max(-32767, Math.min(32767, Math.round(v)));
 const unit8 = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
 
 const UNIT_BYTES = 18;
+/** Position steps per metre for a map whose farthest point is `extent` m from the middle: 2.5 cm where it fits, coarser on the big sea maps. */
+export const posScale = (extent) => Math.max(1, Math.min(40, Math.floor(32000 / Math.max(1, extent))));
 const SORTIE_BYTES = 22;
 
 /** Encode the battle's moving parts. `ref(unit)` → [stackId, index] of its target (or null). */
-export function encodeSnapshot(time, stacks, sorties) {
-  let size = 12;
+export function encodeSnapshot(time, stacks, sorties, q = 40) {
+  let size = 13;
   for (const s of stacks) size += 3 + s.units.length * UNIT_BYTES;
   size += sorties.length * SORTIE_BYTES;
   const buf = new ArrayBuffer(size);
@@ -41,12 +44,13 @@ export function encodeSnapshot(time, stacks, sorties) {
   v.setFloat64(o, time, true); o += 8;
   v.setUint16(o, stacks.length, true); o += 2;
   v.setUint8(o, sorties.length); o += 1;
+  v.setUint8(o, q); o += 1;
   for (const s of stacks) {
     v.setUint16(o, s.id, true); o += 2;
     v.setUint8(o, s.units.length); o += 1;
     for (const u of s.units) {
-      v.setInt16(o, clampI16(u.pos.x * 40), true);
-      v.setInt16(o + 2, clampI16(u.pos.z * 40), true);
+      v.setInt16(o, clampI16(u.pos.x * q), true);
+      v.setInt16(o + 2, clampI16(u.pos.z * q), true);
       v.setUint16(o + 4, angleToU16(u.yaw), true);
       v.setUint16(o + 6, angleToU16(u.turretYaw), true);
       v.setInt8(o + 8, Math.max(-127, Math.min(127, Math.round((u.gunPitch ?? 0.05) * 80))));
@@ -97,6 +101,7 @@ export function decodeSnapshot(buf) {
   const time = v.getFloat64(o, true); o += 8;
   const ns = v.getUint16(o, true); o += 2;
   const na = v.getUint8(o); o += 1;
+  const q = v.getUint8(o) || 40; o += 1;
   const stacks = new Map();
   for (let i = 0; i < ns; i++) {
     const id = v.getUint16(o, true); o += 2;
@@ -108,8 +113,8 @@ export function decodeSnapshot(buf) {
     const f2 = new Uint8Array(n);
     for (let k = 0; k < n; k++) {
       const b = k * 9;
-      d[b] = v.getInt16(o, true) / 40;
-      d[b + 1] = v.getInt16(o + 2, true) / 40;
+      d[b] = v.getInt16(o, true) / q;
+      d[b + 1] = v.getInt16(o + 2, true) / q;
       d[b + 2] = u16ToAngle(v.getUint16(o + 4, true));
       d[b + 3] = u16ToAngle(v.getUint16(o + 6, true));
       d[b + 4] = v.getInt8(o + 8) / 80;

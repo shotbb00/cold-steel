@@ -579,7 +579,10 @@ export class BabylonView {
         w.foamVersion = t.version;
         this.waters.add(w);
       }
-      new WaterPlugin(m, w); m.environmentIntensity = ENV * 1.5; } // (the sky in the waves: the fresnel at a low angle)
+      new WaterPlugin(m, w);
+      m.environmentIntensity = ENV * 1.5; // (the sky in the waves: the fresnel at a low angle)
+      m.specularIntensity = 0.45;          // (the sun's glitter, not white blotches where the waves catch it)
+    }
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
     m.source = tm;

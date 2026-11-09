@@ -7,6 +7,9 @@
 //              periscope depth — found by a hunter, they dive deep and run silent, and come back
 //              up once it has lost them; at night the Imperial Navy's destroyers go in with the
 //              torpedo against the enemy's big ships
+//   hunt     – (Pitched battle and Skirmish at sea: no zones) the objective is the enemy fleet it has
+//              seen, else their base; `holdUntil` keeps it waiting first, and it does nothing while
+//              the battle is still being set up (state.setup)
 //   strikes  – with its carrier: bombers at the most valuable ship it can see (carrier, battleship,
 //              cruiser…), fighters over its own fleet when enemy aircraft come, a scout when it
 //              sees nothing
@@ -20,28 +23,31 @@ const ORDER = ['destroyer', 'frigate', 'cruiser', 'destroyer', 'submarine', 'car
 const VALUE = { carrier: 5, battleship: 4, cruiser: 3, destroyer: 2, frigate: 1, submarine: 1 };
 
 export class SeaDirector {
-  constructor(game, faction, state, { tempo = 1 } = {}) {
+  constructor(game, faction, state, { tempo = 1, hunt = false, holdUntil = null } = {}) {
     this.game = game;
     this.faction = faction;
     this.state = state;
     this.tempo = tempo;
+    this.hunt = hunt;
+    this.holdUntil = holdUntil;
     this.t = 0;
     this.airT = 4;
     this.buyIndex = 0;
   }
 
-  get points() { return this.state.points.points; }
+  get points() { return this.state.points?.points ?? []; }
   ships() { return this.game.world.stacksOf(this.faction).filter((s) => s.alive && s.stats.naval); }
   foes() { return this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => s.alive && s.stats.naval); }
   move(s, x, z) { this.game.orders.run(this.faction, { t: 'move', m: [[s.id, Math.round(x), Math.round(z)]] }, 'ai'); }
 
   update(dt) {
+    if (this.state.setup || this.game.net?.isClient) return;
     this.t -= dt * this.tempo;
     this.airT -= dt;
     if (this.t <= 0) {
       this.t = THINK;
       this.buy();
-      this.steer();
+      if (this.holdUntil == null || this.game.world.time >= this.holdUntil) this.steer();
     }
     if (this.airT <= 0) {
       this.airT = AIR_EVERY;
@@ -50,6 +56,7 @@ export class SeaDirector {
   }
 
   buy() {
+    if (!this.state.buy) return; // (a fleet it was given: Pitched battle, Skirmish)
     const mine = this.ships();
     if (mine.length >= this.state.maxStacks) return;
     const army = this.game.armyOf(this.faction);
@@ -68,6 +75,12 @@ export class SeaDirector {
 
   /** The zone to go for: a contested one of ours or theirs first, then the nearest not ours to our home. */
   objective() {
+    if (this.hunt) { // the enemy's ships it can see (their middle), else their base
+      const seen = this.foes().filter((s) => s.units.some((u) => u.alive && u.spotted));
+      if (seen.length) return { x: seen.reduce((a, s) => a + s.centroid.x, 0) / seen.length, z: seen.reduce((a, s) => a + s.centroid.z, 0) / seen.length, radius: 500 };
+      const b = this.game.world.bases[enemyOf(this.faction)];
+      return { x: b.x, z: b.z, radius: 600 };
+    }
     const home = this.points.find((p) => p.owner === this.faction) ?? this.game.world.bases[this.faction];
     const open = this.points.filter((p) => p.owner !== this.faction);
     const contested = this.points.find((p) => p.contested);
@@ -142,7 +155,7 @@ export class SeaDirector {
     const f = this.faction;
     const fleet = this.ships();
     if (!fleet.some((s) => s.stats.carrier && s.units[0]?.alive)) return;
-    const support = this.state.support?.[f] ?? this.state.cp[f];
+    const support = this.state.support?.[f] ?? this.state.cp?.[f] ?? 0;
     const seen = this.foes().filter((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1));
     const best = seen.sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0))[0];
     const call = (kind, x, z) => g.air.ready(f, kind) && support >= g.air.terms(f, kind).cost && g.air.call(f, x, z, null, kind);

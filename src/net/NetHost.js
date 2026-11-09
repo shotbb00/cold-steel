@@ -10,7 +10,7 @@
 //     the client sees and hears the same battle. Rounds fly on the client as well (cosmetic: they
 //     strike and burst there, but only the host's do damage). What renderers and the projectile
 //     flight produce is left out of the recording: the client's own renderers and rounds make it.
-import { encodeSnapshot, packArgs, v3, dir3, SNAPSHOT_RATE, STATE_RATE } from './protocol.js';
+import { encodeSnapshot, posScale, packArgs, v3, dir3, SNAPSHOT_RATE, STATE_RATE } from './protocol.js';
 import { enemyOf } from '../data/factions.js';
 
 const DEPLOY_CLOCK = -1e4; // deployment snapshots' clock (s): below any battle time
@@ -21,6 +21,9 @@ export const SOUND_CALLS = ['play', 'weapon'];
 const r2 = (n) => Math.round(n * 100) / 100;
 
 export class NetHost {
+  /** Position steps per metre in the snapshots: what fits this map (net/protocol.js posScale). */
+  get posQ() { const b = this.game.world.bounds; return (this._posQ ??= posScale(Math.max(b.x, b.z) + 200)); }
+
   constructor(game, link) {
     this.game = game;
     this.link = link;
@@ -172,14 +175,14 @@ export class NetHost {
     this.snapT -= dt;
     if (this.snapT > 0) return;
     this.snapT = 1 / SNAPSHOT_RATE;
-    this.link.sendSnapshot(encodeSnapshot(DEPLOY_CLOCK + this.deployT, this.game.world.stacks.filter((s) => s.alive), []));
+    this.link.sendSnapshot(encodeSnapshot(DEPLOY_CLOCK + this.deployT, this.game.world.stacks.filter((s) => s.alive), [], this.posQ));
   }
 
   sendSnapshot() {
     const g = this.game;
     const stacks = g.world.stacks.filter((s) => s.alive);
     const sorties = g.air.sorties.filter((s) => s.state !== 'inbound' && s.state !== 'done');
-    this.link.sendSnapshot(encodeSnapshot(g.time, stacks, sorties));
+    this.link.sendSnapshot(encodeSnapshot(g.time, stacks, sorties, this.posQ));
   }
 
   sendState() {

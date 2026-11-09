@@ -90,6 +90,21 @@ const FLAME = new THREE.Color(1, 0.55, 0.15).multiplyScalar(2.2);
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
+// ships' hulls as segments, stern to bow (x, z, x, z, half the beam), and the closest points between two
+const _ha = [0, 0, 0, 0, 0];
+const _hb = [0, 0, 0, 0, 0];
+const _seg = [0, 0, 0, 0];
+/** Closest points between segments a and b (2D, [x0, z0, x1, z1]) into out [ax, az, bx, bz]; returns the distance. */
+function segClosest(a, b, out) {
+  const d1x = a[2] - a[0], d1z = a[3] - a[1], d2x = b[2] - b[0], d2z = b[3] - b[1], rx = a[0] - b[0], rz = a[1] - b[1];
+  const A = d1x * d1x + d1z * d1z, E = d2x * d2x + d2z * d2z, F = d2x * rx + d2z * rz, C = d1x * rx + d1z * rz, B = d1x * d2x + d1z * d2z;
+  const den = A * E - B * B;
+  let sa = den > 1e-9 ? clamp((B * F - C * E) / den, 0, 1) : 0;
+  let tb = E > 1e-9 ? (B * sa + F) / E : 0;
+  if (tb < 0) { tb = 0; sa = A > 1e-9 ? clamp(-C / A, 0, 1) : 0; } else if (tb > 1) { tb = 1; sa = A > 1e-9 ? clamp((B - C) / A, 0, 1) : 0; }
+  out[0] = a[0] + d1x * sa; out[1] = a[1] + d1z * sa; out[2] = b[0] + d2x * tb; out[3] = b[1] + d2z * tb;
+  return Math.hypot(out[0] - out[2], out[1] - out[3]);
+}
 
 let nextId = 1;
 
@@ -325,6 +340,10 @@ export class UnitStack {
   /** Put the whole stack at (x, z) at once, facing `facing` (the deployment phase, systems/Deployment.js): every man or vehicle in its formation slot, off anything solid. */
   placeAt(x, z, facing = this.facing) {
     const w = this.world;
+    if (this.stats.naval && w.nav) { // a ship: the nearest water deep enough for her hull (never on the reef)
+      const k = w.nav.snap(x, z, SHIP, this.units[0]?.radius ?? 6);
+      if (k >= 0) ({ x, z } = w.nav.point(k));
+    }
     this.facing = facing;
     this.holdFacing = null;
     this.anchor.set(x, w.terrain.heightAt(x, z), z);
@@ -722,8 +741,52 @@ export class UnitStack {
     if (u.stuckN >= (v ? STUCK.ghostVehicle : STUCK.ghost)) u.ghostT = v ? STUCK.ghostTVehicle : STUCK.ghostT;
   }
 
+  /** A ship's hull into `out` as a segment stern → bow (the bow stretched `ahead` m) and half its beam. */
+  hullOf(u, out, ahead = 0) {
+    const h = this.type.hull;
+    const half = (h?.length ?? u.radius * 8) * 0.46;
+    const sx = Math.sin(u.yaw), sz = Math.cos(u.yaw);
+    out[0] = u.pos.x - sx * half; out[1] = u.pos.z - sz * half;
+    out[2] = u.pos.x + sx * (half + ahead); out[3] = u.pos.z + sz * (half + ahead);
+    out[4] = (h?.beam ?? u.radius * 2) * 0.5;
+    return out;
+  }
+
+  /**
+   * Every other ship's hull near u's (not a submarine below 3 m: she passes under), called with the closest
+   * points (in _seg), the distance between the hulls and the room they want between them.
+   */
+  eachHull(u, ahead, fn) {
+    if ((u.depth ?? 0) > 3) return;
+    const a = this.hullOf(u, _ha, ahead);
+    const myHalf = (this.type.hull?.length ?? u.radius * 8) * 0.5 + ahead;
+    for (const s of this.world.stacks) {
+      if (s === this || !s.alive || !s.stats.naval) continue;
+      const reach = myHalf + (s.type.hull?.length ?? 100) * 0.5 + 40;
+      for (const o of s.units) {
+        if (!o.alive || (o.depth ?? 0) > 3 || Math.abs(o.pos.x - u.pos.x) > reach || Math.abs(o.pos.z - u.pos.z) > reach) continue;
+        const b = s.hullOf(o, _hb);
+        fn(o, segClosest(a, b, _seg), a[4] + b[4]);
+      }
+    }
+  }
+
   /** Push away from neighbours, scaled by both bodies' sizes. */
   separate(u, out) {
+    if (this.stats.naval) { // ships: keep off each other's hulls, looking ahead along the course
+      const v = Math.hypot(u.vel.x, u.vel.z);
+      this.eachHull(u, v * 8, (o, d, beams) => {
+        const want = beams + 30;
+        if (d >= want) return;
+        let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
+        const nl = Math.hypot(nx, nz) || 1;
+        nx /= nl; nz /= nl;
+        const push = ((want - d) / want) * Math.max(2, this.stats.speed * 0.6);
+        out.x += nx * push;
+        out.z += nz * push;
+      });
+      return;
+    }
     for (const o of this.world.neighbors(u.pos, u.radius + 4.5, _near)) {
       if (o === u) continue;
       const min = u.radius + o.radius + PERSONAL_SPACE;
@@ -786,6 +849,20 @@ export class UnitStack {
   floatBody(u, px, pz, dt) {
     const w = this.world.river?.water;
     this.world.clampToBounds(u.pos);
+    // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
+    this.eachHull(u, 0, (o, d, beams) => {
+      const min = beams + 2;
+      if (d >= min) return;
+      let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
+      let nl = Math.hypot(nx, nz);
+      if (nl < 1e-3) { nx = u.pos.x - o.pos.x; nz = u.pos.z - o.pos.z; nl = Math.hypot(nx, nz) || 1; }
+      nx /= nl; nz /= nl;
+      const k = (min - d) * 0.5;
+      u.pos.x += nx * k;
+      u.pos.z += nz * k;
+      const vn = u.vel.x * nx + u.vel.z * nz;
+      if (vn < 0) { u.vel.x -= nx * vn; u.vel.z -= nz * vn; }
+    });
     const nav = this.world.nav;
     // the shallows: her middle keeps her own radius off them (as her route does), her bow (some nine radii
     // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
