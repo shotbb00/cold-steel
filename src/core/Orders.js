@@ -17,6 +17,10 @@
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
 //   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
+//   { t: 'shipSpeed', s: [ids], v }              (ships' engine orders: slow / half / full / flank, UnitStack SHIP_SPEEDS)
+//   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
+//   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
+//   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
@@ -84,6 +88,10 @@ export class Orders {
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
           // a waypoint: queued behind the route it's already on (StackAI takes the next on arrival)
           if (cmd.q && (s.moveTarget || s.waypoints?.length)) { (s.waypoints ??= []).push({ x, z, hold: !!cmd.hold, face }); continue; }
+          if (s.station) { // a ship in formation: sent on with her leader, she keeps her place; sent alone, she leaves it
+            if ((cmd.m ?? []).some(([lid]) => lid === s.station.lead)) continue;
+            s.station = null;
+          }
           s.waypoints = null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
@@ -112,6 +120,43 @@ export class Orders {
         g.tell(faction, `The ${b.name} is ${up.label} now`);
         return null;
       }
+      case 'shipSpeed': // ships' engine orders (UnitStack SHIP_SPEEDS)
+        for (const s of mine(cmd.s)) if (s.stats.naval) s.shipSpeed = cmd.v;
+        return null;
+      case 'zigzag':
+        for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.zigzag = !!cmd.on;
+        return null;
+      case 'formation': { // the biggest ship leads; the rest take their stations on her (UnitStack.keepStation)
+        const ships = mine(cmd.s).filter((s) => s.stats.naval && !s.stats.submarine);
+        for (const s of ships) s.station = null;
+        if (cmd.f === 'free' || ships.length < 2) return null;
+        const size = (s) => s.type.hull?.length ?? 100;
+        const [lead, ...rest] = [...ships].sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0) || size(b) - size(a));
+        let back = size(lead) / 2;
+        rest.forEach((s, i) => {
+          let dx = 0, dz = 0;
+          if (cmd.f === 'ahead') { dz = -(back + 130 + size(s) / 2); back = -dz + size(s) / 2; }
+          else if (cmd.f === 'abreast') { dx = (i % 2 ? -1 : 1) * Math.ceil((i + 1) / 2) * 260; }
+          else { // screen: a ring ahead and round the sides
+            const r = size(lead) / 2 + 480;
+            const a = rest.length === 1 ? 0 : (-1 + (2 * i) / (rest.length - 1)) * 2.1;
+            dx = Math.sin(a) * r; dz = Math.cos(a) * r;
+          }
+          s.station = { lead: lead.id, dx, dz };
+          s.waypoints = null;
+        });
+        g.tell(faction, `${lead.name} leads: ${{ ahead: 'line ahead', abreast: 'line abreast', screen: 'the screen closes round her' }[cmd.f] ?? cmd.f}`);
+        return null;
+      }
+      case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
+        for (const s of mine(cmd.s)) {
+          const sg = s.stats.smokeGen;
+          if (!sg) continue;
+          if ((s.smokeReady ?? 0) > g.world.time) { g.tell(faction, `${s.name}: smoke again in ${Math.ceil(s.smokeReady - g.world.time)} s`); continue; }
+          s.smokeUntil = g.world.time + sg.last;
+          s.smokeReady = s.smokeUntil + sg.cooldown;
+        }
+        return null;
       case 'subDepth': // a submarine: surface / periscope / deep (UnitStack.shipUpkeep)
         for (const s of mine(cmd.s)) if (s.stats.submarine) for (const u of s.units) u.depthMode = cmd.d;
         return null;

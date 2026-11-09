@@ -10,7 +10,7 @@ import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
-import { RANKS } from '../entities/UnitStack.js';
+import { RANKS, SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
@@ -23,6 +23,14 @@ const ACTIONS = [
   { cmd: 'sub:periscope', label: 'Periscope', icon: 'recon', key: 'none', tip: 'Periscope depth: slow, hidden from eyes but a sonar finds you; torpedoes can be fired', when: (sel) => sel.some((s) => s.stats.submarine), on: (sel) => sel.some((s) => (s.units[0]?.depthMode ?? 'periscope') === 'periscope') },
   { cmd: 'sub:deep', label: 'Dive deep', icon: 'smoke', key: 'none', tip: 'Deep: blind and can\'t shoot, harder for depth charges — you hear ships under way', when: (sel) => sel.some((s) => s.stats.submarine), on: (sel) => sel.some((s) => s.units[0]?.depthMode === 'deep') },
   { cmd: 'sub:silent', label: 'Silent running', icon: 'stop', key: 'none', tip: 'Half the speed — and a sonar has to come twice as close to find you', when: (sel) => sel.some((s) => s.stats.submarine), on: (sel) => sel.some((s) => s.silent) },
+  // ships (entities/UnitStack.js: engine orders, zig-zag, formations, smoke; Orders.js)
+  { cmd: 'ship:speed', label: (g) => `${SHIP_SPEEDS[[...g.commands.selected].find((s) => s.alive && s.stats.naval)?.shipSpeed ?? 'full'].name} ahead`, icon: 'charge', key: 'none', tip: 'Engine orders, a step a click: Slow (quiet: a listening submarine hears you half as far) · Half · Full · Flank (the fastest — and loudest)', when: (sel) => sel.some((s) => s.stats.naval) },
+  { cmd: 'ship:zigzag', label: 'Zig-zag', icon: 'turnRight', key: 'none', tip: 'Weave either side of the course: a torpedo aimed at where you would be finds water — you get there a little later', when: (sel) => sel.some((s) => s.stats.naval && !s.stats.submarine), on: (sel) => sel.some((s) => s.zigzag) },
+  { cmd: 'ship:form:ahead', label: 'Line ahead', icon: 'formColumn', key: 'none', tip: 'The biggest selected ship leads, the others follow in her wake — move her and they come along', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
+  { cmd: 'ship:form:abreast', label: 'Abreast', icon: 'formLine', key: 'none', tip: 'Side by side with the biggest ship: every bow gun bears ahead', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
+  { cmd: 'ship:form:screen', label: 'Screen', icon: 'formSquare', key: 'none', tip: 'The smaller ships ring the biggest — escorts round a carrier or a battleship, between her and the submarines', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
+  { cmd: 'ship:form:free', label: 'Break formation', icon: 'cancel', key: 'none', tip: 'Every ship on her own again', when: (sel) => sel.some((s) => s.station) },
+  { cmd: 'ship:smoke', label: 'Lay smoke', icon: 'smoke', key: 'none', tip: 'A minute of smoke off the stern while under way: nobody sees through it — go in behind it, or get out. Two minutes to make more', when: (sel) => sel.some((s) => s.stats.smokeGen), on: (sel) => sel.some((s) => s.smokeUntil > s.world.time) },
   { cmd: 'holdFire', label: (g) => ([...g.commands.selected].some((s) => s.holdFire) ? 'Holding fire' : 'Hold fire'), icon: 'stop', key: 'holdFire', tip: 'Hold fire: they shoot only at what you order them to attack (or at an enemy right on top of them). Again: fire at will', when: (sel) => sel.some((s) => s.stats.damage > 0 && !s.stats.structure), on: (sel) => sel.some((s) => s.holdFire) },
   { cmd: 'sprint', label: 'Sprint', icon: 'charge', key: 'sprintOrder', tip: 'Infantry on the move runs for 10 s, then is winded (slower) for 20 s. With a mouse: give the move order twice', when: (sel) => sel.some((s) => s.usesCover && s.moveTarget && !s.stats.structure), on: (sel) => sel.some((s) => s.sprinting) },
   { cmd: 'waypoints', label: (g) => (g.commands.queueing ? 'Waypoints on' : 'Waypoints'), icon: 'place', key: 'waypoints', tip: 'Each order adds a waypoint to the route instead of replacing it (with a mouse: Shift+right-click)', when: (sel) => document.body.classList.contains('touch') && sel.some((s) => s.stats.speed > 0 && !s.stats.structure) },

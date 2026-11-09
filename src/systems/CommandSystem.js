@@ -7,6 +7,7 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { POWERS_1806 } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
@@ -265,6 +266,29 @@ export class CommandSystem {
       const s = [...this.selected].find((st) => st.alive && st.entered);
       if (!s) return this.game.bus.emit('toast', 'Select a squad in a house');
       this.game.orders.issue({ t: 'houseUpgrade', s: s.id, k: cmd.slice(6) });
+    } else if (cmd.startsWith('ship:')) { // ships: engine orders, zig-zag, formations, smoke
+      const ships = [...this.selected].filter((s) => s.alive && s.stats.naval);
+      if (!ships.length) return this.game.bus.emit('toast', 'Select ships');
+      const k = cmd.slice(5);
+      if (k === 'speed') {
+        const steps = ['slow', 'half', 'full', 'flank'];
+        const v = steps[(steps.indexOf(ships[0].shipSpeed ?? 'full') + 1) % steps.length];
+        this.game.orders.issue({ t: 'shipSpeed', s: ids(ships), v });
+        for (const s of ships) s.shipSpeed = v; // (shown at once, also on a guest's screen)
+        this.game.bus.emit('toast', `Engines: ${SHIP_SPEEDS[v].name}${v === 'slow' ? ' — quiet' : v === 'flank' ? ' — loud' : ''}`);
+      } else if (k === 'zigzag') {
+        const surface = ships.filter((s) => !s.stats.submarine);
+        const on = !surface.every((s) => s.zigzag);
+        this.game.orders.issue({ t: 'zigzag', s: ids(surface), on: on ? 1 : 0 });
+        for (const s of surface) s.zigzag = on;
+        this.game.bus.emit('toast', on ? 'Zig-zag: weaving either side of the course' : 'Steady on course');
+      } else if (k.startsWith('form:')) {
+        this.game.orders.issue({ t: 'formation', s: ids(ships), f: k.slice(5) });
+      } else if (k === 'smoke') {
+        const gens = ships.filter((s) => s.stats.smokeGen);
+        if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');
+        this.game.orders.issue({ t: 'shipSmoke', s: ids(gens) });
+      }
     } else if (cmd.startsWith('sub:')) { // a submarine's depth, or silent running
       const subs = [...this.selected].filter((s) => s.alive && s.stats.submarine);
       if (!subs.length) return this.game.bus.emit('toast', 'Select a submarine');

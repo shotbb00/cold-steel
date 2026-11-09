@@ -92,7 +92,7 @@ export default {
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-900, 0, 900] }, pact: { x: 0, z: -BASE_Z, entries: [-900, 0, 900] } },
   maxStacks: 12,
-  cameraStart: { nato: { x: 0, z: 1700 }, pact: { x: 0, z: -1700 } },
+  cameraStart: { nato: { x: 0, z: 2000 }, pact: { x: 0, z: -2000 } }, // (on the fleet as the battle opens)
   points,
 
   spawns: {

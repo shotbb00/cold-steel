@@ -152,7 +152,7 @@ export class VisibilitySystem {
     for (const o of spotters) {
       const os = o.stats;
       if ((o.depth ?? 0) > 9) { // a boat deep down sees nothing — but hears the screws of a ship under way
-        if (u.stack.stats.naval && u.moving && (u.pos.x - o.pos.x) ** 2 + (u.pos.z - o.pos.z) ** 2 < (os.hearing ?? 0) ** 2) return true;
+        if (u.stack.stats.naval && u.moving && (u.pos.x - o.pos.x) ** 2 + (u.pos.z - o.pos.z) ** 2 < ((os.hearing ?? 0) * (u.stack.noise ?? 1)) ** 2) return true; // (her engine order: slow is quiet, flank loud)
         continue;
       }
       // a sniper's scope (stats.scope: the share of that cover it sees past) finds men lying low

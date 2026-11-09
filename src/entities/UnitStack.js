@@ -62,6 +62,11 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // which one by where it struck (front: the gun, sides: the tracks, rear: the engine). Tracks the
 // crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
 const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
+// a ship's engine orders (stack.shipSpeed): the share of her top speed, and how loud her screws are to a
+// listening submarine (VisibilitySystem: the boats' `hearing` × noise)
+export const SHIP_SPEEDS = { slow: { k: 0.35, noise: 0.5, name: 'Slow' }, half: { k: 0.6, noise: 0.75, name: 'Half' }, full: { k: 1, noise: 1, name: 'Full' }, flank: { k: 1.12, noise: 1.5, name: 'Flank' } };
+const ZIGZAG = { period: 40, swing: 0.5 }; // s a leg pair, rad off the course each way
+const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
 export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 // a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
@@ -631,6 +636,14 @@ export class UnitStack {
       this.shipUpkeep(u, dt);
       if (!u.alive) return;
       maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
+      maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
+      if (!u.possessed) {
+        this.keepStation(u, dt);
+        const m = this.stationSpeed(u);
+        if (m != null) maxSpeed = Math.min(maxSpeed, m);
+        this.watchTorpedoes(u, dt);
+      }
+      this.laySmoke(u, dt);
       if (s.submarine) maxSpeed = Math.min(maxSpeed, (u.depth ?? 0) > 2 ? s.submarine.submerged : maxSpeed) * (this.silent ? 0.5 : 1); // under the surface: on the batteries (silent running: slower still)
     }
     if (u.speedMul === 0 && !this.usesCover && this.world.time - this.lastHitTime > PARTS.calm && (u.fixT = (u.fixT ?? 0) + dt) > PARTS.fix) {
@@ -638,7 +651,8 @@ export class UnitStack {
       this.services.tell(this.faction, `${this.name}: tracks mended`);
     }
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
-    const way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
+    let way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
+    if (s.naval && !u.possessed) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
     const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
     _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
     const d = way === u.dest ? _v.length() : Math.max(_v.length(), Math.min(dDest, 6)); // (no slowing down at a corner)
@@ -701,6 +715,10 @@ export class UnitStack {
   steerTo(u, dt) {
     const nav = this.world.nav;
     const dest = u.dest;
+    if (u.detour) { // a ship going round ships in her way (checkStuck), then on along her route
+      if (Math.hypot(u.detour.x - u.pos.x, u.detour.z - u.pos.z) < 80 || this.world.time > u.detour.until) { u.detour = null; u.path = null; u.navT = 0; }
+      else return u.detour;
+    }
     if (!nav || u.ghostT > 0) return dest;
     if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
       u.navT = 0.3 + Math.random() * 0.2;
@@ -721,6 +739,7 @@ export class UnitStack {
    * after STUCK.ghost such spells in a row, squeeze through (collisions off for a moment).
    */
   checkStuck(u, dt, distToDest, wantSpeed) {
+    if (this.stats.naval) return this.checkHeadway(u, dt, distToDest, wantSpeed);
     if (u.ghostT > 0) u.ghostT -= dt;
     if (distToDest < 2 || wantSpeed < 0.3) {
       u.stuckT = 0;
@@ -739,6 +758,140 @@ export class UnitStack {
     u.path = null;
     u.navT = 0;
     if (u.stuckN >= (v ? STUCK.ghostVehicle : STUCK.ghost)) u.ghostT = v ? STUCK.ghostTVehicle : STUCK.ghostT;
+  }
+
+  /** How loud her screws are (her engine order; a submarine's silent running is its own). */
+  get noise() { return SHIP_SPEEDS[this.shipSpeed]?.noise ?? 1; }
+
+  /**
+   * The way a ship steers this moment, given the way her route wants: hard round onto a torpedo track she
+   * has seen coming (u.evade, watchTorpedoes), or — ordered to zig-zag and with sea room to go — weaving
+   * ZIGZAG.swing either side of it (a torpedo aimed at where she'd be finds water).
+   */
+  shipCourse(u, way) {
+    const t = this.world.time;
+    if (u.evade) {
+      if (t < u.evade.until) return { x: u.pos.x + Math.sin(u.evade.yaw) * 400, z: u.pos.z + Math.cos(u.evade.yaw) * 400 };
+      u.evade = null;
+    }
+    if (!this.zigzag || Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z) < 300) return way;
+    const a = Math.sin((t / ZIGZAG.period) * Math.PI * 2 + this.id * 1.7) * ZIGZAG.swing;
+    const dx = way.x - u.pos.x, dz = way.z - u.pos.z;
+    const c = Math.cos(a), sn = Math.sin(a);
+    return { x: u.pos.x + dx * c + dz * sn, z: u.pos.z - dx * sn + dz * c };
+  }
+
+  /**
+   * Torpedoes she can see coming (a wake from 1 km; the wakeless Long Lance only within 200 m) that would
+   * hit her: she turns to comb the track — her bow or stern onto it, whichever is the shorter turn — and
+   * holds that till they're past.
+   */
+  watchTorpedoes(u, dt) {
+    if ((u.torpLook = (u.torpLook ?? 0) - dt) > 0) return;
+    u.torpLook = 0.5;
+    const list = this.services.game?.torpedoes?.list;
+    if (!list?.length || (u.depth ?? 0) > 3) return;
+    const half = (this.type.hull?.length ?? 100) * 0.5;
+    for (const tp of list) {
+      if (tp.faction === this.faction) continue;
+      const dx = u.pos.x - tp.x, dz = u.pos.z - tp.z;
+      const d = Math.hypot(dx, dz);
+      if (d > (tp.wakeless ? 200 : 1000)) continue;
+      const rvx = tp.dx * tp.speed - u.vel.x, rvz = tp.dz * tp.speed - u.vel.z;
+      const rv2 = rvx * rvx + rvz * rvz;
+      if (rv2 < 1) continue;
+      const tca = (dx * rvx + dz * rvz) / rv2;
+      if (tca <= 0 || tca > 70) continue;
+      if (Math.hypot(dx - rvx * tca, dz - rvz * tca) > half + 25) continue; // it misses as she goes
+      const along = Math.atan2(tp.dx, tp.dz);
+      const yaw = Math.abs(angleDelta(u.yaw, along)) < Math.PI / 2 ? along : along + Math.PI; // the shorter turn: stern or bow onto it
+      if (!u.evade) this.services.tell(this.faction, `${this.name}: torpedo tracks — turning to comb them`);
+      u.evade = { yaw, until: this.world.time + Math.min(18, tca + 6) };
+      return;
+    }
+  }
+
+  /** A ship in formation (stack.station: on a leader, an offset in his frame): her place there, a little ahead of where he is now. */
+  stationPoint() {
+    const st = this.station;
+    const lead = st && this.world.stackById(st.lead);
+    const L = lead?.alive ? lead.units[0] : null;
+    if (!L?.alive) { this.station = null; return null; }
+    const c = Math.cos(L.yaw), s = Math.sin(L.yaw);
+    return { x: L.pos.x + st.dx * c + st.dz * s + L.vel.x * 6, z: L.pos.z - st.dx * s + st.dz * c + L.vel.z * 6, lead: L };
+  }
+
+  /** Steer for her place in the formation (a fresh move order as it drifts). */
+  keepStation(u, dt) {
+    if (!this.station || (this.stationT = (this.stationT ?? 0) - dt) > 0) return;
+    this.stationT = 1.5;
+    const p = this.stationPoint();
+    if (!p) return;
+    const goal = this.world.clampToBounds({ x: p.x, z: p.z });
+    if (!this.moveTarget || Math.hypot(this.moveTarget.x - goal.x, this.moveTarget.z - goal.z) > 35) this.ai.moveTo(goal, { ordered: true, keepStation: true });
+  }
+
+  /**
+   * Near her place in the formation she matches the leader's speed (a little over, to close up); null: free.
+   * The leader herself keeps to 85 % of her slowest follower's best, so the line can form up and hold.
+   */
+  stationSpeed(u) {
+    if (!this.station) {
+      if ((this.leadT = (this.leadT ?? 0) - 1 / 30) <= 0) { // (who follows her: looked up now and then)
+        this.leadT = 2;
+        const followers = this.world.stacks.filter((s) => s.alive && s.station?.lead === this.id);
+        this.leadCap = followers.length ? Math.min(...followers.map((s) => s.stats.speed * (SHIP_SPEEDS[s.shipSpeed]?.k ?? 1))) * 0.85 : null;
+      }
+      return this.leadCap ?? null;
+    }
+    const p = this.stationPoint();
+    if (!p) return null;
+    const d = Math.hypot(p.x - u.pos.x, p.z - u.pos.z);
+    if (d > 250) return null;
+    return Math.hypot(p.lead.vel.x, p.lead.vel.z) + 0.5 + d * 0.03;
+  }
+
+  /** A destroyer or escort laying smoke (stats.smokeGen, ordered: stack.smokeUntil): clouds off her stern while she's under way. */
+  laySmoke(u, dt) {
+    if (!(this.smokeUntil > this.world.time) || (u.smokeT = (u.smokeT ?? 0) - dt) > 0) return;
+    u.smokeT = SMOKE_SHIP.every;
+    if (Math.hypot(u.vel.x, u.vel.z) < 1) return;
+    const back = (this.type.hull?.length ?? 100) * 0.5;
+    this.services.smoke?.add(u.pos.x - Math.sin(u.yaw) * back, u.pos.z - Math.cos(u.yaw) * back, { radius: SMOKE_SHIP.radius, duration: SMOKE_SHIP.last });
+  }
+
+  /**
+   * A ship making no headway (other ships across her way: the route planner doesn't see them) goes round
+   * them: a detour point ahead and out to the side with the fewer ships, in deep water.
+   */
+  checkHeadway(u, dt, distToDest, wantSpeed) {
+    if (distToDest < 60 || wantSpeed < 0.3 || u.detour) { u.stuckT = 0; u.bestD = null; return; }
+    if ((u.stuckT = (u.stuckT ?? 0) + dt) < 6) return;
+    u.stuckT = 0;
+    const gain = (u.bestD ?? Infinity) - distToDest;
+    u.bestD = distToDest;
+    if (gain > 15) return;
+    const L = this.type.hull?.length ?? 100;
+    if (distToDest < L * 1.5) return; // (a crowd at her goal: near enough — no circling off)
+    const dl = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z) || 1;
+    const fx = (u.dest.x - u.pos.x) / dl, fz = (u.dest.z - u.pos.z) / dl; // toward where she's going
+    // only for ships in the way (stuck on anything else: the route planner's business)
+    const blocked = this.world.stacks.some((st) => st !== this && st.alive && st.stats.naval && st.units.some((o) => {
+      if (!o.alive || (o.depth ?? 0) > 3) return false;
+      const ox = o.pos.x - u.pos.x, oz = o.pos.z - u.pos.z, ahead = ox * fx + oz * fz;
+      return ahead > 0 && ahead < L + 200 && Math.abs(ox * fz - oz * fx) < (L + (st.type.hull?.length ?? 100)) * 0.6;
+    }));
+    if (!blocked) return;
+    const nav = this.world.nav;
+    let best = null, bestScore = -Infinity;
+    for (const side of [-1, 1]) {
+      const p = this.world.clampToBounds({ x: u.pos.x + fx * L * 0.9 + fz * side * L * 1.1, z: u.pos.z + fz * L * 0.9 - fx * side * L * 1.1 });
+      if (nav && !nav.passable(p.x, p.z, SHIP, u.radius)) continue;
+      let score = Infinity; // the room there: to the nearest other ship
+      for (const st of this.world.stacks) if (st !== this && st.alive && st.stats.naval) score = Math.min(score, Math.hypot(st.centroid.x - p.x, st.centroid.z - p.z));
+      if (score > bestScore) { bestScore = score; best = p; }
+    }
+    if (best) { u.detour = { x: best.x, z: best.z, until: this.world.time + 45 }; u.bestD = null; }
   }
 
   /** A ship's hull into `out` as a segment stern → bow (the bow stretched `ahead` m) and half its beam. */
@@ -784,6 +937,11 @@ export class UnitStack {
         const push = ((want - d) / want) * Math.max(2, this.stats.speed * 0.6);
         out.x += nx * push;
         out.z += nz * push;
+        // and round it: along its side, the way she was heading anyway (a ship lying in the way is passed, not pushed against)
+        let tx = -nz, tz = nx;
+        if (tx * out.x + tz * out.z < 0) { tx = -tx; tz = -tz; }
+        out.x += tx * push * 1.5;
+        out.z += tz * push * 1.5;
       });
       return;
     }
@@ -857,7 +1015,7 @@ export class UnitStack {
       let nl = Math.hypot(nx, nz);
       if (nl < 1e-3) { nx = u.pos.x - o.pos.x; nz = u.pos.z - o.pos.z; nl = Math.hypot(nx, nz) || 1; }
       nx /= nl; nz /= nl;
-      const k = (min - d) * 0.5;
+      const k = (min - d) * (Math.hypot(o.vel.x, o.vel.z) > 0.3 ? 0.5 : 1); // (half each when both are under way; all of it against a ship lying still)
       u.pos.x += nx * k;
       u.pos.z += nz * k;
       const vn = u.vel.x * nx + u.vel.z * nz;
