@@ -133,12 +133,16 @@ export function sprite(view, o) {
   mesh.isPickable = false;
   mesh.alphaIndex = 4;
   const tm = o.material;
+  const glow = tm.blending === 2;
   let mat = view.spriteMaterials.get(tm);
   if (!mat) {
     mat = new StandardMaterial(`spriteMat${tm.id}`, scene);
     mat.disableLighting = true;
     mat.backFaceCulling = false;
     mat.disableDepthWrite = true;
+    // unlit, so all of it is emissive: a glow (additive: flares, fire light) is its colour plus the texture, as
+    // bright as it gets; a plain see-through billboard (rain squalls) is the texture scaled by its colour's
+    // brightness (Three multiplies; exact for a grey tint)
     if (tm.map) {
       mat.emissiveTexture = view.texture(tm.map);
       mat.opacityTexture = mat.emissiveTexture;
@@ -155,7 +159,8 @@ export function sprite(view, o) {
       const w = o.matrixWorld.elements;
       mesh.position.set(w[12], w[13], w[14]);
       mesh.scaling.set(o.scale.x, o.scale.y, 1);
-      mat.emissiveColor.set(tm.color.r, tm.color.g, tm.color.b);
+      if (glow || !mat.emissiveTexture) mat.emissiveColor.set(tm.color.r, tm.color.g, tm.color.b);
+      else { mat.emissiveColor.set(0, 0, 0); mat.emissiveTexture.level = Math.max(tm.color.r, tm.color.g, tm.color.b); }
       mat.alpha = tm.opacity ?? 1;
     },
   };

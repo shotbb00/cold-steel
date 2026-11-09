@@ -40,7 +40,7 @@ export class Squalls {
       const cc = document.createElement('canvas');
       cc.width = 64; cc.height = 128;
       cc.getContext('2d').drawImage(c, 0, 0);
-      return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cc), color: 0x000000, transparent: true, opacity: 0.55, depthWrite: false }); // (black: the Babylon renderer adds the texture to the colour — render/babylon/extras.js sprite)
+      return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cc), transparent: true, opacity: 0.55, depthWrite: false });
     };
     this.mats = { day: make(112, 122, 130), night: make(24, 30, 36) };
     this.mat = this.mats[game.conditions?.night ? 'night' : 'day'];
