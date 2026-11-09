@@ -6,6 +6,9 @@
 // the symbol that fills as they load and flashes as they fire. Rank stars sit under the symbol,
 // LT marks a platoon leader, a cross or a wrench a stack being treated or repaired. The AI's state
 // and morale in words are in the selection panel (ui/HUD.js).
+// Your damaged ships carry a damage-control strip under the tag (in the fight, by the ship, not in a
+// panel): where her parties go first — the pumps, the fire, the repairs — each showing how bad it is,
+// and counter-flood when she lists. Click the lit one again: all alike.
 import * as THREE from 'three';
 import { RANKS } from '../entities/UnitStack.js';
 
@@ -73,7 +76,7 @@ export function callsign(stack) {
   const name = stack.name;
   if (callsignCache.has(name)) return callsignCache.get(name);
   const num = name.match(/\s(\d+)$/)?.[1] ?? '';
-  let base = num ? name.slice(0, -num.length).trim() : name;
+  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^USS /, ''); // (a warship: her name)
   const cls = base.match(/^(\S+?)-class\b/);
   if (cls) base = cls[1];
   else {
@@ -120,7 +123,8 @@ export class StackLabels {
     el.className = `stack-label ${side}`;
     el.innerHTML = '<div class="sl-row"><span class="sl-sym"><i class="sl-ring"></i><span class="sl-glyph"></span><i class="sl-rank"></i></span>'
       + '<span class="sl-name"></span><span class="sl-count"></span><span class="sl-off" title="Platoon leader"></span><span class="sl-care"></span><span class="sl-chips"></span></div>'
-      + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div>';
+      + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div>'
+      + (stack.stats.naval && side !== 'enemy' ? '<div class="sl-dc" hidden></div>' : '');
     el.querySelector('.sl-glyph').innerHTML = symbol(signOf(stack), side === 'enemy');
     el.querySelector('.sl-name').textContent = callsign(stack);
     el.title = stack.name;
@@ -136,6 +140,7 @@ export class StackLabels {
       sup: el.querySelector('.sl-sup i'),
       care: el.querySelector('.sl-care'),
       chips: el.querySelector('.sl-chips'),
+      dc: el.querySelector('.sl-dc'),
       cycle: 0,          // the reload's length, measured: the countdown's value when it last jumped back up
       lastLeft: 0,
       fired: 0,          // until when the ring flashes
@@ -226,10 +231,51 @@ export class StackLabels {
       const flash = item.fired > now;
       this.set(item, 'fire', flash, () => item.sym.classList.toggle('fire', flash));
 
+      if (item.dc) this.drawDamageControl(stack, item);
+
       this.set(item, 'auto', !!stack.autonomous, () => item.el.classList.toggle('wave', !!stack.autonomous));
       const sel = commands.selected.has(stack);
       this.set(item, 'sel', sel, () => item.el.classList.toggle('selected', sel));
     }
+  }
+
+  /** A damaged ship of yours: the damage-control buttons under her tag (Orders damageControl). */
+  drawDamageControl(stack, item) {
+    const u = stack.units[0];
+    if (!u?.alive || !this.game.mine(stack)) return this.set(item, 'dc', '', () => (item.dc.hidden = true));
+    const now = this.game.world.time;
+    const flood = (u.leak ?? 0) > 0 || (u.flood ?? 0) > 0.03 ? Math.round((u.flood ?? 0) * 100) : -1;
+    const fire = (u.blaze ?? 0) > 0.02 ? Math.round(u.blaze * 100) : -1;
+    const broken = (u.engineHit ? 1 : 0) + (u.rudderHit > now ? 1 : 0) + (u.bridgeHit > now ? 1 : 0) + (u.mounts ?? []).filter((m) => m.out).length;
+    const list = Math.abs(u.list ?? 0) > 0.03 && u.counterK == null;
+    const key = `${flood}|${fire}|${broken}|${list}|${u.dc ?? ''}`;
+    this.set(item, 'dc', key, () => {
+      const any = flood >= 0 || fire >= 0 || broken > 0 || list;
+      item.dc.hidden = !any;
+      if (!any) return;
+      const btn = (p, label, value, tip) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `sl-dc-b${u.dc === p ? ' on' : ''}`;
+        b.innerHTML = `${label}<i>${value}</i>`;
+        b.title = tip;
+        b.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const next = p === 'counter' ? u.dc : u.dc === p ? null : p; // (the lit one again: all alike)
+          this.game.orders.issue({ t: 'damageControl', s: [stack.id], p: p === 'counter' ? p : next ?? 'auto' });
+          u.dc = next; // (shown at once, also on a guest's screen)
+          item.last.dc = null;
+        });
+        return b;
+      };
+      const parts = [];
+      if (flood >= 0) parts.push(btn('flood', 'Pumps', `${flood}%`, 'Damage control on the flooding first: plug the holes, pump her out'));
+      if (fire >= 0) parts.push(btn('fire', 'Fire', `${fire}%`, 'Every hose on the fire: even a big one dies down'));
+      if (broken > 0) parts.push(btn('repair', 'Repair', `${broken}`, 'The repair parties first: engines, rudder, bridge, the guns'));
+      if (list) parts.push(btn('counter', 'Counter-flood', '', 'Flood her other side: she comes upright and shoots straight again — at the price of more water in her'));
+      item.dc.replaceChildren(...parts);
+    });
   }
 
   /** Only touch the DOM when a value actually changed. */

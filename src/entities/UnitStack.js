@@ -67,6 +67,13 @@ const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
 export const SHIP_SPEEDS = { slow: { k: 0.35, noise: 0.5, name: 'Slow' }, half: { k: 0.6, noise: 0.75, name: 'Half' }, full: { k: 1, noise: 1, name: 'Full' }, flank: { k: 1.12, noise: 1.5, name: 'Flank' } };
 const ZIGZAG = { period: 40, swing: 0.5 }; // s a leg pair, rad off the course each way
 const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
+// gunnery at sea (UnitStack.fireControl): a firing solution builds over SOLUTION s of shooting at one target
+// (radar-directed US guns faster); until then the shells fall long or short, up to RANGE_ERR of the range,
+// walking onto her; her sharp turns and changes of speed spoil it
+const SOLUTION = { nato: 14, pact: 22 };
+const DC_FOCUS = 2.2; // damage control where the captain puts it (UnitStack.shipUpkeep)…
+const DC_ELSE = 0.55; // …and everywhere else meanwhile
+const RANGE_ERR = 0.07;
 export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 // a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
@@ -113,6 +120,18 @@ function segClosest(a, b, out) {
 
 let nextId = 1;
 
+/** A warship's own name (type.names per side, data/units45/ships.js): the class's next one not yet afloat in this battle. */
+function shipName(type, faction, world) {
+  const list = type.names?.[faction];
+  if (!list?.length) return null;
+  const used = (world.shipNames ??= new Map());
+  const key = `${type.id}:${faction}`;
+  const i = used.get(key) ?? 0;
+  used.set(key, i + 1);
+  const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
+  return faction === 'nato' ? `USS ${n}` : n;
+}
+
 export class UnitStack {
   /**
    * @param {object} o
@@ -138,7 +157,7 @@ export class UnitStack {
     if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
-    this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
+    this.name = name ?? shipName(type, faction, services.world ?? {}) ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it; a warship her own)
     this.services = services;
     this.world = services.world;
 
@@ -1989,11 +2008,17 @@ export class UnitStack {
         this.services.game?.torpedoes?.launch(this, _p, t, m);
         continue;
       }
-      // the shell: led onto where the target will be, spread growing with the range
+      // the shell: led onto where the target will be, off by what the firing solution hasn't got yet, spread growing with the range
       _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
       if (t.vel) _v.addScaledVector(t.vel, d / m.shell);
+      const fc = this.fireControl(u, t);
+      const lx = (t.pos.x - u.pos.x) / (d || 1), lz = (t.pos.z - u.pos.z) / (d || 1);
+      const long = (1 - fc.q) * RANGE_ERR * d * Math.sin(fc.n * 2.3 + this.id);       // long or short
+      const wide = (1 - fc.q) * RANGE_ERR * 0.2 * d * Math.cos(fc.n * 1.7 + this.id); // left or right
+      _v.x += lx * long + lz * wide;
+      _v.z += lz * long - lx * wide;
       _w.subVectors(_v, _p).normalize();
-      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank);
+      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank) * (1 + Math.abs(u.list ?? 0) * 4); // (a list throws the guns off: counter-flood)
       _w.x += (Math.random() - 0.5) * spread * 2;
       _w.y += (Math.random() - 0.5) * spread * 0.6;
       _w.z += (Math.random() - 0.5) * spread * 2;
@@ -2007,6 +2032,25 @@ export class UnitStack {
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
     }
+  }
+
+  /**
+   * The firing solution on target unit `t` (ranging, at sea): from nothing when the guns turn on her, better
+   * with every second of shooting (SOLUTION), halved when she turns hard or changes speed, worn by our own
+   * hard turning. A straddle the first time it's good: the gunnery officer says so.
+   */
+  fireControl(u, t) {
+    const now = this.world.time;
+    const tv = Math.hypot(t.vel?.x ?? 0, t.vel?.z ?? 0);
+    let fc = u.fc;
+    if (!fc || fc.t !== t) fc = u.fc = { t, q: 0, yaw: t.yaw ?? 0, v: tv, n: 0, last: now, straddle: false };
+    if (Math.abs(angleDelta(fc.yaw, t.yaw ?? 0)) > 0.25 || Math.abs(tv - fc.v) > 3) { fc.q *= 0.5; fc.yaw = t.yaw ?? 0; fc.v = tv; }
+    if (Math.abs(u.turning ?? 0) > 0.5) fc.q *= 0.97;
+    fc.q = Math.min(1, fc.q + (now - fc.last) / (SOLUTION[this.faction] ?? 18));
+    fc.last = now;
+    fc.n++;
+    if (fc.q >= 0.75 && !fc.straddle) { fc.straddle = true; this.bark(u, 'straddle', 1, true); }
+    return fc;
   }
 
   /**
@@ -2062,13 +2106,20 @@ export class UnitStack {
    */
   shipUpkeep(u, dt) {
     const now = this.world.time;
+    // damage control (u.dc, ordered from her tag: ui/StackLabels.js): its parties where the captain wants them —
+    // the pumps, the fire, the repairs — work DC_FOCUS faster there and DC_ELSE as fast everywhere else
+    const dc = (k) => (!u.dc ? 1 : u.dc === k ? DC_FOCUS : DC_ELSE);
     if (u.leak > 0) {
       u.flood = (u.flood ?? 0) + u.leak * dt;
-      u.leak = Math.max(0, u.leak - dt * 0.00045);   // damage control: the holes get plugged, one by one
-    } else if (u.flood > 0) u.flood = Math.max(0, u.flood - dt * 0.002); // …and pumped out
+      u.leak = Math.max(0, u.leak - dt * 0.00045 * dc('flood'));   // damage control: the holes get plugged, one by one
+    } else if (u.flood > 0) u.flood = Math.max(0, u.flood - dt * 0.002 * dc('flood')); // …and pumped out
+    for (const k of ['engineFix', 'rudderHit', 'bridgeHit']) if (u[k] > now) u[k] -= dt * (dc('repair') - 1); // (the repair parties: sooner, or later)
+    for (const m of u.mounts ?? []) if (m.out && Number.isFinite(m.fixAt)) m.fixAt -= dt * (dc('repair') - 1);
+    if (u.counterK != null && u.counterK < 1) u.counterK = Math.min(1, u.counterK + dt / 12); // counter-flooding: she comes upright over 12 s
     if (u.blaze > 0) {
       u.hp -= u.blaze * u.maxHp * 0.0025 * dt;
-      u.blaze = Math.min(1, Math.max(0, u.blaze + (u.blaze > 0.65 ? 0.008 : -0.02) * dt)); // a small fire is put out, a big one spreads
+      const burn = u.dc === 'fire' ? -0.03 : u.blaze > 0.65 ? 0.008 : -0.02 * dc('fire'); // a small fire is put out, a big one spreads — unless every hose is on it
+      u.blaze = Math.min(1, Math.max(0, u.blaze + burn * dt));
       if ((u.burnFx = (u.burnFx ?? 0) - dt) <= 0) {
         u.burnFx = 6;
         this.services.effects.burn({ x: u.pos.x, y: u.pos.y + 6, z: u.pos.z }, 8, 0.8 + u.blaze * 1.5);
@@ -2093,7 +2144,7 @@ export class UnitStack {
     for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;
     const f = u.flood ?? 0;
     u.listSide ??= Math.random() < 0.5 ? -1 : 1;
-    u.list = f * 0.22 * u.listSide;
+    u.list = f * 0.22 * u.listSide * (1 - (u.counterK ?? 0));
     u.trim = f * 0.03;
     u.sink = f * 2.5;
     if (f >= 1 || u.hp <= 0) this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1); // (no more buoyancy: she goes down)
@@ -2377,7 +2428,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind, this.army);
+    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' ? 'ijn' : this.army); // (at sea the other side is the Imperial Navy: Japanese)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

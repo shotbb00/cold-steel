@@ -118,6 +118,10 @@ export class SeaDirector {
         if (d(b.centroid) > 1200) this.move(s, b.centroid.x, b.centroid.z);
         continue;
       }
+      // damage control where it's worst: a big fire first, then the flooding, else repairs; a bad list is counter-flooded
+      const want = (u.blaze ?? 0) > 0.4 ? 'fire' : (u.flood ?? 0) > 0.3 || (u.leak ?? 0) > 0.004 ? 'flood' : u.engineHit || u.rudderHit > g.world.time ? 'repair' : 'auto';
+      if ((u.dc ?? 'auto') !== want) g.orders.run(this.faction, { t: 'damageControl', s: [s.id], p: want }, 'ai');
+      if (Math.abs(u.list ?? 0) > 0.08 && u.counterK == null) g.orders.run(this.faction, { t: 'damageControl', s: [s.id], p: 'counter' }, 'ai');
       // badly hurt in sight of the enemy: a destroyer or escort hides behind her own smoke
       if (s.stats.smokeGen && s.hpRatio < 0.5 && u.target && !(s.smokeReady > g.world.time)) g.orders.run(this.faction, { t: 'shipSmoke', s: [s.id] }, 'ai');
       // cruising to a far objective: zig-zag (a submarine's torpedo finds water); in a fight: steady, the guns need it

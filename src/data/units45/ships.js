@@ -44,6 +44,7 @@ const DD_JP = { range: 2400, reload: 4.5, damage: 440, splash: 4.5, pierce: 0.3 
 
 export const frigate = ship({
   id: 'frigate', name: 'Escort', shortName: 'Escort', cost: 280,
+  names: { nato: ['Buckley', 'Reuben James', 'England', 'Fogg', 'Foss', 'Gantner', 'Lee Fox', 'Amesbury', 'Bates', 'Blessman', 'Ira Jeffery', 'Fechteler'], pact: ['Etorofu', 'Matsuwa', 'Sado', 'Oki', 'Mutsure', 'Iki', 'Tsushima', 'Wakamiya', 'Hirado', 'Fukae', 'Amakusa', 'Kasado'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 93, beam: 11 },
   stats: { hp: 2600, armor: 0.1, speed: 11.5, accel: 0.15, turnRate: 0.12, turretRate: 0.6, radius: 6, height: 8, sight: 2200, sonar: 950, depthCharges: DC({ count: 6, reload: 14 }), smokeGen: SMOKE_GEN, ...AA(600, 0.12, 0.03), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 160, fireCooldown: 3, spread: 0.012, boltSpeed: 850, boltSize: 1.4, splash: 3, pierce: 0.2 },
   mounts: {
@@ -60,6 +61,7 @@ export const frigate = ship({
 
 export const destroyer = ship({
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 450,
+  names: { nato: ['Johnston', 'Hoel', 'Heermann', 'Fletcher', "O'Bannon", 'Nicholas', 'Kidd', 'The Sullivans', 'Laffey', 'Aaron Ward', 'Spence', 'Charles Ausburne', 'Radford', 'Jenkins', 'Hazelwood', 'Strong'], pact: ['Yukikaze', 'Shiranui', 'Kagerō', 'Kuroshio', 'Oyashio', 'Hatsukaze', 'Natsushio', 'Amatsukaze', 'Tokitsukaze', 'Urakaze', 'Isokaze', 'Hamakaze', 'Tanikaze', 'Nowaki', 'Arashi', 'Maikaze'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 115, beam: 12 },
   stats: { hp: 4200, armor: 0.2, speed: 16, accel: 0.12, turnRate: 0.09, turretRate: 0.5, radius: 7, height: 10, sight: 2600, sonar: 800, depthCharges: DC(), smokeGen: SMOKE_GEN, ...AA(700, 0.18, 0.04), range: 2400, aggroRange: 2400, preferredRange: 1600, leash: 60, damage: 220, fireCooldown: 3.5, spread: 0.012, boltSpeed: 900, boltSize: 1.8, splash: 4, pierce: 0.3 },
   mounts: {
@@ -81,6 +83,7 @@ const TWENTY_CM = { range: 3000, reload: 10, damage: 560, splash: 7, pierce: 0.5
 
 export const cruiser = ship({
   id: 'cruiser', name: 'Heavy Cruiser', shortName: 'Cruiser', cost: 750, limit: 3,
+  names: { nato: ['Baltimore', 'Boston', 'Canberra', 'Quincy', 'Pittsburgh', 'Saint Paul', 'Columbus', 'Helena'], pact: ['Takao', 'Atago', 'Maya', 'Chōkai'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 205, beam: 21 },
   stats: { hp: 11000, armor: 0.45, speed: 15, accel: 0.08, turnRate: 0.065, turretRate: 0.3, radius: 10, height: 16, sight: 3000, ...AA(850, 0.26, 0.06), range: 3000, aggroRange: 3000, preferredRange: 2200, leash: 80, damage: 700, fireCooldown: 9, spread: 0.009, boltSpeed: 950, boltSize: 2.6, splash: 7, pierce: 0.55 },
   mounts: {
@@ -102,6 +105,7 @@ const SECONDARY = (at, facing) => gun(at, facing, { range: 2200, reload: 4, dama
 
 export const battleship = ship({
   id: 'battleship', name: 'Battleship', shortName: 'Battleship', cost: 1300, limit: 1,
+  names: { nato: ['Iowa', 'New Jersey', 'Missouri', 'Wisconsin'], pact: ['Yamato', 'Musashi'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 262, beam: 33 },
   stats: { hp: 26000, armor: 0.7, speed: 15, accel: 0.06, turnRate: 0.05, turretRate: 0.2, radius: 14, height: 30, sight: 3600, ...AA(950, 0.32, 0.07), range: 4000, aggroRange: 4000, preferredRange: 3000, leash: 100, damage: 2400, fireCooldown: 30, spread: 0.008, boltSpeed: 1000, boltSize: 4, splash: 12, pierce: 0.8 },
   factionStats: { pact: { hp: 30000, armor: 0.75, speed: 13.5 } },   // Yamato: the heaviest armour afloat, slower
@@ -121,6 +125,7 @@ const TUBES = (at, facing, o) => torps(at, { facing, arc: 0.9, ...o }); // a sub
 
 export const submarine = ship({
   id: 'submarine', name: 'Submarine', shortName: 'Submarine', cost: 500, limit: 2,
+  names: { nato: ['Wahoo', 'Barb', 'Flasher', 'Harder', 'Silversides', 'Gato', 'Growler', 'Guardfish', 'Trigger', 'Bonefish'], pact: ['I-19', 'I-26', 'I-17', 'I-15', 'I-21', 'I-23', 'I-25', 'I-27', 'I-28', 'I-29'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 95, beam: 8.3 },
   stats: {
     submarine: { submerged: 4.2, dive: 1.4, periscope: 6, deep: 40 }, hp: 2400, armor: 0.1, speed: 10, accel: 0.1, turnRate: 0.11, turretRate: 0.6, radius: 5, height: 6, eyeHeight: 8,
@@ -140,6 +145,7 @@ export const submarine = ship({
 
 export const carrier = ship({
   id: 'carrier', name: 'Aircraft Carrier', shortName: 'Carrier', cost: 1200, limit: 1,
+  names: { nato: ['Essex', 'Yorktown', 'Intrepid', 'Hornet', 'Franklin', 'Lexington', 'Bunker Hill', 'Wasp'], pact: ['Shōkaku', 'Zuikaku'] }, // her own name, the class's next not yet afloat (UnitStack shipName)
   hull: { length: 267, beam: 28 },
   stats: {
     carrier: true,   // its side's carrier missions launch from its deck (systems/AirStrike.js: the sea kinds)

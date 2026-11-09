@@ -9,6 +9,24 @@
 // Only what the player can see leaves foam (an unseen ship's wake would give her away).
 const TICK = 0.125;
 
+/** Foam stamped straight into a sea's grid (a shell's splash, a burst): radius `r` m, `v` 0…255 at its middle. */
+export function stampFoam(f, x, z, r, v) {
+  const k = f.n * f.box.z;
+  const cx = (x - f.box.x) * k - 0.5;
+  const cz = (z - f.box.y) * k - 0.5;
+  const rr = Math.max(0.8, r * k);
+  const d = f.data;
+  for (let j = Math.max(0, Math.floor(cz - rr)); j <= Math.min(f.n - 1, Math.ceil(cz + rr)); j++) {
+    for (let i = Math.max(0, Math.floor(cx - rr)); i <= Math.min(f.n - 1, Math.ceil(cx + rr)); i++) {
+      const q = ((i - cx) ** 2 + (j - cz) ** 2) / (rr * rr);
+      if (q >= 1) continue;
+      const w = v * (1 - q);
+      const idx = j * f.n + i;
+      if (w > d[idx]) d[idx] = w;
+    }
+  }
+}
+
 export class SeaFoam {
   constructor(game, sea) {
     this.game = game;
@@ -61,23 +79,7 @@ export class SeaFoam {
   }
 
   /** A soft disc of foam: radius `r` m, `v` (0…255) at its middle. */
-  stamp(x, z, r, v) {
-    const f = this.f;
-    const k = f.n * f.box.z;           // texels per metre
-    const cx = (x - f.box.x) * k - 0.5;
-    const cz = (z - f.box.y) * k - 0.5;
-    const rr = Math.max(0.8, r * k);
-    const d = f.data;
-    for (let j = Math.max(0, Math.floor(cz - rr)); j <= Math.min(f.n - 1, Math.ceil(cz + rr)); j++) {
-      for (let i = Math.max(0, Math.floor(cx - rr)); i <= Math.min(f.n - 1, Math.ceil(cx + rr)); i++) {
-        const q = ((i - cx) ** 2 + (j - cz) ** 2) / (rr * rr);
-        if (q >= 1) continue;
-        const w = v * (1 - q);
-        const idx = j * f.n + i;
-        if (w > d[idx]) d[idx] = w;
-      }
-    }
-  }
+  stamp(x, z, r, v) { stampFoam(this.f, x, z, r, v); }
 
   /** Foam all along a→b. */
   line(ax, az, bx, bz, r, v) {

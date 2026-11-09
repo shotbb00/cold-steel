@@ -8,6 +8,7 @@
 // craters in the terrain.
 // `cosmetic` (a multiplayer client): rounds fly, strike and burst exactly the same, but hurt and
 // rattle nobody — the host decides hits, and its snapshots carry the result.
+import { stampFoam } from '../world/SeaFoam.js';
 import * as THREE from 'three';
 import { enemyOf } from '../data/factions.js';
 
@@ -168,7 +169,10 @@ export class ProjectileSystem {
           const gy = Math.max(ground, sea);
           if (b.pos.y <= gy && gy === sea && ground < sea) {
             b.pos.y = sea;
-            this.effects.waterSplash?.(b.pos, Math.max(0.4, (b.splash || 1) / 4));
+            if ((b.splash || 0) >= 3) { // a warship's shell: the tall column, and its foam on the water
+              this.effects.shellSplash?.(b.pos, b.splash);
+              if (this.world.river.foam) stampFoam(this.world.river.foam, b.pos.x, b.pos.z, 6 + b.splash * 1.5, 230);
+            } else this.effects.waterSplash?.(b.pos, Math.max(0.4, (b.splash || 1) / 4));
             if (b.splash) this.detonate(b, b.pos, null, false, true);
             dead = true;
           } else if (b.pos.y <= gy) {

@@ -21,6 +21,7 @@
 //   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
 //   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
 //   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
+//   { t: 'damageControl', s: [ids], p }          (ships: 'flood' / 'fire' / 'repair' first, 'auto' all alike, 'counter' counter-flood the list)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
@@ -148,6 +149,20 @@ export class Orders {
         g.tell(faction, `${lead.name} leads: ${{ ahead: 'line ahead', abreast: 'line abreast', screen: 'the screen closes round her' }[cmd.f] ?? cmd.f}`);
         return null;
       }
+      case 'damageControl': // where a ship's damage control parties go first (UnitStack.shipUpkeep); counter-flooding rights a list
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.naval) continue;
+          for (const u of s.units) {
+            if (!u.alive) continue;
+            if (cmd.p === 'counter') {
+              if (Math.abs(u.list ?? 0) < 0.02 || u.counterK != null) continue;
+              u.counterK = 0;
+              u.flood = (u.flood ?? 0) + 0.05; // (the price: water let in on the other side)
+              g.tell(faction, `${s.name}: counter-flooding — coming upright`);
+            } else u.dc = cmd.p === 'auto' ? null : cmd.p;
+          }
+        }
+        return null;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {
           const sg = s.stats.smokeGen;
