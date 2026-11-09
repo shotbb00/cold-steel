@@ -25,6 +25,8 @@ import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
 import { barkLine } from '../data/barks.js';
+/** What a ship's crew calls out instead of the soldiers' lines (data/barks.js); the rest it doesn't. */
+const SHIP_BARK = { hit: 'shipHit', wounded: 'shipBad', contact: 'shipContact', straddle: 'straddle' };
 import { angleDelta, clamp, dist2DSq } from '../core/math.js';
 import { Unit } from './Unit.js';
 import { KITS } from '../data/kits.js';
@@ -2464,6 +2466,7 @@ export class UnitStack {
   // ------------------------------------------------------------------ voice
 
   bark(u, kind, chance = 1, priority = false) {
+    if (this.stats.naval) { kind = SHIP_BARK[kind]; if (!kind) return; } // (a ship's crew: no legs, medics or magazines)
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
