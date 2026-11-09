@@ -21,6 +21,7 @@
 //   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
 //   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
 //   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
+//   { t: 'searchlight', s: [ids], on }           (ships at night: light the target up — and show yourself)
 //   { t: 'damageControl', s: [ids], p }          (ships: 'flood' / 'fire' / 'repair' first, 'auto' all alike, 'counter' counter-flood the list)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
@@ -162,6 +163,9 @@ export class Orders {
             } else u.dc = cmd.p === 'auto' ? null : cmd.p;
           }
         }
+        return null;
+      case 'searchlight': // ships at night: the beam on the target — she lights it up for everyone, and shows herself
+        for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.searchlight = !!cmd.on;
         return null;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {
@@ -308,6 +312,17 @@ export class Orders {
           const d = Math.hypot(cmd.x - s.centroid.x, cmd.z - s.centroid.z);
           const range = s.unitStats(0).range;
           if (d > range) { g.tell(faction, `${s.name}: out of range (${range} m)`); continue; }
+          if (s.stats.naval) { // a ship's star shell: from a 5-inch gun, it bursts high over the spot after its flight and lights the sea far round
+            const u = s.units.find((v) => v.alive);
+            if (!u) continue;
+            s.flareRounds--;
+            s.starAt = g.world.time;
+            g.flares.later(d / 700, cmd.x, 260, cmd.z, { radius: 450 });
+            g.effects.muzzle({ x: u.pos.x, y: u.pos.y + 8, z: u.pos.z }, { x: cmd.x - u.pos.x, y: 0.6 * d, z: cmd.z - u.pos.z }, 1.4, 'artillery');
+            g.audio?.weapon(s.faction, 'cannon', u.pos);
+            g.tell(faction, `${s.name}: star shell (${s.flareRounds} left)`);
+            return null;
+          }
           s.ai.halt();
           s.smokeOrder = { x: cmd.x, z: cmd.z, left: 1, kind: 'flare' };
           for (const u of s.units) u.retarget = 0;

@@ -122,6 +122,14 @@ export class SeaDirector {
       const want = (u.blaze ?? 0) > 0.4 ? 'fire' : (u.flood ?? 0) > 0.3 || (u.leak ?? 0) > 0.004 ? 'flood' : u.engineHit || u.rudderHit > g.world.time ? 'repair' : 'auto';
       if ((u.dc ?? 'auto') !== want) g.orders.run(this.faction, { t: 'damageControl', s: [s.id], p: want }, 'ai');
       if (Math.abs(u.list ?? 0) > 0.08 && u.counterK == null) g.orders.run(this.faction, { t: 'damageControl', s: [s.id], p: 'counter' }, 'ai');
+      // at night: a star shell over her target if nothing lights it; the Imperial Navy's ships now and then put a searchlight on it
+      if (night && u.target && s.flareRounds > 0 && !(s.starAt > g.world.time - 35) && !g.flares?.lit(u.target.pos.x, u.target.pos.z)) {
+        g.orders.run(this.faction, { t: 'flare', s: [s.id], x: Math.round(u.target.pos.x), z: Math.round(u.target.pos.z) }, 'ai');
+      }
+      if (night && this.faction === 'pact' && !s.stats.submarine) {
+        const shine = !!u.target && d(u.target.pos) < 1800 && s.id % 3 === 0;
+        if (!!s.searchlight !== shine) g.orders.run(this.faction, { t: 'searchlight', s: [s.id], on: shine ? 1 : 0 }, 'ai');
+      }
       // badly hurt in sight of the enemy: a destroyer or escort hides behind her own smoke
       if (s.stats.smokeGen && s.hpRatio < 0.5 && u.target && !(s.smokeReady > g.world.time)) g.orders.run(this.faction, { t: 'shipSmoke', s: [s.id] }, 'ai');
       // cruising to a far objective: zig-zag (a submarine's torpedo finds water); in a fight: steady, the guns need it

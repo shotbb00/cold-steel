@@ -71,6 +71,7 @@ const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
 // (radar-directed US guns faster); until then the shells fall long or short, up to RANGE_ERR of the range,
 // walking onto her; her sharp turns and changes of speed spoil it
 const SOLUTION = { nato: 14, pact: 22 };
+const SEARCHLIGHT = 2200; // m a ship's searchlight reaches at night
 const DC_FOCUS = 2.2; // damage control where the captain puts it (UnitStack.shipUpkeep)…
 const DC_ELSE = 0.55; // …and everywhere else meanwhile
 const RANGE_ERR = 0.07;
@@ -1984,6 +1985,7 @@ export class UnitStack {
     }
     const t = u.target;
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
+    this.shine(u, t);
     if (!t) return;
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
     const depth = u.depth ?? 0;
@@ -2018,7 +2020,7 @@ export class UnitStack {
       _v.x += lx * long + lz * wide;
       _v.z += lz * long - lx * wide;
       _w.subVectors(_v, _p).normalize();
-      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank) * (1 + Math.abs(u.list ?? 0) * 4); // (a list throws the guns off: counter-flood)
+      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank) * (1 + Math.abs(u.list ?? 0) * 4) * (this.services.game?.seaState ?? 1); // (a list throws the guns off: counter-flood; a rough sea too)
       _w.x += (Math.random() - 0.5) * spread * 2;
       _w.y += (Math.random() - 0.5) * spread * 0.6;
       _w.z += (Math.random() - 0.5) * spread * 2;
@@ -2031,6 +2033,25 @@ export class UnitStack {
       this.services.audio?.weapon(this.faction, m.damage > 1000 ? 'artillery' : this.weaponSound, _p);
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /**
+   * A ship's searchlight at night (stack.searchlight): on her target within SEARCHLIGHT m — lit up as by day for
+   * everyone (locatedUntil: VisibilitySystem.isSeen) — and on herself as much: the beam shows where she is.
+   * With no target it sweeps ahead. u.lightOn: what systems/Searchlights.js draws the beam to.
+   */
+  shine(u, t) {
+    const g = this.services.game;
+    if (!this.searchlight || !g?.conditions?.night || (u.depth ?? 0) > 1) { u.lightOn = null; return; }
+    const now = this.world.time;
+    u.locatedUntil = Math.max(u.locatedUntil ?? 0, now + 0.6);
+    if (t && dist2DSq(u.pos, t.pos) < SEARCHLIGHT * SEARCHLIGHT) {
+      t.locatedUntil = Math.max(t.locatedUntil ?? 0, now + 0.6);
+      u.lightOn = t.pos;
+    } else {
+      const a = u.yaw + Math.sin(now * 0.4 + this.id) * 0.9;
+      u.lightOn = { x: u.pos.x + Math.sin(a) * 900, y: 0, z: u.pos.z + Math.cos(a) * 900 };
     }
   }
 
@@ -2131,6 +2152,7 @@ export class UnitStack {
         return;
       }
     }
+    u.seaK = this.services.game?.seaState ?? 1; // (how she rolls and pitches: data/models/ships1945.js)
     const sm = u.stats.submarine;
     if (sm) { // dive or come up toward the ordered depth (never below the sea floor); badly holed, she has to surface
       u.depthMode ??= 'periscope';

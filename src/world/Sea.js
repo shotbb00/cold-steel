@@ -14,6 +14,8 @@ import { NOISE } from '../render/paint.js';
 
 /** The waves' clock: read every frame by both renderers. */
 export const SEA_TIME = { get value() { return (performance.now() / 1000) % 20000; } };
+/** How rough the sea runs (GameEngine.seaState, from the weather): the waves' height, the whitecaps. */
+export const SEA_STATE = { value: 1 };
 
 const f = (v) => v.toFixed(4);
 /** The water's GLSL (needs paint.js NOISE): seaHeight(p, t) in metres, seaColor(depth, p, t) → linear rgb, alpha. */
@@ -25,8 +27,8 @@ export function waterGlsl(deep) {
   float seaHeight(vec2 p, float t, float dist) {
     float far = 1.0 - smoothstep(160.0, 900.0, dist);
     float mid = 1.0 - smoothstep(600.0, 3000.0, dist);
-    float h = pNoise(vec3(p * 0.011 + vec2(0.012, 0.008) * t, t * 0.03)) * 4.0;        // the swell
-    h += pNoise(vec3(p * 0.043 + vec2(-0.02, 0.035) * t, t * 0.07 + 1.7)) * 1.4 * mid;  // a cross sea
+    float h = pNoise(vec3(p * 0.011 + vec2(0.012, 0.008) * t, t * 0.03)) * 4.0 * uSeaState;        // the swell
+    h += pNoise(vec3(p * 0.043 + vec2(-0.02, 0.035) * t, t * 0.07 + 1.7)) * 1.4 * mid * uSeaState;  // a cross sea
     h += (pNoise(vec3(p * 0.17 + vec2(0.07, -0.05) * t, t * 0.2 + 3.1)) * 0.4
         + pNoise(vec3(p * 0.6 - vec2(0.15, 0.22) * t, t * 0.5 + 5.3)) * 0.1) * far;   // chop
     return h;
@@ -43,7 +45,7 @@ export function waterGlsl(deep) {
     float n = pNoise(vec3(p * 0.12, t * 0.35)) * 0.6 + pNoise(vec3(p * 0.5, t * 0.8 + 3.0)) * 0.4;
     float foam = band * smoothstep(0.42, 0.72, n + band * 0.25);
     // a few whitecaps out on the open sea
-    float cap = smoothstep(0.86, 0.92, pNoise(vec3(p * 0.03 + vec2(0.012, 0.008) * t, t * 0.05))) * smoothstep(0.68, 0.82, pNoise(vec3(p * 0.9, t * 0.9)));
+    float cap = smoothstep(0.86 - (uSeaState - 1.0) * 0.16, 0.92 - (uSeaState - 1.0) * 0.1, pNoise(vec3(p * 0.03 + vec2(0.012, 0.008) * t, t * 0.05))) * smoothstep(0.68, 0.82, pNoise(vec3(p * 0.9, t * 0.9)));
     foam = max(foam, cap * 0.28 * smoothstep(10.0, 20.0, d));
     // wakes (world/SeaFoam.js): churned, paler water, white foam through it, broken up
     float wn = pNoise(vec3(p * 0.3, t * 0.7 + 7.0)) * 0.65 + pNoise(vec3(p * 1.1, t * 1.3 + 2.0)) * 0.35;
@@ -85,13 +87,14 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
       const glsl = waterGlsl(deep);
       mat.onBeforeCompile = (sh) => {
         sh.uniforms.uSeaTime = SEA_TIME;
+        sh.uniforms.uSeaState = SEA_STATE;
         sh.uniforms.uFoam = { value: this.foam.texture };
         sh.uniforms.uFoamBox = { value: this.foam.box };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nattribute float aDepth;\nvarying float vDepth;\nvarying vec3 vSeaW;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDepth = aDepth;\nvSeaW = (modelMatrix * vec4(position, 1.0)).xyz;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nuniform sampler2D uFoam;\nuniform vec4 uFoamBox;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
+          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform sampler2D uFoam;\nuniform vec4 uFoamBox;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
           .replace('#include <color_fragment>', '#include <color_fragment>\nvec2 fuv = (vSeaW.xz - uFoamBox.xy) * uFoamBox.zw;\nfloat wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(uFoam, fuv).r;\nvec4 sea = seaColor(vDepth, vSeaW.xz, uSeaTime, wake);\ndiffuseColor.rgb = sea.rgb;\ndiffuseColor.a *= sea.a;')
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = pBumpNormal(-vViewPosition, normal, seaHeight(vSeaW.xz, uSeaTime, length(vViewPosition)));');
       };

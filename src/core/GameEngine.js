@@ -17,6 +17,9 @@ import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
 import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
+import { Squalls } from '../systems/Squalls.js';
+import { Searchlights } from '../systems/Searchlights.js';
+import { SEA_STATE } from '../world/Sea.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
@@ -83,6 +86,9 @@ const CRATER_COVER = 0.4; // m: a crater this deep (artillery, rockets) shelters
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
 
 export class GameEngine {
+  /** How rough the sea runs (1 calm … 1.8 rough: the weather at sea, systems/Squalls.js); 1 on land. */
+  get seaState() { return this.squalls ? SEA_STATE.value : 1; }
+
   /**
    * `net`: { role: 'host' | 'client', link } for a multiplayer battle;
    * `conditions`: { time, weather } (core/Conditions.js).
@@ -169,6 +175,7 @@ export class GameEngine {
     if (map.camera?.maxHeight) this.cameraManager.tactical.maxHeight = map.camera.maxHeight; // (a 5 km sea: zoom out much further)
     if (map.river?.sea) this.cameraManager.waterLevel = map.river.level; // (never down to the sea floor)
     if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
+    if (map.river?.sea) { this.squalls = new Squalls(this); this.systems.push(this.squalls, new Searchlights(this)); } // rain squalls and the sea state; searchlight beams at night
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;

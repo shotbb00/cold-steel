@@ -310,12 +310,13 @@ function ship(describe) {
       muzzle,
       animate(u, dt, t) {
         heel += ((u.turning ?? 0) * 0.07 - heel) * Math.min(1, dt * 0.8);
+        const sea = u.seaK ?? 1; // (the sea state: the weather, GameEngine.seaState)
         body.rotation.set(
-          Math.sin(t * 0.55 + phase) * 0.012 + (u.trim ?? 0),             // the swell, bow up and down (and down by the head when flooding)
+          Math.sin(t * 0.55 + phase) * 0.012 * sea + (u.trim ?? 0),                // the swell, bow up and down (and down by the head when flooding)
           0,
-          Math.sin(t * 0.42 + phase * 1.7) * 0.022 + heel + (u.list ?? 0), // the roll, the heel into a turn, a list
+          Math.sin(t * 0.42 + phase * 1.7) * 0.022 * sea ** 1.5 + heel + (u.list ?? 0), // the roll, the heel into a turn, a list
         );
-        body.position.y = Math.sin(t * 0.7 + phase) * 0.25;
+        body.position.y = Math.sin(t * 0.7 + phase) * 0.25 * sea;
         // the mounts train on the target, each within its arc (forward ones over the bow, aft ones over the stern)
         const want = (u.turretYaw ?? u.yaw) - u.yaw;
         for (const m of mounts) {

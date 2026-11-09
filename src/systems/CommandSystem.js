@@ -284,6 +284,12 @@ export class CommandSystem {
         this.game.bus.emit('toast', on ? 'Zig-zag: weaving either side of the course' : 'Steady on course');
       } else if (k.startsWith('form:')) {
         this.game.orders.issue({ t: 'formation', s: ids(ships), f: k.slice(5) });
+      } else if (k === 'searchlight') {
+        const surface = ships.filter((s) => !s.stats.submarine);
+        const on = !surface.every((s) => s.searchlight);
+        this.game.orders.issue({ t: 'searchlight', s: ids(surface), on: on ? 1 : 0 });
+        for (const s of surface) s.searchlight = on;
+        this.game.bus.emit('toast', on ? 'Searchlights on: she lights her target — and shows herself' : 'Searchlights off');
       } else if (k === 'smoke') {
         const gens = ships.filter((s) => s.stats.smokeGen);
         if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');

@@ -17,7 +17,7 @@
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
 import { NOISE, CLIMATE } from '../paint.js';
-import { SEA_TIME } from '../../world/Sea.js';
+import { SEA_TIME, SEA_STATE } from '../../world/Sea.js';
 
 class GlslPlugin extends MaterialPluginBase {
   isCompatible(lang) {
@@ -257,13 +257,14 @@ export class WaterPlugin extends GlslPlugin {
   getAttributes(attributes, scene, mesh) { if (mesh?.isVerticesDataPresent?.('aDepth')) attributes.push('aDepth'); }
 
   getUniforms() {
-    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform vec4 foamBox;\n#endif\n' };
+    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'uSeaState', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform vec4 foamBox;\n#endif\n' };
   }
 
   getSamplers(samplers) { samplers.push('foamMap'); }
 
   bindForSubMesh(ubo) {
     ubo.updateFloat('uSeaTime', SEA_TIME.value);
+    ubo.updateFloat('uSeaState', SEA_STATE.value);
     const b = this.water.foam.box;
     ubo.updateFloat4('foamBox', b.x, b.y, b.z, b.w);
     ubo.setTexture('foamMap', this.water.babylonFoam);

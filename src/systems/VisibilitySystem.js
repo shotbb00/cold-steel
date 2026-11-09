@@ -159,6 +159,7 @@ export class VisibilitySystem {
       const conceal = (os.scope ? 1 - (1 - posture) * (1 - os.scope) : posture) * rest;
       const base = (os.sight ?? 100) * (os.binoculars && !o.moving ? 1.25 : 1);
       let r = (base * (cond ? cond.sightFor(os, o.faction, lit) : 1) + u.height * 4) * conceal;
+      if (this.game.squalls) r *= 1 - 0.65 * Math.max(this.game.squalls.inside(o.pos.x, o.pos.z), this.game.squalls.inside(u.pos.x, u.pos.z)); // (in a rain squall: a third as far)
       if (this.overwatch && o.pos.y > u.pos.y) r *= 1 + Math.min(0.5, (o.pos.y - u.pos.y) / 50); // looking down from a height
       const dx = o.pos.x - u.pos.x;
       const dz = o.pos.z - u.pos.z;

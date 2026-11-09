@@ -84,7 +84,10 @@ export class Flares {
   }
 
   /** A flare bursting at (x, y, z). */
-  add(x, y, z) {
+  /** A flare `delay` s from now (a ship's star shell on its way). */
+  later(delay, x, y, z, o) { (this.pending ??= []).push({ at: this.game.world.time + delay, x, y, z, o }); }
+
+  add(x, y, z, { radius = RADIUS } = {}) {
     if (!this.enabled) return;
     const g = this.game;
     const rig = new THREE.Group();
@@ -103,12 +106,12 @@ export class Flares {
       hang.add(sp);
       return sp;
     };
-    const halo = sprite(this.haloTex, 70, 0.22);
+    const halo = sprite(this.haloTex, 70 * Math.sqrt(radius / RADIUS), 0.22);
     const core = sprite(this.coreTex, 5, 1);
     g.scene.add(rig);
     // sink so it burns out before it reaches the ground
     const fall = Math.min(FALL, Math.max(0.5, (y - g.terrain.heightAt(x, z) - BURN_OUT) / LIFE));
-    const f = { x, y, z, t: 0, fall, rig, swing, core, halo, phase: Math.random() * 6, smokeAt: 0, sparkAt: 0, intensity: 0, color: WHITE.clone() };
+    const f = { x, y, z, radius, t: 0, fall, rig, swing, core, halo, phase: Math.random() * 6, smokeAt: 0, sparkAt: 0, intensity: 0, color: WHITE.clone() };
     this.list.push(f);
     // the burst: a flash and a puff where the shell opened
     g.effects?.flashLight?.(new THREE.Vector3(x, y, z), 40, 120, 0.25);
@@ -121,11 +124,15 @@ export class Flares {
 
   /** Is (x, z) under a burning flare's light? */
   lit(x, z) {
-    for (const f of this.list) if ((x - f.x) ** 2 + (z - f.z) ** 2 < RADIUS * RADIUS && f.t < LIFE - 3) return true;
+    for (const f of this.list) if ((x - f.x) ** 2 + (z - f.z) ** 2 < (f.radius ?? RADIUS) ** 2 && f.t < LIFE - 3) return true;
     return false;
   }
 
   update(dt) {
+    if (this.pending?.length) {
+      const now = this.game.world.time;
+      for (let i = this.pending.length - 1; i >= 0; i--) if (this.pending[i].at <= now) { const p = this.pending.splice(i, 1)[0]; this.add(p.x, p.y, p.z, p.o); }
+    }
     if (!this.geo || (!this.enabled && !this.list.length)) return; // after dawn, the last ones still burn out
     const g = this.game;
     const terrain = g.terrain;
