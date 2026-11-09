@@ -7,7 +7,7 @@
 // See render/RigRenderer.js for the model contract.
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
-import { sideProfile, planProfile, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
+import { trackedHull, planProfile, runningGear, roadWheelGeometry, spinningWheels, distanceDriven, groundTilt, meshAdder } from './vehicleCommon.js';
 
 const GREEN = 0x4b5a35;
 const DARK = 0x33382a;
@@ -30,10 +30,12 @@ function geometry() {
     wheel: roadWheelGeometry(0.33, 0.55),
     hull: grime(merge([
       ...gear.parts,
-      // lower hull between the tracks, then the wide upper hull over them
-      sideProfile([[-3.7, 0.45], [-3.75, 1.4], [2.6, 1.48], [3.9, 1.1], [3.95, 0.9], [3.35, 0.45]], 2.3, { color: GREEN, ...C }),
-      sideProfile([[-3.78, 1.02], [-3.8, 1.42], [2.6, 1.5], [3.88, 1.12], [3.9, 1.02]], 3.72, { color: GREEN, ...C }),
+      // the hull from its stations (vehicleCommon trackedHull): the belly between the tracks, the fender
+      // shelf over them, the long flat deck, the shallow glacis down to the nose; edges chamfered
+      trackedHull([[-3.8, 1.42, 0.5], [-3.62, 1.48, 0.45], [2.6, 1.5, 0.45], [3.88, 1.12, 0.62], [3.95, 1.0, 0.9]], { belly: 1.15, fender: 1.86, fenderY: 1.02, chamfer: 0.06 }, { color: GREEN, ...C }),
       ...skirts,
+      ...pair((s) => merge(Array.from({ length: 14 }, (_, k) => P.box(0.03, 0.04, 0.04, { x: s * 1.92, y: 0.62, z: -3.55 + k * 0.5, color: DARK })))), // the skirts' bolt rows
+      ...pair((s) => P.box(0.42, 0.3, 0.9, { x: s * 1.55, y: 1.65, z: -3.1, color: GREEN, ...C })),          // fender stowage bins, aft
       P.box(2.6, 0.06, 1.7, { y: 1.47, z: -2.4, color: DARK }),                         // engine deck grilles
       ...[-3.0, -2.6, -2.2, -1.8].map((z) => P.box(2.5, 0.03, 0.06, { y: 1.51, z, color: STEEL })),
       P.box(2.9, 0.55, 0.12, { y: 1.1, z: -3.8, color: DARK }),                         // exhaust grille
@@ -66,6 +68,9 @@ function geometry() {
       // smoke grenade launchers, six tubes a side
       ...pair((s) => merge([0, 1, 2, 3, 4, 5].map((k) => P.cyl(0.045, 0.045, 0.24, { x: s * (1.62 - (k % 3) * 0.1), y: 0.42 + Math.floor(k / 3) * 0.1, z: 1.45 + (k % 3) * 0.06, rx: -1.1, rz: s * 0.4, color: DARK }, 8)))),
       P.box(0.95, 0.6, 0.35, { y: 0.4, z: 2.5, color: GREEN, ...C }),                  // mantlet
+      ...pair((s) => P.box(0.3, 0.42, 1.2, { x: s * 1.86, y: 0.36, z: -1.45, ry: s * 0.04, color: GREEN, ...C })),   // the turret's side stowage bins
+      ...pair((s) => P.box(0.95, 0.025, 1.25, { x: s * 0.55, y: 0.775, z: -1.35, color: DARK })),             // the ammunition blow-out panels' seams
+      ...[[-1.2, 1.6], [1.2, 1.6], [-1.3, -1.5], [1.3, -1.5]].map(([x, z]) => P.box(0.05, 0.1, 0.14, { x, y: 0.82, z, color: STEEL })), // lifting eyes
     ]), 0.9, 0.0, 0.3),
     marks: merge([
       ...pair((s) => P.box(0.02, 0.26, 0.55, { x: s * 1.79, y: 0.32, z: 0.2 })),

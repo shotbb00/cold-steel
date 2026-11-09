@@ -26,7 +26,7 @@ const _c = new THREE.Color();
  */
 export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth', 'plate', 'deck', 'flight']; // (plate, deck, flight: ships' steel and planking, render/paint.js pShip)
 const GLASS_TINTS = new Set([0x1b2126, 0x14181a, 0x1a1d1c, 0x2a3a44, 0x2a2232]);
-const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236]);
+const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236, 0x5a5c42, 0xd8d0b8, 0x8a887c, 0xa8966a, 0x3c3e28, 0x4f5238]); // (canvas, tarps, wagon tilts, sandbags, nets)
 const SKIN_TINTS = new Set();
 /** Skin colours (data/models/soldierBody.js): matte, and never whitewashed (render/paint.js CLIMATE). */
 export const markSkin = (...cs) => cs.forEach((c) => SKIN_TINTS.add(c));
