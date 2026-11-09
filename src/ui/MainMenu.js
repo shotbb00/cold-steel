@@ -423,6 +423,7 @@ export class MainMenu {
       b.setAttribute('aria-checked', String(c.map === m.id));
       b.addEventListener('click', () => {
         c.map = m.id;
+        if (m.conditions) { Object.assign(c, m.conditions); this.refreshConditions?.(); }
         for (const o of chips.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
         about.textContent = m.description ?? '';
         this.sheet?.show(m, c.side);
@@ -466,7 +467,10 @@ export class MainMenu {
     // conditions and rules: one sentence, the controls folded away until asked for
     const more = el('div', 'setup-more');
     more.hidden = true;
-    more.append(el('h3', 'menu-sub', 'Time and weather'), conditionsPicker(c, () => this.drawSummary()));
+    let cond = conditionsPicker(c, () => this.drawSummary());
+    more.append(el('h3', 'menu-sub', 'Time and weather'), cond);
+    // a map with its own time and weather (Savo Sound, Surigao Strait: a night action) sets them when picked
+    this.refreshConditions = () => { const n = conditionsPicker(c, () => this.drawSummary()); cond.replaceWith(n); cond = n; this.drawSummary(); };
     more.append(el('h3', 'menu-sub', 'Battle rules'));
     this.rulesBox = el('div', 'rules-box');
     more.append(this.rulesBox);

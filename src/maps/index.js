@@ -12,6 +12,9 @@ import auerstedt from './auerstedt.ts';
 import stalingrad from './stalingrad.ts';
 import elAlamein from './elAlamein.ts';
 import midway from './midway.ts';
+import savoSound from './savoSound.ts';
+import surigaoStrait from './surigaoStrait.ts';
+import philippineSea from './philippineSea.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -26,6 +29,9 @@ export const MAPS = {
   [stalingrad.id]: stalingrad,
   [elAlamein.id]: elAlamein,
   [midway.id]: midway,
+  [savoSound.id]: savoSound,
+  [surigaoStrait.id]: surigaoStrait,
+  [philippineSea.id]: philippineSea,
 };
 
 export const DEFAULT_MAP = fuldaGap.id;
