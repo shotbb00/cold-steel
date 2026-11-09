@@ -4,6 +4,8 @@
 // `carry` re-arms riflemen (not the squad's own specialist, its MG): `count` of them get `weapon`,
 // shown in their hands (the type's kitModels[weapon], render/StackRenderer.js) — with the anti-tank
 // kit only those men fire the squad's rockets (UnitStack.lightATAt).
+import { year } from './epoch.js';
+
 export const KITS = {
   standard: { label: 'Standard', short: '', tip: 'Rifles, the squad\'s usual anti-tank rockets, grenades', stats: () => ({}) },
   at: {
@@ -18,4 +20,4 @@ export const KITS = {
 };
 
 /** Does this unit type take a kit? (The rifle squads: they have the models for it.) */
-export const takesKit = (type) => type.kind === 'infantry' && !!type.kitModels;
+export const takesKit = (type) => type.kind === 'infantry' && !!type.kitModels && year() >= 1900; // (1806: muskets — no kits to pick)
