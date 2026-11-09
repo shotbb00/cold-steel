@@ -20,6 +20,7 @@ const BUDGET_MS = 1.5;      // per frame
 const SWEEP_PER_FRAME = 300; // scene objects checked for new materials per frame
 const AWARE = 12;            // metres seen all round (as in VisibilitySystem)
 const TARGET_H = 1.2;        // the height that has to show over the terrain
+const SHIP_H = 6;           // at sea: a ship's upperworks that have to show over an island
 const FADE = 5;              // per second toward the new picture
 const PATCHED = Symbol('fow');
 
@@ -59,7 +60,7 @@ export class FogOfWar {
 
   update(dt, force = false) {
     // at night the dark is already doing much of the job: unseen ground is dimmed less
-    this.uniforms.fowAmount.value = this.game.visibility.enabled === false ? 0 : this.game.conditions?.night ? 0.6 : 1;
+    this.uniforms.fowAmount.value = this.game.visibility.enabled === false ? 0 : (this.game.conditions?.night ? 0.6 : 1) * (this.game.map.fow ?? 1); // (a sea map: lighter — most of a 5 km sea is out of sight)
     this.timer -= dt;
     if (force) this.compute();
     else if (this.queue.length) this.work();
@@ -118,7 +119,7 @@ export class FogOfWar {
     while (this.queue.length) {
       const [u, facing] = this.queue.pop();
       if (u.alive) this.cast(u, facing);
-      if (performance.now() - t0 > budget) return;
+      if (this.queue.length && performance.now() - t0 > budget) return; // (the last one done: the picture goes up now, or the next begin() threw it away)
     }
     const done = this.target;
     this.target = this.next;
@@ -129,6 +130,7 @@ export class FogOfWar {
   cast(u, facing) {
     const { cell, half, next: t } = this;
     const terrain = this.game.terrain;
+    const sea = this.game.world.river?.sea ? this.game.world.river.level : -Infinity; // (at sea the ground is the water: the sea floor's hills cast no sight shadows over it)
     const smoke = this.game.smoke;
     const smoky = smoke?.clouds?.length > 0;
     const st = u.stats;
@@ -149,6 +151,26 @@ export class FogOfWar {
       if (v > t[i]) t[i] = v;
       return true;
     };
+    // a ship at sea: all round, rays over the ground's height a cell (seaGround, sampled once: terrain samples
+    // over kilometres a ray would be a frame's budget many times over) — the high islands hide what's behind
+    if (sea > -Infinity && st.naval) {
+      if ((u.depth ?? 0) > 9) return; // (deep down: blind)
+      const G = (this.seaGround ??= Float32Array.from({ length: N * N }, (_, k) => Math.max(sea, terrain.heightAt((k % N + 0.5) * cell - half, (Math.floor(k / N) + 0.5) * cell - half))));
+      const rays = Math.ceil((Math.PI * 2 * range) / (cell * 1.1));
+      for (let i = 0; i < rays; i++) {
+        const a = (Math.PI * 2 * i) / rays, sx = Math.sin(a), sz = Math.cos(a);
+        let maxSlope = -Infinity;
+        for (let d = cell * 0.9; d <= range; d += cell * 0.9) {
+          const ix = Math.floor((u.pos.x + sx * d + half) / cell), iz = Math.floor((u.pos.z + sz * d + half) / cell);
+          if (ix < 0 || iz < 0 || ix >= N || iz >= N) break;
+          const k = iz * N + ix, ground = G[k];
+          if ((ground + SHIP_H - eye) / d >= maxSlope) { const v = Math.min(1, (range - d) / 10 + 0.15); if (v > t[k]) t[k] = v; }
+          const slope = (ground + 0.2 - eye) / d;
+          if (slope > maxSlope) maxSlope = slope;
+        }
+      }
+      return;
+    }
     // all-round awareness
     const r = Math.ceil(AWARE / cell);
     for (let dz = -r; dz <= r; dz++) {
@@ -168,7 +190,7 @@ export class FogOfWar {
         const x = u.pos.x + sx * d;
         const z = u.pos.z + sz * d;
         if (smoky && smoke.inside(x, z)) break;
-        const ground = terrain.heightAt(x, z);
+        const ground = Math.max(sea, terrain.heightAt(x, z));
         const reach = d <= range ? range : flares.lit(x, z) ? litRange : 0;
         if (reach && (ground + TARGET_H - eye) / d >= maxSlope) {
           if (!mark(x, z, Math.min(1, (reach - d) / 10 + 0.15))) break;

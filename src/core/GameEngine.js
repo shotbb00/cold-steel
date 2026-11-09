@@ -15,6 +15,12 @@ import { Deployment } from '../systems/Deployment.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
+import { Torpedoes } from '../systems/Torpedoes.js';
+import { SeaFoam } from '../world/SeaFoam.js';
+import { Squalls } from '../systems/Squalls.js';
+import { Searchlights } from '../systems/Searchlights.js';
+import { AutoFlares } from '../systems/AutoFlares.js';
+import { SEA_STATE } from '../world/Sea.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
@@ -29,6 +35,7 @@ import { CameraManager, CameraMode } from './CameraManager.js';
 import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
+import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType } from '../data/units/index.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
@@ -80,6 +87,9 @@ const CRATER_COVER = 0.4; // m: a crater this deep (artillery, rockets) shelters
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
 
 export class GameEngine {
+  /** How rough the sea runs (1 calm … 1.8 rough: the weather at sea, systems/Squalls.js); 1 on land. */
+  get seaState() { return this.squalls ? SEA_STATE.value : 1; }
+
   /**
    * `net`: { role: 'host' | 'client', link } for a multiplayer battle;
    * `conditions`: { time, weather } (core/Conditions.js).
@@ -87,6 +97,9 @@ export class GameEngine {
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
     setClimate(map.climate); // winter whitewash, desert sand paint (render/paint.js)
+    const sides = { ...EPOCHS[epoch()]?.sides, ...map.sides }; // (a map may name its own sides: the Pacific's United States and Japan)
+    if (sides.nato) FACTIONS.nato.name = sides.nato;
+    if (sides.pact) FACTIONS.pact.name = sides.pact;
     this.mode = mode;
     // the size the picture is drawn at: the container, not innerWidth/innerHeight — on an iPhone
     // Safari's sliding toolbar makes those differ, and every label placed by them drifts (onResize)
@@ -100,7 +113,8 @@ export class GameEngine {
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
-    this.systems = [new Doctrine(this)]; // extra per-frame systems (game modes add theirs); the armies' doctrine
+    this.torpedoes = new Torpedoes(this); // (the sea: systems/Torpedoes.js)
+    this.systems = [new Doctrine(this), this.torpedoes]; // extra per-frame systems (game modes add theirs); the armies' doctrine
     this.ended = false;
     this.time = 0;
 
@@ -116,7 +130,7 @@ export class GameEngine {
     if (RENDERER === 'three') container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(62, this.view.w / this.view.h, 0.1, 2000);
+    this.camera = new THREE.PerspectiveCamera(62, this.view.w / this.view.h, map.camera?.near ?? 0.1, map.camera?.far ?? 2000); // (a sea map sees further — and starts further: depth precision for shoals under the surface km away)
     // Babylon mirrors the Three scene graph and draws it (render/babylon/BabylonView.js)
     this.babylon = RENDERER === 'babylon'
       ? new BabylonView(container, { scene: this.scene, camera: this.camera }, { exposure: this.conditions.theme.exposure ?? 1.1, theme: this.conditions.theme })
@@ -139,7 +153,8 @@ export class GameEngine {
     if (!this.cover.finalized) this.cover.finalize(map.bounds);
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
-    this.world.river = map.river ?? null; // water that stops and slows
+    this.world.river = map.river ?? null; // water that stops and slows (a sea map: world/Sea.js)
+    this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
@@ -158,6 +173,10 @@ export class GameEngine {
     this.projectiles.flares = this.flares;
     this.world.flares = this.flares;
     this.cameraManager = new CameraManager(this.camera, this.input, { bounds: map.bounds, terrain: this.terrain, cover: this.cover });
+    if (map.camera?.maxHeight) this.cameraManager.tactical.maxHeight = map.camera.maxHeight; // (a 5 km sea: zoom out much further)
+    if (map.river?.sea) this.cameraManager.waterLevel = map.river.level; // (never down to the sea floor)
+    if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
+    if (map.river?.sea) { this.squalls = new Squalls(this); this.systems.push(this.squalls, new Searchlights(this)); } // rain squalls and the sea state; searchlight beams at night
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;
@@ -184,7 +203,7 @@ export class GameEngine {
     this.air = new AirStrike(this);
     this.support = new Support(this);
     this.powers = new Powers1806(this);   // 1806's grand battery, cavalry reserve, the Guard
-    this.systems.push(this.powers);
+    this.systems.push(this.powers, new AutoFlares(this)); // (and flares of their own at night for the player's mortars and ships)
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets

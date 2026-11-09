@@ -35,7 +35,7 @@ function materialsFor(army, glowColor) {
   if (!materialCache.has(key)) {
     const camo = epoch() === '1945' ? ARMY_CAMO_1945[army] : ARMY_CAMO[army];
     materialCache.set(key, {
-      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true }),
+      body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true, weather: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
     });
   }
@@ -139,6 +139,18 @@ export class RigRenderer {
       if (!rig.dead && (this.stack.stats.cavalry || this.stack.stats.loose || this.stack.stats.gun || this.stack.stats.wagon)) { // 1806 horse and rider, a loose horse, gun and team: they fall (models/napCavalry.js, napGuns.js), nothing burns
         rig.dead = true;
         rig.fate = u.fate;
+      } else if (!rig.dead && this.stack.stats.naval) { // a ship: no wreck on the spot — she burns and goes down
+        rig.dead = true;
+        rig.sinkT = 0;
+        rig.sinkSide = Math.random() < 0.5 ? -1 : 1;
+        rig.sinkRoll = rig.root.rotation.z;
+        const s = this.stack.services;
+        rig.root.getWorldPosition(_p);
+        _p.y += this.stack.stats.height * 0.4;
+        s.effects.explosion(_p, 2.5, { ground: false, fire: 2.5 });
+        s.audio?.play('ship.sink', _p, { volume: 1, throttle: 1 }); // her hull groaning, steam and air going up
+        s.effects.burn(_p, 30, 2.5);
+        s.audio?.play('explosion.big', _p, { volume: 1 });
       } else if (!rig.dead) {
         rig.dead = true;
         rig.root.traverse((o) => {
@@ -156,11 +168,22 @@ export class RigRenderer {
         if (armed && Math.random() < COOK_OFF.chance) rig.cook = { next: rnd(COOK_OFF.first), left: Math.round(rnd(COOK_OFF.pops)), big: Math.random() < COOK_OFF.big };
       }
       if (rig.cook) this.cookOff(rig, dt);
+      if (rig.sinkT != null) this.sink(rig, dt);
       u.deathTime += dt;
       rig.die?.(u.deathTime, dt);
-      if (u.deathTime < 6 || rig.cook) animating = true;
+      if (u.deathTime < 6 || rig.cook || (rig.sinkT != null && rig.root.visible)) animating = true;
     }
     if (!animating) this.done = true;
+  }
+
+  /** A sunk ship goes down: slowly at first, by the bow and listing, then faster, until she is gone. */
+  sink(rig, dt) {
+    const t = (rig.sinkT += dt);
+    const L = this.stack.type.hull?.length ?? 100;
+    rig.root.position.y -= dt * (0.25 + t * 0.06);
+    rig.root.rotation.x = Math.min(0.5, t * 0.006) * (60 / L + 0.4);                    // down by the bow (a short ship tips further)
+    rig.root.rotation.z = rig.sinkRoll + Math.min(0.9, t * 0.012) * rig.sinkSide;       // and over on her side
+    if (rig.root.position.y < -(this.stack.stats.height + 30)) rig.root.visible = false; // gone
   }
 
   /** The ammunition going up in a knocked-out wreck: pops, sparks, sometimes a last big blast. */

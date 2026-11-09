@@ -24,9 +24,9 @@ const _c = new THREE.Color();
  * everything else paint.
  * It rides in paint.x as camo + 2 × surface index.
  */
-export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth'];
+export const SURFACES = ['paint', 'metal', 'rubber', 'glass', 'cloth', 'plate', 'deck', 'flight']; // (plate, deck, flight: ships' steel and planking, render/paint.js pShip)
 const GLASS_TINTS = new Set([0x1b2126, 0x14181a, 0x1a1d1c, 0x2a3a44, 0x2a2232]);
-const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236]);
+const CLOTH_TINTS = new Set([0x4d5236, 0x5b5236, 0x5a5c42, 0xd8d0b8, 0x8a887c, 0xa8966a, 0x3c3e28, 0x4f5238]); // (canvas, tarps, wagon tilts, sandbags, nets)
 const SKIN_TINTS = new Set();
 /** Skin colours (data/models/soldierBody.js): matte, and never whitewashed (render/paint.js CLIMATE). */
 export const markSkin = (...cs) => cs.forEach((c) => SKIN_TINTS.add(c));
@@ -91,9 +91,34 @@ export function merge(parts) {
     });
     if (kept.length) parts = kept;
   }
+  if (parts[0]?.userData?.roof) seatOnRoof(parts[0].userData.roof, parts.slice(1));
   const g = mergeGeometries(parts, false);
   g.computeBoundingSphere();
   return g;
+}
+
+/**
+ * Roof fittings on a cast turret (vehicleCommon castTurret, merged first): a hatch, cupola or sight
+ * set at one height on a curved roof hangs in the air where the roof falls away under its edge —
+ * its underside is drawn down to the lowest point of the roof beneath it. Only parts a hand's
+ * breadth or more across in both directions (not a gun, a barrel or an aerial) sitting on or
+ * near the roof.
+ */
+function seatOnRoof(roof, parts) {
+  const b = new THREE.Box3();
+  for (const g of parts) {
+    const pos = g.attributes.position;
+    b.setFromBufferAttribute(pos);
+    const w = b.max.x - b.min.x, d = b.max.z - b.min.z, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
+    if (Math.min(w, d) < 0.25 || Math.max(w, d) > 1.3 || b.max.y - b.min.y > 0.9) continue;
+    const mid = roof(cx, cz);
+    if (mid <= 0 || b.min.y - mid > 0.3 || b.min.y < mid - 0.3) continue;
+    const low = Math.min(mid, ...[[b.min.x, b.min.z], [b.max.x, b.min.z], [b.min.x, b.max.z], [b.max.x, b.max.z]].map(([x, z]) => roof(x, z)).filter((y) => y > 0)) - 0.02; // (a corner past the edge: not down to the ring)
+    if (low >= b.min.y) continue;
+    const floor = b.min.y + 1e-4;
+    for (let i = 0; i < pos.count; i++) if (pos.getY(i) < floor) pos.setY(i, low);
+    pos.needsUpdate = true;
+  }
 }
 
 /** Shorthand primitives: P.box(w, h, d, opts), P.sphere(r, opts), … */

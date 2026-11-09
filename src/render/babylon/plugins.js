@@ -9,12 +9,15 @@
 //                flash) still applies
 //   WindPlugin   world/Vegetation.js — grass tufts and hedgerow leaf cards sway in the wind, by
 //                each instance's position (`wind.kind`: 'grass' bends from the root, 'leaf' lifts)
+//   WaterPlugin  world/Sea.js — the sea's colour, clearness and surf from its depth (aDepth), waves
+//                as drifting noise turned into normals
 //   TerrainPlugin world/Terrain.js — large-scale variation from the ground texture sampled at
 //                ~30× its scale (so the ground never looks tiled) and the furrows / crop rows of
 //                the fields from the `aFurrow` attribute (strength, angle, spacing)
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
 import { NOISE, CLIMATE } from '../paint.js';
+import { SEA_TIME, SEA_STATE } from '../../world/Sea.js';
 
 class GlslPlugin extends MaterialPluginBase {
   isCompatible(lang) {
@@ -80,7 +83,7 @@ export class FowPlugin extends GlslPlugin {
 export class PaintPlugin extends GlslPlugin {
   /** @param {object} paint  { colors: 4 × Three Color (linear), scale, mud (Three Color), wear } */
   constructor(material, paint) {
-    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false });
+    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false });
     this.paint = paint;
     this._enable(true);
   }
@@ -90,6 +93,8 @@ export class PaintPlugin extends GlslPlugin {
   prepareDefines(defines, scene, mesh) {
     defines.PAINT = !!mesh?.isVerticesDataPresent?.('paint');
     defines.PAINT_SURF = defines.PAINT && !!this.paint.surfaces;
+    defines.PAINT_WEATHER = defines.PAINT && !!this.paint.weather;
+    defines.PAINT_AIR = defines.PAINT && this.paint.weather === 'air';
   }
 
   getAttributes(attributes, scene, mesh) {
@@ -160,6 +165,12 @@ export class PaintPlugin extends GlslPlugin {
           float g = clamp(vPaint.y * (0.55 + 0.9 * (n2 - 0.35)), 0.0, 1.0);
           surfaceAlbedo = mix(surfaceAlbedo, uMud * vTint, g * 0.85);
           surfaceAlbedo *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
+          #ifdef PAINT_SURF
+            surfaceAlbedo = pShip(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
+          #endif
+          #ifdef PAINT_WEATHER
+            surfaceAlbedo = pWeather(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
+          #endif
           if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
             float sf = pSurf(vPaint.x);
             float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -229,6 +240,59 @@ export class WindPlugin extends GlslPlugin {
           float shape = ${w.shape};
           positionUpdated.x += sway * ${f(w.ax)} * shape;
           positionUpdated.z += sway * ${f(w.az)} * shape;
+        }
+        #endif`,
+    };
+  }
+}
+
+export class WaterPlugin extends GlslPlugin {
+  /** @param {object} water  { glsl } (world/Sea.js waterGlsl) */
+  constructor(material, water) {
+    WaterPlugin.pending = water; // (the shader code is asked for inside super())
+    super(material, 'Water', 175, { WATER: false });
+    this.water = water;
+    this._enable(true);
+  }
+
+  getClassName() { return 'WaterPlugin'; }
+
+  prepareDefines(defines, scene, mesh) { defines.WATER = !!mesh?.isVerticesDataPresent?.('aDepth'); }
+
+  getAttributes(attributes, scene, mesh) { if (mesh?.isVerticesDataPresent?.('aDepth')) attributes.push('aDepth'); }
+
+  getUniforms() {
+    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'uSeaState', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform vec4 foamBox;\n#endif\n' };
+  }
+
+  getSamplers(samplers) { samplers.push('foamMap'); }
+
+  bindForSubMesh(ubo) {
+    ubo.updateFloat('uSeaTime', SEA_TIME.value);
+    ubo.updateFloat('uSeaState', SEA_STATE.value);
+    const b = this.water.foam.box;
+    ubo.updateFloat4('foamBox', b.x, b.y, b.z, b.w);
+    ubo.setTexture('foamMap', this.water.babylonFoam);
+  }
+
+  getCustomCode(shaderType) {
+    if (shaderType === 'vertex') {
+      return {
+        CUSTOM_VERTEX_DEFINITIONS: '#ifdef WATER\nattribute float aDepth;\nvarying float vDepth;\n#endif\n',
+        CUSTOM_VERTEX_MAIN_END: '#ifdef WATER\nvDepth = aDepth;\n#endif\n',
+      };
+    }
+    return {
+      CUSTOM_FRAGMENT_DEFINITIONS: `#ifdef WATER\nvarying float vDepth;\nuniform sampler2D foamMap;\n${NOISE}\n${(this.water ?? WaterPlugin.pending).glsl}\n#endif\n`,
+      CUSTOM_FRAGMENT_UPDATE_ALPHA: /* glsl */ `
+        #ifdef WATER
+        {
+          vec2 fuv = (vPositionW.xz - foamBox.xy) * foamBox.zw;
+          float wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(foamMap, fuv).r;
+          vec4 sea = seaColor(vDepth, vPositionW.xz, uSeaTime, wake);
+          surfaceAlbedo = sea.rgb;
+          alpha *= sea.a;
+          normalW = pBumpNormal(vPositionW, normalW, seaHeight(vPositionW.xz, uSeaTime, length(vEyePosition.xyz - vPositionW)));
         }
         #endif`,
     };

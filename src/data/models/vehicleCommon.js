@@ -86,7 +86,25 @@ export function stationHull(stations, opts = {}, axis = 'z') {
  * ring (y = 0). `e` > 2 flattens the roof and squares the shoulders a little.
  */
 export function castTurret(sections, opts = {}, e = 2.6) {
-  return loft(sections.map(([z, w, h]) => [0, 0, z, w, h, e]), { ...opts, warp: (v) => { if (v.y < 0) v.y = 0; } }, 22);
+  const g = loft(sections.map(([z, w, h]) => [0, 0, z, w, h, e]), { ...opts, warp: (v) => { if (v.y < 0) v.y = 0; } }, 22);
+  // its surface, for parts set on it: units/geometry.js merge seats roof fittings merged after it on the curve
+  const at = (z) => { // half-width and height of the section at z (linear between them, as the loft)
+    const s = sections;
+    if (z > s[0][0] || z < s[s.length - 1][0]) return null;
+    let i = 0;
+    while (i < s.length - 2 && z < s[i + 1][0]) i++;
+    const k = (s[i][0] - z) / (s[i][0] - s[i + 1][0] || 1);
+    return [s[i][1] + (s[i + 1][1] - s[i][1]) * k, s[i][2] + (s[i + 1][2] - s[i][2]) * k];
+  };
+  const roof = (x, z) => { const q = at(z); if (!q || Math.abs(x) >= q[0]) return 0; return q[1] * (1 - Math.abs(x / q[0]) ** e) ** (1 / e); };
+  g.userData.roof = roof;
+  /** Where a ray from (0, y, z0) along angle a (0: forward) leaves the casting: its distance out. */
+  g.userData.edge = (a, y, z0 = 0) => {
+    let r = 0;
+    while (r < 4 && roof(Math.sin(a) * r, z0 + Math.cos(a) * r) > y) r += 0.01;
+    return r;
+  };
+  return g;
 }
 
 /**

@@ -16,6 +16,12 @@ export default {
   lossShare: 0,
   hint: "Take the hill in the middle and hold it: while it is yours, the enemy's bar runs down.",
   pointsFor(map) {
+    if (map.theatre === 'sea') { // at sea: the neutral zone as far from one fleet's base as from the other's (then the nearest the middle), its own size
+      const { nato, pact } = map.bases;
+      const fair = (p) => Math.abs(Math.hypot(p.x - nato.x, p.z - nato.z) - Math.hypot(p.x - pact.x, p.z - pact.z));
+      const hill = map.points.filter((p) => !p.owner).sort((a, b) => fair(a) - fair(b) || Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z))[0];
+      return [{ ...hill, id: 'H', name: hill.name, owner: null, radius: hill.radius }];
+    }
     const hill = [...map.points].sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z))[0];
     return [{ ...hill, id: 'H', name: hill.name, owner: null, radius: RADIUS }];
   },

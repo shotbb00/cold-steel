@@ -49,7 +49,7 @@ import '@babylonjs/core/Rendering/geometryBufferRendererSceneComponent.js';
 import { createSky } from './sky.js';
 import { createSight } from './sight.js';
 import { particleLayer, sprite, lines, points } from './extras.js';
-import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin } from './plugins.js';
+import { FowPlugin, PaintPlugin, WindPlugin, TerrainPlugin, WaterPlugin } from './plugins.js';
 
 /** Vertex attributes the bridge maps to Babylon's own; anything else goes over under its own name. */
 const STANDARD = new Set(['position', 'normal', 'uv', 'color']);
@@ -101,6 +101,7 @@ export class BabylonView {
     this.meshes = new Map();     // Three object → { mesh, versions }
     this.geometries = new WeakMap();
     this.materials = new WeakMap();
+    this.waters = new Set(); // the sea's foam grids (world/Sea.js), re-sent when they change
     this.textures = new WeakMap();
     this.lights = new Map();
     this.extras = new Map();     // Three object → a native counterpart (particles, sprites, lines, points)
@@ -249,6 +250,11 @@ export class BabylonView {
       if (rec.mesh.isEnabled()) rec.mesh.setEnabled(false);
     }
     this.sky?.update(time, tCam);
+    for (const w of this.waters) {
+      if (w.foam.texture.version === w.foamVersion) continue;
+      w.babylonFoam.update(w.foam.texture.image.data);
+      w.foamVersion = w.foam.texture.version;
+    }
     if (this.fow && this.fow.texture.version !== this.fowVersion) {
       this.fow.babylonTexture.update(this.fow.texture.image.data);
       this.fowVersion = this.fow.texture.version;
@@ -420,6 +426,7 @@ export class BabylonView {
     mesh.hasVertexAlpha = false;
     mesh.receiveShadows = !!o.receiveShadow;
     mesh.applyFog = tm.fog !== false;
+    if (tm.userData?.water) mesh.alphaIndex = 0; // the sea first among the see-through: splashes, smoke and decals above it are drawn over it, not under
     if (o.castShadow && this.shadowGen) this.shadowGen.addShadowCaster(mesh, false);
     if (o.frustumCulled === false || o.isInstancedMesh) mesh.alwaysSelectAsActiveMesh = true;
     const rec = { mesh, material, tm: o.material, matrix: new Float32Array(16).fill(NaN), versions: {}, instanceVersion: -1, colorVersion: -1, count: -1 };
@@ -560,9 +567,23 @@ export class BabylonView {
       if (m.albedoTexture) m.useAlphaFromAlbedoTexture = true;
     }
     if (tm.blending === 2) m.alphaMode = Engine.ALPHA_ADD; // THREE.AdditiveBlending
+    if (tm.userData?.matte) { m.specularIntensity = 0; m.environmentIntensity = 0; m.reflectionColor?.set?.(0, 0, 0); } // (the open sea: a 25 km² flat sheet throws the sun's highlight up as a white blot)
     if (tm.userData?.paint) new PaintPlugin(m, tm.userData.paint);
     if (tm.userData?.wind) new WindPlugin(m, tm.userData.wind);
     if (tm.userData?.terrain) new TerrainPlugin(m);
+    if (tm.userData?.water) {
+      const w = tm.userData.water;
+      if (!w.babylonFoam) {   // the foam grid: re-sent when world/SeaFoam.js writes it (like the fog of war)
+        const t = w.foam.texture;
+        w.babylonFoam = RawTexture.CreateRTexture(t.image.data, t.image.width, t.image.height, this.scene, false, false, Texture.BILINEAR_SAMPLINGMODE, Engine.TEXTURETYPE_UNSIGNED_BYTE);
+        w.babylonFoam.wrapU = w.babylonFoam.wrapV = Texture.CLAMP_ADDRESSMODE;
+        w.foamVersion = t.version;
+        this.waters.add(w);
+      }
+      new WaterPlugin(m, w);
+      m.environmentIntensity = ENV * 1.5; // (the sky in the waves: the fresnel at a low angle)
+      m.specularIntensity = 0.45;          // (the sun's glitter, not white blotches where the waves catch it)
+    }
     if (this.fow && tm.fog !== false && tm.toneMapped !== false) new FowPlugin(m, this.fow);
     this.materials.set(tm, m);
     m.source = tm;

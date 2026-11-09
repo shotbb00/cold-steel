@@ -488,6 +488,44 @@ export class EffectsSystem {
    * A fresh crater smouldering: a thin grey wisp for `duration` s, no flame. At most SMOULDER_MAX at once
    * (fewer on a phone): the oldest gives way to a new one.
    */
+  /** A shell or torpedo bursting in the sea: a white column of spray that falls back, and foam. */
+  waterSplash(pos, size = 1) {
+    const n = Math.round(8 + size * 6);
+    for (let i = 0; i < n; i++) {
+      this.smoke.spawn(pos.x + rnd(-1, 1) * size, pos.y + 0.3, pos.z + rnd(-1, 1) * size, {
+        vx: rnd(-1.5, 1.5) * size, vy: rnd(6, 16) * Math.sqrt(size), vz: rnd(-1.5, 1.5) * size, size: rnd(0.8, 1.6) * size, grow: 1.6,
+        life: rnd(1.4, 2.6), alpha: rnd(0.55, 0.85), color: 0xf2f6f8, drag: 1.2, wind: 0.4,
+      });
+    }
+    this.smoke.spawn(pos.x, pos.y + 0.2, pos.z, { vx: 0, vy: 0.1, vz: 0, size: 3 * size, grow: 2, life: 6, alpha: 0.4, color: 0xe8f0f2, drag: 1, wind: 0.2 }); // the foam ring
+  }
+
+  /**
+   * A shell from a warship into the sea: a white column as tall as the shell is big (a 5-inch some 25 m,
+   * a 16-inch 60 m and more) that climbs, hangs and falls back as spray, and a ring of foam where it went in.
+   * `splash`: the shell's blast radius (data/units45/ships.js mounts).
+   */
+  shellSplash(pos, splash = 4) {
+    const h = 8 + splash * 4.5;                 // the column's height, m
+    const up = Math.sqrt(2 * 9 * h);            // what it takes to get there against gravity
+    const w = 0.6 + splash * 0.18;              // how wide it spreads
+    const n = Math.round(14 + splash * 2.2);
+    for (let i = 0; i < n; i++) {
+      const k = Math.random();
+      this.smoke.spawn(pos.x + rnd(-1, 1) * w, pos.y + 0.5, pos.z + rnd(-1, 1) * w, {
+        vx: rnd(-1, 1) * w * 0.8, vy: up * (0.45 + 0.55 * k), vz: rnd(-1, 1) * w * 0.8,
+        size: (1.2 + splash * 0.32) * rnd(0.7, 1.3), grow: 1.5, life: rnd(2.2, 3.6), alpha: rnd(0.7, 0.92),
+        color: 0xf4f8fa, drag: 0.35, gravity: 9, wind: 0.5,
+      });
+    }
+    for (let i = 0; i < 4; i++) { // the mist the column leaves hanging, drifting off
+      this.smoke.spawn(pos.x + rnd(-1, 1) * w * 2, pos.y + h * rnd(0.3, 0.8), pos.z + rnd(-1, 1) * w * 2, {
+        vx: rnd(-0.6, 0.6), vy: rnd(0, 0.6), vz: rnd(-0.6, 0.6), size: h * 0.35, grow: 1.4, life: rnd(4, 6), alpha: 0.32, color: 0xe6eef2, drag: 1, wind: 1,
+      });
+    }
+    this.smoke.spawn(pos.x, pos.y + 0.3, pos.z, { vx: 0, vy: 0.05, vz: 0, size: 3 + splash * 0.8, grow: 2.2, life: 7, alpha: 0.45, color: 0xe8f0f2, drag: 1, wind: 0.2 }); // the foam ring
+  }
+
   smoulder(pos, duration = 35, size = 1) {
     const max = touchScreen() ? 5 : 12;
     const now = this.emitters.filter((e) => e.kind === 'smoulder');

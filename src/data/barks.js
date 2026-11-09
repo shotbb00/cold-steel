@@ -16,6 +16,7 @@ const LINES = {
     rally: ['On me!', 'Form up on me!', 'Regroup!'],
     bail: ['Bail out, bail out!', 'We\'re hit, get out!', 'Out, out, out!'],
     officer: ['The LT\'s down!', 'Lieutenant\'s hit!', 'We lost the lieutenant!', 'Who\'s in charge?!'],
+    straddle: ['Straddle!', 'We have the range!', 'Splashes all round her!', 'On target — fire for effect!'],
   },
   pact: {
     contact: ['Protivnik!', 'Vizhu vraga!', 'Kontakt!', 'Vrag vperedi!'],
@@ -48,10 +49,15 @@ const LINES = {
 };
 
 /** Which lines an army shouts (its language), whatever side it is on. */
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de' };
+// the Imperial Japanese Navy's ships (Japanese, in transliteration)
+LINES.ja = {
+  straddle: ['Kyōsa!', 'Kyori yoshi!', 'Meichū!', 'Utechi-kata, tsuzuke!'],
+};
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja' };
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
-  const list = LINES[LANG[army] ?? faction]?.[kind] ?? LINES.nato[kind];
+  const lang = LANG[army] ?? faction;
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' ? null : LINES.nato[kind]); // (the Japanese crews say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

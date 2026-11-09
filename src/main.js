@@ -8,7 +8,7 @@ import { settings } from './core/Settings.js';
 import { setEpoch, epoch } from './data/epoch.js';
 import { GameEngine } from './core/GameEngine.js';
 import { GAME } from './data/game.js';
-import { getMap, forEpoch } from './maps/index.js';
+import { getMap, forEpoch, setTheatre } from './maps/index.js';
 import { getMode } from './modes/index.js';
 import { MainMenu } from './ui/MainMenu.js';
 import { MenuMusic } from './audio/MenuMusic.js';
@@ -25,13 +25,16 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
   if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies, epoch: epoch() });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
-  const game = new GameEngine(document.getElementById('app'), { map: getMap(map), mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
+  const m = getMap(map);
+  if (m.modes && !m.modes.includes(mode)) mode = m.modes[0]; // (a map fought only in some modes: Midway's sea zones, Frontline)
+  const game = new GameEngine(document.getElementById('app'), { map: m, mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
   window.game = game; // handy for poking at the simulation from the dev console
 }
 
 const params = new URLSearchParams(location.search);
 const replay = takeReplay();
 setEpoch(params.get('epoch') ?? replay?.epoch ?? settings.get('epoch')); // the war the menu and the battle are set in (data/epoch.js)
+setTheatre(settings.get('theatre')); // land or sea (maps/index.js): which maps the menu offers
 forEpoch(epoch()); // its map texts and point names (maps/index.js)
 if (params.has('mode')) start({ mode: params.get('mode'), map: params.get('map'), side: params.get('side'), time: params.get('time'), weather: params.get('weather'), armies: { nato: params.get('nato'), pact: params.get('pact') }, epoch: params.get('epoch') });
 else if (replay) start(replay);

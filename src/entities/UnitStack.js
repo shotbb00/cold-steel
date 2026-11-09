@@ -33,7 +33,7 @@ import { createRenderer } from '../render/index.js';
 import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
-import { CLIMB, LOCAL } from '../world/Nav.js';
+import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
@@ -62,6 +62,20 @@ const AMBUSH = { damage: 1.6, suppress: 2, tellEvery: 30 };
 // which one by where it struck (front: the gun, sides: the tracks, rear: the engine). Tracks the
 // crew mends itself (`fix` s once out of fire for `calm` s); gun and engine need a recovery vehicle.
 const PARTS = { chance: 0.5, fix: 40, calm: 10, engine: 0.4, recoverable: 0.5 };
+// a ship's engine orders (stack.shipSpeed): the share of her top speed, and how loud her screws are to a
+// listening submarine (VisibilitySystem: the boats' `hearing` × noise)
+export const SHIP_SPEEDS = { slow: { k: 0.35, noise: 0.5, name: 'Slow' }, half: { k: 0.6, noise: 0.75, name: 'Half' }, full: { k: 1, noise: 1, name: 'Full' }, flank: { k: 1.12, noise: 1.5, name: 'Flank' } };
+const ZIGZAG = { period: 40, swing: 0.5 }; // s a leg pair, rad off the course each way
+const SMOKE_SHIP = { every: 2.5, radius: 60, last: 110 };
+// gunnery at sea (UnitStack.fireControl): a firing solution builds over SOLUTION s of shooting at one target
+// until then the shells fall long or short, up to RANGE_ERR of the range, walking onto her; her sharp turns
+// and changes of speed spoil it. The same for both navies: in AI-v-AI soaks on mirrored Midway even 16 vs 19
+// gave the US 9:1 (the US radar edge is its night sight, NAVAL nightSight)
+const SOLUTION = { nato: 17, pact: 17 };
+const SEARCHLIGHT = 1200; // m a ship's searchlight reaches at night (the sea's game scale: data/units45/ships.js RANGE)
+const DC_FOCUS = 2.2; // damage control where the captain puts it (UnitStack.shipUpkeep)…
+const DC_ELSE = 0.55; // …and everywhere else meanwhile
+const RANGE_ERR = 0.07;
 export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, refill: 60, gravity: 9.8 };
 // a rifle squad's light anti-tank rockets (stats.lightAT: how many the squad carries — M72 LAW,
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
@@ -90,8 +104,35 @@ const FLAME = new THREE.Color(1, 0.55, 0.15).multiplyScalar(2.2);
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _near = [];
+// ships' hulls as segments, stern to bow (x, z, x, z, half the beam), and the closest points between two
+const _ha = [0, 0, 0, 0, 0];
+const _hb = [0, 0, 0, 0, 0];
+const _seg = [0, 0, 0, 0];
+/** Closest points between segments a and b (2D, [x0, z0, x1, z1]) into out [ax, az, bx, bz]; returns the distance. */
+function segClosest(a, b, out) {
+  const d1x = a[2] - a[0], d1z = a[3] - a[1], d2x = b[2] - b[0], d2z = b[3] - b[1], rx = a[0] - b[0], rz = a[1] - b[1];
+  const A = d1x * d1x + d1z * d1z, E = d2x * d2x + d2z * d2z, F = d2x * rx + d2z * rz, C = d1x * rx + d1z * rz, B = d1x * d2x + d1z * d2z;
+  const den = A * E - B * B;
+  let sa = den > 1e-9 ? clamp((B * F - C * E) / den, 0, 1) : 0;
+  let tb = E > 1e-9 ? (B * sa + F) / E : 0;
+  if (tb < 0) { tb = 0; sa = A > 1e-9 ? clamp(-C / A, 0, 1) : 0; } else if (tb > 1) { tb = 1; sa = A > 1e-9 ? clamp((B - C) / A, 0, 1) : 0; }
+  out[0] = a[0] + d1x * sa; out[1] = a[1] + d1z * sa; out[2] = b[0] + d2x * tb; out[3] = b[1] + d2z * tb;
+  return Math.hypot(out[0] - out[2], out[1] - out[3]);
+}
 
 let nextId = 1;
+
+/** A warship's own name (type.names per side, data/units45/ships.js): the class's next one not yet afloat in this battle. */
+function shipName(type, faction, world) {
+  const list = type.names?.[faction];
+  if (!list?.length) return null;
+  const used = (world.shipNames ??= new Map());
+  const key = `${type.id}:${faction}`;
+  const i = used.get(key) ?? 0;
+  used.set(key, i + 1);
+  const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
+  return faction === 'nato' && !n.startsWith('SS ') ? `USS ${n}` : n; // (a merchantman is SS already)
+}
 
 export class UnitStack {
   /**
@@ -118,7 +159,7 @@ export class UnitStack {
     if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
-    this.name = name ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it)
+    this.name = name ?? shipName(type, faction, services.world ?? {}) ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it; a warship her own)
     this.services = services;
     this.world = services.world;
 
@@ -232,6 +273,9 @@ export class UnitStack {
   get sprinting() { return this.moveTarget && (this.sprintUntil ?? 0) > this.world.time; }
   get winded() { return (this.windedUntil ?? 0) > this.world.time && !this.sprinting; }
 
+  /** How this stack routes (world/Nav.js): men, vehicles — or a ship, deep water only. */
+  get navFoot() { return this.stats.naval ? SHIP : this.usesCover; }
+
   get usesCover() {
     return this.kind === 'infantry';
   }
@@ -322,6 +366,10 @@ export class UnitStack {
   /** Put the whole stack at (x, z) at once, facing `facing` (the deployment phase, systems/Deployment.js): every man or vehicle in its formation slot, off anything solid. */
   placeAt(x, z, facing = this.facing) {
     const w = this.world;
+    if (this.stats.naval && w.nav) { // a ship: the nearest water deep enough for her hull (never on the reef)
+      const k = w.nav.snap(x, z, SHIP, this.units[0]?.radius ?? 6);
+      if (k >= 0) ({ x, z } = w.nav.point(k));
+    }
     this.facing = facing;
     this.holdFacing = null;
     this.anchor.set(x, w.terrain.heightAt(x, z), z);
@@ -370,7 +418,7 @@ export class UnitStack {
   fitSlot(u, out) {
     const nav = this.world.nav;
     const a = this.anchor;
-    if (!nav || nav.visible(a, out, this.usesCover, u.radius)) return;
+    if (!nav || nav.visible(a, out, this.navFoot, u.radius)) return;
     const x = out.x - a.x;
     const z = out.z - a.z;
     let lo = 0;
@@ -378,7 +426,7 @@ export class UnitStack {
     for (let i = 0; i < 5; i++) {
       const m = (lo + hi) / 2;
       _p.set(a.x + x * m, 0, a.z + z * m);
-      if (nav.visible(a, _p, this.usesCover, u.radius)) lo = m; else hi = m;
+      if (nav.visible(a, _p, this.navFoot, u.radius)) lo = m; else hi = m;
     }
     out.set(a.x + x * lo, 0, a.z + z * lo);
   }
@@ -478,7 +526,7 @@ export class UnitStack {
     if (!nav) return { x: t.x, z: t.z, last: true };
     let r = this.route;
     if (!r || r.version !== nav.version || Math.hypot(r.to.x - t.x, r.to.z - t.z) > 2) {
-      const p = nav.path(this.anchor, t, this.usesCover, this.stats.radius);
+      const p = nav.path(this.anchor, t, this.navFoot, this.stats.radius);
       r = this.route = { to: { x: t.x, z: t.z }, version: nav.version, pts: p?.pts ?? [{ x: t.x, z: t.z }], i: 0 };
     }
     while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < 1.5) r.i++;
@@ -488,6 +536,13 @@ export class UnitStack {
 
   updateAnchor(dt) {
     const s = this.stats;
+    if (s.naval) { // a ship is its own stack: the anchor rides on it, and it steers along the route itself (SoldierAI)
+      const u = this.units[0];
+      if (u?.alive) { this.anchor.x = u.pos.x; this.anchor.z = u.pos.z; }
+      if (this.moveTarget && Math.hypot(this.anchor.x - this.moveTarget.x, this.anchor.z - this.moveTarget.z) < 25 + s.radius) { this.moveTarget = null; this.route = null; }
+      this.anchor.y = this.world.terrain.heightAt(this.anchor.x, this.anchor.z);
+      return;
+    }
     if (this.moveTarget && this.deploySeconds && this.units.some((u) => u.alive && (u.deployK ?? 0) > 0)) return; // still packing up
     if (this.moveTarget) {
       const goal = this.routeTarget();
@@ -531,7 +586,7 @@ export class UnitStack {
     // really narrow (a hedge along the road isn't): single file while moving, and back into the
     // formation only once it's open for a while — every change strings the men out again
     const nav = this.world.nav;
-    const room = nav ? nav.clearance(a.x, a.z, this.usesCover) : Infinity;
+    const room = nav ? nav.clearance(a.x, a.z, this.navFoot) : Infinity;
     if (!this.moveTarget || this.units.length < 2 || this.form) this.column = false; // (1806: a formed company keeps its ranks — the slots squeeze in round trees and walls, fitSlot)
     else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
@@ -548,6 +603,16 @@ export class UnitStack {
     if (want < 0.05) { w.set(0, 0, 0); return; }
     const s = u.stats;
     const heading = Math.atan2(w.x, w.z);
+    if (s.naval) { // a ship: the rudder bites only with way on, and it keeps going round the turn
+      const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
+      const diff = angleDelta(u.yaw, heading);
+      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1);
+      u.yaw += clamp(diff, -rate * dt, rate * dt);
+      u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
+      const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
+      w.set(Math.sin(u.yaw) * speed, 0, Math.cos(u.yaw) * speed);
+      return;
+    }
     let diff = angleDelta(u.yaw, heading);
     const back = Math.abs(diff) > REVERSE.angle && d < REVERSE.within; // just behind: reverse into it
     if (back) diff = angleDelta(u.yaw, heading + Math.PI);
@@ -588,12 +653,28 @@ export class UnitStack {
     }
     if (u.prone > 0.5) maxSpeed = Math.min(maxSpeed, 0.7); // crawling
     if (u.engineHit) maxSpeed *= PARTS.engine;
+    if (s.naval) {
+      this.shipUpkeep(u, dt);
+      if (!u.alive) return;
+      maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
+      maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
+      if (s.smallCraft) maxSpeed *= 1 - ((this.services.game?.seaState ?? 1) - 1) * 0.55; // (a PT boat in a rough sea: pounding, half speed)
+      if (!u.possessed) {
+        this.keepStation(u, dt);
+        const m = this.stationSpeed(u);
+        if (m != null) maxSpeed = Math.min(maxSpeed, m);
+        this.watchTorpedoes(u, dt);
+      }
+      this.laySmoke(u, dt);
+      if (s.submarine) maxSpeed = Math.min(maxSpeed, (u.depth ?? 0) > 2 ? s.submarine.submerged : maxSpeed) * (this.silent ? 0.5 : 1); // under the surface: on the batteries (silent running: slower still)
+    }
     if (u.speedMul === 0 && !this.usesCover && this.world.time - this.lastHitTime > PARTS.calm && (u.fixT = (u.fixT ?? 0) + dt) > PARTS.fix) {
       u.speedMul = 0.95; // the crew got the track back on
       this.services.tell(this.faction, `${this.name}: tracks mended`);
     }
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
-    const way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
+    let way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
+    if (s.naval && !u.possessed) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
     const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
     _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
     const d = way === u.dest ? _v.length() : Math.max(_v.length(), Math.min(dDest, 6)); // (no slowing down at a corner)
@@ -611,7 +692,7 @@ export class UnitStack {
       if (!this.moveTarget && dDest < PARKED) _w.set(0, 0, 0); // arrived: a small correction isn't worth turning the hull for
       this.driveAlongHull(u, _w, d, dt);
     }
-    u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : 2.5))); // vehicles accelerate gently
+    u.vel.lerp(_w, Math.min(1, dt * (this.usesCover ? 7 : s.naval ? s.accel ?? 0.25 : 2.5))); // vehicles accelerate gently, ships slowly (way on, way off)
     if (!this.usesCover && !freeing) { // …and only along the hull: no skating sideways while the old heading blends out
       const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), along = u.vel.x * fx + u.vel.z * fz;
       u.vel.set(fx * along, 0, fz * along);
@@ -656,12 +737,16 @@ export class UnitStack {
   steerTo(u, dt) {
     const nav = this.world.nav;
     const dest = u.dest;
+    if (u.detour) { // a ship going round ships in her way (checkStuck), then on along her route
+      if (Math.hypot(u.detour.x - u.pos.x, u.detour.z - u.pos.z) < 80 || this.world.time > u.detour.until) { u.detour = null; u.path = null; u.navT = 0; }
+      else return u.detour;
+    }
     if (!nav || u.ghostT > 0) return dest;
     if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
       u.navT = 0.3 + Math.random() * 0.2;
-      if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.usesCover, u.radius)) u.path = null;
+      if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.navFoot, u.radius)) u.path = null;
       else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > 2) {
-        const p = nav.path(u.pos, dest, this.usesCover, u.radius, LOCAL);
+        const p = nav.path(u.pos, dest, this.navFoot, u.radius, LOCAL);
         u.path = p && { to: { x: dest.x, z: dest.z }, version: nav.version, pts: p.pts, i: 0, reached: p.reached };
       }
     }
@@ -676,6 +761,7 @@ export class UnitStack {
    * after STUCK.ghost such spells in a row, squeeze through (collisions off for a moment).
    */
   checkStuck(u, dt, distToDest, wantSpeed) {
+    if (this.stats.naval) return this.checkHeadway(u, dt, distToDest, wantSpeed);
     if (u.ghostT > 0) u.ghostT -= dt;
     if (distToDest < 2 || wantSpeed < 0.3) {
       u.stuckT = 0;
@@ -696,8 +782,191 @@ export class UnitStack {
     if (u.stuckN >= (v ? STUCK.ghostVehicle : STUCK.ghost)) u.ghostT = v ? STUCK.ghostTVehicle : STUCK.ghostT;
   }
 
+  /** How loud her screws are (her engine order; a submarine's silent running is its own). */
+  get noise() { return SHIP_SPEEDS[this.shipSpeed]?.noise ?? 1; }
+
+  /**
+   * The way a ship steers this moment, given the way her route wants: hard round onto a torpedo track she
+   * has seen coming (u.evade, watchTorpedoes), or — ordered to zig-zag and with sea room to go — weaving
+   * ZIGZAG.swing either side of it (a torpedo aimed at where she'd be finds water).
+   */
+  shipCourse(u, way) {
+    const t = this.world.time;
+    if (u.evade) {
+      if (t < u.evade.until) return { x: u.pos.x + Math.sin(u.evade.yaw) * 400, z: u.pos.z + Math.cos(u.evade.yaw) * 400 };
+      u.evade = null;
+    }
+    if (!this.zigzag || Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z) < 300) return way;
+    const a = Math.sin((t / ZIGZAG.period) * Math.PI * 2 + this.id * 1.7) * ZIGZAG.swing;
+    const dx = way.x - u.pos.x, dz = way.z - u.pos.z;
+    const c = Math.cos(a), sn = Math.sin(a);
+    return { x: u.pos.x + dx * c + dz * sn, z: u.pos.z - dx * sn + dz * c };
+  }
+
+  /**
+   * Torpedoes she can see coming (a wake from 1 km; the wakeless Long Lance only within 200 m) that would
+   * hit her: she turns to comb the track — her bow or stern onto it, whichever is the shorter turn — and
+   * holds that till they're past.
+   */
+  watchTorpedoes(u, dt) {
+    if ((u.torpLook = (u.torpLook ?? 0) - dt) > 0) return;
+    u.torpLook = 0.5;
+    const list = this.services.game?.torpedoes?.list;
+    if (!list?.length || (u.depth ?? 0) > 3) return;
+    const half = (this.type.hull?.length ?? 100) * 0.5;
+    for (const tp of list) {
+      if (tp.faction === this.faction) continue;
+      const dx = u.pos.x - tp.x, dz = u.pos.z - tp.z;
+      const d = Math.hypot(dx, dz);
+      if (d > (tp.wakeless ? 200 : 1000)) continue;
+      const rvx = tp.dx * tp.speed - u.vel.x, rvz = tp.dz * tp.speed - u.vel.z;
+      const rv2 = rvx * rvx + rvz * rvz;
+      if (rv2 < 1) continue;
+      const tca = (dx * rvx + dz * rvz) / rv2;
+      if (tca <= 0 || tca > 70) continue;
+      if (Math.hypot(dx - rvx * tca, dz - rvz * tca) > half + 25) continue; // it misses as she goes
+      const along = Math.atan2(tp.dx, tp.dz);
+      const yaw = Math.abs(angleDelta(u.yaw, along)) < Math.PI / 2 ? along : along + Math.PI; // the shorter turn: stern or bow onto it
+      if (!u.evade) this.services.tell(this.faction, `${this.name}: torpedo tracks — turning to comb them`);
+      u.evade = { yaw, until: this.world.time + Math.min(18, tca + 6) };
+      return;
+    }
+  }
+
+  /** A ship in formation (stack.station: on a leader, an offset in his frame): her place there, a little ahead of where he is now. */
+  stationPoint() {
+    const st = this.station;
+    const lead = st && this.world.stackById(st.lead);
+    const L = lead?.alive ? lead.units[0] : null;
+    if (!L?.alive) { this.station = null; return null; }
+    const c = Math.cos(L.yaw), s = Math.sin(L.yaw);
+    return { x: L.pos.x + st.dx * c + st.dz * s + L.vel.x * 6, z: L.pos.z - st.dx * s + st.dz * c + L.vel.z * 6, lead: L };
+  }
+
+  /** Steer for her place in the formation (a fresh move order as it drifts). */
+  keepStation(u, dt) {
+    if (!this.station || (this.stationT = (this.stationT ?? 0) - dt) > 0) return;
+    this.stationT = 1.5;
+    const p = this.stationPoint();
+    if (!p) return;
+    const goal = this.world.clampToBounds({ x: p.x, z: p.z });
+    if (!this.moveTarget || Math.hypot(this.moveTarget.x - goal.x, this.moveTarget.z - goal.z) > 35) this.ai.moveTo(goal, { ordered: true, keepStation: true });
+  }
+
+  /**
+   * Near her place in the formation she matches the leader's speed (a little over, to close up); null: free.
+   * The leader herself keeps to 85 % of her slowest follower's best, so the line can form up and hold.
+   */
+  stationSpeed(u) {
+    if (!this.station) {
+      if ((this.leadT = (this.leadT ?? 0) - 1 / 30) <= 0) { // (who follows her: looked up now and then)
+        this.leadT = 2;
+        const followers = this.world.stacks.filter((s) => s.alive && s.station?.lead === this.id);
+        this.leadCap = followers.length ? Math.min(...followers.map((s) => s.stats.speed * (SHIP_SPEEDS[s.shipSpeed]?.k ?? 1))) * 0.85 : null;
+      }
+      return this.leadCap ?? null;
+    }
+    const p = this.stationPoint();
+    if (!p) return null;
+    const d = Math.hypot(p.x - u.pos.x, p.z - u.pos.z);
+    if (d > 250) return null;
+    return Math.hypot(p.lead.vel.x, p.lead.vel.z) + 0.5 + d * 0.03;
+  }
+
+  /** A destroyer or escort laying smoke (stats.smokeGen, ordered: stack.smokeUntil): clouds off her stern while she's under way. */
+  laySmoke(u, dt) {
+    if (!(this.smokeUntil > this.world.time) || (u.smokeT = (u.smokeT ?? 0) - dt) > 0) return;
+    u.smokeT = SMOKE_SHIP.every;
+    if (Math.hypot(u.vel.x, u.vel.z) < 1) return;
+    const back = (this.type.hull?.length ?? 100) * 0.5;
+    this.services.smoke?.add(u.pos.x - Math.sin(u.yaw) * back, u.pos.z - Math.cos(u.yaw) * back, { radius: SMOKE_SHIP.radius, duration: SMOKE_SHIP.last });
+  }
+
+  /**
+   * A ship making no headway (other ships across her way: the route planner doesn't see them) goes round
+   * them: a detour point ahead and out to the side with the fewer ships, in deep water.
+   */
+  checkHeadway(u, dt, distToDest, wantSpeed) {
+    if (distToDest < 60 || wantSpeed < 0.3 || u.detour) { u.stuckT = 0; u.bestD = null; return; }
+    if ((u.stuckT = (u.stuckT ?? 0) + dt) < 6) return;
+    u.stuckT = 0;
+    const gain = (u.bestD ?? Infinity) - distToDest;
+    u.bestD = distToDest;
+    if (gain > 15) return;
+    const L = this.type.hull?.length ?? 100;
+    if (distToDest < L * 1.5) return; // (a crowd at her goal: near enough — no circling off)
+    const dl = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z) || 1;
+    const fx = (u.dest.x - u.pos.x) / dl, fz = (u.dest.z - u.pos.z) / dl; // toward where she's going
+    // only for ships in the way (stuck on anything else: the route planner's business)
+    const blocked = this.world.stacks.some((st) => st !== this && st.alive && st.stats.naval && st.units.some((o) => {
+      if (!o.alive || (o.depth ?? 0) > 3) return false;
+      const ox = o.pos.x - u.pos.x, oz = o.pos.z - u.pos.z, ahead = ox * fx + oz * fz;
+      return ahead > 0 && ahead < L + 200 && Math.abs(ox * fz - oz * fx) < (L + (st.type.hull?.length ?? 100)) * 0.6;
+    }));
+    if (!blocked) return;
+    const nav = this.world.nav;
+    let best = null, bestScore = -Infinity;
+    for (const side of [-1, 1]) {
+      const p = this.world.clampToBounds({ x: u.pos.x + fx * L * 0.9 + fz * side * L * 1.1, z: u.pos.z + fz * L * 0.9 - fx * side * L * 1.1 });
+      if (nav && !nav.passable(p.x, p.z, SHIP, u.radius)) continue;
+      let score = Infinity; // the room there: to the nearest other ship
+      for (const st of this.world.stacks) if (st !== this && st.alive && st.stats.naval) score = Math.min(score, Math.hypot(st.centroid.x - p.x, st.centroid.z - p.z));
+      if (score > bestScore) { bestScore = score; best = p; }
+    }
+    if (best) { u.detour = { x: best.x, z: best.z, until: this.world.time + 45 }; u.bestD = null; }
+  }
+
+  /** A ship's hull into `out` as a segment stern → bow (the bow stretched `ahead` m) and half its beam. */
+  hullOf(u, out, ahead = 0) {
+    const h = this.type.hull;
+    const half = (h?.length ?? u.radius * 8) * 0.46;
+    const sx = Math.sin(u.yaw), sz = Math.cos(u.yaw);
+    out[0] = u.pos.x - sx * half; out[1] = u.pos.z - sz * half;
+    out[2] = u.pos.x + sx * (half + ahead); out[3] = u.pos.z + sz * (half + ahead);
+    out[4] = (h?.beam ?? u.radius * 2) * 0.5;
+    return out;
+  }
+
+  /**
+   * Every other ship's hull near u's (not a submarine below 3 m: she passes under), called with the closest
+   * points (in _seg), the distance between the hulls and the room they want between them.
+   */
+  eachHull(u, ahead, fn) {
+    if ((u.depth ?? 0) > 3) return;
+    const a = this.hullOf(u, _ha, ahead);
+    const myHalf = (this.type.hull?.length ?? u.radius * 8) * 0.5 + ahead;
+    for (const s of this.world.stacks) {
+      if (s === this || !s.alive || !s.stats.naval) continue;
+      const reach = myHalf + (s.type.hull?.length ?? 100) * 0.5 + 40;
+      for (const o of s.units) {
+        if (!o.alive || (o.depth ?? 0) > 3 || Math.abs(o.pos.x - u.pos.x) > reach || Math.abs(o.pos.z - u.pos.z) > reach) continue;
+        const b = s.hullOf(o, _hb);
+        fn(o, segClosest(a, b, _seg), a[4] + b[4]);
+      }
+    }
+  }
+
   /** Push away from neighbours, scaled by both bodies' sizes. */
   separate(u, out) {
+    if (this.stats.naval) { // ships: keep off each other's hulls, looking ahead along the course
+      const v = Math.hypot(u.vel.x, u.vel.z);
+      this.eachHull(u, v * 8, (o, d, beams) => {
+        const want = beams + 30;
+        if (d >= want) return;
+        let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
+        const nl = Math.hypot(nx, nz) || 1;
+        nx /= nl; nz /= nl;
+        const push = ((want - d) / want) * Math.max(2, this.stats.speed * 0.6);
+        out.x += nx * push;
+        out.z += nz * push;
+        // and round it: along its side, the way she was heading anyway (a ship lying in the way is passed, not pushed against)
+        let tx = -nz, tz = nx;
+        if (tx * out.x + tz * out.z < 0) { tx = -tx; tz = -tz; }
+        out.x += tx * push * 1.5;
+        out.z += tz * push * 1.5;
+      });
+      return;
+    }
     for (const o of this.world.neighbors(u.pos, u.radius + 4.5, _near)) {
       if (o === u) continue;
       const min = u.radius + o.radius + PERSONAL_SPACE;
@@ -728,6 +997,7 @@ export class UnitStack {
     const pz = u.pos.z;
     u.pos.x += u.vel.x * dt;
     u.pos.z += u.vel.z * dt;
+    if (s.naval) { this.floatBody(u, px, pz, dt); return; }
     if (!(u.ghostT > 0)) this.world.cover.resolveCircle(u.pos, u.radius * 0.85, this.climb); // ghostT: climbing through
     this.world.clampToBounds(u.pos);
     this.onDeck(u.pos, true); // nobody pushed off the side of a bridge
@@ -752,6 +1022,51 @@ export class UnitStack {
 
     u.gait += (Math.min(1, speed / (s.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
     u.walkPhase += dt * speed * (Math.PI / (s.stride ?? 1.1));
+    if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
+  }
+
+  /** A ship: deep water only (running onto a reef or the shallows stops it), afloat at the sea's level. */
+  floatBody(u, px, pz, dt) {
+    const w = this.world.river?.water;
+    this.world.clampToBounds(u.pos);
+    const nav = this.world.nav;
+    // the shallows: her middle keeps her own radius off them (as her route does), her bow (some nine radii
+    // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
+    const fx = Math.sin(u.yaw) * u.radius * 9, fz = Math.cos(u.yaw) * u.radius * 9;
+    const closes = (cNew, cOld, r) => cNew < r && cNew < cOld;
+    if (nav && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
+      || closes(nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), nav.clearance(px + fx, pz + fz, SHIP), 0.5))) {
+      u.pos.x = px;
+      u.pos.z = pz;
+      u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
+    }
+    // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
+    // (after the shallows: a ship stopped by them still gets out of another's way — turning on the spot
+    // beside a shoal she would otherwise swing her hull into her neighbour's) — but never shoved onto them:
+    // that push is the other ship's to make (a ship stopped there lies still, so she takes all of it)
+    this.eachHull(u, 0, (o, d, beams) => {
+      const min = beams + 2;
+      if (d >= min) return;
+      let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
+      let nl = Math.hypot(nx, nz);
+      if (nl < 1e-3) { nx = u.pos.x - o.pos.x; nz = u.pos.z - o.pos.z; nl = Math.hypot(nx, nz) || 1; }
+      nx /= nl; nz /= nl;
+      const k = (min - d) * (Math.hypot(o.vel.x, o.vel.z) > 0.3 ? 0.5 : 1); // (half each when both are under way; all of it against a ship lying still)
+      const vn = u.vel.x * nx + u.vel.z * nz;
+      if (vn < 0) { u.vel.x -= nx * vn; u.vel.z -= nz * vn; } // (always: pinned against a shoal she still mustn't drive on into her)
+      const qx = u.pos.x + nx * k, qz = u.pos.z + nz * k;
+      if (nav && (closes(nav.clearance(qx, qz, SHIP), nav.clearance(u.pos.x, u.pos.z, SHIP), u.radius)
+        || closes(nav.clearance(qx + fx, qz + fz, SHIP), nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), 0.5))) return;
+      u.pos.x = qx;
+      u.pos.z = qz;
+    });
+    u.pos.y = (w?.level ?? 0) - (u.sink ?? 0) - (u.depth ?? 0);
+    u.climbY = 0;
+    const speed = Math.hypot(u.vel.x, u.vel.z);
+    u.moving = speed > 0.5;
+    if (!u.setUp || (u.pos.x - u.setUp.x) ** 2 + (u.pos.z - u.setUp.z) ** 2 > SET_UP_SLACK * SET_UP_SLACK) u.setUp = { x: u.pos.x, z: u.pos.z, at: this.world.time };
+    u.gait = Math.min(1, speed / this.stats.speed);
+    u.walkPhase += dt * speed;
     if (u.moving) u.moveYaw = Math.atan2(u.vel.x, u.vel.z);
   }
 
@@ -806,6 +1121,7 @@ export class UnitStack {
 
   updateWeapon(u, dt) {
     const s = u.stats;
+    if (s.naval) return this.updateShipWeapons(u, dt);
     // a towed gun: hitched to its truck while it moves, and it takes `towed.deploy` s from
     // stopping to being unhitched and laid — no shooting until then (the renderer shows the truck)
     if (s.towed) {
@@ -1239,7 +1555,7 @@ export class UnitStack {
         size: 0.9, source: this, life: len / 700 + 0.3, tracer: Math.random() < 0.6,
       });
       this.services.effects.muzzle(_p, _w, 1.1, 'rifle');
-      this.firedAt = this.world.time; // (the minimap shows where the fighting is)
+      // (no minimap pulse for flak: the fighting it shows is on the ground and the water)
       this.services.audio?.weapon(this.faction, this.weaponSound, _p);
       const k = Math.min(1, dist / reach);
       if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
@@ -1283,7 +1599,7 @@ export class UnitStack {
     air.missile(_p, h, this.faction, aa);
     _w.subVectors(h.pos, _p).normalize();
     this.services.effects.muzzle(_p, _w, 1, 'rocket');
-    this.firedAt = this.world.time; // (the minimap shows where the fighting is)
+    // (no minimap pulse for flak)
     this.services.audio?.weapon(this.faction, aa.sound ?? 'sam', _p);
     VisibilitySystem.revealShooter(u);
     u.recoil = 1;
@@ -1387,12 +1703,14 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if ((e.depth ?? 0) > 3 && !s.depthCharges) continue; // a submarine under the surface: only depth charges reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
+      if (s.depthCharges && (e.depth ?? 0) > 3) score -= 600; // the escort's job: the boat it has found
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
@@ -1648,6 +1966,226 @@ export class UnitStack {
     }
   }
 
+
+  // ------------------------------------------------------------------ ships (stats.naval)
+
+  /** The mounts of a ship (data/units45/ships.js `mounts`, per side), each with its own reload and state. */
+  shipMounts(u) {
+    const m = this.type.mounts;
+    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false })));
+  }
+
+  /** Where a mount's rounds leave: its place in the ship's frame (bow +z) turned with the hull. */
+  mountWorld(u, at, out) {
+    const c = Math.cos(u.yaw), s = Math.sin(u.yaw);
+    return out.set(u.pos.x + at[0] * c + at[2] * s, u.pos.y + at[1], u.pos.z - at[0] * s + at[2] * c);
+  }
+
+  /** A ship's fight: one target for the whole ship; every mount bearing on it fires on its own. */
+  updateShipWeapons(u, dt) {
+    const s = u.stats;
+    if (s.antiAir && (u.depth ?? 0) < 1) this.engageAir(u, dt); // the 40 mm and 20 mm at aircraft, whatever the main guns do
+    u.retarget -= dt;
+    if (u.target && (!u.target.alive || !u.target.spotted || dist2DSq(u.pos, u.target.pos) > s.range * s.range * 1.21)) u.target = null;
+    if (u.retarget <= 0) {
+      u.retarget = 1 + Math.random() * 0.6;
+      u.target = this.pickTarget(u);
+    }
+    const t = u.target;
+    u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
+    this.shine(u, t);
+    if (!t) return;
+    const d = Math.sqrt(dist2DSq(u.pos, t.pos));
+    const depth = u.depth ?? 0;
+    if (depth > 9) return; // a submarine deep down: blind and can't shoot
+    // a boat with nowhere ordered to go brings its bow tubes round onto the target (it turns only with way on)
+    if (u.stats.submarine && !this.moveTarget && Math.abs(angleDelta(u.yaw, u.turretYaw)) > 0.35 && (this.aimT = (this.aimT ?? 0) - dt) <= 0) {
+      this.aimT = 6;
+      this.ai.moveTo({ x: u.pos.x + Math.sin(u.turretYaw) * 220, z: u.pos.z + Math.cos(u.turretYaw) * 220 }, { ordered: false });
+    }
+    const under = (t.depth ?? 0) > 3; // the target is a submerged submarine: guns and torpedoes are no use, depth charges are
+    if (under) { this.huntSub(u, t, d, dt); return; }
+    const rel = angleDelta(u.yaw, u.turretYaw);
+    const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
+    for (const m of this.shipMounts(u)) {
+      m.cd -= dt;
+      if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
+      const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
+      if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
+      m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
+      this.mountWorld(u, m.at, _p);
+      if (m.torpedo) {
+        this.services.game?.torpedoes?.launch(this, _p, t, m);
+        continue;
+      }
+      // the shell: led onto where the target will be, off by what the firing solution hasn't got yet, spread growing with the range
+      _v.set(t.pos.x, t.pos.y + t.aimHeight, t.pos.z);
+      if (t.vel) _v.addScaledVector(t.vel, d / m.shell);
+      const fc = this.fireControl(u, t);
+      const lx = (t.pos.x - u.pos.x) / (d || 1), lz = (t.pos.z - u.pos.z) / (d || 1);
+      const long = (1 - fc.q) * RANGE_ERR * d * Math.sin(fc.n * 2.3 + this.id);       // long or short
+      const wide = (1 - fc.q) * RANGE_ERR * 0.2 * d * Math.cos(fc.n * 1.7 + this.id); // left or right
+      _v.x += lx * long + lz * wide;
+      _v.z += lz * long - lx * wide;
+      _w.subVectors(_v, _p).normalize();
+      const spread = m.spread * (1 + 0.8 * d / m.range) * (u.moving ? 1.3 : 1) * u.skill * (1 - 0.1 * this.rank) * (1 + Math.abs(u.list ?? 0) * 4) * (this.services.game?.seaState ?? 1); // (a list throws the guns off: counter-flood; a rough sea too)
+      _w.x += (Math.random() - 0.5) * spread * 2;
+      _w.y += (Math.random() - 0.5) * spread * 0.6;
+      _w.z += (Math.random() - 0.5) * spread * 2;
+      _w.normalize();
+      this.services.projectiles.spawn({
+        origin: _p, dir: _w, speed: m.shell, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor,
+        size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: true,
+      });
+      this.services.effects.muzzle(_p, _w, m.size, 'artillery');
+      this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
+      this.firedAt = this.world.time;
+      VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /**
+   * A ship's searchlight at night (stack.searchlight): on her target within SEARCHLIGHT m — lit up as by day for
+   * everyone (locatedUntil: VisibilitySystem.isSeen) — and on herself as much: the beam shows where she is.
+   * With no target it sweeps ahead. u.lightOn: what systems/Searchlights.js draws the beam to.
+   */
+  shine(u, t) {
+    const g = this.services.game;
+    if (!this.searchlight || !g?.conditions?.night || (u.depth ?? 0) > 1) { u.lightOn = null; return; }
+    const now = this.world.time;
+    u.locatedUntil = Math.max(u.locatedUntil ?? 0, now + 0.6);
+    if (t && dist2DSq(u.pos, t.pos) < SEARCHLIGHT * SEARCHLIGHT) {
+      t.locatedUntil = Math.max(t.locatedUntil ?? 0, now + 0.6);
+      u.lightOn = t.pos;
+    } else {
+      const a = u.yaw + Math.sin(now * 0.4 + this.id) * 0.9;
+      u.lightOn = { x: u.pos.x + Math.sin(a) * 900, y: 0, z: u.pos.z + Math.cos(a) * 900 };
+    }
+  }
+
+  /**
+   * The firing solution on target unit `t` (ranging, at sea): from nothing when the guns turn on her, better
+   * with every second of shooting (SOLUTION), halved when she turns hard or changes speed, worn by our own
+   * hard turning. A straddle the first time it's good: the gunnery officer says so.
+   */
+  fireControl(u, t) {
+    const now = this.world.time;
+    const tv = Math.hypot(t.vel?.x ?? 0, t.vel?.z ?? 0);
+    let fc = u.fc;
+    if (!fc || fc.t !== t) fc = u.fc = { t, q: 0, yaw: t.yaw ?? 0, v: tv, n: 0, last: now, straddle: false };
+    if (Math.abs(angleDelta(fc.yaw, t.yaw ?? 0)) > 0.25 || Math.abs(tv - fc.v) > 3) { fc.q *= 0.5; fc.yaw = t.yaw ?? 0; fc.v = tv; }
+    if (Math.abs(u.turning ?? 0) > 0.5) fc.q *= 0.97;
+    fc.q = Math.min(1, fc.q + (now - fc.last) / (SOLUTION[this.faction] ?? 18));
+    fc.last = now;
+    fc.n++;
+    if (fc.q >= 0.75 && !fc.straddle) { fc.straddle = true; this.bark(u, 'straddle', 1, true); }
+    return fc;
+  }
+
+  /**
+   * A found submarine under the surface: a ship with depth charges runs in over it (unless the player
+   * has it on another errand) and drops a pattern where it is (systems/Torpedoes.js charges).
+   */
+  huntSub(u, t, d, dt) {
+    const dc = u.stats.depthCharges;
+    if (!dc) return;
+    if ((!this.ai.ordered || this.ai.state === AIState.ATTACK) && (this.chaseT = (this.chaseT ?? 0) - dt) <= 0) {
+      this.chaseT = 3;
+      this.ai.moveTo({ x: t.pos.x + (t.vel?.x ?? 0) * 8, z: t.pos.z + (t.vel?.z ?? 0) * 8 }, { ordered: false });
+    }
+    u.dcLeft ??= dc.count;
+    if ((u.dcCd = (u.dcCd ?? 0) - dt) > 0 || u.dcLeft <= 0 || d > 60) return;
+    u.dcCd = dc.reload;
+    u.dcLeft--;
+    this.services.game?.torpedoes?.dropCharges(this, u, t, dc);
+    if (u.dcLeft === 0) this.services.tell(this.faction, `${this.name}: out of depth charges`);
+  }
+
+  /**
+   * A hit on a ship that didn't sink it: below the waterline it leaks (flooding: UnitStack.shipUpkeep),
+   * and now and then it knocks something out — the engines, the rudder, a mount, the bridge — or
+   * starts a fire. `torpedo`: a hole in the hull for certain.
+   */
+  shipHit(u, dealt, torpedo = false) {
+    const k = dealt / u.maxHp;
+    if (!torpedo && k > 0.02) this.services.audio?.play('impact.ship', u.pos, { volume: Math.min(1, 0.5 + k * 6), throttle: 0.2 }); // the hull rings
+    const tell = (text) => this.services.tell(this.faction, `${this.name}: ${text}`);
+    if (u.deckSpot > this.world.time) { // a carrier caught with her strike spotted on deck: armed and fuelled planes go up in flames
+      u.blaze = Math.max(u.blaze ?? 0, 0.8);
+      u.deckSpot = 0;
+      tell('hit with armed planes on deck — she\'s burning!');
+    }
+    if (torpedo || Math.random() < 0.3 + k * 4) {
+      const was = u.leak ?? 0;
+      u.leak = was + (torpedo ? 0.012 * clamp(120 / (this.type.hull?.length ?? 120), 0.35, 1.2) : Math.min(0.006, k * 0.03 + 0.002)); // (a torpedo opens a destroyer up, a battleship takes several; a shell or a charge springs a leak at most)
+      if (torpedo) tell('torpedo hit — flooding!');
+      else if (!was) tell('holed below the waterline');
+    }
+    if (Math.random() > Math.min(0.55, 0.06 + k * 5)) return;
+    const now = this.world.time;
+    const r = Math.random();
+    if (r < 0.2) { u.engineHit = true; u.engineFix = now + 60; tell('engine room hit — losing speed'); }
+    else if (r < 0.32) { u.rudderHit = now + 40; tell('rudder jammed'); }
+    else if (r < 0.62) {
+      const up = this.shipMounts(u).filter((m) => !m.out);
+      const m = up[Math.floor(Math.random() * up.length)];
+      if (m) { m.out = true; m.fixAt = Math.random() < 0.5 ? now + 60 : Infinity; tell(m.torpedo ? 'torpedo mount wrecked' : 'a gun mount knocked out'); }
+    } else if (r < 0.72) { u.bridgeHit = now + 30; tell('bridge hit'); }
+    else { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.35); tell('fire aboard'); }
+  }
+
+  /**
+   * A ship's own upkeep: water comes in through the leaks and the pumps fight it; fires burn and the
+   * crews put them out (or don't: a big one can reach the magazine); damage gets mended. Flooding
+   * settles the ship, lists and trims it (the model) and slows it; when it's full, it goes down.
+   */
+  shipUpkeep(u, dt) {
+    const now = this.world.time;
+    // damage control (u.dc, ordered from her tag: ui/StackLabels.js): its parties where the captain wants them —
+    // the pumps, the fire, the repairs — work DC_FOCUS faster there and DC_ELSE as fast everywhere else
+    const dc = (k) => (!u.dc ? 1 : u.dc === k ? DC_FOCUS : DC_ELSE);
+    if (u.leak > 0) {
+      u.flood = (u.flood ?? 0) + u.leak * dt;
+      u.leak = Math.max(0, u.leak - dt * 0.00045 * dc('flood'));   // damage control: the holes get plugged, one by one
+    } else if (u.flood > 0) u.flood = Math.max(0, u.flood - dt * 0.002 * dc('flood')); // …and pumped out
+    for (const k of ['engineFix', 'rudderHit', 'bridgeHit']) if (u[k] > now) u[k] -= dt * (dc('repair') - 1); // (the repair parties: sooner, or later)
+    for (const m of u.mounts ?? []) if (m.out && Number.isFinite(m.fixAt)) m.fixAt -= dt * (dc('repair') - 1);
+    if (u.counterK != null && u.counterK < 1) u.counterK = Math.min(1, u.counterK + dt / 12); // counter-flooding: she comes upright over 12 s
+    if (u.blaze > 0) {
+      u.hp -= u.blaze * u.maxHp * 0.0025 * dt;
+      const burn = u.dc === 'fire' ? -0.03 : u.blaze > 0.65 ? 0.008 : -0.02 * dc('fire'); // a small fire is put out, a big one spreads — unless every hose is on it
+      u.blaze = Math.min(1, Math.max(0, u.blaze + burn * dt));
+      if ((u.burnFx = (u.burnFx ?? 0) - dt) <= 0) {
+        u.burnFx = 6;
+        this.services.effects.burn({ x: u.pos.x, y: u.pos.y + 6, z: u.pos.z }, 8, 0.8 + u.blaze * 1.5);
+      }
+      if (u.blaze > 0.85 && Math.random() < dt * 0.01) { // the fire reaches a magazine
+        this.services.effects.explosion({ x: u.pos.x, y: u.pos.y + 8, z: u.pos.z }, 4, { ground: false, fire: 3 });
+        this.services.tell(this.faction, `${this.name}: the magazine has gone up!`);
+        this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1);
+        return;
+      }
+    }
+    u.seaK = this.services.game?.seaState ?? 1; // (how she rolls and pitches: data/models/ships1945.js)
+    const sm = u.stats.submarine;
+    if (sm) { // dive or come up toward the ordered depth (never below the sea floor); badly holed, she has to surface
+      u.depthMode ??= 'periscope';
+      const floor = (this.world.river?.level ?? 0) - this.world.terrain.heightAt(u.pos.x, u.pos.z) - 5;
+      let want = u.depthMode === 'surface' ? 0 : u.depthMode === 'deep' ? sm.deep : sm.periscope;
+      if ((u.flood ?? 0) > 0.5) { want = 0; if (u.depthMode !== 'surface') { u.depthMode = 'surface'; this.services.tell(this.faction, `${this.name}: flooding — forced to surface!`); } }
+      want = Math.max(0, Math.min(want, floor));
+      u.depth = (u.depth ?? 0) + clamp(want - (u.depth ?? 0), -sm.dive * dt, sm.dive * dt);
+    }
+    if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
+    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) m.out = false;
+    const f = u.flood ?? 0;
+    u.listSide ??= Math.random() < 0.5 ? -1 : 1;
+    u.list = f * 0.22 * u.listSide * (1 - (u.counterK ?? 0));
+    u.trim = f * 0.03;
+    u.sink = f * 2.5;
+    if (f >= 1 || u.hp <= 0) this.damageUnit(u, u.hp * 10 + 1e5, this.lastAttacker ?? null, 1, null, 1); // (no more buoyancy: she goes down)
+  }
+
   /** Smoke grenade launchers (vehicles) or thrown smoke grenades (infantry): a screen between `u` and the threat (dir: incoming shot). */
   popSmoke(u, dir = null) {
     if (this.smokeLeft <= 0 || this.world.time < (this.smokeReadyAt ?? 0)) return false;
@@ -1788,14 +2326,15 @@ export class UnitStack {
       // Armour: rifles barely scratch it; directional plating (front 1x, side 0.7x, rear 0.35x).
       let armor = this.stats.armor;
       let facing = 1;
-      if (dir) {
+      if (dir && !this.stats.naval) { // (a ship: one belt all round)
         const len = Math.hypot(dir.x, dir.z) || 1;
         facing = -(dir.x * Math.sin(u.yaw) + dir.z * Math.cos(u.yaw)) / len; // 1 = hit head-on
         armor *= facing > 0.5 ? 1 : facing > -0.5 ? 0.7 : 0.35;
       }
       const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
-      if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
+      if (this.stats.naval) { if (u.hp > 0) this.shipHit(u, dealt); } // (flooding, fires, parts)
+      else if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
       if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);
@@ -1807,8 +2346,12 @@ export class UnitStack {
     if (source && source.faction !== this.faction && source.alive) {
       this.lastAttacker = source;
       this.lastHitTime = this.world.time;
-      // infantry hit in the attack, on the move or pinned: a smoke grenade toward the shooter
-      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !this.garrison && (this.ai.state === AIState.ATTACK || this.moveTarget || u.suppression > 0.7)) {
+      // infantry hit out in the open — in the attack, on the move, or pinned with nothing to hide behind: a
+      // smoke grenade toward the shooter. Never from a house or from behind good cover: there the smoke
+      // only hides the enemy coming across the open toward them
+      const housed = this.garrison || this.entered || u.coverSpot?.interior;
+      const exposed = this.moveTarget || this.ai.state === AIState.ATTACK || (u.suppression > 0.7 && !u.atCover);
+      if (this.usesCover && this.smokeLeft > 0 && !u.possessed && !housed && exposed) {
         const from = source.centroid ?? source.pos;
         if (from) this.popSmoke(u, { x: u.pos.x - from.x, z: u.pos.z - from.z });
       }
@@ -1925,7 +2468,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind, this.army);
+    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' ? 'ijn' : this.army); // (at sea the other side is the Imperial Navy: Japanese)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

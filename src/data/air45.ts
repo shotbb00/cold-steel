@@ -2,7 +2,7 @@
 // army's own aircraft — `nato` the US Army's, `sov` the Red Army's, `pact` the Wehrmacht's, `fj`
 // the Fallschirmjäger's. Phase 1: the strike run ('jet') and the fighter patrol ('cap'); no
 // helicopters in this war, the paradrop and the recon flight come later.
-import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52, buildUsF5, buildSovPe2, buildFjAr234 } from './models/ww2Aircraft.js';
+import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52, buildUsF5, buildSovPe2, buildFjAr234, buildUsHellcat, buildUsHelldiver, buildUsAvenger, buildJpZero, buildJpVal, buildJpJill } from './models/ww2Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const MG50 = { rate: 26, damage: 120, splash: 0.6, vsArmor: 0.3, pierce: 0.25, speed: 880, tracer: 0.3, size: 0.8, sound: 'nato.aa' };   // eight .50 cals
@@ -50,5 +50,26 @@ const RECON: Record<string, Aircraft> = {
   fj: { name: 'Ar 234 B Blitz', weapon: 'cameras', text: 'The jet reconnaissance bomber: too fast for any Allied fighter to catch on its run.', model: buildFjAr234, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 6 },
 };
 
+// the Pacific (the open-sea maps): what the carriers launch — `nato` the US Navy's, `pact` the Imperial Navy's
+const SEA_BLUE = { colors: [0x2e3d52, 0x2a384c, 0x334459, 0x283548] as [number, number, number, number], scale: 0.8 };
+const IJN_GREEN = { colors: [0x3c4a34, 0x36432f, 0x43523a, 0x323e2c] as [number, number, number, number], scale: 0.8 };
+const BOMB = { interval: 0.1, splash: 7, vsArmor: 1, pierce: 0.6, speed: 170, sound: 'heli.rocket' };
+const NAV_FIGHTER: Record<string, Aircraft> = {
+  nato: { name: 'F6F Hellcat', weapon: '6 × .50 cal', text: 'The Navy’s workhorse fighter: rugged and fast, it cleared the Pacific sky.', model: buildUsHellcat, paint: SEA_BLUE, engineSound: 'prop', gun: MG50, hp: 7, guns: true },
+  pact: { name: 'A6M Zero', weapon: '2 × 20 mm · 2 × 7.7 mm', text: 'The Zero: nimble and long-ranged, but no armour and no self-sealing tanks.', model: buildJpZero, paint: IJN_GREEN, engineSound: 'prop', gun: CANNON, hp: 4, guns: true },
+};
+const DIVE: Record<string, Aircraft> = {
+  nato: { name: 'SB2C Helldiver', weapon: '1,000 lb bomb', text: 'The dive bomber: down at seventy degrees, the bomb onto the deck, out low over the water.', model: buildUsHelldiver, paint: SEA_BLUE, engineSound: 'prop', gun: MG50, rockets: { count: 1, damage: 1700, ...BOMB }, hp: 7 },
+  pact: { name: 'D3A Val', weapon: '250 kg bomb', text: 'The fixed-gear dive bomber that sank more Allied warships than any other aircraft.', model: buildJpVal, paint: IJN_GREEN, engineSound: 'prop', gun: CANNON, rockets: { count: 1, damage: 1300, ...BOMB }, hp: 5 },
+};
+const TORP: Record<string, Aircraft> = {
+  nato: { name: 'TBM Avenger', weapon: 'Mark 13 aerial torpedo', text: 'The torpedo bomber: low and level at the ship, the fish dropped close in.', model: buildUsAvenger, paint: SEA_BLUE, engineSound: 'prop', gun: MG50, hp: 8, torpedo: { count: 1, speed: 18, range: 1300, damage: 2600 } },
+  pact: { name: 'B6N Jill', weapon: 'Type 91 aerial torpedo', text: 'The Kate’s successor: faster, and the Type 91 torpedo ran true.', model: buildJpJill, paint: IJN_GREEN, engineSound: 'prop', gun: CANNON, hp: 6, torpedo: { count: 1, speed: 20, range: 1400, damage: 2600 } },
+};
+const NAV_SCOUT: Record<string, Aircraft> = {
+  nato: { name: 'TBM Avenger (search)', weapon: 'radar and cameras', text: 'An Avenger flying search: a long leg out, and what it sees shows on the plot.', model: buildUsAvenger, paint: SEA_BLUE, engineSound: 'prop', gun: NOGUN, hp: 8 },
+  pact: { name: 'B6N Jill (search)', weapon: 'cameras', text: 'A carrier attack plane flying search for the fleet.', model: buildJpJill, paint: IJN_GREEN, engineSound: 'prop', gun: NOGUN, hp: 6 },
+};
+
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (sov, fj). */
-export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP, recon: RECON };
+export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP, recon: RECON, navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT };

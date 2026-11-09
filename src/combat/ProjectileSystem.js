@@ -8,6 +8,7 @@
 // craters in the terrain.
 // `cosmetic` (a multiplayer client): rounds fly, strike and burst exactly the same, but hurt and
 // rattle nobody — the host decides hits, and its snapshots carry the result.
+import { stampFoam } from '../world/SeaFoam.js';
 import * as THREE from 'three';
 import { enemyOf } from '../data/factions.js';
 
@@ -163,8 +164,19 @@ export class ProjectileSystem {
           if (b.splash) this.detonate(b, _hit, null);
           dead = true;
         } else {
-          const gy = terrain.heightAt(b.pos.x, b.pos.z);
-          if (b.pos.y <= gy) {
+          const sea = this.world.river?.sea ? this.world.river.level : -Infinity; // (the open sea: rounds burst at the surface, not on the sea floor)
+          const ground = terrain.heightAt(b.pos.x, b.pos.z);
+          const gy = Math.max(ground, sea);
+          if (b.pos.y <= gy && gy === sea && ground < sea) {
+            b.pos.y = sea;
+            if ((b.splash || 0) >= 3) { // a warship's shell: the tall column, and its foam on the water
+              this.effects.shellSplash?.(b.pos, b.splash);
+              if (this.world.river.foam) stampFoam(this.world.river.foam, b.pos.x, b.pos.z, 6 + b.splash * 1.5, 230);
+            } else this.effects.waterSplash?.(b.pos, Math.max(0.4, (b.splash || 1) / 4));
+            if ((b.splash || 0) >= 3) this.audio?.play(b.splash >= 9 ? 'splash.big' : 'splash', b.pos, { volume: Math.min(1, 0.55 + b.splash / 20), throttle: 0.08 }); // (a shell short: the column going up)
+            if (b.splash) this.detonate(b, b.pos, null, false, true);
+            dead = true;
+          } else if (b.pos.y <= gy) {
             b.pos.y = gy;
             if (!b.splash) this.effects.impact(b.pos, 'ground');
             this.audio?.play('impact.ground', b.pos, { volume: 0.35, throttle: 0.05 });
@@ -241,7 +253,7 @@ export class ProjectileSystem {
     let bestT = -1;
 
     for (const t of targets) {
-      if (!t.alive || b.hitSet?.has(t)) continue;
+      if (!t.alive || b.hitSet?.has(t) || (t.depth ?? 0) > 2) continue; // (a submarine under the surface: the water takes the shell)
       const cx = t.pos.x;
       const cz = t.pos.z;
       if (Math.abs(b.pos.x - cx) > reach || Math.abs(b.pos.z - cz) > reach) continue;
@@ -271,7 +283,7 @@ export class ProjectileSystem {
   }
 
   /** Shell burst: falloff damage to enemies around the impact (the direct-hit target excluded). */
-  detonate(b, point, directTarget, ground = true) {
+  detonate(b, point, directTarget, ground = true, water = false) {
     const foe = enemyOf(b.faction);
     const r = b.splash;
     if (!this.cosmetic) {
@@ -284,6 +296,7 @@ export class ProjectileSystem {
       this.suppressAround(point, b.faction, r * 2.2, 0.6);
       this.buildings?.blast(point, b.damage, r);
     }
+    if (water) return; // (in the sea: the splash is all there is to see)
     if (b.ignite) { // a flamethrower's fuel: it burns where it lands, nothing goes bang
       this.effects.flameSplash?.(point);
       if (!this.cosmetic && Math.abs(point.y - this.world.terrain.heightAt(point.x, point.z)) < 1.5) this.fire?.ignite(point.x, point.z, b.ignite);

@@ -17,6 +17,12 @@
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
 //   { t: 'refill', s: [ids] }                    (depleted squads near supply take in new men for CP, UnitStack.refill)
 //   { t: 'withdraw', s: [ids] }                  (back to base and off the field: frees the slot, half the price back)
+//   { t: 'shipSpeed', s: [ids], v }              (ships' engine orders: slow / half / full / flank, UnitStack SHIP_SPEEDS)
+//   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
+//   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
+//   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
+//   { t: 'searchlight', s: [ids], on }           (ships at night: light the target up — and show yourself)
+//   { t: 'damageControl', s: [ids], p }          (ships: 'flood' / 'fire' / 'repair' first, 'auto' all alike, 'counter' counter-flood the list)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
@@ -84,6 +90,10 @@ export class Orders {
           const face = Number.isFinite(cmd.face) ? cmd.face : null;
           // a waypoint: queued behind the route it's already on (StackAI takes the next on arrival)
           if (cmd.q && (s.moveTarget || s.waypoints?.length)) { (s.waypoints ??= []).push({ x, z, hold: !!cmd.hold, face }); continue; }
+          if (s.station) { // a ship in formation: sent on with her leader, she keeps her place; sent alone, she leaves it
+            if ((cmd.m ?? []).some(([lid]) => lid === s.station.lead)) continue;
+            s.station = null;
+          }
           s.waypoints = null;
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
@@ -112,6 +122,72 @@ export class Orders {
         g.tell(faction, `The ${b.name} is ${up.label} now`);
         return null;
       }
+      case 'shipSpeed': // ships' engine orders (UnitStack SHIP_SPEEDS)
+        for (const s of mine(cmd.s)) if (s.stats.naval) s.shipSpeed = cmd.v;
+        return null;
+      case 'zigzag':
+        for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.zigzag = !!cmd.on;
+        return null;
+      case 'formation': { // the biggest ship leads; the rest take their stations on her (UnitStack.keepStation)
+        const ships = mine(cmd.s).filter((s) => s.stats.naval && !s.stats.submarine);
+        for (const s of ships) s.station = null;
+        if (cmd.f === 'free' || ships.length < 2) return null;
+        const size = (s) => s.type.hull?.length ?? 100;
+        const [lead, ...rest] = [...ships].sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0) || size(b) - size(a));
+        let back = size(lead) / 2;
+        rest.forEach((s, i) => {
+          let dx = 0, dz = 0;
+          if (cmd.f === 'ahead') { dz = -(back + 130 + size(s) / 2); back = -dz + size(s) / 2; }
+          else if (cmd.f === 'abreast') { dx = (i % 2 ? -1 : 1) * Math.ceil((i + 1) / 2) * 260; }
+          else { // screen: a ring ahead and round the sides
+            const r = size(lead) / 2 + 480;
+            const a = rest.length === 1 ? 0 : (-1 + (2 * i) / (rest.length - 1)) * 2.1;
+            dx = Math.sin(a) * r; dz = Math.cos(a) * r;
+          }
+          s.station = { lead: lead.id, dx, dz };
+          s.waypoints = null;
+        });
+        g.tell(faction, `${lead.name} leads: ${{ ahead: 'line ahead', abreast: 'line abreast', screen: 'the screen closes round her' }[cmd.f] ?? cmd.f}`);
+        return null;
+      }
+      case 'damageControl': // where a ship's damage control parties go first (UnitStack.shipUpkeep); counter-flooding rights a list
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.naval) continue;
+          for (const u of s.units) {
+            if (!u.alive) continue;
+            if (cmd.p === 'counter') {
+              if (Math.abs(u.list ?? 0) < 0.02 || u.counterK != null) continue;
+              u.counterK = 0;
+              u.flood = (u.flood ?? 0) + 0.05; // (the price: water let in on the other side)
+              g.tell(faction, `${s.name}: counter-flooding — coming upright`);
+            } else u.dc = cmd.p === 'auto' ? null : cmd.p;
+          }
+        }
+        return null;
+      case 'searchlight': // ships at night: the beam on the target — she lights it up for everyone, and shows herself
+        for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.searchlight = !!cmd.on;
+        return null;
+      case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
+        for (const s of mine(cmd.s)) {
+          const sg = s.stats.smokeGen;
+          if (!sg) continue;
+          if ((s.smokeReady ?? 0) > g.world.time) { g.tell(faction, `${s.name}: smoke again in ${Math.ceil(s.smokeReady - g.world.time)} s`); continue; }
+          s.smokeUntil = g.world.time + sg.last;
+          s.smokeReady = s.smokeUntil + sg.cooldown;
+        }
+        return null;
+      case 'subDepth': // a submarine: surface / periscope / deep (UnitStack.shipUpkeep)
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.submarine) continue;
+          for (const u of s.units) {
+            if (cmd.d !== 'surface' && (u.depthMode ?? 'periscope') === 'surface' && u.alive) g.audio?.play('klaxon', u.pos, { volume: 0.8, throttle: 1 }); // dive, dive!
+            u.depthMode = cmd.d;
+          }
+        }
+        return null;
+      case 'silent': // a submarine: silent running — half the speed, half as easy to hear
+        for (const s of mine(cmd.s)) if (s.stats.submarine) s.silent = !!cmd.on;
+        return null;
       case 'holdFire': // per stack: hold fire (only the attack target) or fire at will (the default)
         for (const s of mine(cmd.s)) { s.holdFire = !!cmd.on; for (const u of s.units) if (cmd.on && u.target) u.target = null; }
         return null;
@@ -242,6 +318,17 @@ export class Orders {
           const d = Math.hypot(cmd.x - s.centroid.x, cmd.z - s.centroid.z);
           const range = s.unitStats(0).range;
           if (d > range) { g.tell(faction, `${s.name}: out of range (${range} m)`); continue; }
+          if (s.stats.naval) { // a ship's star shell: from a 5-inch gun, it bursts high over the spot after its flight and lights the sea far round
+            const u = s.units.find((v) => v.alive);
+            if (!u) continue;
+            s.flareRounds--;
+            s.starAt = g.world.time;
+            g.flares.later(d / 700, cmd.x, 260, cmd.z, { radius: 450 });
+            g.effects.muzzle({ x: u.pos.x, y: u.pos.y + 8, z: u.pos.z }, { x: cmd.x - u.pos.x, y: 0.6 * d, z: cmd.z - u.pos.z }, 1.4, 'artillery');
+            g.audio?.weapon(s.faction, 'cannon', u.pos);
+            g.tell(faction, `${s.name}: star shell (${s.flareRounds} left)`);
+            return null;
+          }
           s.ai.halt();
           s.smokeOrder = { x: cmd.x, z: cmd.z, left: 1, kind: 'flare' };
           for (const u of s.units) u.retarget = 0;

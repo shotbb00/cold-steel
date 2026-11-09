@@ -49,7 +49,7 @@ export class Deployment {
     // the front edge of the zone, a gold line across the field
     const span = Math.max(g.world.bounds.x, g.world.bounds.z) * 3;
     const geo = new THREE.PlaneGeometry(span, 1.6, 400, 1).rotateX(-Math.PI / 2);
-    this.edge = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffc35a, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false }), g.terrain, 0.25);
+    this.edge = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffc35a, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false }), g.commands?.surface ?? g.terrain, 0.25); // (at sea: on the water)
     this.edge.place(base.x + d.x * limit, base.z + d.y * limit, 1, Math.atan2(-d.x, -d.y));
     g.scene.add(this.edge.mesh);
     this.on = true;

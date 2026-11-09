@@ -8,6 +8,7 @@ export class EnemyDirector {
   constructor(game, faction, { holdTime = 6, thinkInterval = 1.5 } = {}) {
     this.game = game;
     this.faction = faction;
+    this.bot = true; // (systems/AutoFlares.js: a bot fires its own flares)
     this.holdTime = holdTime;
     this.thinkInterval = thinkInterval;
     this.elapsed = 0;

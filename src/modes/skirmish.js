@@ -6,6 +6,7 @@
 // whatever the mode needs and may push extra systems ({ update(dt, t) }) onto game.systems.
 import { epoch } from '../data/epoch.js';
 import { EnemyDirector } from '../ai/EnemyDirector.js';
+import { SeaDirector } from '../ai/SeaDirector.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 
 // Reinforcement schedule (seconds of game time) for the enemy and for your side. Units spawn
@@ -14,6 +15,12 @@ const WAVES = [
   { at: 95, side: 'enemy', units: ['rifles', 'atTeam'] },
   { at: 150, side: 'ally', units: ['rifles'] },
   { at: 190, side: 'enemy', units: ['rifles', 'rifles', 'atTeam'] },
+];
+// at sea: the follow-on squadrons
+const SEA_WAVES = [
+  { at: 120, side: 'enemy', units: ['destroyer', 'frigate'] },
+  { at: 200, side: 'ally', units: ['destroyer'] },
+  { at: 280, side: 'enemy', units: ['cruiser', 'destroyer', 'submarine'] },
 ];
 
 export default {
@@ -25,10 +32,13 @@ export default {
     for (const [faction, spawns] of Object.entries(game.map.spawns)) {
       for (const sp of spawns) game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); // (the maps' names are 1985's: "1-ya Rota")
     }
-    game.systems.push(new EnemyDirector(game, enemyOf(game.playerFaction), { holdTime: 12 }));
     const foe = enemyOf(game.playerFaction);
-    game.modeState = { waves: WAVES.map((w) => ({ ...w, faction: w.side === 'enemy' ? foe : game.playerFaction, done: false })), waveNo: 0 };
-    game.bus.emit('toast', 'Enemy stacks are massing across the valley — set your lines');
+    const sea = !!game.world.river?.sea;
+    game.systems.push(sea
+      ? new SeaDirector(game, foe, { maxStacks: 99, cp: { [foe]: 0 } }, { hunt: true }) // (no points to take: it goes for your fleet)
+      : new EnemyDirector(game, foe, { holdTime: 12 }));
+    game.modeState = { waves: (sea ? SEA_WAVES : WAVES).map((w) => ({ ...w, faction: w.side === 'enemy' ? foe : game.playerFaction, done: false })), waveNo: 0 };
+    game.bus.emit('toast', sea ? 'An enemy squadron is out there, more on the way — find it and sink it' : 'Enemy stacks are massing across the valley — set your lines');
   },
 
   update(game) {
@@ -39,13 +49,14 @@ export default {
       const layout = game.map.spawns[wave.faction];
       wave.units.forEach((unit, i) => {
         const sp = layout[i % layout.length];
-        const name = `${wave.faction === game.playerFaction ? 'Relief' : 'Echelon'} ${['I', 'II', 'III', 'IV'][i] ?? i + 1}-${++state.waveNo}`;
-        game.spawnStack(unit, wave.faction, { x: sp.x + (Math.random() - 0.5) * 6, z: sp.z }, sp.facing ?? 0, name);
+        const sea = !!game.world.river?.sea;
+        const name = sea ? undefined : `${wave.faction === game.playerFaction ? 'Relief' : 'Echelon'} ${['I', 'II', 'III', 'IV'][i] ?? i + 1}-${++state.waveNo}`; // (ships keep their class name)
+        game.spawnStack(unit, wave.faction, { x: sp.x + (Math.random() - 0.5) * (sea ? 300 : 6), z: sp.z }, sp.facing ?? 0, name);
       });
       game.bus.emit('wave', { faction: wave.faction, units: wave.units });
       game.bus.emit('toast', wave.faction === game.playerFaction
         ? `Reinforcements have reached your base (${wave.units.length} stack${wave.units.length > 1 ? 's' : ''})`
-        : `Enemy reinforcements are entering the valley (${wave.units.length} stacks)`);
+        : game.world.river?.sea ? `More enemy ships are coming in (${wave.units.length})` : `Enemy reinforcements are entering the valley (${wave.units.length} stacks)`);
     }
 
     const foe = enemyOf(game.playerFaction);

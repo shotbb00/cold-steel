@@ -37,7 +37,11 @@ export function setClimate(name) {
 }
 
 export const NOISE = /* glsl */ `
-  float pHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  // a lattice corner's value: whole-number arithmetic only (a permutation polynomial mod 289), so a
+  // corner shared by two cells hashes the same in both however the GPU's compiler regroups (i + 1) * k
+  // — a fractional hash got it a hair different, and wave normals made every cell edge a line
+  float pPerm(float x) { return mod((x * 34.0 + 1.0) * x, 289.0); }
+  float pHash(vec3 p) { p = mod(p, 289.0); return pPerm(pPerm(pPerm(p.x) + p.y) + p.z) * (1.0 / 289.0); }
   float pNoise(vec3 x) {
     vec3 i = floor(x), f = fract(x);
     f = f * f * (3.0 - 2.0 * f);
@@ -45,12 +49,12 @@ export const NOISE = /* glsl */ `
                mix(mix(pHash(i + vec3(0, 0, 1)), pHash(i + vec3(1, 0, 1)), f.x), mix(pHash(i + vec3(0, 1, 1)), pHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
   }
   float pFbm(vec3 p) { return pNoise(p) * 0.6 + pNoise(p * 2.1 + 5.3) * 0.3 + pNoise(p * 4.3 + 9.1) * 0.1; }
-  // paint.x = camo mask + 2 × surface (0 paint, 1 metal, 2 rubber, 3 glass, 4 cloth)
+  // paint.x = camo mask + 2 × surface (0 paint, 1 metal, 2 rubber, 3 glass, 4 cloth, 5 ship plate, 6 deck, 7 flight deck)
   float pSurf(float px) { return floor(px * 0.5 + 0.01); }
   float pCamo(float px) { return px - 2.0 * pSurf(px); }
   // roughness, metalness of a surface; n (0…1) varies the roughness a little
   vec2 pSurfRM(float s, float n) {
-    vec2 rm = s < 0.5 ? vec2(0.62, 0.14) : s < 1.5 ? vec2(0.4, 0.62) : s < 2.5 ? vec2(0.9, 0.0) : s < 3.5 ? vec2(0.06, 0.0) : vec2(0.96, 0.0);
+    vec2 rm = s < 0.5 ? vec2(0.62, 0.14) : s < 1.5 ? vec2(0.4, 0.62) : s < 2.5 ? vec2(0.9, 0.0) : s < 3.5 ? vec2(0.06, 0.0) : s < 4.5 ? vec2(0.96, 0.0) : s < 5.5 ? vec2(0.58, 0.2) : vec2(0.88, 0.0);
     rm.x = clamp(rm.x + (n - 0.5) * 0.18, 0.04, 1.0);
     return rm;
   }
@@ -58,8 +62,70 @@ export const NOISE = /* glsl */ `
   float pBump(float s, vec3 p) {
     if (s < 0.5) return pFbm(p * 6.0) * 0.003 + pNoise(p * 29.0) * 0.0005;   // cast and rolled armour
     if (s < 1.5) return pNoise(p * 37.0) * 0.0004;
-    if (s > 3.5) return pNoise(p * vec3(70.0, 70.0, 9.0)) * 0.0007;          // canvas
+    if (s > 3.5 && s < 4.5) return pNoise(p * vec3(70.0, 70.0, 9.0)) * 0.0007; // canvas
     return 0.0;
+  }
+  // a ship's steel and decks, in model-space metres (seams fade out where a pixel spans them: no shimmer far off)
+  //   5 plate:  strakes 2.4 m high, butts every 9 m staggered, each plate a shade apart; rust running down
+  //             from the seams and the deck edge, salt-bleached patches, a dark scum at the waterline
+  //   6 deck:   planks 0.3 m wide along the ship, butted every 6 m, dark caulking, each plank its own shade
+  //   7 flight: the same planks laid across (a carrier's flight deck)
+  vec3 pShip(vec3 c, float s, vec3 p) {
+    if (s < 4.5) return c;
+    vec3 w = fwidth(p);
+    float far = 1.0 - smoothstep(0.03, 0.22, max(max(w.x, w.y), w.z));
+    if (s < 5.5) {
+      float row = floor(p.y / 2.4);
+      float bz = p.z / 9.0 + row * 0.5;
+      float dy = abs(fract(p.y / 2.4 + 0.5) - 0.5) * 2.4;
+      float dz = abs(fract(bz + 0.5) - 0.5) * 9.0;
+      float seam = 1.0 - smoothstep(0.015, 0.06, min(dy, dz));
+      c *= 0.94 + 0.12 * pHash(vec3(floor(bz), row, 3.0));
+      c *= 1.0 - 0.22 * seam * far;
+      float streak = pNoise(vec3(p.z * 1.9 + p.x * 1.9, p.y * 0.12, 7.0)) * pNoise(vec3(p.z * 0.35 + p.x * 0.35, p.y * 0.05, 2.0));
+      float rust = smoothstep(0.28, 0.62, streak) * (0.35 + 0.65 * smoothstep(0.8, 0.0, dy));
+      c = mix(c, vec3(0.16, 0.075, 0.035), rust * 0.42);
+      c = mix(c, c * 1.18 + 0.025, smoothstep(0.62, 0.8, pFbm(p * 0.09 + 4.0)) * 0.5);   // salt-bleached
+      c = mix(c, vec3(0.035, 0.04, 0.03), smoothstep(0.9, -0.2, p.y) * step(-1.5, p.y) * 0.55); // the waterline scum
+      return c;
+    }
+    vec2 q = s < 6.5 ? p.xz : p.zx;
+    float pl = floor(q.x / 0.3);
+    float h = pHash(vec3(pl, 1.0, 2.0));
+    float along = q.y / 6.0 + h;
+    float dx = abs(fract(q.x / 0.3 + 0.5) - 0.5) * 0.3;
+    float de = abs(fract(along + 0.5) - 0.5) * 6.0;
+    float seam = 1.0 - smoothstep(0.008, 0.025, min(dx, de));
+    float shade = 0.9 + 0.2 * pHash(vec3(pl, floor(along), 5.0));
+    c *= mix(1.0, shade, far * 0.8 + 0.2);
+    c *= 1.0 - 0.35 * seam * far;
+    c *= 0.9 + 0.2 * pFbm(p * 0.12 + 1.7);   // weathered, scrubbed, stained
+    return c;
+  }
+  // a vehicle's paint in the field (option weather, painted armour only), in model-space metres: big soft
+  // patches sun-faded or touched up, rain and dirt streaks running down the plates, and up close — where a
+  // pixel is small enough to show them, so nothing shimmers far off — chips knocked out of the paint
+  vec3 pWeather(vec3 c, float s, vec3 p) {
+    if (s > 0.5) return c;
+    vec3 w = fwidth(p);
+    float near = 1.0 - smoothstep(0.012, 0.05, max(max(w.x, w.y), w.z));
+    float l = dot(c, vec3(0.3, 0.55, 0.15));
+    #ifdef PAINT_AIR
+      const float fadeK = 0.25, dustK = 0.14, streakK = 0.22, chipK = 0.2; // (an aircraft: kept up better than a tank in the field, no dust on its skin)
+    #else
+      const float fadeK = 0.8, dustK = 0.55, streakK = 0.45, chipK = 1.0;
+    #endif
+    c = mix(c, mix(c, vec3(l), 0.35) * 1.45, smoothstep(0.47, 0.55, pFbm(p * 0.7 + 11.0)) * fadeK);   // sun-faded patches
+    #ifdef PAINT_AIR
+      vec3 q = p.xzy; // an aircraft's streaks run back along the airflow (z), not down
+    #else
+      vec3 q = p;
+    #endif
+    float st = pNoise(vec3((q.x + q.z) * 9.0, q.y * 0.6, 3.0)) * smoothstep(0.35, 0.7, pNoise(vec3((q.x - q.z) * 1.6, q.y * 0.3, 9.0)));
+    c *= 1.0 - smoothstep(0.25, 0.5, st) * streakK;                                                   // rain and dirt streaks
+    c = mix(c, vec3(0.2, 0.17, 0.12), smoothstep(0.58, 0.68, pFbm(p * 1.6 + 5.0)) * dustK);          // dust caught on the plates
+    c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6 * chipK);     // chips (few: more read as noise)
+    return c;
   }
   // bump by screen derivatives: pos and n in the same space
   vec3 pBumpNormal(vec3 pos, vec3 n, float h) {
@@ -75,7 +141,7 @@ export const NOISE = /* glsl */ `
  * @param {object} o  { colors: 4 hex (camo), scale: pattern frequency per metre, mud: hex, wear,
  *                      surfaces: per-part roughness / metalness / relief from `surf` }
  */
-export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false } = {}) {
+export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false, weather = false } = {}) {
   const uniforms = {
     uClimate: CLIMATE.amount,
     uClimateColor: CLIMATE.color,
@@ -88,6 +154,7 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
     uWear: { value: wear },
   };
   if (surfaces) mat.defines = { ...mat.defines, PAINT_SURF: '' };
+  if (weather) mat.defines = { ...mat.defines, PAINT_WEATHER: '', ...(weather === 'air' && { PAINT_AIR: '' }) }; // ('air': streaks along the airflow)
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -131,6 +198,12 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
         float g = clamp(vPaint.y * (0.55 + 0.9 * (n2 - 0.35)), 0.0, 1.0);
         diffuseColor.rgb = mix(diffuseColor.rgb, uMud * vTint, g * 0.85);
         diffuseColor.rgb *= 1.0 - uWear * 0.5 + uWear * pNoise(pp * 3.7);
+        #ifdef PAINT_SURF
+          diffuseColor.rgb = pShip(diffuseColor.rgb, pSurf(vPaint.x), vPaintPos);
+        #endif
+        #ifdef PAINT_WEATHER
+          diffuseColor.rgb = pWeather(diffuseColor.rgb, pSurf(vPaint.x), vPaintPos);
+        #endif
         if (uClimate > 0.0) { // the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
           float sf = pSurf(vPaint.x);
           float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -153,8 +226,8 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
           normal = pBumpNormal(-vViewPosition, normal, pBump(pSurf(vPaint.x), vPaintPos));
         #endif`);
   };
-  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}`;
+  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}:${weather}`;
   // the same paint for the Babylon renderer (render/babylon/plugins.js PaintPlugin)
-  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock };
+  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock, weather };
   return mat;
 }

@@ -7,6 +7,7 @@
 // RMB or Esc cancels, Q / E rotate a structure.
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
+import { SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { POWERS_1806 } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
@@ -43,6 +44,10 @@ export class CommandSystem {
     this._p = new THREE.Vector3();
     this._v = new THREE.Vector3();
 
+    // what markers, rings and routes lie on: the ground, or at sea the water over it (not the sea floor)
+    const sea = game.world.river?.sea ? game.world.river.level : -Infinity;
+    this.surface = { heightAt: (x, z) => Math.max(sea, game.terrain.heightAt(x, z)) };
+    this.markScale = () => (Number.isFinite(sea) ? Math.max(1, (game.camera.position.y - sea) / 45) : 1); // (at sea: as big on screen from any height)
     this.preview = this.buildPreview();
     this.ringGeo = new THREE.RingGeometry(0.92, 1, 48);
     this.ringGeo.rotateX(-Math.PI / 2);
@@ -80,6 +85,13 @@ export class CommandSystem {
     this.ndc.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.game.camera);
     const ray = this.raycaster.ray;
+    const sea = this.game.world.river?.sea ? this.game.world.river : null;
+    if (sea && ray.direction.y < 0) {
+      // at sea: the click lands on the water, not the sea floor under it (an island still catches it first);
+      // the camera flies far higher here, so no 900 m reach either
+      const t = (ray.origin.y - sea.level) / -ray.direction.y;
+      return this.game.terrain.raycast(ray.origin, ray.direction, t, out) ?? out.copy(ray.origin).addScaledVector(ray.direction, t);
+    }
     return this.game.terrain.raycast(ray.origin, ray.direction, 900, out);
   }
 
@@ -254,6 +266,44 @@ export class CommandSystem {
       const s = [...this.selected].find((st) => st.alive && st.entered);
       if (!s) return this.game.bus.emit('toast', 'Select a squad in a house');
       this.game.orders.issue({ t: 'houseUpgrade', s: s.id, k: cmd.slice(6) });
+    } else if (cmd.startsWith('ship:')) { // ships: engine orders, zig-zag, formations, smoke
+      const ships = [...this.selected].filter((s) => s.alive && s.stats.naval);
+      if (!ships.length) return this.game.bus.emit('toast', 'Select ships');
+      const k = cmd.slice(5);
+      if (k === 'speed') {
+        const steps = ['slow', 'half', 'full', 'flank'];
+        const v = steps[(steps.indexOf(ships[0].shipSpeed ?? 'full') + 1) % steps.length];
+        this.game.orders.issue({ t: 'shipSpeed', s: ids(ships), v });
+        for (const s of ships) s.shipSpeed = v; // (shown at once, also on a guest's screen)
+        this.game.bus.emit('toast', `Engines: ${SHIP_SPEEDS[v].name}${v === 'slow' ? ' — quiet' : v === 'flank' ? ' — loud' : ''}`);
+      } else if (k === 'zigzag') {
+        const surface = ships.filter((s) => !s.stats.submarine);
+        const on = !surface.every((s) => s.zigzag);
+        this.game.orders.issue({ t: 'zigzag', s: ids(surface), on: on ? 1 : 0 });
+        for (const s of surface) s.zigzag = on;
+        this.game.bus.emit('toast', on ? 'Zig-zag: weaving either side of the course' : 'Steady on course');
+      } else if (k.startsWith('form:')) {
+        this.game.orders.issue({ t: 'formation', s: ids(ships), f: k.slice(5) });
+      } else if (k === 'searchlight') {
+        const surface = ships.filter((s) => !s.stats.submarine);
+        const on = !surface.every((s) => s.searchlight);
+        this.game.orders.issue({ t: 'searchlight', s: ids(surface), on: on ? 1 : 0 });
+        for (const s of surface) s.searchlight = on;
+        this.game.bus.emit('toast', on ? 'Searchlights on: she lights her target — and shows herself' : 'Searchlights off');
+      } else if (k === 'smoke') {
+        const gens = ships.filter((s) => s.stats.smokeGen);
+        if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');
+        this.game.orders.issue({ t: 'shipSmoke', s: ids(gens) });
+      }
+    } else if (cmd.startsWith('sub:')) { // a submarine's depth, or silent running
+      const subs = [...this.selected].filter((s) => s.alive && s.stats.submarine);
+      if (!subs.length) return this.game.bus.emit('toast', 'Select a submarine');
+      const k = cmd.slice(4);
+      if (k === 'silent') {
+        const on = !subs.every((s) => s.silent);
+        this.game.orders.issue({ t: 'silent', s: ids(subs), on: on ? 1 : 0 });
+        for (const s of subs) s.silent = on;
+      } else this.game.orders.issue({ t: 'subDepth', s: ids(subs), d: k });
     } else if (cmd === 'holdFire') {
       const sel = [...this.selected].filter((s) => s.alive && s.stats.damage > 0);
       if (!sel.length) return;
@@ -305,7 +355,8 @@ export class CommandSystem {
       if (!vehicles.length) return this.game.bus.emit('toast', 'Select infantry or vehicles with smoke, or a mortar team');
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
-      const air = cmd.slice(4) || 'heli';
+      let air = cmd.slice(4) || 'heli';
+      if (this.game.world.river?.sea && !KINDS[air]?.sea) air = { heli: 'torpBomb', jet: 'diveBomb', cap: 'navCap', recon: 'navScout' }[air] ?? air; // (at sea the keys call the carrier's missions)
       if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
@@ -360,7 +411,7 @@ export class CommandSystem {
     } else if (t.kind === 'engineer') {
       const geo = new THREE.RingGeometry(0.9, 1, 48);
       geo.rotateX(-Math.PI / 2);
-      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.game.terrain, 0.3);
+      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       if (t.layer) { // a blueprint of the bridge itself, the way works are placed
         const river = this.game.world.river;
@@ -373,7 +424,7 @@ export class CommandSystem {
     } else if (t.kind === 'smoke') {
       const geo = new THREE.RingGeometry(0.92, 1, 48);
       geo.rotateX(-Math.PI / 2);
-      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.game.terrain, 0.3);
+      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
       const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
@@ -409,7 +460,7 @@ export class CommandSystem {
       geo.rotateX(Math.PI / 2);
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({
         color: new THREE.Color(0xff6a3d).multiplyScalar(1.6), transparent: true, opacity: 0.6, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      }), this.game.terrain, 0.3);
+      }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       t.hint = t.air === 'lift'
         ? `${p.label} (${p.cost} CP): ${click} the ${epoch() === '1945' ? 'drop zone' : 'landing zone'} — ${turn('the approach')}, ${cancel}`
@@ -572,7 +623,7 @@ export class CommandSystem {
           const q = pieces[i];
           g.visible = !!q;
           if (!q) return;
-          g.position.set(q.x, this.game.terrain.heightAt(q.x, q.z) + 0.4, q.z);
+          g.position.set(q.x, this.surface.heightAt(q.x, q.z) + 0.4, q.z);
           g.rotation.y = q.yaw;
           // red where it can't go (the same test the build order makes: systems/Construction.js place)
           this.badMat ??= new THREE.MeshBasicMaterial({ color: 0xff6a5a, transparent: true, opacity: 0.35, depthWrite: false });
@@ -761,7 +812,7 @@ export class CommandSystem {
       geo.rotateX(Math.PI / 2); // flat, pointing along +z
       this.arrow = new GroundDecal(geo, new THREE.MeshBasicMaterial({
         color: new THREE.Color(MARKER_COLORS.hold).multiplyScalar(1.5), transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      }), this.game.terrain, 0.3);
+      }), this.surface, 0.3);
       this.game.scene.add(this.arrow.mesh);
     }
     this.arrow.mesh.visible = true;
@@ -874,7 +925,7 @@ export class CommandSystem {
   /** Place the markers for pv.spots on screen (every frame: the camera moves). */
   drawPreview() {
     const pv = this.preview;
-    const terrain = this.game.terrain;
+    const terrain = this.surface;
     const cam = this.game.camera;
     const rect = this.game.canvas.getBoundingClientRect();
     const screen = (v) => [rect.left + (v.x * 0.5 + 0.5) * rect.width, rect.top + (-v.y * 0.5 + 0.5) * rect.height];
@@ -908,7 +959,7 @@ export class CommandSystem {
       this.game.scene.add(this.routes);
       this.routeKey = '';
     }
-    const t = this.game.terrain;
+    const t = this.surface;
     const pts = [];
     for (const s of this.selected) {
       if (!s.alive || !s.waypoints?.length) continue;
@@ -929,7 +980,7 @@ export class CommandSystem {
       color: new THREE.Color(MARKER_COLORS[kind]).multiplyScalar(1.6), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
     });
-    const decal = new GroundDecal(this.ringGeo, mat, this.game.terrain, 0.2);
+    const decal = new GroundDecal(this.ringGeo, mat, this.surface, 0.2);
     decal.place(point.x, point.z);
     this.game.scene.add(decal.mesh);
     this.markers.push({ decal, x: point.x, z: point.z, t: 0 });
@@ -965,7 +1016,7 @@ export class CommandSystem {
       const show = s.alive && this.selected.has(s);
       if (!ring) {
         if (!show) continue;
-        ring = new GroundDecal(this.ringGeo, this.ringMat, this.game.terrain, 0.2);
+        ring = new GroundDecal(this.ringGeo, this.ringMat, this.surface, 0.2);
         this.game.scene.add(ring.mesh);
         this.rings.set(s, ring);
       }
@@ -986,7 +1037,7 @@ export class CommandSystem {
         this.markers.splice(i, 1);
         continue;
       }
-      mk.decal.place(mk.x, mk.z, 1 + p * 2.5);
+      mk.decal.place(mk.x, mk.z, (1 + p * 2.5) * (mk.k ??= this.markScale()));
       mesh.material.opacity = 1 - p;
     }
   }

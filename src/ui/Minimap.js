@@ -195,6 +195,24 @@ export class Minimap {
       c.fillText(p.id, mx, my);
     }
 
+    // lost submarine contacts: a dashed ring and a question mark, fading
+    for (const k of game.visibility?.contacts ?? []) {
+      const [mx, my] = this.toMap(k.x, k.z);
+      c.globalAlpha = Math.max(0, 1 - (game.time - k.at) / 45);
+      c.strokeStyle = '#ff9a3c';
+      c.setLineDash([3, 3]);
+      c.beginPath();
+      c.arc(mx, my, 6, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = '#ff9a3c';
+      c.font = 'bold 9px Segoe UI, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('?', mx, my);
+      c.globalAlpha = 1;
+    }
+
     // our radars, jammers and command posts: what they cover (dashed until they work)
     this.drawAreas(c);
 
@@ -282,6 +300,8 @@ export class Minimap {
     c.strokeStyle = 'rgba(255,120,60,0.85)';
     for (const s of game.world.stacks) {
       if (!s.alive || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
+      // yours: only while it fights something you can see (not blind at a sonar contact, a sound, a flash)
+      if (s.faction === game.playerFaction && !s.units.some((u) => u.alive && u.target?.alive !== false && u.target?.visible === true)) continue;
       const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
       c.beginPath();
       c.arc(mx, my, 6 + 4 * ((t * 1.5 + s.id * 0.37) % 1), 0, Math.PI * 2);

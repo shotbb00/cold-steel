@@ -13,6 +13,7 @@
 import { epoch } from '../data/epoch.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineDirector } from '../ai/FrontlineDirector.js';
+import { SeaDirector } from '../ai/SeaDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 import { makeBuyer } from './shared.js';
@@ -26,7 +27,11 @@ const POINT_INCOME = 1.1;     // CP / s per held point
 const START_STRENGTH = 1000;
 const BLEED = 0.6;            // strength / s per point of difference
 const LOSS_SHARE = 0.2;       // fraction of a unit's cost removed from strength when it dies
-const MAX_STACKS = 12;        // per side, unless the map sets maxStacks
+const MAX_STACKS = 12;
+const LANDING_CP = 0.6;       // CP / s for each transport in a zone its side holds (the sea maps)
+
+/** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
+const seaAllow = (game, allow) => (t) => !!t.stats?.naval === !!game.world.river?.sea && (!allow || allow(t));        // per side, unless the map sets maxStacks
 
 export default {
   id: 'frontline',
@@ -54,14 +59,15 @@ export default {
       strength: { [game.playerFaction]: strength, [foe]: strength },
       maxStrength: strength,
       maxStacks: R.maxStacks ?? map.maxStacks ?? MAX_STACKS,
-      allow: this.allow ?? null,
+      allow: seaAllow(game, this.allow),
       income: { [game.playerFaction]: R.income ?? 1, [foe]: (R.income ?? 1) * (DIFFICULTY[R.difficulty]?.income ?? 1) },
     };
     state.buy = makeBuyer(game, state);
     if (this.air === false) for (const f of [game.playerFaction, foe]) game.air.limit[f] = 0;
     game.modeState = state;
     game.systems.push(points, new Economy(game, state)); // the building and support budgets, the side objectives
-    if (!game.net || game.coop) game.systems.push(new FrontlineDirector(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
+    const Director = game.world.river?.sea ? SeaDirector : FrontlineDirector; // (at sea: the admiral, ai/SeaDirector.js)
+    if (!game.net || game.coop) game.systems.push(new Director(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
     game.frontlineHud = new FrontlineHUD(game, state);
 
     game.bus.on('unit:death', ({ stack }) => {
@@ -83,7 +89,7 @@ export default {
       strength: { [me]: this.strength ?? START_STRENGTH, [foe]: this.strength ?? START_STRENGTH },
       maxStrength: this.strength ?? START_STRENGTH,
       maxStacks: map.maxStacks ?? MAX_STACKS,
-      allow: this.allow ?? null,
+      allow: seaAllow(game, this.allow),
       build: { [me]: 0, [foe]: 0 }, support: { [me]: 0, [foe]: 0 }, // (the host's numbers arrive)
     };
     state.sides = new ControlPoints(game, sideObjectiveDefs(game, state.points.points));
@@ -113,6 +119,8 @@ export default {
     const theirs = state.points.owned(foe);
     state.cp[me] += dt * (BASE_INCOME + POINT_INCOME * mine) * (state.income?.[me] ?? 1);
     state.cp[foe] += dt * (BASE_INCOME + POINT_INCOME * theirs) * (state.income?.[foe] ?? 1);
+    // at sea: transports in a zone their side holds (landing parties ashore) bring in command points
+    for (const f of [me, foe]) state.cp[f] += dt * LANDING_CP * state.points.points.reduce((n, p) => n + (p.owner !== f ? 0 : game.world.stacksOf(f).filter((s) => s.alive && s.stats.landing && (s.centroid.x - p.x) ** 2 + (s.centroid.z - p.z) ** 2 < p.radius * p.radius).length), 0);
     if (mine > theirs) state.strength[foe] -= (mine - theirs) * BLEED * dt;
     else if (theirs > mine) state.strength[me] -= (theirs - mine) * BLEED * dt;
     game.frontlineHud.update();

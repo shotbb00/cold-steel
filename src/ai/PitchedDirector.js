@@ -15,6 +15,11 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { FrontlineDirector } from './FrontlineDirector.js';
 import { AIState } from './StackAI.js';
+import { SeaDirector } from './SeaDirector.js';
+import { getUnitType } from '../data/units/index.js';
+
+// at sea: the fleet it buys, in this order (within the class limits), and where each class goes
+const FLEET = ['destroyer', 'cruiser', 'destroyer', 'lightCruiser', 'ptBoat', 'frigate', 'battleship', 'submarine', 'carrier', 'destroyer', 'cruiser', 'escortCarrier', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'lightCruiser', 'destroyer'];
 
 const RESERVE = 0.12;       // of the budget kept for support
 const HOLD = [35, 70];      // s standing before it advances
@@ -36,6 +41,7 @@ export class PitchedDirector {
   constructor(game, faction, state) {
     this.game = game;
     this.faction = faction;
+    this.bot = true; // (systems/AutoFlares.js: a bot fires its own flares)
     this.state = state;
     const names = Object.keys(STYLES);
     this.style = names[Math.floor(Math.random() * names.length)];
@@ -47,9 +53,39 @@ export class PitchedDirector {
   get now() { return this.game.world.time; }
   myStacks() { return this.game.world.stacksOf(this.faction); }
 
+  /** At sea: a fleet for the budget, in line abreast — the carrier behind, the submarines out ahead. */
+  buildFleet() {
+    const g = this.game;
+    const f = this.faction;
+    const army = g.armyOf(f);
+    const budget = this.state.cp[f];
+    const bought = [];
+    for (let i = 0, misses = 0; misses < FLEET.length && i < 200; i++) {
+      const t = getUnitType(FLEET[i % FLEET.length]);
+      const had = bought.filter((s) => s.type.id === t.id).length;
+      if ((t.limit && had >= t.limit) || unitCost(t, army) > this.state.cp[f] - budget * RESERVE) { misses++; continue; }
+      const s = this.state.buy(f, t.id);
+      if (!s) break; // the stack limit
+      bought.push(s);
+      misses = 0;
+    }
+    const base = g.world.bases[f];
+    const foe = g.world.bases[enemyOf(f)];
+    const dx = foe.x - base.x, dz = foe.z - base.z, len = Math.hypot(dx, dz) || 1;
+    const fx = dx / len, fz = dz / len, sx = -fz, sz = fx;
+    const facing = Math.atan2(fx, fz);
+    const line = bought.filter((s) => !s.stats.carrier && !s.stats.submarine);
+    const put = (s, ahead, k) => { const p = g.world.clampToBounds({ x: base.x + fx * ahead + sx * k, z: base.z + fz * ahead + sz * k }); s.placeAt(p.x, p.z, facing); };
+    line.forEach((s, i) => put(s, len * 0.12, (i - (line.length - 1) / 2) * 260));
+    bought.filter((s) => s.stats.carrier).forEach((s, i) => put(s, len * 0.02, (i - 0.5) * 400));
+    bought.filter((s) => s.stats.submarine).forEach((s, i) => put(s, len * 0.22, (i ? 1 : -1) * 700));
+    this.sea = new SeaDirector(g, f, this.state, { hunt: true });
+  }
+
   /** Buy the army and draw it up in its zone. */
   build() {
     const g = this.game;
+    if (g.world.river?.sea) return this.buildFleet();
     const f = this.faction;
     const army = g.armyOf(f);
     const budget = this.state.cp[f];
@@ -94,6 +130,7 @@ export class PitchedDirector {
     const g = this.game;
     if (this.state.setup || g.net?.isClient) return;
     this.holdUntil ??= this.now + HOLD[0] + Math.random() * (HOLD[1] - HOLD[0]);
+    if (this.sea) { this.sea.holdUntil = this.holdUntil; this.sea.update(dt); return; } // (at sea: the admiral, waiting first)
     if (this.myStacks().some((s) => s.stats.formations)) FrontlineDirector.prototype.drill.call(this); // 1806: column, line, square, the bayonet
     if ((this.thinkT -= dt) > 0) return;
     this.thinkT = THINK;
