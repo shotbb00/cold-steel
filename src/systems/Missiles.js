@@ -57,7 +57,7 @@ export class Missiles {
   }
 
   update(dt) {
-    if (!this.list.length && !this.interceptors.length) { if (this.chaff.length) this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; }
+    if (!this.list.length && !this.interceptors.length && !this.game.air?.sorties.some((a) => a.airborne)) { if (this.chaff.length) this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; }
     this.flyMissiles(dt);
     this.defend(dt);
     this.flyInterceptors(dt);
@@ -169,6 +169,12 @@ export class Missiles {
           if (mine && d < nearestD) { nearest = s; nearestD = d; }
         }
         if (nearest && D.ciws && nearestD < D.ciws.range) this.gun(st, u, D.ciws, nearest, dt);
+        // enemy aircraft in her area SAMs' reach (her radar on): shot at again and again while they stay
+        if (D.sam && radar) for (const a of g.air?.sorties ?? []) {
+          if (a.faction === st.faction || !a.airborne) continue;
+          const d = Math.hypot(a.pos.x - u.pos.x, a.pos.z - u.pos.z);
+          if (d < D.sam.range) this.layer(st, u, D.sam, 'sam', a, d, now, true, true);
+        }
         // chaff: a seeker on her, close — a cloud off her beam, and every seeker near it may take it instead
         if (D.chaff && nearest?.target === u && nearestD < 1600 && (u.chaffLeft ?? D.chaff.count) > 0 && !(u.chaffAt > now - D.chaff.cooldown)) {
           u.chaffLeft = (u.chaffLeft ?? D.chaff.count) - 1;
@@ -185,19 +191,20 @@ export class Missiles {
   }
 
   /** A missile layer: one more interceptor at `s` if a channel is free, it's in reach and not already covered. */
-  layer(st, u, L, key, s, d, now, area) {
-    if (d > L.range || s.engaged >= 2) return;
+  layer(st, u, L, key, s, d, now, area, air = false) {
+    if (d > L.range || (s.engaged ?? 0) >= 2) return;
+    if (air) s.engaged ??= 0;
     // one shot each: an area layer's at it once (`shots`: Aegis twice) for the whole group, a ship's point layer once for herself
-    if (area ? (s.areaShots ?? 0) >= (L.shots ?? 1) : (s.pointBy ??= new Set()).has(u)) return;
+    if (!air && (area ? (s.areaShots ?? 0) >= (L.shots ?? 1) : (s.pointBy ??= new Set()).has(u))) return;
     const busy = this.interceptors.reduce((n, i) => n + (i.from === u && i.layer === key ? 1 : 0), 0);
     if (busy >= L.channels) return;
     if ((u[`${key}Left`] ?? L.load) <= 0 || u[`${key}At`] > now - L.reload) return;
-    if (area) s.areaShots = (s.areaShots ?? 0) + 1; else s.pointBy.add(u);
+    if (air) { /* (an aircraft: as long as it stays in reach) */ } else if (area) s.areaShots = (s.areaShots ?? 0) + 1; else s.pointBy.add(u);
     u[`${key}Left`] = (u[`${key}Left`] ?? L.load) - 1;
     u[`${key}At`] = now;
     s.engaged++;
     _p.set(u.pos.x, u.pos.y + (st.stats.height ?? 10) * 0.8, u.pos.z);
-    this.interceptors.push({ pos: _p.clone(), dir: new THREE.Vector3(0, 1, 0), target: s, from: u, layer: key, speed: L.speed, pk: L.pk * (s.skim ? 0.75 : 1), age: 0 }); // (a sea-skimmer: low in the clutter, a harder shot)
+    this.interceptors.push({ pos: _p.clone(), dir: new THREE.Vector3(0, 1, 0), target: s, air, from: u, layer: key, speed: L.speed, pk: L.pk * (s.skim ? 0.75 : 1) * (air ? 0.8 : 1), age: 0 }); // (a sea-skimmer: low in the clutter, a harder shot; an aircraft jinks and jams)
     this.game.audio?.play(`${st.faction}.sam`, _p, { volume: 0.7, throttle: 0.2 });
   }
 
@@ -207,7 +214,8 @@ export class Missiles {
       const m = this.interceptors[i];
       m.age += dt;
       const t = m.target;
-      if (!this.list.includes(t) || m.age > 12) { this.interceptors.splice(i, 1); if (this.list.includes(t)) t.engaged--; continue; }
+      const live = m.air ? t.airborne : this.list.includes(t);
+      if (!live || m.age > 12) { this.interceptors.splice(i, 1); if (live) t.engaged--; continue; }
       // lead the missile: where it will be when we get there
       const dist = m.pos.distanceTo(t.pos);
       _d.copy(t.pos).addScaledVector(t.dir, t.speed * Math.min(2, dist / m.speed)).sub(m.pos).normalize();
@@ -219,7 +227,7 @@ export class Missiles {
         t.engaged--;
         g.effects.explosion(m.pos, 0.6, { ground: false, fire: 0.8 });
         g.audio?.play('explosion.far', m.pos, { volume: 0.6, throttle: 0.1 });
-        if (Math.random() < m.pk) this.kill(t);
+        if (Math.random() < m.pk) { if (m.air) t.hit(6); else this.kill(t); } // (an aircraft: a hit brings it down — a big one takes two)
       }
     }
   }

@@ -294,6 +294,10 @@ export class CommandSystem {
         const shooters = ships.filter((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile));
         if (!shooters.length) return this.game.bus.emit('toast', 'Select ships with anti-ship missiles');
         this.startTargeting({ kind: 'smoke', stacks: shooters, fire: 'missile' });
+      } else if (k === 'helo') {
+        const hel = ships.filter((s) => s.stats.helo);
+        if (!hel.length) return this.game.bus.emit('toast', 'Select a ship with a helicopter');
+        this.startTargeting({ kind: 'smoke', stacks: hel, fire: 'helo' });
       } else if (k === 'searchlight') {
         const surface = ships.filter((s) => !s.stats.submarine);
         const on = !surface.every((s) => s.searchlight);
@@ -440,6 +444,7 @@ export class CommandSystem {
       const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
       t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
+        : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
         : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
         : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
@@ -596,6 +601,9 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.fire === 'helo') {
+      this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
+      this.addMarker(p, 'hold');
     } else if (t.kind === 'smoke' && t.fire === 'missile') {
       this.game.orders.issue({ t: 'missileAt', s: ids(t.stacks), x: p.x, z: p.z, n: 2 });
       this.addMarker(p, 'attack');

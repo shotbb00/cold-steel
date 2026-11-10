@@ -188,14 +188,15 @@ export class SeaDirector {
     const call = (kind, x, z) => g.air.ready(f, kind) && support >= g.air.terms(f, kind).cost && g.air.call(f, x, z, null, kind);
     if (best) {
       const c = best.centroid;
+      if (call('seaStrike', c.x, c.z)) return; // (1985: the missile strike)
       if (call('torpBomb', c.x, c.z)) return;
       if (call('diveBomb', c.x, c.z)) return;
     }
     const mid = fleet.reduce((a, s) => ({ x: a.x + s.centroid.x / fleet.length, z: a.z + s.centroid.z / fleet.length }), { x: 0, z: 0 });
-    if (g.air.nearestThreat(f, { x: mid.x, y: 0, z: mid.z }, 2500) && call('navCap', mid.x, mid.z)) return;
-    if (!seen.length) {
-      const foeHome = g.world.bases[enemyOf(f)];
-      call('navScout', (mid.x + foeHome.x) / 2, (mid.z + foeHome.z) / 2);
-    }
+    if (g.air.nearestThreat(f, { x: mid.x, y: 0, z: mid.z }, 2500) && (call('seaCap', mid.x, mid.z) || call('navCap', mid.x, mid.z))) return;
+    const foeHome = g.world.bases[enemyOf(f)];
+    const ahead = { x: (mid.x + foeHome.x) / 2, z: (mid.z + foeHome.z) / 2 };
+    if (this.foes().some((s) => s.stats.submarine && !s.units.some((u) => u.alive && u.spotted)) && Math.random() < 0.3 && call('asw', (mid.x + ahead.x) / 2, (mid.z + ahead.z) / 2)) return; // (1985: a patrol plane ahead of the fleet)
+    if (!seen.length) call('aew', ahead.x, ahead.z) || call('navScout', ahead.x, ahead.z);
   }
 }

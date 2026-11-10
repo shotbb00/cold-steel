@@ -20,7 +20,7 @@ export class Torpedoes {
    * A pattern from ship `src` (unit `u`) over submarine `t`: rolled off the stern and thrown either
    * side, laid round where the sonar puts the boat (some 15 m out, either way), set for its depth.
    */
-  dropCharges(src, u, t, dc) {
+  dropCharges(src, u, t, dc, quiet = false) {
     const now = this.game.time;
     const bx = Math.sin(u.yaw), bz = Math.cos(u.yaw);
     const cx = t.pos.x + (Math.random() - 0.5) * 30, cz = t.pos.z + (Math.random() - 0.5) * 30;
@@ -31,7 +31,7 @@ export class Torpedoes {
         faction: src.faction, source: src, radius: dc.radius, damage: dc.damage });
     }
     this.game.netEvent('dcs', this.charges.slice(-dc.count).map((c) => [Math.round(c.x), Math.round(c.z), Math.round((c.at - now) * 10) / 10, c.faction]));
-    this.game.tell(src.faction, `${src.name}: depth charges!`);
+    if (!quiet) this.game.tell(src.faction, `${src.name}: depth charges!`);
   }
 
   /** A spread from `from` (world) at target unit `t`, by stack `src`'s mount `m` { count, speed, range, damage, wakeless }. */

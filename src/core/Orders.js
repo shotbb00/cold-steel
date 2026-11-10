@@ -169,6 +169,9 @@ export class Orders {
       case 'radar': // 1985 ships: radar on (sees all a horizon and the islands let it — and every enemy hears it) or off
         for (const s of mine(cmd.s)) if (s.stats.radar) s.radarOn = !!cmd.on;
         return null;
+      case 'helo': // 1985 ships: her helicopter out to a spot (systems/AirStrike.js launchHelo)
+        for (const s of mine(cmd.s)) g.air?.launchHelo(s, cmd.x, cmd.z);
+        return null;
       case 'missileAt': // 1985 ships: a missile salvo at a point (a bearing fix): the seekers find what's there
         for (const s of mine(cmd.s)) s.missileStrike?.(cmd.x, cmd.z, cmd.n ?? 2);
         return null;
