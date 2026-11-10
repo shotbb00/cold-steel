@@ -84,27 +84,28 @@ function shipOfTheLine(o) {
   // the masts: lower mast, the top (a platform), topmast, topgallant; the shrouds down to the channels
   const rig = [];
   masts.forEach(([z, h], i) => {
+    const sp = []; // this mast's spars, shrouds and stay: their own group (a mast that falls goes with its rigging)
     const r = 0.55 + (i === 1 ? 0.1 : 0);
-    hull.push(P.cyl(r * 0.8, r, h * 0.5, { y: fb + h * 0.25, z, color: WOOD }, 10));
-    hull.push(P.cyl(r * 0.55, r * 0.7, h * 0.32, { y: fb + h * 0.5 + h * 0.15, z, color: WOOD }, 8));
-    hull.push(P.cyl(r * 0.3, r * 0.45, h * 0.22, { y: fb + h * 0.82 + h * 0.09, z, color: WOOD }, 7));
-    hull.push(P.box(beam * 0.32, 0.25, 3.2, { y: fb + h * 0.5, z, color: WOOD }));                       // the top
+    sp.push(P.cyl(r * 0.8, r, h * 0.5, { y: fb + h * 0.25, z, color: WOOD }, 10));
+    sp.push(P.cyl(r * 0.55, r * 0.7, h * 0.32, { y: fb + h * 0.5 + h * 0.15, z, color: WOOD }, 8));
+    sp.push(P.cyl(r * 0.3, r * 0.45, h * 0.22, { y: fb + h * 0.82 + h * 0.09, z, color: WOOD }, 7));
+    sp.push(P.box(beam * 0.32, 0.25, 3.2, { y: fb + h * 0.5, z, color: WOOD }));                       // the top
     for (const s of [-1, 1]) for (const dz of [-1.5, 0, 1.5]) { // the shrouds, from the channels to the top
       const a = new THREE.Vector3(s * (beam / 2 + 0.3), fb + 0.4, z + dz), b = new THREE.Vector3(s * beam * 0.15, fb + h * 0.5, z + dz * 0.3);
       const m = a.clone().add(b).multiplyScalar(0.5), l = a.distanceTo(b);
-      hull.push(P.cyl(0.05, 0.05, l, { x: m.x, y: m.y, z: m.z, rz: Math.atan2(b.x - a.x, b.y - a.y) * -1, color: IRON }, 4));
+      sp.push(P.cyl(0.05, 0.05, l, { x: m.x, y: m.y, z: m.z, rz: Math.atan2(b.x - a.x, b.y - a.y) * -1, color: IRON }, 4));
     }
-    hull.push(P.cyl(0.04, 0.04, len * 0.3, { y: fb + h * 0.75, z: z + (i < 2 ? len * 0.12 : -len * 0.12), rx: Math.PI / 2 - (i < 2 ? -0.9 : 0.9), color: IRON }, 4)); // a stay
+    sp.push(P.cyl(0.04, 0.04, len * 0.3, { y: fb + h * 0.75, z: z + (i < 2 ? len * 0.12 : -len * 0.12), rx: Math.PI / 2 - (i < 2 ? -0.9 : 0.9), color: IRON }, 4)); // a stay
     // the yards and sails, braced together: the course, the topsail, the topgallant (the mizzen: no course — the spanker)
     const w = beam * (i === 1 ? 1.55 : i === 0 ? 1.45 : 1.05);
     const sails = [];
     if (i < 2) sails.push(...square(w, h * 0.2, h * 0.43));
     sails.push(...square(w * 0.78, h * 0.24, h * 0.73), ...square(w * 0.5, h * 0.14, h * 0.9));
-    rig.push({ at: [0, fb, z], geo: merge(sails), spanker: i === 2 });
+    rig.push({ at: [0, fb, z], geo: merge(sails), spars: merge(sp), mast: i });
   });
   // the spanker on the mizzen: fore and aft, on its gaff and boom (it swings out to leeward, not braced)
   const [mz, mh] = masts[2];
-  rig.push({ at: [0, fb, mz], fore: true, geo: merge([
+  rig.push({ at: [0, fb, mz], fore: true, mast: 2, geo: merge([
     loft([[0, mh * 0.12, -0.5, 0.06, 0.06, 2], [0, mh * 0.3, -6, 0.06, 0.06, 2], [0, mh * 0.42, -0.8, 0.06, 0.06, 2]], { color: SAIL, surf: 'cloth' }, 4),
     P.box(0.12, mh * 0.34, 9, { y: mh * 0.26, z: -5, color: SAIL, surf: 'cloth' }),
     P.cyl(0.18, 0.18, 11, { y: mh * 0.1, z: -5.5, rx: Math.PI / 2, color: WOOD }, 6),
@@ -126,9 +127,10 @@ function shipOfTheLine(o) {
   const flag = c.flag === 'rn'
     ? [P.box(0.05, 2.4, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xe8e8e2 }), P.box(0.06, 2.4, 0.5, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.06, 0.45, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.07, 1.2, 2, { y: fb + 8.1, z: -len / 2 - 2, color: 0x1f2e6e })]
     : [P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 1.9, color: 0x1f3a8e }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 3.2, color: 0xeeeeea }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 4.5, color: 0xc8221e })];
-  hull.push(P.cyl(0.12, 0.15, 7, { y: fb + 5, z: -len / 2 - 1, rx: -0.3, color: WOOD }, 6), ...flag);
+  hull.push(P.cyl(0.12, 0.15, 7, { y: fb + 5, z: -len / 2 - 1, rx: -0.3, color: WOOD }, 6));
+  const colours = merge(flag); // (their own: they come down when she strikes)
   hull.push(P.box(0.04, 0.25, 6, { y: fb + masts[1][1] + 0.2, z: masts[1][0] - 3, color: c.flag === 'rn' ? 0xb8221e : 0x1f3a8e }));
-  return { fixed: merge(hull), rig, len, beam };
+  return { fixed: merge(hull), rig, colours, len, beam };
 }
 
 /** The model's builder: the hull, and the rig groups that answer the wind (UnitStack's animate hook). */
@@ -140,15 +142,20 @@ function sailRig(describe) {
     const body = new THREE.Group();   // pitch and roll on the swell, the heel to leeward
     root.add(body);
     meshAdder(body)(d.fixed, mats.body);
+    const masts = [0, 1, 2].map(() => { const m = new THREE.Group(); body.add(m); return m; }); // a mast and all on it: hidden when it goes by the board
     const rig = d.rig.map((r) => {
+      if (r.spars) meshAdder(masts[r.mast])(r.spars, mats.body);
       const g = new THREE.Group();
       g.position.set(...r.at);
       const s = new THREE.Group();
       meshAdder(s)(r.geo, mats.body);
       g.add(s);
-      body.add(g);
+      masts[r.mast].add(g);
       return { g, s, fore: !!r.fore };
     });
+    const colours = new THREE.Group();
+    meshAdder(colours)(d.colours, mats.body);
+    body.add(colours);
     const muzzle = new THREE.Object3D();
     muzzle.position.set(d.beam / 2 + 1, 2, 0);
     body.add(muzzle);
@@ -168,6 +175,9 @@ function sailRig(describe) {
           else r.g.rotation.y = brace;
           r.s.scale.z = fill;
         }
+        for (let i = 0; i < 3; i++) masts[i].visible = u.masts?.[i] !== false;
+        colours.visible = !u.struck;
+        if (u.struck) for (const r of rig) r.s.scale.z = 0.2 + 0.15 * Math.sin(t * 7 + phase); // (her sails let fly)
         const sea = u.seaK ?? 1;
         body.rotation.set(Math.sin(t * 0.5 + phase) * 0.014 * sea + (u.trim ?? 0), 0, Math.sin(t * 0.4 + phase * 1.7) * 0.025 * sea + heel + (u.list ?? 0));
         body.position.y = Math.sin(t * 0.65 + phase) * 0.3 * sea;

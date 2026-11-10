@@ -104,6 +104,7 @@ export function callsign(stack) {
 /** What is wrong with the stack, worst first: [word, colour class]. */
 function chipsOf(stack, word, pinned, mine) {
   const out = [];
+  if (stack.units[0]?.struck) return [['Struck', 'bad']]; // (1806: she has struck her colours — out of the fight)
   if (word === 'Broken') out.push(['Broken', 'bad flash']);
   if (pinned) out.push(['Pinned', 'warn']);
   if (word === 'Wavering') out.push(['Wavering', 'hot']);

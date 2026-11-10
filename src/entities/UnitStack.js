@@ -38,6 +38,7 @@ import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
 import { sailFactor, sailCourse } from './sailing.js';
+import { rakeFactor, sailHit, sailUpkeep, mastDrive } from './sailDamage.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
@@ -619,7 +620,7 @@ export class UnitStack {
       if (s.sail) heading = sailCourse(u, heading); // (under sail: no closer than the wind allows — a goal to windward by tacking, entities/sailing.js)
       const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
       const diff = angleDelta(u.yaw, heading);
-      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1);
+      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1) * (s.sail ? 0.45 + 0.55 * mastDrive(u) : 1);
       u.yaw += clamp(diff, -rate * dt, rate * dt);
       u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
       const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
@@ -671,7 +672,10 @@ export class UnitStack {
       if (!u.alive) return;
       maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
       maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
-      if (s.sail) maxSpeed *= sailFactor(u.yaw); // (the wind: where it comes from, how hard it blows)
+      if (s.sail) { // (the wind: where it comes from, how hard it blows — and what's left of her masts; struck, her sails let fly)
+        sailUpkeep(this, u, dt);
+        maxSpeed *= sailFactor(u.yaw) * mastDrive(u) * (u.struck ? 0.12 : 1);
+      }
       if (s.smallCraft) maxSpeed *= 1 - ((this.services.game?.seaState ?? 1) - 1) * 0.55; // (a PT boat in a rough sea: pounding, half speed)
       if (!u.possessed) {
         this.keepStation(u, dt);
@@ -1731,7 +1735,7 @@ export class UnitStack {
     let bestScore = Infinity;
     if (s.indirect) return this.holdFire ? null : this.pickIndirectTarget(u); // hold fire: only what it is sent at (fire missions come before this)
     for (const e of this.world.combatants(enemyOf(this.faction))) {
-      if (!e.alive || !e.spotted) continue; // you can only shoot what your side can see
+      if (!e.alive || !e.spotted || e.struck) continue; // you can only shoot what your side can see (and never a ship that has struck)
       const d2 = dist2DSq(u.pos, e.pos);
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
@@ -2019,6 +2023,7 @@ export class UnitStack {
   updateShipWeapons(u, dt) {
     const s = u.stats;
     if (s.antiAir && (u.depth ?? 0) < 1) this.engageAir(u, dt); // the 40 mm and 20 mm at aircraft, whatever the main guns do
+    if (u.struck) { u.target = null; return; } // (1806: she has struck her colours)
     u.retarget -= dt;
     if (u.target && (!u.target.alive || !u.target.spotted || dist2DSq(u.pos, u.target.pos) > s.range * s.range * 1.21)) u.target = null;
     if (u.retarget <= 0) {
@@ -2041,7 +2046,7 @@ export class UnitStack {
     const under = (t.depth ?? 0) > 3; // the target is a submerged submarine: guns and torpedoes are no use, depth charges are
     if (under) { this.huntSub(u, t, d, dt); return; }
     const rel = angleDelta(u.yaw, u.turretYaw);
-    const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
+    const slow = (u.bridgeHit > this.world.time ? 1.4 : 1) * (s.sail ? 1 / Math.max(0.3, u.crew ?? 1) : 1); // (the bridge hit: orders come late; under sail, fewer men at the guns)
     for (const m of this.shipMounts(u)) {
       if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
       if (m.missile) { // anti-ship missiles (1985: systems/Missiles.js) — no more in the air at her than it takes to sink her
@@ -2078,11 +2083,15 @@ export class UnitStack {
       _w.normalize();
       this.services.projectiles.spawn({
         origin: _p, dir: _w, speed: m.shell, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor,
-        size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: true,
+        size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: !s.sail,
       });
-      if (m.damage >= 120) this.services.effects.muzzle(_p, _w, m.damage >= 1500 ? 3 : m.damage >= 500 ? 2 : 1, 'naval', this.world.river?.level ?? 0); // (the big guns: a fireball and the blast on the water)
+      if (s.sail) { // the battery's flash, and its smoke: a bank alongside her that drifts off downwind and hides what's behind it
+        this.services.effects.muzzle(_p, _w, 2.2, 'artillery');
+        this.services.smoke?.add(_p.x + Math.sin(u.turretYaw) * 14, _p.z + Math.cos(u.turretYaw) * 14, { radius: 16, duration: 14, powder: true });
+        this.services.audio?.weapon(this.faction, 'arty', _p);
+      } else if (m.damage >= 120) this.services.effects.muzzle(_p, _w, m.damage >= 1500 ? 3 : m.damage >= 500 ? 2 : 1, 'naval', this.world.river?.level ?? 0); // (the big guns: a fireball and the blast on the water)
       else this.services.effects.muzzle(_p, _w, m.size, 'artillery');
-      this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
+      if (!s.sail) this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
     }
@@ -2436,9 +2445,10 @@ export class UnitStack {
         facing = -(dir.x * Math.sin(u.yaw) + dir.z * Math.cos(u.yaw)) / len; // 1 = hit head-on
         armor *= facing > 0.5 ? 1 : facing > -0.5 ? 0.7 : 0.35;
       }
-      const dealt = amount * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
+      const rake = this.stats.sail ? rakeFactor(u, dir) : 1; // (1806: a ball along her length, in at the bow or the stern — entities/sailDamage.js)
+      const dealt = amount * rake * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
-      if (this.stats.naval) { if (u.hp > 0) this.shipHit(u, dealt); } // (flooding, fires, parts)
+      if (this.stats.naval) { if (u.hp > 0) { this.shipHit(u, dealt); if (this.stats.sail) sailHit(this, u, dealt, source, rake); } } // (flooding, fires, parts; under sail the men and the masts)
       else if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
       if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter

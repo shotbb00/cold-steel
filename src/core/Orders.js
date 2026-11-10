@@ -61,7 +61,7 @@ export class Orders {
     const g = this.game;
     const own = (id) => {
       const s = g.world.stackById(id);
-      return s && s.alive && !s.withdrawing && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null; // a withdrawing stack takes no more orders
+      return s && s.alive && !s.withdrawing && !s.units[0]?.struck && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null; // a withdrawing stack takes no more orders (nor a ship that has struck)
     };
     g.currentOwner = owner;
     try {

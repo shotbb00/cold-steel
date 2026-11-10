@@ -117,7 +117,7 @@ export class ControlPoints {
       for (const s of this.game.world.stacks) {
         if (!s.alive || (sea ? !s.stats.naval : !s.usesCover)) continue; // vehicles can't take ground (at sea: warships take the zones)
         for (const u of s.units) {
-          if (!u.alive || (u.depth ?? 0) > 1 || (u.pos.x - p.x) ** 2 + (u.pos.z - p.z) ** 2 > p.radius * p.radius) continue; // (a submarine under the surface: no)
+          if (!u.alive || u.struck || (u.depth ?? 0) > 1 || (u.pos.x - p.x) ** 2 + (u.pos.z - p.z) ** 2 > p.radius * p.radius) continue; // (a submarine under the surface: no)
           const n = sea ? 4 : 1; // a warship counts as a squad of four
           if (s.faction === this.home) home += n; else foe += n;
         }
