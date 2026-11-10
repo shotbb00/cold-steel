@@ -15,6 +15,7 @@ import midway from './midway.ts';
 import savoSound from './savoSound.ts';
 import surigaoStrait from './surigaoStrait.ts';
 import philippineSea from './philippineSea.ts';
+import norwegianSea from './norwegianSea.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -31,6 +32,7 @@ export const MAPS = {
   [midway.id]: midway,
   [savoSound.id]: savoSound,
   [surigaoStrait.id]: surigaoStrait,
+  [norwegianSea.id]: norwegianSea,
   [philippineSea.id]: philippineSea,
 };
 

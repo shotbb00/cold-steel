@@ -1996,7 +1996,7 @@ export class UnitStack {
   /** The mounts of a ship (data/units45/ships.js `mounts`, per side), each with its own reload and state. */
   shipMounts(u) {
     const m = this.type.mounts;
-    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false })));
+    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false, left: d.load ?? Infinity }))); // (`left`: a missile mount's rounds aboard)
   }
 
   /** Where a mount's rounds leave: its place in the ship's frame (bow +z) turned with the hull. */
@@ -2034,6 +2034,15 @@ export class UnitStack {
     const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
     for (const m of this.shipMounts(u)) {
       if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
+      if (m.missile) { // anti-ship missiles (1985: systems/Missiles.js) — no more in the air at her than it takes to sink her
+        const ms = this.services.game?.missiles;
+        if (!ms || m.left <= 0 || ms.inbound(t) >= Math.min(6, Math.ceil(t.hp / (m.damage * 0.6)) + (t.stack.stats.defence ? 1 : 0))) continue;
+        m.cd = m.reload * slow;
+        this.mountWorld(u, m.at, _p);
+        const flight = d / m.speed;
+        ms.launch(this, u, _p, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
+        continue;
+      }
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
@@ -2066,6 +2075,22 @@ export class UnitStack {
       this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /** Ordered: `n` anti-ship missiles at the point (x, z) — a bearing fix, a spot she can't see: the seekers find what's there. */
+  missileStrike(x, z, n) {
+    const u = this.units.find((v) => v.alive), ms = this.services.game?.missiles;
+    if (!u || !ms || (u.depth ?? 0) > 9) return;
+    for (const m of this.shipMounts(u)) {
+      if (!m.missile || m.out || m.left <= 0 || n <= 0) continue;
+      if (Math.hypot(x - u.pos.x, z - u.pos.z) > m.range) { this.services.tell(this.faction, `${this.name}: out of missile range`); return; }
+      const k = Math.min(n, m.left);
+      this.mountWorld(u, m.at, _p);
+      ms.launch(this, u, _p, x, z, { ...m, count: k, left: k }, null);
+      m.left -= k;
+      m.cd = m.reload;
+      n -= k;
     }
   }
 

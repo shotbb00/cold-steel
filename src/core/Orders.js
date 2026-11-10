@@ -22,6 +22,8 @@
 //   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
 //   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
 //   { t: 'searchlight', s: [ids], on }           (ships at night: light the target up — and show yourself)
+//   { t: 'radar', s: [ids], on }                 (1985 ships: radar on — see, and be heard — or silent: systems/Sensors.js)
+//   { t: 'missileAt', s: [ids], x, z, n }        (1985 ships: n anti-ship missiles at a point — a bearing fix: systems/Missiles.js)
 //   { t: 'damageControl', s: [ids], p }          (ships: 'flood' / 'fire' / 'repair' first, 'auto' all alike, 'counter' counter-flood the list)
 import { unitCost } from '../data/doctrine.js';
 import { promoteCost } from '../modes/pitched.js';
@@ -163,6 +165,12 @@ export class Orders {
             } else u.dc = cmd.p === 'auto' ? null : cmd.p;
           }
         }
+        return null;
+      case 'radar': // 1985 ships: radar on (sees all a horizon and the islands let it — and every enemy hears it) or off
+        for (const s of mine(cmd.s)) if (s.stats.radar) s.radarOn = !!cmd.on;
+        return null;
+      case 'missileAt': // 1985 ships: a missile salvo at a point (a bearing fix): the seekers find what's there
+        for (const s of mine(cmd.s)) s.missileStrike?.(cmd.x, cmd.z, cmd.n ?? 2);
         return null;
       case 'searchlight': // ships at night: the beam on the target — she lights it up for everyone, and shows herself
         for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.searchlight = !!cmd.on;

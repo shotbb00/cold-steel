@@ -284,6 +284,16 @@ export class CommandSystem {
         this.game.bus.emit('toast', on ? 'Zig-zag: weaving either side of the course' : 'Steady on course');
       } else if (k.startsWith('form:')) {
         this.game.orders.issue({ t: 'formation', s: ids(ships), f: k.slice(5) });
+      } else if (k === 'radar') {
+        const sets = ships.filter((s) => s.stats.radar);
+        const on = !sets.every((s) => s.radarOn !== false);
+        this.game.orders.issue({ t: 'radar', s: ids(sets), on: on ? 1 : 0 });
+        for (const s of sets) s.radarOn = on;
+        this.game.bus.emit('toast', on ? 'Radar on: she sees — and is heard' : 'Radar off: silent, eyes only');
+      } else if (k === 'missile') {
+        const shooters = ships.filter((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile));
+        if (!shooters.length) return this.game.bus.emit('toast', 'Select ships with anti-ship missiles');
+        this.startTargeting({ kind: 'smoke', stacks: shooters, fire: 'missile' });
       } else if (k === 'searchlight') {
         const surface = ships.filter((s) => !s.stats.submarine);
         const on = !surface.every((s) => s.searchlight);
@@ -430,6 +440,7 @@ export class CommandSystem {
       const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
       t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
+        : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
         : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
         : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
@@ -584,6 +595,9 @@ export class CommandSystem {
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.fire === 'missile') {
+      this.game.orders.issue({ t: 'missileAt', s: ids(t.stacks), x: p.x, z: p.z, n: 2 });
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.fire) {
       this.game.orders.issue({ t: 'fireMission', s: ids(t.stacks), x: p.x, z: p.z, m: t.fire });

@@ -213,6 +213,17 @@ export class Minimap {
       c.globalAlpha = 1;
     }
 
+    // ESM bearings on enemy radars (systems/Sensors.js): a line from the ship that heard it, fading
+    for (const b of game.sensors?.lines() ?? []) {
+      c.globalAlpha = Math.max(0, b.k) * 0.9;
+      c.strokeStyle = '#ffb04a';
+      c.beginPath();
+      c.moveTo(...this.toMap(b.x, b.z));
+      c.lineTo(...this.toMap(b.x + Math.sin(b.a) * 6000, b.z + Math.cos(b.a) * 6000));
+      c.stroke();
+      c.globalAlpha = 1;
+    }
+
     // our radars, jammers and command posts: what they cover (dashed until they work)
     this.drawAreas(c);
 

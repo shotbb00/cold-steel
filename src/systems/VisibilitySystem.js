@@ -148,7 +148,7 @@ export class VisibilitySystem {
         // drawn only where your fog of war is clear (render/FogOfWar.js): spotted by a shot's flash or
         // a tall hull past the edge of view, your troops may fire at it, you don't see it. A gun a
         // counter-battery radar has tracked back is shown wherever it is: that's what the radar is for
-        const located = u.locatedUntil > this.game.time;
+        const located = u.locatedUntil > this.game.time || u.radarUntil > this.game.time; // (a radar contact: shown wherever she is, the fog cleared round her: render/FogOfWar.js markLocated)
         u.visible = s.faction === this.player || (u.spotted && (!this.enabled || s.stats.structure || located || (this.game.fow?.at(u.pos.x, u.pos.z) ?? 1) > 0.3));
         if (u.visible) any = true;
       }
@@ -169,8 +169,18 @@ export class VisibilitySystem {
     const inBuilding = u.atCover && u.coverSpot?.interior;
     const posture = inBuilding ? 0.45 : u.prone > 0.7 ? 0.45 : u.crouch > 0.6 && u.atCover ? 0.6 : 1;
     const rest = (u.moving ? 1.15 : 1) * (u.stats.stealth ?? 1) * (!u.moving && this.game.construction?.underNet(u.pos.x, u.pos.z, u.faction) ? 0.5 : 1); // a camouflage net: half as far
+    const ship = u.stack.stats.naval && (u.depth ?? 0) < 1;
     for (const o of spotters) {
       const os = o.stats;
+      // a ship's radar (1985: systems/Sensors.js): every ship on the surface in its reach that no island hides
+      if (ship && os.radar && o.stack.radarOn !== false && (o.depth ?? 0) < 1) {
+        const R = os.radar.range * (u.stack.stats.smallCraft ? 0.6 : 1) * (u.stack.stats.submarine ? 0.4 : 1); // (a boat on the surface, a periscope: small returns)
+        const d2 = (o.pos.x - u.pos.x) ** 2 + (o.pos.z - u.pos.z) ** 2;
+        if (d2 < R * R && terrain.lineOfSight(o.pos.x, o.pos.y + os.radar.height, o.pos.z, u.pos.x, u.pos.y + Math.max(2, u.height * 0.8), u.pos.z)) {
+          u.radarUntil = this.game.time + INTERVAL * 2.5;
+          return true;
+        }
+      }
       if ((o.depth ?? 0) > 9) { // a boat deep down sees nothing — but hears the screws of a ship under way
         if (u.stack.stats.naval && u.moving && (u.pos.x - o.pos.x) ** 2 + (u.pos.z - o.pos.z) ** 2 < ((os.hearing ?? 0) * (u.stack.noise ?? 1)) ** 2) return true; // (her engine order: slow is quiet, flank loud)
         continue;

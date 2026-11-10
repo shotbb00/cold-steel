@@ -135,7 +135,7 @@ export class FogOfWar {
     for (const s of g.world.stacks) {
       if (!s.alive || s.faction === g.playerFaction) continue;
       for (const u of s.units) {
-        if (!u.alive || !(u.locatedUntil > g.time)) continue;
+        if (!u.alive || !(u.locatedUntil > g.time || (u.radarUntil > g.time && u.spotted))) continue;
         const r = Math.max(40, (s.type.hull?.length ?? 0) * 0.7), n = Math.ceil(r / cell);
         const cx = Math.floor((u.pos.x + half) / cell), cz = Math.floor((u.pos.z + half) / cell);
         for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
