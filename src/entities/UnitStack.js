@@ -811,15 +811,20 @@ export class UnitStack {
    */
   shipCourse(u, way) {
     const t = this.world.time;
+    const nav = this.world.nav;
+    // a weave or a dodge never toward the shallows: 250 m along it clear of them (Nav.visible: with a ship's margin), else the route
+    const clear = (p) => { const l = Math.hypot(p.x - u.pos.x, p.z - u.pos.z) || 1, fx = (p.x - u.pos.x) / l, fz = (p.z - u.pos.z) / l; return !nav || (nav.clearance(u.pos.x + fx * 60, u.pos.z + fz * 60, SHIP) > u.radius + 30 && nav.clearance(u.pos.x + fx * 150, u.pos.z + fz * 150, SHIP) > u.radius + 60); }; // (sea room ahead along it)
     if (u.evade) {
-      if (t < u.evade.until) return { x: u.pos.x + Math.sin(u.evade.yaw) * 400, z: u.pos.z + Math.cos(u.evade.yaw) * 400 };
-      u.evade = null;
+      const e = { x: u.pos.x + Math.sin(u.evade.yaw) * 400, z: u.pos.z + Math.cos(u.evade.yaw) * 400 };
+      if (t < u.evade.until && clear(e)) return e;
+      if (t >= u.evade.until) u.evade = null;
     }
     if (!this.zigzag || Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z) < 300) return way;
     const a = Math.sin((t / ZIGZAG.period) * Math.PI * 2 + this.id * 1.7) * ZIGZAG.swing;
     const dx = way.x - u.pos.x, dz = way.z - u.pos.z;
     const c = Math.cos(a), sn = Math.sin(a);
-    return { x: u.pos.x + dx * c + dz * sn, z: u.pos.z - dx * sn + dz * c };
+    const z = { x: u.pos.x + dx * c + dz * sn, z: u.pos.z - dx * sn + dz * c };
+    return clear(z) ? z : way;
   }
 
   /**

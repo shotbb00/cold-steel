@@ -21,6 +21,7 @@ import { year } from '../data/epoch.js';
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
 const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer'];
+const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
@@ -212,10 +213,22 @@ export class SeaDirector {
         // spread out round the zone a little, each its own spot
         const a = (s.id * 2.399) % (Math.PI * 2);
         const r = target.radius * 0.45;
-        const goal = { x: target.x + Math.cos(a) * r, z: target.z + Math.sin(a) * r };
+        const goal = this.seaRoom({ x: target.x + Math.cos(a) * r, z: target.z + Math.sin(a) * r }, target.radius);
         if (!s.moveTarget || Math.hypot(s.moveTarget.x - goal.x, s.moveTarget.z - goal.z) > 80) this.move(s, goal.x, goal.z);
       }
     }
+  }
+
+  /** A spot with sea room: `p` if it's SEA_ROOM m off the shallows, else the deepest-water spot within `r` of it (a zone by an island: on its open side). */
+  seaRoom(p, r = 150) {
+    const nav = this.game.world.nav;
+    if (!nav || nav.clearance(p.x, p.z, 'ship') >= SEA_ROOM) return p;
+    let best = p, bestC = nav.clearance(p.x, p.z, 'ship');
+    for (let i = 0; i < 12; i++) for (const k of [0.5, 1]) {
+      const q = { x: p.x + Math.cos((i / 12) * Math.PI * 2) * r * k, z: p.z + Math.sin((i / 12) * Math.PI * 2) * r * k }, c = nav.clearance(q.x, q.z, 'ship');
+      if (c > bestC) { best = q; bestC = c; }
+    }
+    return best;
   }
 
   /** A submarine: out ahead at periscope depth; found by a hunter, deep and silent until it has lost the boat. */
