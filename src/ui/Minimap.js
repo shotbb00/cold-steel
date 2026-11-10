@@ -227,8 +227,8 @@ export class Minimap {
       c.globalAlpha = Math.max(0, b.k) * 0.9;
       c.strokeStyle = '#ffb04a';
       c.beginPath();
-      c.moveTo(...this.toMap(b.x, b.z));
-      c.lineTo(...this.toMap(b.x + Math.sin(b.a) * 6000, b.z + Math.cos(b.a) * 6000));
+      if (b.fix) { const [fx, fy] = this.toMap(b.fx, b.fz); c.arc(fx, fy, 4, 0, Math.PI * 2); }
+      else { c.moveTo(...this.toMap(b.x, b.z)); c.lineTo(...this.toMap(b.x + Math.sin(b.a) * 3800, b.z + Math.cos(b.a) * 3800)); }
       c.stroke();
       c.globalAlpha = 1;
     }

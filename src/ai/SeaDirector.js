@@ -140,8 +140,7 @@ export class SeaDirector {
   steer() {
     const g = this.game;
     this.emcon(this.ships());
-    this.fireAtFixes(this.ships());
-    this.helos(this.ships());
+    this.helos(this.ships()); // (missiles at fixes: every ship does that herself, either side — UnitStack.fireAtFix)
     const target = this.objective();
     const home = this.game.world.bases[this.faction];
     const night = !!g.conditions?.night;

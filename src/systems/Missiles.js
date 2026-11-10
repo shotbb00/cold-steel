@@ -80,7 +80,7 @@ export class Missiles {
       });
     }
     g.netEvent('msl', this.list.slice(first).map((s) => [s.id, Math.round(s.pos.x), Math.round(s.pos.y), Math.round(s.pos.z), Math.round(s.aim.x), Math.round(s.aim.z), s.speed, Math.round(s.cruise), s.skim ? 1 : 0, s.faction, s.seeker, Math.round(s.left)]));
-    u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + 10); // the launch: a flash and a trail everyone sees
+    g.sensors?.launch(src.faction, from.x, from.z); // the launch: a flash and a booster — a bearing for the other side (systems/Sensors.js), not a position
     g.audio?.play('nato.mlrs', from, { volume: 1, rate: m.speed > 150 ? 0.8 : 1, throttle: 0.25 }); // (the booster's roar — a big supersonic one deeper)
     g.tell(src.faction, `${src.name}: ${m.name ?? 'missiles'} away`);
   }

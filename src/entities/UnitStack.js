@@ -2023,7 +2023,7 @@ export class UnitStack {
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
     this.shine(u, t);
     for (const m of this.shipMounts(u)) if (m.cd > 0) m.cd -= dt; // (the guns reload whether or not there's a target)
-    if (!t) return;
+    if (!t) { this.fireAtFix(u); return; }
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
     const depth = u.depth ?? 0;
     if (depth > 9) return; // a submarine deep down: blind and can't shoot
@@ -2079,6 +2079,27 @@ export class UnitStack {
       this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /**
+   * Nothing in sight, but the fleet has a fix on an enemy radar (systems/Sensors.js: heard by two or more
+   * ships): a salvo at it, if she has missiles that reach — once in FIX_EVERY s per enemy ship for her side,
+   * so the fleet doesn't empty its launchers at one bearing. Hold fire: never.
+   */
+  fireAtFix(u) {
+    const g = this.services.game, ms = g?.missiles, S = g?.sensors;
+    if (!ms || !S || this.holdFire || (u.depth ?? 0) > 9) return;
+    const now = this.world.time;
+    for (const fx of S.fixes?.[this.faction] ?? []) {
+      if (fx.stack.units.some((v) => v.alive && v.spotted)) continue; // (seen: fired at as a target)
+      const key = `${this.faction}:${fx.stack.id}`;
+      if ((S.firedAt ??= {})[key] > now - 50) continue;
+      const m = this.shipMounts(u).find((k) => k.missile && !k.out && k.left > 0 && k.cd <= 0 && Math.hypot(fx.x - u.pos.x, fx.z - u.pos.z) < k.range);
+      if (!m) continue;
+      S.firedAt[key] = now;
+      this.missileStrike(fx.x, fx.z, Math.min(4, m.left));
+      return;
     }
   }
 

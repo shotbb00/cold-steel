@@ -552,6 +552,7 @@ export class MainMenu {
   }
 
   deploy(choice = this.choice) {
+    window.__deploying = true; // (an update waiting won't reload the page under it: pwa/register.js)
     landscape();
     this.preview?.dispose();
     this.preview = null;

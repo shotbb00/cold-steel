@@ -11,7 +11,7 @@ const SOV = { colors: [0x8e9696, 0x889090, 0x949c9c, 0x848c8c], scale: 0.9 };
 const NOGUN = { rate: 1, damage: 0, splash: 0, vsArmor: 0, pierce: 0, speed: 600, tracer: 0, size: 0.5, sound: 'nato.mg' };
 
 // the missiles they carry (systems/Missiles.js; a third of the real speed, like the ships')
-const HARPOON = { name: 'Harpoons', speed: 80, range: 4600, seeker: 1200, skim: true, damage: 2100, pierce: 0.6 };
+const HARPOON = { name: 'Harpoons', speed: 80, range: 4600, seeker: 1200, skim: true, damage: 2300, pierce: 0.6 };
 const KH22 = { name: 'Kh-22s', speed: 330, range: 6000, seeker: 1800, alt: 70, damage: 5200, pierce: 0.7 };
 
 export const SEA_STRIKE = {

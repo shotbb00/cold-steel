@@ -250,23 +250,28 @@ export class StackLabels {
     this.air ??= new Map();
     const marked = new Set();
     const seen = new Set();
+    const sea = !!g.world.river?.sea;
+    const eyes = sea ? g.world.stacksOf(g.playerFaction).filter((st) => st.alive && st.stats.naval).map((st) => [st.units.find((u) => u.alive), st]).filter(([u]) => u && (u.depth ?? 0) < 1) : [];
+    // an enemy aircraft at sea: tagged while your radar (on) or your lookouts have it
+    const spotted = (s) => s.airborne && eyes.some(([u, st]) => Math.hypot(u.pos.x - s.pos.x, u.pos.z - s.pos.z) < (st.stats.radar && st.radarOn !== false ? st.stats.radar.range * 1.2 : 1800));
     for (const s of g.air.sorties) {
-      if (s.faction !== g.playerFaction) continue;
+      const own = s.faction === g.playerFaction;
+      if (!own && !(sea && spotted(s))) continue;
       seen.add(s);
       let a = this.air.get(s);
       if (!a) {
         const el = document.createElement('div');
-        el.className = 'stack-label ally air-tag';
+        el.className = `stack-label ${own ? 'ally' : 'enemy'} air-tag`;
         el.innerHTML = '<div class="sl-row"><span class="sl-plane">✈</span><span class="sl-name"></span><span class="sl-chips"><span class="sl-chip job"></span></span></div>';
         this.root.appendChild(el);
         a = { el, name: el.querySelector('.sl-name'), chip: el.querySelector('.sl-chip'), state: null, last: {} };
         a.name.textContent = s.type.name;
         this.air.set(s, a);
       }
-      const ship = s.ship?.alive ? s.ship.stack : null;
+      const ship = own && s.ship?.alive ? s.ship.stack : null;
       const what = ship ? ship.name : null;
-      // the log, as it changes
-      if (s.state !== a.state) {
+      // the log, as it changes (yours only)
+      if (own && s.state !== a.state) {
         const was = a.state;
         a.state = s.state;
         const from = s.cvUnit?.stack?.name;
@@ -285,7 +290,7 @@ export class StackLabels {
       if (show) a.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
     }
     for (const [s, a] of this.air) if (!seen.has(s)) {
-      if (s.p?.sea && !s.wrecked && a.state !== 'down' && a.state !== 'inbound') g.tell(s.faction, `${s.type.name} back aboard`); // (landed: the sortie is over)
+      if (s.faction === g.playerFaction && s.done !== false && s.state === 'done' && s.p?.sea && !s.homeShip && !s.wrecked && a.state !== 'down' && a.state !== 'inbound') g.tell(s.faction, `${s.type.name} back aboard`); // (landed: the sortie is over)
       a.el.remove();
       this.air.delete(s);
     }
