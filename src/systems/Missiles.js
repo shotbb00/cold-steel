@@ -15,6 +15,8 @@ import { enemyOf } from '../data/factions.js';
 
 const SKIM_HORIZON = 1100;  // m: a sea-skimmer shows on a ship's radar only this close (over the radar horizon)
 const EYES = 450;           // m: seen by eye (no radar) — the gun's own director, the lookouts
+const LIGHT_UP = 3200;      // m: a silent ship hearing an incoming missile's seeker this close switches her radars on (Missiles.defend)
+const MISSILE_HIT = 0.6;     // share of a missile's listed damage one hit does: a cruiser takes three or four, not two (the defence, damage control and the helm get time to matter)
 const CLIMB = 2.5;          // s from the launcher to cruise height
 const TERMINAL = 700;       // m: a high-flyer comes down for the last run in
 const CHAFF_LIFE = 12;      // s a chaff cloud fools a seeker
@@ -175,7 +177,7 @@ export class Missiles {
     g.effects.explosion(s.pos, 2.2, { ground: false, fire: 2.5 });
     g.audio?.play('explosion.big', s.pos, { volume: 1 });
     if (g.net?.isClient) return;
-    u.receiveDamage(s.damage, s.source, s.pierce, { x: s.dir.x, z: s.dir.z }, 1);
+    u.receiveDamage(s.damage * MISSILE_HIT, s.source, s.pierce, { x: s.dir.x, z: s.dir.z }, 1);
     if (u.alive) {
       u.blaze = Math.min(1, (u.blaze ?? 0) + 0.3); // (every hit: the fuel left in it, the aluminium upperworks — she burns)
       g.tell(u.stack.faction, `${u.stack.name}: missile hit — fire aboard!`);
@@ -197,6 +199,12 @@ export class Missiles {
       if (!D || !st.alive) continue;
       for (const u of st.units) {
         if (!u.alive || (u.depth ?? 0) > 1) continue;
+        // a silent ship hears a missile's seeker switch on (it radiates: her ESM picks it up) and lights up her radars to fight it
+        if (st.radarOn === false && st.stats.radar && st.stats.esm && this.list.some((s) => s.faction !== st.faction && s.age > 0 && (s.target || Math.hypot(s.aim.x - s.pos.x, s.aim.z - s.pos.z) < s.seeker * 1.2)
+          && Math.hypot(s.pos.x - u.pos.x, s.pos.z - u.pos.z) < LIGHT_UP)) {
+          st.radarOn = true;
+          if (!(this.litAt?.[st.faction] > now - 20)) { (this.litAt ??= {})[st.faction] = now; g.tell(st.faction, `${st.name}: missile seekers heard — radars on, weapons free`); }
+        }
         const radar = st.radarOn !== false && st.stats.radar;
         // what she sees coming: the high-flyers out to her SAMs' reach, a skimmer only over the horizon
         let nearest = null, nearestD = Infinity;

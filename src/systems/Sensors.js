@@ -89,7 +89,7 @@ export class Sensors {
         if (!m) {
           const line = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3)), this.lineMat.clone());
           const ring = new THREE.Mesh(new THREE.RingGeometry(SPREAD2 * 0.8, SPREAD2, 40).rotateX(-Math.PI / 2), this.ringMat.clone());
-          for (const o of [line, ring]) { o.frustumCulled = false; o.renderOrder = 5; g.scene.add(o); }
+          for (const o of [line, ring]) { o.frustumCulled = false; o.renderOrder = 5; } // (not in the scene: the bearings and fixes are drawn on the minimap only — in the battle view they were in the way)
           m = { line, ring };
           this.marks.set(h.key, m);
           if (h.key.units && !this.heard.has(h.key.id)) { this.heard.add(h.key.id); g.tell(me, `ESM: enemy radar bearing ${Math.round(((Math.atan2(h.x - h.by[0].pos.x, h.z - h.by[0].pos.z) * 180) / Math.PI + 360) % 360)}°`); }
