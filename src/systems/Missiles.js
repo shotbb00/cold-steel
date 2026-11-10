@@ -17,7 +17,8 @@ const SKIM_HORIZON = 1100;  // m: a sea-skimmer shows on a ship's radar only thi
 const EYES = 450;           // m: seen by eye (no radar) — the gun's own director, the lookouts
 const CLIMB = 2.5;          // s from the launcher to cruise height
 const TERMINAL = 700;       // m: a high-flyer comes down for the last run in
-const CHAFF_LIFE = 18;      // s a chaff cloud fools a seeker
+const CHAFF_LIFE = 12;      // s a chaff cloud fools a seeker
+const CHAFF_FOOLS = 0.35;   // the chance a seeker switching on near a cloud takes it (once per missile and cloud)
 const _p = new THREE.Vector3();
 const _d = new THREE.Vector3();
 
@@ -80,7 +81,7 @@ export class Missiles {
     }
     g.netEvent('msl', this.list.slice(first).map((s) => [s.id, Math.round(s.pos.x), Math.round(s.pos.y), Math.round(s.pos.z), Math.round(s.aim.x), Math.round(s.aim.z), s.speed, Math.round(s.cruise), s.skim ? 1 : 0, s.faction, s.seeker, Math.round(s.left)]));
     u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + 10); // the launch: a flash and a trail everyone sees
-    g.audio?.play(`${src.faction}.sam`, from, { volume: 1, throttle: 0.3 });
+    g.audio?.play('nato.mlrs', from, { volume: 1, rate: m.speed > 150 ? 0.8 : 1, throttle: 0.25 }); // (the booster's roar — a big supersonic one deeper)
     g.tell(src.faction, `${src.name}: ${m.name ?? 'missiles'} away`);
   }
 
@@ -151,7 +152,9 @@ export class Missiles {
     }
     for (const c of this.chaff) {
       if (c.faction === s.faction) continue;
-      const d = ahead(c.x, c.z) * 0.65;
+      const fooled = ((s.fooled ??= new Map()).has(c) ? s.fooled : s.fooled.set(c, Math.random() < CHAFF_FOOLS)).get(c);
+      if (!fooled) continue; // (this seeker sees through it)
+      const d = ahead(c.x, c.z);
       if (d < bestD) { bestD = d; best = null; cloud = c; }
     }
     s.target = best;
@@ -201,6 +204,7 @@ export class Missiles {
           const seen = d < EYES || (radar && d < (s.skim || s.pos.y - s.level < 12 ? SKIM_HORIZON : radar.range));
           if (!seen) continue;
           const mine = s.target === u || (!s.target && Math.hypot(s.aim.x - u.pos.x, s.aim.z - u.pos.z) < 600); // (coming for her)
+          if (mine && !s.warned?.has(st.faction)) this.warn(st, u, s);
           if (D.sam) this.layer(st, u, D.sam, 'sam', s, d, now, true);
           if (D.point && mine) this.layer(st, u, D.point, 'point', s, d, now, false);
           if (mine && d < nearestD) { nearest = s; nearestD = d; }
@@ -222,10 +226,22 @@ export class Missiles {
           this.chaffPuff(c);
           g.netEvent('chaff', Math.round(c.x), Math.round(c.y), Math.round(c.z), c.faction);
           g.audio?.play(`${st.faction}.mortar`, u.pos, { volume: 0.5, throttle: 0.5 }); // (the chaff rockets' pop)
-          for (const s of this.list) if (s.target === u && Math.random() < 0.3) this.seek(s); // (seduced — or not)
+          for (const s of this.list) if (s.target === u) this.seek(s); // (seduced — or not: CHAFF_FOOLS, rolled per missile and cloud)
         }
       }
     }
+  }
+
+  /** "Vampire!" — her side is told once per raid that missiles are coming at her, and the klaxon sounds. */
+  warn(st, u, s) {
+    const g = this.game, now = g.time;
+    (s.warned ??= new Set()).add(st.faction);
+    if (this.warnedAt?.[st.faction] > now - 6) return; // (one call for a salvo)
+    (this.warnedAt ??= {})[st.faction] = now;
+    const n = Math.max(1, this.list.filter((m) => m.faction !== st.faction && Math.hypot(m.pos.x - u.pos.x, m.pos.z - u.pos.z) < 5000).length);
+    const brg = Math.round(((Math.atan2(s.pos.x - u.pos.x, s.pos.z - u.pos.z) * 180) / Math.PI + 360) % 360);
+    g.tell(st.faction, `${st.name}: vampire, vampire — ${n} missile${n > 1 ? 's' : ''} inbound, bearing ${brg}°`);
+    if (st.faction === g.playerFaction) g.audio?.play('klaxon', u.pos, { volume: 0.7, throttle: 4 });
   }
 
   /** A missile layer: one more interceptor at `s` if a channel is free, it's in reach and not already covered. */
@@ -282,7 +298,7 @@ export class Missiles {
       const len = _d.length();
       _d.x += (Math.random() - 0.5) * len * 0.02; _d.y += (Math.random() - 0.5) * len * 0.02; _d.z += (Math.random() - 0.5) * len * 0.02;
       g.projectiles?.spawn({ origin: _p, dir: _d.normalize(), speed: 1100, damage: 0, faction: st.faction, color: st.boltColor, size: 0.7, source: st, life: len / 1100 + 0.1, tracer: true });
-      g.audio?.weapon(st.faction, 'aa', _p);
+      if (!(u.ciwsSnd > g.time)) { u.ciwsSnd = g.time + 1.2; g.audio?.play('jet.gau8', _p, { volume: 0.7, rate: 1.6 }); } // (Phalanx, AK-630: the gatling's tearing burst)
     }
     if (Math.random() < C.pk * dt) this.kill(s);
   }

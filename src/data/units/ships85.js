@@ -31,11 +31,11 @@ const G16IN = { range: 2200, reload: 30, damage: 2400, splash: 12, pierce: 0.8, 
 
 // the missiles (systems/Missiles.js): `speed` a third of the real one, the sub/supersonic gap kept
 const MSL = (o) => ({ at: [0, 8, 0], missile: true, arc: 6.3, count: 2, reload: 8, pierce: 0.6, ...o });
-const HARPOON = { count: 4, name: 'Harpoons', speed: 80, range: 4600, seeker: 1200, skim: true, damage: 1800 };
-const TASM = { count: 4, name: 'Tomahawks', speed: 80, range: 5800, seeker: 1400, skim: true, damage: 2600 };
-const MOSKIT = { count: 4, name: 'Moskits', speed: 280, range: 4000, seeker: 1000, skim: true, damage: 2700 };
-const BAZALT = { name: 'Bazalts', speed: 225, range: 5500, seeker: 1600, alt: 40, damage: 5000, pierce: 0.7 };
-const GRANIT = { name: 'Granits', speed: 250, range: 6000, seeker: 1800, alt: 45, damage: 5400, pierce: 0.7 };
+const HARPOON = { count: 4, name: 'Harpoons', speed: 80, range: 4600, seeker: 1200, skim: true, damage: 2100 };
+const TASM = { count: 4, name: 'Tomahawks', speed: 80, range: 5800, seeker: 1400, skim: true, damage: 2800 };
+const MOSKIT = { count: 4, name: 'Moskits', speed: 280, range: 4000, seeker: 1000, skim: true, damage: 2500 };
+const BAZALT = { name: 'Bazalts', speed: 225, range: 5500, seeker: 1600, alt: 40, damage: 4200, pierce: 0.7 };
+const GRANIT = { name: 'Granits', speed: 250, range: 6000, seeker: 1800, alt: 45, damage: 4800, pierce: 0.7 };
 
 // the defences: area SAMs (`channels` in the air at once), point SAMs, the last-ditch gun, chaff
 const SM2 = { range: 2600, channels: 3, load: 40, reload: 1.2, speed: 330, pk: 0.5 };
@@ -64,7 +64,7 @@ export const frigate = ship({
   id: 'frigate', name: 'Frigate', shortName: 'Frigate', cost: 300,
   names: { nato: ['Oliver Hazard Perry', 'McInerney', 'Clark', 'George Philip', 'Samuel Eliot Morison', 'Jack Williams', 'Stark', 'Taylor'], pact: ['Bditelny', 'Razumny', 'Druzhny', 'Svirepy', 'Silny', 'Storozhevoy', 'Doblestny', 'Bezukoriznenny'] },
   hull: { length: 136, beam: 14 },
-  stats: { helo: 6, hp: 2600, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(3000, 25), sonar: 600, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
+  stats: { helo: 6, hp: 3000, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(3000, 25), sonar: 600, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
     defence: { sam: SM1, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 80 },
   factionStats: { pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
   mounts: {
@@ -126,7 +126,7 @@ export const cruiser = ship({
   hull: { length: 173, beam: 17 },
   stats: { helo: 6.5, hp: 7500, armor: 0.1, speed: 15.5, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 20, radar: RADAR(3400, 35), sonar: 800, depthCharges: DC(), asTorp: ASROC, ...AA(700, 0.22, 0.05),
     defence: { sam: AEGIS, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
-  factionStats: { pact: { helo: 7.5, hp: 8500, sonar: 500, defence: { sam: S300F, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3200 } },
+  factionStats: { pact: { helo: 7.5, hp: 8000, sonar: 500, defence: { sam: S300F, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3200 } },
   mounts: {
     nato: [MSL({ ...HARPOON, at: [0, 10, -45], load: 8 }), gun([0, 9, 60], FWD, G5IN), gun([0, 9, -62], AFT, G5IN)],
     pact: [MSL({ ...BAZALT, at: [0, 10, 30], load: 16, count: 8, reload: 15 }), gun([0, 10, 66], FWD, G130)],

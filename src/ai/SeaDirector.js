@@ -120,10 +120,28 @@ export class SeaDirector {
     }
   }
 
+  /** Its ships' helicopters (1985): to a lost submarine contact, else ahead toward the enemy to see what's there. */
+  helos(fleet) {
+    const g = this.game, now = g.world.time;
+    const seen = this.foes().some((s) => s.units.some((u) => u.alive && u.spotted));
+    // a submarine its sonar held lately and has lost (contactAt: VisibilitySystem.underwater) — searched near where it was
+    const sub = this.foes().flatMap((f) => f.units).find((u) => u.alive && u.stack.stats.submarine && !u.spotted && now - (u.contactAt ?? -99) < 40);
+    const lost = sub && { x: sub.pos.x + (Math.random() - 0.5) * 300, z: sub.pos.z + (Math.random() - 0.5) * 300 };
+    const foeHome = g.world.bases[enemyOf(this.faction)];
+    for (const s of fleet) {
+      const u = s.units[0];
+      if (!u?.alive || !s.stats.helo || s.heloReadyAt > now || Math.random() > 0.35) continue;
+      const to = lost && Math.hypot(lost.x - u.pos.x, lost.z - u.pos.z) < 2500 ? lost
+        : !seen ? { x: u.pos.x + (foeHome.x - u.pos.x) * 0.35, z: u.pos.z + Math.sign(foeHome.z - u.pos.z) * 1300 } : null;
+      if (to) { g.orders.run(this.faction, { t: 'helo', s: [s.id], x: Math.round(to.x), z: Math.round(to.z) }, 'ai'); return; }
+    }
+  }
+
   steer() {
     const g = this.game;
     this.emcon(this.ships());
     this.fireAtFixes(this.ships());
+    this.helos(this.ships());
     const target = this.objective();
     const home = this.game.world.bases[this.faction];
     const night = !!g.conditions?.night;
