@@ -21,6 +21,7 @@
 // wounded (slow, goes prone, crawls back) and the next hit finishes him. Soldiers stand,
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
+import { year } from '../data/epoch.js';
 import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
@@ -2546,7 +2547,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' ? 'ijn' : this.army); // (at sea the other side is the Imperial Navy: Japanese)
+    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1945 the other side is the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

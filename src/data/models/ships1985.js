@@ -68,7 +68,7 @@ function canisters(c, x, y, z, ry, { n = 4, r = 0.3, len = 4.6, up = 0.5 } = {})
     g.push(P.cyl(r, r, len, { x: cx, y: 0.8 + cy + len * 0.5 * Math.sin(up), z: 0, rx: Math.PI / 2 - up, color: c.upper, surf: 'plate' }, 10));
     g.push(P.cyl(r * 1.05, r * 1.05, 0.12, { x: cx, y: 0.8 + cy + len * Math.sin(up), z: len * 0.5 * Math.cos(up), rx: Math.PI / 2 - up, color: DARK }, 10));
   }
-  g.push(box(r * 5, 0.5, len * 0.5, { y: 0.3, color: c.gun }), ...[-1, 1].map((s) => box(0.15, 1.6, 0.15, { x: s * r * 2.6, y: 1, z: -len * 0.25, color: c.gun, surf: 'metal' })));
+  g.push(box(r * 5, 0.62, len * 0.95, { y: 0.31, color: c.gun }), ...[-1, 1].map((s) => box(0.15, 1.6, 0.15, { x: s * r * 2.6, y: 1, z: -len * 0.25, color: c.gun, surf: 'metal' }))); // (the frame: under the tubes' whole length, on the deck)
   return put(g, x, y, z, ry);
 }
 /** A box launcher (ASROC, Sea Sparrow, SS-N-14): a cell block on a trainable pedestal, raised a little. */
@@ -122,7 +122,7 @@ function lattice(c, x, y, z, h, w, top = []) {
   return [...g, ...top.map((f) => f(x, y + h + 0.2, z))];
 }
 // radar heads, (x, y, z) at their foot
-const dish = (w, h) => (x, y, z) => merge([P.cyl(0.25, 0.3, 1, { x, y: y + 0.5, z, color: DARK }, 8), P.box(w, h, 0.25, { x, y: y + 1 + h / 2, z, rx: -0.15, color: 0x5a6066, surf: 'metal' }), P.box(w, 0.12, 0.12, { x, y: y + 1, z: z + 0.8, color: BLACK })]);
+const dish = (w, h) => (x, y, z) => merge([P.cyl(0.25, 0.3, 1, { x, y: y + 0.5, z, color: DARK }, 8), P.box(w, h, 0.25, { x, y: y + 1 + h / 2, z, rx: -0.15, color: 0x5a6066, surf: 'metal' }), P.box(w, 0.12, 0.3, { x, y: y + 1.05, z: z + 0.2, color: BLACK })]);
 const slab = (w, h) => (x, y, z) => merge([P.cyl(0.25, 0.3, 1, { x, y: y + 0.5, z, color: DARK }, 8), P.box(w, h, 0.45, { x, y: y + 1 + h / 2, z, rx: -0.25, color: 0x6a7076 })]);
 const topPair = (x, y, z) => merge([P.cyl(0.4, 0.5, 1.2, { x, y: y + 0.6, z, color: DARK }, 8), ...[-1, 1].map((s) => P.box(6.5, 3.6, 0.4, { x, y: y + 3.1, z: z + s * 1.2, rx: s * 0.2, color: 0x5e666c })), P.box(1.2, 4, 2.4, { x, y: y + 3, z, color: DARK })]);
 const topSail = (x, y, z) => merge([P.cyl(0.4, 0.5, 1.2, { x, y: y + 0.6, z, color: DARK }, 8), P.box(7.5, 4.2, 0.5, { x, y: y + 3.3, z: z + 0.6, rx: -0.35, color: 0x5e666c }), P.box(7.5, 0.3, 2, { x, y: y + 1.3, z: z - 0.3, color: DARK })]);
@@ -560,7 +560,7 @@ export const buildNewport = ship(() => {
     ...H.parts,
     ...bowNumber(H, '1179', 2.4),
     ...[-1, 1].flatMap((s) => [strut([s * 3.5, fb + 6, 62], [s * 3, fb + 3, 92], 0.6, c.upper), strut([s * 3.5, fb, 74], [s * 3, fb + 3, 92], 0.4, c.upper)]),   // the derrick horns
-    P.box(3, 1, 26, { y: fb + 3.5, z: 88, color: c.gun }),                    // the ramp, run out over them
+    P.box(7.2, 1, 26, { y: fb + 3.4, z: 88, color: c.gun }),                  // the ramp, run out over them (lying on the horns)
     ...house(c, 0, fb, 20, 16, 9, 32),
     ...house(c, 0, fb + 9, 28, 13, 3, 10, 1.6),
     ...lattice(c, 0, fb + 9, 16, 12, 4, [dish(4, 1.8)]),

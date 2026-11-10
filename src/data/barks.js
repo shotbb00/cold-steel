@@ -35,6 +35,11 @@ const LINES = {
     rally: ['Ko mne!', 'Vperyod!', 'Za mnoy!'],
     bail: ['Pokinut\' mashinu!', 'Gorim! Vylezay!'],
     officer: ['Leytenanta ubili!', 'Komandir ranen!', 'Kto komanduyet?!'],
+    // the Soviet Navy's ships (1985 at sea)
+    shipHit: ['Popadaniye!', 'Pozhar v nadstroyke!', 'Popadaniye v kormu!', 'Avariynaya partiya — v nos!'],
+    shipBad: ["Postupayet voda!", "Kren na bort!", "Vse na bor'bu za zhivuchest'!", "Ne uderzhim!"],
+    shipContact: ["Tsel' obnaruzhena!", "Kontakt na radare!", "Korabli protivnika, peleng dva-sem'-nol'!"],
+    straddle: ["Nakrytiye!", "Est' popadaniye!", "Tak derzhat'!"],
   },
   de: {
     contact: ['Feind!', 'Feindkontakt!', 'Feind voraus!', 'Achtung, Feind!', 'Bewegung, elf Uhr!'],

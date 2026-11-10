@@ -37,8 +37,9 @@ function mark(kind, x, y, z, r, up = false) {
 
 /** Propeller: `n` blades of radius r about z (contra-rotating pairs: `contra`). */
 function propeller(n, r, contra = false) {
-  const blade = (k, dz) => loft([[0, r * 0.12, dz, 0.07, 0.05, 2], [0, r * 0.45, dz, 0.16, 0.03, 2.2], [0, r * 0.9, dz, 0.1, 0.02, 2], [0, r, dz, 0.04, 0.01, 2]], { color: 0x2a2c2a, surf: 'paint' }, 8).rotateY(0.35).rotateZ((k / n) * Math.PI * 2);
-  return M([P.cyl(0.05, 0.32, 0.9, { z: 0.1, rx: Math.PI / 2, color: 0x3a3c36 }, 12), ...Array.from({ length: n }, (_, k) => blade(k, 0)), ...(contra ? Array.from({ length: n }, (_, k) => blade(k + 0.5, -0.5)) : [])]);
+  const blade = (k, dz) => loft([[0, 0.1, dz, 0.07, 0.05, 2], [0, r * 0.45, dz, 0.16, 0.03, 2.2], [0, r * 0.9, dz, 0.1, 0.02, 2], [0, r, dz, 0.04, 0.01, 2]], { color: 0x2a2c2a, surf: 'paint' }, 8).rotateY(0.35).rotateZ((k / n) * Math.PI * 2);
+  // the spinner, through the blades' roots
+  return M([P.cyl(0.12, 0.4, 1.4, { z: contra ? -0.25 : 0, rx: Math.PI / 2, color: 0x3a3c36 }, 12), ...Array.from({ length: n }, (_, k) => blade(k, 0)), ...(contra ? Array.from({ length: n }, (_, k) => blade(k + 0.5, -0.5)) : [])]);
 }
 
 const cache = {};
@@ -47,10 +48,12 @@ function mount(key, mats, make, { gun, props = [], blades = 4, r = 1.8, contra =
   const m = (cache[key] ??= { body: make(), prop: props.length ? propeller(blades, r, contra) : null });
   const root = new THREE.Group();
   meshAdder(root)(m.body, mats.body);
-  const ps = props.map((at) => { const g = new THREE.Group(); g.position.set(...at); root.add(g); meshAdder(g)(m.prop, mats.body); return g; });
+  const ps = props.map((at) => { const g = new THREE.Group(); g.position.set(at[0], at[1], at[2] - 0.35); /* (tucked a little into the nacelle) */ root.add(g); meshAdder(g)(m.prop, mats.body); return g; });
   return { root, gun: point(root, ...gun), pods: [], ...(ps.length ? { props: ps } : { jet: true }) };
 }
 /** An engine nacelle with its intake, at (x, y) from z0 back to z1. */
+/** A pylon: from a store's top (y0) up to the wing (y1), at x, over z. */
+const pylon = (x, y0, y1, z, len = 1.2) => P.box(0.1, y1 - y0 + 0.1, len, { x, y: (y0 + y1) / 2, z, color: DARK });
 const nacelle = (x, y, z0, z1, r, color) => [body([[z0, y, r * 0.7, r * 0.8], [z0 - 0.6, y, r, r], [z1 + 0.8, y, r * 0.9, r * 0.9], [z1, y, r * 0.5, r * 0.5]], { x, color, ...C })];
 
 // ---------------------------------------------------------------- US Navy
@@ -64,7 +67,9 @@ export const buildF14 = (mats) => mount('f14', mats, () => M([
   ...pair((s) => surface([[s * 1.8, 1.9, -7.4, 2.0, 0.08], [s * 4.6, 1.85, -8.8, 0.8, 0.04]], { color: NAVY, ...C })),
   ...pair((s) => fin([[2.2, -5.4, 2.4, 0.1, s * 1.5], [3.2, -6.6, 1.8, 0.08, s * 1.62], [4.9, -8.1, 0.9, 0.05, s * 1.75]], { color: NAVY, ...C })),
   ...pair((s) => missile(s * 0.7, 1.15, -2.6, 1.4, 0.19, WHITE)),                                                     // Phoenix under the belly
+  ...pair((s) => pylon(s * 0.7, 1.3, 1.5, -0.6, 2.4)),
   ...pair((s) => missile(s * 2.8, 1.55, -1.0, 1.8, 0.1, WHITE)),
+  ...pair((s) => pylon(s * 2.8, 1.62, 2.12, 0.4, 1.6)),
   ...pair((s) => mark('us', s * 2.18, 1.75, -4.5, 0.32)),
 ]), { gun: [0, 1.6, 6.5] });
 
@@ -76,7 +81,7 @@ export const buildA6 = (mats) => mount('a6', mats, () => M([
   ...pair((s) => surface([[s * 0.8, 2.1, 0.0, 3.6, 0.2], [s * 8.1, 2.2, -2.6, 1.3, 0.07]], { color: NAVY, ...C })),
   ...pair((s) => surface([[s * 0.4, 2.3, -6.8, 1.8, 0.07], [s * 3.4, 2.3, -7.8, 0.8, 0.04]], { color: NAVY, ...C })),
   fin([[2.4, -5.6, 2.4, 0.1], [4.5, -7.2, 1.2, 0.06]], { color: NAVY, ...C }),
-  ...pair((s) => [3.4, 5.6].map((x) => missile(s * x, 1.5, -2.6, 1.0, 0.17, WHITE))),                                // four Harpoons
+  ...pair((s) => [3.4, 5.6].map((x) => [missile(s * x, 1.5, -2.6, 1.0, 0.17, WHITE), pylon(s * x, 1.62, 2.14, -0.6, 1.8)])),   // four Harpoons on their pylons
   ...pair((s) => mark('us', s * 1.0, 1.9, -3.0, 0.32)),
 ]), { gun: [0, 1.4, 7] });
 
@@ -89,8 +94,8 @@ export const buildE2 = (mats) => mount('e2', mats, () => M([
   P.cyl(3.65, 3.65, 0.75, { y: 5.0, z: -2.0, color: WHITE, surf: 'paint' }, 28),                                     // the rotodome
   P.cyl(3.7, 3.7, 0.08, { y: 5.0, z: -2.0, color: NAVY_DK }, 28),
   surface([[-4.0, 3.2, -7.8, 1.6, 0.08], [4.0, 3.2, -7.8, 1.6, 0.08]], { color: NAVY, ...C }),
-  ...[-4, -1.4, 1.4, 4].map((x) => fin([[0.4, -7.8, 1.6, 0.08, x], [3.2, -8.0, 1.1, 0.06, x]], { color: NAVY, ...C }).translate(0, 3.0, 0)),
-  ...pair((s) => mark('us', s * 1.3, 2.2, -4.0, 0.36)),
+  ...[-4, -1.4, 1.4, 4].map((x) => fin([[0.4, -7.8, 1.6, 0.08, x], [3.2, -8.0, 1.1, 0.06, x]], { color: NAVY, ...C }).translate(0, 2.76, 0)),
+  ...pair((s) => mark('us', s * 0.98, 2.3, -4.0, 0.36)),
 ]), { gun: [0, 1.6, 7], props: [[-3.4, 2.6, 4.7], [3.4, 2.6, 4.7]], blades: 4, r: 2.1 });
 function strut2(a, b) { const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()); const e = new THREE.Euler().setFromQuaternion(q); return P.cyl(0.25, 0.3, d.length(), { x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, z: (a[2] + b[2]) / 2, rx: e.x, ry: e.y, rz: e.z, color: NAVY }, 8); }
 
@@ -119,7 +124,8 @@ export const buildTu22M = (mats) => mount('tu22m', mats, () => M([
   ...pair((s) => surface([[s * 1.6, 2.7, -16.8, 4.6, 0.14], [s * 7.6, 2.6, -19.6, 1.8, 0.06]], { color: BACKFIRE, ...C })),
   fin([[3.5, -13.5, 7.0, 0.22], [8.2, -18.0, 3.0, 0.12], [9.4, -19.2, 1.6, 0.07]], { color: BACKFIRE, ...C }),
   ...pair((s) => missile(s * 5.2, 1.7, -3.5, 7.5, 0.48, 0xd0d0c8)),                                                  // a Kh-22 under each glove
-  ...pair((s) => mark('sov', s * 0.32, 5.6, -16.4, 0.6)),
+  ...pair((s) => pylon(s * 5.2, 2.1, 2.92, 2.0, 3.0)),
+  ...pair((s) => mark('sov', s * 0.13, 5.6, -16.4, 0.6)),
 ]), { gun: [0, 2.4, -21] });
 
 export const buildYak38 = (mats) => mount('yak38', mats, () => M([
@@ -132,6 +138,7 @@ export const buildYak38 = (mats) => mount('yak38', mats, () => M([
   ...pair((s) => surface([[s * 0.4, 2.2, -6.6, 1.4, 0.06], [s * 2.1, 2.2, -7.3, 0.7, 0.04]], { color: SOV_NAVY, ...C })),
   fin([[2.6, -5.2, 2.2, 0.09], [4.4, -6.6, 1.0, 0.05]], { color: SOV_NAVY, ...C }),
   ...pair((s) => missile(s * 2.6, 1.85, -2.0, -0.4, 0.08, WHITE)),
+  ...pair((s) => pylon(s * 2.6, 1.9, 2.22, -1.2, 1.0)),
   ...pair((s) => mark('sov', s * 0.06, 3.6, -5.6, 0.32)),
 ]), { gun: [0, 1.6, 5.5] });
 
@@ -145,7 +152,7 @@ export const buildTu95 = (mats) => mount('tu95', mats, () => M([
   ...pair((s) => [0.3, 0.6].map((k) => nacelle(s * 25 * k, 2.6, 6.5 - k * 16, 0.5 - k * 16, 0.85, SOV_NAVY))),
   ...pair((s) => surface([[s * 1.2, 3.4, -19, 4.0, 0.2], [s * 7.0, 3.4, -22.5, 1.8, 0.08]], { color: SOV_NAVY, ...C })),
   fin([[3.4, -17.5, 6.0, 0.24], [9.0, -22.5, 2.6, 0.12]], { color: SOV_NAVY, ...C }),
-  ...pair((s) => mark('sov', s * 0.4, 7.2, -20.5, 0.65)),
+  ...pair((s) => mark('sov', s * 0.13, 7.2, -20.5, 0.65)),
 ]), { gun: [0, 2.6, -25], props: [[-7.5, 2.6, 2.5], [-15, 2.6, -2.3], [7.5, 2.6, 2.5], [15, 2.6, -2.3]], blades: 4, r: 2.8, contra: true });
 
 // ---------------------------------------------------------------- ships' helicopters (KINDS.helo)
@@ -176,11 +183,13 @@ export const buildSH60 = (mats) => heloRig('sh60', mats, () => ({
     body([[1.6, 2.6, 0.8, 0.28, 3], [0.6, 2.72, 0.85, 0.4, 3], [-1.2, 2.7, 0.8, 0.38, 3], [-2.3, 2.5, 0.5, 0.2, 3]], { color: NAVY, ...C }),
     P.cyl(0.24, 0.26, 0.6, { y: 3.2, z: -0.2, color: DARK }, 10),
     P.box(0.5, 0.9, 1.6, { x: -1.15, y: 1.6, z: -1.2, color: NAVY_DK }),                                                 // the sonobuoy launcher
-    P.box(0.08, 0.08, 1.4, { x: 1.2, y: 1.9, z: -2.2, color: DARK }), P.capsule(0.12, 0.7, { x: 1.35, y: 1.9, z: -3.0, rx: Math.PI / 2, color: 0xd8b830 }), // the MAD bird
+    P.box(0.5, 0.08, 0.3, { x: 1.0, y: 1.9, z: -2.2, color: DARK }), P.capsule(0.12, 0.7, { x: 1.28, y: 1.9, z: -2.2, rx: Math.PI / 2, color: 0xd8b830 }), // the MAD bird on its pylon
     fin([[2.2, -8.8, 0.55, 0.14], [3.2, -9.2, 0.45, 0.12], [3.7, -9.45, 0.3, 0.08]], { color: NAVY, ...C }),
     surface([[-2.0, 2.1, -8.6, 0.42, 0.05], [2.0, 2.1, -8.6, 0.42, 0.05]], { color: NAVY, ...C }),
     ...pair((s) => P.cyl(0.3, 0.3, 0.2, { x: s * 1.3, y: 0.3, z: 1.9, rz: Math.PI / 2, color: 0x1d1d1b, surf: 'rubber' }, 12)),
+    ...pair((s) => P.box(0.1, 0.75, 0.12, { x: s * 1.12, y: 0.62, z: 1.9, rz: s * 0.55, color: DARK })),              // the main gear's struts
     P.cyl(0.22, 0.22, 0.14, { y: 0.24, z: -2.6, rz: Math.PI / 2, color: 0x1d1d1b, surf: 'rubber' }, 10),             // (the tailwheel well forward: a deck landing)
+    P.box(0.08, 1.0, 0.08, { y: 0.75, z: -2.6, color: DARK }),
     ...pair((s) => mark('us', s * 1.07, 1.6, -0.6, 0.3)),
   ]),
   rotor: merge([...blades(4, 8.1, 0.55, 0x2a2c2a), P.cyl(0.36, 0.36, 0.25, { color: DARK }, 10)]), rotorAt: [0, 3.55, -0.2], r: 8.1, n: 4,
@@ -192,11 +201,12 @@ export const buildKa27 = (mats) => heloRig('ka27', mats, () => ({
     body([[3.2, 2.1, 0.3, 0.2], [2.6, 2.5, 1.0, 0.4], [2.0, 2.45, 1.0, 0.32]], { color: GLASS }),
     P.sphere(0.7, { y: 0.9, z: 2.6, sy: 0.55, color: SOV_NAVY }, 12, 8),                                                 // the radar under the chin
     body([[1.2, 2.85, 0.75, 0.35, 3], [-1.6, 2.9, 0.8, 0.4, 3], [-2.4, 2.7, 0.5, 0.2, 3]], { color: SOV_NAVY, ...C }),
-    P.cyl(0.25, 0.25, 1.4, { y: 3.6, z: 0.0, color: DARK }, 10),                                                         // the coaxial mast
+    P.cyl(0.25, 0.25, 2.2, { y: 3.8, z: 0.0, color: DARK }, 10),                                                         // the coaxial mast, up through both rotors
     surface([[-1.6, 2.4, -5.4, 0.7, 0.06], [1.6, 2.4, -5.4, 0.7, 0.06]], { color: SOV_NAVY, ...C }),
     ...pair((s) => fin([[0.0, -5.4, 0.9, 0.08, s * 1.6], [1.2, -5.6, 0.7, 0.06, s * 1.6]], { color: SOV_NAVY, ...C }).translate(0, 1.9, 0)),
     ...pair((s) => P.cyl(0.32, 0.32, 0.22, { x: s * 1.3, y: 0.32, z: 1.6, rz: Math.PI / 2, color: 0x1d1d1b, surf: 'rubber' }, 12)),
     ...pair((s) => P.cyl(0.32, 0.32, 0.22, { x: s * 1.3, y: 0.32, z: -1.6, rz: Math.PI / 2, color: 0x1d1d1b, surf: 'rubber' }, 12)),
+    ...pair((s) => [1.6, -1.6].map((z) => P.box(0.1, 0.75, 0.12, { x: s * 1.12, y: 0.62, z, rz: s * 0.55, color: DARK }))),
     ...pair((s) => mark('sov', s * 0.06, 2.6, -5.6, 0.3)),
   ]),
   rotor: merge([...blades(3, 7.95, 0.5, 0x2a2c2a), P.cyl(0.34, 0.34, 0.25, { color: DARK }, 10)]), rotorAt: [0, 3.9, 0], rotor2At: [0, 4.75, 0], r: 7.95, n: 3,

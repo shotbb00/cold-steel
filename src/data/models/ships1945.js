@@ -179,7 +179,7 @@ function mast(c, x, y, z, h, { tripod = false, yard = 8, rake = 0, radar = null,
   if (radar === 'sc') g.push(bracket(0.4, top[1] - 0.05));
   if (radar === 'mattress') g.push(bracket(0.5, top[1] - 0.1));
   if (radar === 'ladder') g.push(bracket(0.5, top[1] - 0.2));
-  if (radar === 'ladder') g.push(...grid(top[0], top[1] - 0.5, top[2] + 0.5, 1.2, 4, BLACK, 3));
+  if (radar === 'ladder') g.push(...grid(top[0], top[1] - 0.2, top[2] + 0.5, 1.2, 4, BLACK, 4)); // (an even grid: the bracket meets its middle bar)
   return g;
 }
 /** A funnel: raked back by `rake`, a black cap over a dark mouth, steam pipes up its after face. */
@@ -388,7 +388,7 @@ export const buildKagero = ship(() => {
     box(8, 3, 12, { y: fb + 1.5, z: 30, color: c.upper }),           // forward superstructure
     box(6, 3, 6, { y: fb + 4.5, z: 31, color: c.upper }),            // the bridge
     ...windows(0, fb + 5.4, 31, 6, 6),
-    box(3.4, 2.2, 3.4, { y: fb + 7.2, z: 30, color: c.upper }),      // the director
+    box(3.4, 2.2, 3.4, { y: fb + 7.1, z: 30, color: c.upper }),      // the director
     cyl(0.4, 0.4, 4.4, { y: fb + 7.6, z: 30, rz: Math.PI / 2, color: c.gun }, 8),
     ...mast(c, 0, fb + 6, 26, 12, { tripod: true, rake: 0.15, radar: 'ladder', yard: 7 }),
     box(7, 2.6, 30, { y: fb + 1.3, z: 2, color: c.upper }),          // midships
@@ -428,13 +428,13 @@ export const buildBuckley = ship(() => {
       box(6, 3, 5, { y: fb + 4, z: 23, color: c.upper }),
       ...windows(0, fb + 4.9, 23, 6, 5),
       ...[-1, 1].map((s) => box(2, 0.3, 2.6, { x: s * 3.9, y: fb + 5.4, z: 24, color: c.upper })),
-      ...mast(c, 0, fb + 5.5, 20, 10, { radar: 'sc', yard: 6 }),
+      ...mast(c, 0, fb + 5.5, 21.5, 10, { radar: 'sc', yard: 6 }),
       box(3.2, 1.4, 2.4, { y: fb + 0.7, z: 31.5, color: c.gun }),      // the Hedgehog
       ...every(-1.2, 1.2, 0.6).flatMap((x) => [-0.6, 0.6].map((dz) => P.cyl(0.08, 0.08, 1, { x, y: fb + 1.8, z: 31.5 + dz, rx: 0.5, color: BLACK }, 5))),
       ...funnel(c, 0, fb + 2.4, 5, 1.6, 5, 0.1, { oval: 1.3 }),
       box(7, 2.4, 22, { y: fb + 1.2, z: -2, color: c.upper }),
       aa(c, 0, fb + 2.4, -10, { n: 2, ry: Math.PI }),
-      ...[-1, 1].flatMap((s) => [10, -6].map((z) => oerlikon(c, s * 3.2, fb + 2.4, z, s * Math.PI / 2))),
+      ...[-1, 1].flatMap((s) => [7, -6].map((z) => oerlikon(c, s * 3.2, fb + 2.4, z, s * Math.PI / 2))),
       ...[-1, 1].map((s) => boat(c, s * 4.4, fb + 0.2, 0, 7, s)),
       ...[-1, 1].map((s) => raft(s * 3.7, fb + 1.4, -8)),
       ...depthCharges(c, H, -44, 4),
@@ -457,7 +457,7 @@ export const buildKaibokan = ship(() => {
       box(7, 3, 10, { y: fb + 1.5, z: 16, color: c.upper }),
       box(5, 2.6, 4.5, { y: fb + 4.3, z: 17, color: c.upper }),
       ...windows(0, fb + 5, 17, 5, 4.5),
-      ...mast(c, 0, fb + 5.6, 13, 9, { tripod: true, rake: 0.12, radar: 'mattress', yard: 5 }),
+      ...mast(c, 0, fb + 5.6, 15.5, 9, { tripod: true, rake: 0.12, radar: 'mattress', yard: 5, legsY: fb + 3 }),
       ...funnel(c, 0, fb + 2.4, 2, 1.5, 4.5, 0.15, { oval: 1.2 }),
       box(6, 2.4, 16, { y: fb + 1.2, z: -2, color: c.upper }),
       ...[-1, 1].map((s) => aa(c, s * 2.2, fb + 2.4, 4, { n: 3, ry: s * Math.PI / 2, cal: 0.05, len: 2.4 })),
@@ -505,7 +505,7 @@ export const buildBaltimore = ship(() => {
       ...[-1, 1].map((s) => boat(c, s * 7.8, fb + 4, -24, 9, s)),
       ...[-1, 1].map((s) => catapult(c, s * 5, fb + 0.1, -82, s * 0.5, kingfisher)),
       ...crane(c, 0, fb, -95, 10, 12, Math.PI),
-      ...[-1, 1].flatMap((s) => searchlight(c, s * 3, fb + 7, 2)),
+      ...[-1, 1].flatMap((s) => searchlight(c, s * 3, fb + 4, 2)),
     ]),
     mounts: [
       { geo: t3, at: [0, H.top(70), 70], arc: 5 },
@@ -532,8 +532,8 @@ export const buildTakao = ship(() => {
       ...windows(0, fb + 14.6, 25, 10, 9),
       ...windows(0, fb + 10, 26, 12, 12),
       ...[-1, 1].map((s) => box(2.6, 0.3, 3, { x: s * 6.6, y: fb + 11, z: 28, color: c.upper })),
-      box(9, 1.6, 2.4, { y: fb + 16, z: 25, color: c.gun }),           // the rangefinder
-      box(3.4, 1.8, 0.3, { y: fb + 17.6, z: 27, color: c.upper }), ...grid(0, fb + 17.6, 27.2, 3.2, 1.6, BLACK, 4), // Type 21
+      box(9, 1.6, 2.4, { y: fb + 15.8, z: 25, color: c.gun }),         // the rangefinder
+      box(3.4, 1.8, 0.3, { y: fb + 17.5, z: 26, color: c.upper }), ...grid(0, fb + 17.5, 26.2, 3.2, 1.6, BLACK, 4), // Type 21
       ...mast(c, 0, fb + 4, 18, 18, { tripod: true, rake: 0.12, yard: 10 }),
       ...funnel(c, 0, fb + 4, 4, 3.4, 13, 0.35, { oval: 1.4 }),      // the trunked funnel, raked far back
       ...mast(c, 0, fb + 4, -30, 16, { tripod: true, rake: 0.1, radar: 'ladder', yard: 8 }),
@@ -577,7 +577,7 @@ export const buildIowa = ship(() => {
       ...[-1, 1].map((s) => box(3, 0.3, 5, { x: s * 8.5, y: fb + 20.6, z: 40, color: c.upper })),
       box(6, 4, 6, { y: fb + 23, z: 37, color: c.upper }),             // main director
       cyl(0.7, 0.7, 9, { y: fb + 24, z: 37, rz: Math.PI / 2, color: c.gun }, 8),
-      ...mast(c, 0, fb + 25, 32, 14, { tripod: true, radar: 'sk', yard: 12 }),
+      ...mast(c, 0, fb + 25, 36, 14, { tripod: true, radar: 'sk', yard: 12, legsY: fb + 21 }),
       box(17, 6, 64, { y: fb + 3, z: -10, color: c.upper }),
       ...funnel(c, 0, fb + 6, 14, 4.5, 14, 0, { oval: 1.3 }),
       ...funnel(c, 0, fb + 6, -10, 4.5, 14, 0, { oval: 1.3 }),
@@ -620,8 +620,8 @@ export const buildYamato = ship(() => {
       ...windows(0, fb + 22, 25, 11, 12),
       ...windows(0, fb + 14, 26, 14, 16),
       ...[-1, 1].map((s) => box(3, 0.3, 4, { x: s * 8.5, y: fb + 16, z: 29, color: c.upper })),
-      box(16, 2.4, 4, { y: fb + 25.5, z: 25, color: c.gun }),          // the 15 m rangefinder
-      box(4, 2, 0.3, { y: fb + 28, z: 27, color: c.upper }), ...grid(0, fb + 28, 27.2, 3.8, 1.8, BLACK, 5), // Type 21
+      box(16, 2.4, 4, { y: fb + 25.2, z: 25, color: c.gun }),          // the 15 m rangefinder
+      box(4, 2, 0.3, { y: fb + 27.4, z: 26.8, color: c.upper }), ...grid(0, fb + 27.4, 27, 3.8, 1.8, BLACK, 5), // Type 21
       ...[-1, 1].map((s) => box(3, 1.6, 0.3, { x: s * 5, y: fb + 23, z: 31.2, color: c.upper })),       // Type 22 horns
       ...mast(c, 0, fb + 24, 23, 12, { yard: 10, radar: 'ladder' }),
       ...funnel(c, 0, fb + 6, 2, 5, 13, 0.3, { oval: 1.5 }),           // the single raked funnel
@@ -764,11 +764,11 @@ function flattop(c, H, { len, beam, fb, deck, islandZ, funnel: fun = 'stack', nu
       box(5, 9, 22, { x: beam * 0.55, y: dy + 4.5, z: islandZ, color: c.upper }),
       box(6.5, 2.5, 8, { x: beam * 0.55, y: dy + 10, z: islandZ + 6, color: c.upper }),
       ...windows(beam * 0.55, dy + 10.6, islandZ + 6, 6.5, 8),
-      box(3, 2, 3, { x: beam * 0.55, y: dy + 12.3, z: islandZ + 7, color: c.upper }),
+      box(3, 2, 3, { x: beam * 0.55, y: dy + 12.2, z: islandZ + 7, color: c.upper }),
       ...mast(c, beam * 0.55, dy + 11.2, islandZ + 2, 12, { tripod: true, radar: 'sk', yard: 8 }),
       aa(c, beam * 0.55, dy + 9, islandZ - 9, { n: aaN, cal: aaCal, ry: Math.PI }),
-      aa(c, beam * 0.55, dy + 9, islandZ + 13, { n: aaN, cal: aaCal }),
-    ] : [box(beam * 0.7, 2.4, 4, { y: dy - 1.6, z: len * 0.47, color: c.upper }), ...windows(0, dy - 1.4, len * 0.47, beam * 0.7, 4)]),
+      aa(c, beam * 0.55, dy + 9, islandZ + 9.5, { n: aaN, cal: aaCal }),
+    ] : [box(beam * 0.7, 2.4, 4, { y: dy - 1.45, z: len * 0.44, color: c.upper }), ...windows(0, dy - 1.3, len * 0.44, beam * 0.7, 4)]),
     ...(fun === 'stack'
       ? funnel(c, beam * 0.55, dy + 9, islandZ - 4, 2.6, 7, 0.08, { oval: 1.6 })
       : [cyl(1.8, 2.2, 9, { x: beam * 0.62, y: fb + 2, z: islandZ - 10, rz: -1.2, color: c.upper }, 10), P.cyl(1.82, 1.82, 0.6, { x: beam * 0.62 + 4.2, y: fb + 0.4, z: islandZ - 10, rz: -1.2, color: BLACK }, 10)]), // the IJN's funnels, turned down over the side
@@ -884,8 +884,8 @@ export const buildAgano = ship(() => {
       box(10, 4.5, 16, { y: fb + 2.25, z: 30, color: c.upper }),
       box(8, 5, 9, { y: fb + 7, z: 30, color: c.upper }),
       ...windows(0, fb + 8.6, 30, 8, 9),
-      box(7, 1.4, 2, { y: fb + 10.4, z: 30, color: c.gun }),
-      box(3, 1.6, 0.3, { y: fb + 11.8, z: 31, color: c.upper }), ...grid(0, fb + 11.8, 31.2, 2.8, 1.4, BLACK, 4),
+      box(7, 1.4, 2, { y: fb + 10.2, z: 30, color: c.gun }),
+      box(3, 1.6, 0.3, { y: fb + 11.7, z: 30.8, color: c.upper }), ...grid(0, fb + 11.7, 31, 2.8, 1.4, BLACK, 4),
       ...mast(c, 0, fb + 4.5, 24, 15, { tripod: true, rake: 0.12, yard: 8 }),
       ...funnel(c, 0, fb + 3, 4, 2.6, 10, 0.3, { oval: 1.5 }),
       box(8.5, 3.4, 40, { y: fb + 1.7, z: -8, color: c.upper }),

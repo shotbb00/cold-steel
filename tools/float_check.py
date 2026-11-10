@@ -42,6 +42,7 @@ JS = r'''async ({ only, tol }) => {
     return [...boxes.values()];
   };
   // every vehicle model per key, and (as 'air:<kind>') every aircraft per side and army (data/air.ts)
+  globalThis.__all = only.includes('all');
   const builds = [];
   // both wars (data/epoch.js): the 1945 types and aircraft as '45:<id>'
   const { TYPES_1945 } = await import('/src/data/units45/index.js');
@@ -55,6 +56,8 @@ JS = r'''async ({ only, tol }) => {
   const air45 = await import('/src/data/air45.ts');
   for (const [kind, table] of [['heli', air.AIRCRAFT], ['jet', air.JETS], ['lift', air.LIFT], ['cap', air.FIGHTERS], ['recon', air.RECON]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
   for (const [kind, table] of Object.entries(air45.AIR_1945)) for (const [key, a] of Object.entries(table)) builds.push([`45:air:${kind}`, key, a.model]);
+  const sea85 = await import('/src/data/air85sea.js'); // (1985 at sea: the carrier and shore aircraft, the ships' helicopters)
+  for (const [kind, table] of [['seaStrike', sea85.SEA_STRIKE], ['seaCap', sea85.SEA_CAP], ['asw', sea85.ASW], ['aew', sea85.AEW], ['helo', sea85.HELO]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
   for (const [id, key, build] of builds) {
     {
       if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:')) && !(only.includes('45') && id.startsWith('45:'))) continue;
@@ -83,7 +86,7 @@ JS = r'''async ({ only, tol }) => {
       report.push({ loose, n: boxes.length, towPart });
       }
       const loose = report.flatMap((r) => r.loose), boxes = { length: report.reduce((n, r) => n + r.n, 0) };
-      if (loose.length) out.push({ unit: type.id, key, pieces: boxes.length, floating: loose.slice(0, 6).map(({ b }) => { const c = new THREE.Vector3(), s = new THREE.Vector3(); b.getCenter(c); b.getSize(s); return `at ${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)} size ${s.x.toFixed(2)}×${s.y.toFixed(2)}×${s.z.toFixed(2)}`; }), more: Math.max(0, loose.length - 6) });
+      if (loose.length) out.push({ unit: type.id, key, pieces: boxes.length, floating: loose.slice(0, globalThis.__all ? 99 : 6).map(({ b }) => { const c = new THREE.Vector3(), s = new THREE.Vector3(); b.getCenter(c); b.getSize(s); return `at ${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)} size ${s.x.toFixed(2)}×${s.y.toFixed(2)}×${s.z.toFixed(2)}`; }), more: Math.max(0, loose.length - (globalThis.__all ? 99 : 6)) });
     }
   }
   return out;
