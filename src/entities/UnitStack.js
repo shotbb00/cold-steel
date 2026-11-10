@@ -38,7 +38,8 @@ import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
 import { sailFactor, sailCourse } from './sailing.js';
-import { rakeFactor, sailHit, sailUpkeep, mastDrive } from './sailDamage.js';
+import { rakeFactor, sailHit, sailUpkeep, mastDrive, GALE } from './sailDamage.js';
+import { wind } from '../world/Wind.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
@@ -2052,8 +2053,10 @@ export class UnitStack {
     if (under) { this.huntSub(u, t, d, dt); return; }
     const rel = angleDelta(u.yaw, u.turretYaw);
     const slow = (u.bridgeHit > this.world.time ? 1.4 : 1) * (s.sail ? (1 / Math.max(0.3, u.crew ?? 1)) * (this.services.game?.powers?.signalled?.(this.faction) ? 0.75 : 1) : 1); // (the bridge hit: orders come late; under sail, fewer men at the guns — and the close-action signal flying, faster)
+    const gale = s.sail && wind.speed > GALE;
+    if (gale && !this.galeTold && this.shipMounts(u).some((m) => m.lower)) { this.galeTold = true; this.services.tell(this.faction, `${this.name}: blowing a gale — the lower deck ports are shut`); }
     for (const m of this.shipMounts(u)) {
-      if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
+      if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1) || (gale && m.lower)) continue;
       if (m.missile) { // anti-ship missiles (1985: systems/Missiles.js) — no more in the air at her than it takes to sink her
         const ms = this.services.game?.missiles;
         if (!ms || m.left <= 0 || ms.inbound(t) >= Math.min(6, Math.ceil(t.hp / (m.damage * 0.6)) + (t.stack.stats.defence ? 1 : 0))) continue;

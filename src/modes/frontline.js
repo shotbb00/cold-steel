@@ -46,7 +46,7 @@ export default {
     for (const [faction, spawns] of Object.entries(map.spawns)) {
       const allowed = spawns.filter((sp) => this.allows(sp.unit));
       for (const sp of allowed.length ? allowed : spawns.slice(0, 1).map((sp) => ({ ...sp, unit: 'rifles' }))) {
-        game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); // (the maps' names are 1985's: "1-ya Rota")
+        { const st = game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); if (sp.anchored && st) st.anchored = true; } // (a fleet at anchor: SeaDirector) // (the maps' names are 1985's: "1-ya Rota")
       }
     }
     const foe = enemyOf(game.playerFaction);

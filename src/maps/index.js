@@ -19,6 +19,9 @@ import norwegianSea from './norwegianSea.ts';
 import northCape from './northCape.ts';
 import ionianSea from './ionianSea.ts';
 import trafalgar from './trafalgar.ts';
+import aboukir from './aboukir.ts';
+import brest from './brest.ts';
+import caribbean from './caribbean.ts';
 import balticSea from './balticSea.ts';
 
 export const MAPS = {
@@ -40,6 +43,9 @@ export const MAPS = {
   [northCape.id]: northCape,
   [ionianSea.id]: ionianSea,
   [trafalgar.id]: trafalgar,
+  [aboukir.id]: aboukir,
+  [brest.id]: brest,
+  [caribbean.id]: caribbean,
   [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
 };

@@ -18,6 +18,9 @@
 //             for TAKE_POSSESSION s. A prize changes sides with a prize crew (PRIZE_CREW): weak, slow at her
 //             guns — and her old side can board her back.
 import { FACTIONS } from '../data/factions.js';
+import { wind } from '../world/Wind.js';
+
+export const GALE = 11; // m/s: a gale — the lower deck ports shut (UnitStack fire), masts carry away sooner
 
 const MAST_HP = 0.18;                          // a mast's hit points, as a share of the hull's
 const JURY = 90;                               // s until a jury mast is up where one fell
@@ -73,7 +76,7 @@ export function sailHit(st, u, dealt, source, rake) {
   if (Math.random() < (french ? 0.5 : 0.18)) {
     const i = Math.floor(Math.random() * u.masts.length);
     if (u.masts[i]) {
-      u.mastHp[i] -= dealt * (french ? 1.6 : 1);
+      u.mastHp[i] -= dealt * (french ? 1.6 : 1) * (wind.speed > GALE ? 1.5 : 1);
       if (u.mastHp[i] <= 0) {
         u.masts[i] = false;
         (u.fellAt ??= [])[i] = st.world.time;

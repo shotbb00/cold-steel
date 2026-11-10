@@ -30,7 +30,7 @@ export default {
 
   setup(game) {
     for (const [faction, spawns] of Object.entries(game.map.spawns)) {
-      for (const sp of spawns) game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); // (the maps' names are 1985's: "1-ya Rota")
+      for (const sp of spawns) { const st = game.spawnStack(sp.unit, faction, sp, sp.facing ?? 0, epoch() === '1985' ? sp.name : undefined); if (sp.anchored && st) st.anchored = true; } // (a fleet at anchor: SeaDirector) // (the maps' names are 1985's: "1-ya Rota")
     }
     const foe = enemyOf(game.playerFaction);
     const sea = !!game.world.river?.sea;

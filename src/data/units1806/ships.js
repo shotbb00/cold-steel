@@ -16,7 +16,7 @@ const BEAM = Math.PI / 2;
 const battery = (x, y, z, o) => ({ at: [x, y, z], facing: x > 0 ? BEAM : -BEAM, arc: 1.5, spread: 0.022, splash: 2.5, pierce: 0.5, shell: 420, size: 0.7, ...o });
 /** Both sides of a two-decker: the lower deck's heavy guns and the upper deck's, each forward and aft. */
 const twoDecker = (beam, len, lower, upper) => [-1, 1].flatMap((s) => [
-  battery(s * (beam / 2 + 1), 1.6, len * 0.15, lower), battery(s * (beam / 2 + 1), 1.6, -len * 0.15, lower),
+  battery(s * (beam / 2 + 1), 1.6, len * 0.15, { ...lower, lower: true }), battery(s * (beam / 2 + 1), 1.6, -len * 0.15, { ...lower, lower: true }), // (lower: shut in a gale)
   battery(s * (beam / 2 + 1), 3.9, len * 0.15, upper), battery(s * (beam / 2 + 1), 3.9, -len * 0.15, upper),
 ]);
 const ship = (o) => ({
@@ -56,7 +56,7 @@ export const cruiser = ship({
 /** A single-decker's broadside (a frigate, a brig): one battery a side forward, one aft. */
 const oneDecker = (beam, len, y, guns) => [-1, 1].flatMap((s) => [battery(s * (beam / 2 + 1), y, len * 0.15, guns), battery(s * (beam / 2 + 1), y, -len * 0.15, guns)]);
 /** A three-decker's: the lower, middle and upper gun decks, each forward and aft. */
-const threeDecker = (beam, len, decks) => [-1, 1].flatMap((s) => decks.flatMap(([y, guns]) => [battery(s * (beam / 2 + 1), y, len * 0.16, guns), battery(s * (beam / 2 + 1), y, -len * 0.16, guns)]));
+const threeDecker = (beam, len, decks) => [-1, 1].flatMap((s) => decks.flatMap(([y, guns], k) => [battery(s * (beam / 2 + 1), y, len * 0.16, { ...guns, lower: k === 0 }), battery(s * (beam / 2 + 1), y, -len * 0.16, { ...guns, lower: k === 0 })]));
 const drilled = (g) => ({ ...g, reload: g.reload * DRILLED });
 
 const G32 = { range: 750, reload: 30, damage: 300 }, G24 = { range: 720, reload: 28, damage: 240 }, G12 = { range: 600, reload: 22, damage: 140 };

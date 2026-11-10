@@ -39,7 +39,6 @@ export default {
   description: 'Off Cape Trafalgar, October 1805: the British come down with the wind behind them; the French line waits to leeward. The cape and its shoals to the east.',
   epochs: ['1806'],
   theatre: 'sea',
-  wip: true,               // (not offered in the menus yet: the 1806 sea battles are being built — ?map=trafalgar&epoch=1806)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'day', weather: 'clear' },
   wind: { from: 295, speed: 6.5, veer: 0.3 },   // west-north-west, a moderate breeze (world/Wind.js)

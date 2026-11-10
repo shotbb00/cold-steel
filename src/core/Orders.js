@@ -97,6 +97,7 @@ export class Orders {
             s.station = null;
           }
           s.waypoints = null;
+          s.anchored = false; // (1806: she weighs anchor)
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
           const plan = s.moveTarget && (s.usesCover ? planCover(g.world, s, s.moveTarget, face) : g.construction.planRevetments(s, s.moveTarget)); // cover, or dug-in vehicle positions

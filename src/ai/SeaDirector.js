@@ -152,7 +152,7 @@ export class SeaDirector {
     const bigFoes = this.foes().filter((s) => s.units[0]?.spotted && VALUE[s.type.id] >= 3);
     const fleet = this.ships();
     let escort = null;
-    const line = fleet.filter((s) => s.stats.sail && (s.type.id === 'cruiser' || s.type.id === 'battleship') && !s.units[0]?.struck && !s.units[0]?.grappled && !s.boardTarget && !s.owner);
+    const line = fleet.filter((s) => s.stats.sail && !s.anchored && (s.type.id === 'cruiser' || s.type.id === 'battleship') && !s.units[0]?.struck && !s.units[0]?.grappled && !s.boardTarget && !s.owner);
     if (line.length >= 2 && line.filter((s) => !s.station).length > 1 && (this.lineT = (this.lineT ?? 0) - 1) <= 0) {
       this.lineT = 12; // (every dozen thoughts at most: let the line settle)
       g.orders.run(this.faction, { t: 'formation', s: line.map((s) => s.id), f: 'ahead' }, 'ai');
@@ -217,6 +217,9 @@ export class SeaDirector {
       const cruising = !u.target && d(target) > 900 && !s.stats.sail; // (not under sail: the wind sets her course — and no submarines yet to dodge)
       if (!!s.zigzag !== cruising) g.orders.run(this.faction, { t: 'zigzag', s: [s.id], on: cruising ? 1 : 0 }, 'ai');
       if (u.target && d(u.target.pos) < (s.stats.range ?? 2000) * 0.9) continue; // in a fight already: let the guns work
+      if (s.anchored) { // (at anchor in line: she lies there until the enemy is close or fire opens — then cuts her cable)
+        if (this.foes().some((f) => f.units[0]?.spotted && d(f.units[0].pos) < 1000) || g.world.time - (s.lastHitTime ?? -1e9) < 5) s.anchored = false; else continue;
+      }
       if (s.station && s.stats.sail) continue; // (in the line: she keeps her station on the leader)
       if (s.stats.sail && !s.stats.fireship) {
         const foe = this.foes().filter((f) => f.units[0]?.spotted && !f.units[0].struck).sort((a, b) => d(a.units[0].pos) - d(b.units[0].pos))[0];
