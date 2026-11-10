@@ -162,7 +162,7 @@ export class NetClient {
     this.lastSeq = a.seq;
     for (const s of g.world.stacks) { // (all knocked out here, it may be back on the host: re-manned, recovered)
       const sa = a.stacks.get(s.id);
-      if (sa) this.applyStack(s, sa, b?.stacks.get(s.id) ?? sa, k, fresh, dt, span);
+      if (sa && !(s.netDeadAt >= a.time)) this.applyStack(s, sa, b?.stacks.get(s.id) ?? sa, k, fresh, dt, span);
     }
     this.applySorties(a, b, k, dt);
   }
@@ -296,7 +296,7 @@ export class NetClient {
       case 'spawn': this.spawn(e.slice(1)); break;
       case 'dead': {
         const s = g.world.stackById(e[1]);
-        if (s) for (const u of s.units) if (u.alive) this.kill(s, u);
+        if (s) { for (const u of s.units) if (u.alive) this.kill(s, u); s.netDeadAt = this.renderTime; } // (an older snapshot still in the blend must not bring her back)
         break;
       }
       case 'removed': {
@@ -392,7 +392,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -408,6 +408,7 @@ export class NetClient {
       s.job = job || null;
       s.tended = tended ? { kind: tended, until: g.time + 1 } : null;
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
+      if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
     }
     const ms = g.modeState;
     if (ms) {
