@@ -421,24 +421,27 @@ export const buildKirov = ship(() => {
 function supercarrier(c, H, { len, beam, fb, deckW, angle, angleLen, islandZ, islandX, number, elevators, cats = [] }) {
   const dy = fb + 9;
   const deckC = 0x45494c;
+  // a deck marking: a thin strip from the deck (the angled deck's top, 0.32 up) to `top` — its face well above the
+  // deck's, so they don't flicker against each other as the camera moves, and never floating off it
+  const mark = (w, d, top, o) => P.box(w, top - 0.32, d, { ...o, y: dy + (0.32 + top) / 2 });
   const parts = [
     ...H.parts,
     box(beam * 0.94, 9, len * 0.8, { y: fb + 4.5, z: 0, color: c.upper }),
     box(deckW * 0.62, 0.8, len * 0.97, { x: deckW * 0.12, y: dy, z: 0, color: deckC, surf: 'flight' }),                     // the axial deck
-    box(deckW * 0.5, 0.8, angleLen, { x: -deckW * 0.18, y: dy - 0.01, z: -len * 0.12, ry: angle, color: deckC, surf: 'flight' }), // the angled deck
+    box(deckW * 0.5, 0.8, angleLen, { x: -deckW * 0.18, y: dy - 0.08, z: -len * 0.12, ry: angle, color: deckC, surf: 'flight' }), // the angled deck (a little under the axial one: the two tops flickered where they overlap)
     ...[-1, 1].map((s) => box(4, 6, len * 0.6, { x: s * (beam * 0.47 + 2), y: dy - 3.4, z: -len * 0.05, color: c.upper })),         // the sponsons under it
-    P.box(0.5, 0.06, angleLen * 0.95, { x: -deckW * 0.18, y: dy + 0.42, z: -len * 0.12, ry: angle, color: WHITE }),         // the landing area's centre line
-    ...[-1, 1].map((s) => P.box(0.3, 0.06, angleLen * 0.9, { x: -deckW * 0.18 + s * deckW * 0.2 * Math.cos(angle), y: dy + 0.42, z: -len * 0.12 - s * deckW * 0.2 * Math.sin(angle), ry: angle, color: 0xd8c040 })),
-    ...cats.map(([x, z, l]) => P.box(0.5, 0.06, l, { x, y: dy + 0.42, z, color: 0x2a2c2e })),
-    ...elevators.map(([x, z]) => P.box(15, 0.06, 18, { x, y: dy + 0.41, z, color: 0x3a3e42 })),
-    ...every(-len * 0.42, -len * 0.34, 4).map((z) => P.box(deckW * 0.3, 0.06, 0.15, { x: -deckW * 0.18, y: dy + 0.43, z, ry: angle, color: BLACK })),   // the arresting wires
+    mark(0.5, angleLen * 0.95, 0.6, { x: -deckW * 0.18, z: -len * 0.12, ry: angle, color: WHITE }),                         // the landing area's centre line
+    ...[-1, 1].map((s) => mark(0.3, angleLen * 0.9, 0.6, { x: -deckW * 0.18 + s * deckW * 0.2 * Math.cos(angle), z: -len * 0.12 - s * deckW * 0.2 * Math.sin(angle), ry: angle, color: 0xd8c040 })),
+    ...cats.map(([x, z, l]) => mark(0.5, l, 0.6, { x, z: Math.min(z, len * 0.485 - 2 - l / 2), ry: x < 0 ? angle : 0, color: 0x2a2c2e })), // (ending on the deck, not past its bow; the waist pair along the angled deck, not off its edge)
+    ...elevators.map(([x, z]) => mark(15, 18, 0.52, { x, z, color: 0x3a3e42 })),
+    ...every(-len * 0.42, -len * 0.34, 4).map((z) => mark(deckW * 0.3, 0.15, 0.66, { x: -deckW * 0.18, z, ry: angle, color: BLACK })),   // the arresting wires
   ];
   // the island: decks stacked, the bridge windows, two lattice masts with the radars
   parts.push(...house(c, islandX, dy, islandZ, 9, 16, 34), ...house(c, islandX, dy + 16, islandZ + 4, 9, 4, 18, 2));
   parts.push(...lattice(c, islandX, dy + 20, islandZ + 2, 10, 4.4, [slab(5, 3)]), ...lattice(c, islandX, dy + 16, islandZ - 12, 8, 4, [dish(6.5, 2.4)]));
   if (number) {
     const h = 14, w = number.length * h * 0.55 + (number.length - 1) * h * 0.28;
-    parts.push(...numerals(number, h, (u, v, du, dv) => P.box(du, 0.06, dv, { x: deckW * 0.12 + w / 2 - u, y: dy + 0.44, z: len * 0.38 + v, color: WHITE })));
+    parts.push(...numerals(number, h, (u, v, du, dv) => mark(du, dv, 0.6, { x: deckW * 0.12 + w / 2 - u, z: len * 0.38 + v, color: WHITE })));
   }
   return { parts, dy };
 }

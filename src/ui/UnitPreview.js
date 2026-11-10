@@ -9,7 +9,8 @@ import { getUnitType } from '../data/units/index.js';
 import { FACTIONS, DEFAULT_ARMY } from '../data/factions.js';
 import { StackRenderer } from '../render/StackRenderer.js';
 import { RigRenderer } from '../render/RigRenderer.js';
-import { buildAircraft, airType } from '../systems/AirStrike.js';
+import { buildAircraft, airType, KINDS } from '../systems/AirStrike.js';
+import { createSea } from '../world/Sea.js';
 
 export const INFANTRY_POSES = ['idle', 'aim', 'kneel', 'prone', 'walk', 'run', 'reload'];
 export const VEHICLE_POSES = ['idle', 'traverse', 'drive', 'fire'];
@@ -31,6 +32,19 @@ function standIn(stack, index, x, yaw) {
     working: false, wounded: false, target: null, possessed: false, peekT: 0, deathTime: 0, cooldown: 0, aimPitch: 0,
     stats: stack.stats,
   };
+}
+
+/** A round fade for the water disc's alpha (opaque in the middle, nothing at the rim). */
+function fadeTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  const r = g.createRadialGradient(64, 64, 20, 64, 64, 64);
+  r.addColorStop(0, '#fff');
+  r.addColorStop(1, '#000');
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(cv);
 }
 
 function groundTexture() {
@@ -81,6 +95,18 @@ export class UnitPreview {
     ground.receiveShadow = true;
     scene.add(ground);
     this.ground = ground;
+    // at sea: the game's own water (world/Sea.js), deep, on a disc the size of the ground — fading out at its rim like the ground
+    const tmp = new THREE.Group();
+    createSea({ level: 0, size: 20 }).build(tmp);
+    const water = tmp.children[0].material;
+    const mat = water.clone();
+    Object.assign(mat, { onBeforeCompile: water.onBeforeCompile, customProgramCacheKey: () => 'sea:preview', alphaMap: fadeTexture() });
+    const disc = new THREE.CircleGeometry(10, 64).rotateX(-Math.PI / 2);
+    disc.setAttribute('aDepth', new THREE.BufferAttribute(new Float32Array(disc.attributes.position.count).fill(60), 1));
+    this.sea = new THREE.Mesh(disc, mat);
+    this.sea.receiveShadow = true;
+    this.sea.visible = false;
+    scene.add(this.sea);
 
     this.orbit = { yaw: 0.7, pitch: 0.28, zoom: 1, target: new THREE.Vector3(0, 1, 0), idle: 0 };
     this.fit = { w: 2, h: 1.2 }; // half-extents (m) the camera keeps in frame
@@ -139,6 +165,7 @@ export class UnitPreview {
     this.orbit.zoom = 1;
     this.fit = vehicle ? { w: 4.4, h: 2.1 } : { w: 0.55 + n * 0.5, h: 1.1 };
     if (type.stats?.naval) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships: framed by their size)
+    this.atSea(!!type.stats?.naval);
     this.setPose('idle');
   }
 
@@ -162,6 +189,7 @@ export class UnitPreview {
   /** The ground disc, shadow box and far plane at `k` times their size for a small vehicle. */
   scaleStage(k) {
     this.ground.scale.setScalar(Math.max(1, k * 1.3));
+    this.sea.scale.setScalar(Math.max(1, k * 1.3));
     const sc = this.sun.shadow.camera;
     Object.assign(sc, { left: -9 * k, right: 9 * k, top: 9 * k, bottom: -9 * k, far: 40 * Math.max(1, k) });
     this.sun.position.set(-6 * Math.max(1, k), 10 * Math.max(1, k), 7 * Math.max(1, k));
@@ -175,6 +203,7 @@ export class UnitPreview {
     this.clear();
     const rig = buildAircraft(kind, faction, army);
     this.aircraft = { rig, kind, type: airType(kind, faction, army) };
+    this.atSea(!!KINDS[kind]?.sea);
     this.scene.add(rig.root);
     const jet = kind === 'jet' || kind === 'cap' || kind === 'recon';
     this.orbit.target.set(0, jet ? 3.2 : 3, 0);
@@ -238,6 +267,12 @@ export class UnitPreview {
     this.camera.position.set(o.target.x + Math.sin(o.yaw) * cp * dist, o.target.y + Math.sin(o.pitch) * dist, o.target.z + Math.cos(o.yaw) * cp * dist);
     this.camera.lookAt(o.target);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Water under a ship (or a carrier's aircraft), the ground under the rest. */
+  atSea(on) {
+    this.sea.visible = on;
+    this.ground.visible = !on;
   }
 
   clear() {
