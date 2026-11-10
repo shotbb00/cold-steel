@@ -4,7 +4,7 @@
 // `pactDeck` is what flies when it goes off a deck (the Kiev's Yak-38s, not the shore-based MiG-23s).
 import { buildF14, buildA6, buildE2, buildP3, buildTu22M, buildYak38, buildIl38, buildTu95 } from './models/navalAir85.js';
 import { buildPactMiG23 } from './models/fighters.js';
-import { buildNatoUH60, buildPactMi8 } from './models/aircraft.js';
+import { buildSH60, buildKa27 } from './models/navalAir85.js';
 
 const GREY = { colors: [0x8c949a, 0x868e94, 0x929aa0, 0x828a90], scale: 0.9 };
 const SOV = { colors: [0x8e9696, 0x889090, 0x949c9c, 0x848c8c], scale: 0.9 };
@@ -30,10 +30,10 @@ export const ASW = {
 // a ship's own helicopter (KINDS.helo, Orders 'helo'): out to the spot, it hovers there dipping its sonar —
 // submarines near it found and a torpedo on one; its radar finds the ships round it (the Ka-25/27's
 // targeting link reaches further: the Soviet missile ships' eyes over the horizon).
-// ponytail: stand-in hulls (the Black Hawk, the Mi-8) until the Seahawk and the Helix are modelled
+// (models/navalAir85.js: the Seahawk and the coaxial Helix)
 export const HELO = {
-  nato: { name: 'SH-60B Seahawk', weapon: 'dipping sonar, Mk 46 torpedo', text: 'The frigate\'s and destroyer\'s own helicopter: sent out to a spot, it hovers there with its sonar down — and drops on what it hears.', model: buildNatoUH60, paint: GREY, rotorSound: 'rotor.uh60', rotorSpeed: 26, gun: NOGUN, hp: 6, torpedo: { count: 1, radius: 70, damage: 2400 }, picture: 1400 },
-  pact: { name: 'Ka-27 Helix', weapon: 'dipping sonar, torpedo, targeting radar', text: 'The ship\'s helicopter: sonar for the submarines, and a radar that passes the ships it finds to the missile launchers.', model: buildPactMi8, paint: SOV, rotorSound: 'rotor.mi8', rotorSpeed: 22, gun: NOGUN, hp: 7, torpedo: { count: 1, radius: 70, damage: 2400 }, picture: 2400 },
+  nato: { name: 'SH-60B Seahawk', weapon: 'dipping sonar, Mk 46 torpedo', text: 'The frigate\'s and destroyer\'s own helicopter: sent out to a spot, it hovers there with its sonar down — and drops on what it hears.', model: buildSH60, paint: GREY, rotorSound: 'rotor.uh60', rotorSpeed: 26, gun: NOGUN, hp: 6, torpedo: { count: 1, radius: 70, damage: 2400 }, picture: 1400 },
+  pact: { name: 'Ka-27 Helix', weapon: 'dipping sonar, torpedo, targeting radar', text: 'The ship\'s helicopter: sonar for the submarines, and a radar that passes the ships it finds to the missile launchers.', model: buildKa27, paint: SOV, rotorSound: 'rotor.mi8', rotorSpeed: 22, gun: NOGUN, hp: 7, torpedo: { count: 1, radius: 70, damage: 2400 }, picture: 2400 },
 };
 export const AEW = {
   nato: { name: 'E-2C Hawkeye', weapon: 'APS-125 radar', text: 'The radar in the sky: while it circles, every enemy ship within three kilometres shows on your map — your missiles can be fired at them.', model: buildE2, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 8 },

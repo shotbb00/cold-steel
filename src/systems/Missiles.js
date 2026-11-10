@@ -8,8 +8,8 @@
 // has `channels` — a saturating raid gets through), `point` short-range missiles for what comes at
 // her, `ciws` the last-ditch gun, `chaff` a decoy cloud off her beam when a seeker has her. All
 // of it needs the missile seen: her radar on (a sea-skimmer only inside SKIM_HORIZON), or by eye
-// close in. The host runs them (ponytail: not sent to a multiplayer guest yet — add a netEvent when
-// sea battles get versus play).
+// close in. The host runs them; a multiplayer guest is sent each launch, interceptor, chaff cloud and end
+// ('msl', 'mslsam', 'chaff', 'mslx': net/NetClient.js) and flies them to watch — the host deals the damage.
 import * as THREE from 'three';
 import { enemyOf } from '../data/factions.js';
 
@@ -27,12 +27,46 @@ export class Missiles {
     this.list = [];         // anti-ship missiles in flight
     this.interceptors = []; // SAMs after them
     this.chaff = [];        // { x, z, y, faction (the ship's side), until }
+    this.nextId = 1;
+  }
+
+  // ---------------------------------------------------------------- a multiplayer guest: the host's missiles, to watch
+
+  remote(list) {
+    const level = this.game.world.river?.level ?? 0;
+    for (const [id, x, y, z, ax, az, speed, cruise, skim, faction, seeker, left] of list) {
+      this.list.push({ id, pos: new THREE.Vector3(x, y, z), dir: new THREE.Vector3(ax - x, 0.6 * Math.hypot(ax - x, az - z), az - z).normalize(), aim: { x: ax, z: az }, meant: null, target: null, decoy: null,
+        speed, left, damage: 0, pierce: 0, seeker, skim: !!skim, cruise, level, age: 0, faction, source: null, engaged: 0, fx: 0, remote: true });
+    }
+  }
+  remoteGone(id, how, x, y, z) {
+    const i = this.list.findIndex((s) => s.id === id);
+    const s = i >= 0 ? this.list.splice(i, 1)[0] : null;
+    _p.set(x, y, z);
+    if (how === 1) { this.game.effects.explosion(_p, 2.2, { ground: false, fire: 2.5 }); this.game.audio?.play('explosion.big', _p, { volume: 1 }); }
+    else if (how === 2) { this.game.effects.explosion(_p, 1, { ground: false, fire: 1.2 }); this.game.audio?.play('explosion', _p, { volume: 0.7, throttle: 0.1 }); }
+    else if (s) this.splash(s);
+  }
+  remoteSam(x, y, z, id, speed) {
+    const t = this.list.find((s) => s.id === id);
+    if (t) this.interceptors.push({ pos: new THREE.Vector3(x, y, z), dir: new THREE.Vector3(0, 1, 0), target: t, air: false, from: null, layer: 'remote', speed, pk: 0, age: 0, remote: true });
+  }
+  remoteChaff(x, y, z, faction) {
+    const c = { x, y, z, faction, until: this.game.time + CHAFF_LIFE };
+    this.chaff.push(c);
+    this.chaffPuff(c);
+  }
+  /** Tell a guest a missile is gone: 0 into the sea, 1 a hit, 2 shot down. */
+  gone(s, how) { if (s.id) this.game.netEvent('mslx', s.id, how, Math.round(s.pos.x), Math.round(s.pos.y), Math.round(s.pos.z)); }
+  chaffPuff(c) {
+    for (let k = 0; k < 14; k++) this.game.effects.smoke.spawn(c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 16, c.z + (Math.random() - 0.5) * 30, { vx: 0, vy: -0.4, vz: 0, size: 5, grow: 1.6, life: CHAFF_LIFE * 0.6, alpha: 0.35, color: 0xd8dde2, drag: 1, wind: 0.6 });
   }
 
   /** Stack `src` (unit `u`) fires mount `m` at point (x, z) — `t` the ship it was aimed at, if any. */
   launch(src, u, from, x, z, m, t = null) {
     const g = this.game;
     const level = g.world.river?.level ?? 0;
+    const first = this.list.length;
     for (let i = 0; i < (m.count ?? 1); i++) {
       if (m.left <= 0) break;
       m.left--;
@@ -41,9 +75,10 @@ export class Missiles {
         pos: new THREE.Vector3(from.x, from.y, from.z), dir: new THREE.Vector3(Math.sin(yaw), 0.6, Math.cos(yaw)).normalize(),
         aim: { x: x + (Math.random() - 0.5) * 40, z: z + (Math.random() - 0.5) * 40 }, meant: t, target: null, decoy: null,
         speed: m.speed, left: m.range * 1.15, damage: m.damage, pierce: m.pierce ?? 0.6, seeker: m.seeker, skim: !!m.skim,
-        cruise: level + (m.skim ? 5 : m.alt ?? 40), level, age: -i * 0.6, faction: src.faction, source: src, name: m.name, engaged: 0, fx: 0,
+        cruise: level + (m.skim ? 5 : m.alt ?? 40), level, age: -i * 0.6, faction: src.faction, source: src, name: m.name, engaged: 0, fx: 0, id: this.nextId++,
       });
     }
+    g.netEvent('msl', this.list.slice(first).map((s) => [s.id, Math.round(s.pos.x), Math.round(s.pos.y), Math.round(s.pos.z), Math.round(s.aim.x), Math.round(s.aim.z), s.speed, Math.round(s.cruise), s.skim ? 1 : 0, s.faction, s.seeker, Math.round(s.left)]));
     u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + 10); // the launch: a flash and a trail everyone sees
     g.audio?.play(`${src.faction}.sam`, from, { volume: 1, throttle: 0.3 });
     g.tell(src.faction, `${src.name}: ${m.name ?? 'missiles'} away`);
@@ -57,6 +92,7 @@ export class Missiles {
   }
 
   update(dt) {
+    if (this.game.net?.isClient) { this.flyMissiles(dt); this.flyInterceptors(dt); this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; } // (a guest: the host's, to watch)
     if (!this.list.length && !this.interceptors.length && !this.game.air?.sorties.some((a) => a.airborne)) { if (this.chaff.length) this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; }
     this.flyMissiles(dt);
     this.defend(dt);
@@ -91,9 +127,10 @@ export class Missiles {
       }
       // the hit: inside her hull (length × beam, up to her upperworks)
       const h = s.target && this.hits(s, s.target);
-      if (h) { this.impact(s, s.target); this.list.splice(i, 1); continue; }
-      if (s.decoy && Math.hypot(s.decoy.x - s.pos.x, s.decoy.z - s.pos.z) < 15) { this.splash(s); this.list.splice(i, 1); continue; } // into the chaff: the sea
-      if (s.left <= 0 || s.pos.y < s.level - 1 || (s.target == null && s.decoy == null && toAim < 20 && s.age > CLIMB)) { this.splash(s); this.list.splice(i, 1); }
+      if (s.remote) { if (h || s.left <= -200) this.list.splice(i, 1); continue; } // (a guest: the host says when it ends — 'mslx'; a hit it shows then)
+      if (h) { this.impact(s, s.target); this.gone(s, 1); this.list.splice(i, 1); continue; }
+      if (s.decoy && Math.hypot(s.decoy.x - s.pos.x, s.decoy.z - s.pos.z) < 15) { this.splash(s); this.gone(s, 0); this.list.splice(i, 1); continue; } // into the chaff: the sea
+      if (s.left <= 0 || s.pos.y < s.level - 1 || (s.target == null && s.decoy == null && toAim < 20 && s.age > CLIMB)) { this.splash(s); this.gone(s, 0); this.list.splice(i, 1); }
     }
   }
 
@@ -182,7 +219,8 @@ export class Missiles {
           const side = Math.random() < 0.5 ? -1 : 1, bx = Math.cos(u.yaw) * side, bz = -Math.sin(u.yaw) * side;
           const c = { x: u.pos.x + bx * 90, z: u.pos.z + bz * 90, y: u.pos.y + 25, faction: st.faction, until: now + CHAFF_LIFE };
           this.chaff.push(c);
-          for (let k = 0; k < 14; k++) g.effects.smoke.spawn(c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 16, c.z + (Math.random() - 0.5) * 30, { vx: 0, vy: -0.4, vz: 0, size: 5, grow: 1.6, life: CHAFF_LIFE * 0.6, alpha: 0.35, color: 0xd8dde2, drag: 1, wind: 0.6 });
+          this.chaffPuff(c);
+          g.netEvent('chaff', Math.round(c.x), Math.round(c.y), Math.round(c.z), c.faction);
           g.audio?.play(`${st.faction}.mortar`, u.pos, { volume: 0.5, throttle: 0.5 }); // (the chaff rockets' pop)
           for (const s of this.list) if (s.target === u && Math.random() < 0.3) this.seek(s); // (seduced — or not)
         }
@@ -204,6 +242,7 @@ export class Missiles {
     u[`${key}At`] = now;
     s.engaged++;
     _p.set(u.pos.x, u.pos.y + (st.stats.height ?? 10) * 0.8, u.pos.z);
+    if (!air && s.id) this.game.netEvent('mslsam', Math.round(_p.x), Math.round(_p.y), Math.round(_p.z), s.id, L.speed);
     this.interceptors.push({ pos: _p.clone(), dir: new THREE.Vector3(0, 1, 0), target: s, air, from: u, layer: key, speed: L.speed, pk: L.pk * (s.skim ? 0.75 : 1) * (air ? 0.8 : 1), age: 0 }); // (a sea-skimmer: low in the clutter, a harder shot; an aircraft jinks and jams)
     this.game.audio?.play(`${st.faction}.sam`, _p, { volume: 0.7, throttle: 0.2 });
   }
@@ -227,7 +266,7 @@ export class Missiles {
         t.engaged--;
         g.effects.explosion(m.pos, 0.6, { ground: false, fire: 0.8 });
         g.audio?.play('explosion.far', m.pos, { volume: 0.6, throttle: 0.1 });
-        if (Math.random() < m.pk) { if (m.air) t.hit(6); else this.kill(t); } // (an aircraft: a hit brings it down — a big one takes two)
+        if (!m.remote && Math.random() < m.pk) { if (m.air) t.hit(6); else this.kill(t); } // (an aircraft: a hit brings it down — a big one takes two)
       }
     }
   }
@@ -252,6 +291,7 @@ export class Missiles {
     const i = this.list.indexOf(s);
     if (i < 0) return;
     this.list.splice(i, 1);
+    this.gone(s, 2);
     this.game.effects.explosion(s.pos, 1, { ground: false, fire: 1.2 });
     this.game.audio?.play('explosion', s.pos, { volume: 0.7, throttle: 0.1 });
   }

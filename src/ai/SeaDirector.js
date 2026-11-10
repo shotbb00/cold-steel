@@ -89,8 +89,41 @@ export class SeaDirector {
     return open.sort((a, b) => Math.hypot(a.x - home.x, a.z - home.z) - Math.hypot(b.x - home.x, b.z - home.z))[0] ?? home;
   }
 
+  /**
+   * Radar discipline (1985): one picket radiating — the smallest ship — the rest silent, until there is contact
+   * (an enemy seen, a missile in the air); then every radar on, and silent again a minute after the last contact.
+   */
+  emcon(fleet) {
+    const g = this.game, now = g.world.time;
+    const radars = fleet.filter((s) => s.stats.radar && s.units[0]?.alive);
+    if (!radars.length) return;
+    if (this.foes().some((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1)) || g.missiles?.list.some((m) => m.faction !== this.faction)) this.contactAt = now;
+    const loud = now - (this.contactAt ?? -999) < 60;
+    const picket = radars.filter((s) => !s.stats.carrier).sort((a, b) => (VALUE[a.type.id] ?? 0) - (VALUE[b.type.id] ?? 0))[0] ?? radars[0];
+    for (const s of radars) {
+      const on = loud || s === picket;
+      if ((s.radarOn !== false) !== on) g.orders.run(this.faction, { t: 'radar', s: [s.id], on: on ? 1 : 0 }, 'ai');
+    }
+  }
+
+  /** An enemy radar it hears but can't see (systems/Sensors.js fixes): a missile salvo at the fix, now and then. */
+  fireAtFixes(fleet) {
+    const g = this.game, now = g.world.time;
+    for (const fx of g.sensors?.fixes?.[this.faction] ?? []) {
+      if (fx.stack.units.some((u) => u.alive && u.spotted)) continue; // (seen: the ships fire at her on their own)
+      if ((this.fixFired?.[fx.stack.id] ?? -999) > now - 50) continue;
+      const shooter = fleet.find((s) => { const u = s.units[0]; return u?.alive && (u.depth ?? 0) <= 9 && s.shipMounts(u).some((m) => m.missile && !m.out && m.left > 0 && Math.hypot(fx.x - u.pos.x, fx.z - u.pos.z) < m.range); });
+      if (!shooter) continue;
+      (this.fixFired ??= {})[fx.stack.id] = now;
+      g.orders.run(this.faction, { t: 'missileAt', s: [shooter.id], x: Math.round(fx.x), z: Math.round(fx.z), n: 4 }, 'ai');
+      return;
+    }
+  }
+
   steer() {
     const g = this.game;
+    this.emcon(this.ships());
+    this.fireAtFixes(this.ships());
     const target = this.objective();
     const home = this.game.world.bases[this.faction];
     const night = !!g.conditions?.night;

@@ -5,18 +5,22 @@
 // along the bearing, fading over BEARING_LIFE s; where two cross is a fix to fire missiles at
 // (the minimap draws them too: ui/Minimap.js). Off, she sees only by eye — and is silent.
 import * as THREE from 'three';
+import { enemyOf } from '../data/factions.js';
 
 const EVERY = 3;            // s between fresh bearings
 const BEARING_LIFE = 20;    // s a bearing line fades over
 const ESM_REACH = 7000;     // m: a radar is heard far beyond what it sees
 const LINE = 6000;          // m: how far a bearing line is drawn
 const NOISE = 0.02;         // rad: a bearing's error (±1°)
+const SPREAD1 = 450;        // m: a fix from one listener — how far off it may be
+const SPREAD2 = 150;        // m: from two or more
 
 export class Sensors {
   constructor(game) {
     this.game = game;
     this.t = 0;
     this.bearings = new Map(); // `${listener.id}:${emitter.id}` → { x, z, a, at, line } (the player's side)
+    this.fixes = { nato: [], pact: [] }; // per side: { stack, x, z } — an enemy radar heard, roughly placed (SeaDirector fires at them)
     this.mat = new THREE.LineBasicMaterial({ color: 0xffb04a, transparent: true, opacity: 0.6, depthWrite: false, depthTest: false, toneMapped: false, fog: false });
   }
 
@@ -24,6 +28,7 @@ export class Sensors {
     const g = this.game;
     if ((this.t -= dt) <= 0) {
       this.t = EVERY;
+      this.makeFixes();
       const me = g.playerFaction;
       for (const e of g.world.stacks) {
         if (!e.alive || !e.stats.radar || e.radarOn === false || e.faction === me || e.visible) continue; // (one you see already needs no bearing)
@@ -58,6 +63,28 @@ export class Sensors {
       const k = 1 - (g.time - b.at) / BEARING_LIFE;
       if (k <= 0) { b.line.removeFromParent(); b.line.geometry.dispose(); b.line.material.dispose(); this.bearings.delete(key); continue; }
       b.line.material.opacity = 0.6 * k;
+    }
+  }
+
+  /**
+   * Each side's fixes on the enemy's radiating ships: heard by one listener the position is a rough guess
+   * (a bearing and a signal strength, `SPREAD1` m off), by two or more a crossing (`SPREAD2`).
+   */
+  makeFixes() {
+    const g = this.game;
+    for (const f of ['nato', 'pact']) {
+      const out = [];
+      const ears = g.world.stacksOf(f).filter((s) => s.alive && s.stats.esm).map((s) => s.units.find((u) => u.alive)).filter((u) => u && (u.depth ?? 0) <= 9);
+      for (const e of g.world.stacksOf(enemyOf(f))) {
+        if (!e.alive || !e.stats.radar || e.radarOn === false) continue;
+        const eu = e.units.find((x) => x.alive);
+        if (!eu || (eu.depth ?? 0) > 1) continue;
+        const n = ears.filter((u) => Math.hypot(eu.pos.x - u.pos.x, eu.pos.z - u.pos.z) < ESM_REACH).length;
+        if (!n) continue;
+        const r = (n >= 2 ? SPREAD2 : SPREAD1) * Math.sqrt(Math.random()), a = Math.random() * Math.PI * 2;
+        out.push({ stack: e, x: eu.pos.x + Math.cos(a) * r, z: eu.pos.z + Math.sin(a) * r });
+      }
+      this.fixes[f] = out;
     }
   }
 

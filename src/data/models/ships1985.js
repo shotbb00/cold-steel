@@ -8,9 +8,11 @@
 import * as THREE from 'three';
 import { P, merge, loft } from '../units/geometry.js';
 import { sideProfile } from './vehicleCommon.js';
-import { KIT, buildIowa } from './ships1945.js';
+import { KIT } from './ships1945.js';
 
-const { box, cyl, every, strut, hull, bowNumber, numerals, boat, windows, vent, raft, ship, sub, BLACK, GLASS, WHITE } = KIT;
+const { box, cyl, every, strut, bowNumber, numerals, boat, windows, vent, raft, ship, sub, turret, mount, funnel, BLACK, GLASS, WHITE } = KIT;
+/** The kit's hull without the old porthole row (a modern hull: and the pennant number sits clear on the bow). */
+const hull = (len, beam, fb, draft, c, sheer, o = {}) => KIT.hull(len, beam, fb, draft, c, sheer, { ports: false, ...o });
 const USN = { hull: 0x7f868c, deck: 0x4c5156, upper: 0x8d949a, gun: 0x8d949a, black: BLACK, boat: 0x8d949a };
 const VMF = { hull: 0x6a7882, deck: 0x5c4a44, upper: 0x7b8993, gun: 0x75838d, black: BLACK, boat: 0xa0a49e };
 const DOME = 0xe4e4dc;
@@ -344,7 +346,45 @@ export const buildSlava = ship(() => {
 
 // ---------------------------------------------------------------- capital ships
 
-export const buildIowa85 = buildIowa; // ponytail: the 1945 Iowa stands in — add her Tomahawk boxes, Harpoon quads and Phalanxes when the battleships get a pass
+/** An armoured box launcher (the Iowa's Tomahawks): a heavy box on a raising frame, four cells under its lid. */
+const abl = (c, x, y, z) => [box(2.8, 1.8, 7.4, { x, y: y + 1.3, z, rx: -0.08, color: c.upper }), P.box(2.4, 0.08, 6.8, { x, y: y + 2.25, z, rx: -0.08, color: DARK }), box(2.2, 0.4, 6, { x, y: y + 0.2, z, color: c.gun })];
+
+/** Iowa as recommissioned in the 1980s: the 1945 hull and turrets, the light AA and the catapults gone; Tomahawk
+ * boxes, Harpoon quads, four Phalanx, new masts and radars, a helicopter deck on the quarterdeck. */
+export const buildIowa85 = ship(() => {
+  const c = USN, fb = 9;
+  const H = hull(262, 33, fb, 11, c, 2);
+  const t3 = turret(c, { w: 12, h: 5, d: 13, barrels: 3, len: 20, cal: 0.5, ears: true });
+  const five = mount(c, { w: 4.4, h: 2.8, d: 5, barrels: 2, len: 5.4, cal: 0.15 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...bowNumber(H, '61', 3.2),
+      box(14, 4, 15, { y: fb + 2, z: 74, color: c.upper }),                 // the barbette of No. 2
+      box(18, 6, 30, { y: fb + 3, z: 36, color: c.upper }),
+      cyl(5, 5.5, 14, { y: fb + 10, z: 40, color: c.upper }, 16),           // the conning tower
+      box(14, 6, 14, { y: fb + 18, z: 38, color: c.upper }),                 // the bridge levels
+      ...windows(0, fb + 20, 38, 14, 14),
+      ...lattice(c, 0, fb + 21, 34, 11, 5, [dish(7, 2.6)]),                  // SPS-49
+      box(17, 6, 64, { y: fb + 3, z: -10, color: c.upper }),
+      ...funnel(c, 0, fb + 6, 14, 4.5, 14, 0, { oval: 1.3 }),
+      ...funnel(c, 0, fb + 6, -10, 4.5, 14, 0, { oval: 1.3 }),
+      ...lattice(c, 0, fb + 6, -26, 15, 4.4, [slab(4, 2.2)]),                // the after mast, SPS-67
+      ...[-1, 1].flatMap((s) => [30, 14, -2].map((z) => five.clone().rotateY(s * Math.PI / 2).translate(s * 6, fb + 6, z))), // six of the ten 5-inch twins
+      ...[-1, 1].flatMap((s) => [...abl(c, s * 6.8, fb + 6, 4), ...abl(c, s * 5, fb, -50), ...abl(c, s * 5, fb, -58)]),   // the Tomahawk boxes
+      ...[-1, 1].flatMap((s) => [-30, -37].map((z) => canisters(c, s * 6.2, fb + 6, z, s * 0.35))),                   // Harpoon quads
+      ...helideck(0, fb, -112, 22, 18),
+      ...[-1, 1].map((s) => boat(c, s * 9.5, fb + 6, -18, 10, s)),
+    ]),
+    mounts: [
+      { geo: t3, at: [0, H.top(92), 92], arc: 5 },
+      { geo: t3, at: [0, fb + 4, 74], arc: 5 },
+      { geo: t3, at: [0, fb, -74], aft: true, arc: 5 },
+      { geo: phalanx(c), at: [6.5, fb + 6, 48], arc: 4 }, { geo: phalanx(c), at: [-6.5, fb + 6, 48], arc: 4 },
+      { geo: phalanx(c), at: [6, fb + 6, -40], aft: true, arc: 4 }, { geo: phalanx(c), at: [-6, fb + 6, -40], aft: true, arc: 4 },
+    ],
+  };
+});
 
 export const buildKirov = ship(() => {
   const c = VMF, fb = 9;

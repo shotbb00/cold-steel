@@ -52,7 +52,7 @@ const breadth = (t) => (t < 0.12 ? 0.78 + 0.22 * Math.sin((t / 0.12) * Math.PI /
  * Returns the parts and the hull's measure (`top(z)`: the deck there, `side(z, y)`: the half-breadth
  * at that height) so the rest of the kit can sit on it.
  */
-function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = true, fittings = true } = {}) {
+function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = true, fittings = true, ports = true } = {}) { // ports: the porthole row (1985 hulls: none — and the hull number sits clear)
   const N = 40;
   const at = (t) => ({ z: -len / 2 + t * len, w: (beam / 2) * breadth(t), top: fb + sheer * Math.max(0, (t - 0.55) / 0.45) ** 2 });
   const tz = (z) => Math.min(1, Math.max(0, (z + len / 2) / len));
@@ -83,7 +83,7 @@ function hull(len, beam, fb, draft, c, sheer = 1.2, { deck = 'deck', rails = tru
     }
     if (!fittings) continue; // (a motor torpedo boat: no portholes, no anchors in hawses)
     // portholes: a row along the forward half, under the deck edge
-    for (const z of every(len * 0.08, len * 0.36, 1.8)) {
+    for (const z of ports ? every(len * 0.08, len * 0.36, 1.8) : []) {
       const y = top(z) - 1.3;
       parts.push(P.box(0.3, 0.42, 0.42, { x: s * (side(z, y) - 0.1), y, z, color: BLACK }));
     }
@@ -954,4 +954,4 @@ export const buildLiberty = ship(() => transport({ ...US, hull: 0x626c74, upper:
 export const buildMaru = ship(() => transport({ ...IJN, hull: 0x5e625c, upper: 0x7a7c76, boat: 0x6e706a }, { len: 130, beam: 17, fb: 6.2, houseZ: -10, gunAft: true, barges: true, band: 0xb02020 }));
 
 // the kit, for the 1985 ships (models/ships1985.js): the same hulls, masts, rails and paint
-export const KIT = { box, cyl, every, strut, hull, numerals, bowNumber, boat, searchlight, mast, funnel, windows, vent, raft, mount, ship, sub, BLACK, GLASS, WHITE, CANVAS };
+export const KIT = { box, cyl, every, strut, hull, turret, aa, numerals, bowNumber, boat, searchlight, mast, funnel, windows, vent, raft, mount, ship, sub, BLACK, GLASS, WHITE, CANVAS };

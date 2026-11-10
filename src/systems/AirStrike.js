@@ -206,6 +206,8 @@ const _p = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+/** What an aircraft flies over: the ground, or over the sea the water (not the sea floor under it). */
+const floorAt = (g, x, z) => Math.max(g.terrain.heightAt(x, z), g.world.river?.sea ? g.world.river.level : -Infinity);
 const materials = {};
 
 /** The machine `army` of `faction` flies for support power `kind` (data/air.ts: an army's own, else the side's). */
@@ -235,7 +237,8 @@ export const buildHelicopter = (faction) => buildAircraft('heli', faction);
 /** A carrier's flight deck in the world: its height, length, her heading and her way (for take-off and landing). */
 function deckOf(u) {
   const c = u.stack.stats.carrier ?? {};
-  return { top: u.pos.y + (c.deck ?? 16), len: c.deckLen ?? 240, fx: Math.sin(u.yaw), fz: Math.cos(u.yaw), v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
+  const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), z0 = c.deckZ ?? 0; // (deckZ: the flight deck's middle, fore or aft of hers — the Kiev's is all aft)
+  return { top: u.pos.y + (c.deck ?? 16), len: c.deckLen ?? 240, fx, fz, cx: u.pos.x + fx * z0, cz: u.pos.z + fz * z0, v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
 }
 
 // a flight's wingmen off the leader: [side, back, down] in metres — a vee, the fourth in the slot
@@ -244,6 +247,7 @@ const TRAIL = 26; // m between them in line on the deck, on the take-off run and
 
 function spin(rig, type, dt, k = 1) {
   if (rig.rotor) rig.rotor.rotation.y += dt * type.rotorSpeed * k;
+  if (rig.rotor2) rig.rotor2.rotation.y -= dt * type.rotorSpeed * k; // (a Kamov's coaxial pair: the other way)
   if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70 * k;
   if (rig.prop) rig.prop.rotation.z += dt * 45 * k; // a propeller (1945: models/ww2Aircraft.js)
   if (rig.props) for (const p of rig.props) p.rotation.z += dt * 40 * k; // a twin or a trimotor
@@ -275,7 +279,7 @@ class Sortie {
     this.dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     this.side = new THREE.Vector3(this.dir.z, 0, -this.dir.x);
     this.pos = this.target.clone().addScaledVector(this.dir, -this.p.approach);
-    this.pos.y = game.terrain.heightAt(this.pos.x, this.pos.z) + this.p.cruiseAlt;
+    this.pos.y = floorAt(game, this.pos.x, this.pos.z) + this.p.cruiseAlt;
     this.appearAt = game.time + this.p.delay;
     this.state = 'inbound';   // inbound → ingress → attack (lift: land) → break → home | down → done
     this.hp = this.type.hp;
@@ -370,7 +374,7 @@ class Sortie {
     this.build();
     const d = deckOf(cv);
     this.deckS = -d.len * 0.12;
-    this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+    this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
     this.yaw = cv.yaw;
     this.pitch = 0;
     this.roll = 0;
@@ -491,7 +495,7 @@ class Sortie {
     this.speed += (wantSpeed - this.speed) * Math.min(1, dt * (this.kind === 'jet' ? 0.6 : 1.2));
     this.pos.addScaledVector(this.dir, this.speed * dt);
     const look = this.kind === 'jet' ? 120 : 40;
-    const ground = Math.max(terrain.heightAt(this.pos.x, this.pos.z), this.state === 'land' ? -Infinity : terrain.heightAt(this.pos.x + this.dir.x * look, this.pos.z + this.dir.z * look));
+    const ground = Math.max(floorAt(game, this.pos.x, this.pos.z), this.state === 'land' ? -Infinity : floorAt(game, this.pos.x + this.dir.x * look, this.pos.z + this.dir.z * look));
     this.pos.y += (ground + alt - this.pos.y) * Math.min(1, dt * (this.state === 'land' ? 3 : 1.5));
     this.pitch += (wantPitch - this.pitch) * Math.min(1, dt * 2);
     this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
@@ -513,6 +517,32 @@ class Sortie {
       this.groundFire();
     }
     if (this.hp < this.type.hp * 0.6) game.effects.trail(_p.copy(this.pos).addScaledVector(UP, 1.5), this.dir); // trailing smoke
+  }
+
+  /**
+   * A ship's helicopter coming home: to the pad on her quarterdeck (a little over a third of her length aft,
+   * `stats.helo` its height above the water), slowing as it closes, down onto it — then it is aboard.
+   */
+  landOn(dt) {
+    const g = this.game, u = this.homeShip, L = u.stack.type.hull?.length ?? 100;
+    const px = u.pos.x - Math.sin(u.yaw) * L * 0.38, pz = u.pos.z - Math.cos(u.yaw) * L * 0.38;
+    const deck = (g.world.river?.level ?? 0) + (typeof u.stack.stats.helo === 'number' ? u.stack.stats.helo : 7);
+    const dx = px - this.pos.x, dz = pz - this.pos.z, d = Math.hypot(dx, dz);
+    if (d > 6) this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 1.5);
+    else this.yaw += angleDelta(this.yaw, u.yaw) * Math.min(1, dt);
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const step = Math.min(d, (Math.min(this.p.cruiseSpeed, d * 0.4 + 3) + Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0)) * dt);
+    if (d > 0.01) { this.pos.x += (dx / d) * step; this.pos.z += (dz / d) * step; }
+    this.speed = step / Math.max(dt, 1e-3);
+    const want = d > 80 ? deck + 35 : deck + 0.3 + Math.max(0, d - 6) * 0.45;
+    this.pos.y += (want - this.pos.y) * Math.min(1, dt * 1.4);
+    this.pitch += ((d > 20 ? -0.12 : 0.04) - this.pitch) * Math.min(1, dt * 2);
+    this.roll += (0 - this.roll) * Math.min(1, dt * 2);
+    this.place(dt);
+    if (d < 3 && this.pos.y - deck < 1) {
+      g.tell(this.faction, `${u.stack.name}: ${this.type.name} back aboard`);
+      return this.finish();
+    }
   }
 
   /** Missile strike (1985): every plane of the flight fires its missiles at the spot (or the ship nearest it), then home. */
@@ -624,6 +654,7 @@ class Sortie {
       }
     } else if (this.state === 'break' || this.state === 'home') {
       this.state = 'home';
+      if (this.kind === 'helo' && this.homeShip?.alive) return this.landOn(dt); // (a ship's helicopter: back onto her deck)
       if ((this.homeT += dt) > 9) return this.finish();
     }
     if (this.orphan && this.state === 'attack' && (this.stationT += dt * 2) > p.station) { this.shotDown(true); return; } // (fighters with no deck: on until the fuel's gone, then into the sea)
@@ -631,7 +662,7 @@ class Sortie {
     const wantSpeed = this.state === 'attack' ? p.attackSpeed : p.cruiseSpeed;
     this.speed += (wantSpeed - this.speed) * Math.min(1, dt * 0.6);
     this.pos.addScaledVector(this.dir, this.speed * dt);
-    this.pos.y += (g.terrain.heightAt(this.pos.x, this.pos.z) + p.cruiseAlt - this.pos.y) * Math.min(1, dt);
+    this.pos.y += (floorAt(g, this.pos.x, this.pos.z) + p.cruiseAlt - this.pos.y) * Math.min(1, dt);
     this.pitch += (0 - this.pitch) * Math.min(1, dt * 2);
     this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
     this.place(dt);
@@ -646,7 +677,7 @@ class Sortie {
     this.speed = this.rollV;
     if (this.deckS < d.len * 0.48) { // on the deck, carried along with her
       this.deckS += this.rollV * dt;
-      this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+      this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
       this.yaw = cv.yaw;
       this.pitch = 0;
       this.roll = 0;
@@ -683,7 +714,7 @@ class Sortie {
     if (this.state === 'rollout') { // on the deck: the arrester wire takes the way off
       this.rollV = Math.max(0, this.rollV - 22 * dt);
       this.deckS += this.rollV * dt;
-      this.pos.set(cv.pos.x + d.fx * this.deckS, d.top, cv.pos.z + d.fz * this.deckS);
+      this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
       this.yaw = cv.yaw;
       this.pitch = 0;
       this.roll = 0;
@@ -692,14 +723,14 @@ class Sortie {
       return;
     }
     if (this.state === 'home') { // to a point some way astern of her, at circuit height
-      const ax = cv.pos.x - d.fx * 700, az = cv.pos.z - d.fz * 700;
+      const ax = d.cx - d.fx * 700, az = d.cz - d.fz * 700;
       turn(Math.atan2(ax - this.pos.x, az - this.pos.z), 0.7);
       this.speed += (this.p.cruiseSpeed - this.speed) * Math.min(1, dt);
       this.pos.y += (level + 60 - this.pos.y) * Math.min(1, dt);
       this.pitch += (0 - this.pitch) * Math.min(1, dt * 2);
       if (Math.hypot(ax - this.pos.x, az - this.pos.z) < 160) this.state = 'landing';
     } else { // the approach: down her wake, slowing, onto the deck's after end
-      const tx = cv.pos.x - d.fx * d.len * 0.36, tz = cv.pos.z - d.fz * d.len * 0.36;
+      const tx = d.cx - d.fx * d.len * 0.36, tz = d.cz - d.fz * d.len * 0.36;
       const dist = Math.hypot(tx - this.pos.x, tz - this.pos.z);
       turn(Math.atan2(tx - this.pos.x, tz - this.pos.z), 1.1);
       this.speed += (d.v + Math.max(14, Math.min(this.p.cruiseSpeed, dist * 0.09)) - this.speed) * Math.min(1, dt * 1.5);
@@ -950,7 +981,7 @@ class Sortie {
     this.place(dt * 0.5);
     game.effects.trail(this.pos, this.dir);
     if (Math.random() < 0.5) game.effects.explosion(this.pos, 0.25, { ground: false, fire: 0.5 });
-    const ground = game.terrain.heightAt(this.pos.x, this.pos.z);
+    const ground = floorAt(game, this.pos.x, this.pos.z);
     if (this.pos.y > ground + 0.5) return;
     this.pos.y = ground;
     game.effects.explosion(this.pos, 1.8, { ground: true, fire: 2 });

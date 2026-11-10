@@ -200,6 +200,7 @@ export class CommandSystem {
     else if (keys.is(code, 'unload')) this.runCommand('unload');
     else if (keys.is(code, 'engineer')) this.runCommand('engineer');
     else if (keys.is(code, 'flare')) this.runCommand('flare');
+    else if (keys.is(code, 'fleetRadar')) this.fleetRadar();
     else if (keys.is(code, 'reinforce')) this.game.bus.emit('ui:reinforcements');
     else if (keys.is(code, 'leave')) this.runCommand('leave');
     else if (keys.is(code, 'selectAll')) this.runCommand('selectAll');
@@ -399,6 +400,16 @@ export class CommandSystem {
   }
 
   // ---------------------------------------------------------------- targeting mode
+
+  /** Every ship of yours with a radar: all on, or (if they all are) all off — the fleet goes silent or lights up. */
+  fleetRadar() {
+    const sets = this.game.world.stacksOf(this.faction).filter((s) => s.alive && s.stats.radar);
+    if (!sets.length) return;
+    const on = !sets.every((s) => s.radarOn !== false);
+    this.game.orders.issue({ t: 'radar', s: ids(sets), on: on ? 1 : 0 });
+    for (const s of sets) s.radarOn = on;
+    this.game.bus.emit('toast', on ? `Fleet radars on (${sets.length}): every ship sees — and is heard` : `Fleet radars off (${sets.length}): silent, eyes only`);
+  }
 
   startTargeting(t) {
     this.cancelTargeting();
