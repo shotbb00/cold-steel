@@ -952,3 +952,6 @@ function transport(c, { len, beam, fb, houseZ, gunAft, barges, band }) {
 }
 export const buildLiberty = ship(() => transport({ ...US, hull: 0x626c74, upper: 0x7a828a }, { len: 135, beam: 17.3, fb: 6, houseZ: -6, gunAft: true }));
 export const buildMaru = ship(() => transport({ ...IJN, hull: 0x5e625c, upper: 0x7a7c76, boat: 0x6e706a }, { len: 130, beam: 17, fb: 6.2, houseZ: -10, gunAft: true, barges: true, band: 0xb02020 }));
+
+// the kit, for the 1985 ships (models/ships1985.js): the same hulls, masts, rails and paint
+export const KIT = { box, cyl, every, strut, hull, numerals, bowNumber, boat, searchlight, mast, funnel, windows, vent, raft, mount, ship, sub, BLACK, GLASS, WHITE, CANVAS };

@@ -5,9 +5,9 @@
 //           no island hides, and is heard by every enemy `esm` (systems/Sensors.js: bearing lines)
 //   defence { sam, point, ciws, chaff } — the layers against missiles (systems/Missiles.js)
 //   mounts with `missile`: anti-ship missiles, `load` aboard, `count` a salvo, all-round launchers
-// ponytail: stand-in hulls (the 1945 models) until the 1985 ships are built (WW3 plan step 2); the
+// Models: models/ships1985.js (the Iowa still her 1945 self). ponytail: the
 // carriers have no air group yet (step 3) — they fight with their defences only.
-import { buildFletcher, buildBuckley, buildBaltimore, buildIowa, buildGato, buildEssex, buildElcoPT, buildCleveland, buildCasablanca, buildLiberty } from '../models/ships1945.js';
+import { buildPerry, buildKrivak, buildSpruance, buildSovremenny, buildVirginia, buildKara, buildTiconderoga, buildSlava, buildIowa85, buildKirov, buildNimitz, buildKiev, buildTarawa, buildMoskva, buildPegasus, buildTarantul, buildLosAngeles, buildVictor, buildOscar, buildNewport, buildRopucha } from '../models/ships1985.js';
 
 const NAVAL = { naval: true, eyeHeight: 20, aimHeight: 4, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1, esm: true, sight: 1600 };
 const FWD = 0;
@@ -70,7 +70,7 @@ export const frigate = ship({
     pact: [gun([0, 9, -45], AFT, G76), gun([0, 9, -52], AFT, G76)],
   },
   camera: { distance: 90, height: 28, shoulder: 0 },
-  models: { nato: buildBuckley, pact: buildBuckley },
+  models: { nato: buildPerry, pact: buildKrivak },
   variants: {
     nato: { name: 'Oliver Hazard Perry-class frigate', weapon: 'Harpoon, SM-1, 76 mm, Phalanx', text: 'The convoy escort built by the dozen: one launcher for Harpoons and Standard missiles, two helicopters, a good sonar.' },
     pact: { name: 'Krivak I-class frigate', weapon: 'SS-N-14 (anti-submarine), SA-N-4, 2 × twin 76 mm', text: 'A fast, handsome sub hunter: her big launcher is for submarines only — against ships she has her guns.' },
@@ -90,7 +90,7 @@ export const destroyer = ship({
     pact: [MSL({ ...MOSKIT, at: [0, 9, 35], load: 8 }), gun([0, 9, 60], FWD, G130), gun([0, 9, -55], AFT, G130)],
   },
   camera: { distance: 110, height: 34, shoulder: 0 },
-  models: { nato: buildFletcher, pact: buildFletcher },
+  models: { nato: buildSpruance, pact: buildSovremenny },
   variants: {
     nato: { name: 'Spruance-class destroyer', weapon: 'Harpoon, Sea Sparrow, 2 × 5-inch, Phalanx', text: 'The big, quiet sub hunter of the carrier screen: the best sonar afloat, Harpoons for ships, Sea Sparrow for herself.' },
     pact: { name: 'Sovremenny-class destroyer', weapon: '8 Moskit (SS-N-22), SA-N-7, 2 × twin 130 mm', text: 'Built to kill ships: eight supersonic sea-skimmers, the heaviest destroyer guns afloat and a good area SAM. A poor sonar.' },
@@ -110,7 +110,7 @@ export const lightCruiser = ship({
     pact: [gun([0, 10, -55], AFT, G76), gun([0, 10, -62], AFT, G76)],
   },
   camera: { distance: 120, height: 38, shoulder: 0 },
-  models: { nato: buildCleveland, pact: buildCleveland },
+  models: { nato: buildVirginia, pact: buildKara },
   variants: {
     nato: { name: 'Virginia-class nuclear cruiser', weapon: 'Harpoon, SM-2, 2 × 5-inch, Phalanx', text: 'Nuclear powered, she keeps up with the carrier for ever: an area SAM umbrella over the group and Harpoons.' },
     pact: { name: 'Kara-class cruiser', weapon: 'SA-N-3, SA-N-4, SS-N-14, 2 × twin 76 mm', text: 'The Soviet Navy\'s big sub hunter: two area SAM systems over the group, a strong sonar — but nothing to sink a ship with but her guns.' },
@@ -130,7 +130,7 @@ export const cruiser = ship({
     pact: [MSL({ ...BAZALT, at: [0, 10, 30], load: 16, count: 8, reload: 15 }), gun([0, 10, 66], FWD, G130)],
   },
   camera: { distance: 120, height: 40, shoulder: 0 },
-  models: { nato: buildBaltimore, pact: buildBaltimore },
+  models: { nato: buildTiconderoga, pact: buildSlava },
   variants: {
     nato: { name: 'Ticonderoga-class Aegis cruiser', weapon: 'Aegis, SM-2, Harpoon, 2 × 5-inch, Phalanx', text: 'The Aegis radar tracks a hundred targets and guides six missiles at once: the shield of the carrier group against a saturating raid.' },
     pact: { name: 'Slava-class missile cruiser', weapon: '16 Bazalt (SS-N-12), S-300F, twin 130 mm', text: 'Sixteen big supersonic missiles in tubes along her sides — built to break through a carrier group\'s defences in one salvo.' },
@@ -150,7 +150,7 @@ export const battleship = ship({
     pact: [MSL({ ...GRANIT, at: [0, 12, 70], load: 20, count: 8, reload: 15 }), gun([0, 12, -90], AFT, G130)],
   },
   camera: { distance: 200, height: 60, shoulder: 0 },
-  models: { nato: buildIowa, pact: buildIowa },
+  models: { nato: buildIowa85, pact: buildKirov },
   variants: {
     nato: { name: 'Iowa-class battleship (1985)', weapon: '9 × 16-inch, Tomahawk, Harpoon, Phalanx', text: 'Brought back from reserve: the old armour shrugs off missiles that would sink a cruiser, and the 16-inch guns still hit hardest — if she gets close. No missile defence but her guns and chaff.' },
     pact: { name: 'Kirov-class battlecruiser', weapon: '20 Granit (SS-N-19), S-300F, SA-N-4, 130 mm', text: 'The biggest surface warship since the war, nuclear powered: twenty huge Granits, a dense air defence. Built to fight a carrier group on her own.' },
@@ -170,7 +170,7 @@ export const carrier = ship({
     pact: [MSL({ ...BAZALT, at: [0, 12, 100], load: 8, count: 4, reload: 12 })],
   },
   camera: { distance: 240, height: 75, shoulder: 0 },
-  models: { nato: buildEssex, pact: buildEssex },
+  models: { nato: buildNimitz, pact: buildKiev },
   variants: {
     nato: { name: 'Nimitz-class carrier', weapon: 'air wing, Sea Sparrow, Phalanx', text: 'Ninety aircraft and a city of six thousand: the heart of the battle group. Everything else is there to keep her afloat.' },
     pact: { name: 'Kiev-class aviation cruiser', weapon: 'Yak-38, Ka-25, 8 Bazalt, SA-N-3', text: 'Half carrier, half cruiser: a few jump jets and helicopters forward of a heavy missile battery.' },
@@ -190,7 +190,7 @@ export const escortCarrier = ship({
     pact: [gun([8, 14, -30], AFT, G76)],
   },
   camera: { distance: 200, height: 65, shoulder: 0 },
-  models: { nato: buildCasablanca, pact: buildCasablanca },
+  models: { nato: buildTarawa, pact: buildMoskva },
   variants: {
     nato: { name: 'Tarawa-class amphibious assault ship', weapon: 'Harriers, helicopters, Sea Sparrow', text: 'A Marine battalion, its helicopters and a few Harriers: a small carrier of her own.' },
     pact: { name: 'Moskva-class helicopter cruiser', weapon: 'Ka-25, SA-N-3, SS-N-14', text: 'A cruiser forward, a helicopter deck aft: the hunter-killer of the Soviet Navy\'s first carrier groups.' },
@@ -210,7 +210,7 @@ export const ptBoat = ship({
     pact: [MSL({ ...MOSKIT, at: [0, 4, -5], load: 4, count: 2 }), gun([0, 5, 14], FWD, G76)],
   },
   camera: { distance: 50, height: 15, shoulder: 0 },
-  models: { nato: buildElcoPT, pact: buildElcoPT },
+  models: { nato: buildPegasus, pact: buildTarantul },
   variants: {
     nato: { name: 'Pegasus-class hydrofoil', weapon: '8 Harpoon, 76 mm', text: 'Up on her foils at nearly 50 knots, eight Harpoons: a small, fast, hard-to-see threat — and no armour or defence at all.' },
     pact: { name: 'Tarantul III missile corvette', weapon: '4 Moskit (SS-N-22), 76 mm, AK-630', text: 'Four of the destroyers\' supersonic missiles on a small fast hull: the coastal navy\'s sting.' },
@@ -232,7 +232,7 @@ export const submarine = ship({
     pact: [TUBES([0, -1, 50], 0, { count: 2, range: 1800, reload: 30, wakeless: true })],
   },
   camera: { distance: 90, height: 24, shoulder: 0 },
-  models: { nato: buildGato, pact: buildGato },
+  models: { nato: buildLosAngeles, pact: buildVictor },
   variants: {
     nato: { name: 'Los Angeles-class attack submarine', weapon: 'Mk 48 torpedoes, sub-Harpoon', text: 'Fast, quiet, a superb sonar: she hunts submarines and ships alike — and fires Harpoons from her tubes at periscope depth.' },
     pact: { name: 'Victor III-class attack submarine', weapon: '53 cm and 65 cm torpedoes', text: 'The quietest Soviet hunter yet: she trails carrier groups and their submarines. Torpedoes only against ships.' },
@@ -250,7 +250,7 @@ export const missileSub = ship({
   },
   mounts: { pact: [MSL({ ...GRANIT, at: [0, 2, 20], load: 24, count: 8, reload: 15 }), TUBES([0, -1, 70], 0, { count: 2, range: 1800, reload: 40 })] },
   camera: { distance: 120, height: 30, shoulder: 0 },
-  models: { pact: buildGato, nato: buildGato },
+  models: { pact: buildOscar, nato: buildOscar },
   variants: {
     pact: { name: 'Oscar-class cruise missile submarine', weapon: '24 Granit (SS-N-19), torpedoes', text: 'A carrier killer: twenty-four Granits fired from periscope depth, far beyond what the carrier group sees. Find her before she fires.' },
   },
@@ -269,7 +269,7 @@ export const transport = ship({
     pact: [gun([0, 10, 50], FWD, G76)],
   },
   camera: { distance: 120, height: 38, shoulder: 0 },
-  models: { nato: buildLiberty, pact: buildLiberty },
+  models: { nato: buildNewport, pact: buildRopucha },
   variants: {
     nato: { name: 'Newport-class tank landing ship', weapon: '20 mm Phalanx', text: 'Marines and their tanks: soft and slow, but a landing party ashore holds a zone and brings in command points.' },
     pact: { name: 'Ropucha-class landing ship', weapon: '2 × twin 57 mm', text: 'Naval infantry and their armour for the beach: the men aboard hold a zone and bring in command points.' },
