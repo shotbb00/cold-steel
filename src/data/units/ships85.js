@@ -19,7 +19,8 @@ const RADAR = (range = 5000, height = 30) => ({ range, height });
 const gun = (at, facing, o) => ({ at, facing, arc: 4.6, spread: 0.01, splash: 3, pierce: 0.3, shell: 900, size: 1.6, ...o });
 const DC = (o) => ({ count: 4, reload: 16, radius: 45, damage: 1300, ...o }); // (ASW torpedoes and rockets: the 1945 pattern stands in)
 const torps = (at, o) => ({ at, torpedo: true, arc: 2.2, count: 2, range: 1800, speed: 24, damage: 3000, reload: 40, ...o });
-const TUBES = (at, facing, o) => torps(at, { facing, arc: 0.9, ...o });
+const TUBES = (at, facing, o) => torps(at, { facing, arc: 2.6, homing: true, ...o }); // (homing, wire-guided: off her bow, at a surface ship or a submarine at any depth)
+const ASROC = { range: 1500, speed: 24, damage: 2200, reload: 25 }; // (ASROC, SS-N-14: a homing torpedo flown out and dropped near the submarine)
 
 // the guns
 const G76 = { range: 1200, reload: 1, damage: 80, splash: 2, size: 1.1 };
@@ -62,7 +63,7 @@ export const frigate = ship({
   id: 'frigate', name: 'Frigate', shortName: 'Frigate', cost: 300,
   names: { nato: ['Oliver Hazard Perry', 'McInerney', 'Clark', 'George Philip', 'Samuel Eliot Morison', 'Jack Williams', 'Stark', 'Taylor'], pact: ['Bditelny', 'Razumny', 'Druzhny', 'Svirepy', 'Silny', 'Storozhevoy', 'Doblestny', 'Bezukoriznenny'] },
   hull: { length: 136, beam: 14 },
-  stats: { helo: true, hp: 2600, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(5000, 25), sonar: 600, depthCharges: DC(), ...AA(500, 0.2, 0.05),
+  stats: { helo: true, hp: 2600, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(5000, 25), sonar: 600, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
     defence: { sam: SM1, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 80 },
   factionStats: { pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
   mounts: {
@@ -82,7 +83,7 @@ export const destroyer = ship({
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 520,
   names: { nato: ['Spruance', 'Paul F. Foster', 'Kinkaid', 'Hewitt', 'Elliot', 'Arthur W. Radford', 'Peterson', 'Caron'], pact: ['Sovremenny', 'Otchayanny', 'Otlichny', 'Osmotritelny', 'Bezuprechny', 'Boyevoy', 'Stoyky', 'Okrylenny'] },
   hull: { length: 172, beam: 17 },
-  stats: { helo: true, hp: 4600, armor: 0.05, speed: 15.5, accel: 0.12, turnRate: 0.09, turretRate: 0.6, radius: 8, height: 16, radar: RADAR(5000, 30), sonar: 900, depthCharges: DC(), ...AA(600, 0.2, 0.05),
+  stats: { helo: true, hp: 4600, armor: 0.05, speed: 15.5, accel: 0.12, turnRate: 0.09, turretRate: 0.6, radius: 8, height: 16, radar: RADAR(5000, 30), sonar: 900, depthCharges: DC(), asTorp: ASROC, ...AA(600, 0.2, 0.05),
     defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 180 },
   factionStats: { pact: { hp: 4800, sonar: 450, defence: { sam: SHTIL, ciws: AK630, chaff: CHAFF }, range: 4000, aggroRange: 4000, preferredRange: 2400 } },
   mounts: {
@@ -102,7 +103,7 @@ export const lightCruiser = ship({
   id: 'lightCruiser', name: 'Cruiser (escort)', shortName: 'Escort cruiser', cost: 650, limit: 3,
   names: { nato: ['Virginia', 'Texas', 'Mississippi', 'Arkansas', 'California', 'South Carolina'], pact: ['Nikolayev', 'Ochakov', 'Kerch', 'Azov', 'Petropavlovsk', 'Tashkent', 'Tallinn'] },
   hull: { length: 178, beam: 19 },
-  stats: { hp: 6500, armor: 0.1, speed: 15, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 18, radar: RADAR(5000, 32), sonar: 700, depthCharges: DC(), ...AA(700, 0.22, 0.05),
+  stats: { hp: 6500, armor: 0.1, speed: 15, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 18, radar: RADAR(5000, 32), sonar: 700, depthCharges: DC(), asTorp: ASROC, ...AA(700, 0.22, 0.05),
     defence: { sam: { ...SM2, channels: 2 }, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
   factionStats: { pact: { helo: true, sonar: 950, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF }, range: 1200, aggroRange: 1800, preferredRange: 1400 } }, // (Kara: the fleet's anti-submarine cruiser — her missiles are for aircraft and submarines)
   mounts: {
@@ -122,7 +123,7 @@ export const cruiser = ship({
   id: 'cruiser', name: 'Missile Cruiser', shortName: 'Cruiser', cost: 850, limit: 2,
   names: { nato: ['Ticonderoga', 'Yorktown', 'Vincennes', 'Valley Forge', 'Thomas S. Gates'], pact: ['Slava', 'Marshal Ustinov', 'Chervona Ukraina'] },
   hull: { length: 173, beam: 17 },
-  stats: { helo: true, hp: 7500, armor: 0.1, speed: 15.5, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 20, radar: RADAR(5200, 35), sonar: 800, depthCharges: DC(), ...AA(700, 0.22, 0.05),
+  stats: { helo: true, hp: 7500, armor: 0.1, speed: 15.5, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 20, radar: RADAR(5200, 35), sonar: 800, depthCharges: DC(), asTorp: ASROC, ...AA(700, 0.22, 0.05),
     defence: { sam: AEGIS, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
   factionStats: { pact: { hp: 8500, sonar: 500, defence: { sam: S300F, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3200 } },
   mounts: {
@@ -144,7 +145,7 @@ export const battleship = ship({
   hull: { length: 262, beam: 33 },
   stats: { hp: 14000, armor: 0.7, speed: 15.5, accel: 0.06, turnRate: 0.05, turretRate: 0.2, radius: 14, height: 30, radar: RADAR(5200, 40), ...AA(800, 0.22, 0.05),
     defence: { ciws: PHALANX, chaff: CHAFF }, range: 5800, aggroRange: 5800, preferredRange: 2200, damage: 2400, splash: 12, pierce: 0.8 },
-  factionStats: { pact: { helo: true, hp: 14000, armor: 0.5, sonar: 800, depthCharges: DC(), defence: { sam: { ...S300F, channels: 6, load: 96 }, point: { ...OSA, channels: 2 }, ciws: AK630, chaff: CHAFF }, range: 6000, aggroRange: 6000, preferredRange: 3500, damage: 260 } },
+  factionStats: { pact: { helo: true, hp: 14000, armor: 0.5, sonar: 800, depthCharges: DC(), asTorp: ASROC, defence: { sam: { ...S300F, channels: 6, load: 96 }, point: { ...OSA, channels: 2 }, ciws: AK630, chaff: CHAFF }, range: 6000, aggroRange: 6000, preferredRange: 3500, damage: 260 } },
   mounts: {
     nato: [MSL({ ...TASM, at: [0, 14, -40], load: 8 }), MSL({ ...HARPOON, at: [0, 14, -60], load: 16 }), gun([0, 13, 96], FWD, G16IN), gun([0, 17, 78], FWD, G16IN), gun([0, 13, -78], AFT, G16IN), gun([11, 12, 10], Math.PI / 2, G5IN), gun([-11, 12, 10], -Math.PI / 2, G5IN)],
     pact: [MSL({ ...GRANIT, at: [0, 12, 70], load: 20, count: 8, reload: 15 }), gun([0, 12, -90], AFT, G130)],
@@ -185,7 +186,7 @@ export const escortCarrier = ship({
   hull: { length: 250, beam: 32 },
   stats: { helo: true, hp: 13000, armor: 0.1, speed: 12, accel: 0.06, turnRate: 0.05, turretRate: 0.4, radius: 13, height: 30, eyeHeight: 28, radar: RADAR(5000, 40), sonar: 600, ...AA(600, 0.2, 0.05),
     defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 1500, aggroRange: 1500, preferredRange: 3200, damage: 180 },
-  factionStats: { pact: { hp: 10000, sonar: 900, depthCharges: DC(), defence: { sam: SHTORM, ciws: AK630, chaff: CHAFF } } },
+  factionStats: { pact: { hp: 10000, sonar: 900, depthCharges: DC(), asTorp: ASROC, defence: { sam: SHTORM, ciws: AK630, chaff: CHAFF } } },
   mounts: {
     nato: [gun([10, 18, 90], FWD, G5IN), gun([-10, 18, -90], AFT, G5IN)],
     pact: [gun([8, 14, -30], AFT, G76)],
@@ -224,10 +225,10 @@ export const submarine = ship({
   names: { nato: ['Los Angeles', 'Dallas', 'Houston', 'Providence', 'Bremerton', 'Jacksonville'], pact: ['K-524', 'K-502', 'K-388', 'K-138', 'K-255', 'K-292'] },
   hull: { length: 110, beam: 10 },
   stats: {
-    submarine: { submerged: 7, dive: 2, periscope: 6, deep: 60 }, hp: 3000, armor: 0.15, speed: 12, accel: 0.1, turnRate: 0.1, turretRate: 0.6, radius: 5, height: 8, eyeHeight: 10, esm: true,
+    submarine: { submerged: 7, dive: 2, periscope: 6, deep: 60 }, passive: 2600, hp: 3000, armor: 0.15, speed: 12, accel: 0.1, turnRate: 0.1, turretRate: 0.6, radius: 5, height: 8, eyeHeight: 10, esm: true,
     sight: 1400, hearing: 3200, range: 4600, aggroRange: 4600, preferredRange: 1600, leash: 60, damage: 0, fireCooldown: 6,
   },
-  factionStats: { pact: { range: 1800, aggroRange: 1800, preferredRange: 1300 } },
+  factionStats: { pact: { range: 1800, aggroRange: 1800, preferredRange: 1300, passive: 2000, hearing: 2600 } }, // (the Victor: a good hunter, not as quiet or as sharp-eared as the Los Angeles)
   mounts: {
     nato: [TUBES([0, -1, 50], 0, { count: 2, range: 1800, reload: 30 }), MSL({ ...HARPOON, at: [0, 1, 40], load: 4, count: 2, reload: 20 })],
     pact: [TUBES([0, -1, 50], 0, { count: 2, range: 1800, reload: 30, wakeless: true })],
@@ -246,7 +247,7 @@ export const missileSub = ship({
   names: { pact: ['K-525', 'K-206', 'K-148'] },
   hull: { length: 154, beam: 18 },
   stats: {
-    submarine: { submerged: 6, dive: 1.6, periscope: 6, deep: 50 }, hp: 6500, armor: 0.25, speed: 10, accel: 0.07, turnRate: 0.07, turretRate: 0.5, radius: 8, height: 10, eyeHeight: 12, esm: true,
+    submarine: { submerged: 6, dive: 1.6, periscope: 6, deep: 50 }, passive: 1800, hp: 6500, armor: 0.25, speed: 10, accel: 0.07, turnRate: 0.07, turretRate: 0.5, radius: 8, height: 10, eyeHeight: 12, esm: true,
     sight: 1400, hearing: 2600, range: 6000, aggroRange: 6000, preferredRange: 3500, leash: 80, damage: 0, fireCooldown: 6,
   },
   mounts: { pact: [MSL({ ...GRANIT, at: [0, 2, 20], load: 24, count: 8, reload: 15 }), TUBES([0, -1, 70], 0, { count: 2, range: 1800, reload: 40 })] },

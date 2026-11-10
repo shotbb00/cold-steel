@@ -1708,6 +1708,8 @@ export class UnitStack {
   }
 
   /** Prefer exposed enemies, the squad's focus target, and whoever we're already shooting. */
+  get _homing() { return (this.__homing ??= Object.values(this.type.mounts ?? {}).flat().some((m) => m.torpedo && m.homing)); }
+
   pickTarget(u) {
     const s = u.stats;
     const terrain = this.world.terrain;
@@ -1727,14 +1729,15 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
-      if ((e.depth ?? 0) > 3 && !s.depthCharges) continue; // a submarine under the surface: only depth charges reach it
+      const asw = s.depthCharges || s.asTorp || this._homing; // (1985: an ASW weapon flown out, a submarine's homing torpedoes)
+      if ((e.depth ?? 0) > 3 && !asw) continue; // a submarine under the surface: only depth charges (or homing torpedoes) reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
-      if (s.depthCharges && (e.depth ?? 0) > 3) score -= 600; // the escort's job: the boat it has found
+      if (asw && (e.depth ?? 0) > 3) score -= 600; // the escort's job (and a hunter-killer submarine's): the boat it has found
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
@@ -2137,6 +2140,29 @@ export class UnitStack {
    * has it on another errand) and drops a pattern where it is (systems/Torpedoes.js charges).
    */
   huntSub(u, t, d, dt) {
+    const g = this.services.game;
+    // 1985: a submarine's homing torpedoes, wire-guided off her bow (no need to turn onto her)
+    const tubes = this.shipMounts(u).filter((m) => m.torpedo && m.homing && !m.out);
+    if (tubes.length && (u.depth ?? 0) <= 60) {
+      for (const m of tubes) {
+        if (m.cd > 0 || d > m.range) continue;
+        m.cd = m.reload;
+        this.mountWorld(u, m.at, _p);
+        g?.torpedoes?.launch(this, _p, t, m);
+        VisibilitySystem.revealShooter(u);
+        break;
+      }
+      return;
+    }
+    // 1985 ships: ASROC / SS-N-14 — a homing torpedo dropped near her from well out
+    const as = u.stats.asTorp;
+    if (as && d < as.range && !((u.asCd ?? 0) > this.world.time)) {
+      u.asCd = this.world.time + as.reload;
+      const k = Math.min(1, 160 / Math.max(1, d));
+      _p.set(t.pos.x + (u.pos.x - t.pos.x) * k, this.world.river?.level ?? 0, t.pos.z + (u.pos.z - t.pos.z) * k);
+      g?.effects?.waterSplash?.(_p, 2);
+      g?.torpedoes?.launch(this, _p, t, { ...as, homing: true, count: 1, range: 900 });
+    }
     const dc = u.stats.depthCharges;
     if (!dc) return;
     if ((!this.ai.ordered || this.ai.state === AIState.ATTACK) && (this.chaseT = (this.chaseT ?? 0) - dt) <= 0) {

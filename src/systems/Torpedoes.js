@@ -8,6 +8,8 @@ import { enemyOf } from '../data/factions.js';
 
 const SPREAD = 0.045;   // rad between the fish of one spread
 const RUN_DEPTH = 0.4;  // m under the surface
+const HOME = 700;       // m: a homing torpedo (1985: `homing`) turns onto its target from this close
+const TURN = 0.6;       // rad/s it can turn
 
 export class Torpedoes {
   constructor(game) {
@@ -50,6 +52,7 @@ export class Torpedoes {
       this.list.push({
         x: from.x + Math.sin(a) * 6, z: from.z + Math.cos(a) * 6, y: level - RUN_DEPTH, dx: Math.sin(a), dz: Math.cos(a),
         speed: m.speed, left: m.range, damage: m.damage, wakeless: !!m.wakeless, faction: src.faction, source: src, fx: Math.random() * 0.2,
+        homing: m.homing ? t : null, // (1985: wire-guided and homing — at her depth, turning onto her)
       });
     }
     this.game.netEvent('torps', this.list.slice(-m.count).map((f) => [Math.round(f.x), Math.round(f.z), Math.round(f.dx * 1000) / 1000, Math.round(f.dz * 1000) / 1000, f.speed, Math.round(f.left), f.wakeless ? 1 : 0, f.faction]));
@@ -62,14 +65,25 @@ export class Torpedoes {
     if (!this.list.length) return;
     const g = this.game;
     const terrain = g.terrain;
+    const level = g.world.river?.level ?? 0;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const f = this.list[i];
+      const h = f.homing;
+      if (h?.alive) { // a homing torpedo: down to her depth, and once close onto her
+        f.y += ((level - Math.max(RUN_DEPTH, h.depth ?? 0)) - f.y) * Math.min(1, dt * 0.5);
+        const dx = h.pos.x - f.x, dz = h.pos.z - f.z, d = Math.hypot(dx, dz);
+        if (d < HOME) {
+          const want = Math.atan2(dx, dz), now = Math.atan2(f.dx, f.dz);
+          const a = now + Math.max(-TURN * dt, Math.min(TURN * dt, Math.atan2(Math.sin(want - now), Math.cos(want - now))));
+          f.dx = Math.sin(a); f.dz = Math.cos(a);
+        }
+      }
       const step = f.speed * dt;
       f.x += f.dx * step;
       f.z += f.dz * step;
       f.left -= step;
       // the wake: bubbles behind it (a Long Lance's barely there)
-      if ((f.fx -= dt) <= 0) {
+      if ((f.fx -= dt) <= 0 && f.y > level - 3) { // (deep down: no wake to see)
         f.fx = f.wakeless ? 0.6 : 0.12;
         g.effects.smoke.spawn(f.x - f.dx * 4, f.y + 0.5, f.z - f.dz * 4, {
           vx: 0, vy: 0.2, vz: 0, size: f.wakeless ? 0.8 : 1.4, grow: 0.8, life: f.wakeless ? 2 : 5, alpha: f.wakeless ? 0.12 : 0.5, color: 0xeef4f6, drag: 1, wind: 0.1,
@@ -140,7 +154,7 @@ export class Torpedoes {
       if (!s.stats.naval || !s.type.hull) continue;
       const { length, beam } = s.type.hull;
       for (const u of s.units) {
-        if (!u.alive || (u.depth ?? 0) > 8) continue; // (a submarine deep down: under it)
+        if (!u.alive || ((u.depth ?? 0) > 8 && f.homing !== u)) continue; // (a submarine deep down: under it — unless it is homing on her)
         const dx = f.x - u.pos.x, dz = f.z - u.pos.z;
         const along = dx * Math.sin(u.yaw) + dz * Math.cos(u.yaw);
         const across = dx * Math.cos(u.yaw) - dz * Math.sin(u.yaw);

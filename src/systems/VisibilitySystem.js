@@ -84,6 +84,10 @@ export class VisibilitySystem {
       const os = o.stats;
       const d = Math.hypot(o.pos.x - u.pos.x, o.pos.z - u.pos.z);
       if (u.revealT > 0 && d < 1400) return true;
+      if (os.passive && (o.depth ?? 0) >= 1) { // a submarine's own sonar, listening (1985): the quieter the boat, the closer
+        const quiet = u.stack.silent ? 0.35 : u.moving ? 0.65 : 0.45;
+        if (d < os.passive * quiet) { u.contactAt = now; return true; }
+      }
       if (os.sonar && (o.depth ?? 0) < 1) {
         const fast = Math.hypot(o.vel?.x ?? 0, o.vel?.z ?? 0) > 12;
         const range = os.sonar * (u.stack.silent ? 0.5 : 1) * (fast ? 0.5 : 1);
