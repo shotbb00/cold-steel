@@ -264,10 +264,11 @@ export class Buildings {
     if (b.collapsed) return;
     const game = this.game;
     b.collapsed = true;
-    // walls slump into a rubble pile: squash the meshes toward the ground
-    for (const m of b.meshes) {
-      m.scale.y = 0.3;
-      m.position.y = b.ground * 0.7;
+    // walls slump into a rubble pile: squash its vertices toward the ground (its range of the tile's shared mesh: world/Props.js finish)
+    for (const { mesh, start, count } of b.meshes) {
+      const p = mesh.geometry.attributes.position;
+      for (let i = start; i < start + count; i++) p.setY(i, p.getY(i) * 0.3 + b.ground * 0.7);
+      p.needsUpdate = true;
     }
     for (const c of b.colliders) c.top = Math.min(c.top, c.y + 0.6 + 0.85);
     for (const s of game.cover.spots) if (s.collider.building === b) { s.height = s.collider.top - s.y; s.interior = null; }

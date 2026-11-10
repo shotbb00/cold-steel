@@ -16,6 +16,7 @@ import { year } from '../data/epoch.js';
 
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const TILED = new Set(['stone', 'plaster']); // textured materials: their texture repeats every TILE m
+const BUILDING_CELL = 150; // m: the tile whose buildings share their meshes (Props.finish)
 const TILE = 2.2;
 
 /** A unit box whose UVs are scaled to the box's real size, so its texture tiles instead of stretching. */
@@ -1018,13 +1019,32 @@ export class PropBuilder {
 
   /** Merge every batch into one mesh per material and add them to the scene. */
   finish() {
-    for (const [k, geos] of this.batches) {
-      const [key, group] = k.split('#');
-      const mesh = new THREE.Mesh(mergeGeometries(geos, false), this.material(key));
+    const add = (geo, key) => {
+      const mesh = new THREE.Mesh(geo, this.material(key));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.scene.add(mesh);
-      if (group !== undefined) this.buildings[+group].meshes.push(mesh);
+      return mesh;
+    };
+    // buildings share a mesh per material with their neighbours in a BUILDING_CELL tile (Stalingrad: 1500 meshes → a few
+    // hundred, every one a cost per frame); each keeps its vertex range there, for the collapse (systems/Buildings.js)
+    const cells = new Map();
+    for (const [k, geos] of this.batches) {
+      const [key, group] = k.split('#');
+      if (group === undefined) { add(mergeGeometries(geos, false), key); continue; }
+      const b = this.buildings[+group];
+      const ck = `${key}@${Math.floor(b.x / BUILDING_CELL)},${Math.floor(b.z / BUILDING_CELL)}`;
+      if (!cells.has(ck)) cells.set(ck, []);
+      cells.get(ck).push({ geo: mergeGeometries(geos, false), b });
+    }
+    for (const [ck, parts] of cells) {
+      const mesh = add(mergeGeometries(parts.map((p) => p.geo), false), ck.split('@')[0]);
+      let start = 0;
+      for (const { geo, b } of parts) {
+        const count = geo.attributes.position.count;
+        b.meshes.push({ mesh, start, count });
+        start += count;
+      }
     }
     this.batches.clear();
   }

@@ -958,6 +958,7 @@ export class CommandSystem {
   /** Place the markers for pv.spots on screen (every frame: the camera moves). */
   drawPreview() {
     const pv = this.preview;
+    if (!pv.spots.length && !pv.shown) return; // (nothing to place, nothing showing: no layout read this frame)
     const terrain = this.surface;
     const cam = this.game.camera;
     const rect = this.game.canvas.getBoundingClientRect();
@@ -980,6 +981,7 @@ export class CommandSystem {
       n++;
     }
     for (let i = n; i < pv.els.length; i++) pv.els[i].hidden = true;
+    pv.shown = n;
   }
 
   /** The selected stacks' routes: from each stack through where it's going and every waypoint after. */

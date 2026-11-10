@@ -174,6 +174,7 @@ export class Quality {
   setResolution(r) {
     const { renderer, post } = this.game;
     this.res = r;
+    if (this.game.babylon) return this.game.babylon.setResolution?.(r); // (Babylon draws: three's canvas and passes needn't reallocate — 9% of a phone's frame)
     renderer.setPixelRatio(r);
     renderer.setSize(this.game.view.w, this.game.view.h);
     post.setPixelRatio(r);
