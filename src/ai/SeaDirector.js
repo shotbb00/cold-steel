@@ -16,10 +16,12 @@
 import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES, getUnitType } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
+import { year } from '../data/epoch.js';
 
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
 const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer'];
+const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
 export class SeaDirector {
@@ -63,8 +65,9 @@ export class SeaDirector {
     const army = this.game.armyOf(this.faction);
     const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(getUnitType(id)));
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
-    for (let tries = 0; tries < ORDER.length; tries++) {
-      const id = ORDER[this.buyIndex % ORDER.length];
+    for (let tries = 0; tries < (year() < 1900 ? ORDER_1806 : ORDER).length; tries++) {
+      const list = year() < 1900 ? ORDER_1806 : ORDER;
+      const id = list[this.buyIndex % list.length];
       if (!allowed(id) || capped(id)) { this.buyIndex++; continue; }
       if (this.state.cp[this.faction] >= unitCost(getUnitType(id), army)) {
         this.state.buy(this.faction, id);
@@ -149,7 +152,16 @@ export class SeaDirector {
     let escort = null;
     for (const s of fleet) {
       const u = s.units[0];
-      if (!u?.alive || u.struck || s.owner) continue; // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
+      if (!u?.alive || u.struck || s.owner) continue;
+      if (s.stats.sail && !s.boardTarget && !u.grappled) { // (1806: a prize to be had — struck, or her crew cut down and his not)
+        const prize = this.foes().filter((f) => f.stats.sail && f.units[0]?.alive && (f.units[0].struck || ((f.units[0].crew ?? 1) < 0.35 && (u.crew ?? 1) > 0.6)) && d(f.units[0].pos) < 1200).sort((a, b) => d(a.units[0].pos) - d(b.units[0].pos))[0];
+        if (prize) { g.orders.run(this.faction, { t: 'board', s: [s.id], target: prize.id }, 'ai'); continue; }
+      }
+      if (s.boardTarget) continue; // (on her way alongside)
+      if (s.stats.fireship) { // (1806: down onto the nearest enemy she can see — the bigger the better)
+        const prey = this.foes().filter((f) => f.stats.sail && f.units[0]?.spotted && !f.units[0].struck).sort((a, b) => d(a.units[0].pos) - (VALUE[a.type.id] ?? 1) * 150 - d(b.units[0].pos) + (VALUE[b.type.id] ?? 1) * 150)[0];
+        if (prey) { this.move(s, prey.units[0].pos.x, prey.units[0].pos.z); continue; }
+      } // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
       const d = (p) => Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
       if (s.stats.carrier) { // back by home, a little toward the fight
         const want = { x: home.x + (target.x - home.x) * 0.15, z: home.z + (target.z - home.z) * 0.15 };

@@ -120,6 +120,7 @@ export class StackLabels {
     this.root = document.getElementById('labels');
     this.items = new Map();
     game.bus.on('stack:removed', (s) => { this.items.get(s)?.el.remove(); this.items.delete(s); });
+    game.bus.on('stack:side', (s) => { this.items.get(s)?.el.remove(); this.items.delete(s); }); // (a prize: her tag in her new side's colours)
     this._v = new THREE.Vector3();
   }
 

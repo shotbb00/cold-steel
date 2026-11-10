@@ -8,6 +8,7 @@
 //   • walking, gait and footfall come from the interpolated motion; renderers, effects, sound,
 //     labels, minimap and HUD then run as in single player
 // Orders go to the host (core/Orders.js); the host's simulation answers in the next snapshots.
+import { sideChanged } from '../entities/sailDamage.js';
 import * as THREE from 'three';
 import { decodeSnapshot, unpackArgs, FLAG, FLAG2 } from './protocol.js';
 import { FX_CALLS, SOUND_CALLS } from './NetHost.js';
@@ -294,6 +295,11 @@ export class NetClient {
       case 'p': this.shot(e[1]); break;
       case 'smoke': g.smoke.add(e[1], e[2], e[3] ?? undefined); break;
       case 'spawn': this.spawn(e.slice(1)); break;
+      case 'side': { // (1806: a ship taken as a prize — entities/sailDamage.js)
+        const s = g.world.stackById(e[1]);
+        if (s) sideChanged(s, e[2]);
+        break;
+      }
       case 'dead': {
         const s = g.world.stackById(e[1]);
         if (s) { for (const u of s.units) if (u.alive) this.kill(s, u); s.netDeadAt = this.renderTime; } // (an older snapshot still in the blend must not bring her back)

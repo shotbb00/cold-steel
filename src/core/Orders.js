@@ -166,6 +166,12 @@ export class Orders {
           }
         }
         return null;
+      case 'board': { // 1806 ships: alongside her and over the side (entities/sailDamage.js)
+        const target = g.world.stackById(cmd.target);
+        if (!target?.alive || target.faction === faction || !target.stats.sail) return null;
+        for (const s of mine(cmd.s)) if (s.stats.sail) { s.boardTarget = target; s.boardT = 0; }
+        return null;
+      }
       case 'radar': // 1985 ships: radar on (sees all a horizon and the islands let it — and every enemy hears it) or off
         for (const s of mine(cmd.s)) if (s.stats.radar) s.radarOn = !!cmd.on;
         return null;

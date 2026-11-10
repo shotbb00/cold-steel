@@ -674,7 +674,7 @@ export class UnitStack {
       maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
       if (s.sail) { // (the wind: where it comes from, how hard it blows — and what's left of her masts; struck, her sails let fly)
         sailUpkeep(this, u, dt);
-        maxSpeed *= sailFactor(u.yaw) * mastDrive(u) * (u.struck ? 0.12 : 1);
+        maxSpeed *= Math.max(s.oars ?? 0, sailFactor(u.yaw) * mastDrive(u)) * (u.struck ? 0.12 : u.grappled ? 0.04 : 1); // (oars: a gunboat's sweeps, whatever the wind)
       }
       if (s.smallCraft) maxSpeed *= 1 - ((this.services.game?.seaState ?? 1) - 1) * 0.55; // (a PT boat in a rough sea: pounding, half speed)
       if (!u.possessed) {
