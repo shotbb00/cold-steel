@@ -36,16 +36,19 @@ export class Sensors {
     const g = this.game;
     const ears = g.world.stacksOf(f).filter((s) => s.alive && s.stats.esm).map((s) => s.units.find((u) => u.alive)).filter((u) => u && (u.depth ?? 0) <= 9);
     const out = [];
-    const listen = (key, x, z) => {
-      const by = ears.filter((u) => Math.hypot(x - u.pos.x, z - u.pos.z) < ESM_REACH).sort((a, b) => Math.hypot(x - a.pos.x, z - a.pos.z) - Math.hypot(x - b.pos.x, z - b.pos.z));
+    const sea = g.world.river?.level ?? 0, terrain = g.world.terrain;
+    // what an island hides it doesn't hear either: a radar's emission (or a launch's flash) needs a line of sight to the mast
+    const clear = (u, x, z, h) => !terrain?.lineOfSight || terrain.lineOfSight(u.pos.x, sea + ((u.depth ?? 0) > 1 ? 2 : u.stats.radar?.height ?? 25), u.pos.z, x, sea + h, z);
+    const listen = (key, x, z, h) => {
+      const by = ears.filter((u) => Math.hypot(x - u.pos.x, z - u.pos.z) < ESM_REACH && clear(u, x, z, h)).sort((a, b) => Math.hypot(x - a.pos.x, z - a.pos.z) - Math.hypot(x - b.pos.x, z - b.pos.z));
       if (by.length) out.push({ key, x, z, by });
     };
     for (const e of g.world.stacksOf(enemyOf(f))) {
       if (!e.alive || !e.stats.radar || e.radarOn === false) continue;
       const eu = e.units.find((x) => x.alive);
-      if (eu && (eu.depth ?? 0) <= 1) listen(e, eu.pos.x, eu.pos.z);
+      if (eu && (eu.depth ?? 0) <= 1) listen(e, eu.pos.x, eu.pos.z, e.stats.radar.height);
     }
-    for (const l of this.launches) if (l.faction !== f && g.time - l.at < 6) listen(l, l.x, l.z);
+    for (const l of this.launches) if (l.faction !== f && g.time - l.at < 6) listen(l, l.x, l.z, 80); // (the booster climbs before it dives to the sea)
     return out;
   }
 

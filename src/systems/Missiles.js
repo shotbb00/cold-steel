@@ -131,6 +131,8 @@ export class Missiles {
       if (s.remote) { if (h || s.left <= -200) this.list.splice(i, 1); continue; } // (a guest: the host says when it ends — 'mslx'; a hit it shows then)
       if (h) { this.impact(s, s.target); this.gone(s, 1); this.list.splice(i, 1); continue; }
       if (s.decoy && Math.hypot(s.decoy.x - s.pos.x, s.decoy.z - s.pos.z) < 15) { this.splash(s); this.gone(s, 0); this.list.splice(i, 1); continue; } // into the chaff: the sea
+      const ground = g.world.terrain.heightAt(s.pos.x, s.pos.z);
+      if (ground > s.pos.y) { g.effects.explosion({ x: s.pos.x, y: ground, z: s.pos.z }, 1, { ground: true, fire: 0.6 }); this.gone(s, 0); this.list.splice(i, 1); continue; } // into an island: no missile flies through the land
       if (s.left <= 0 || s.pos.y < s.level - 1 || (s.target == null && s.decoy == null && toAim < 20 && s.age > CLIMB)) { this.splash(s); this.gone(s, 0); this.list.splice(i, 1); }
     }
   }
