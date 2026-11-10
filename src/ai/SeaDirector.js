@@ -149,7 +149,7 @@ export class SeaDirector {
     let escort = null;
     for (const s of fleet) {
       const u = s.units[0];
-      if (!u?.alive || s.ai.ordered) continue; // (a player's ships in co-op are theirs to steer)
+      if (!u?.alive || s.owner) continue; // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
       const d = (p) => Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
       if (s.stats.carrier) { // back by home, a little toward the fight
         const want = { x: home.x + (target.x - home.x) * 0.15, z: home.z + (target.z - home.z) * 0.15 };

@@ -7,7 +7,7 @@
 //   mounts with `missile`: anti-ship missiles, `load` aboard, `count` a salvo, all-round launchers
 // Models: models/ships1985.js (the Iowa still her 1945 self). The carriers launch the air missions they
 // have aboard (systems/AirStrike.js: stats.carrier.airGroup); the rest come in from the shore.
-import { buildPerry, buildKrivak, buildSpruance, buildSovremenny, buildVirginia, buildKara, buildTiconderoga, buildSlava, buildIowa85, buildKirov, buildNimitz, buildKiev, buildTarawa, buildMoskva, buildPegasus, buildTarantul, buildLosAngeles, buildVictor, buildOscar, buildNewport, buildRopucha } from '../models/ships1985.js';
+import { buildPerry, buildKrivak, buildSpruance, buildSovremenny, buildVirginia, buildKara, buildTiconderoga, buildSlava, buildIowa85, buildKirov, buildNimitz, buildKiev, buildTarawa, buildMoskva, buildPegasus, buildTarantul, buildLosAngeles, buildLosAngelesVLS, buildVictor, buildOscar, buildNewport, buildRopucha } from '../models/ships1985.js';
 
 // stats.helo: she carries a helicopter (Orders 'helo') — the height of her landing pad above the water
 const NAVAL = { naval: true, eyeHeight: 20, aimHeight: 4, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1, esm: true, sight: 1600 };
@@ -167,7 +167,7 @@ export const carrier = ship({
   stats: { carrier: { deck: 19.4, deckLen: 300, airGroup: { seaCap: 3, seaStrike: 3, aew: 1 } }, // her air wing (systems/AirStrike.js: off her deck, rearmed aboard)
     hp: 22000, armor: 0.3, speed: 16, accel: 0.06, turnRate: 0.045, turretRate: 0.4, radius: 16, height: 34, eyeHeight: 32, radar: RADAR(3200, 45), ...AA(700, 0.2, 0.05),
     defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 300, aggroRange: 2000, preferredRange: 3500, damage: 0 },
-  factionStats: { pact: { helo: 16.4, carrier: { deck: 16.4, deckLen: 180, deckZ: -50, airGroup: { seaCap: 2 } }, hp: 15000, armor: 0.2, sonar: 700, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3500 } }, // (the Kiev: her Yak-38s)
+  factionStats: { pact: { helo: 16.4, carrier: { deck: 16.4, deckLen: 180, deckZ: -50, airGroup: { seaCap: 2, seaStrike: 2 } }, hp: 15000, armor: 0.2, sonar: 700, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3500 } }, // (the Kiev: her Yak-38s)
   mounts: {
     nato: [],
     pact: [MSL({ ...BAZALT, at: [0, 12, 100], load: 8, count: 4, reload: 12 })],
@@ -244,24 +244,29 @@ export const submarine = ship({
 
 export const missileSub = ship({
   fleet: 'under',
-  id: 'missileSub', name: 'Missile Submarine', shortName: 'Missile sub', cost: 1100, limit: 1, armies: ['sov', 'nva'], // (the Soviet Navy only: the US answer is to hunt her)
-  names: { pact: ['K-525', 'K-206', 'K-148'] },
+  id: 'missileSub', name: 'Missile Submarine', shortName: 'Missile sub', cost: 1100, limit: 1,
+  names: { nato: ['Chicago', 'Key West', 'Oklahoma City', 'Louisville'], pact: ['K-525', 'K-206', 'K-148'] },
   hull: { length: 154, beam: 18 },
   stats: {
     submarine: { submerged: 6, dive: 1.6, periscope: 6, deep: 50 }, passive: 1800, hp: 6500, armor: 0.25, speed: 10, accel: 0.07, turnRate: 0.07, turretRate: 0.5, radius: 8, height: 10, eyeHeight: 12, esm: true,
     sight: 1400, hearing: 2600, range: 6000, aggroRange: 6000, preferredRange: 3500, leash: 80, damage: 0, fireCooldown: 6,
   },
-  mounts: { pact: [MSL({ ...GRANIT, at: [0, 2, 20], load: 24, count: 8, reload: 15 }), TUBES([0, -1, 70], 0, { count: 2, range: 1800, reload: 40 })] },
+  factionStats: { nato: { hp: 3200, armor: 0.15, speed: 12, accel: 0.1, turnRate: 0.1, radius: 5, height: 8, eyeHeight: 10, passive: 2600, hearing: 3200, range: 5800, aggroRange: 5800 } }, // (the Los Angeles with her VLS: the attack boat, twelve Tomahawks in the bow)
+  mounts: {
+    pact: [MSL({ ...GRANIT, at: [0, 2, 20], load: 24, count: 8, reload: 15 }), TUBES([0, -1, 70], 0, { count: 2, range: 1800, reload: 40 })],
+    nato: [MSL({ ...TASM, at: [0, 2, 36], load: 12, count: 4, reload: 15 }), TUBES([0, -1, 50], 0, { count: 2, range: 1800, reload: 30 })],
+  },
   camera: { distance: 120, height: 30, shoulder: 0 },
-  models: { pact: buildOscar, nato: buildOscar },
+  models: { pact: buildOscar, nato: buildLosAngelesVLS },
   variants: {
+    nato: { name: 'Los Angeles-class (VLS) submarine', weapon: '12 Tomahawk (TASM), Mk 48 torpedoes', text: 'The Flight II boat: twelve vertical tubes in her bow, anti-ship Tomahawks fired from periscope depth at what the fleet has found — then gone, an attack submarine again.' },
     pact: { name: 'Oscar-class cruise missile submarine', weapon: '24 Granit (SS-N-19), torpedoes', text: 'A carrier killer: twenty-four Granits fired from periscope depth, far beyond what the carrier group sees. Find her before she fires.' },
   },
 });
 
 export const transport = ship({
   fleet: 'under',
-  id: 'transport', name: 'Landing Ship', shortName: 'Landing ship', cost: 260,
+  id: 'transport', name: 'Landing Ship', shortName: 'Landing ship', cost: 260, hidden: true, // (for the coastal battles, soon: no beach to land on at sea)
   names: { nato: ['Newport', 'Manitowoc', 'Sumter', 'Fresno', 'Peoria', 'Frederick'], pact: ['BDK-91', 'BDK-98', 'BDK-101', 'BDK-181', 'BDK-200', 'BDK-232'] },
   hull: { length: 160, beam: 21 },
   stats: { landing: true, hp: 5000, armor: 0.05, speed: 10, accel: 0.06, turnRate: 0.06, turretRate: 0.6, radius: 9, height: 16, radar: RADAR(2600, 22), ...AA(500, 0.15, 0.03),

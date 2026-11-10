@@ -754,8 +754,9 @@ export class UnitStack {
     if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
       u.navT = 0.3 + Math.random() * 0.2;
       if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.navFoot, u.radius)) u.path = null;
-      else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > 2) {
-        const p = nav.path(u.pos, dest, this.navFoot, u.radius, LOCAL);
+      else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > (this.stats.naval ? 40 : 2)) {
+        // a ship: the whole sea searched (LOCAL gives up before the way round an island, and she ran for the nearest shore) — planned again only when her goal moved 40 m
+        const p = nav.path(u.pos, dest, this.navFoot, u.radius, this.stats.naval ? undefined : LOCAL);
         u.path = p && { to: { x: dest.x, z: dest.z }, version: nav.version, pts: p.pts, i: 0, reached: p.reached };
       }
     }

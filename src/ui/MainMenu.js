@@ -182,7 +182,7 @@ const NAVIES = { 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato:
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
 const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
-const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind];
+const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind] ?? KINDS[kind]?.label; // (1985 at sea: the powers' own labels — Missile strike, Fighter cover…)
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
 function aircraftRows(kind, faction, army) {

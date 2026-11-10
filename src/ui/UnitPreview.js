@@ -212,6 +212,7 @@ export class UnitPreview {
       rig.root.position.set(0, (kind !== 'heli' && kind !== 'lift' ? 3 : 2.6) + Math.sin(t * 1.3) * 0.12, 0);
       rig.root.rotation.set(fly ? (kind !== 'heli' && kind !== 'lift' ? 0.05 : 0.14) : 0, 0, fly ? Math.sin(t * 0.5) * 0.35 : Math.sin(t * 0.9) * 0.03, 'YXZ');
       if (rig.rotor) rig.rotor.rotation.y += dt * (type.rotorSpeed ?? 25);
+      if (rig.rotor2) rig.rotor2.rotation.y -= dt * (type.rotorSpeed ?? 25); // (a Kamov's coaxial pair: the other way)
       if (rig.tailRotor) rig.tailRotor.rotation.x += dt * 70;
     }
     if (this.stack) {

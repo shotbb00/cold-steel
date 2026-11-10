@@ -162,14 +162,14 @@ export const KINDS = {
     swath: 600, hold: 40,
   },
   // 1985 at sea (data/air85sea.js): off a carrier that has the mission aboard, else in from the map edge
-  // (`deck: 'optional'` — from the shore: the Backfires, the Orions, the Kola fighters)
+  // (the jets fly off a carrier that has them aboard, like 1945's; `deck: 'optional'` — the patrol planes from the shore: the Orions, the Mays, the Bears)
   seaStrike: { // stand-off missile strike: in to `standoff` m from the spot, every plane fires, home (Sortie.update)
-    aircraft: SEA_STRIKE, sea: true, deck: 'optional', flight: 2, label: 'Missile strike', key: 'J', cost: 200, cooldown: 120, delay: 10,
+    aircraft: SEA_STRIKE, sea: true, flight: 2, label: 'Missile strike', key: 'J', cost: 200, cooldown: 120, delay: 10,
     approach: 3600, cruiseAlt: 160, attackAlt: 120, cruiseSpeed: 170, attackSpeed: 170,
     rocketsFrom: 2400, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0.5, pitchDown: 0,
   },
   seaCap: {
-    aircraft: SEA_CAP, sea: true, deck: 'optional', flight: 2, label: 'Fighter cover', key: 'I', cost: 130, cooldown: 90, delay: 8,
+    aircraft: SEA_CAP, sea: true, flight: 2, label: 'Fighter cover', key: 'I', cost: 130, cooldown: 90, delay: 8,
     approach: 2400, cruiseAlt: 320, attackAlt: 320, cruiseSpeed: 180, attackSpeed: 160,
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0,
     orbit: 450, station: 100, aam: { count: 6, range: 1600, speed: 520, pk: 0.65, hits: 99, every: 3 },

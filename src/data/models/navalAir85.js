@@ -149,11 +149,12 @@ export const buildTu95 = (mats) => mount('tu95', mats, () => M([
   body([[23, 3.9, 0.3, 0.2], [21.4, 4.25, 1.1, 0.4], [19.6, 4.2, 1.1, 0.35]], { color: GLASS }),
   body([[6, 1.4, 1.6, 0.4], [3, 0.9, 2.6, 0.9], [-1, 1.2, 1.8, 0.5]], { color: SOV_NAVY, ...C }),                     // the belly radome (Big Bulge)
   ...pair((s) => surface([[s * 1.5, 2.6, 4.0, 7.0, 0.5], [s * 25, 2.0, -12, 2.6, 0.15]], { color: SOV_NAVY, ...C })),
-  ...pair((s) => [0.3, 0.6].map((k) => nacelle(s * 25 * k, 2.6, 6.5 - k * 16, 0.5 - k * 16, 0.85, SOV_NAVY))),
+  // the four nacelles under the wing, reaching well ahead of its leading edge (they were inside it): [x, y, front, back]
+  ...pair((s) => [[7.5, 2.15, 7.8, -4.0], [15, 1.95, 2.4, -8.4]].map(([x, y, z0, z1]) => nacelle(s * x, y, z0, z1, 0.85, SOV_NAVY))),
   ...pair((s) => surface([[s * 1.2, 3.4, -19, 4.0, 0.2], [s * 7.0, 3.4, -22.5, 1.8, 0.08]], { color: SOV_NAVY, ...C })),
   fin([[3.4, -17.5, 6.0, 0.24], [9.0, -22.5, 2.6, 0.12]], { color: SOV_NAVY, ...C }),
   ...pair((s) => mark('sov', s * 0.13, 7.2, -20.5, 0.65)),
-]), { gun: [0, 2.6, -25], props: [[-7.5, 2.6, 2.5], [-15, 2.6, -2.3], [7.5, 2.6, 2.5], [15, 2.6, -2.3]], blades: 4, r: 2.8, contra: true });
+]), { gun: [0, 2.6, -25], props: [[-7.5, 2.15, 8.4], [-15, 1.95, 3.0], [7.5, 2.15, 8.4], [15, 1.95, 3.0]], blades: 4, r: 2.8, contra: true });
 
 // ---------------------------------------------------------------- ships' helicopters (KINDS.helo)
 //   SH-60B Seahawk  the Hawk in Navy grey: the chin radome, the sonobuoy launcher on the left, the MAD bird

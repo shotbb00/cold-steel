@@ -582,7 +582,7 @@ export const buildRopucha = ship(() => {
     ...house(c, 0, fb + 8, -2, 10, 3, 8, 1.6),
     ...lattice(c, 0, fb + 8, -10, 10, 3.4, [headNet]),
     ...sovFunnel(c, 0, fb + 8, -18, 6, 8, 4),
-    box(13, 0.4, 36, { y: fb, z: 26, color: c.deck }),
+    box(12, 0.4, 24, { y: fb, z: 18, color: c.deck }),                       // the vehicle deck's hatch plate: ending behind the gun, where the bow still has the beam for it
     ...[-1, 1].map((s) => boat(c, s * 7, fb + 1, -24, 6.5, s)),
   ]);
   const twin57 = gun76(c, true);
@@ -596,13 +596,15 @@ export const buildRopucha = ship(() => {
  * its masts, planes on the sail (`sailPlanes`) or at the bow, the cruciform tail and its propeller;
  * `pod` the towed-array pod on the upper fin (Victor), `lids` missile hatches either side (Oscar).
  */
-function modernSub(c, { len, beam, sail: [sl, sh, sz], sailPlanes = true, pod = false, lids: nLids = 0, wide = 1 }) {
+function modernSub(c, { len, beam, sail: [sl, sh, sz], sailPlanes = true, pod = false, lids: nLids = 0, wide = 1, vls = 0 }) {
   const parts = [];
   const cy = -beam * 0.3;
   const secs = [];
+  const radius = (t) => (beam / 2) * (t > 0.86 ? Math.sqrt(Math.max(0.02, 1 - ((t - 0.86) / 0.14) ** 2)) : t < 0.45 ? Math.max(0.06, (t / 0.45) ** 0.7) : 1); // t: stern … bow
+  const radiusAt = (z) => radius(Math.min(1, Math.max(0, (z + len / 2) / len)));
   for (let k = 0; k <= 28; k++) {
-    const t = k / 28; // stern … bow
-    const r = (beam / 2) * (t > 0.86 ? Math.sqrt(Math.max(0.02, 1 - ((t - 0.86) / 0.14) ** 2)) : t < 0.45 ? Math.max(0.06, (t / 0.45) ** 0.7) : 1);
+    const t = k / 28;
+    const r = radius(t);
     secs.push([0, cy, -len / 2 + t * len, r * wide, r, 2]);
   }
   parts.push(loft(secs, { color: c.hull, surf: 'rubber' }, 20));
@@ -620,16 +622,26 @@ function modernSub(c, { len, beam, sail: [sl, sh, sz], sailPlanes = true, pod = 
   else parts.push(...[-1, 1].map((s) => P.box(3.4, 0.3, 2.4, { x: s * (beam / 2 * wide + 1.4), y: cy + 0.5, z: len * 0.36, color: c.upper })));
   // the tail: four fins, the propeller behind them
   const tz = -len / 2 + 5;
-  parts.push(P.box(0.4, 6, 5, { y: cy + 3, z: tz, color: c.upper }), P.box(0.4, 5, 5, { y: cy - 2.5, z: tz, color: c.upper }), P.box(beam * wide + 4, 0.4, 5, { y: cy, z: tz, color: c.upper }));
+  const up = Math.max(radiusAt(tz) + 1.5, -cy - 0.3); // (the upper rudder: up to just under the surface — above it, over the drowned stern, it stood alone in the sea)
+  parts.push(P.box(0.4, up, 5, { y: cy + up / 2, z: tz, color: c.upper }), P.box(0.4, 5, 5, { y: cy - 2.5, z: tz, color: c.upper }), P.box(beam * wide + 4, 0.4, 5, { y: cy, z: tz, color: c.upper }));
   parts.push(P.cyl(1.4, 0.6, 1.2, { y: cy, z: -len / 2 + 0.4, rx: Math.PI / 2, color: 0x7a6040, surf: 'metal' }, 7));
-  if (pod) parts.push(P.capsule(0.9, 5, { y: cy + 6.4, z: tz - 1, rx: Math.PI / 2, color: c.upper }));
+  if (pod) parts.push(P.capsule(0.9, 5, { y: cy + up + 0.8, z: tz - 1, rx: Math.PI / 2, color: c.upper })); // (on top of the upper rudder)
+  // the missile lids along her back, each on the hull where it is (the bow narrowed away under the last of them)
+  const lidStep = Math.min(3.6, (len / 2 - 10 - (sz + sl / 2 + 4)) / Math.max(1, nLids - 1));
   for (let i = 0; i < nLids; i++) for (const s of [-1, 1]) {
-    const z = sz + sl / 2 + 4 + i * 3.6;
-    parts.push(P.box(2.4, 0.15, 2.8, { x: s * beam * wide * 0.32, y: top - 0.5, z, rz: s * -0.35, color: 0x2c2e30 }));
+    const z = sz + sl / 2 + 4 + i * lidStep;
+    const r = radiusAt(z);
+    parts.push(P.box(2.4, 0.15, 2.8, { x: s * r * wide * 0.32, y: cy + r - 0.35, z, rz: s * -0.35, color: 0x2c2e30 }));
+  }
+  // vertical launch tubes in the bow (the Los Angeles Flight II: twelve Tomahawks), hatches flush with the hull
+  for (let i = 0; i < vls; i++) {
+    const z = sz + sl / 2 + 3 + Math.floor(i / 2) * 1.6, r = radiusAt(z);
+    parts.push(P.cyl(0.55, 0.55, 0.2, { x: (i % 2 ? 1 : -1) * 0.75, y: cy + r - 0.02, z, color: 0x2c2e30 }, 10));
   }
   return merge(parts);
 }
 
 export const buildLosAngeles = sub(() => modernSub(SUB, { len: 110, beam: 10, sail: [12, 6, 26] }));
 export const buildVictor = sub(() => modernSub(SUB, { len: 106, beam: 10.6, sail: [14, 4.6, 6], sailPlanes: false, pod: true }));
+export const buildLosAngelesVLS = sub(() => modernSub(SUB, { len: 110, beam: 10, sail: [12, 6, 26], vls: 12 }));
 export const buildOscar = sub(() => modernSub(SUB, { len: 154, beam: 13, sail: [24, 6, 16], sailPlanes: false, lids: 12, wide: 1.3 }));
