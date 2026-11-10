@@ -37,6 +37,7 @@ import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
+import { sailFactor, sailCourse } from './sailing.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
 
@@ -134,7 +135,9 @@ function shipName(type, faction, world) {
   const i = used.get(key) ?? 0;
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
-  return faction === 'nato' && !n.startsWith('SS ') ? `USS ${n}` : n; // (a merchantman is SS already)
+  if (n.startsWith('SS ')) return n; // (a merchantman is SS already)
+  const pre = year() < 1900 ? { pact: 'HMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; later the US Navy's USS)
+  return pre ? `${pre} ${n}` : n;
 }
 
 export class UnitStack {
@@ -611,8 +614,9 @@ export class UnitStack {
     const want = Math.hypot(w.x, w.z);
     if (want < 0.05) { w.set(0, 0, 0); return; }
     const s = u.stats;
-    const heading = Math.atan2(w.x, w.z);
+    let heading = Math.atan2(w.x, w.z);
     if (s.naval) { // a ship: the rudder bites only with way on, and it keeps going round the turn
+      if (s.sail) heading = sailCourse(u, heading); // (under sail: no closer than the wind allows — a goal to windward by tacking, entities/sailing.js)
       const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
       const diff = angleDelta(u.yaw, heading);
       const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1);
@@ -667,6 +671,7 @@ export class UnitStack {
       if (!u.alive) return;
       maxSpeed *= 1 - (u.flood ?? 0) * 0.6;
       maxSpeed *= SHIP_SPEEDS[this.shipSpeed]?.k ?? 1;
+      if (s.sail) maxSpeed *= sailFactor(u.yaw); // (the wind: where it comes from, how hard it blows)
       if (s.smallCraft) maxSpeed *= 1 - ((this.services.game?.seaState ?? 1) - 1) * 0.55; // (a PT boat in a rough sea: pounding, half speed)
       if (!u.possessed) {
         this.keepStation(u, dt);

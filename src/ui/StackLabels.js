@@ -77,7 +77,7 @@ export function callsign(stack) {
   const name = stack.name;
   if (callsignCache.has(name)) return callsignCache.get(name);
   const num = name.match(/\s(\d+)$/)?.[1] ?? '';
-  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|SS) /, ''); // (a ship: her name)
+  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|HMS|SS) /, ''); // (a ship: her name)
   const cls = base.match(/^(\S+?)-class\b/);
   if (cls) base = cls[1];
   else {

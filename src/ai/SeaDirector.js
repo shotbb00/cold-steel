@@ -193,7 +193,7 @@ export class SeaDirector {
       // badly hurt in sight of the enemy: a destroyer or escort hides behind her own smoke
       if (s.stats.smokeGen && s.hpRatio < 0.5 && u.target && !(s.smokeReady > g.world.time)) g.orders.run(this.faction, { t: 'shipSmoke', s: [s.id] }, 'ai');
       // cruising to a far objective: zig-zag (a submarine's torpedo finds water); in a fight: steady, the guns need it
-      const cruising = !u.target && d(target) > 900;
+      const cruising = !u.target && d(target) > 900 && !s.stats.sail; // (not under sail: the wind sets her course — and no submarines yet to dodge)
       if (!!s.zigzag !== cruising) g.orders.run(this.faction, { t: 'zigzag', s: [s.id], on: cruising ? 1 : 0 }, 'ai');
       if (u.target && d(u.target.pos) < (s.stats.range ?? 2000) * 0.9) continue; // in a fight already: let the guns work
       if (d(target) > target.radius * 0.6) {
