@@ -256,7 +256,7 @@ export const transport = ship({
   models: { nato: buildLiberty, pact: buildMaru },
   variants: {
     nato: { name: 'Liberty ship transport', weapon: 'one 4-inch gun, 20 mm', text: 'Troops and stores for the islands: barely armed and slow — but the landing parties she carries hold a zone, and bring in command points while they hold it.' },
-    pact: { name: 'Army transport (Maru)', weapon: 'one gun, landing barges', text: 'The Imperial Army\'s troopship with its landing barges: slow and soft, but the men aboard hold a zone and bring in command points.' },
+    pact: { name: 'Maru army transport', weapon: 'one gun, landing barges', text: 'The Imperial Army\'s troopship with its landing barges: slow and soft, but the men aboard hold a zone and bring in command points.' },
   },
 });
 

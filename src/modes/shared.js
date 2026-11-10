@@ -70,7 +70,7 @@ export function makeBuyer(game, state) {
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
     const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)
     const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}${kitted ? ` (${KITS[kitted].short})` : ''}`;
-    const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, name);
+    const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
     if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
     game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);

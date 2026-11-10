@@ -11,6 +11,7 @@
 // and counter-flood when she lists. Click the lit one again: all alike.
 import * as THREE from 'three';
 import { RANKS } from '../entities/UnitStack.js';
+import { forArmy } from '../data/factions.js';
 
 const RANK_NAMES = RANKS.map((r) => r.name);
 
@@ -87,8 +88,13 @@ export function callsign(stack) {
     if (words.length === 2 && DESIGNATION.test(words[0]) && /^[A-Z][a-z]/.test(words[1]) && !GENERIC.test(words[1])) base = words[1]; // a designation and a name: the name
     if (/escort$/.test(base) && base.split(' ').length > 1) base = base.split(' ')[0]; // Kaibōkan escort
   }
-  if (base.length > 18) base = stack.type.shortName ?? base.split(' ')[0];
-  const out = num ? `${base} ${num}` : base;
+  if (base.length > (stack.type.names ? 22 : 18)) base = stack.type.shortName ?? base.split(' ')[0];
+  let out = num ? `${base} ${num}` : base;
+  if (stack.type.names) { // a warship: her name and her class ("Johnston · Fletcher")
+    const v = forArmy(stack.type.variants, stack.army, stack.faction)?.name ?? '';
+    const cls = (v.match(/^(.+?)-class\b/)?.[1] ?? v.match(/^[A-Z0-9][^\s]*(\s[A-Z0-9][^\s]*)*/)?.[0] ?? '').replace('Oliver Hazard ', ''); // (else the leading capitalised words: "Elco PT", "Type B1")
+    if (cls && !base.includes(cls)) out += ` · ${cls}`; // (the class's lead ship, or "Gyoraitei 14": already says it)
+  }
   callsignCache.set(name, out);
   return out;
 }
