@@ -4,17 +4,29 @@
 //   reserve  the cavalry reserve: a squadron of heavy horse rides in from your edge, charges the
 //            enemy nearest the spot, and rides back off the field (an "air strike" on horseback)
 //   guard    the Guard, once a battle: two veteran companies march in from your base to the spot
+// At sea (a sea map: `sea` powers instead of the land's):
+//   signal   'Engage the enemy more closely': for SIGNAL s every ship of yours reloads faster and holds out longer
+//   fireship a fireship comes down the wind from upwind of the spot onto it (entities/sailDamage.js fireship)
+//   squadron once a battle: two 74s come in from your edge to the spot
 // call(faction, kind, x, z) spends command points and starts the cooldown; false if it can't.
 // The AI side uses them too (update: think()). Host only — what they do reaches a guest as usual.
 import { enemyOf } from '../data/factions.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { year } from '../data/epoch.js';
+import { windFrom } from '../entities/sailing.js';
+
+const SIGNAL = 60; // s the close-action signal holds
 
 export const POWERS_1806 = {
   battery: { label: 'Grand battery', icon: 'flare', key: 'barrage', cost: 120, cooldown: 120, tip: 'Every gun of yours in reach fires three rounds on the spot' },
   reserve: { label: 'Cavalry charge', icon: 'charge', key: 'jet', cost: 260, cooldown: 200, tip: 'A squadron of heavy horse rides in, charges the enemy nearest the spot, and rides off again' },
   guard: { label: 'The Guard', icon: 'reinforce', key: 'lift', cost: 350, once: true, tip: 'Once a battle: two veteran companies of the Guard march in to the spot' },
+  signal: { sea: true, label: 'Close action', icon: 'flare', key: 'barrage', cost: 120, cooldown: 180, tip: '"Engage the enemy more closely": for a minute every ship of yours reloads faster and holds out longer before she strikes' },
+  fireship: { sea: true, label: 'Fireship', icon: 'charge', key: 'jet', cost: 180, cooldown: 150, tip: 'A fireship comes down the wind from upwind onto the spot: what she touches catches fire' },
+  squadron: { sea: true, label: 'Reserve squadron', icon: 'reinforce', key: 'lift', cost: 900, once: true, tip: 'Once a battle: two ships of the line come in from your edge to the spot' },
 };
+/** Whether a power belongs to this battle: the sea's three on a sea map, the land's three ashore. */
+export const powerHere = (k, game) => !!POWERS_1806[k]?.sea === !!game.world.river?.sea;
 
 export class Powers1806 {
   constructor(game) {
@@ -31,7 +43,7 @@ export class Powers1806 {
 
   call(f, k, x, z) {
     const g = this.game, P = POWERS_1806[k];
-    if (!P) return false;
+    if (!P || !powerHere(k, g)) return false;
     if (!this.ready(f, k)) return g.tell(f, `${P.label} not ready`) ?? false;
     if (k === 'battery' && !this.gunsFor(f, x, z).length) return g.tell(f, 'Grand battery: no guns in reach') ?? false;
     if (!g.spendFrom('support', f, P.cost)) return g.tell(f, `Not enough ${g.poolName('support')} (${P.cost})`) ?? false;
@@ -85,6 +97,33 @@ export class Powers1806 {
     g.tellBoth(f, 'The cavalry reserve is coming up', 'Enemy cavalry coming on!');
   }
 
+  /** Close action: SIGNAL s of faster broadsides and stouter hearts (UnitStack updateShipWeapons, sailDamage strike). */
+  signal(f) {
+    (this.signalUntil ??= {})[f] = this.game.time + SIGNAL;
+    for (const s of this.game.world.stacksOf(f)) if (s.stats.sail) s.morale = Math.min(1, s.morale + 0.2);
+    this.game.tellBoth(f, '"Engage the enemy more closely" — the signal is flying', 'The enemy flagship signals close action!');
+  }
+  signalled(f) { return (this.signalUntil?.[f] ?? 0) > this.game.time; }
+
+  /** A fireship from upwind of the spot, steered down onto it. */
+  fireship(f, x, z) {
+    const g = this.game, a = windFrom(), from = g.world.clampToBounds({ x: x + Math.sin(a) * 700, z: z + Math.cos(a) * 700 });
+    const s = g.spawnStack('fireship', f, from, a + Math.PI);
+    if (!s) return;
+    s.ai.moveTo({ x, z }, { ordered: false });
+    g.tellBoth(f, 'A fireship is coming down on them', 'A fireship bearing down on us!');
+  }
+
+  /** The reserve squadron: two 74s in from our edge. */
+  squadron(f, x, z) {
+    const g = this.game, from = this.edge(f);
+    for (let i = 0; i < 2; i++) {
+      const s = g.spawnStack('cruiser', f, { x: from.x + (i - 0.5) * 260, z: from.z }, Math.atan2(x - from.x, z - from.z));
+      if (s) s.ai.moveTo({ x: x + (i - 0.5) * 200, z }, { ordered: false });
+    }
+    g.tellBoth(f, 'The reserve squadron is coming up', 'Enemy sail on the horizon — a fresh squadron!');
+  }
+
   guard(f, x, z) {
     const g = this.game, base = g.world.bases[f];
     for (let i = 0; i < 2; i++) {
@@ -127,9 +166,20 @@ export class Powers1806 {
     return f !== g.playerFaction;
   }
 
+  thinkSea(f) {
+    const g = this.game, cp = g.modeState?.cp?.[f] ?? 0;
+    const mine = g.world.stacksOf(f).filter((s) => s.stats.sail && !s.units[0]?.struck), foes = g.world.stacksOf(enemyOf(f)).filter((e) => e.stats.sail && !e.units[0]?.struck && e.units[0]?.spotted);
+    if (!foes.length) return;
+    if (this.ready(f, 'signal') && cp >= POWERS_1806.signal.cost && mine.filter((s) => s.units[0]?.target).length >= 2) { this.call(f, 'signal'); return; }
+    const big = foes.slice().sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0))[0];
+    if (this.ready(f, 'fireship') && cp >= POWERS_1806.fireship.cost + 150) { this.call(f, 'fireship', big.centroid.x, big.centroid.z); return; }
+    if (mine.length < foes.length * 0.7 && this.ready(f, 'squadron') && cp >= POWERS_1806.squadron.cost) this.call(f, 'squadron', big.centroid.x, big.centroid.z);
+  }
+
   /** The AI's use of the powers: guns on massed enemies, the reserve on foot caught out of square, the Guard when it's going badly. */
   think(f) {
     const g = this.game;
+    if (g.world.river?.sea) return this.thinkSea(f);
     const foes = g.world.stacksOf(enemyOf(f)).filter((e) => e.alive && !e.stats.loose && !e.stats.structure && !e.autonomous && e.units.some((u) => u.alive && u.spotted));
     if (!foes.length) return;
     const cp = g.modeState?.cp?.[f] ?? 0;

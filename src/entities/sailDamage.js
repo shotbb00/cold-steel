@@ -101,7 +101,7 @@ export function sailUpkeep(st, u, dt) {
   if (beaten <= 0) return;
   if (!st.world.stacksOf(st.faction === 'nato' ? 'pact' : 'nato').some((e) => e.stats.naval && !e.units[0]?.struck && Math.hypot(e.centroid.x - u.pos.x, e.centroid.z - u.pos.z) < 1500)) return; // (no enemy near to strike to)
   const flag = st.world.stacksOf(st.faction).some((f) => f !== st && f.stats.flagship && !f.units[0]?.struck && Math.hypot(f.centroid.x - u.pos.x, f.centroid.z - u.pos.z) < FLAG_REACH);
-  const grit = (st.faction === 'pact' ? 0.6 : 1) * (flag ? 0.6 : 1); // (the Royal Navy fought on longer; the admiral's flag in sight, everyone did)
+  const grit = (st.faction === 'pact' ? 0.75 : 1) * (flag ? 0.6 : 1) * (st.services.game?.powers?.signalled?.(st.faction) ? 0.5 : 1); // (the Royal Navy fought on longer; the admiral's flag in sight, everyone did)
   if (Math.random() < dt * beaten * 0.2 * grit * (1.5 - st.morale)) strike(st, u);
 }
 

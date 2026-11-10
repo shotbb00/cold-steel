@@ -79,8 +79,8 @@ export default {
   points,
 
   spawns: {
-    nato: [{ unit: 'cruiser', x: -700, z: 1700, facing: Math.PI }, { unit: 'cruiser', x: -300, z: 1700, facing: Math.PI }, { unit: 'cruiser', x: 100, z: 1700, facing: Math.PI }],
-    pact: [{ unit: 'cruiser', x: -500, z: -1700, facing: 0 }, { unit: 'cruiser', x: -500, z: -1850, facing: 0 }, { unit: 'cruiser', x: -100, z: -1700, facing: 0 }],
+    nato: [{ unit: 'cruiser', x: -700, z: 1300, facing: Math.PI }, { unit: 'cruiser', x: -300, z: 1300, facing: Math.PI }, { unit: 'cruiser', x: 100, z: 1300, facing: Math.PI }],
+    pact: [{ unit: 'cruiser', x: -500, z: -1300, facing: 0 }, { unit: 'cruiser', x: -500, z: -1450, facing: 0 }, { unit: 'cruiser', x: -100, z: -1300, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {

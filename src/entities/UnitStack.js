@@ -2051,7 +2051,7 @@ export class UnitStack {
     const under = (t.depth ?? 0) > 3; // the target is a submerged submarine: guns and torpedoes are no use, depth charges are
     if (under) { this.huntSub(u, t, d, dt); return; }
     const rel = angleDelta(u.yaw, u.turretYaw);
-    const slow = (u.bridgeHit > this.world.time ? 1.4 : 1) * (s.sail ? 1 / Math.max(0.3, u.crew ?? 1) : 1); // (the bridge hit: orders come late; under sail, fewer men at the guns)
+    const slow = (u.bridgeHit > this.world.time ? 1.4 : 1) * (s.sail ? (1 / Math.max(0.3, u.crew ?? 1)) * (this.services.game?.powers?.signalled?.(this.faction) ? 0.75 : 1) : 1); // (the bridge hit: orders come late; under sail, fewer men at the guns — and the close-action signal flying, faster)
     for (const m of this.shipMounts(u)) {
       if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
       if (m.missile) { // anti-ship missiles (1985: systems/Missiles.js) — no more in the air at her than it takes to sink her

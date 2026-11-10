@@ -388,6 +388,7 @@ export class CommandSystem {
       const k = cmd.slice(6), g = this.game;
       if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
       if (!g.powers.ready(this.faction, k)) return g.bus.emit('toast', `${POWERS_1806[k].label} ${POWERS_1806[k].once ? 'already called' : `not ready (${Math.ceil(g.powers.cooldownLeft(this.faction, k))} s)`}`);
+      if (k === 'signal') { this.game.orders.issue({ t: 'power', k, x: 0, z: 0 }); return; } // (a signal: no spot to pick)
       this.startTargeting({ kind: 'smoke', power: k });
     } else if (cmd === 'salvo' || cmd === 'sustain') {
       const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect);

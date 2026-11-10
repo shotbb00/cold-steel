@@ -29,7 +29,7 @@ const ship = (o) => ({
 
 const LOWER = { range: 750, reload: 30, damage: 300 };   // 32-pounders (the French 36s)
 const UPPER = { range: 650, reload: 26, damage: 190 };   // 18-pounders
-const DRILLED = 0.8; // the Royal Navy's gun crews: a broadside in four fifths of the time
+const DRILLED = 0.85; // the Royal Navy's gun crews: a broadside in a little less time (an edge, not a rout: tuned on AI-vs-AI battles)
 
 export const cruiser = ship({
   fleet: 'line',
@@ -113,7 +113,7 @@ export const destroyer = ship({
 export const fireship = ship({
   fleet: 'under',
   id: 'fireship', name: 'Fireship', shortName: 'Fireship', cost: 150,
-  names: { nato: ['Brûlot 1', 'Brûlot 2', 'Brûlot 3', 'Brûlot 4'], pact: ['Fireship 1', 'Fireship 2', 'Fireship 3', 'Fireship 4'] },
+  names: { nato: ['Brûlot 1', 'Brûlot 2', 'Brûlot 3', 'Brûlot 4'], pact: ['Prometheus', 'Tisiphone', 'Comet', 'Lightning', 'Thais', 'Etna'] },
   hull: { length: 30, beam: 9 },
   stats: { masts: 2, fireship: true, hp: 1100, armor: 0.05, speed: 9.5, accel: 0.08, turnRate: 0.12, turretRate: 1, radius: 5, height: 13, sight: 2800, range: 60, aggroRange: 0, preferredRange: 0, leash: 0, damage: 0, fireCooldown: 999 },
   mounts: { nato: [], pact: [] },

@@ -5,7 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { POWERS_1806 } from '../systems/Powers1806.js';
+import { POWERS_1806, powerHere } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
@@ -152,7 +152,7 @@ export class ActionBar {
     for (const { b, cmd, small } of this.support) {
       if (cmd.startsWith('power:') || year() < 1900) { // 1806: its own three powers, nothing else
         const k = cmd.startsWith('power:') ? cmd.slice(6) : null;
-        b.hidden = off || !k || year() >= 1900;
+        b.hidden = off || !k || year() >= 1900 || !powerHere(k, g); // (at sea the sea's three, ashore the land's)
         if (b.hidden) continue;
         const P = POWERS_1806[k], left = g.powers.cooldownLeft(me, k);
         const text = left === Infinity ? 'used' : left > 0 ? `${Math.ceil(left)} s` : String(P.cost);
