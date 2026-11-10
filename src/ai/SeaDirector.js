@@ -89,8 +89,58 @@ export class SeaDirector {
     return open.sort((a, b) => Math.hypot(a.x - home.x, a.z - home.z) - Math.hypot(b.x - home.x, b.z - home.z))[0] ?? home;
   }
 
+  /**
+   * Radar discipline (1985): one picket radiating — the smallest ship — the rest silent, until there is contact
+   * (an enemy seen, a missile in the air); then every radar on, and silent again a minute after the last contact.
+   */
+  emcon(fleet) {
+    const g = this.game, now = g.world.time;
+    const radars = fleet.filter((s) => s.stats.radar && s.units[0]?.alive);
+    if (!radars.length) return;
+    if (this.foes().some((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1)) || g.missiles?.list.some((m) => m.faction !== this.faction)) this.contactAt = now;
+    const loud = now - (this.contactAt ?? -999) < 60;
+    const picket = radars.filter((s) => !s.stats.carrier).sort((a, b) => (VALUE[a.type.id] ?? 0) - (VALUE[b.type.id] ?? 0))[0] ?? radars[0];
+    for (const s of radars) {
+      const on = loud || s === picket;
+      if ((s.radarOn !== false) !== on) g.orders.run(this.faction, { t: 'radar', s: [s.id], on: on ? 1 : 0 }, 'ai');
+    }
+  }
+
+  /** An enemy radar it hears but can't see (systems/Sensors.js fixes): a missile salvo at the fix, now and then. */
+  fireAtFixes(fleet) {
+    const g = this.game, now = g.world.time;
+    for (const fx of g.sensors?.fixes?.[this.faction] ?? []) {
+      if (fx.stack.units.some((u) => u.alive && u.spotted)) continue; // (seen: the ships fire at her on their own)
+      if ((this.fixFired?.[fx.stack.id] ?? -999) > now - 50) continue;
+      const shooter = fleet.find((s) => { const u = s.units[0]; return u?.alive && (u.depth ?? 0) <= 9 && s.shipMounts(u).some((m) => m.missile && !m.out && m.left > 0 && Math.hypot(fx.x - u.pos.x, fx.z - u.pos.z) < m.range); });
+      if (!shooter) continue;
+      (this.fixFired ??= {})[fx.stack.id] = now;
+      g.orders.run(this.faction, { t: 'missileAt', s: [shooter.id], x: Math.round(fx.x), z: Math.round(fx.z), n: 4 }, 'ai');
+      return;
+    }
+  }
+
+  /** Its ships' helicopters (1985): to a lost submarine contact, else ahead toward the enemy to see what's there. */
+  helos(fleet) {
+    const g = this.game, now = g.world.time;
+    const seen = this.foes().some((s) => s.units.some((u) => u.alive && u.spotted));
+    // a submarine its sonar held lately and has lost (contactAt: VisibilitySystem.underwater) — searched near where it was
+    const sub = this.foes().flatMap((f) => f.units).find((u) => u.alive && u.stack.stats.submarine && !u.spotted && now - (u.contactAt ?? -99) < 40);
+    const lost = sub && { x: sub.pos.x + (Math.random() - 0.5) * 300, z: sub.pos.z + (Math.random() - 0.5) * 300 };
+    const foeHome = g.world.bases[enemyOf(this.faction)];
+    for (const s of fleet) {
+      const u = s.units[0];
+      if (!u?.alive || !s.stats.helo || s.heloReadyAt > now || Math.random() > 0.35) continue;
+      const to = lost && Math.hypot(lost.x - u.pos.x, lost.z - u.pos.z) < 2500 ? lost
+        : !seen ? { x: u.pos.x + (foeHome.x - u.pos.x) * 0.35, z: u.pos.z + Math.sign(foeHome.z - u.pos.z) * 1300 } : null;
+      if (to) { g.orders.run(this.faction, { t: 'helo', s: [s.id], x: Math.round(to.x), z: Math.round(to.z) }, 'ai'); return; }
+    }
+  }
+
   steer() {
     const g = this.game;
+    this.emcon(this.ships());
+    this.helos(this.ships()); // (missiles at fixes: every ship does that herself, either side — UnitStack.fireAtFix)
     const target = this.objective();
     const home = this.game.world.bases[this.faction];
     const night = !!g.conditions?.night;
@@ -99,7 +149,7 @@ export class SeaDirector {
     let escort = null;
     for (const s of fleet) {
       const u = s.units[0];
-      if (!u?.alive || s.ai.ordered) continue; // (a player's ships in co-op are theirs to steer)
+      if (!u?.alive || s.owner) continue; // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
       const d = (p) => Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
       if (s.stats.carrier) { // back by home, a little toward the fight
         const want = { x: home.x + (target.x - home.x) * 0.15, z: home.z + (target.z - home.z) * 0.15 };
@@ -188,14 +238,15 @@ export class SeaDirector {
     const call = (kind, x, z) => g.air.ready(f, kind) && support >= g.air.terms(f, kind).cost && g.air.call(f, x, z, null, kind);
     if (best) {
       const c = best.centroid;
+      if (call('seaStrike', c.x, c.z)) return; // (1985: the missile strike)
       if (call('torpBomb', c.x, c.z)) return;
       if (call('diveBomb', c.x, c.z)) return;
     }
     const mid = fleet.reduce((a, s) => ({ x: a.x + s.centroid.x / fleet.length, z: a.z + s.centroid.z / fleet.length }), { x: 0, z: 0 });
-    if (g.air.nearestThreat(f, { x: mid.x, y: 0, z: mid.z }, 2500) && call('navCap', mid.x, mid.z)) return;
-    if (!seen.length) {
-      const foeHome = g.world.bases[enemyOf(f)];
-      call('navScout', (mid.x + foeHome.x) / 2, (mid.z + foeHome.z) / 2);
-    }
+    if (g.air.nearestThreat(f, { x: mid.x, y: 0, z: mid.z }, 2500) && (call('seaCap', mid.x, mid.z) || call('navCap', mid.x, mid.z))) return;
+    const foeHome = g.world.bases[enemyOf(f)];
+    const ahead = { x: (mid.x + foeHome.x) / 2, z: (mid.z + foeHome.z) / 2 };
+    if (this.foes().some((s) => s.stats.submarine && !s.units.some((u) => u.alive && u.spotted)) && Math.random() < 0.3 && call('asw', (mid.x + ahead.x) / 2, (mid.z + ahead.z) / 2)) return; // (1985: a patrol plane ahead of the fleet)
+    if (!seen.length) call('aew', ahead.x, ahead.z) || call('navScout', ahead.x, ahead.z);
   }
 }

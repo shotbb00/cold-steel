@@ -15,6 +15,10 @@ import midway from './midway.ts';
 import savoSound from './savoSound.ts';
 import surigaoStrait from './surigaoStrait.ts';
 import philippineSea from './philippineSea.ts';
+import norwegianSea from './norwegianSea.ts';
+import northCape from './northCape.ts';
+import ionianSea from './ionianSea.ts';
+import balticSea from './balticSea.ts';
 
 export const MAPS = {
   [fuldaGap.id]: fuldaGap,
@@ -31,6 +35,10 @@ export const MAPS = {
   [midway.id]: midway,
   [savoSound.id]: savoSound,
   [surigaoStrait.id]: surigaoStrait,
+  [norwegianSea.id]: norwegianSea,
+  [northCape.id]: northCape,
+  [ionianSea.id]: ionianSea,
+  [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
 };
 

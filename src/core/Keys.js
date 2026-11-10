@@ -26,6 +26,7 @@ export const ACTIONS = [
   { id: 'engineer', label: 'Engineers: clear / blow bridge', ctx: 'command', key: 'KeyX' },
   { id: 'smoke', label: 'Smoke', ctx: 'command', key: 'KeyK' },
   { id: 'flare', label: 'Illumination flare (night)', ctx: 'command', key: 'KeyL' },
+  { id: 'fleetRadar', label: 'All ships: radar on / off (1985, at sea)', ctx: 'command', key: 'Backquote' },
   { id: 'unload', label: 'Unload', ctx: 'command', key: 'KeyU' },
   { id: 'leave', label: 'Leave a building', ctx: 'command', key: 'KeyE' },
   { id: 'cancelJob', label: 'Cancel a build order', ctx: 'command', key: 'Backspace', alt: 'Delete' },

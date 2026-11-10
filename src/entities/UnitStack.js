@@ -21,6 +21,7 @@
 // wounded (slow, goes prone, crawls back) and the next hit finishes him. Soldiers stand,
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
+import { year } from '../data/epoch.js';
 import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
@@ -753,8 +754,9 @@ export class UnitStack {
     if ((u.navT = (u.navT ?? 0) - dt) <= 0) {
       u.navT = 0.3 + Math.random() * 0.2;
       if (Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z) < 1.5 || nav.visible(u.pos, dest, this.navFoot, u.radius)) u.path = null;
-      else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > 2) {
-        const p = nav.path(u.pos, dest, this.navFoot, u.radius, LOCAL);
+      else if (!u.path || u.path.version !== nav.version || Math.hypot(u.path.to.x - dest.x, u.path.to.z - dest.z) > (this.stats.naval ? 40 : 2)) {
+        // a ship: the whole sea searched (LOCAL gives up before the way round an island, and she ran for the nearest shore) — planned again only when her goal moved 40 m
+        const p = nav.path(u.pos, dest, this.navFoot, u.radius, this.stats.naval ? undefined : LOCAL);
         u.path = p && { to: { x: dest.x, z: dest.z }, version: nav.version, pts: p.pts, i: 0, reached: p.reached };
       }
     }
@@ -1708,6 +1710,8 @@ export class UnitStack {
   }
 
   /** Prefer exposed enemies, the squad's focus target, and whoever we're already shooting. */
+  get _homing() { return (this.__homing ??= Object.values(this.type.mounts ?? {}).flat().some((m) => m.torpedo && m.homing)); }
+
   pickTarget(u) {
     const s = u.stats;
     const terrain = this.world.terrain;
@@ -1727,14 +1731,15 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
-      if ((e.depth ?? 0) > 3 && !s.depthCharges) continue; // a submarine under the surface: only depth charges reach it
+      const asw = s.depthCharges || s.asTorp || this._homing; // (1985: an ASW weapon flown out, a submarine's homing torpedoes)
+      if ((e.depth ?? 0) > 3 && !asw) continue; // a submarine under the surface: only depth charges (or homing torpedoes) reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
       if (focus && e.stack === focus) score -= 6;
       if (e === u.target) score -= 3;
-      if (s.depthCharges && (e.depth ?? 0) > 3) score -= 600; // the escort's job: the boat it has found
+      if (asw && (e.depth ?? 0) > 3) score -= 600; // the escort's job (and a hunter-killer submarine's): the boat it has found
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
@@ -1996,7 +2001,7 @@ export class UnitStack {
   /** The mounts of a ship (data/units45/ships.js `mounts`, per side), each with its own reload and state. */
   shipMounts(u) {
     const m = this.type.mounts;
-    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false })));
+    return (u.mounts ??= ((m && (m[this.army] ?? m[this.faction])) ?? []).map((d) => ({ ...d, cd: Math.random() * d.reload, out: false, left: d.load ?? Infinity }))); // (`left`: a missile mount's rounds aboard)
   }
 
   /** Where a mount's rounds leave: its place in the ship's frame (bow +z) turned with the hull. */
@@ -2019,7 +2024,7 @@ export class UnitStack {
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
     this.shine(u, t);
     for (const m of this.shipMounts(u)) if (m.cd > 0) m.cd -= dt; // (the guns reload whether or not there's a target)
-    if (!t) return;
+    if (!t) { this.fireAtFix(u); return; }
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
     const depth = u.depth ?? 0;
     if (depth > 9) return; // a submarine deep down: blind and can't shoot
@@ -2034,6 +2039,15 @@ export class UnitStack {
     const slow = u.bridgeHit > this.world.time ? 1.4 : 1; // (the bridge hit: orders come late)
     for (const m of this.shipMounts(u)) {
       if (m.out || m.cd > 0 || d > m.range || (m.surfaced && depth > 1)) continue;
+      if (m.missile) { // anti-ship missiles (1985: systems/Missiles.js) — no more in the air at her than it takes to sink her
+        const ms = this.services.game?.missiles;
+        if (!ms || m.left <= 0 || ms.inbound(t) >= Math.min(6, Math.ceil(t.hp / (m.damage * 0.6)) + (t.stack.stats.defence ? 1 : 0))) continue;
+        m.cd = m.reload * slow;
+        this.mountWorld(u, m.at, _p);
+        const flight = d / m.speed;
+        ms.launch(this, u, _p, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
+        continue;
+      }
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
@@ -2066,6 +2080,43 @@ export class UnitStack {
       this.services.audio?.weapon(this.faction, m.damage >= 500 ? 'navalHeavy' : m.damage >= 120 ? 'naval' : 'autocannon', _p); // (8-inch and up: the thunderclap; a PT boat's 40 mm)
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
+    }
+  }
+
+  /**
+   * Nothing in sight, but the fleet has a fix on an enemy radar (systems/Sensors.js: heard by two or more
+   * ships): a salvo at it, if she has missiles that reach — once in FIX_EVERY s per enemy ship for her side,
+   * so the fleet doesn't empty its launchers at one bearing. Hold fire: never.
+   */
+  fireAtFix(u) {
+    const g = this.services.game, ms = g?.missiles, S = g?.sensors;
+    if (!ms || !S || this.holdFire || (u.depth ?? 0) > 9) return;
+    const now = this.world.time;
+    for (const fx of S.fixes?.[this.faction] ?? []) {
+      if (fx.stack.units.some((v) => v.alive && v.spotted)) continue; // (seen: fired at as a target)
+      const key = `${this.faction}:${fx.stack.id}`;
+      if ((S.firedAt ??= {})[key] > now - 50) continue;
+      const m = this.shipMounts(u).find((k) => k.missile && !k.out && k.left > 0 && k.cd <= 0 && Math.hypot(fx.x - u.pos.x, fx.z - u.pos.z) < k.range);
+      if (!m) continue;
+      S.firedAt[key] = now;
+      this.missileStrike(fx.x, fx.z, Math.min(4, m.left));
+      return;
+    }
+  }
+
+  /** Ordered: `n` anti-ship missiles at the point (x, z) — a bearing fix, a spot she can't see: the seekers find what's there. */
+  missileStrike(x, z, n) {
+    const u = this.units.find((v) => v.alive), ms = this.services.game?.missiles;
+    if (!u || !ms || (u.depth ?? 0) > 9) return;
+    for (const m of this.shipMounts(u)) {
+      if (!m.missile || m.out || m.left <= 0 || n <= 0) continue;
+      if (Math.hypot(x - u.pos.x, z - u.pos.z) > m.range) { this.services.tell(this.faction, `${this.name}: out of missile range`); return; }
+      const k = Math.min(n, m.left);
+      this.mountWorld(u, m.at, _p);
+      ms.launch(this, u, _p, x, z, { ...m, count: k, left: k }, null);
+      m.left -= k;
+      m.cd = m.reload;
+      n -= k;
     }
   }
 
@@ -2112,6 +2163,29 @@ export class UnitStack {
    * has it on another errand) and drops a pattern where it is (systems/Torpedoes.js charges).
    */
   huntSub(u, t, d, dt) {
+    const g = this.services.game;
+    // 1985: a submarine's homing torpedoes, wire-guided off her bow (no need to turn onto her)
+    const tubes = this.shipMounts(u).filter((m) => m.torpedo && m.homing && !m.out);
+    if (tubes.length && (u.depth ?? 0) <= 60) {
+      for (const m of tubes) {
+        if (m.cd > 0 || d > m.range) continue;
+        m.cd = m.reload;
+        this.mountWorld(u, m.at, _p);
+        g?.torpedoes?.launch(this, _p, t, m);
+        VisibilitySystem.revealShooter(u);
+        break;
+      }
+      return;
+    }
+    // 1985 ships: ASROC / SS-N-14 — a homing torpedo dropped near her from well out
+    const as = u.stats.asTorp;
+    if (as && d < as.range && !((u.asCd ?? 0) > this.world.time)) {
+      u.asCd = this.world.time + as.reload;
+      const k = Math.min(1, 160 / Math.max(1, d));
+      _p.set(t.pos.x + (u.pos.x - t.pos.x) * k, this.world.river?.level ?? 0, t.pos.z + (u.pos.z - t.pos.z) * k);
+      g?.effects?.waterSplash?.(_p, 2);
+      g?.torpedoes?.launch(this, _p, t, { ...as, homing: true, count: 1, range: 900 });
+    }
     const dc = u.stats.depthCharges;
     if (!dc) return;
     if ((!this.ai.ordered || this.ai.state === AIState.ATTACK) && (this.chaseT = (this.chaseT ?? 0) - dt) <= 0) {
@@ -2495,7 +2569,7 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' ? 'ijn' : this.army); // (at sea the other side is the Imperial Navy: Japanese)
+    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1945 the other side is the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

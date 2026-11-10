@@ -25,6 +25,9 @@ const ACTIONS = [
   { cmd: 'sub:silent', label: 'Silent running', icon: 'stop', key: 'none', tip: 'Half the speed — and a sonar has to come twice as close to find you', when: (sel) => sel.some((s) => s.stats.submarine), on: (sel) => sel.some((s) => s.silent) },
   // ships (entities/UnitStack.js: engine orders, zig-zag, formations, smoke; Orders.js)
   { cmd: 'ship:speed', label: (g) => `${SHIP_SPEEDS[[...g.commands.selected].find((s) => s.alive && s.stats.naval)?.shipSpeed ?? 'full'].name} ahead`, icon: 'charge', key: 'none', tip: 'Engine orders, a step a click: Slow (quiet: a listening submarine hears you half as far) · Half · Full · Flank (the fastest — and loudest)', when: (sel) => sel.some((s) => s.stats.naval) },
+  { cmd: 'ship:radar', label: (g) => ([...g.commands.selected].some((s) => s.stats.radar && s.radarOn !== false) ? 'Radar on' : 'Radar off'), icon: 'recon', key: 'none', tip: 'Radar on: she sees every ship no island hides — and every enemy hears her and gets a bearing. Off: silent, she sees only by eye. ^ switches the whole fleet', when: (sel) => sel.some((s) => s.stats.radar), on: (sel) => sel.some((s) => s.stats.radar && s.radarOn !== false) },
+  { cmd: 'ship:missile', count: (sel) => sel.reduce((a, s) => a + (s.alive && s.stats.naval && s.units[0]?.mounts ? s.units[0].mounts.filter((m) => m.missile).reduce((b, m) => b + Math.max(0, m.left), 0) : 0), 0), label: 'Missile strike', icon: 'charge', key: 'none', tip: 'Two missiles from each selected ship at a spot you pick — a bearing fix, a ship out of sight: the seekers find what is there (or the wrong ship, or chaff)', when: (sel) => sel.some((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile)) },
+  { cmd: 'ship:helo', label: 'Helicopter', icon: 'recon', key: 'none', tip: 'Her helicopter out to a spot you pick: it hovers there with its sonar down — submarines near it show on your map and it drops a torpedo on one; the ships round it show too', when: (sel) => sel.some((s) => s.alive && s.stats.helo) },
   { cmd: 'ship:zigzag', label: 'Zig-zag', icon: 'turnRight', key: 'none', tip: 'Weave either side of the course: a torpedo aimed at where you would be finds water — you get there a little later', when: (sel) => sel.some((s) => s.stats.naval && !s.stats.submarine), on: (sel) => sel.some((s) => s.zigzag) },
   { cmd: 'ship:form:ahead', label: 'Line ahead', icon: 'formColumn', key: 'none', tip: 'The biggest selected ship leads, the others follow in her wake — move her and they come along', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
   { cmd: 'ship:form:abreast', label: 'Abreast', icon: 'formLine', key: 'none', tip: 'Side by side with the biggest ship: every bow gun bears ahead', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
@@ -85,6 +88,10 @@ const SUPPORT = [
   ['air:torpBomb', 'torpBomb', 'heli', 'Torpedo bombers', 'From the carrier: low over the water, a torpedo into the ship nearest the spot'],
   ['air:navCap', 'fighter', 'cap', 'Fighter cover', 'From the carrier: fighters circle the spot and go for enemy aircraft'],
   ['air:navScout', 'recon', 'recon', 'Scout flight', 'From the carrier: a long search leg — every ship it sees shows on your map'],
+  ['air:seaStrike', 'jet', 'jet', 'Missile strike', 'Bombers fire their anti-ship missiles at the spot from beyond the defences (off a carrier, or from the shore)'],
+  ['air:seaCap', 'fighter', 'cap', 'Fighter cover', 'Fighters circle the spot and shoot down enemy aircraft before they fire'],
+  ['air:asw', 'torpBomb', 'heli', 'Sub hunt', 'A patrol aircraft searches along a line: submarines it finds show on your map, and it drops a torpedo on one'],
+  ['air:aew', 'recon', 'recon', 'Radar picture', 'A radar aircraft circles the spot: every enemy ship within 3 km shows on your map — and can be fired at'],
   ...Object.entries(POWERS_1806).map(([k, p]) => [`power:${k}`, p.icon, p.key, p.label, p.tip]), // 1806 (systems/Powers1806.js)
 ];
 
@@ -158,7 +165,7 @@ export class ActionBar {
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const aboard = kind && KINDS[kind]?.sea ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers)
+      const aboard = kind && KINDS[kind]?.sea && KINDS[kind].deck !== 'optional' ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers; 1985's come from the shore too)
       const text = left > 0 ? `${left} s` : aboard === 0 ? 'none aboard' : `${mass !== null ? mass.cost ?? '' : terms.cost}${aboard != null ? ` · ${aboard}` : ''}`;
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;

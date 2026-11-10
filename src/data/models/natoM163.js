@@ -32,7 +32,7 @@ function geometry() {
       P.cyl(0.95, 1.0, 0.32, { y: 0.16, color: GREEN, ...C }, 20),                                // turret ring and base
       P.box(1.3, 0.55, 1.3, { y: 0.6, z: -0.1, color: GREEN, ...C }),                           // gunner's station
       P.box(0.55, 0.65, 0.9, { x: -0.85, y: 0.6, z: -0.2, color: DARK }),                       // ammunition drum
-      P.box(0.12, 0.9, 0.12, { x: 0.85, y: 0.85, z: -0.1, color: STEEL }),                      // radar post
+      P.box(0.12, 1.1, 0.12, { x: 0.85, y: 0.75, z: -0.1, color: STEEL }),                      // radar post (down onto the turret ring)
     ]), 0.6, 0.0, 0.3),
     gun: merge([
       ...[0, 1, 2, 3, 4, 5].map((k) => P.cyl(0.03, 0.03, 1.8, { x: Math.cos(k * 1.047) * 0.075, y: Math.sin(k * 1.047) * 0.075, z: 0.9, rx: Math.PI / 2, color: STEEL }, 6)),

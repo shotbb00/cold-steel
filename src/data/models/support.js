@@ -326,11 +326,11 @@ export const buildNatoM88 = vehicle(() => {
       geo: merge([
         P.cyl(0.45, 0.5, 0.35, { color: NATO, ...C }, 14),
         ...[0, 1, 2, 3, 4].map((k) => P.box(0.1, 0.07, 0.03, { x: Math.sin(k * 0.6 - 1.2) * 0.47, y: 0.12, z: Math.cos(k * 0.6 - 1.2) * 0.47, ry: k * 0.6 - 1.2, color: GLASS })),
-        P.box(0.12, 0.14, 0.4, { y: 0.32, z: 0.15, color: STEEL }),
+        P.box(0.12, 0.14, 0.4, { y: 0.24, z: 0.15, color: STEEL }),
       ]),
       at: [0.9, 2.45, 1.4],
     },
-    gun: { geo: merge([P.cyl(0.024, 0.024, 1.1, { z: 0.55, rx: Math.PI / 2, color: STEEL }, 6)]), at: [0, 0.35, 0.3] },
+    gun: { geo: merge([P.cyl(0.024, 0.024, 1.1, { z: 0.55, rx: Math.PI / 2, color: STEEL }, 6)]), at: [0, 0.28, 0.3] },
     muzzle: [0, 0, 1.1],
     marks: merge([P.box(0.02, 0.35, 0.6, { x: 1.795, y: 1.5, z: -1.2 })]),
   };
@@ -402,7 +402,7 @@ export const buildPactBRDM = vehicle(() => ({
       P.cyl(0.075, 0.075, 0.7, { z: 0.35, rx: Math.PI / 2, color: PACT_DK }, 10),   // KPVT cooling jacket
       P.cyl(0.035, 0.04, 1.3, { z: 1.3, rx: Math.PI / 2, color: STEEL }, 8),       // barrel
       P.cyl(0.05, 0.045, 0.12, { z: 1.98, rx: Math.PI / 2, color: STEEL }, 8),     // flash hider
-      P.cyl(0.02, 0.02, 0.6, { x: 0.16, z: 0.45, rx: Math.PI / 2, color: STEEL }, 6), // PKT
+      P.cyl(0.02, 0.02, 0.6, { x: 0.16, z: 0.35, rx: Math.PI / 2, color: STEEL }, 6), // PKT
     ]),
     at: [0, 0.34, 0.6],
   },
@@ -563,6 +563,7 @@ export const buildPactStrela = vehicle(() => ({
   gun: { // four boxy missile containers on the turret's arms
     geo: merge([
       P.box(2.2, 0.15, 0.25, { color: STEEL }),
+      P.box(0.2, 0.3, 0.2, { y: -0.15, color: STEEL }),                                                // the post the arms turn on
       ...[-0.9, -0.55, 0.55, 0.9].map((x) => P.box(0.3, 0.3, 2.2, { x, y: 0.22, z: 0.5, color: PACT_DK })),
     ]),
     at: [0, 0.75, 0],
@@ -616,11 +617,11 @@ export const buildPactBREM = vehicle(() => {
       geo: merge([
         P.cyl(0.4, 0.45, 0.3, { color: PACT }, 14),
         ...[0, 1, 2, 3].map((k) => P.box(0.09, 0.06, 0.03, { x: Math.sin(k * 0.6 - 0.9) * 0.42, y: 0.1, z: Math.cos(k * 0.6 - 0.9) * 0.42, ry: k * 0.6 - 0.9, color: GLASS })),
-        P.box(0.12, 0.14, 0.4, { y: 0.28, z: 0.1, color: STEEL }),
+        P.box(0.12, 0.14, 0.4, { y: 0.22, z: 0.1, color: STEEL }),
       ]),
       at: [-0.5, 2.42, -0.6],
     },
-    gun: { geo: merge([P.cyl(0.025, 0.025, 1.2, { z: 0.6, rx: Math.PI / 2, color: STEEL }, 6)]), at: [0, 0.3, 0.2] },
+    gun: { geo: merge([P.cyl(0.025, 0.025, 1.2, { z: 0.6, rx: Math.PI / 2, color: STEEL }, 6)]), at: [0, 0.24, 0.2] },
     muzzle: [0, 0, 1.2],
     marks: merge([P.box(0.02, 0.3, 0.3, { x: 1.005, y: 2.0, z: -0.8 })]),
   };
@@ -768,7 +769,7 @@ export const buildNatoCEV = vehicle(() => {
         ...pair((s) => P.box(0.22, 0.1, 0.3, { x: s * 0.85, y: 0.78, z: -0.6, color: STEEL })),              // its rests on the roof
         P.box(1.9, 0.16, 0.16, { y: 0.74, z: -2.3, color: NATO_DK }),
         ...pair((s) => P.box(0.26, 0.3, 0.3, { x: s * 0.95, y: 0.55, z: 1.2, color: STEEL })),
-        P.cyl(0.02, 0.02, 3.2, { y: 1.05, z: -0.6, rx: Math.PI / 2 + 0.1, color: STEEL }, 5),
+        P.cyl(0.02, 0.02, 3.2, { y: 0.92, z: -0.6, rx: Math.PI / 2 + 0.1, color: STEEL }, 5),
         P.box(1.6, 0.3, 0.5, { y: 0.45, z: -1.8, color: 0x4d5236 }),                                    // bustle rack
       ]), 0.8, 0, 0.4),
       at: [0, 1.62, 0.1],
@@ -861,6 +862,7 @@ export const buildNatoM167 = vehicle(() => ({
     P.box(0.9, 0.32, 2.2, { y: 0.55, color: NATO, ...C }),                                           // carriage
     ...pair((s) => P.cyl(0.33, 0.33, 0.22, { x: s * 0.72, y: 0.33, z: -0.25, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 16)), // wheels
     ...pair((s) => P.cyl(0.14, 0.14, 0.24, { x: s * 0.72, y: 0.33, z: -0.25, rz: Math.PI / 2, color: NATO_DK }, 10)),
+    P.cyl(0.06, 0.06, 1.66, { y: 0.33, z: -0.25, rz: Math.PI / 2, color: STEEL }, 8),               // the axle
     P.box(0.14, 0.12, 1.3, { y: 0.48, z: 1.65, rx: 0.12, color: NATO_DK }),                           // tow bar…
     P.cyl(0.07, 0.07, 0.1, { y: 0.4, z: 2.3, color: STEEL }, 8),                                      // …and its lunette
     ...[[-0.5, 1.0], [0.5, 1.0], [-0.5, -1.05], [0.5, -1.05]].map(([x, z]) => P.box(0.1, 0.55, 0.1, { x, y: 0.28, z, color: STEEL })), // jacks
@@ -869,12 +871,14 @@ export const buildNatoM167 = vehicle(() => ({
   turret: {
     geo: grime(merge([
       P.cyl(0.5, 0.52, 0.16, { color: NATO, ...C }, 18),                                              // mount ring
+      P.box(0.08, 0.22, 0.08, { y: 0.18, z: -0.5, color: STEEL }),                                    // seat post…
+      P.box(0.2, 0.34, 0.3, { y: 0.24, z: 0.15, color: NATO_DK }),                                    // the gun's pedestal
       P.box(0.4, 0.08, 0.36, { y: 0.32, z: -0.5, color: NATO_DK }),                                   // seat…
       P.box(0.4, 0.4, 0.06, { y: 0.52, z: -0.7, rx: -0.15, color: NATO_DK }),                         // …and its back
-      ...gunner({ y: 0.36, z: -0.52, cloth: 0x4b5331, helmet: 0x4d5733 }),
-      P.box(0.5, 0.5, 0.62, { x: 0.52, y: 0.42, z: 0.0, color: NATO_DK }),                            // linked-ammunition drum
-      P.cyl(0.18, 0.18, 0.05, { x: -0.55, y: 0.8, z: -0.2, rx: Math.PI / 2 - 0.3, color: STEEL }, 14), // VPS-2 range-only radar dish
-      P.box(0.1, 0.4, 0.1, { x: -0.55, y: 0.55, z: -0.2, color: STEEL }),
+      ...gunner({ y: 0.16, z: -0.52, cloth: 0x4b5331, helmet: 0x4d5733 }),
+      P.box(0.5, 0.5, 0.62, { x: 0.52, y: 0.33, z: 0.0, color: NATO_DK }),                            // linked-ammunition drum
+      P.cyl(0.18, 0.18, 0.05, { x: -0.45, y: 0.8, z: -0.2, rx: Math.PI / 2 - 0.3, color: STEEL }, 14), // VPS-2 range-only radar dish
+      P.box(0.1, 0.7, 0.1, { x: -0.45, y: 0.43, z: -0.2, color: STEEL }),
     ]), 0.8, 0, 0.3),
     at: [0, 0.72, 0],
   },
@@ -903,12 +907,15 @@ export const buildPactZU23 = vehicle(() => ({
     ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.box(0.12, 0.12, Math.hypot(x, z) + 0.06, { x: x / 2, y: 0.36, z: z / 2, ry: Math.atan2(x, z), color: PACT_DK })),
     ...pair((s) => P.cyl(0.34, 0.34, 0.2, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 16)), // wheels, lifted
     ...pair((s) => P.cyl(0.13, 0.13, 0.22, { x: s * 0.9, y: 0.5, z: -0.35, rz: Math.PI / 2, color: PACT_DK }, 10)),
+    ...pair((s) => P.box(0.4, 0.08, 0.12, { x: s * 0.65, y: 0.5, z: -0.35, color: PACT_DK })),          // the wheels' swing arms
     ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.box(0.1, 0.45, 0.1, { x, y: 0.22, z, color: STEEL })), // jacks
     ...[[0, 1.1], [-0.6, -0.8], [0.6, -0.8]].map(([x, z]) => P.cyl(0.13, 0.13, 0.03, { x, y: 0.02, z, color: STEEL }, 10)),
   ]), 1, 0.3),
   turret: {
     geo: grime(merge([
       P.cyl(0.62, 0.62, 0.12, { color: PACT }, 18),                                                   // the traversing platform
+      P.box(0.08, 0.24, 0.08, { x: -0.48, y: 0.17, z: -0.45, color: STEEL }),                        // seat post
+      P.box(0.5, 0.04, 0.04, { x: -0.48, y: 0.62, z: -0.05, color: STEEL }),                         // the handwheels' shaft
       P.box(0.36, 0.07, 0.34, { x: -0.48, y: 0.3, z: -0.45, color: PACT_DK }),                       // gunner's seat
       ...gunner({ x: -0.48, y: 0.33, z: -0.47, cloth: 0x6f6a4a, helmet: 0x4a5634 }),
       ...pair((s) => P.cyl(0.11, 0.11, 0.03, { x: -0.48 + s * 0.25, y: 0.62, z: -0.05, rz: Math.PI / 2, color: STEEL }, 12)), // traverse / elevation handwheels
@@ -940,7 +947,7 @@ const faarAntenna = (color, dark) => merge([
   P.cyl(0.16, 0.2, 0.5, { y: 0.25, color: dark }, 10),
   P.box(2.2, 0.75, 0.12, { y: 0.9, z: 0.1, rx: -0.2, color }),
   ...[-0.8, -0.4, 0, 0.4, 0.8].map((x) => P.box(0.04, 0.7, 0.03, { x, y: 0.9, z: 0.18, rx: -0.2, color: dark })),
-  P.box(2.0, 0.12, 0.1, { y: 1.38, z: 0.15, color: dark }),
+  P.box(2.0, 0.12, 0.1, { y: 1.3, z: 0.1, color: dark }),
   P.box(0.3, 0.3, 0.4, { y: 0.55, z: -0.25, color: dark }),
 ]);
 
@@ -989,6 +996,7 @@ export const buildPactP19 = vehicle(() => ({
     P.box(2.3, 1.85, 3.6, { y: 2.08, z: -1.15, color: PACT }),
     P.box(0.6, 1.2, 0.04, { x: 0.5, y: 1.9, z: -2.96, color: PACT_DK }),
     ...[0, 1, 2, 3].map((k) => P.box(0.4, 0.03, 0.05, { x: 0.5, y: 0.75 + k * 0.25, z: -3.05, color: STEEL })),
+    ...[0.3, 0.7].map((x) => P.box(0.04, 1.0, 0.1, { x, y: 1.12, z: -3.0, color: STEEL })),          // ladder rails
     P.box(0.5, 0.35, 0.5, { x: -0.6, y: 3.15, z: 0.3, color: PACT_DK }),
     ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.2, z: -1.45, color: PACT_DK })),
     P.cyl(0.14, 0.17, 0.35, { y: 3.18, z: -1.5, color: STEEL }, 10),                                 // the antenna turntable
@@ -1003,7 +1011,7 @@ export const buildPactP19 = vehicle(() => ({
           P.box(0.05, 0.25, 0.05, { x, y, z: -0.05, color: PACT_DK }),
         ]),
       ]),
-      P.box(3.1, 0.75, 0.04, { y: 0.9, z: -0.15, color: PACT_DK }),                                 // reflector screen
+      P.box(3.1, 0.75, 0.04, { y: 0.9, z: -0.09, color: PACT_DK }),                                 // reflector screen
     ]),
     at: [0, 3.35, -1.5],
     rate: 1.2,
@@ -1032,7 +1040,7 @@ export const buildNatoADATS = vehicle(() => ({
   },
   gun: { // two banks of four tubes, either side of the housing
     geo: merge([
-      ...pair((s) => P.box(0.12, 0.12, 0.6, { x: s * 0.52, color: STEEL })),                         // trunnions
+      ...pair((s) => P.box(0.4, 0.12, 0.6, { x: s * 0.6, color: STEEL })),                           // trunnions
       ...pair((s) => [0, 1].flatMap((i) => [0, 1].map((j) => P.cyl(0.1, 0.1, 2.2, { x: s * (0.78 + i * 0.22), y: -0.05 + j * 0.22, z: 0.4, rx: Math.PI / 2, color: NATO_DK }, 10)))).flat(),
       ...pair((s) => P.box(0.5, 0.5, 0.05, { x: s * 0.89, y: 0.06, z: 1.5, color: STEEL })),          // the tube banks' front frames
     ]),
@@ -1079,7 +1087,9 @@ export const buildPactTunguska = vehicle(() => {
     },
     gun: { // either side: the twin cannon and above it the pod of four 9M311 missiles
       geo: merge([
+        ...pair((s) => P.box(0.4, 0.2, 0.4, { x: s * 1.38, color: STEEL })),                             // trunnions
         ...pair((s) => P.box(0.3, 0.38, 1.2, { x: s * 1.58, color: PACT_DK })),                          // gun housings
+        ...pair((s) => P.box(0.42, 0.44, 1.4, { x: s * 1.6, y: 0.4, z: 0.3, color: PACT })),            // missile pods
         ...pair((s) => [0, 1].map((i) => P.cyl(0.035, 0.035, 2.2, { x: s * (1.52 + i * 0.13), y: -0.05, z: 1.6, rx: Math.PI / 2, color: STEEL }, 8))).flat(),
         ...pair((s) => [0, 1].map((i) => P.cyl(0.055, 0.055, 0.14, { x: s * (1.52 + i * 0.13), y: -0.05, z: 2.7, rx: Math.PI / 2, color: STEEL }, 8))).flat(),
         ...pair((s) => [0, 1].flatMap((i) => [0, 1].map((j) => P.cyl(0.09, 0.09, 2.0, { x: s * (1.5 + i * 0.2), y: 0.32 + j * 0.2, z: 0.5, rx: Math.PI / 2, color: PACT }, 10)))).flat(),
@@ -1121,9 +1131,9 @@ export const buildNatoFirefinder = vehicle(() => ({
     ...pair((s) => P.box(0.03, 0.4, 0.6, { x: s * 1.01, y: 1.95, z: 1.6, color: GLASS })),
     P.box(2.3, 0.18, 0.14, { y: 0.92, z: 3.38, color: STEEL }),                                      // bumper, on the rails' ends
     // the S-280 operations shelter on the bed, its door and air conditioner
-    P.box(2.15, 1.75, 2.6, { y: 2.05, z: -0.65, color: NATO, ...C }),
+    P.box(2.15, 1.75, 2.6, { y: 1.98, z: -0.65, color: NATO, ...C }),
     P.box(0.7, 1.2, 0.04, { x: -0.4, y: 1.9, z: -1.96, color: NATO_DK }),
-    P.box(0.6, 0.4, 0.4, { x: 0.6, y: 3.1, z: 0.2, color: NATO_DK }),
+    P.box(0.6, 0.4, 0.4, { x: 0.6, y: 3.05, z: 0.2, color: NATO_DK }),
   ]), 1.0, 0.3),
   trailer: { // the antenna trailer, hitched behind the truck: drawbar, the array on its pedestal
     geo: grime(merge([

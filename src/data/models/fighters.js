@@ -144,7 +144,7 @@ function phantom(color, recon) {
         ? [body([[1.8, 0.95, 0.05, 0.05], [1.2, 0.95, 0.3, 0.3], [-2.2, 0.95, 0.3, 0.3], [-3.0, 0.95, 0.08, 0.08]], { color: WHITE }), P.box(0.08, 0.3, 1.0, { y: 1.15, z: -0.5, color: DARK })]
         : [...pair((s) => [1.2, -3.0].map((z) => missile(s * 0.55, 1.08, z - 3.6, z, 0.1, WHITE))).flat(),
           ...pair((s) => P.box(0.08, 0.3, 1.0, { x: s * 2.6, y: 1.35, z: -2.2, color: DARK })),
-          ...pair((s) => missile(s * 2.6, 1.08, -3.6, -0.9, 0.07, WHITE))]),
+          ...pair((s) => missile(s * 2.6, 1.15, -3.6, -0.9, 0.07, WHITE))]),
     ]),
     marks: M([...pair((s) => roundel(s * 1.49, 1.9, 0.6, 0.32)), ...pair((s) => roundel(s * 4.9, 1.74, -3.9, 0.36, true))]),
   };
@@ -173,7 +173,7 @@ export const buildNvaMiG21 = (mats) => mount('mig21', mats, () => ({
     // the GSh-23 pack under the belly, R-60s on the pylons
     P.box(0.3, 0.22, 1.2, { y: 1.25, z: -0.6, color: DARK }),
     ...pair((s) => P.box(0.08, 0.3, 1.0, { x: s * 2.2, y: 1.6, z: -3.4, color: DARK })),
-    ...pair((s) => missile(s * 2.2, 1.35, -4.4, -2.1, 0.07, WHITE)),
+    ...pair((s) => missile(s * 2.2, 1.4, -4.4, -2.1, 0.07, WHITE)),
   ]),
   marks: M([...pair((s) => roundel(s * 0.1, 3.5, -5.5, 0.34)), ...pair((s) => roundel(s * 2.6, 1.79, -4.3, 0.3, true))]),
 }), [0, 1.25, 0.1]);

@@ -95,6 +95,7 @@
   font: 600 15px var(--font-ui); letter-spacing: 0.06em;
 }
 .unit-list button:hover { background: rgba(30, 33, 25, 0.9); }
+.unit-list button[hidden] { display: none; } /* (an army's own unit, on another army's list: 'all: unset' above would show it) */
 .unit-list button.on { border-left-color: var(--gold); }
 .unit-stage {
   position: relative; min-height: 0; border: 1px solid var(--line);

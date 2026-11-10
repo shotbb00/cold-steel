@@ -200,6 +200,7 @@ export class CommandSystem {
     else if (keys.is(code, 'unload')) this.runCommand('unload');
     else if (keys.is(code, 'engineer')) this.runCommand('engineer');
     else if (keys.is(code, 'flare')) this.runCommand('flare');
+    else if (keys.is(code, 'fleetRadar')) this.fleetRadar();
     else if (keys.is(code, 'reinforce')) this.game.bus.emit('ui:reinforcements');
     else if (keys.is(code, 'leave')) this.runCommand('leave');
     else if (keys.is(code, 'selectAll')) this.runCommand('selectAll');
@@ -284,6 +285,20 @@ export class CommandSystem {
         this.game.bus.emit('toast', on ? 'Zig-zag: weaving either side of the course' : 'Steady on course');
       } else if (k.startsWith('form:')) {
         this.game.orders.issue({ t: 'formation', s: ids(ships), f: k.slice(5) });
+      } else if (k === 'radar') {
+        const sets = ships.filter((s) => s.stats.radar);
+        const on = !sets.every((s) => s.radarOn !== false);
+        this.game.orders.issue({ t: 'radar', s: ids(sets), on: on ? 1 : 0 });
+        for (const s of sets) s.radarOn = on;
+        this.game.bus.emit('toast', on ? 'Radar on: she sees — and is heard' : 'Radar off: silent, eyes only');
+      } else if (k === 'missile') {
+        const shooters = ships.filter((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile));
+        if (!shooters.length) return this.game.bus.emit('toast', 'Select ships with anti-ship missiles');
+        this.startTargeting({ kind: 'smoke', stacks: shooters, fire: 'missile' });
+      } else if (k === 'helo') {
+        const hel = ships.filter((s) => s.stats.helo);
+        if (!hel.length) return this.game.bus.emit('toast', 'Select a ship with a helicopter');
+        this.startTargeting({ kind: 'smoke', stacks: hel, fire: 'helo' });
       } else if (k === 'searchlight') {
         const surface = ships.filter((s) => !s.stats.submarine);
         const on = !surface.every((s) => s.searchlight);
@@ -386,6 +401,16 @@ export class CommandSystem {
 
   // ---------------------------------------------------------------- targeting mode
 
+  /** Every ship of yours with a radar: all on, or (if they all are) all off — the fleet goes silent or lights up. */
+  fleetRadar() {
+    const sets = this.game.world.stacksOf(this.faction).filter((s) => s.alive && s.stats.radar);
+    if (!sets.length) return;
+    const on = !sets.every((s) => s.radarOn !== false);
+    this.game.orders.issue({ t: 'radar', s: ids(sets), on: on ? 1 : 0 });
+    for (const s of sets) s.radarOn = on;
+    this.game.bus.emit('toast', on ? `Fleet radars on (${sets.length}): every ship sees — and is heard` : `Fleet radars off (${sets.length}): silent, eyes only`);
+  }
+
   startTargeting(t) {
     this.cancelTargeting();
     const scene = this.game.scene;
@@ -430,6 +455,8 @@ export class CommandSystem {
       const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
       t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
+        : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
+        : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
         : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
         : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
@@ -584,6 +611,12 @@ export class CommandSystem {
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.fire === 'helo') {
+      this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
+      this.addMarker(p, 'hold');
+    } else if (t.kind === 'smoke' && t.fire === 'missile') {
+      this.game.orders.issue({ t: 'missileAt', s: ids(t.stacks), x: p.x, z: p.z, n: 2 });
       this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.fire) {
       this.game.orders.issue({ t: 'fireMission', s: ids(t.stacks), x: p.x, z: p.z, m: t.fire });
@@ -925,6 +958,7 @@ export class CommandSystem {
   /** Place the markers for pv.spots on screen (every frame: the camera moves). */
   drawPreview() {
     const pv = this.preview;
+    if (!pv.spots.length && !pv.shown) return; // (nothing to place, nothing showing: no layout read this frame)
     const terrain = this.surface;
     const cam = this.game.camera;
     const rect = this.game.canvas.getBoundingClientRect();
@@ -947,6 +981,7 @@ export class CommandSystem {
       n++;
     }
     for (let i = n; i < pv.els.length; i++) pv.els[i].hidden = true;
+    pv.shown = n;
   }
 
   /** The selected stacks' routes: from each stack through where it's going and every waypoint after. */

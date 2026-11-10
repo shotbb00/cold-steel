@@ -35,6 +35,7 @@ import commandPost from './commandPost.ts';
 import airAssault from './airAssault.ts';
 import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
+import { SHIPS_1985 } from './ships85.js';
 
 export const UNIT_TYPES = {
   [rifles.id]: rifles,
@@ -73,6 +74,7 @@ export const UNIT_TYPES = {
   [bunker.id]: bunker,
   [strongpoint.id]: strongpoint,
   [hq.id]: hq,
+  ...SHIPS_1985,   // the open-sea maps' warships (./ships85.js)
 };
 
 /** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */

@@ -213,6 +213,26 @@ export class Minimap {
       c.globalAlpha = 1;
     }
 
+    // missiles in the air: yours blue, theirs red — the ones your ships can see (systems/Missiles.js)
+    for (const m of game.missiles?.list ?? []) {
+      const own = m.faction === game.playerFaction;
+      if (!own && !game.world.stacksOf(game.playerFaction).some((s) => s.alive && s.units.some((u) => u.alive && Math.hypot(u.pos.x - m.pos.x, u.pos.z - m.pos.z) < 3200))) continue;
+      const [mx, my] = this.toMap(m.pos.x, m.pos.z);
+      c.fillStyle = own ? '#7ab8ff' : '#ff5a4a';
+      c.fillRect(mx - 1.5, my - 1.5, 3, 3);
+    }
+
+    // ESM bearings on enemy radars (systems/Sensors.js): a line from the ship that heard it, fading
+    for (const b of game.sensors?.lines() ?? []) {
+      c.globalAlpha = Math.max(0, b.k) * 0.9;
+      c.strokeStyle = '#ffb04a';
+      c.beginPath();
+      if (b.fix) { const [fx, fy] = this.toMap(b.fx, b.fz); c.arc(fx, fy, 4, 0, Math.PI * 2); }
+      else { c.moveTo(...this.toMap(b.x, b.z)); c.lineTo(...this.toMap(b.x + Math.sin(b.a) * 3800, b.z + Math.cos(b.a) * 3800)); }
+      c.stroke();
+      c.globalAlpha = 1;
+    }
+
     // our radars, jammers and command posts: what they cover (dashed until they work)
     this.drawAreas(c);
 

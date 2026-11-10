@@ -871,6 +871,7 @@ body.touch #target-hint { max-width: calc(100vw - 420px); }
   background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--gold);
 }
 #deploy-bar[hidden] { display: none; }
+body:has(#reinforce-window:not([hidden])) #deploy-bar { display: none; } /* (buying: the window has the screen — it lay over the tabs on phones; Start battle is back once it closes) */
 #deploy-bar .dp-title { font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
 #deploy-bar .dp-text { color: var(--muted); font-size: 13.5px; flex: 1 1 260px; }
 #deploy-bar .dp-go { padding: 8px 18px; font-size: 15px; }

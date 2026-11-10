@@ -196,6 +196,8 @@ export class NetHost {
         s.id, s.ai.state, Math.round(s.ai.defendTime ?? 0), r2(s.morale), s.passengers ?? 0,
         s.smokeLeft ?? 0, s.smokeRounds ?? 0, s.garrison?.index ?? -1, s.ai.ordered ? 1 : 0, s.rank, s.autonomous ? 1 : 0,
         s.job ?? '', s.tended && s.tended.until > g.time ? s.tended.kind : '', // a support vehicle's work, and whom it treats (systems/Support.js)
+        s.radarOn === false ? 0 : 1, // (1985 ships: radar on or silent — a guest's ESM bearings, systems/Sensors.js)
+        (() => { const l = s.stats.naval && s.units.find((u) => u.alive && u.lightOn)?.lightOn; return l ? [Math.round(l.x), Math.round(l.z)] : 0; })(), // a ship's searchlight on (x, z)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),

@@ -19,6 +19,8 @@ import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
 import { Squalls } from '../systems/Squalls.js';
 import { Searchlights } from '../systems/Searchlights.js';
+import { Missiles } from '../systems/Missiles.js';
+import { Sensors } from '../systems/Sensors.js';
 import { AutoFlares } from '../systems/AutoFlares.js';
 import { SEA_STATE } from '../world/Sea.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
@@ -176,7 +178,7 @@ export class GameEngine {
     if (map.camera?.maxHeight) this.cameraManager.tactical.maxHeight = map.camera.maxHeight; // (a 5 km sea: zoom out much further)
     if (map.river?.sea) this.cameraManager.waterLevel = map.river.level; // (never down to the sea floor)
     if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
-    if (map.river?.sea) { this.squalls = new Squalls(this); this.systems.push(this.squalls, new Searchlights(this)); } // rain squalls and the sea state; searchlight beams at night
+    if (map.river?.sea) { this.squalls = new Squalls(this); this.missiles = new Missiles(this); this.sensors = new Sensors(this); this.searchlights = new Searchlights(this); this.systems.push(this.squalls, this.searchlights, this.missiles, this.sensors); } // (1985: anti-ship missiles and their defence, radar and ESM bearings) // rain squalls and the sea state; searchlight beams at night
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;
@@ -747,6 +749,7 @@ export class GameEngine {
     this.barrage.update(dt);
     this.fire.update(dt);
     this.air.updateChutes(dt); // a paradrop's men on the way down (the host's 'chute')
+    for (const sys of [this.squalls, this.searchlights, this.missiles, this.sensors]) sys?.update(dt, t); // at sea: squalls, beams, the host's missiles in flight, your own ESM bearings
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);
     this.decor?.update?.(dt, t);
