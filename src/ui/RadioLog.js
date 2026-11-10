@@ -28,7 +28,8 @@ export class RadioLog {
     });
     game.bus.on('stack:destroyed', (s) => {
       if (s.stats.loose || s.stats.dismounted) return; // (1806: a loose horse, a man on foot — not a unit lost)
-      this.add(s.faction === me ? `Lost contact with ${s.name}.` : `Enemy ${s.type.shortName} destroyed.`, s.faction === me ? 'bad' : 'good');
+      const sunk = s.stats.naval; // (a ship goes down: sunk, not out of contact)
+      this.add(s.faction === me ? (sunk ? `${s.name} has been sunk.` : `Lost contact with ${s.name}.`) : `Enemy ${s.type.shortName} ${sunk ? 'sunk' : 'destroyed'}.`, s.faction === me ? 'bad' : 'good');
     });
     game.bus.on('game:end', () => { this.next = Infinity; });
   }

@@ -145,7 +145,7 @@ export const buildBwFlaMK20 = vehicle(() => ({
     geo: merge([
       P.box(0.55, 0.22, 0.8, { z: 0.1, color: BW_DK }),
       ...pair((s) => P.cyl(0.028, 0.025, 1.7, { x: s * 0.14, z: 1.3, rx: Math.PI / 2, color: STEEL }, 8)), // twin Rh 202
-      ...pair((s) => P.box(0.16, 0.26, 0.4, { x: s * 0.4, y: 0.02, z: 0.05, color: BW })),            // drum magazines
+      ...pair((s) => P.box(0.16, 0.26, 0.4, { x: s * 0.33, y: 0.02, z: 0.05, color: BW })),           // drum magazines
     ]),
     at: [0.05, 0.42, 0.05],
   },

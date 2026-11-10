@@ -51,6 +51,7 @@ function geometry() {
       ...pair((s) => P.box(0.05, 0.05, 0.8, { x: s * 1.5, y: 0.55, z: -2.4, color: STEEL })),
       P.box(3.0, 0.05, 0.05, { y: 0.55, z: -2.8, color: STEEL }),
       P.box(3.0, 0.05, 0.05, { y: 0.2, z: -2.8, color: STEEL }),
+      P.box(3.0, 0.04, 0.8, { y: 0.18, z: -2.4, color: STEEL }),                         // the rack's mesh floor (the bags lie on it)
       ...[-1.5, -0.75, 0, 0.75, 1.5].map((x) => P.box(0.04, 0.38, 0.04, { x, y: 0.37, z: -2.8, color: STEEL })),
       P.box(1.1, 0.34, 0.55, { x: -0.7, y: 0.36, z: -2.45, color: BAG }),
       P.box(0.9, 0.28, 0.5, { x: 0.6, y: 0.33, z: -2.45, rz: 0.06, color: 0x5b5236 }),

@@ -277,7 +277,7 @@ export const buildNvaMortar120 = vehicle(() => ({
     ]), 0.6, 0, 0.3),
     at: [0, 0.1, 0],
   },
-  gun: { geo: merge([P.cyl(0.075, 0.085, 1.85, { z: 0.9, rx: Math.PI / 2, color: NVA }, 12)]), at: [0, 0.1, -0.3], pitch: 0.95 },
+  gun: { geo: merge([P.cyl(0.075, 0.085, 1.85, { z: 0.9, rx: Math.PI / 2, color: NVA }, 12)]), at: [0, 0.0, -0.3], pitch: 0.95 },
   muzzle: [0, 0, 1.85],
   recoil: 0.1,
   tow: { geo: grime(merge(towTruck({ color: NVA, dark: NVA_DK, length: 5.65, width: 2.3, bonnet: 'round' })), 1, 0.4), hitch: 1.2 }, // a GAZ-66

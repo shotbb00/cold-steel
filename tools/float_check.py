@@ -79,6 +79,9 @@ JS = r'''async ({ only, tol }) => {
       const find = (i) => { while (parent[i] !== i) i = parent[i] = parent[parent[i]]; return i; };
       const grown = boxes.map((b) => b.clone().expandByScalar(tol));
       for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (grown[i].intersectsBox(boxes[j])) { const a = find(i), c = find(j); if (a !== c) parent[a] = c; }
+      // whatever stands on the ground is not floating (a baseplate, jacks)
+      const gnd = boxes.map((_, i) => i).filter((i) => boxes[i].min.y <= tol);
+      for (const i of gnd.slice(1)) { const a = find(i), c = find(gnd[0]); if (a !== c) parent[a] = c; }
       const size = new Map();
       boxes.forEach((b, i) => { const r = find(i); const s = new THREE.Vector3(); b.getSize(s); size.set(r, (size.get(r) ?? 0) + s.x * s.y * s.z + 1e-6); });
       const main = [...size.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
