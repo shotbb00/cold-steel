@@ -31,7 +31,7 @@ const MAX_STACKS = 12;
 const LANDING_CP = 0.6;       // CP / s for each transport in a zone its side holds (the sea maps)
 
 /** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
-const seaAllow = (game, allow) => (t) => (game.world.coastal || !!t.stats?.naval === !!game.world.river?.sea) && (!allow || allow(t)); // (a coastal map: both)        // per side, unless the map sets maxStacks
+const seaAllow = (game, allow) => (t, f = game.playerFaction) => (game.world.coastal ? !t.stats?.naval || !!game.landing?.lands(f) : !!t.stats?.naval === !!game.world.river?.sea) && (!allow || allow(t)); // (a coastal map: the land for both, ships for the side that lands)        // per side, unless the map sets maxStacks
 
 export default {
   id: 'frontline',

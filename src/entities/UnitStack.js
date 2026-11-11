@@ -693,9 +693,10 @@ export class UnitStack {
       this.services.tell(this.faction, `${this.name}: tracks mended`);
     }
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
-    let way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
-    if (s.naval && !u.possessed) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
-    const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
+    let way = this.run ? this.run.way : this.steerTo(u, dt); // the next corner on the way to its place (or the place) — a landing craft: her spot on the beach (systems/Landing.js)
+    if (s.naval && !u.possessed && !this.run) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
+    const dest = this.run ? this.run.way : u.dest;
+    const dDest = Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z);
     _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
     const d = way === u.dest ? _v.length() : Math.max(_v.length(), Math.min(dDest, 6)); // (no slowing down at a corner)
     u.wantsMove = dDest > 1.5;
@@ -1060,7 +1061,7 @@ export class UnitStack {
     // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
     const fx = Math.sin(u.yaw) * u.radius * 9, fz = Math.cos(u.yaw) * u.radius * 9;
     const closes = (cNew, cOld, r) => cNew < r && cNew < cOld;
-    if (nav && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
+    if (nav && !this.stats.landingCraft && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
       || closes(nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), nav.clearance(px + fx, pz + fz, SHIP), 0.5))) {
       u.pos.x = px;
       u.pos.z = pz;
@@ -2067,6 +2068,7 @@ export class UnitStack {
         ms.launch(this, u, _p, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
         continue;
       }
+      if (m.torpedo && !t.stack?.stats.naval) continue; // (a torpedo is for a ship: never at men or tanks ashore)
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);

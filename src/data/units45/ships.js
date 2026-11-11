@@ -12,6 +12,7 @@
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
+import { buildLCVP, buildLCT } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -260,4 +261,37 @@ export const transport = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport };
+/**
+ * Landing craft (the coastal maps: systems/Landing.js). Never bought: a land unit bought by the side that
+ * lands comes in one, chosen by what it is — a squad in a Higgins boat, a vehicle in an LCT. They run in,
+ * ground, drop the ramp and back off; sunk on the way in, what they carried is lost. `draft`: how far
+ * up the sand she runs (the depth she grounds in).
+ */
+export const lcvp = ship({
+  id: 'lcvp', name: 'Landing Craft (LCVP)', shortName: 'LCVP', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 10.9, beam: 3.3 },
+  stats: { landingCraft: true, draft: 0.9, hp: 260, armor: 0.04, speed: 4.6, accel: 0.6, turnRate: 0.45, turretRate: 1, radius: 2.4, height: 2.6, eyeHeight: 3, sight: 400, smallCraft: true, stealth: 0.4,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 26, height: 9, shoulder: 0 },
+  models: { nato: buildLCVP, pact: buildLCVP },
+  variants: {
+    nato: { name: 'LCVP Higgins boat', weapon: '2 × .30 machine guns', text: 'Plywood and a steel ramp: a section of riflemen from the transports to the sand. The ramp drops, they go — straight into whatever is waiting.' },
+    pact: { name: 'Landing craft', weapon: 'machine guns', text: 'A small landing craft for a section of infantry.' },
+  },
+});
+export const lct = ship({
+  id: 'lct', name: 'Tank Landing Craft (LCT)', shortName: 'LCT', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 36.6, beam: 9.8 },
+  stats: { landingCraft: true, draft: 1.3, hp: 1100, armor: 0.08, speed: 3.6, accel: 0.3, turnRate: 0.18, turretRate: 1, radius: 5, height: 5, eyeHeight: 6, sight: 500, smallCraft: true,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 30, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 60, height: 18, shoulder: 0 },
+  models: { nato: buildLCT, pact: buildLCT },
+  variants: {
+    nato: { name: 'LCT Mk 6', weapon: '2 × 20 mm', text: 'A flat steel box with a ramp: tanks, half-tracks and guns straight onto the beach. Slow, big and an easy target on the run in.' },
+    pact: { name: 'Tank landing craft', weapon: '20 mm', text: 'A landing craft for vehicles.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct };

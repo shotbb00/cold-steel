@@ -129,10 +129,20 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: 680, entries: [-300, 0, 300] }, pact: { x: 0, z: -680, entries: [-200, 0, 200] } },
+  bases: { nato: { x: 0, z: 680, entries: [-330, 10, 330] }, // (the side that lands: its roads are the beach sectors Dog, Easy, Fox)
+           pact: { x: 0, z: -680, entries: [-200, 0, 200] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 330 }, pact: { x: 0, z: -150 } },
   points,
+
+  // H-hour: the first wave, in to all three sectors at once (systems/Landing.js); the destroyers are already off the beach
+  landing: {
+    waves: [{ t: 0, say: 'H-hour: the first wave is going in', units: [
+      { unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 0 }, { unit: 'tank', sector: 0 },
+      { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'engineers', sector: 1 },
+      { unit: 'rifles', sector: 2 }, { unit: 'rifles', sector: 2 }, { unit: 'tank', sector: 2 },
+    ] }],
+  },
 
   spawns: {
     nato: [{ unit: 'destroyer', x: -200, z: 560, facing: Math.PI / 2 }, { unit: 'destroyer', x: 220, z: 600, facing: -Math.PI / 2 }],
