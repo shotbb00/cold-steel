@@ -308,6 +308,7 @@ export class UnitStack {
     if (s.naval) { // a ship: her main battery's mounts (shipFire m.cd) — the next salvo
       const u = this.units.find((x) => x.alive), ms = u ? this.shipMounts(u).filter((m) => !m.torpedo && !m.out) : [];
       const top = Math.max(0, ...ms.map((m) => m.damage));
+      if (s.sail) return ms.length ? Math.max(0, ...ms.map((m) => m.cd ?? 0)) : null; // (under sail: the broadside that fired, till its last gun is loaded — the other side is always ready)
       const cds = ms.filter((m) => m.damage === top).map((m) => Math.max(0, m.cd ?? 0));
       return cds.length ? Math.min(...cds) : null;
     }
@@ -2093,9 +2094,16 @@ export class UnitStack {
         origin: _p, dir: _w, speed: m.shell, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor,
         size: m.size, source: this, life: (m.range * 1.4) / m.shell + 0.3, splash: m.splash, pierce: m.pierce, vsArmor: 1, suppress: 1, tracer: !s.sail,
       });
-      if (s.sail) { // the battery's flash, and its smoke: a bank alongside her that drifts off downwind and hides what's behind it
-        this.services.effects.muzzle(_p, _w, 2.2, 'artillery');
-        this.services.smoke?.add(_p.x + Math.sin(u.turretYaw) * 14, _p.z + Math.cos(u.turretYaw) * 14, { radius: 16, duration: 14, powder: true });
+      if (s.sail) { // the battery's flash and blast on the water (the heavy guns' shockwave ring), and its smoke billowing out of the ports on that side — a bank that drifts off downwind and hides what's behind it
+        const out = u.yaw + (m.facing ?? 0), ox = Math.sin(out), oz = Math.cos(out);
+        this.services.effects.muzzle(_p, _w, m.damage >= 250 ? 2.2 : 1.6, 'naval', this.world.river?.level ?? 0, 0xcfccc2); // (black powder: a pale grey-white cloud)
+        this.services.smoke?.add(_p.x + ox * 9, _p.z + oz * 9, { radius: 12, duration: 14, powder: true }); // (the sight it blocks)
+        const fx = this.services.effects?.smoke; // (what you see: the battery's bank of smoke along its ports, blown out by the blast, then off downwind)
+        if (fx) for (let i = 0; i < 7; i++) {
+          const along = (i / 6 - 0.5) * (this.type.hull?.length ?? 50) * 0.3, out2 = 3 + Math.random() * 7;
+          fx.spawn(_p.x + Math.sin(u.yaw) * along + ox * out2, _p.y + Math.random() * 2, _p.z + Math.cos(u.yaw) * along + oz * out2,
+            { vx: ox * (2 + Math.random() * 3), vy: 0.4 + Math.random() * 0.5, vz: oz * (2 + Math.random() * 3), size: 4 + Math.random() * 3, grow: 2.2, life: 12 + Math.random() * 6, alpha: 0.42, color: 0xd6d4cc, drag: 0.6, wind: 0.9 });
+        }
         this.services.audio?.weapon(this.faction, 'arty', _p);
       } else if (m.damage >= 120) this.services.effects.muzzle(_p, _w, m.damage >= 1500 ? 3 : m.damage >= 500 ? 2 : 1, 'naval', this.world.river?.level ?? 0); // (the big guns: a fireball and the blast on the water)
       else this.services.effects.muzzle(_p, _w, m.size, 'artillery');

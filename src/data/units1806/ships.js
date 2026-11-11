@@ -126,7 +126,7 @@ export const fireship = ship({
 });
 
 export const ptBoat = ship({
-  fleet: 'escort',
+  fleet: 'under', // (with the fireships: small craft for a calm or a dark night)
   id: 'ptBoat', name: 'Gunboat', shortName: 'Gunboat', cost: 120,
   names: { nato: ['Canonnière 1', 'Canonnière 2', 'Canonnière 3', 'Canonnière 4', 'Canonnière 5', 'Canonnière 6'], pact: ['Gunboat 1', 'Gunboat 2', 'Gunboat 3', 'Gunboat 4', 'Gunboat 5', 'Gunboat 6'] },
   hull: { length: 18, beam: 4.6 },

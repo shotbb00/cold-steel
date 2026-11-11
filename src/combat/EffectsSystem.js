@@ -331,7 +331,7 @@ export class EffectsSystem {
   }
 
   /** Muzzle flash (short, directional) and the puff of propellant smoke. */
-  muzzle(pos, dir, size = 1, weapon = 'rifle', water = null) {
+  muzzle(pos, dir, size = 1, weapon = 'rifle', water = null, cloud = 0x57524a) { // (cloud: the naval gun's smoke — cordite brown-grey; black powder, 1806, a pale grey-white)
     const F = this.fire;
     const S = this.smoke;
     if (weapon === 'musket') { // black powder: the flash, then a thick white puff that hangs (1806)
@@ -360,11 +360,11 @@ export class EffectsSystem {
         const t = rnd(2, 26) * k, f = rnd(1, 6) * k;
         S.spawn(pos.x + dir.x * t + rnd(-2, 2) * k, pos.y + dir.y * t + rnd(-1, 1.5) * k, pos.z + dir.z * t + rnd(-2, 2) * k, {
           vx: dir.x * f + rnd(-1.5, 1.5), vy: rnd(0.2, 1.5), vz: dir.z * f + rnd(-1.5, 1.5),
-          size: rnd(3, 5) * k, grow: 1.8, life: rnd(6, 10) * (0.6 + k * 0.3), alpha: 0.7, color: 0x57524a, drag: 1.1, wind: 1,
+          size: rnd(3, 5) * k, grow: 1.8, life: rnd(6, 10) * (0.6 + k * 0.3), alpha: 0.7, color: cloud, drag: 1.1, wind: 1,
         });
       }
       // the blast pressing the water flat: a ring of spray racing out from under the muzzle (the heavy guns)
-      if (k >= 2) {
+      if (k >= 1.5) { // (1806: every broadside — a battery of guns at once)
         const n = 10 + 6 * k, x = pos.x + dir.x * 8, z = pos.z + dir.z * 8;
         for (let i = 0; i < n; i++) {
           const a = (i / n) * 6.283 + rnd(-0.1, 0.1), v = rnd(26, 36) * k * 0.6;
