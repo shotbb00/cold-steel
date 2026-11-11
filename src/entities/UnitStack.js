@@ -2273,13 +2273,13 @@ export class UnitStack {
     if (Math.random() > Math.min(0.55, 0.06 + k * 5)) return;
     const now = this.world.time;
     const r = Math.random();
-    if (r < 0.2) { u.engineHit = true; u.engineFix = now + 60; tell('engine room hit — losing speed'); }
+    if (r < 0.2) { if (!this.stats.sail) { u.engineHit = true; u.engineFix = now + 60; tell('engine room hit — losing speed'); } } // (under sail there's no engine: her masts and rigging take their own hits — entities/sailDamage.js)
     else if (r < 0.32) { u.rudderHit = now + 40; tell('rudder jammed'); }
     else if (r < 0.62) {
       const up = this.shipMounts(u).filter((m) => !m.out);
       const m = up[Math.floor(Math.random() * up.length)];
-      if (m) { m.out = true; m.fixAt = Math.random() < 0.5 ? now + 60 : Infinity; tell(m.torpedo ? 'torpedo mount wrecked' : 'a gun mount knocked out'); }
-    } else if (r < 0.72) { u.bridgeHit = now + 30; tell('bridge hit'); }
+      if (m) { m.out = true; m.fixAt = Math.random() < 0.5 ? now + 60 : Infinity; tell(m.torpedo ? 'torpedo mount wrecked' : this.stats.sail ? 'guns dismounted' : 'a gun mount knocked out'); }
+    } else if (r < 0.72) { u.bridgeHit = now + 30; tell(this.stats.sail ? 'the quarterdeck swept' : 'bridge hit'); }
     else { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.35); tell('fire aboard'); }
   }
 
@@ -2326,7 +2326,7 @@ export class UnitStack {
       u.depth = (u.depth ?? 0) + clamp(want - (u.depth ?? 0), -sm.dive * dt, sm.dive * dt);
     }
     if (u.engineHit && now > u.engineFix) { u.engineHit = false; this.services.tell(this.faction, `${this.name}: engines back`); }
-    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) { m.out = false; this.services.tell(this.faction, `${this.name}: ${m.torpedo ? 'torpedo mount' : 'gun mount'} back in action`); }
+    for (const m of u.mounts ?? []) if (m.out && now > m.fixAt) { m.out = false; this.services.tell(this.faction, `${this.name}: ${m.torpedo ? 'torpedo mount' : this.stats.sail ? 'guns' : 'gun mount'} back in action`); }
     const f = u.flood ?? 0;
     u.listSide ??= Math.random() < 0.5 ? -1 : 1;
     u.list = f * 0.22 * u.listSide * (1 - (u.counterK ?? 0));
