@@ -268,9 +268,10 @@ export const transport = ship({
  * up the sand she runs (the depth she grounds in).
  */
 export const lcvp = ship({
+  engine: 'engine.dieselSmall', // (her Gray diesel)
   id: 'lcvp', name: 'Landing Craft (LCVP)', shortName: 'LCVP', cost: 0, hidden: true, uncapped: true,
   hull: { length: 10.9, beam: 3.3 },
-  stats: { landingCraft: true, draft: 0.9, hp: 260, armor: 0.04, speed: 4.6, accel: 0.6, turnRate: 0.45, turretRate: 1, radius: 2.4, height: 2.6, eyeHeight: 3, sight: 400, smallCraft: true, stealth: 0.4,
+  stats: { landingCraft: true, draft: 0.9, hp: 260, armor: 0.04, speed: 9, accel: 0.8, /* (twice her 9 knots: the sea maps' scale) */ turnRate: 0.45, turretRate: 1, radius: 2.4, height: 2.6, eyeHeight: 3, sight: 400, smallCraft: true, stealth: 0.4,
     range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
   mounts: { nato: [], pact: [] },
   camera: { distance: 26, height: 9, shoulder: 0 },
@@ -281,9 +282,10 @@ export const lcvp = ship({
   },
 });
 export const lct = ship({
+  engine: 'engine.diesel',
   id: 'lct', name: 'Tank Landing Craft (LCT)', shortName: 'LCT', cost: 0, hidden: true, uncapped: true,
   hull: { length: 36.6, beam: 9.8 },
-  stats: { landingCraft: true, draft: 1.3, hp: 1100, armor: 0.08, speed: 3.6, accel: 0.3, turnRate: 0.18, turretRate: 1, radius: 5, height: 5, eyeHeight: 6, sight: 500, smallCraft: true,
+  stats: { landingCraft: true, draft: 1.3, hp: 1100, armor: 0.08, speed: 7, accel: 0.45, turnRate: 0.18, turretRate: 1, radius: 5, height: 5, eyeHeight: 6, sight: 500, smallCraft: true,
     range: 0, aggroRange: 0, preferredRange: 0, leash: 30, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
   mounts: { nato: [], pact: [] },
   camera: { distance: 60, height: 18, shoulder: 0 },
@@ -296,9 +298,10 @@ export const lct = ship({
 
 /** A DD Sherman swimming in on its canvas screen (systems/Landing.js: never bought — a `dd` tank bought on a coastal map comes as one). */
 export const ddCraft = ship({
+  engine: 'engine.dieselSmall', // (the Sherman's engine driving her propellers)
   id: 'ddCraft', name: 'DD Tank (swimming)', shortName: 'DD tank', cost: 0, hidden: true, uncapped: true,
   hull: { length: 6, beam: 3 },
-  stats: { landingCraft: true, dd: true, draft: 1.1, hp: 300, armor: 0.02, speed: 2.4, accel: 0.4, turnRate: 0.25, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 300, smallCraft: true, stealth: 0.5,
+  stats: { landingCraft: true, dd: true, draft: 1.1, hp: 300, armor: 0.02, speed: 4, accel: 0.5, turnRate: 0.25, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 300, smallCraft: true, stealth: 0.5,
     range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
   mounts: { nato: [], pact: [] },
   camera: { distance: 18, height: 6, shoulder: 0 },

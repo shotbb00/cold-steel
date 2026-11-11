@@ -528,4 +528,45 @@ export const CODEX45 = {
       },
     },
   },
+  // the coastal maps (Omaha): what lands, what fires on it
+  lcvp: {
+    use: 'The Higgins boat: never bought — a squad bought for the landing comes in one, off the beach sector you send it to. It runs in down the swept lane, grounds, drops the ramp and backs off.',
+    strong: 'Getting a section of men onto the sand', weak: 'Everything: plywood, slow, and the 88s on the beach see it the last few hundred metres',
+    counter: 'Mines off the lanes, the obstacles once the tide covers them, the strongpoints\' guns as it closes the beach.',
+  },
+  lct: {
+    use: 'The tank landing craft: a vehicle bought for the landing comes in one. Big, slow, and the same run in as the boats.',
+    strong: 'Tanks and guns straight onto the beach', weak: 'An easy target on the run in; its tanks are lost with it',
+    counter: 'The 88s in their casemates as it nears the beach — and the tank traps waiting on the shingle.',
+  },
+  ddTank: {
+    use: 'A Sherman on a canvas screen: it swims in from just outside the mine band instead of waiting for an LCT, and is on the beach with the first infantry. Cheaper than a tank in an LCT.',
+    strong: 'Armour on the sand early, when the infantry need it most', weak: 'A rough sea: any second afloat it may be swamped and go down with its crew',
+    counter: 'Shoot it while it swims — it can\'t shoot back — or let the sea take it.',
+  },
+  ddCraft: {
+    use: 'A DD Sherman afloat: it swims on its own to the beach, then drops the screen and drives out as a tank.',
+    strong: 'Low in the water, hard to see', weak: 'Swamping; it can\'t fire until it is ashore',
+    counter: 'Anything that can reach it on the water.',
+  },
+  minesweeper: {
+    use: 'Where she steams, the moored mines are cut. Clear a wider channel for the destroyers, or a new lane where the craft keep going down. Your other warships keep clear of live mines on their own — she is the one who goes into the field.',
+    strong: 'Opening water for the fleet', weak: 'Wooden and slow, one small gun',
+    counter: 'The coastal battery, if it has been left alive.',
+  },
+  oldBattleship: {
+    use: 'Thirty years old and slow, but her ten 14-inch guns reach the batteries inland and break strongpoints from far out. She can only hit what your side has spotted: send scouts up the bluffs or a recon flight over the bocage.',
+    strong: 'Concrete, batteries, anything big she can see', weak: 'Seeing: she lies far out; one per battle',
+    counter: 'Keep the batteries hidden and the strongpoints quiet until the boats are in range.',
+  },
+  wn: {
+    use: 'A resistance nest of the Atlantic Wall: an 88 in a flanking casemate (it fires along the beach — at boats, tanks and men — never out at the warships) and two MG 42s in their Tobruks. Hidden until seen, or until it fires.',
+    strong: 'Men on the open sand, boats closing the beach, tanks', weak: 'Its embrasure can\'t see the sea: the destroyers close inshore can pound it',
+    counter: 'Destroyers close in, tanks from the flank, engineers\' charges, smoke to cross the beach.',
+  },
+  battery: {
+    use: 'Heavy guns inland that fire on ships only — the destroyers and the boats out at sea. Hidden behind the bluffs and the hedgerows.',
+    strong: 'Ships that stay in its reach', weak: 'Seeing: it has to be spotted to be hit back, but once it fires it can be found',
+    counter: 'Find it — scouts up the bluffs, a recon flight — then the old battleship.',
+  },
 };

@@ -244,6 +244,12 @@ export class Landing {
   /** Craft of faction `f` still on their way in or unloading (the sea-edge limit). */
   busy(f) { return this.runs.filter((r) => r.craft.faction === f && r.phase !== 'out').length; }
 
+  /** How far out the craft are put in the water: just outside the mine band (the transports lie further out — the run in is what matters), else the sea edge. */
+  launchZ() {
+    const edge = this.game.world.bounds.z - 25, band = this.game.map.landing?.seaMines?.z;
+    return band ? Math.min(edge, band[1] + 130) : edge;
+  }
+
   /** x kept `margin` m inside the nearest swept lane (no mines: as it is). */
   inLane(x, margin) {
     const o = this.game.map.landing?.seaMines;
@@ -269,7 +275,7 @@ export class Landing {
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
-    const start = { x, z: z0 ?? sign * (edge - 25) };
+    const start = { x, z: z0 ?? sign * this.launchZ() };
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
     craft.cargo = cargo;
@@ -297,7 +303,7 @@ export class Landing {
           count[o.unit] = (count[o.unit] ?? 0) + 1;
           const name = o.name ?? `${forArmy(type.variants, g.armyOf(f), f)?.name ?? type.shortName} ${ROMAN[count[o.unit] - 1] ?? count[o.unit]}`; // (as a bought one is named)
           const x = (roads[o.sector ?? 0] ?? 0) + (o.dx ?? (Math.random() - 0.5) * 40);
-          this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null }, x, Math.sign(g.map.bases[f].z) * (g.world.bounds.z - 25 - (i % 3) * 30));
+          this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null, owner: g.coop && f === g.playerFaction ? (i % 2 ? 'guest' : 'host') : null } /* (co-op: the wave shared out) */, x, Math.sign(g.map.bases[f].z) * (this.launchZ() - (i % 3) * 30));
         });
         if (w.say) g.tell(f, w.say);
       }
@@ -370,6 +376,7 @@ export class Landing {
     }
     const d = Math.hypot(r.way.x - u.pos.x, r.way.z - u.pos.z);
     if (r.phase === 'in') {
+      this.alarm(r, u);
       // a warship close by in the lane: she waits for it (shoved aside by its hull, she'd be over the mines)
       const big = g.world.stacks.find((o) => o.alive && o.stats.naval && !o.stats.landingCraft && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < 60 + (o.type.hull?.length ?? 60) / 2);
       if (big && band && Math.abs(u.pos.z) > band[0] - 80 && Math.abs(u.pos.z) < band[1] + 120) { r.waitWay ??= r.way; r.way = { x: u.pos.x, z: u.pos.z }; r.still = 0; return; }
@@ -385,7 +392,7 @@ export class Landing {
       }
     } else if (r.phase === 'ramp') {
       u.rampK = Math.min(1, r.t / RAMP);
-      if (u.rampK >= 1 && !r.landed) { r.landed = true; this.unload(r, u); }
+      if (u.rampK >= 1 && !r.landed) { r.landed = true; g.audio?.play('impact.armor', { x: u.pos.x, y: u.pos.y + 1, z: u.pos.z }, { volume: 0.9 }); this.unload(r, u); } // (the ramp down on the sand: a clang)
       if (r.landed && r.t > RAMP + UNLOAD) { r.phase = 'back'; r.t = 0; u.beached = false; r.way = { x: u.pos.x, z: u.pos.z + r.sign * BACK }; }
     } else if (r.phase === 'back') {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
@@ -401,13 +408,20 @@ export class Landing {
     this.game.removeStack(s);
   }
 
+  /** What a craft carried, ashore as its own stack — in co-op the buyer's (the spawn's net event carries the owner it's made with). */
+  spawnCargo(r, at) {
+    const g = this.game, was = g.currentOwner;
+    if (r.cargo.owner) g.currentOwner = r.cargo.owner;
+    try { return g.spawnStack(r.cargo.typeId, r.craft.faction, at, r.sign > 0 ? Math.PI : 0, r.cargo.name); } finally { g.currentOwner = was; }
+  }
+
   /** A DD tank touching bottom: the screen folds, the tank it was carries on as itself. */
   ashore(r, u) {
     const g = this.game, s = r.craft;
     this.runs.splice(this.runs.indexOf(r), 1);
     let x = u.pos.x, zz = u.pos.z - r.sign * 3; // (in where it can drive: no deeper than a tank wades)
     for (let i = 0; i < 120 && g.world.river.level - g.terrain.heightAt(x, zz) > 0.5; i++) zz -= r.sign;
-    const stack = g.spawnStack(r.cargo.typeId, s.faction, { x, z: zz }, r.sign > 0 ? Math.PI : 0, r.cargo.name);
+    const stack = this.spawnCargo(r, { x, z: zz });
     s.cargo = null;
     s.run = null;
     this.remove(s);
@@ -423,7 +437,7 @@ export class Landing {
     const fx = 0, fz = -r.sign, half = (s.type.hull?.length ?? 10) / 2; // (always out on the landward side, whichever way she swung)
     let x = u.pos.x + fx * (half + 3), z = u.pos.z + fz * (half + 3);
     for (let i = 0; i < 120 && level - g.terrain.heightAt(x, z) > 0.5; i++) { x += fx; z += fz; } // (out where it's shallow enough to wade: never in over their heads)
-    const stack = g.spawnStack(r.cargo.typeId, s.faction, { x, z }, r.sign > 0 ? Math.PI : 0, r.cargo.name);
+    const stack = this.spawnCargo(r, { x, z });
     if (r.cargo.kit) stack.setKit?.(r.cargo.kit);
     s.cargo = null;
     // up out of the water onto the dry sand, a little way: from there it's yours to command
@@ -431,5 +445,20 @@ export class Landing {
     for (let i = 0; i < 300 && g.terrain.heightAt(ux, uz) < level + 0.8; i++) { ux += fx; uz += fz; }
     stack.ai.moveTo({ x: ux + fx * 12, z: uz + fz * 12 }, { ordered: false });
     g.bus.emit('landed', { stack, craft: s });
+    const man = stack.units.find((m) => m.alive);
+    if (man) stack.bark?.(man, 'landing', 0.8, true);
+  }
+
+  /** The defence sees the boats close in: a shout from whoever's nearest (now and then). */
+  alarm(r, u) {
+    const g = this.game;
+    if (r.alarmed || g.time < (this.alarmAt ?? 0)) return;
+    const foe = g.world.stacksOf(r.craft.faction === 'nato' ? 'pact' : 'nato').filter((s) => s.alive && s.usesCover && Math.hypot(s.centroid.x - u.pos.x, s.centroid.z - u.pos.z) < 450)
+      .sort((a, b) => Math.hypot(a.centroid.x - u.pos.x, a.centroid.z - u.pos.z) - Math.hypot(b.centroid.x - u.pos.x, b.centroid.z - u.pos.z))[0];
+    if (!foe) return;
+    r.alarmed = true;
+    this.alarmAt = g.time + 25;
+    const man = foe.units.find((m) => m.alive);
+    if (man) foe.bark?.(man, 'boats', 1, true);
   }
 }
