@@ -192,22 +192,7 @@ export default {
     const r = mulberry32(1944);
     sea.build(scene, terrain);
 
-    // ---- the beach obstacles (OBSTACLES: systems/Landing.js knows them too)
-    for (const o of OBSTACLES) {
-      const y = terrain.heightAt(o.x, o.z), yaw = r() * 0.6 - 0.3;
-      if (o.kind === 'hedgehog') props.hedgehog({ x: o.x, z: o.z });
-      else if (o.kind === 'gate') { // Element C: a steel gate on rollers, braced behind
-        props.box('metal', o.x, y + 1.4, o.z, 3, 0.12, 0.12, yaw, 0x4a3a2e);
-        props.box('metal', o.x, y + 2.7, o.z, 3, 0.12, 0.12, yaw, 0x4a3a2e);
-        for (const sx of [-1.4, 0, 1.4]) props.box('metal', o.x + Math.cos(yaw) * sx, y + 1.4, o.z - Math.sin(yaw) * sx, 0.12, 2.8, 0.12, yaw, 0x4a3a2e);
-        props.box('metal', o.x, y + 1.2, o.z - 1.1, 0.1, 2.6, 0.1, yaw, 0x4a3a2e, 0.7);
-        cover.addBox({ x: o.x, z: o.z, yaw, length: 3, thickness: 0.4, height: 2.6 });
-      } else { // a log ramp: one stake driven in leaning seaward, a Teller mine on its top
-        props.box('plain', o.x, y + 1.1, o.z, 0.25, 2.6, 0.25, yaw, 0x5a4a38, 0.5);
-        if (o.mine) props.box('metal', o.x, y + 2.25, o.z + 0.6, 0.35, 0.12, 0.35, 0, 0x3a3e32);
-      }
-      if (o.mine && o.kind !== 'stake') props.box('metal', o.x, y + (o.kind === 'gate' ? 2.85 : 1.6), o.z, 0.32, 0.12, 0.32, 0, 0x3a3e32);
-    }
+    // (the beach obstacles, OBSTACLES: drawn by systems/Landing.js — a blown one goes)
 
     // ---- the villas along the shelf behind the sea wall (Dog sector: Hamel-au-Prêtre, the Vierville front), the sea wall itself
     for (let x = -470; x < -150; x += 6) {

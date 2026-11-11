@@ -20,6 +20,7 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { forArmy } from '../data/factions.js';
 import { mulberry32 } from '../core/math.js';
 import { TIDE } from '../world/Sea.js';
+import { P, merge } from '../data/units/geometry.js';
 
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
 const DD_START = 40;           // m inshore of the mine band where the LCTs launch them
@@ -41,7 +42,8 @@ export class Landing {
     this.count = {};
     this.waves = (game.map.landing?.waves ?? []).map((w) => ({ ...w, done: false }));
     this.mines = this.layMines(game.map.landing?.seaMines);
-    this.obstacles = (game.map.landing?.obstacles ?? []).map((o) => ({ ...o }));
+    this.obstacles = (game.map.landing?.obstacles ?? []).map((o, i) => ({ ...o, i }));
+    this.drawObstacles();
     this.sweptN = 0;
     game.bus.on('stack:destroyed', (s) => {
       const r = this.runs.find((q) => q.craft === s);
@@ -50,6 +52,64 @@ export class Landing {
       if (r.phase === 'in' || r.phase === 'ramp') game.tellBoth?.(s.faction, `${s.type.shortName} sunk with ${r.cargo.name} aboard`, `A landing craft sunk with ${r.cargo.name} aboard`);
     });
   }
+
+  /**
+   * The beach obstacles, one instanced mesh a kind (and one for the Teller mines on top), with their cover for the men
+   * crossing the sand: so a blown one can go — its instance shrunk to nothing, its cover gone (hideObstacle).
+   */
+  drawObstacles() {
+    const g = this.game, RUST = 0x4a3a2e, WOOD = 0x5a4a38;
+    const geo = {
+      hedgehog: merge([0, 1, 2].map((k) => P.box(0.14, 1.9, 0.14, { y: 0.62, ry: k * Math.PI / 3 * 2, rx: k === 2 ? 0 : 0.95, rz: k === 2 ? 0.95 : 0, color: RUST }))),
+      gate: merge([
+        P.box(3, 0.12, 0.12, { y: 1.4, color: RUST }), P.box(3, 0.12, 0.12, { y: 2.7, color: RUST }),
+        ...[-1.4, 0, 1.4].map((x) => P.box(0.12, 2.8, 0.12, { x, y: 1.4, color: RUST })),
+        P.box(0.1, 2.6, 0.1, { y: 1.2, z: -1.1, rx: 0.7, color: RUST }), P.box(2.8, 0.08, 0.08, { y: 0.3, z: -1.6, color: RUST }),
+      ]),
+      stake: merge([P.box(0.25, 2.6, 0.25, { y: 1.1, rx: 0.5, color: WOOD })]),
+      mine: merge([P.cyl(0.17, 0.17, 0.1, { color: 0x3a3e32 }, 10)]),
+    };
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.3, roughness: 0.75 });
+    const r = mulberry32(44), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
+    this.obMesh = {};
+    for (const kind of Object.keys(geo)) {
+      const list = this.obstacles.filter((o) => (kind === 'mine' ? o.mine : o.kind === kind));
+      if (!list.length) continue;
+      const mesh = new THREE.InstancedMesh(geo[kind], mat, list.length);
+      mesh.castShadow = true;
+      list.forEach((o, n) => {
+        const y = g.terrain.heightAt(o.x, o.z), yaw = (o.yaw ??= r() * 0.6 - 0.3 + (o.kind === 'hedgehog' ? r() * 3 : 0));
+        const top = kind === 'mine' ? (o.kind === 'gate' ? 2.85 : o.kind === 'stake' ? 2.2 : 1.6) : 0;
+        q.setFromAxisAngle(up, yaw);
+        m.compose(new THREE.Vector3(o.x, y + top, o.z + (kind === 'mine' && o.kind === 'stake' ? 0.55 : 0)), q, one);
+        mesh.setMatrixAt(n, m);
+        (o.slots ??= []).push([mesh, n]);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      g.scene.add(mesh);
+      this.obMesh[kind] = mesh;
+    }
+    for (const o of this.obstacles) { // (cover: a hedgehog or a gate to lie behind; a stake is too thin)
+      if (o.kind === 'hedgehog') o.collider = g.cover.addCylinder({ x: o.x, z: o.z, radius: 0.7, height: 1.2, spots: false });
+      else if (o.kind === 'gate') o.collider = g.cover.addBox({ x: o.x, z: o.z, yaw: o.yaw, length: 3, thickness: 0.4, height: 2.6, spots: false });
+    }
+  }
+
+  /** A blown obstacle: gone from the sand (`mineOnly`: the mine on it went up, the obstacle stands). Host and guest alike. */
+  hideObstacle(o, mineOnly = false) {
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    for (const [mesh, n] of o.slots ?? []) {
+      if (mineOnly && mesh !== this.obMesh.mine) continue;
+      mesh.setMatrixAt(n, zero);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+    if (!mineOnly && o.collider) { this.game.cover.remove(o.collider); o.collider = null; }
+    if (!o.gone) this.game.netEvent?.('beach', o.i, mineOnly ? 1 : 0);
+    o.gone = !mineOnly;
+  }
+
+  /** On a multiplayer guest, each frame: the tide (by the clock: no route grid here, the host does the moving). */
+  clientUpdate() { this.tide(true); }
 
   /** The moored mines (seeded: host and guest lay the same), and the dan buoys along the swept lanes. */
   layMines(o) {
@@ -108,7 +168,7 @@ export class Landing {
       for (const o of this.obstacles) {
         if (o.hit || Math.hypot(u.pos.x - o.x, u.pos.z - o.z) > u.radius + 1.2 || level - g.terrain.heightAt(o.x, o.z) < 0.4) continue;
         o.hit = true;
-        if (o.mine) { this.blast(s, u, o, OBSTACLE_MINE, 1.6); g.tell(s.faction, `${s.name}: blown up on a mined obstacle`); }
+        if (o.mine) { this.blast(s, u, o, OBSTACLE_MINE, 1.6); this.hideObstacle(o, true); g.tell(s.faction, `${s.name}: blown up on a mined obstacle`); }
         else { s.damageUnit(u, 60, null); r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z }; g.tell(s.faction, `${s.name}: stuck on the obstacles — the men go in from here`); }
         break;
       }
@@ -187,7 +247,7 @@ export class Landing {
   }
 
   /** The tide coming in (the map's `landing.tide`: { rise m, over s }): the sea's level up, the beach narrower, the obstacles under. */
-  tide() {
+  tide(guest = false) {
     const T = this.game.map.landing?.tide, g = this.game, river = g.world.river;
     if (!T || !river) return;
     this.base ??= river.level;
@@ -198,14 +258,15 @@ export class Landing {
     TIDE.value = level - this.base;
     for (const m of river.meshes ?? []) m.position.y = level;
     g.cameraManager.waterLevel = level;
-    if (Math.abs(level - (this.navAt ?? this.base)) >= 0.1) { this.navAt = level; g.world.nav.water(T.band ?? null); } // (men and vehicles: where the water is too deep now)
-    if (!this.tideSaid && TIDE.value > T.rise * 0.35) { this.tideSaid = true; for (const f of ['nato', 'pact']) g.tell(f, 'The tide is coming in: the obstacles are going under, the beach is getting narrower'); }
+    if (!guest && Math.abs(level - (this.navAt ?? this.base)) >= 0.1) { this.navAt = level; g.world.nav.water(T.band ?? null); } // (men and vehicles: where the water is too deep now)
+    if (!guest && !this.tideSaid && TIDE.value > T.rise * 0.35) { this.tideSaid = true; for (const f of ['nato', 'pact']) g.tell(f, 'The tide is coming in: the obstacles are going under, the beach is getting narrower'); }
   }
 
   /** Engineers' charges (systems/Construction.js clear): the beach obstacles round (x, z) blown — no craft will run onto them now. */
   clearObstacles(x, z, r) {
     let n = 0;
-    for (const o of this.obstacles) if (!o.hit && Math.hypot(o.x - x, o.z - z) < r) { o.hit = true; o.cleared = true; n++; }
+    for (const o of this.obstacles) if (!o.gone && Math.hypot(o.x - x, o.z - z) < r) { o.hit = true; o.cleared = true; this.hideObstacle(o); n++; }
+    if (n) this.game.effects?.explosion?.({ x, y: this.game.terrain.heightAt(x, z), z }, 1.4);
     return n;
   }
 

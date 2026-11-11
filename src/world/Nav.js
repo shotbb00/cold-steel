@@ -125,6 +125,13 @@ export class NavGrid {
         this.dShore[k] = shoal < SHIP_DEPTH ? 0 : Infinity;
       }
     }
+    if (band) { // (the band alone: its distances from its own seeds — beyond it nothing changed; no stall while the tide comes in)
+      const n = this.nx, a = j0 * n, b = j1 * n;
+      chamfer(d.subarray(a, b), n, j1 - j0, this.cell);
+      chamfer(this.dShore.subarray(a, b), n, j1 - j0, this.cell);
+      this.version++;
+      return;
+    }
     this.waterDirty = true;
     this.dirty = true;
   }

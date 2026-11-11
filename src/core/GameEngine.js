@@ -749,6 +749,7 @@ export class GameEngine {
     world.refresh();
     this.cameraManager.handleInput(dt);
     for (const s of world.stacks) s.renderer.update(dt, t);
+    this.landing?.clientUpdate(dt); // (coastal: the tide by the clock)
     this.projectiles.update(dt);
     this.effects.update(dt);
     this.smoke.update(dt);

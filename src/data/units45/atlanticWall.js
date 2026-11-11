@@ -5,8 +5,8 @@
 //            men) and two Tobruk MG pits (the MG 42's long bursts: men pinned on the sand)
 //   battery  a coastal battery: two 155 mm guns in casemates inland — ships only (`shipsOnly`): the
 //            destroyers have to find and silence it
-import { buildMgPit } from '../models/fortifications.js';
-import { buildCasemate } from '../models/atlanticWall.js';
+
+import { buildCasemate, buildTobruk } from '../models/atlanticWall.js';
 
 const FIXED = { structure: true, concealed: true, stealth: 0.55, /* (dug in and camouflaged: found by eye, or by its fire — then it stays marked) */ speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.2, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand' };
 
@@ -31,7 +31,7 @@ export const wn = {
   formation: { count: 3, columns: 3, spacing: 14 },
   stats: TOBRUK,
   specialist: { count: 1, stats: EIGHTY_EIGHT },
-  models: { nato: buildMgPit('nato'), pact: buildMgPit('pact') },
+  models: { nato: buildTobruk(), pact: buildTobruk() },
   specialistModels: { nato: buildCasemate(1, 5.2, 0.7)(), pact: buildCasemate(1, 5.2, 0.7)() },
   weaponSound: 'mg',
   variants: {
