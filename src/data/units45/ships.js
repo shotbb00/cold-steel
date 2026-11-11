@@ -11,7 +11,7 @@
 // submerged they're seen only by a ship's `sonar` (or the periscope close by, or a torpedo shot:
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
-import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
+import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
 import { buildLCVP, buildLCT, buildYMS } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
@@ -311,4 +311,25 @@ export const minesweeper = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper };
+/** The old battleship offshore (the coastal maps only): ten 14-inch guns on the batteries and the strongpoints inland. */
+const FOURTEEN_INCH = { range: 3000, reload: 26, damage: 1400, splash: 10, pierce: 0.6, shell: 760, size: 3, spread: 0.008 };
+export const oldBattleship = ship({
+  fleet: 'line', coastal: true,
+  id: 'oldBattleship', name: 'Old Battleship', shortName: 'Battleship', cost: 1100, limit: 1,
+  names: { nato: ['Texas', 'Arkansas', 'Nevada'], pact: ['Schleswig-Holstein'] },
+  hull: { length: 174, beam: 29 },
+  stats: { hp: 13000, armor: 0.42, speed: 7, accel: 0.05, turnRate: 0.045, turretRate: 0.18, radius: 13, height: 30, eyeHeight: 34, sight: 3000, ...AA(700, 0.2, 0.05),
+    range: 3000, aggroRange: 3000, preferredRange: 2600, leash: 80, damage: 1400, fireCooldown: 26, spread: 0.008, boltSpeed: 760, boltSize: 3, splash: 10, pierce: 0.6 },
+  mounts: {
+    nato: [gun([0, 14, 64], FWD, FOURTEEN_INCH), gun([0, 17, 50], FWD, FOURTEEN_INCH), gun([0, 13, -14], AFT, { ...FOURTEEN_INCH, arc: 4 }), gun([0, 16, -50], AFT, FOURTEEN_INCH), gun([0, 13, -64], AFT, FOURTEEN_INCH)],
+    pact: [gun([0, 12, 50], FWD, { ...FOURTEEN_INCH, damage: 900 }), gun([0, 12, -50], AFT, { ...FOURTEEN_INCH, damage: 900 })],
+  },
+  camera: { distance: 150, height: 48, shoulder: 0 },
+  models: { nato: buildTexas, pact: buildTexas },
+  variants: {
+    nato: { name: 'New York-class battleship', weapon: '10 × 14-inch, 5-inch casemate guns', text: 'Thirty years old and slow, but her ten 14-inch guns reach the batteries inland and break the strongpoints on the bluffs. Find her targets for her: what nobody has seen, she can\'t hit.' },
+    pact: { name: 'Old battleship', weapon: '11-inch guns', text: 'An old battleship.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship };

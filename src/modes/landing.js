@@ -62,7 +62,7 @@ export default {
       },
     };
     state.buy = makeBuyer(game, state);
-    state.allow = (t, f = game.playerFaction) => !t.stats?.naval || f === att; // (ships for the side that lands)
+    state.allow = (t, f = game.playerFaction) => !t.stats?.naval || (f === att && (map.landing?.navy ?? [t.id]).includes(t.id)); // (ships for the side that lands: the map's navy)
     game.modeState = state;
     this.opens = opens;
     this.inland = inland;

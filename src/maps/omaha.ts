@@ -42,7 +42,7 @@ function height(x: number, z: number) {
   if (z > sz) { // the beach and the sea floor: hard sand shelving gently, a runnel and bar on it, then the bottom falling away
     const d = z - sz;
     h = 1.7 - d * 0.017 + Math.sin(d * 0.045 + x * 0.004) * 0.25 * smoothstep(40, 90, d) * smoothstep(260, 200, d);
-    h = Math.min(h, 1.7 - d * 0.017 - Math.max(0, d - 230) * 0.025);
+    h = Math.min(h, 1.7 - d * 0.017 - Math.max(0, d - 200) * 0.05); // (past the obstacle belts the bottom shelves away: the destroyers came in to a few hundred metres)
     h = Math.max(h, -16);
     h += smoothstep(10, 0, d) * 1.3;                                                  // the shingle bank's seaward face
   } else if (z > fz) { // the shingle, then the shelf: marsh and low dunes
@@ -164,7 +164,9 @@ export default {
       ...DRAWS.flatMap((d) => [{ kind: 'mines', x: d.x - 28, z: footZ(d.x) + 22 }, { kind: 'mines', x: d.x + 28, z: footZ(d.x) + 22 }, { kind: 'tankTraps', x: d.x, z: footZ(d.x) + 4 }]),
     ],
     // moored mines across the approach, swept lanes off the three sectors (dan buoys)
-    seaMines: { z: [360, 450], count: 90, lanes: [-330, 10, 330], lane: 48, seed: 1944 },
+    seaMines: { z: [430, 500], count: 60, lanes: [-330, 10, 330], lane: 48, seed: 1944 },
+    // what the landing may call in at sea: the destroyers inshore, the minesweepers, the old battleship offshore
+    navy: ['destroyer', 'minesweeper', 'oldBattleship'],
     obstacles: OBSTACLES,
     // the defence at H-hour (modes/landing.js): on the bluffs over each sector, in the draws, in the villages
     hold: [...DRAWS.flatMap((d) => [{ x: d.x - 70, z: topZ(d.x - 70) - 4 }, { x: d.x + 70, z: topZ(d.x + 70) - 4 }, { x: d.x, z: footZ(d.x) - 60 }]), ...DRAWS.map((d) => ({ x: d.x, z: d.vz }))],
@@ -176,7 +178,7 @@ export default {
   },
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -200, z: 560, facing: Math.PI / 2 }, { unit: 'destroyer', x: 220, z: 600, facing: -Math.PI / 2 }],
+    nato: [{ unit: 'destroyer', x: -250, z: 650, facing: Math.PI }, { unit: 'destroyer', x: 260, z: 660, facing: Math.PI }], // (off the mine band, bows to the beach: in through the lanes)
     pact: [{ unit: 'rifles', x: 10, z: -250, facing: 0, name: '1. Kompanie' }],
   },
 

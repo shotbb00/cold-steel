@@ -601,6 +601,46 @@ export const buildIowa = ship(() => {
   };
 });
 
+/**
+ * USS Texas (BB-35), New York class, as at Normandy: 174 m, five twin 14-inch turrets (two forward, one
+ * amidships between the funnel and the mainmast, two aft), a tripod foremast and a pole main, one big funnel,
+ * the old 5-inch casemate guns along the hull, AA tubs added everywhere, Measure 22 grey.
+ */
+export const buildTexas = ship(() => {
+  const c = { ...US, hull: 0x6a747c, upper: 0x7e8892 };
+  const fb = 8;
+  const H = hull(174, 29, fb, 8.7, c, 2.2);
+  const t2 = turret(c, { w: 10, h: 4.2, d: 11, barrels: 2, len: 16, cal: 0.42 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...bowNumber(H, '35', 3),
+      box(11, 3, 12, { y: fb + 1.5, z: 50, color: c.upper }),            // No. 2's barbette, superfiring
+      box(14, 5, 22, { y: fb + 2.5, z: 30, color: c.upper }),            // the forward superstructure
+      cyl(3.6, 4, 8, { y: fb + 8, z: 33, color: c.upper }, 14),          // the conning tower
+      box(11, 4.5, 9, { y: fb + 13.5, z: 30, color: c.upper }),          // the bridge
+      ...windows(0, fb + 15, 30, 11, 9),
+      ...mast(c, 0, fb + 16, 27, 18, { tripod: true, yard: 10, legsY: fb + 5 }), // the tripod foremast with its top
+      box(5, 3, 5, { y: fb + 34, z: 27, color: c.upper }),               // the fire-control top
+      box(13, 5, 40, { y: fb + 2.5, z: -4, color: c.upper }),            // the boat deck and casing
+      ...funnel(c, 0, fb + 5, 4, 4.2, 15, 0.05, { oval: 1.4 }),
+      ...mast(c, 0, fb + 5, -26, 22, { yard: 8 }),                       // the pole mainmast
+      box(8, 3, 8, { y: fb + 6.5, z: -26, color: c.upper }),
+      ...[-1, 1].flatMap((s) => every(-40, 40, 10).map((z) => box(0.4, 1.2, 1.6, { x: s * (H.side(z, fb - 2) + 0.1), y: fb - 2.2, z, color: BLACK }))), // the casemate ports
+      ...[-1, 1].flatMap((s) => [38, 20, -14, -38].map((z) => aa(c, s * 7.5, fb + 5, z, { ry: s * Math.PI / 2 }))),
+      ...[-1, 1].flatMap((s) => every(-70, 70, 10).filter((z) => Math.abs(z) > 46).map((z) => oerlikon(c, s * (H.side(z, fb) - 1.1), H.top(z), z, s * Math.PI / 2))),
+      ...[-1, 1].map((s) => boat(c, s * 7.5, fb + 5, -6, 9, s)),
+    ]),
+    mounts: [
+      { geo: t2, at: [0, H.top(64), 64], arc: 5 },
+      { geo: t2, at: [0, fb + 3, 50], arc: 5 },
+      { geo: t2, at: [0, fb, -14], aft: true, arc: 4 },                    // No. 3, amidships
+      { geo: t2, at: [0, fb + 3, -50], aft: true, arc: 5 },
+      { geo: t2, at: [0, fb, -64], aft: true, arc: 5 },
+    ],
+  };
+});
+
 export const buildYamato = ship(() => {
   const c = { ...IJN, deck: 0x9a845e };   // the scrubbed hinoki deck
   const fb = 10;

@@ -27,7 +27,7 @@ const RAMP = 1.6;              // s for the ramp to come down (and as long to go
 const UNLOAD = 3;              // s with the ramp down before she backs off
 const BACK = 40;               // m she backs off before she turns for the sea
 const MINE_REACH = 7;          // m from a sea mine to a hull (plus her radius) that sets it off
-const MINE_DAMAGE = 2600;      // a destroyer badly holed, a craft gone
+const MINE_DAMAGE = 1700;      // a destroyer badly holed (flooding: she may still go down), a craft gone
 const OBSTACLE_MINE = 500;     // a Teller mine on a stake: a Higgins boat gone, an LCT holed
 
 export class Landing {
