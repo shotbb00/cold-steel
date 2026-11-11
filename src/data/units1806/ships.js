@@ -22,7 +22,7 @@ const twoDecker = (beam, len, lower, upper) => [-1, 1].flatMap((s) => [
 const ship = (o) => ({
   category: 'naval', kind: 'vehicle', role: 'fighter',
   formation: { count: 1, columns: 1, spacing: 0 },
-  weaponSound: 'arty', engine: undefined, tracks: 'wash',
+  weaponSound: 'arty', engine: 'engine.sail', tracks: 'wash', // (engine.sail: the creak of the hull and the wind in her rigging, public/sounds/ships)
   ...o,
   stats: { ...SAIL, weapon: 'cannon', ...o.stats },
 });
