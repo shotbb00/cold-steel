@@ -12,6 +12,7 @@ import { buildNapSoldier } from '../models/napSoldier.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
 import { buildFieldGun } from '../models/napGuns.js';
 import { buildWagon } from '../models/napWagons.js';
+import { SHIPS_1806 } from './ships.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -310,6 +311,7 @@ const bridgeLayer = wagon('bridgeLayer', 'pontoon', {
 });
 
 export const TYPES_1806 = {
+  ...SHIPS_1806,   // the sea maps' sailing ships (./ships.js)
   rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
   mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)

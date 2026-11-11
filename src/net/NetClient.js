@@ -8,6 +8,7 @@
 //   • walking, gait and footfall come from the interpolated motion; renderers, effects, sound,
 //     labels, minimap and HUD then run as in single player
 // Orders go to the host (core/Orders.js); the host's simulation answers in the next snapshots.
+import { sideChanged } from '../entities/sailDamage.js';
 import * as THREE from 'three';
 import { decodeSnapshot, unpackArgs, FLAG, FLAG2 } from './protocol.js';
 import { FX_CALLS, SOUND_CALLS } from './NetHost.js';
@@ -294,6 +295,11 @@ export class NetClient {
       case 'p': this.shot(e[1]); break;
       case 'smoke': g.smoke.add(e[1], e[2], e[3] ?? undefined); break;
       case 'spawn': this.spawn(e.slice(1)); break;
+      case 'side': { // (1806: a ship taken as a prize — entities/sailDamage.js)
+        const s = g.world.stackById(e[1]);
+        if (s) sideChanged(s, e[2]);
+        break;
+      }
       case 'dead': {
         const s = g.world.stackById(e[1]);
         if (s) { for (const u of s.units) if (u.alive) this.kill(s, u); s.netDeadAt = this.renderTime; } // (an older snapshot still in the blend must not bring her back)
@@ -392,7 +398,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -409,6 +415,7 @@ export class NetClient {
       s.tended = tended ? { kind: tended, until: g.time + 1 } : null;
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
       if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
+      if (s.stats.sail && rig != null) { const u = s.units[0]; u.masts = [0, 1, 2].map((i) => !!(rig & (1 << i))); u.struck = !!(rig & 8); } // (1806: the model's masts and colours)
     }
     const ms = g.modeState;
     if (ms) {

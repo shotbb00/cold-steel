@@ -27,7 +27,8 @@ export class SmokeSystem {
     duration /= 1 + 0.12 * wind.speed; // a gale tears a screen apart sooner
     const cloud = { x, z, maxR: radius, r: 0, t: 0, duration };
     this.clouds.push(cloud);
-    const y = this.game.terrain.heightAt(x, z);
+    const river = this.game.world.river, ground = this.game.terrain.heightAt(x, z);
+    const y = river && ground < river.level ? river.level + 1.5 : ground; // (on the water, never on the sea floor under it)
     cloud.emitter = this.game.effects.screen({ x, y, z }, radius, duration + 6);
     if (!powder) this.game.audio?.play('smoke.pop', { x, y, z }, { volume: 0.5, throttle: 0.1 });
     return cloud;

@@ -16,10 +16,14 @@
 import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES, getUnitType } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
+import { year } from '../data/epoch.js';
+import { windFrom } from '../entities/sailing.js';
 
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
-const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer'];
+const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer']; // (missileSub: 1985 only — the others skip what their year doesn't have)
+const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
+const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
 export class SeaDirector {
@@ -63,8 +67,9 @@ export class SeaDirector {
     const army = this.game.armyOf(this.faction);
     const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(getUnitType(id)));
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
-    for (let tries = 0; tries < ORDER.length; tries++) {
-      const id = ORDER[this.buyIndex % ORDER.length];
+    for (let tries = 0; tries < (year() < 1900 ? ORDER_1806 : ORDER).length; tries++) {
+      const list = year() < 1900 ? ORDER_1806 : ORDER;
+      const id = list[this.buyIndex % list.length];
       if (!allowed(id) || capped(id)) { this.buyIndex++; continue; }
       if (this.state.cp[this.faction] >= unitCost(getUnitType(id), army)) {
         this.state.buy(this.faction, id);
@@ -147,10 +152,26 @@ export class SeaDirector {
     const bigFoes = this.foes().filter((s) => s.units[0]?.spotted && VALUE[s.type.id] >= 3);
     const fleet = this.ships();
     let escort = null;
+    const line = fleet.filter((s) => s.stats.sail && !s.anchored && (s.type.id === 'cruiser' || s.type.id === 'battleship') && !s.units[0]?.struck && !s.units[0]?.grappled && !s.boardTarget && !s.owner);
+    if (line.length >= 2 && line.filter((s) => !s.station).length > 1 && (this.lineT = (this.lineT ?? 0) - 1) <= 0) {
+      this.lineT = 12; // (every dozen thoughts at most: let the line settle)
+      g.orders.run(this.faction, { t: 'formation', s: line.map((s) => s.id), f: 'ahead' }, 'ai');
+    }
+    // the weather gauge: from upwind of the enemy (the wind behind, the choice of when to close), then down onto him
+    const from = windFrom(), up = { x: Math.sin(from), z: Math.cos(from) };
     for (const s of fleet) {
       const u = s.units[0];
-      if (!u?.alive || s.owner) continue; // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
+      if (!u?.alive || u.struck || s.owner) continue;
       const d = (p) => Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
+      if (s.stats.sail && !s.boardTarget && !u.grappled) { // (1806: a prize to be had — struck, or her crew cut down and his not)
+        const prize = this.foes().filter((f) => f.stats.sail && f.units[0]?.alive && (f.units[0].struck || ((f.units[0].crew ?? 1) < 0.35 && (u.crew ?? 1) > 0.6)) && d(f.units[0].pos) < 1200).sort((a, b) => d(a.units[0].pos) - d(b.units[0].pos))[0];
+        if (prize) { g.orders.run(this.faction, { t: 'board', s: [s.id], target: prize.id }, 'ai'); continue; }
+      }
+      if (s.boardTarget) continue; // (on her way alongside)
+      if (s.stats.fireship) { // (1806: down onto the nearest enemy she can see — the bigger the better)
+        const prey = this.foes().filter((f) => f.stats.sail && f.units[0]?.spotted && !f.units[0].struck).sort((a, b) => d(a.units[0].pos) - (VALUE[a.type.id] ?? 1) * 150 - d(b.units[0].pos) + (VALUE[b.type.id] ?? 1) * 150)[0];
+        if (prey) { this.move(s, prey.units[0].pos.x, prey.units[0].pos.z); continue; }
+      } // (a player's ships in co-op — owned by host or guest — are theirs to steer; its own move orders mark the rest 'ordered' too)
       if (s.stats.carrier) { // back by home, a little toward the fight
         const want = { x: home.x + (target.x - home.x) * 0.15, z: home.z + (target.z - home.z) * 0.15 };
         if (d(want) > 250 && !s.moveTarget) this.move(s, want.x, want.z);
@@ -193,17 +214,48 @@ export class SeaDirector {
       // badly hurt in sight of the enemy: a destroyer or escort hides behind her own smoke
       if (s.stats.smokeGen && s.hpRatio < 0.5 && u.target && !(s.smokeReady > g.world.time)) g.orders.run(this.faction, { t: 'shipSmoke', s: [s.id] }, 'ai');
       // cruising to a far objective: zig-zag (a submarine's torpedo finds water); in a fight: steady, the guns need it
-      const cruising = !u.target && d(target) > 900;
+      const cruising = !u.target && d(target) > 900 && !s.stats.sail; // (not under sail: the wind sets her course — and no submarines yet to dodge)
       if (!!s.zigzag !== cruising) g.orders.run(this.faction, { t: 'zigzag', s: [s.id], on: cruising ? 1 : 0 }, 'ai');
       if (u.target && d(u.target.pos) < (s.stats.range ?? 2000) * 0.9) continue; // in a fight already: let the guns work
+      if (s.anchored) { // (at anchor in line: she lies there until the enemy is close or fire opens — then cuts her cable)
+        if (this.foes().some((f) => f.units[0]?.spotted && d(f.units[0].pos) < 1000) || g.world.time - (s.lastHitTime ?? -1e9) < 5) s.anchored = false; else continue;
+      }
+      if (s.station && s.stats.sail) continue; // (in the line: she keeps her station on the leader)
+      if (s.stats.sail && !s.stats.fireship) {
+        const foe = this.foes().filter((f) => f.units[0]?.spotted && !f.units[0].struck).sort((a, b) => d(a.units[0].pos) - d(b.units[0].pos))[0];
+        const windward = foe && ((u.pos.x - foe.units[0].pos.x) * up.x + (u.pos.z - foe.units[0].pos.z) * up.z) > 0; // (already upwind of him: hold the gauge; to leeward: no beating up for it — close him)
+        if (foe && windward && d(foe.units[0].pos) > 1200) { // still closing: to windward of him first
+          const gauge = this.seaRoom(g.world.clampToBounds({ x: foe.units[0].pos.x + up.x * 450, z: foe.units[0].pos.z + up.z * 450 }), 300);
+          if (!s.moveTarget || Math.hypot(s.moveTarget.x - gauge.x, s.moveTarget.z - gauge.z) > 150) this.move(s, gauge.x, gauge.z);
+          continue;
+        }
+        if (foe) { // close enough: bear down and lie alongside him at broadside range, on his beam
+          const e = foe.units[0], side = Math.sign((u.pos.x - e.pos.x) * Math.cos(e.yaw) - (u.pos.z - e.pos.z) * Math.sin(e.yaw)) || 1;
+          const spot = { x: e.pos.x + Math.cos(e.yaw) * side * 260 + (e.vel?.x ?? 0) * 20, z: e.pos.z - Math.sin(e.yaw) * side * 260 + (e.vel?.z ?? 0) * 20 };
+          if (!s.moveTarget || Math.hypot(s.moveTarget.x - spot.x, s.moveTarget.z - spot.z) > 120) this.move(s, spot.x, spot.z);
+          continue;
+        }
+      }
       if (d(target) > target.radius * 0.6) {
         // spread out round the zone a little, each its own spot
         const a = (s.id * 2.399) % (Math.PI * 2);
         const r = target.radius * 0.45;
-        const goal = { x: target.x + Math.cos(a) * r, z: target.z + Math.sin(a) * r };
+        const goal = this.seaRoom({ x: target.x + Math.cos(a) * r, z: target.z + Math.sin(a) * r }, target.radius);
         if (!s.moveTarget || Math.hypot(s.moveTarget.x - goal.x, s.moveTarget.z - goal.z) > 80) this.move(s, goal.x, goal.z);
       }
     }
+  }
+
+  /** A spot with sea room: `p` if it's SEA_ROOM m off the shallows, else the deepest-water spot within `r` of it (a zone by an island: on its open side). */
+  seaRoom(p, r = 150) {
+    const nav = this.game.world.nav;
+    if (!nav || nav.clearance(p.x, p.z, 'ship') >= SEA_ROOM) return p;
+    let best = p, bestC = nav.clearance(p.x, p.z, 'ship');
+    for (let i = 0; i < 12; i++) for (const k of [0.5, 1]) {
+      const q = { x: p.x + Math.cos((i / 12) * Math.PI * 2) * r * k, z: p.z + Math.sin((i / 12) * Math.PI * 2) * r * k }, c = nav.clearance(q.x, q.z, 'ship');
+      if (c > bestC) { best = q; bestC = c; }
+    }
+    return best;
   }
 
   /** A submarine: out ahead at periscope depth; found by a hunter, deep and silent until it has lost the boat. */

@@ -463,13 +463,14 @@ export class AudioSystem {
       ch.d = this.distanceTo(u.pos);
       const k = Math.min(1, Math.hypot(u.vel.x, u.vel.z) / ch.s.stats.speed);
       const busy = u.cooldown > 0 || !!u.target; // the gunner's foot on it in a fight
-      ch.engine.setRate(0.8 + 0.5 * k + (busy ? 0.05 : 0));
-      ch.engine.setGain((0.16 + 0.24 * k) * ch.level);
+      const sail = ch.s.stats.sail; // (1806: the rigging and the hull, a recording — never pitched, there at rest too, the wind is in it)
+      ch.engine.setRate(sail ? 1 : 0.8 + 0.5 * k + (busy ? 0.05 : 0));
+      ch.engine.setGain((sail ? 0.3 + 0.2 * k : 0.16 + 0.24 * k) * ch.level);
       ch.tracks.setRate(ch.s.stats.naval ? 1 : 0.45 + 1.05 * k); // (a ship's bow wash: louder with speed, never pitched up)
       ch.tracks.setGain(k > 0.05 ? 0.1 + 0.28 * k : 0);
       const turn = dt > 0 ? Math.abs(angleDelta(ch.turretYaw, u.turretYaw)) / dt : 0;
       ch.turretYaw = u.turretYaw;
-      ch.turret.setGain(Math.min(0.22, turn * 0.35));
+      ch.turret.setGain(ch.s.stats.sail ? 0 : Math.min(0.22, turn * 0.35)); // (broadside guns don't train: no whine)
       ch.engine.setPos(u.pos);
       ch.tracks.setPos(u.pos);
       ch.turret.setPos(u.pos);
@@ -585,6 +586,13 @@ export class AudioSystem {
     this.updateIndoors();
     this.updateMachines(step);
     this.updateHooves();
+    // under sail (1806 at sea): the ship's bell strikes two bells now and then, aboard one of yours near the camera
+    if (this.game.world.river?.sea && epoch() === '1806' && (this.bellT = (this.bellT ?? 8) - step) <= 0) {
+      this.bellT = 130 + Math.random() * 60;
+      const mine = this.game.world.stacksOf(this.game.playerFaction).filter((s) => s.stats.sail && !s.units[0]?.struck).map((s) => s.units[0]).filter((u) => u?.alive);
+      const u = mine.sort((a, b) => this.distanceTo(a.pos) - this.distanceTo(b.pos))[0];
+      if (u) this.play('ship.bell', { x: u.pos.x, y: u.pos.y + 12, z: u.pos.z }, { volume: 0.8 });
+    }
     this.updateAmbience(this.game.world.time);
   }
 

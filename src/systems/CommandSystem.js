@@ -67,6 +67,9 @@ export class CommandSystem {
     bus.on('stack:removed', (s) => {
       if (this.selected.delete(s)) this.emitSelection();
     });
+    bus.on('stack:side', (s) => { // (1806: a ship taken as a prize — no longer yours, or now yours)
+      if (this.selected.delete(s)) this.emitSelection();
+    });
   }
 
   get active() {
@@ -291,6 +294,10 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'radar', s: ids(sets), on: on ? 1 : 0 });
         for (const s of sets) s.radarOn = on;
         this.game.bus.emit('toast', on ? 'Radar on: she sees — and is heard' : 'Radar off: silent, eyes only');
+      } else if (k === 'board') {
+        const crews = ships.filter((s) => s.alive && s.stats.sail && !s.units[0]?.struck);
+        if (!crews.length) return this.game.bus.emit('toast', 'Select a sailing ship');
+        this.startTargeting({ kind: 'smoke', stacks: crews, fire: 'board' });
       } else if (k === 'missile') {
         const shooters = ships.filter((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile));
         if (!shooters.length) return this.game.bus.emit('toast', 'Select ships with anti-ship missiles');
@@ -381,6 +388,7 @@ export class CommandSystem {
       const k = cmd.slice(6), g = this.game;
       if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
       if (!g.powers.ready(this.faction, k)) return g.bus.emit('toast', `${POWERS_1806[k].label} ${POWERS_1806[k].once ? 'already called' : `not ready (${Math.ceil(g.powers.cooldownLeft(this.faction, k))} s)`}`);
+      if (k === 'signal') { this.game.orders.issue({ t: 'power', k, x: 0, z: 0 }); return; } // (a signal: no spot to pick)
       this.startTargeting({ kind: 'smoke', power: k });
     } else if (cmd === 'salvo' || cmd === 'sustain') {
       const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect);
@@ -457,6 +465,7 @@ export class CommandSystem {
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
+        : t.fire === 'board' ? `Board: ${click} the enemy ship to run alongside and board — ${cancel}`
         : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
         : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
@@ -615,6 +624,12 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.fire === 'helo') {
       this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
+    } else if (t.kind === 'smoke' && t.fire === 'board') {
+      const foe = this.game.world.stacks.filter((s) => s.alive && s.faction !== this.faction && s.stats.sail)
+        .map((s) => [s, Math.hypot(s.centroid.x - p.x, s.centroid.z - p.z)]).filter(([, d]) => d < 150).sort((a, b) => a[1] - b[1])[0]?.[0];
+      if (!foe) return this.game.bus.emit('toast', 'Click on an enemy ship');
+      this.game.orders.issue({ t: 'board', s: ids(t.stacks), target: foe.id });
+      this.addMarker(foe.centroid, 'attack');
     } else if (t.kind === 'smoke' && t.fire === 'missile') {
       this.game.orders.issue({ t: 'missileAt', s: ids(t.stacks), x: p.x, z: p.z, n: 2 });
       this.addMarker(p, 'attack');

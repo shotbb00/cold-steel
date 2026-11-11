@@ -172,6 +172,9 @@ export class NetHost {
       try { this.game.orders.run(this.remoteFaction, o, 'guest'); } catch (e) { console.error('bad order', o, e); }
     }
     this.deployT = (this.deployT ?? 0) + dt;
+    // what was bought meanwhile (a pitched battle: both armies are built now) — its spawns, on this clock, and the CP left
+    if (this.events.length) { this.link.send({ k: 'ev', t: DEPLOY_CLOCK + this.deployT, e: this.events }); this.events = []; }
+    if ((this.stateT -= dt) <= 0) { this.stateT = 0.5; this.sendState(); }
     this.snapT -= dt;
     if (this.snapT > 0) return;
     this.snapT = 1 / SNAPSHOT_RATE;
@@ -185,19 +188,21 @@ export class NetHost {
     this.link.sendSnapshot(encodeSnapshot(g.time, stacks, sorties, this.posQ));
   }
 
-  sendState() {
+  /** `t`: the clock it's stamped on (the battle's; during deployment, deployment's — the guest takes it in order, by that clock). */
+  sendState(t = this.game.deployment?.on ? DEPLOY_CLOCK + (this.deployT ?? 0) : this.game.time) {
     const g = this.game;
     const ms = g.modeState;
     const round = (o) => (o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r2(v)])) : null);
     this.link.send({
       k: 'st',
-      t: g.time,
+      t,
       s: g.world.stacks.filter((s) => s.alive).map((s) => [
         s.id, s.ai.state, Math.round(s.ai.defendTime ?? 0), r2(s.morale), s.passengers ?? 0,
         s.smokeLeft ?? 0, s.smokeRounds ?? 0, s.garrison?.index ?? -1, s.ai.ordered ? 1 : 0, s.rank, s.autonomous ? 1 : 0,
         s.job ?? '', s.tended && s.tended.until > g.time ? s.tended.kind : '', // a support vehicle's work, and whom it treats (systems/Support.js)
         s.radarOn === false ? 0 : 1, // (1985 ships: radar on or silent — a guest's ESM bearings, systems/Sensors.js)
         (() => { const l = s.stats.naval && s.units.find((u) => u.alive && u.lightOn)?.lightOn; return l ? [Math.round(l.x), Math.round(l.z)] : 0; })(), // a ship's searchlight on (x, z)
+        (() => { const u = s.stats.sail && s.units[0]; return u ? (u.masts ?? [1, 1, 1]).reduce((a, m, i) => a | (m ? 1 << i : 0), 0) | (u.struck ? 8 : 0) : 0; })(), // (1806: her masts standing, struck)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),

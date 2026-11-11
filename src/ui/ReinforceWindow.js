@@ -28,6 +28,8 @@ const SECTIONS = [
   ['naval', 'Warships'],
   ['other', 'Other'],
 ];
+/** Under sail (1806): the same tabs by the names of the day (no carriers, no submarines — fireships and gunboats in the last). */
+const SAIL_TITLES = { line: 'Ships of the line', escort: 'Frigates & brigs', under: 'Fireships & gunboats' };
 
 /** The first sentence of the unit's description, for the card. */
 const blurb = (type, faction, army) => (forArmy(type.variants, army, faction)?.text ?? '').split(/(?<=\.)\s/)[0];
@@ -51,6 +53,13 @@ const GRADE = [['\u2013', 'none'], ['\u2193', 'low'], ['\u2192', 'medium'], ['\u
 /** The card's row of three: infantry, armour, air — a dash, or an arrow down / level / up. */
 const damageRow = (type) => {
   const d = damageVs(type);
+  if (year() < 1900 && type.stats.sail) { // 1806 at sea: her broadside's weight against ships (a fireship: the fire she brings), and her boarders (her size)
+    const ms = Object.values(type.mounts ?? {})[0] ?? [];
+    const side = ms.filter((m) => m.facing >= 0).reduce((a, m) => a + m.damage / m.reload, 0);
+    const len = type.hull?.length ?? 30;
+    const v = { ships: type.stats.fireship ? 3 : side >= 30 ? 3 : side >= 12 ? 2 : side > 0 ? 1 : 0, board: type.stats.fireship ? 0 : len >= 55 ? 3 : len >= 40 ? 2 : 1 };
+    return `<span class="rw-dmg">${[['ships', 'Ships'], ['board', 'Boarding']].map(([k, label]) => { const [mark, word] = GRADE[v[k]]; return `<span class="g${v[k]}" title="${k === 'board' ? 'Boarding: ' : 'Against ships: '}${word}">${label}<b>${mark}</b></span>`; }).join('')}</span>`;
+  }
   if (year() < 1900) { // 1806: against foot and against horse (no armour, no aircraft); horsemen's weapon is the charge
     const cav = type.stats.cavalry && !type.stats.loose;
     const v = { inf: cav ? 3 : d.inf, horse: cav ? 2 : d.inf };
@@ -139,7 +148,7 @@ export class ReinforceWindow {
       const tab = document.createElement('button');
       tab.type = 'button';
       tab.tabIndex = -1;
-      tab.textContent = title;
+      tab.textContent = (year() < 1900 && SAIL_TITLES[cat]) || title;
       tab.addEventListener('click', () => this.show(tab, sec));
       tabs.append(tab);
       for (const type of list) {

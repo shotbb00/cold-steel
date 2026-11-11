@@ -234,6 +234,7 @@ export interface Spawn {
   x: number;
   z: number;
   facing?: number;
+  anchored?: boolean;    // (1806 at sea) she starts at anchor: holds until the enemy is close (ai/SeaDirector.js)
   name?: string;
 }
 
@@ -284,6 +285,7 @@ export interface MapDef {
   /** only these epochs (maps/index.js mapsFor) */
   epochs?: string[];
   wip?: boolean;          // not offered in the menus yet (maps/index.js mapsFor)
+  wind?: { from: number; speed?: number; veer?: number; lulls?: boolean }; // the map's own wind (world/Wind.js setWind): `from` a compass bearing in degrees, m/s — the sea's, for the sails
   navCell?: number;       // routing cell, m (world/Nav.js; a sea map: coarser)
   camera?: { maxHeight?: number; near?: number; far?: number }; // a big map: zoom out further, see further
   fow?: number;           // how dark unseen ground gets, 0…1 (render/FogOfWar.js; a sea map: lighter)

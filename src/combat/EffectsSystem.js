@@ -331,7 +331,7 @@ export class EffectsSystem {
   }
 
   /** Muzzle flash (short, directional) and the puff of propellant smoke. */
-  muzzle(pos, dir, size = 1, weapon = 'rifle', water = null) {
+  muzzle(pos, dir, size = 1, weapon = 'rifle', water = null, cloud = 0x57524a, flash = 1) { // (cloud: the naval gun's smoke — cordite brown-grey; black powder, 1806, a pale grey-white)
     const F = this.fire;
     const S = this.smoke;
     if (weapon === 'musket') { // black powder: the flash, then a thick white puff that hangs (1806)
@@ -349,22 +349,23 @@ export class EffectsSystem {
     if (weapon === 'naval') { // a warship's gun: `size` 1 (5-inch) .. 3 (16-inch); `water` the sea level under the muzzle
       const k = size; water ??= pos.y - 6;
       // the fireball: a long tongue of flame out along the barrel, a big ball at its end
+      const fk = k * flash; // (flash < 1: a smaller fireball — 1806's black-powder guns)
       for (let i = 0; i <= 7; i++) {
-        const t = i * 3 * k;
-        F.spawn(pos.x + dir.x * t, pos.y + dir.y * t, pos.z + dir.z * t, { size: (4 + i * 1.6) * k, grow: 1.6, life: 0.16 + i * 0.03, color: i < 3 ? FLASH : FIRE, bright: 4 });
+        const t = i * 3 * fk;
+        F.spawn(pos.x + dir.x * t, pos.y + dir.y * t, pos.z + dir.z * t, { size: (4 + i * 1.6) * fk, grow: 1.6, life: 0.16 + i * 0.03, color: i < 3 ? FLASH : FIRE, bright: 4 * Math.min(1, flash * 1.5) });
       }
-      F.spawn(pos.x + dir.x * 14 * k, pos.y + dir.y * 14 * k, pos.z + dir.z * 14 * k, { size: 11 * k, grow: 1.2, life: 0.22, color: FIRE, bright: 3 }); // (the ball at the end of it)
-      this.flashLight(pos, 900 * k, 120 * k, 0.2);
+      F.spawn(pos.x + dir.x * 14 * fk, pos.y + dir.y * 14 * fk, pos.z + dir.z * 14 * fk, { size: 11 * fk, grow: 1.2, life: 0.22, color: FIRE, bright: 3 * Math.min(1, flash * 1.5) }); // (the ball at the end of it)
+      this.flashLight(pos, 900 * fk, 120 * fk, 0.2);
       // the cordite cloud: thrown out along the line of fire, rolling, dark brown-grey, hangs a while
       for (let i = 0; i < 10 + 10 * k; i++) {
         const t = rnd(2, 26) * k, f = rnd(1, 6) * k;
         S.spawn(pos.x + dir.x * t + rnd(-2, 2) * k, pos.y + dir.y * t + rnd(-1, 1.5) * k, pos.z + dir.z * t + rnd(-2, 2) * k, {
           vx: dir.x * f + rnd(-1.5, 1.5), vy: rnd(0.2, 1.5), vz: dir.z * f + rnd(-1.5, 1.5),
-          size: rnd(3, 5) * k, grow: 1.8, life: rnd(6, 10) * (0.6 + k * 0.3), alpha: 0.7, color: 0x57524a, drag: 1.1, wind: 1,
+          size: rnd(3, 5) * k, grow: 1.8, life: rnd(6, 10) * (0.6 + k * 0.3), alpha: 0.7, color: cloud, drag: 1.1, wind: 1,
         });
       }
       // the blast pressing the water flat: a ring of spray racing out from under the muzzle (the heavy guns)
-      if (k >= 2) {
+      if (k >= 1.5) { // (1806: every broadside — a battery of guns at once)
         const n = 10 + 6 * k, x = pos.x + dir.x * 8, z = pos.z + dir.z * 8;
         for (let i = 0; i < n; i++) {
           const a = (i / n) * 6.283 + rnd(-0.1, 0.1), v = rnd(26, 36) * k * 0.6;

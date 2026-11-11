@@ -18,7 +18,7 @@ const sea = createSea({ level: 0, size: SIZE, color: 0x0e4c7a });
 const coastX = (z: number) => 1900 + fbm(noise, z * 0.001, 1.7, 3) * 200 + (Math.abs(z - 300) < 300 ? (300 - Math.abs(z - 300)) * 0.9 : 0);
 const BIG = [-1500, -200, 620, 380];   // the big island: [x, z, radius, height]
 const SMALL = [-150, 300, 330, 190];   // the middle island
-const NORTH = [-400, -1650, 220, 110]; // the islet the Eskadra anchors behind
+const NORTH = [-1150, -1650, 220, 110]; // the islet the Eskadra anchors behind (off to the west of its anchorage: the way south out of it open — ships grazed it leaving)
 
 function height(x: number, z: number) {
   let h = -80 + fbm(noise, x * 0.0005, z * 0.0005, 4) * 14;

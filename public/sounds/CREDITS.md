@@ -42,6 +42,8 @@ The same goes for these, cut from YouTube uploads whose source and licence are u
 | `animals/hoof-1.wav` … `-6.wav` (single hoof beats) | "Horse Gallop Sound Effect" (YouTube download, link not kept) | unknown |
 | `animals/neigh-1.wav` | [HORSE - Sound Effect](https://www.youtube.com/watch?v=8H299dMuZ8M) | unknown |
 | `animals/neigh-2.wav`, `animals/snort-1.wav` | "Horse - Sound Effect" (YouTube download, link not kept) | unknown |
+| `ships/bell-1.wav`, `ships/bell-2.wav` (two strikes each) | "The sound of a ship's bell Sound effect (HD)" (YouTube download, link not kept) | Saidaxyor |
+| `ships/sail-loop.wav` (24 s of it) | "Sail Boat Sound Effect [HD]" (YouTube download, link not kept) | n Beats |
 
 ## Freesound
 

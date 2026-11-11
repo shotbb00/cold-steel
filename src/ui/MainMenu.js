@@ -178,7 +178,7 @@ const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone'
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane', diveBomb: 'Dive bomber', torpBomb: 'Torpedo bomber', navCap: 'Carrier fighter', navScout: 'Scout plane' }; // (no jets yet: data/epoch.js)
 /** The sea's two navies (one army per side there): 1945 the US Navy and the Imperial Navy, 1985 the US Navy and the Soviet Navy. */
-const NAVIES = { 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
+const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
 const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];

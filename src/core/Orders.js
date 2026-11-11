@@ -61,7 +61,7 @@ export class Orders {
     const g = this.game;
     const own = (id) => {
       const s = g.world.stackById(id);
-      return s && s.alive && !s.withdrawing && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null; // a withdrawing stack takes no more orders
+      return s && s.alive && !s.withdrawing && !s.units[0]?.struck && s.faction === faction && (!g.coop || !owner || s.owner === owner) ? s : null; // a withdrawing stack takes no more orders (nor a ship that has struck)
     };
     g.currentOwner = owner;
     try {
@@ -97,6 +97,7 @@ export class Orders {
             s.station = null;
           }
           s.waypoints = null;
+          s.anchored = false; // (1806: she weighs anchor)
           s.ai.moveTo({ x, z }, { hold: !!cmd.hold, face });
           // infantry sent next to cover takes it — the spots the command view previewed
           const plan = s.moveTarget && (s.usesCover ? planCover(g.world, s, s.moveTarget, face) : g.construction.planRevetments(s, s.moveTarget)); // cover, or dug-in vehicle positions
@@ -166,6 +167,12 @@ export class Orders {
           }
         }
         return null;
+      case 'board': { // 1806 ships: alongside her and over the side (entities/sailDamage.js)
+        const target = g.world.stackById(cmd.target);
+        if (!target?.alive || target.faction === faction || !target.stats.sail) return null;
+        for (const s of mine(cmd.s)) if (s.stats.sail) { s.boardTarget = target; s.boardT = 0; }
+        return null;
+      }
       case 'radar': // 1985 ships: radar on (sees all a horizon and the islands let it — and every enemy hears it) or off
         for (const s of mine(cmd.s)) if (s.stats.radar) s.radarOn = !!cmd.on;
         return null;

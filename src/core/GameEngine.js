@@ -11,6 +11,7 @@
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
 import { setClimate } from '../render/paint.js';
+import { setWind } from '../world/Wind.js';
 import { Deployment } from '../systems/Deployment.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
@@ -98,6 +99,7 @@ export class GameEngine {
    */
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
+    setWind(map.wind ?? null); // (a map's own wind: the sea's for the sails — world/Wind.js)
     setClimate(map.climate); // winter whitewash, desert sand paint (render/paint.js)
     const sides = { ...EPOCHS[epoch()]?.sides, ...map.sides }; // (a map may name its own sides: the Pacific's United States and Japan)
     if (sides.nato) FACTIONS.nato.name = sides.nato;

@@ -5,7 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { POWERS_1806 } from '../systems/Powers1806.js';
+import { POWERS_1806, powerHere } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
@@ -26,6 +26,7 @@ const ACTIONS = [
   // ships (entities/UnitStack.js: engine orders, zig-zag, formations, smoke; Orders.js)
   { cmd: 'ship:speed', label: (g) => `${SHIP_SPEEDS[[...g.commands.selected].find((s) => s.alive && s.stats.naval)?.shipSpeed ?? 'full'].name} ahead`, icon: 'charge', key: 'none', tip: 'Engine orders, a step a click: Slow (quiet: a listening submarine hears you half as far) · Half · Full · Flank (the fastest — and loudest)', when: (sel) => sel.some((s) => s.stats.naval) },
   { cmd: 'ship:radar', label: (g) => ([...g.commands.selected].some((s) => s.stats.radar && s.radarOn !== false) ? 'Radar on' : 'Radar off'), icon: 'recon', key: 'none', tip: 'Radar on: she sees every ship no island hides — and every enemy hears her and gets a bearing. Off: silent, she sees only by eye. ^ switches the whole fleet', when: (sel) => sel.some((s) => s.stats.radar), on: (sel) => sel.some((s) => s.stats.radar && s.radarOn !== false) },
+  { cmd: 'ship:board', label: 'Board', icon: 'charge', key: 'none', tip: 'Run alongside the enemy ship you pick and send the boarders over: crew against crew on her decks — a ship that has struck is simply taken', when: (sel) => sel.some((s) => s.alive && s.stats.sail && !s.units[0]?.struck) },
   { cmd: 'ship:missile', count: (sel) => sel.reduce((a, s) => a + (s.alive && s.stats.naval && s.units[0]?.mounts ? s.units[0].mounts.filter((m) => m.missile).reduce((b, m) => b + Math.max(0, m.left), 0) : 0), 0), label: 'Missile strike', icon: 'charge', key: 'none', tip: 'Two missiles from each selected ship at a spot you pick — a bearing fix, a ship out of sight: the seekers find what is there (or the wrong ship, or chaff)', when: (sel) => sel.some((s) => s.alive && s.stats.naval && Object.values(s.type.mounts ?? {}).flat().some((m) => m.missile)) },
   { cmd: 'ship:helo', label: 'Helicopter', icon: 'recon', key: 'none', tip: 'Her helicopter out to a spot you pick: it hovers there with its sonar down — submarines near it show on your map and it drops a torpedo on one; the ships round it show too', when: (sel) => sel.some((s) => s.alive && s.stats.helo) },
   { cmd: 'ship:zigzag', label: 'Zig-zag', icon: 'turnRight', key: 'none', tip: 'Weave either side of the course: a torpedo aimed at where you would be finds water — you get there a little later', when: (sel) => sel.some((s) => s.stats.naval && !s.stats.submarine), on: (sel) => sel.some((s) => s.zigzag) },
@@ -151,7 +152,7 @@ export class ActionBar {
     for (const { b, cmd, small } of this.support) {
       if (cmd.startsWith('power:') || year() < 1900) { // 1806: its own three powers, nothing else
         const k = cmd.startsWith('power:') ? cmd.slice(6) : null;
-        b.hidden = off || !k || year() >= 1900;
+        b.hidden = off || !k || year() >= 1900 || !powerHere(k, g); // (at sea the sea's three, ashore the land's)
         if (b.hidden) continue;
         const P = POWERS_1806[k], left = g.powers.cooldownLeft(me, k);
         const text = left === Infinity ? 'used' : left > 0 ? `${Math.ceil(left)} s` : String(P.cost);

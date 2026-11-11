@@ -22,6 +22,8 @@ const SNAP = 10;           // m searched round a blocked start or goal for open 
 /** Ships (UnitStack `naval`): pass this as `foot` — only water at least SHIP_DEPTH deep, cover ignored. */
 export const SHIP = 'ship';
 export const SHIP_DEPTH = 4;
+const SHIP_MARGIN = 70;    // m a ship's route keeps off the shallows where it can (a narrow channel: as wide as it is) — they grazed the shore
+const SHIP_COST = 0.1;     // extra cost per metre inside that margin (the route bends out round a cape rather than skimming it)
 
 export class NavGrid {
   constructor(world) {
@@ -162,8 +164,11 @@ export class NavGrid {
     this.ensure();
     const l = Math.hypot(b.x - a.x, b.z - a.z);
     const step = foot === SHIP ? this.cell : 0.5;
+    // a ship: SHIP_MARGIN off the shallows along the way — closer only as near an end as that end already is
+    const dA = foot === SHIP ? this.dShore[this.index(a.x, a.z)] : 0, dB = foot === SHIP ? this.dShore[this.index(b.x, b.z)] : 0;
     for (let s = Math.min(step, l); s <= l; s += step) {
-      if (!this.open(this.index(a.x + ((b.x - a.x) * s) / l, a.z + ((b.z - a.z) * s) / l), foot, r)) return false;
+      const rr = foot === SHIP ? Math.min(r + SHIP_MARGIN, Math.max(r, Math.min(dA + s, dB + l - s))) : r;
+      if (!this.open(this.index(a.x + ((b.x - a.x) * s) / l, a.z + ((b.z - a.z) * s) / l), foot, rr)) return false;
     }
     return l < 0.5 || this.open(this.index(b.x, b.z), foot, r);
   }
@@ -242,7 +247,7 @@ export class NavGrid {
           const m = nj * nx + ni;
           if (shut[m] === stamp || !this.open(m, foot, r)) continue;
           if (di && dj && (!this.open(j * nx + ni, foot, r) || !this.open(nj * nx + i, foot, r))) continue; // no cutting corners
-          let cost = (di && dj ? Math.SQRT2 : 1) * this.cell * (1 + Math.max(0, r + 1.5 - d[m]) * WALL_COST);
+          let cost = (di && dj ? Math.SQRT2 : 1) * this.cell * (1 + (foot === SHIP ? Math.max(0, r + SHIP_MARGIN - d[m]) * SHIP_COST : Math.max(0, r + 1.5 - d[m]) * WALL_COST));
           if (foot === true && this.dAll[m] < r) cost *= LOW_COST;
           const ng = g[k] + cost;
           if (seen[m] === stamp && ng >= g[m]) continue;

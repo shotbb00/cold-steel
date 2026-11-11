@@ -77,7 +77,7 @@ export function callsign(stack) {
   const name = stack.name;
   if (callsignCache.has(name)) return callsignCache.get(name);
   const num = name.match(/\s(\d+)$/)?.[1] ?? '';
-  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|SS) /, ''); // (a ship: her name)
+  let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|HMS|SS) /, ''); // (a ship: her name)
   const cls = base.match(/^(\S+?)-class\b/);
   if (cls) base = cls[1];
   else {
@@ -104,6 +104,7 @@ export function callsign(stack) {
 /** What is wrong with the stack, worst first: [word, colour class]. */
 function chipsOf(stack, word, pinned, mine) {
   const out = [];
+  if (stack.units[0]?.struck) return [['Struck', 'bad']]; // (1806: she has struck her colours — out of the fight)
   if (word === 'Broken') out.push(['Broken', 'bad flash']);
   if (pinned) out.push(['Pinned', 'warn']);
   if (word === 'Wavering') out.push(['Wavering', 'hot']);
@@ -119,6 +120,7 @@ export class StackLabels {
     this.root = document.getElementById('labels');
     this.items = new Map();
     game.bus.on('stack:removed', (s) => { this.items.get(s)?.el.remove(); this.items.delete(s); });
+    game.bus.on('stack:side', (s) => { this.items.get(s)?.el.remove(); this.items.delete(s); }); // (a prize: her tag in her new side's colours)
     this._v = new THREE.Vector3();
   }
 

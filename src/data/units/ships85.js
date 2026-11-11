@@ -31,8 +31,8 @@ const G16IN = { range: 2200, reload: 30, damage: 2400, splash: 12, pierce: 0.8, 
 
 // the missiles (systems/Missiles.js): `speed` a third of the real one, the sub/supersonic gap kept
 const MSL = (o) => ({ at: [0, 8, 0], missile: true, arc: 6.3, count: 2, reload: 8, pierce: 0.6, ...o });
-const HARPOON = { count: 4, name: 'Harpoons', speed: 120, range: 4600, seeker: 1200, skim: true, damage: 2300 };
-const TASM = { count: 4, name: 'Tomahawks', speed: 120, range: 5800, seeker: 1400, skim: true, damage: 2800 };
+const HARPOON = { count: 4, name: 'Harpoons', speed: 160, range: 4600, seeker: 1200, skim: true, damage: 2300 };
+const TASM = { count: 4, name: 'Tomahawks', speed: 160, range: 5800, seeker: 1400, skim: true, damage: 2800 };
 const MOSKIT = { count: 4, name: 'Moskits', speed: 280, range: 4000, seeker: 1000, skim: true, damage: 2500 };
 const BAZALT = { name: 'Bazalts', speed: 225, range: 5500, seeker: 1600, alt: 40, damage: 4200, pierce: 0.7 };
 const GRANIT = { name: 'Granits', speed: 250, range: 6000, seeker: 1800, alt: 45, damage: 4800, pierce: 0.7 };
