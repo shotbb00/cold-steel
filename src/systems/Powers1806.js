@@ -172,7 +172,10 @@ export class Powers1806 {
     if (!foes.length) return;
     if (this.ready(f, 'signal') && cp >= POWERS_1806.signal.cost && mine.filter((s) => s.units[0]?.target).length >= 2) { this.call(f, 'signal'); return; }
     const big = foes.slice().sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0))[0];
-    if (this.ready(f, 'fireship') && cp >= POWERS_1806.fireship.cost + 150) { this.call(f, 'fireship', big.centroid.x, big.centroid.z); return; }
+    // a fireship only when there's something to burn: a foe busy in a gunfight or at anchor, close to our own ships — never the opening move
+    const prey = g.time > 240 && foes.filter((e) => (e.anchored || e.units[0]?.target) && mine.some((s) => Math.hypot(s.centroid.x - e.centroid.x, s.centroid.z - e.centroid.z) < 1000))
+      .sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0))[0];
+    if (prey && this.ready(f, 'fireship') && cp >= POWERS_1806.fireship.cost + 150) { this.call(f, 'fireship', prey.centroid.x, prey.centroid.z); return; }
     if (mine.length < foes.length * 0.7 && this.ready(f, 'squadron') && cp >= POWERS_1806.squadron.cost) this.call(f, 'squadron', big.centroid.x, big.centroid.z);
   }
 
