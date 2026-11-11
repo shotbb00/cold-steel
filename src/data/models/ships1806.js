@@ -148,7 +148,14 @@ function sailRig(describe) {
     const body = new THREE.Group();   // pitch and roll on the swell, the heel to leeward
     root.add(body);
     meshAdder(body)(d.fixed, mats.body);
-    const masts = Array.from({ length: d.mastCount }, () => { const m = new THREE.Group(); body.add(m); return m; }); // a mast and all on it: hidden when it goes by the board
+    // a mast and all on it, hung from a pivot at its foot: when it goes by the board it topples over the side, lies in the water, goes under
+    const pivots = Array.from({ length: d.mastCount }, (_, i) => {
+      const p = new THREE.Group(), at = d.rig.find((r) => r.mast === i)?.at ?? [0, 0, 0];
+      p.position.set(0, at[1], at[2]); body.add(p);
+      const m = new THREE.Group(); m.position.set(0, -at[1], -at[2]); p.add(m);
+      return { p, m, y: at[1], t: -1, side: 1 };
+    });
+    const masts = pivots.map((q) => q.m);
     const rig = d.rig.map((r) => {
       if (r.spars) meshAdder(masts[r.mast])(r.spars, mats.body);
       const g = new THREE.Group();
@@ -188,7 +195,16 @@ function sailRig(describe) {
           const swing = rowing ? Math.sin(stroke) * 0.45 : 0, lift = rowing ? Math.max(0, Math.cos(stroke)) * 0.18 : 0.12;
           for (const o of oars) { o.g.rotation.y = o.side * swing; o.g.rotation.z = o.side * lift; }
         }
-        for (let i = 0; i < masts.length; i++) masts[i].visible = u.masts?.[i] !== false;
+        for (let i = 0; i < pivots.length; i++) {
+          const q = pivots[i];
+          if (u.masts?.[i] !== false) { if (q.t >= 0) { q.t = -1; q.p.rotation.set(0, 0, 0); q.p.position.y = q.y; } q.p.visible = true; continue; }
+          if (q.t < 0) { q.t = 0; q.side = heel >= 0 ? 1 : -1; q.tw = (Math.random() - 0.5) * 0.5; } // (she heels to leeward: over that side she goes, a little fore or aft)
+          q.t += dt;
+          const k = Math.min(1, (q.t / 2.4) ** 2); // slow at first, then crashing down
+          q.p.rotation.set(q.tw * k, 0, q.side * 1.52 * k);
+          q.p.position.y = q.y - Math.max(0, q.t - 5) * 1.6; // lying in the water a while, then under
+          q.p.visible = q.t < 14;
+        }
         colours.visible = !u.struck && !u.prize; // (struck: hauled down; a prize: not her own to fly)
         const sea = u.seaK ?? 1;
         body.rotation.set(Math.sin(t * 0.5 + phase) * 0.014 * sea + (u.trim ?? 0), 0, Math.sin(t * 0.4 + phase * 1.7) * 0.025 * sea + heel + (u.list ?? 0));
