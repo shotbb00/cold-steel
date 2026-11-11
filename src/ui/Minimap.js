@@ -6,6 +6,10 @@
 import * as THREE from 'three';
 import { CameraMode } from '../core/CameraManager.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
+import { wind } from '../world/Wind.js';
+
+/** The wind's name by its strength (m/s; the Beaufort scale, a gale from 11: entities/sailDamage.js GALE). */
+const WIND_WORDS = [[1.5, 'Calm'], [3.5, 'Light airs'], [6, 'Light breeze'], [8.5, 'Fresh breeze'], [11, 'Strong breeze'], [Infinity, 'Gale']];
 
 const PARTNER = '#4fd6a0'; // co-op: your partner's stacks (css --partner)
 const WIDTH = 180;
@@ -386,7 +390,44 @@ export class Minimap {
       c.arc(px, py, 5 + 3 * Math.abs(Math.sin(p.t * 3)), 0, Math.PI * 2);
       c.stroke();
     }
+    this.drawWind(c);
     c.lineWidth = 1;
+  }
+
+  /** A map with its own wind (the sailing maps): an arrow the way it blows, turned with the map, its name and speed in knots under it. */
+  drawWind(c) {
+    if (!this.game.map.wind) return;
+    const [ox, oy] = this.toMap(0, 0), [wx, wy] = this.toMap(wind.x * 100, wind.z * 100);
+    const l = Math.hypot(wx - ox, wy - oy) || 1, dx = (wx - ox) / l, dy = (wy - oy) / l;
+    const r = 12, cx = this.w - r - 7, cy = r + 7;
+    c.fillStyle = 'rgba(12, 14, 10, 0.78)';
+    c.beginPath();
+    c.arc(cx, cy, r + 4, 0, Math.PI * 2);
+    c.fill();
+    const calm = wind.speed < 1.5;
+    c.strokeStyle = c.fillStyle = wind.speed > 11 ? '#ff8a6a' : '#e8e2c8';
+    c.lineWidth = 2;
+    if (calm) { c.beginPath(); c.arc(cx, cy, 4, 0, Math.PI * 2); c.stroke(); } // (no way to point it)
+    else {
+      c.beginPath(); // the shaft, from upwind…
+      c.moveTo(cx - dx * r, cy - dy * r);
+      c.lineTo(cx + dx * (r - 5), cy + dy * (r - 5));
+      c.stroke();
+      c.beginPath(); // …to the head, downwind
+      c.moveTo(cx + dx * r, cy + dy * r);
+      c.lineTo(cx + dx * (r - 7) - dy * 4.5, cy + dy * (r - 7) + dx * 4.5);
+      c.lineTo(cx + dx * (r - 7) + dy * 4.5, cy + dy * (r - 7) - dx * 4.5);
+      c.fill();
+    }
+    const word = WIND_WORDS.find(([v]) => wind.speed < v)[1];
+    c.font = '600 10px "Barlow Semi Condensed", "Segoe UI", sans-serif';
+    c.textAlign = 'right';
+    c.fillStyle = 'rgba(12, 14, 10, 0.78)';
+    const text = calm ? word : `${word} · ${Math.round(wind.speed * 1.94)} kn`, tw = c.measureText(text).width;
+    c.fillRect(this.w - tw - 10, cy + r + 6, tw + 8, 14);
+    c.fillStyle = wind.speed > 11 ? '#ff8a6a' : '#e8e2c8';
+    c.fillText(text, this.w - 6, cy + r + 17);
+    c.textAlign = 'left';
   }
 
   /** Is an enemy structure where your side can see? (fog of war applies to fortifications too) */
