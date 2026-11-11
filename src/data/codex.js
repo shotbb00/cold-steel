@@ -273,6 +273,49 @@ export const CODEX = {
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
 // 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
 export const CODEX1806 = {
+  // ---------------------------------------------------------------- at sea (the sailing ships: data/units1806/ships.js)
+  battleship: {
+    use: 'The flagship: three gun decks, the heaviest broadside afloat. Put her in the middle of your line — every ship within about 700 m of her holds out longer before striking. Slow and clumsy: let the wind bring the enemy to her.',
+    strong: 'A 74 at broadside range, holding the line together', weak: 'Being raked across her bow or stern, a gale (her lower deck ports shut), fireships',
+    counter: 'Rake her — cross her bow or stern and fire down her length — and bring her masts down; a fireship from upwind.',
+    nato: 'The French three-deckers of the Océan class carried 118 guns, the biggest warships of their day; Bucentaure, Villeneuve\'s flagship at Trafalgar, was an 80 — the Océans were kept for the Brest fleet.',
+    pact: 'HMS Victory, launched 1765, Nelson\'s flagship at Trafalgar: 104 guns on three decks, 850 men. She led the weather column into the Combined Fleet and broke its line astern of Bucentaure.',
+  },
+  cruiser: {
+    use: 'The ship of the line: the backbone of your fleet. Fight in line ahead (select them, Line ahead), broadside to broadside at 300 m. Get to windward if you can — then you choose when to close. Board a beaten enemy to take her as a prize.',
+    strong: 'Other 74s in a line fight, frigates and brigs', weak: 'Raking fire, a gale, being caught alone by two',
+    counter: 'Two on one, cross her stern, fire high to bring her masts down (the French way), or board her when her crew is thin.',
+    nato: 'The French Téméraire-class 74, built to Sané\'s plans in dozens: larger and faster than the British 74s, the finest ships of the line of the age — let down by crews kept in port by the blockade.',
+    pact: 'The British 74-gun third rate: some 150 were built, and they fought every great battle of the age. Bellerophon fought at the Glorious First of June, the Nile and Trafalgar, and took Napoleon\'s surrender in 1815.',
+  },
+  frigate: {
+    use: 'The eyes of the fleet: fast, weatherly, the best lookouts. Scout ahead, chase down brigs and gunboats, take possession of struck ships. Never lie broadside to a ship of the line — she is built to fight her own kind.',
+    strong: 'Brigs, gunboats, other frigates, scouting', weak: 'Any ship of the line',
+    counter: 'A 74 if you can catch her; otherwise a frigate of your own.',
+    nato: 'French frigates were fine, fast ships — the British copied the captured ones. Hortense and Hermione shadowed the British fleet off Cádiz in 1805.',
+    pact: 'Euryalus, Blackwood\'s frigate, watched the Combined Fleet out of Cádiz and signalled its every move to Nelson before Trafalgar.',
+  },
+  destroyer: {
+    use: 'A brig-sloop: cheap and quick, smashing carronades at short range. Carry the fight to gunboats and fireships, finish struck ships off by taking possession, scout. Keep her away from anything bigger.',
+    strong: 'Gunboats, fireships, taking possession of struck ships', weak: 'Frigates and anything with long guns',
+    counter: 'A frigate, or long guns from out of carronade range.',
+    nato: 'The French built brigs in numbers for the Channel and the colonies: light, fast, sixteen guns.',
+    pact: 'HMS Pickle, a schooner, carried the news of Trafalgar home to England; the Cruizer-class brig-sloops were the most numerous warships of the Royal Navy.',
+  },
+  fireship: {
+    use: 'Point her at the enemy and send her down the wind: whatever she reaches catches fire, then she burns down. Best against ships lying still — at anchor, grappled, dismasted — and from upwind.',
+    strong: 'Anchored or locked ships, a crowded line', weak: 'Gunfire before she arrives, ships under way that can bear away',
+    counter: 'Sink her before she arrives — brigs and gunboats are quick enough — or bear away downwind.',
+    nato: 'Brûlots were an old weapon of the French navy; at the Basque Roads in 1809 it was the British who sent them in.',
+    pact: 'At the Basque Roads, April 1809, Cochrane\'s fireships and explosion vessels drove the French fleet ashore in the night.',
+  },
+  ptBoat: {
+    use: 'An oared gunboat: one long gun in the bow, sweeps along her sides. In a breeze she is a target; in a calm she rows where ships can\'t sail and lays her gun on a helpless stern. Keep them in the shallows and wait for the wind to drop.',
+    strong: 'Becalmed ships, raking a stern in a calm', weak: 'Any ship with way on, brigs',
+    counter: 'A brig or a frigate — or wait for the wind.',
+    nato: 'Napoleon built over a thousand gunboats for the invasion of England in 1803–05; they never crossed.',
+    pact: 'The Royal Navy used gunboats in the Baltic and at Copenhagen, where in a calm they were often the only ships that could move.',
+  },
   mgTeam: {
     use: 'Light infantry fights in open order: a screen of skirmishers in front of your line, in hedges and woods, picking off the enemy\'s officers and gunners and spoiling his volleys. It can close up into line or square when it must (the formation buttons).',
     strong: 'Enemy lines and guns from cover, screening your own columns', weak: 'Cavalry caught in the open, a volley at close range',

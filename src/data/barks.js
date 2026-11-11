@@ -65,11 +65,36 @@ LINES.ja = {
   shipBad: ['Shinsui!', 'Keisha shite iru!', 'Haisui isoge!', 'Ōkyū shūri!'],
   shipContact: ['Teki-kan miyu!', 'Teki kantai hakken!', 'Kokuen miyu!'],
 };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja' };
+// 1806: the Grande Armée and the French Navy in French; Prussia, Saxony and Bavaria in German; the Royal Navy
+// in the English of its day (only what it has lines for of its own: the rest as the English lines)
+LINES.fr = {
+  contact: ["L'ennemi!", 'En face!', 'Les voilà!', 'Attention, devant!'],
+  cover: ['À terre!', 'Serrez les rangs!', 'Tenez bon!'],
+  reload: ['Chargez!', 'Chargez vos armes!', 'Rechargez!'],
+  hit: ['Je suis touché!', 'Aïe!', "Ce n'est rien!"],
+  wounded: ['Je suis blessé!', 'Au secours!', 'Ma jambe!'],
+  down: ['Un homme à terre!', 'Il est tombé!', 'Serrez les rangs!'],
+  pinned: ['Nous sommes cloués!', 'Le feu est trop vif!'],
+  retreat: ['En retraite!', 'Repliez-vous!', 'Sauve qui peut!'],
+  flank: ['Par le flanc!', 'Tournez-les!', 'Par la gauche!'],
+  rally: ['À moi!', 'Ralliez-vous!', 'Au drapeau!'],
+  officer: ['Le capitaine est tombé!', "L'officier est touché!", 'Qui commande?'],
+  straddle: ['Bien pointé!', 'Tirez à démâter!', 'Feu à volonté!', 'Encore une bordée!'],
+  shipHit: ['Touché!', 'Un boulet dans la batterie!', 'Le feu à bord!', 'Le gréement est coupé!'],
+  shipBad: ["Une voie d'eau!", 'Aux pompes!', 'Le grand mât tombe!', 'Nous coulons bas!'],
+  shipContact: ['Voile en vue!', "L'ennemi au vent!", 'Navires anglais!', 'Branle-bas de combat!'],
+};
+LINES.rn = {
+  straddle: ['Fire as she bears!', 'Well laid, lads!', 'Another broadside!', 'Double-shot the guns!'],
+  shipHit: ['We\'re hulled!', 'Shot through the lower deck!', 'Fire in the waist!', 'The rigging\'s cut to pieces!'],
+  shipBad: ['Man the pumps!', 'Six feet of water in the well!', 'The mainmast\'s going!', 'She\'s settling, sir!'],
+  shipContact: ['Sail ho!', 'Enemy fleet in sight!', 'Beat to quarters!', 'Frenchmen, sir — to leeward!'],
+};
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de', pr: 'de', sx: 'de', rn: 'rn' };
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' ? null : LINES.nato[kind]); // (the Japanese crews say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

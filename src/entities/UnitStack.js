@@ -2592,7 +2592,8 @@ export class UnitStack {
     if (Math.random() > chance) return;
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
-    const text = barkLine(this.faction, kind, this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1945 the other side is the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
+    const sea1806 = this.stats.naval && year() < 1900;
+    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : 'frn') : this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });
