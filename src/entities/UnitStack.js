@@ -1748,6 +1748,8 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if (s.shipsOnly && !e.stack.stats.naval) continue; // (a coastal battery: laid on the sea)
+      if (s.flanking && e.stack.stats.naval && !e.stack.stats.landingCraft) continue; // (a flanking casemate: along the beach, blind to the sea beyond the boats)
       const asw = s.depthCharges || s.asTorp || this._homing; // (1985: an ASW weapon flown out, a submarine's homing torpedoes)
       if ((e.depth ?? 0) > 3 && !asw) continue; // a submarine under the surface: only depth charges (or homing torpedoes) reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them

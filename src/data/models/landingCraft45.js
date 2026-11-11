@@ -26,10 +26,8 @@ function craft(describe) {
     const body = new THREE.Group();
     root.add(body);
     meshAdder(body)(d.fixed, mats.body);
-    const ramp = new THREE.Group(); // hinged at its foot, on the bow
-    ramp.position.set(0, d.hinge[0], d.hinge[1]);
-    meshAdder(ramp)(d.ramp, mats.body);
-    body.add(ramp);
+    const ramp = new THREE.Group(); // hinged at its foot, on the bow (a minesweeper: none)
+    if (d.ramp) { ramp.position.set(0, d.hinge[0], d.hinge[1]); meshAdder(ramp)(d.ramp, mats.body); body.add(ramp); }
     const muzzle = new THREE.Object3D();
     muzzle.position.set(0, d.gunAt[0], d.gunAt[1]);
     body.add(muzzle);
@@ -47,6 +45,30 @@ function craft(describe) {
     };
   };
 }
+
+/** A YMS motor minesweeper: 41 m of wood, a deckhouse and funnel, a 3-inch gun forward, the sweep gear (the winch, the floats and the otter boards) aft. */
+export const buildYMS = craft(() => {
+  const L = 41, B = 7.5, fb = 2.6;
+  const fixed = merge([
+    box(B, 3.2, L - 4, { y: fb - 1.6, z: -1, color: GREY }),
+    P.box(B * 0.5, 2.6, 4, { y: fb - 1.2, z: L / 2 - 4, color: GREY, surf: 'plate' }),            // the bow, narrowing
+    box(B - 0.6, 0.12, L - 6, { y: fb + 0.05, z: -1, color: WOOD, surf: 'deck' }),
+    box(4.4, 2.4, 9, { y: fb + 1.2, z: 5, color: GREY }),                                          // the deckhouse
+    box(3.6, 1.6, 3, { y: fb + 3.2, z: 7.5, color: GREY }),                                        // the bridge
+    box(3.4, 0.5, 0.1, { y: fb + 3.4, z: 9.05, color: 0x2a3a44 }),
+    P.cyl(0.55, 0.6, 3, { y: fb + 3.6, z: 2.5, color: DARK }, 10),                                 // the funnel
+    P.cyl(0.08, 0.1, 10, { y: fb + 7, z: 6, color: DARK }, 6),                                     // the mast
+    P.box(3, 0.08, 0.08, { y: fb + 9.5, z: 6, color: DARK }),
+    P.cyl(0.6, 0.7, 0.6, { y: fb + 0.4, z: L / 2 - 7, color: STEEL }, 10),                        // the 3-inch gun's mount
+    P.cyl(0.07, 0.09, 3, { y: fb + 0.9, z: L / 2 - 5.4, rx: Math.PI / 2, color: STEEL }, 8),
+    box(2.4, 1.4, 2, { y: fb + 0.7, z: -L / 2 + 6, color: DARK }),                                 // the sweep winch
+    ...[-1, 1].flatMap((s) => [
+      P.cyl(0.35, 0.35, 2.4, { x: s * 2.2, y: fb + 0.4, z: -L / 2 + 2.5, rx: Math.PI / 2, color: 0xb84a2a }, 8), // the floats, red
+      P.box(0.1, 1.2, 1.6, { x: s * 3.3, y: fb + 0.6, z: -L / 2 + 3.5, color: STEEL }),               // the otter boards
+    ]),
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, L / 2 - 4] };
+});
 
 /** The Higgins boat: 10.9 × 3.3 m. */
 export const buildLCVP = craft(() => {

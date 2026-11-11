@@ -43,7 +43,7 @@ export default {
       strength: { [me]: 0, [foe]: 0 },   // the bars: each army's value in the field (health × price)
       maxStrength: budget,
       maxStacks: game.rules.maxStacks ?? game.map.maxStacks ?? MAX_STACKS,
-      allow: (t) => !!t.stats?.naval === !!game.world.river?.sea, // (a sea map: warships only; a land map: no ships)
+      allow: (t) => !!t.stats?.naval === !!game.world.river?.sea && !t.coastal, // (a sea map: warships only; a land map: no ships)
       setup: true,                       // buying and promoting: until Start battle
       surrendered: null,
       statusText: '',

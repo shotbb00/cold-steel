@@ -6,8 +6,19 @@
 // wades up onto the dry sand; then she backs off and goes back out to sea (and off the map). Sunk on
 // the way in, she takes it with her. Only CRAFT craft per side are on a run at once.
 // The map's `landing.waves` come in on their own at their times (the first: H-hour, at the start).
+// The water off the beach (coastal step 4):
+//   sea mines  the map's `landing.seaMines`: a band of moored mines across the approach, with swept
+//              lanes off each sector (marked by dan buoys, red and green). A ship or craft that runs onto
+//              one is holed (a craft: sunk). A minesweeper (`stats.sweeper`: her sweep's reach, m) cuts
+//              every mine she passes, wherever she goes.
+//   obstacles  the map's `landing.obstacles` on the tidal flat: hedgehogs, Belgian gates, ramped stakes,
+//              many with a mine on top. Dry at low water (cover for the men crossing the sand); under
+//              the water (the tide, coastal step 6) a craft runs onto them unseen: a mine sinks her,
+//              the rest stop her short, and her men wade in from there.
+import * as THREE from 'three';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forArmy } from '../data/factions.js';
+import { mulberry32 } from '../core/math.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
@@ -15,6 +26,9 @@ export const CRAFT = 12;       // craft on a run at once, per side (the H-hour w
 const RAMP = 1.6;              // s for the ramp to come down (and as long to go back up)
 const UNLOAD = 3;              // s with the ramp down before she backs off
 const BACK = 40;               // m she backs off before she turns for the sea
+const MINE_REACH = 7;          // m from a sea mine to a hull (plus her radius) that sets it off
+const MINE_DAMAGE = 2600;      // a destroyer badly holed, a craft gone
+const OBSTACLE_MINE = 500;     // a Teller mine on a stake: a Higgins boat gone, an LCT holed
 
 export class Landing {
   constructor(game) {
@@ -22,12 +36,87 @@ export class Landing {
     this.runs = [];
     this.count = {};
     this.waves = (game.map.landing?.waves ?? []).map((w) => ({ ...w, done: false }));
+    this.mines = this.layMines(game.map.landing?.seaMines);
+    this.obstacles = (game.map.landing?.obstacles ?? []).map((o) => ({ ...o }));
+    this.sweptN = 0;
     game.bus.on('stack:destroyed', (s) => {
       const r = this.runs.find((q) => q.craft === s);
       if (!r) return;
       this.runs.splice(this.runs.indexOf(r), 1);
       if (r.phase === 'in' || r.phase === 'ramp') game.tellBoth?.(s.faction, `${s.type.shortName} sunk with ${r.cargo.name} aboard`, `A landing craft sunk with ${r.cargo.name} aboard`);
     });
+  }
+
+  /** The moored mines (seeded: host and guest lay the same), and the dan buoys along the swept lanes. */
+  layMines(o) {
+    if (!o) return [];
+    const g = this.game, r = mulberry32(o.seed ?? 6), bx = g.world.bounds.x, [z0, z1] = o.z;
+    const inLane = (x) => o.lanes.some((lx) => Math.abs(x - lx) < o.lane);
+    const mines = [];
+    for (let i = 0; mines.length < o.count && i < o.count * 20; i++) {
+      const x = (r() * 2 - 1) * bx, z = z0 + r() * (z1 - z0);
+      if (!inLane(x)) mines.push({ x, z, live: true });
+    }
+    // the dan buoys: each lane's edges, red to port and green to starboard coming in
+    const level = g.world.river.level;
+    const geo = new THREE.ConeGeometry(0.9, 2.4, 8), pole = new THREE.CylinderGeometry(0.06, 0.06, 2.2, 5);
+    const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 });
+    const red = mat(0xb8321e), green = mat(0x2e7a3a), dark = mat(0x222222);
+    for (const lx of o.lanes) for (const side of [-1, 1]) for (let z = z0 - 10; z <= z1 + 10; z += (z1 - z0 + 20) / 3) {
+      const b = new THREE.Mesh(geo, side < 0 ? green : red);
+      b.position.set(lx + side * o.lane, level + 0.9, z);
+      const p = new THREE.Mesh(pole, dark);
+      p.position.set(0, 1.9, 0);
+      b.add(p);
+      g.scene.add(b);
+    }
+    return mines;
+  }
+
+  /** The water off the beach, every step: mines cut by a sweeper, mines and obstacles struck. */
+  waters() {
+    const g = this.game, level = g.world.river.level;
+    const ships = g.world.stacks.filter((s) => s.alive && s.stats.naval);
+    const sweepers = ships.filter((s) => s.stats.sweeper).map((s) => s.units[0]).filter((u) => u?.alive && Math.hypot(u.vel.x, u.vel.z) > 1);
+    let cut = 0;
+    for (const m of this.mines) {
+      if (!m.live) continue;
+      if (sweepers.some((u) => Math.hypot(u.pos.x - m.x, u.pos.z - m.z) < u.stats.sweeper)) { m.live = false; cut++; continue; }
+      for (const s of ships) {
+        const u = s.units[0];
+        if (!u?.alive || Math.hypot(u.pos.x - m.x, u.pos.z - m.z) > MINE_REACH + u.radius) continue;
+        m.live = false;
+        this.blast(s, u, m, MINE_DAMAGE, 3.5);
+        g.tellBoth(s.faction, `${s.name}: struck a mine!`, `${s.name} has struck one of our mines`);
+        break;
+      }
+    }
+    if (cut) {
+      this.sweptN += cut;
+      const sw = ships.find((s) => s.stats.sweeper);
+      if (sw && (this.sweptT ?? 0) <= g.time) { this.sweptT = g.time + 20; g.tell(sw.faction, `${sw.name}: ${this.sweptN} mine${this.sweptN > 1 ? 's' : ''} swept`); this.sweptN = 0; }
+    }
+    // the obstacles: only under the water (at low tide they stand dry on the sand)
+    for (const r of this.runs) {
+      if (r.phase !== 'in') continue;
+      const s = r.craft, u = s.units[0];
+      if (!u?.alive) continue;
+      for (const o of this.obstacles) {
+        if (o.hit || Math.hypot(u.pos.x - o.x, u.pos.z - o.z) > u.radius + 1.2 || level - g.terrain.heightAt(o.x, o.z) < 0.4) continue;
+        o.hit = true;
+        if (o.mine) { this.blast(s, u, o, OBSTACLE_MINE, 1.6); g.tell(s.faction, `${s.name}: blown up on a mined obstacle`); }
+        else { s.damageUnit(u, 60, null); r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z }; g.tell(s.faction, `${s.name}: stuck on the obstacles — the men go in from here`); }
+        break;
+      }
+    }
+  }
+
+  blast(s, u, at, damage, size) {
+    const g = this.game, pos = { x: at.x, y: g.world.river.level, z: at.z };
+    g.effects.waterSplash?.(pos, size);
+    g.effects.explosion?.(pos, size * 0.6, { ground: false });
+    g.audio?.play('explosion', pos, { volume: 1 });
+    s.damageUnit(u, damage, null, 1);
   }
 
   /** Does faction `f` land here (its base is out at sea)? */
@@ -88,6 +177,7 @@ export class Landing {
       }
     }
     for (const r of this.runs.slice()) this.step(r, dt);
+    this.waters();
   }
 
   step(r, dt) {

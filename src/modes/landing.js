@@ -14,7 +14,10 @@ import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineDirector } from '../ai/FrontlineDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
-import { deploy, makeBuyer, clientSetup, clientUpdate, clock, fieldStrength } from './shared.js';
+import { deploy, makeBuyer, clientSetup, clientUpdate, clock } from './shared.js';
+
+/** A side's strength in the field: its men, vehicles and ships — not the concrete (the bar would be all Atlantic Wall). */
+const fieldStrength = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure).reduce((a, s) => a + s.hpRatio * (s.type.cost ?? 150), 0);
 
 const TIME = 30 * 60;           // to take the villages
 const RESERVES = 2400;          // the landing's CP at H-hour…
@@ -69,6 +72,12 @@ export default {
     // the defence: its men on the bluffs over the beach and in the villages (the bunkers are the map's: coastal step 4)
     const hold = map.landing?.hold ?? map.points.filter((p) => p.owner !== att);
     deploy(game, def, map.landing?.defence ?? DEFENCE_FORCE, hold, { back: 6, spread: 16 });
+    // the Atlantic Wall: the map's resistance nests and batteries, its wire, mines and tank traps
+    for (const f of map.landing?.forts ?? []) game.spawnStack(f.unit, def, f, f.facing ?? 0);
+    for (const w of map.landing?.works ?? []) {
+      const site = game.construction.place(w.kind, w.x, w.z, w.yaw ?? 0, def);
+      if (site) { site.quiet = true; game.construction.finish(site); }
+    }
     state.strength[def] = fieldStrength(game, def);
     state.maxStrength = Math.max(state.strength[def], RESERVES) * 1.2;
     game.systems.push(points);

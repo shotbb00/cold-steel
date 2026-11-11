@@ -14,6 +14,7 @@ import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, 
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 import { SHIPS_1945 } from './ships.js';
+import { ATLANTIC_WALL } from './atlanticWall.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -543,6 +544,7 @@ export const TYPES_1945 = {
   ambulance, recovery, bridgeLayer, mineClear, commandPost, jammer,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
   ...SHIPS_1945,   // the open-sea maps' warships (./ships.js)
+  ...ATLANTIC_WALL, // the coastal maps' fixed defences (./atlanticWall.js)
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */

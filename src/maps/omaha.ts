@@ -66,6 +66,21 @@ function height(x: number, z: number) {
   return h;
 }
 
+/**
+ * The beach obstacles on the tidal flat (systems/Landing.js), three belts between the high- and the low-water
+ * mark: ramped stakes nearest the shingle, hedgehogs, Belgian gates furthest out — many with a Teller mine on top.
+ */
+export const OBSTACLES = (() => {
+  const r = mulberry32(1944_2), out: { x: number, z: number, kind: string, mine: boolean }[] = [];
+  [['stake', 48, 0.6, 7], ['hedgehog', 68, 0.2, 8], ['gate', 92, 0.4, 11]].forEach(([kind, d, mined, step]) => {
+    for (let x = -485; x < 485; x += (step as number) + r() * 4) {
+      if (r() < 0.12) continue; // (a gap: some were never set, some knocked down by the sea)
+      out.push({ x: x + (r() - 0.5) * 2, z: shingleZ(x) + (d as number) + (r() - 0.5) * 8, kind: kind as string, mine: r() < (mined as number) });
+    }
+  });
+  return out;
+})();
+
 /** On a lane: the draw roads up to the villages, the coast road along the plateau, the road inland to the German rear. */
 function onRoad(x: number, z: number) {
   for (const d of DRAWS) if (z < shingleZ(x) - 10 && z > d.vz && Math.abs(x - d.x + Math.sin(z * 0.012) * 12) < 3.5) return true;
@@ -137,6 +152,20 @@ export default {
 
   // H-hour: the first wave, in to all three sectors at once (systems/Landing.js); the destroyers are already off the beach
   landing: {
+    // the Atlantic Wall (modes/landing.js, data/units45/atlanticWall.js): a resistance nest either side of each draw's
+    // mouth, two on the bluffs between them, the coastal battery inland that fires on the ships
+    forts: [
+      ...DRAWS.flatMap((d) => [-1, 1].map((s) => ({ unit: 'wn', x: d.x + s * 62, z: footZ(d.x + s * 62) - 3, facing: 0 }))),
+      { unit: 'battery', x: -250, z: -470, facing: 0 }, { unit: 'battery', x: 270, z: -510, facing: 0 },
+    ],
+    // wire along the shingle, mines on the shelf before each draw, tank traps across its mouth (systems/Construction.js)
+    works: [
+      ...Array.from({ length: 88 }, (_, i) => { const x = -480 + i * 11; return { kind: 'wire', x, z: shingleZ(x) - 2, yaw: 0 }; }),
+      ...DRAWS.flatMap((d) => [{ kind: 'mines', x: d.x - 28, z: footZ(d.x) + 22 }, { kind: 'mines', x: d.x + 28, z: footZ(d.x) + 22 }, { kind: 'tankTraps', x: d.x, z: footZ(d.x) + 4 }]),
+    ],
+    // moored mines across the approach, swept lanes off the three sectors (dan buoys)
+    seaMines: { z: [360, 450], count: 90, lanes: [-330, 10, 330], lane: 48, seed: 1944 },
+    obstacles: OBSTACLES,
     // the defence at H-hour (modes/landing.js): on the bluffs over each sector, in the draws, in the villages
     hold: [...DRAWS.flatMap((d) => [{ x: d.x - 70, z: topZ(d.x - 70) - 4 }, { x: d.x + 70, z: topZ(d.x + 70) - 4 }, { x: d.x, z: footZ(d.x) - 60 }]), ...DRAWS.map((d) => ({ x: d.x, z: d.vz }))],
     waves: [{ t: 0, say: 'H-hour: the first wave is going in', units: [
@@ -155,6 +184,23 @@ export default {
     const props = new PropBuilder({ scene, terrain, cover });
     const r = mulberry32(1944);
     sea.build(scene, terrain);
+
+    // ---- the beach obstacles (OBSTACLES: systems/Landing.js knows them too)
+    for (const o of OBSTACLES) {
+      const y = terrain.heightAt(o.x, o.z), yaw = r() * 0.6 - 0.3;
+      if (o.kind === 'hedgehog') props.hedgehog({ x: o.x, z: o.z });
+      else if (o.kind === 'gate') { // Element C: a steel gate on rollers, braced behind
+        props.box('metal', o.x, y + 1.4, o.z, 3, 0.12, 0.12, yaw, 0x4a3a2e);
+        props.box('metal', o.x, y + 2.7, o.z, 3, 0.12, 0.12, yaw, 0x4a3a2e);
+        for (const sx of [-1.4, 0, 1.4]) props.box('metal', o.x + Math.cos(yaw) * sx, y + 1.4, o.z - Math.sin(yaw) * sx, 0.12, 2.8, 0.12, yaw, 0x4a3a2e);
+        props.box('metal', o.x, y + 1.2, o.z - 1.1, 0.1, 2.6, 0.1, yaw, 0x4a3a2e, 0.7);
+        cover.addBox({ x: o.x, z: o.z, yaw, length: 3, thickness: 0.4, height: 2.6 });
+      } else { // a log ramp: one stake driven in leaning seaward, a Teller mine on its top
+        props.box('plain', o.x, y + 1.1, o.z, 0.25, 2.6, 0.25, yaw, 0x5a4a38, 0.5);
+        if (o.mine) props.box('metal', o.x, y + 2.25, o.z + 0.6, 0.35, 0.12, 0.35, 0, 0x3a3e32);
+      }
+      if (o.mine && o.kind !== 'stake') props.box('metal', o.x, y + (o.kind === 'gate' ? 2.85 : 1.6), o.z, 0.32, 0.12, 0.32, 0, 0x3a3e32);
+    }
 
     // ---- the villas along the shelf behind the sea wall (Dog sector: Hamel-au-Prêtre, the Vierville front), the sea wall itself
     for (let x = -470; x < -150; x += 6) {

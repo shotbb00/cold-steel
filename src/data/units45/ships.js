@@ -12,7 +12,7 @@
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
-import { buildLCVP, buildLCT } from '../models/landingCraft45.js';
+import { buildLCVP, buildLCT, buildYMS } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -294,4 +294,21 @@ export const lct = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct };
+/** A motor minesweeper (the coastal maps only: `coastal`): where she steams the sea mines are cut (systems/Landing.js sweeping). */
+export const minesweeper = ship({
+  fleet: 'escort', coastal: true,
+  id: 'minesweeper', name: 'Minesweeper', shortName: 'Minesweeper', cost: 200, limit: 3,
+  names: { nato: ['YMS-247', 'YMS-304', 'YMS-305', 'YMS-347', 'YMS-348', 'YMS-349', 'YMS-350', 'YMS-375'], pact: ['M 1', 'M 2', 'M 3'] },
+  hull: { length: 41, beam: 7.5 },
+  stats: { sweeper: 40, hp: 900, armor: 0.04, speed: 6, accel: 0.25, turnRate: 0.14, turretRate: 0.8, radius: 4, height: 6, eyeHeight: 8, sight: 1200, ...AA(500, 0.1, 0.02),
+    range: 1500, aggroRange: 1500, preferredRange: 1000, leash: 40, damage: 90, fireCooldown: 4, spread: 0.014, boltSpeed: 750, boltSize: 1.2, splash: 2.5, pierce: 0.15 },
+  mounts: { nato: [gun([0, 4, 16], FWD, { range: 1500, reload: 4, damage: 90, splash: 2.5, shell: 750, size: 1.2, arc: 4 })], pact: [gun([0, 4, 16], FWD, { range: 1500, reload: 4, damage: 90, splash: 2.5, shell: 750, size: 1.2, arc: 4 })] },
+  camera: { distance: 70, height: 20, shoulder: 0 },
+  models: { nato: buildYMS, pact: buildYMS },
+  variants: {
+    nato: { name: 'YMS motor minesweeper', weapon: 'one 3-inch gun, 20 mm', text: 'A wooden minesweeper with her sweep streamed astern: where she goes, the moored mines are cut and the water is safe for the boats. Slow and soft — keep her out of reach of the battery.' },
+    pact: { name: 'Minensucher', weapon: 'one gun', text: 'A minesweeper.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper };
