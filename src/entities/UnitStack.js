@@ -621,12 +621,13 @@ export class UnitStack {
     if (s.naval) { // a ship: the rudder bites only with way on, and it keeps going round the turn
       if (s.sail) heading = sailCourse(u, heading); // (under sail: no closer than the wind allows — a goal to windward by tacking, entities/sailing.js)
       const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
-      const diff = angleDelta(u.yaw, heading);
+      let diff = angleDelta(u.yaw, heading);
+      if (Math.abs(diff) > 2.6) { u.turnSign ??= Math.sign(diff) || 1; diff = u.turnSign * Math.abs(diff); } else u.turnSign = null; // (her goal nearly astern: one way round, not this way and that — she'd carry straight on)
       const irons = s.sail && way < 0.25 && Math.abs(offWind(u.yaw)) < NO_GO + 0.2; // (in irons, no way on: she casts her head off with a backed sail — no rudder needed)
       const rate = s.turnRate * clamp(way * 1.6, irons ? 0.55 : 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1) * (s.sail ? 0.45 + 0.55 * mastDrive(u) : 1);
       u.yaw += clamp(diff, -rate * dt, rate * dt);
       u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
-      const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
+      const speed = Math.min(want * (0.45 + 0.55 * Math.max(0, Math.cos(diff))), u.piloting ? 5 : Infinity); // (piloting by the mines: slow ahead, whatever else is pushing her)
       w.set(Math.sin(u.yaw) * speed, 0, Math.cos(u.yaw) * speed);
       return;
     }
@@ -651,6 +652,10 @@ export class UnitStack {
       const interval = 0.35 + Math.random() * 0.3;
       u.thinkT = interval;
       thinkSoldier(u, this, world, interval);
+      if (world.steep && this.usesCover) { // (a man on a bluff: climbing, on hands and knees in places)
+        const t = world.terrain, x = u.pos.x, z = u.pos.z;
+        u.steepK = Math.hypot(t.heightAt(x + 1.5, z) - t.heightAt(x - 1.5, z), t.heightAt(x, z + 1.5) - t.heightAt(x, z - 1.5)) / 3 > world.steep ? 0.4 : 1;
+      }
     }
 
     // --- locomotion: seek destination, keep personal space, slide around cover
@@ -658,6 +663,7 @@ export class UnitStack {
     let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
+    if (u.steepK) maxSpeed *= u.steepK;
     if (this.winded) maxSpeed *= 0.8;
     // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
     // tents go up, the vehicle kit's `deploy`), and when ordered off they pack up first, standing
@@ -694,9 +700,11 @@ export class UnitStack {
       this.services.tell(this.faction, `${this.name}: tracks mended`);
     }
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
-    let way = this.steerTo(u, dt); // the next corner on the way to its place (or the place)
-    if (s.naval && !u.possessed) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
-    const dDest = Math.hypot(u.dest.x - u.pos.x, u.dest.z - u.pos.z);
+    let way = this.run ? this.run.way : this.steerTo(u, dt); // the next corner on the way to its place (or the place) — a landing craft: her spot on the beach (systems/Landing.js)
+    if (s.naval && !u.possessed && !this.run) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
+    if (s.naval && !this.run && this.services.game?.landing) { way = this.services.game.landing.pilot(this, u, way); if (u.piloting) maxSpeed = Math.min(maxSpeed, 5); } // (a coastal map: by the swept lanes through the mines, slow ahead near them)
+    const dest = this.run ? this.run.way : u.dest;
+    const dDest = Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z);
     _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
     const d = way === u.dest ? _v.length() : Math.max(_v.length(), Math.min(dDest, 6)); // (no slowing down at a corner)
     u.wantsMove = dDest > 1.5;
@@ -978,6 +986,7 @@ export class UnitStack {
     if (this.stats.naval) { // ships: keep off each other's hulls, looking ahead along the course
       const v = Math.hypot(u.vel.x, u.vel.z);
       this.eachHull(u, v * 8, (o, d, beams) => {
+        if (o.stack?.stats.landingCraft) return; // (a warship doesn't steer round the boats, nor a boat round the next in the lane — they'd be shoved over the mines; hulls still never overlap)
         const want = beams + 30;
         if (d >= want) return;
         let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];
@@ -1061,11 +1070,17 @@ export class UnitStack {
     // ahead) stays off them too — a move that closes on them is refused, one that opens away never is
     const fx = Math.sin(u.yaw) * u.radius * 9, fz = Math.cos(u.yaw) * u.radius * 9;
     const closes = (cNew, cOld, r) => cNew < r && cNew < cOld;
-    if (nav && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
+    if (nav && !this.stats.landingCraft && (closes(nav.clearance(u.pos.x, u.pos.z, SHIP), nav.clearance(px, pz, SHIP), u.radius)
       || closes(nav.clearance(u.pos.x + fx, u.pos.z + fz, SHIP), nav.clearance(px + fx, pz + fz, SHIP), 0.5))) {
       u.pos.x = px;
       u.pos.z = pz;
       u.vel.multiplyScalar(0.2); // aground, near enough: stopped (it backs off on the next order)
+    }
+    // the minefield (a coastal map: systems/Landing.js): a warship won't close on a mine — her captain keeps to the swept water, as from the shoals
+    const L = !this.stats.sweeper && !this.stats.landingCraft && this.services.game?.landing;
+    if (L && L.mines?.length) {
+      const keep = u.radius + 17, now = L.mineGap(u.pos.x, u.pos.z, keep + 30);
+      if (now < keep && now < L.mineGap(px, pz, keep + 30)) { u.pos.x = px; u.pos.z = pz; u.vel.multiplyScalar(0.2); }
     }
     // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
     // (after the shallows: a ship stopped by them still gets out of another's way — turning on the spot
@@ -1748,6 +1763,8 @@ export class UnitStack {
       if (d2 > r2) continue;
       if (d2 > gun2 && (e.stack.usesCover || !missiles)) continue; // beyond the gun: only a vehicle, only with a missile
       if (s.structure && e.stack.stats.structure) continue; // concrete fights troops, not other concrete
+      if (s.shipsOnly && !e.stack.stats.naval) continue; // (a coastal battery: laid on the sea)
+      if (s.flanking && e.stack.stats.naval && (!e.stack.stats.landingCraft || d2 > 350 * 350)) continue; // (a flanking casemate: along the beach — the boats as they come in to it, never out at sea, never the warships)
       const asw = s.depthCharges || s.asTorp || this._homing; // (1985: an ASW weapon flown out, a submarine's homing torpedoes)
       if ((e.depth ?? 0) > 3 && !asw) continue; // a submarine under the surface: only depth charges (or homing torpedoes) reach it
       if (this.holdFire && !(this.ai.ordered && this.ai.state === AIState.ATTACK && e.stack === focus) && d2 > 15 * 15) continue; // hold fire (the player's order): the attack target, or someone right on top of them
@@ -1807,7 +1824,7 @@ export class UnitStack {
   lightATAt(u, d) {
     const s = u.stats;
     const t = u.target;
-    if (!s.lightAT || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only
+    if (!s.lightAT || !t?.stack?.stats || d > LAW.range || d < LAW.min || t.stack.usesCover || t.stack.stats.structure) return false; // vehicles only (and one still there: a removed stack's units can linger as a target a moment)
     if (this.kit === 'at' && u.kitWeapon !== 'at') return false; // the anti-tank kit: its launchers are in three men's hands
     this.lightAT ??= s.lightAT;
     return this.lightAT > 0 && this.world.time >= (this.nextLightAT ?? 0);
@@ -2068,6 +2085,7 @@ export class UnitStack {
         ms.launch(this, u, _p, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
         continue;
       }
+      if (m.torpedo && !t.stack?.stats.naval) continue; // (a torpedo is for a ship: never at men or tanks ashore)
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);

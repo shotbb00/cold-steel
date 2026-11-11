@@ -145,15 +145,17 @@ export class VisibilitySystem {
       let any = false;
       for (const u of s.units) {
         if (!u.alive) continue; // a body stays where (and as) it was last seen
-        // fortifications are on everyone's maps
-        u.spotted = !this.enabled || s.stats.structure || this.isSeen(u, spotters, terrain);
+        // fortifications are on everyone's maps — a concealed one (the Atlantic Wall) once it has been seen, or has given itself away firing: concrete doesn't move
+        const fort = s.stats.structure && (!s.stats.concealed || u.known);
+        u.spotted = !this.enabled || fort || this.isSeen(u, spotters, terrain);
+        if (u.spotted && s.stats.concealed && !u.known) { u.known = true; if (!s.known && s.faction !== this.player) this.game.tell(this.player, `${s.name} spotted`); s.known = true; }
         if (u.wasSpotted && !u.spotted && s.faction !== this.player && (u.depth ?? 0) > 3) this.lostContact(u); // gone under: mark where
         u.wasSpotted = u.spotted;
         // drawn only where your fog of war is clear (render/FogOfWar.js): spotted by a shot's flash or
         // a tall hull past the edge of view, your troops may fire at it, you don't see it. A gun a
         // counter-battery radar has tracked back is shown wherever it is: that's what the radar is for
         const located = u.locatedUntil > this.game.time || u.radarUntil > this.game.time; // (a radar contact: shown wherever she is, the fog cleared round her: render/FogOfWar.js markLocated)
-        u.visible = s.faction === this.player || (u.spotted && (!this.enabled || s.stats.structure || located || (this.game.fow?.at(u.pos.x, u.pos.z) ?? 1) > 0.3));
+        u.visible = s.faction === this.player || (u.spotted && (!this.enabled || fort || located || (this.game.fow?.at(u.pos.x, u.pos.z) ?? 1) > 0.3));
         if (u.visible) any = true;
       }
       s.visible = s.faction === this.player || any;

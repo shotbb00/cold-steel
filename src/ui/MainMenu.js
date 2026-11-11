@@ -56,9 +56,20 @@ const TIPS = { 1985: [
   'The Guard comes once a battle. Keep it for the moment that decides the day.',
 ] };
 
+/**
+ * The armies the theatre's maps allow (a map's `armies`: Omaha is the US Army against the Wehrmacht), per side —
+ * null where any of them takes any army.
+ */
+export function theatreArmies() {
+  const maps = mapsFor(epoch());
+  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
+}
+
 /** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
 export function armiesPicker(choice, onChange = () => {}) {
   choice.armies = armiesFrom(choice.armies);
+  const only = theatreArmies();
+  for (const f of ['nato', 'pact']) if (only[f] && !only[f].includes(choice.armies[f])) choice.armies[f] = only[f][0]; // (not one this theatre's maps field: the first that is)
   const box = el('div', 'conditions armies');
   for (const f of ['nato', 'pact']) {
     const row = el('div', 'cond-row');
@@ -71,7 +82,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f)) {
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (!only[f] || only[f].includes(a.id)))) {
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -386,11 +397,11 @@ export class MainMenu {
     const kinds = el('div', 'map-pick');
     const modes = el('div', 'map-chips');
     modes.setAttribute('role', 'radiogroup');
-    const modeAbout = el('p', 'map-about', MODES[c.mode]?.description ?? '');
     // the modes this theatre's maps are fought in (a map's `modes`: at sea, Frontline for now)
     const here = mapsFor(epoch());
-    const fits = (m) => here.some((x) => !x.modes || x.modes.includes(m.id));
+    const fits = (m) => here.some((x) => (x.modes ? x.modes.includes(m.id) : !m.only)); // (`only`: a mode the map must list — Landing on the coastal maps)
     if (!fits(MODES[c.mode] ?? {})) c.mode = Object.values(MODES).find((m) => !m.hidden && fits(m))?.id ?? c.mode;
+    const modeAbout = el('p', 'map-about', MODES[c.mode]?.description ?? '');
     for (const m of Object.values(MODES).filter((m) => !m.hidden && fits(m))) {
       const b = el('button', `map-chip${c.mode === m.id ? ' on' : ''}`, m.name);
       b.type = 'button';
@@ -435,7 +446,7 @@ export class MainMenu {
     q('Where', where);
     // a map fought only in some modes (Midway: Frontline) is offered only with those
     this.fitMaps = () => {
-      for (const [b, m] of mapChips) b.hidden = !!m.modes && !m.modes.includes(c.mode);
+      for (const [b, m] of mapChips) b.hidden = m.modes ? !m.modes.includes(c.mode) : !!MODES[c.mode]?.only;
       if (mapChips.find(([, m]) => m.id === c.map)?.[0].hidden) mapChips.find(([b]) => !b.hidden)?.[0].click();
     };
     this.fitMaps();

@@ -27,7 +27,7 @@ export class ControlPoints {
   build(d) {
     const { scene, terrain } = this.game;
     const sea = this.game.world.river?.sea ? this.game.world.river.level : null; // (a sea zone: a buoy at the surface, its ring on the water)
-    const y = sea ?? terrain.heightAt(d.x, d.z);
+    const y = Math.max(sea ?? -Infinity, terrain.heightAt(d.x, d.z)); // (a coastal map's zones ashore: on the ground)
     const radius = d.radius ?? 16;
     const flagMat = new THREE.MeshStandardMaterial({ color: NEUTRAL, emissive: NEUTRAL, emissiveIntensity: 0.25, side: THREE.DoubleSide });
     const ringMat = new THREE.MeshBasicMaterial({ color: NEUTRAL, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false });
@@ -113,7 +113,7 @@ export class ControlPoints {
       }
       let home = 0;
       let foe = 0;
-      const sea = !!this.game.world.river?.sea;
+      const w = this.game.world, sea = !!w.openSea || (!!w.river?.sea && this.game.terrain.heightAt(p.x, p.z) < w.river.level); // (coastal: a zone in the water is the ships', one ashore the men's)
       for (const s of this.game.world.stacks) {
         if (!s.alive || (sea ? !s.stats.naval : !s.usesCover)) continue; // vehicles can't take ground (at sea: warships take the zones)
         for (const u of s.units) {

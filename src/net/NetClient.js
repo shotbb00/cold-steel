@@ -340,6 +340,7 @@ export class NetClient {
         if (ob) { ob.revealed = true; g.construction.showObstacle(ob); }
         break;
       }
+      case 'beach': { const o = g.landing?.obstacles[e[1]]; if (o) g.landing.hideObstacle(o, !!e[2]); break; } // (coastal: a beach obstacle blown)
       case 'cleared': {
         const ob = g.construction.obstacles.find((o) => o.site.id === e[1]);
         if (ob) g.construction.removeObstacle(ob);
@@ -398,7 +399,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -415,6 +416,7 @@ export class NetClient {
       s.tended = tended ? { kind: tended, until: g.time + 1 } : null;
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
       if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
+      if (s.stats.landingCraft && ramp != null) { const u = s.units[0]; u.rampK = (ramp % 1000) / 100; u.beached = ramp >= 1000; }
       if (s.stats.sail && rig != null) { const u = s.units[0]; u.masts = [0, 1, 2].map((i) => !!(rig & (1 << i))); u.struck = !!(rig & 8); } // (1806: the model's masts and colours)
     }
     const ms = g.modeState;

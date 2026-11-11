@@ -50,11 +50,24 @@ export class NavGrid {
     this.stamp = 0;
     this.version = 0; // bumped on every change: routes planned before may be wrong
     for (const c of world.cover.colliders) this.seed(c);
+    if (world.steep) this.steepSeeds(world.steep);
     this.water();
     this.dirty = true;
   }
 
   // ---------------------------------------------------------------- building
+
+  /** Ground too steep for a vehicle (the map's `steep`: rise over run) is like cover to it — the bluffs at Omaha: the draws or nothing. Men climb it (slowly: UnitStack). */
+  steepSeeds(limit) {
+    const t = this.world.terrain, c = this.cell, h = Math.max(1.5, c);
+    for (let j = 0, k = 0; j < this.nz; j++) {
+      for (let i = 0; i < this.nx; i++, k++) {
+        const x = this.ox + i * c, z = this.oz + j * c;
+        const g = Math.hypot(t.heightAt(x + h, z) - t.heightAt(x - h, z), t.heightAt(x, z + h) - t.heightAt(x, z - h)) / (2 * h);
+        if (g > limit) this.seedAll[k] = 0;
+      }
+    }
+  }
 
   /** Cover `c` (a CoverMap collider) into the seeds: exact distances in the cells round it. */
   seed(c) {
@@ -96,11 +109,13 @@ export class NavGrid {
   }
 
   /** Deep water from the terrain (again: a bridge blown or laid). */
-  water() {
+  /** `band` [z0, z1]: only those rows (the tide coming in over a beach: the rest of the map is as it was). */
+  water(band = null) {
     const d = this.dWater;
     const w = this.world.river?.water;
     const terrain = this.world.terrain;
-    for (let j = 0, k = 0; j < this.nz; j++) {
+    const j0 = band ? Math.max(0, Math.floor((band[0] - this.oz) / this.cell)) : 0, j1 = band ? Math.min(this.nz, Math.ceil((band[1] - this.oz) / this.cell) + 1) : this.nz;
+    for (let j = j0, k = j0 * this.nx; j < j1; j++) {
       for (let i = 0; i < this.nx; i++, k++) {
         const depth = w ? w.level - terrain.heightAt(this.ox + i * this.cell, this.oz + j * this.cell) : 0;
         d[k] = w && depth > w.deep ? 0 : Infinity;
@@ -109,6 +124,13 @@ export class NavGrid {
         const shoal = !w || depth < SHIP_DEPTH ? depth : Math.min(depth, ...[[-hc, -hc], [hc, -hc], [-hc, hc], [hc, hc]].map(([dx, dz]) => w.level - terrain.heightAt(x0 + dx, z0 + dz)));
         this.dShore[k] = shoal < SHIP_DEPTH ? 0 : Infinity;
       }
+    }
+    if (band) { // (the band alone: its distances from its own seeds — beyond it nothing changed; no stall while the tide comes in)
+      const n = this.nx, a = j0 * n, b = j1 * n;
+      chamfer(d.subarray(a, b), n, j1 - j0, this.cell);
+      chamfer(this.dShore.subarray(a, b), n, j1 - j0, this.cell);
+      this.version++;
+      return;
     }
     this.waterDirty = true;
     this.dirty = true;

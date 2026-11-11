@@ -108,7 +108,7 @@ export class Ambience {
       }
     }
 
-    const sea = !!g.world.river?.sea; // (open sea: no guns firing beyond the horizon, no villages burning)
+    const sea = !!g.world.openSea; // (open sea: no guns firing beyond the horizon, no villages burning)
     // ---- artillery on the horizon
     if (t >= this.nextArty && !sea) {
       this.nextArty = t + rand(ARTY_GAP);

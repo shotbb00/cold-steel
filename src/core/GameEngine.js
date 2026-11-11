@@ -19,6 +19,7 @@ import { Doctrine } from '../systems/Doctrine.js';
 import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
 import { Squalls } from '../systems/Squalls.js';
+import { Landing } from '../systems/Landing.js';
 import { Searchlights } from '../systems/Searchlights.js';
 import { Missiles } from '../systems/Missiles.js';
 import { Sensors } from '../systems/Sensors.js';
@@ -114,6 +115,7 @@ export class GameEngine {
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.armies = armiesFrom(armies); // which army each side fields (data/factions.js ARMIES)
+    for (const f of ['nato', 'pact']) if (map.armies?.[f] && !map.armies[f].includes(this.armies[f])) this.armies[f] = map.armies[f][0]; // (a map fought by particular armies only: Omaha)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -158,7 +160,10 @@ export class GameEngine {
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
     this.world.river = map.river ?? null; // water that stops and slows (a sea map: world/Sea.js)
+    this.world.coastal = map.theatre === 'coastal'; // the sea and the land in one battle (Omaha): ships and armies both
+    this.world.openSea = !!map.river?.sea && !this.world.coastal; // ships only, nothing ashore
     this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
+    this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
@@ -181,6 +186,7 @@ export class GameEngine {
     if (map.river?.sea) this.cameraManager.waterLevel = map.river.level; // (never down to the sea floor)
     if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
     if (map.river?.sea) { this.squalls = new Squalls(this); this.missiles = new Missiles(this); this.sensors = new Sensors(this); this.searchlights = new Searchlights(this); this.systems.push(this.squalls, this.searchlights, this.missiles, this.sensors); } // (1985: anti-ship missiles and their defence, radar and ESM bearings) // rain squalls and the sea state; searchlight beams at night
+    if (this.world.coastal) { this.landing = new Landing(this); this.systems.push(this.landing); } // the side that lands comes ashore in landing craft
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;
@@ -744,6 +750,7 @@ export class GameEngine {
     world.refresh();
     this.cameraManager.handleInput(dt);
     for (const s of world.stacks) s.renderer.update(dt, t);
+    this.landing?.clientUpdate(dt); // (coastal: the tide by the clock)
     this.projectiles.update(dt);
     this.effects.update(dt);
     this.smoke.update(dt);

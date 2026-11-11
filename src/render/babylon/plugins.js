@@ -17,7 +17,7 @@
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase.js';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage.js';
 import { NOISE, CLIMATE } from '../paint.js';
-import { SEA_TIME, SEA_STATE } from '../../world/Sea.js';
+import { SEA_TIME, SEA_STATE, TIDE } from '../../world/Sea.js';
 
 class GlslPlugin extends MaterialPluginBase {
   isCompatible(lang) {
@@ -262,7 +262,7 @@ export class WaterPlugin extends GlslPlugin {
   getAttributes(attributes, scene, mesh) { if (mesh?.isVerticesDataPresent?.('aDepth')) attributes.push('aDepth'); }
 
   getUniforms() {
-    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'uSeaState', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform vec4 foamBox;\n#endif\n' };
+    return { ubo: [{ name: 'uSeaTime', size: 1, type: 'float' }, { name: 'uSeaState', size: 1, type: 'float' }, { name: 'uTide', size: 1, type: 'float' }, { name: 'foamBox', size: 4, type: 'vec4' }], fragment: '#ifdef WATER\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform float uTide;\nuniform vec4 foamBox;\n#endif\n' };
   }
 
   getSamplers(samplers) { samplers.push('foamMap'); }
@@ -270,6 +270,7 @@ export class WaterPlugin extends GlslPlugin {
   bindForSubMesh(ubo) {
     ubo.updateFloat('uSeaTime', SEA_TIME.value);
     ubo.updateFloat('uSeaState', SEA_STATE.value);
+    ubo.updateFloat('uTide', TIDE.value);
     const b = this.water.foam.box;
     ubo.updateFloat4('foamBox', b.x, b.y, b.z, b.w);
     ubo.setTexture('foamMap', this.water.babylonFoam);
@@ -289,7 +290,7 @@ export class WaterPlugin extends GlslPlugin {
         {
           vec2 fuv = (vPositionW.xz - foamBox.xy) * foamBox.zw;
           float wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(foamMap, fuv).r;
-          vec4 sea = seaColor(vDepth, vPositionW.xz, uSeaTime, wake);
+          vec4 sea = seaColor(vDepth + uTide, vPositionW.xz, uSeaTime, wake);
           surfaceAlbedo = sea.rgb;
           alpha *= sea.a;
           normalW = pBumpNormal(vPositionW, normalW, seaHeight(vPositionW.xz, uSeaTime, length(vEyePosition.xyz - vPositionW)));

@@ -21,6 +21,8 @@ const LINES = {
     shipHit: ['We’re hit!', 'Hit amidships!', 'Shell aboard aft!', 'Fire on the boat deck!', 'Damage control, forward!'],
     shipBad: ['She’s taking water!', 'Flooding forward!', 'We’re listing!', 'All hands to damage control!', 'Can’t hold her much longer!'],
     shipContact: ['Ships in sight!', 'Smoke on the horizon!', 'Radar contact!', 'Enemy ships, bearing two-seven-zero!'],
+    // the coastal maps (systems/Landing.js): off the boat
+    landing: ['Ramp going down!', 'Go, go, go!', 'Off the boat, move!', 'Get off the beach!', 'Follow me!', 'Keep moving, don\'t bunch up!'],
   },
   pact: {
     contact: ['Protivnik!', 'Vizhu vraga!', 'Kontakt!', 'Vrag vperedi!'],
@@ -42,6 +44,7 @@ const LINES = {
     straddle: ["Nakrytiye!", "Est' popadaniye!", "Tak derzhat'!"],
   },
   de: {
+    boats: ['Landungsboote!', 'Feuer auf die Boote!', 'Sie kommen!', 'Alarm — Landung!', 'Da, am Strand!'], // (the coastal maps: the boats coming in)
     contact: ['Feind!', 'Feindkontakt!', 'Feind voraus!', 'Achtung, Feind!', 'Bewegung, elf Uhr!'],
     cover: ['Deckung!', 'In Deckung!', 'Runter!', 'Hinter die Mauer!'],
     reload: ['Nachladen!', 'Magazin leer!', 'Feuerschutz!'],

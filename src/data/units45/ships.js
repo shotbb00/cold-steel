@@ -11,7 +11,8 @@
 // submerged they're seen only by a ship's `sonar` (or the periscope close by, or a torpedo shot:
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
-import { buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
+import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
+import { buildLCVP, buildLCT, buildYMS, buildDD } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -260,4 +261,90 @@ export const transport = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport };
+/**
+ * Landing craft (the coastal maps: systems/Landing.js). Never bought: a land unit bought by the side that
+ * lands comes in one, chosen by what it is — a squad in a Higgins boat, a vehicle in an LCT. They run in,
+ * ground, drop the ramp and back off; sunk on the way in, what they carried is lost. `draft`: how far
+ * up the sand she runs (the depth she grounds in).
+ */
+export const lcvp = ship({
+  engine: 'engine.dieselSmall', // (her Gray diesel)
+  id: 'lcvp', name: 'Landing Craft (LCVP)', shortName: 'LCVP', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 10.9, beam: 3.3 },
+  stats: { landingCraft: true, draft: 0.9, hp: 260, armor: 0.04, speed: 9, accel: 0.8, /* (twice her 9 knots: the sea maps' scale) */ turnRate: 0.45, turretRate: 1, radius: 2.4, height: 2.6, eyeHeight: 3, sight: 400, smallCraft: true, stealth: 0.4,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 26, height: 9, shoulder: 0 },
+  models: { nato: buildLCVP, pact: buildLCVP },
+  variants: {
+    nato: { name: 'LCVP Higgins boat', weapon: '2 × .30 machine guns', text: 'Plywood and a steel ramp: a section of riflemen from the transports to the sand. The ramp drops, they go — straight into whatever is waiting.' },
+    pact: { name: 'Landing craft', weapon: 'machine guns', text: 'A small landing craft for a section of infantry.' },
+  },
+});
+export const lct = ship({
+  engine: 'engine.diesel',
+  id: 'lct', name: 'Tank Landing Craft (LCT)', shortName: 'LCT', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 36.6, beam: 9.8 },
+  stats: { landingCraft: true, draft: 1.3, hp: 1100, armor: 0.08, speed: 7, accel: 0.45, turnRate: 0.18, turretRate: 1, radius: 5, height: 5, eyeHeight: 6, sight: 500, smallCraft: true,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 30, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 60, height: 18, shoulder: 0 },
+  models: { nato: buildLCT, pact: buildLCT },
+  variants: {
+    nato: { name: 'LCT Mk 6', weapon: '2 × 20 mm', text: 'A flat steel box with a ramp: tanks, half-tracks and guns straight onto the beach. Slow, big and an easy target on the run in.' },
+    pact: { name: 'Tank landing craft', weapon: '20 mm', text: 'A landing craft for vehicles.' },
+  },
+});
+
+/** A DD Sherman swimming in on its canvas screen (systems/Landing.js: never bought — a `dd` tank bought on a coastal map comes as one). */
+export const ddCraft = ship({
+  engine: 'engine.dieselSmall', // (the Sherman's engine driving her propellers)
+  id: 'ddCraft', name: 'DD Tank (swimming)', shortName: 'DD tank', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 6, beam: 3 },
+  stats: { landingCraft: true, dd: true, draft: 1.1, hp: 300, armor: 0.02, speed: 4, accel: 0.5, turnRate: 0.25, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 300, smallCraft: true, stealth: 0.5,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 18, height: 6, shoulder: 0 },
+  models: { nato: buildDD, pact: buildDD },
+  variants: { nato: { name: 'DD Sherman, swimming', weapon: '— (afloat)', text: 'A Sherman on a canvas screen, driven by two propellers: it swims in with the first wave. A wave over the screen and it sinks like a stone.' }, pact: { name: 'Swimming tank', weapon: '—', text: 'A swimming tank.' } },
+});
+
+/** A motor minesweeper (the coastal maps only: `coastal`): where she steams the sea mines are cut (systems/Landing.js sweeping). */
+export const minesweeper = ship({
+  fleet: 'escort', coastal: true,
+  id: 'minesweeper', name: 'Minesweeper', shortName: 'Minesweeper', cost: 200, limit: 3,
+  names: { nato: ['YMS-247', 'YMS-304', 'YMS-305', 'YMS-347', 'YMS-348', 'YMS-349', 'YMS-350', 'YMS-375'], pact: ['M 1', 'M 2', 'M 3'] },
+  hull: { length: 41, beam: 7.5 },
+  stats: { sweeper: 40, hp: 900, armor: 0.04, speed: 6, accel: 0.25, turnRate: 0.14, turretRate: 0.8, radius: 4, height: 6, eyeHeight: 8, sight: 1200, ...AA(500, 0.1, 0.02),
+    range: 1500, aggroRange: 1500, preferredRange: 1000, leash: 40, damage: 90, fireCooldown: 4, spread: 0.014, boltSpeed: 750, boltSize: 1.2, splash: 2.5, pierce: 0.15 },
+  mounts: { nato: [gun([0, 4, 16], FWD, { range: 1500, reload: 4, damage: 90, splash: 2.5, shell: 750, size: 1.2, arc: 4 })], pact: [gun([0, 4, 16], FWD, { range: 1500, reload: 4, damage: 90, splash: 2.5, shell: 750, size: 1.2, arc: 4 })] },
+  camera: { distance: 70, height: 20, shoulder: 0 },
+  models: { nato: buildYMS, pact: buildYMS },
+  variants: {
+    nato: { name: 'YMS motor minesweeper', weapon: 'one 3-inch gun, 20 mm', text: 'A wooden minesweeper with her sweep streamed astern: where she goes, the moored mines are cut and the water is safe for the boats. Slow and soft — keep her out of reach of the battery.' },
+    pact: { name: 'Minensucher', weapon: 'one gun', text: 'A minesweeper.' },
+  },
+});
+
+/** The old battleship offshore (the coastal maps only): ten 14-inch guns on the batteries and the strongpoints inland. */
+const FOURTEEN_INCH = { range: 3000, reload: 26, damage: 1400, splash: 10, pierce: 0.6, shell: 760, size: 3, spread: 0.008 };
+export const oldBattleship = ship({
+  fleet: 'line', coastal: true,
+  id: 'oldBattleship', name: 'Old Battleship', shortName: 'Battleship', cost: 1100, limit: 1,
+  names: { nato: ['Texas', 'Arkansas', 'Nevada'], pact: ['Schleswig-Holstein'] },
+  hull: { length: 174, beam: 29 },
+  stats: { hp: 13000, armor: 0.42, speed: 7, accel: 0.05, turnRate: 0.045, turretRate: 0.18, radius: 13, height: 30, eyeHeight: 34, sight: 3000, ...AA(700, 0.2, 0.05),
+    range: 3000, aggroRange: 3000, preferredRange: 2600, leash: 80, damage: 1400, fireCooldown: 26, spread: 0.008, boltSpeed: 760, boltSize: 3, splash: 10, pierce: 0.6 },
+  mounts: {
+    nato: [gun([0, 14, 64], FWD, FOURTEEN_INCH), gun([0, 17, 50], FWD, FOURTEEN_INCH), gun([0, 13, -14], AFT, { ...FOURTEEN_INCH, arc: 4 }), gun([0, 16, -50], AFT, FOURTEEN_INCH), gun([0, 13, -64], AFT, FOURTEEN_INCH)],
+    pact: [gun([0, 12, 50], FWD, { ...FOURTEEN_INCH, damage: 900 }), gun([0, 12, -50], AFT, { ...FOURTEEN_INCH, damage: 900 })],
+  },
+  camera: { distance: 150, height: 48, shoulder: 0 },
+  models: { nato: buildTexas, pact: buildTexas },
+  variants: {
+    nato: { name: 'New York-class battleship', weapon: '10 × 14-inch, 5-inch casemate guns', text: 'Thirty years old and slow, but her ten 14-inch guns reach the batteries inland and break the strongpoints on the bluffs. Find her targets for her: what nobody has seen, she can\'t hit.' },
+    pact: { name: 'Old battleship', weapon: '11-inch guns', text: 'An old battleship.' },
+  },
+});
+
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft };

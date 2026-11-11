@@ -14,6 +14,7 @@ import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, 
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 import { SHIPS_1945 } from './ships.js';
+import { ATLANTIC_WALL } from './atlanticWall.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -104,6 +105,12 @@ const tank = derive(T.tank, {
     fj: { name: 'StuG III G', weapon: '7.5 cm StuK 40 L/48', text: 'No turret, a low casemate: the gun points where the hull points. Hard to spot, deadly from ambush. Stops to fire.' },
   },
 });
+
+/** The DD Sherman (the coastal maps, the US Army only): bought for the landing, it swims in on its own screen (systems/Landing.js) instead of riding an LCT. */
+const ddTank = {
+  ...tank, id: 'ddTank', name: 'DD Tanks', shortName: 'DD tanks', cost: (tank.cost ?? 400) - 40, dd: true, coastal: true, armies: ['us'],
+  variants: { nato: { name: 'M4A1 DD Sherman', weapon: '75 mm M3', text: 'The Duplex Drive Sherman: launched offshore, it swims in on a canvas screen and lands with the first infantry. Cheaper and quicker than waiting for an LCT — but a rough sea swamps it, and it goes down with its crew.' } },
+};
 
 const ifv = derive(T.ifv, {
   name: 'Half-tracks', shortName: 'Half-tracks',
@@ -536,13 +543,14 @@ const airAssault = derive(T.airAssault, {
 });
 
 export const TYPES_1945 = {
-  rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
+  rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
   artillery, rockets, spMortar, observers, cbRadar,
   aa, towedAA, sam, manpads, airRadar, gunMissile,
   scouts, sniper, engineers,
   ambulance, recovery, bridgeLayer, mineClear, commandPost, jammer,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
   ...SHIPS_1945,   // the open-sea maps' warships (./ships.js)
+  ...ATLANTIC_WALL, // the coastal maps' fixed defences (./atlanticWall.js)
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */

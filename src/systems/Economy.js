@@ -25,7 +25,7 @@ export const SIDE_OBJECTIVES = [
  */
 export function sideObjectiveDefs(game, points) {
   const { bounds, river } = game.world;
-  if (river?.sea) return []; // (at sea: the zones are the whole fight — and nothing to build)
+  if (game.world.openSea) return []; // (at sea: the zones are the whole fight — and nothing to build)
   const t = game.terrain;
   const taken = [];
   const defs = [];

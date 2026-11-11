@@ -203,6 +203,7 @@ export class NetHost {
         s.radarOn === false ? 0 : 1, // (1985 ships: radar on or silent — a guest's ESM bearings, systems/Sensors.js)
         (() => { const l = s.stats.naval && s.units.find((u) => u.alive && u.lightOn)?.lightOn; return l ? [Math.round(l.x), Math.round(l.z)] : 0; })(), // a ship's searchlight on (x, z)
         (() => { const u = s.stats.sail && s.units[0]; return u ? (u.masts ?? [1, 1, 1]).reduce((a, m, i) => a | (m ? 1 << i : 0), 0) | (u.struck ? 8 : 0) : 0; })(), // (1806: her masts standing, struck)
+        (() => { const u = s.stats.landingCraft && s.units[0]; return u ? Math.round((u.rampK ?? 0) * 100) + (u.beached ? 1000 : 0) : 0; })(), // (a landing craft: her ramp, aground)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),

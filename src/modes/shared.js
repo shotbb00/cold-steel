@@ -13,6 +13,7 @@ import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { KITS, takesKit } from '../data/kits.js';
+import { CRAFT } from '../systems/Landing.js';
 
 /**
  * state.buy(faction, typeId) for points-and-CP modes: pay, check the stack limit, and bring
@@ -21,13 +22,13 @@ import { KITS, takesKit } from '../data/kits.js';
 const ENTRY_GAP = 10; // seconds: each road brings in one arrival at a time
 
 export function makeBuyer(game, state) {
-  const counter = {};
+  const counter = (state.bought ??= {}); // (shared with a coastal map's landing waves: systems/Landing.js)
   state.entryFree ??= {}; // `${faction}:${road}` → battle time the road is free again
   /** `entry`: the road to arrive on (an index into the base's entries), or null: a command post, else any free road. */
   return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
-    if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type))) return null;
+    if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
     const cost = unitCost(type, game.armyOf(faction));
     if (state.cp[game.wallet(faction)] < cost) {
       game.tell(faction, `Not enough command points for ${type.shortName} (${cost})`);
@@ -54,9 +55,6 @@ export function makeBuyer(game, state) {
       game.tell(faction, `${asked !== null ? 'That road is' : 'Every road is'} busy: the next arrival in ${wait} s`);
       return null;
     }
-    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
-    counter[typeId] = (counter[typeId] ?? 0) + 1;
-    let pos = { x: base.x + roads[road] + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
     // a forward command post that is set up and not under fire takes the new arrivals (the one furthest
     // forward) — in co-op only the buyer's own: each player brings their troops in at their post
     const buyer = game.currentOwner ?? 'host';
@@ -64,22 +62,35 @@ export function makeBuyer(game, state) {
       .filter((s) => s.postReady && (!game.coop || faction !== game.playerFaction || s.owner === buyer) && !game.world.stacks.some((e) => e.faction !== faction && e.alive && !e.stats.structure
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
-    if (post && asked === null && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
+    const atPost = !!post && asked === null && !type.stats.structure && !type.stats.naval;
+    const landing = !type.stats.naval && !atPost && game.landing?.lands(faction); // (a coastal map's side that lands: it comes in a landing craft — unless a command post is set up ashore and no beach was asked for)
+    if (landing && game.landing.busy(faction) >= CRAFT) { game.tell(faction, `All ${CRAFT} landing craft are on a run: wait for one to come back`); return null; }
+    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
+    counter[typeId] = (counter[typeId] ?? 0) + 1;
+    let pos = { x: base.x + roads[road] + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
+    if (atPost) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
     else if (game.rules?.roadCooldown !== false) state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP; // (battle rule: off — everything bought arrives at once)
     const army = game.armyOf(faction);
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
     const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)
     const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}${kitted ? ` (${KITS[kitted].short})` : ''}`;
-    const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
+    if (landing) { // in to the beach sector of the road it was sent on (Dog, Easy, Fox), not at the base out at sea
+      const craft = game.landing.launch(faction, { typeId, name, kit: kitted, owner: game.currentOwner ?? null }, roads[road] + (Math.random() - 0.5) * 50); // (owner: co-op — it lands as the buyer's)
+      game.bus.emit('wave', { faction, units: [typeId], bought: true });
+      game.tell(faction, `${type.shortName} called in: an ${craft.type.shortName} is taking ${name} in`);
+      return craft;
+    }
+    const facing = type.stats.naval && game.world.coastal ? (pos.x > 0 ? -Math.PI / 2 : Math.PI / 2) : toward > 0 ? 0 : Math.PI; // (a coastal map: along the coast, toward the middle)
+    const stack = game.spawnStack(typeId, faction, pos, facing, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
     if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
-    game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);
+    game.tell(faction, `${type.shortName} called in — arriving at ${atPost ? post.name : 'base'}`);
     return stack;
   };
 }
 
 /** A side's own forces: what counts toward the stack limit (not fortifications or lane waves). */
-export const forces = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats.structure && !s.autonomous && !s.withdrawing && s.type.id !== 'crew' && !s.type.uncapped); // (the NVA's Kampfgruppen are outside the cap) // withdrawing: its slot is free already
+export const forces = (game, f) => game.world.stacksOf(f).filter((s) => s.cargo || !s.stats.structure && !s.autonomous && !s.withdrawing && s.type.id !== 'crew' && !s.type.uncapped); // (the NVA's Kampfgruppen are outside the cap) // withdrawing: its slot is free already
 
 export const clock = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 

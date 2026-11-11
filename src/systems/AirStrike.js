@@ -1270,7 +1270,7 @@ export class AirStrike {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
-    if (!!p.sea !== !!game.world.river?.sea) return false; // (the carrier missions at sea, the land's air support on land)
+    if (!!p.sea !== !!game.world.openSea) return false; // (the carrier missions at sea, the land's air support on land)
     let deck = null;
     if (p.sea) { // off a carrier with a flight of this kind aboard and her deck free (1985: else from the shore)
       const optional = p.deck === 'optional';
@@ -1439,7 +1439,7 @@ export class AirStrike {
     const g = this.game;
     if (this.warmed || !g.babylon) return;
     this.warmed = true;
-    const sea = !!g.world.river?.sea;
+    const sea = !!g.world.openSea;
     for (const [kind, p] of Object.entries(KINDS)) {
       if (p.off || !!p.sea !== sea) continue;
       for (const f of ['nato', 'pact']) { try { g.babylon.warm(buildAircraft(kind, f, g.armyOf(f)).root); } catch { /* (a kind this war has no aircraft for) */ } }

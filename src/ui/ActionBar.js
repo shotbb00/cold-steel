@@ -173,7 +173,7 @@ export class ActionBar {
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
       b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
-        || (mass !== null ? !!g.world.river?.sea : !!KINDS[kind]?.sea !== !!g.world.river?.sea); // (at sea: the carrier missions only)
+        || (mass !== null ? !!g.world.openSea : !!KINDS[kind]?.sea !== !!g.world.openSea); // (at sea: the carrier missions only)
       if (mass?.id === 'tot' && b.querySelector('.sup-name').textContent !== 'Time on Target') { b.querySelector('.sup-name').textContent = 'Time on Target'; b.title = 'Time on Target — every gun in range fires one salvo; all the shells land at the same moment'; }
     }
   }
