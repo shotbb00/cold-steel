@@ -74,7 +74,7 @@ export function makeBuyer(game, state) {
     const kitted = takesKit(type) && KITS[kit]?.short ? kit : null; // (a squad kit, data/kits.js: in its name too)
     const name = `${army === 'sov' ? 'Guards ' : ''}${label} ${['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][counter[typeId] - 1] ?? counter[typeId]}${kitted ? ` (${KITS[kitted].short})` : ''}`;
     if (landing) { // in to the beach sector of the road it was sent on (Dog, Easy, Fox), not at the base out at sea
-      const craft = game.landing.launch(faction, { typeId, name, kit: kitted }, roads[road] + (Math.random() - 0.5) * 80);
+      const craft = game.landing.launch(faction, { typeId, name, kit: kitted }, roads[road] + (Math.random() - 0.5) * 50);
       game.bus.emit('wave', { faction, units: [typeId], bought: true });
       game.tell(faction, `${type.shortName} called in: an ${craft.type.shortName} is taking ${name} in`);
       return craft;

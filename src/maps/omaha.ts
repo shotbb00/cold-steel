@@ -17,7 +17,7 @@ import { buildSite, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const SIZE = 2000;
-const BOUNDS = { x: 500, z: 750 };
+const BOUNDS = { x: 500, z: 900 }; // (the sea runs 400 m out past the mines: room for a destroyer's turning circle in the transport area)
 const noise = createNoise2D(1944_06);
 const sea = createSea({ level: 0, size: SIZE, color: 0x34525a }); // (the Channel: grey-green, never blue)
 
@@ -42,7 +42,7 @@ function height(x: number, z: number) {
   if (z > sz) { // the beach and the sea floor: hard sand shelving gently, a runnel and bar on it, then the bottom falling away
     const d = z - sz;
     h = 1.7 - d * 0.017 + Math.sin(d * 0.045 + x * 0.004) * 0.25 * smoothstep(40, 90, d) * smoothstep(260, 200, d);
-    h = Math.min(h, 1.7 - d * 0.017 - Math.max(0, d - 200) * 0.05); // (past the obstacle belts the bottom shelves away: the destroyers came in to a few hundred metres)
+    h = Math.min(h, 1.7 - d * 0.017 - Math.max(0, d - 165) * 0.1); // (just past where the boats ground the bottom shelves away: the destroyers came in to a few hundred metres, bows and all)
     h = Math.max(h, -16);
     h += smoothstep(10, 0, d) * 1.3;                                                  // the shingle bank's seaward face
   } else if (z > fz) { // the shingle, then the shelf: marsh and low dunes
@@ -90,7 +90,7 @@ function onRoad(x: number, z: number) {
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Transport area', x: 0, z: 620, owner: 'nato', sector: 'centre', radius: 90 },
+  { id: 'A', name: 'Transport area', x: 0, z: 770, owner: 'nato', sector: 'centre', radius: 90 },
   // the beach sectors (Landing: open from the start; `opens` the village up its draw once taken)
   { id: 'B', name: 'Dog Green', x: -330, z: shingleZ(-330) + 22, owner: null, sector: 'west', radius: 40, opens: 'E' },
   { id: 'C', name: 'Easy Red', x: 10, z: shingleZ(10) + 22, owner: null, sector: 'centre', radius: 40, opens: 'F' },
@@ -145,7 +145,7 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: 680, entries: [-330, 10, 330] }, // (the side that lands: its roads are the beach sectors Dog, Easy, Fox)
+  bases: { nato: { x: 0, z: 830, entries: [-330, 10, 330] }, // (the side that lands: its roads are the beach sectors Dog, Easy, Fox)
            pact: { x: 0, z: -680, entries: [-200, 0, 200] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 330 }, pact: { x: 0, z: -150 } },
@@ -169,7 +169,8 @@ export default {
     // moored mines across the approach, swept lanes off the three sectors (dan buoys)
     // the tide: low water at H-hour, coming in over the battle — the obstacles go under, the beach narrows to the shingle
     tide: { rise: 1.6, over: 1500, band: [90, 430] }, // (band: the rows of the beach the movement grid redoes as it comes in)
-    seaMines: { z: [430, 500], count: 60, lanes: [-330, 10, 330], lane: 60, seed: 1944 },
+    // (well out: a destroyer's turning circle fits between the mines and the beach)
+    seaMines: { z: [520, 590], count: 60, lanes: [-330, 10, 330], lane: 80, seed: 1944 },
     // what the landing may call in at sea: the destroyers inshore, the minesweepers, the old battleship offshore
     navy: ['destroyer', 'minesweeper', 'oldBattleship'],
     obstacles: OBSTACLES,
@@ -183,7 +184,7 @@ export default {
   },
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -300, z: 700, facing: Math.PI / 2 }, { unit: 'destroyer', x: 300, z: 710, facing: -Math.PI / 2 }], // (well off the mine band, the coast on the beam: in through the lanes)
+    nato: [{ unit: 'destroyer', x: -170, z: 850, facing: Math.PI / 2 }, { unit: 'destroyer', x: 170, z: 860, facing: -Math.PI / 2 }], // (between the lanes: clear of the boats launching off each sector) // (well off the mine band, the coast on the beam: in through the lanes)
     pact: [{ unit: 'rifles', x: 10, z: -250, facing: 0, name: '1. Kompanie' }],
   },
 

@@ -14,8 +14,7 @@ import { enemyOf } from '../data/factions.js';
 const ORDER = ['rifles', 'rifles', 'engineers', 'ddTank', 'rifles', 'mgTeam', 'tank', 'rifles', 'engineers', 'mortar', 'rifles', 'tank', 'atTeam'];
 const FOCUS_HOLD = 150;     // s it keeps landing in one sector before it looks again
 const INSHORE = 395;        // z (from the sea's side) the destroyers lie at: a few hundred metres off the strongpoints
-const OFFING = 680;         // z they run along to the lane, the coast on the beam
-const LANE_IN = 610;        // z where they turn into the swept lane (well out: their turning circle mustn't carry them over the mines)
+const WAVES_THROUGH = 150; // s: the destroyers wait in the offing till the first waves are through the lanes
 const CLEAR_WAIT = 150;     // s for an engineer job before it's given again (under fire on the sand it takes a while)
 const RESERVE = 2;          // defence: stacks sent to the village behind a fallen sector
 
@@ -31,8 +30,36 @@ export class LandingDirector extends FrontlineDirector {
     const due = this.timer - dt <= 0;
     super.update(dt);
     if (!due) return;
-    if (this.lands) { this.pickFocus(); this.ships(); this.engineers(); } else this.reserves();
+    if (this.lands) { this.pickFocus(); this.ships(); this.engineers(); this.stayInshore(); } else this.reserves();
   }
+
+  /** The destroyers stay on their stations until they sink (pulled out to mend, they'd go back out through the mines). */
+  stayInshore() {
+    const sign = Math.sign(this.game.map.bases[this.faction].z) || 1, band = this.game.map.landing?.seaMines?.z;
+    if (!band) return;
+    for (const s of this.fleet) {
+      if (!s.inshoreAt && s.type.id !== 'oldBattleship' && !s.owner) { s.offing ??= { x: s.centroid.x, z: s.centroid.z }; if (s.moveTarget && Math.hypot(s.moveTarget.x - s.offing.x, s.moveTarget.z - s.offing.z) > 40) s.ai.halt(); continue; } // (waiting in the offing: there, not wandering)
+      if (s.type.id === 'oldBattleship' && !s.owner) { // (the old battleship: out in the transport area, her guns reach the bluffs from there)
+        const off = { x: 0, z: sign * (band[1] + 230) };
+        if (!s.moveTarget ? Math.abs(s.centroid.z) < band[1] + 150 : Math.abs(s.moveTarget.z) < band[1] + 150) s.ai.moveTo(off, { hold: true, ordered: false });
+        continue;
+      }
+      if (s.type.id !== 'destroyer' || !s.inshoreAt || s.owner) continue;
+      this.roles.delete(s); // (no jobs from the frontline AI: she fires from her station — any manoeuvre in there swings her toward the mines)
+      const t = s.moveTarget, there = Math.hypot(s.centroid.x - s.inshoreAt.x, s.centroid.z - s.inshoreAt.z) < 60;
+      if (there && t) { s.ai.halt(); continue; } // (on her station: she lies there and fires — no chasing targets round inside the mines)
+      if (Math.abs(s.centroid.z) < band[0] && !there && (!t || Math.hypot(t.x - s.inshoreAt.x, t.z - s.inshoreAt.z) > 30)) s.ai.moveTo(s.inshoreAt, { hold: true, ordered: false });
+    }
+  }
+
+  /** The frontline AI's stacks: the troops — the ships are this AI's own (an assault or a 'support' job would sail them over the mines). */
+  myStacks() { return this.lands ? super.myStacks().filter((s) => !s.stats.naval) : super.myStacks(); }
+
+  /** The landing's ships. */
+  get fleet() { return this.game.world.stacksOf(this.faction).filter((s) => s.stats.naval && !s.stats.landingCraft && s.alive); }
+
+  /** The landing leaves nobody sitting on what it holds (the defence doesn't counter-attack the beach): every squad for the assault. */
+  garrison() { if (!this.lands) super.garrison(); }
 
   /** The beach sectors (points with `opens`), in the order of the base's entries (Dog, Easy, Fox). */
   get sectors() {
@@ -59,11 +86,11 @@ export class LandingDirector extends FrontlineDirector {
     const f = this.faction, army = this.game.armyOf(f), cp = this.state.cp[f];
     const cost = (id) => unitCost(getUnitType(id), army);
     const allowed = (id) => !!getUnitType(id) && (!this.state.allow || this.state.allow(getUnitType(id), f));
-    const ships = this.myStacks().filter((s) => s.stats.naval && !s.stats.landingCraft);
+    const ships = this.fleet;
     const road = () => (this.focus && Math.random() < 0.75 ? this.focus.road : null);
     // the ships first, when there's room: two destroyers inshore, the battleship once
     if (ships.filter((s) => s.type.id === 'destroyer').length < 2 && allowed('destroyer') && cp >= cost('destroyer') + 250) { this.state.buy(f, 'destroyer'); return; }
-    if (this.now > 90 && !ships.some((s) => s.type.id === 'oldBattleship') && allowed('oldBattleship') && cp >= cost('oldBattleship') + 400) { this.state.buy(f, 'oldBattleship'); return; }
+    if (this.now > 300 && !ships.some((s) => s.type.id === 'oldBattleship') && allowed('oldBattleship') && cp >= cost('oldBattleship') + 800) { this.state.buy(f, 'oldBattleship'); return; } // (once the troops are ashore and there's CP to spare)
     for (let tries = 0; tries < ORDER.length; tries++) {
       const id = ORDER[this.orderIndex % ORDER.length];
       if (!allowed(id)) { this.orderIndex++; continue; }
@@ -75,18 +102,19 @@ export class LandingDirector extends FrontlineDirector {
 
   /** The destroyers: in through the focus sector's lane, to lie close off its beach (they fire on what's spotted). */
   ships() {
-    if (!this.focus) return;
+    if (!this.focus || this.now < WAVES_THROUGH) return; // (the lanes are the boats' first: the destroyers go in behind the first waves)
     const sign = Math.sign(this.game.map.bases[this.faction].z) || 1;
     const lanes = this.game.map.landing?.seaMines?.lanes ?? [this.focus.p.x];
     const lane = lanes.reduce((a, x) => (Math.abs(x - this.focus.p.x) < Math.abs(a - this.focus.p.x) ? x : a), lanes[0]);
-    const dds = this.myStacks().filter((s) => s.type.id === 'destroyer' && s.alive);
+    const dds = this.fleet.filter((s) => s.type.id === 'destroyer');
     const band = this.game.map.landing?.seaMines?.z ?? [INSHORE + 20, INSHORE + 20];
     dds.forEach((s, i) => {
       if (s.inshoreLane === lane || s.owner) return; // (sent already; a co-op player's own)
       s.inshoreLane = lane;
-      const off = (i % 2 ? 1 : -1) * 22;
+      const off = (i % 2 ? 1 : -1) * 95; // (off the lane, between it and the next: the boats come down the lane itself)
       s.waypoints = null;
-      s.ai.moveTo({ x: lane + off, z: sign * INSHORE }, { hold: true, ordered: false }); // (systems/Landing.js pilot: by the lane through the mines)
+      s.inshoreAt = { x: lane + off, z: sign * INSHORE }; // (not s.station: that's a ship's place in a formation)
+      s.ai.moveTo(s.inshoreAt, { hold: true, ordered: false }); // (systems/Landing.js pilot: by the lane through the mines)
     });
   }
 

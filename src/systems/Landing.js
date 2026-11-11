@@ -23,7 +23,7 @@ import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
 
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
-const DD_START = 40;           // m inshore of the mine band where the LCTs launch them
+const DD_START = 60;           // m outside the mine band where the LCTs launch them (in through the lane: a two-minute swim on Omaha)
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
@@ -153,12 +153,14 @@ export class Landing {
     // a passage begun is finished: to the mouth, then along the lane's centre line (steering at a point ahead on it:
     // a ship can't turn onto a spot, she converges on a line) and out the far side — whatever else she's told meanwhile
     if (s.transit) {
-      const t = s.transit, mouthZ = t.dir < 0 ? b1 + M + 120 : b0 - M - 120, outZ = t.dir < 0 ? b0 - M - 15 : b1 + M + 15;
+      const edge = this.game.world.bounds.z - 30; // (the approach: out on the lane's line, far enough to settle onto it — her turning circle is ~110 m whatever her speed)
+      const t = s.transit, mouthZ = t.dir < 0 ? Math.min(edge, b1 + M + 260) : Math.min(z, b0 - M - 30), outZ = t.dir < 0 ? b0 - M - 15 : b1 + M + 15; // (going out: no room inshore for an approach — along to the lane where she is, then out)
       if (t.dir < 0 ? z < outZ : z > outZ) s.transit = null; // (through)
       else {
         u.piloting = true;
-        if (!t.line && Math.abs(u.pos.x - t.lane) < 35) t.line = true; // (lined up: only then down the lane)
-        return t.line ? W(t.lane, z + t.dir * 70) : W(t.lane, mouthZ);
+        const off = Math.abs(u.pos.x - t.lane), room = t.dir < 0 ? z - (b1 + M) : (b0 - M) - z; // (m off the lane's line; m still clear of the band)
+        if (!t.line && (t.dir < 0 ? off < 130 && room > 220 : off < 30)) t.line = true;   // (close enough, with a turning circle's room: curve onto the line — steering at a point ahead on it; once on, she stays on: turning back at the band would take her into it)
+        return t.line ? W(t.lane, z + t.dir * 45) : W(t.lane, mouthZ);
       }
     }
     const goal = s.moveTarget ?? way; // (where she's going, not the route's next corner: that cuts through the mines)
@@ -167,7 +169,8 @@ export class Landing {
     const side = z > mid ? 1 : -1, wside = wz > mid ? 1 : -1;
     if (!near(z) && !near(wz) && side === wside) return way; // (nowhere near the mines)
     u.piloting = z > b0 - M - 300 && z < b1 + M + 300; // (close to them: slow ahead, a tight turn — UnitStack)
-    const cost = (x) => Math.abs(x - u.pos.x) + 2 * Math.abs(x - goal.x);
+    const ahead = Math.sin(u.yaw); // (a lane behind her means turning round — two turning circles toward the mines: one ahead is better, then along the beach inside)
+    const cost = (x) => Math.abs(x - u.pos.x) + 2 * Math.abs(x - goal.x) + (Math.abs(x - u.pos.x) > 60 && (x - u.pos.x) * ahead < 0 && Math.abs(ahead) > 0.5 ? 700 : 0);
     const lane = o.lanes.reduce((a, x) => (cost(x) < cost(a) ? x : a), o.lanes[0]);
     const inLane = (x) => Math.abs(x - lane) < o.lane - 18;
     if (near(z) && !inLane(u.pos.x)) { // off the lane at (or in) the band: back out the way she came if she can, else on
@@ -177,6 +180,13 @@ export class Landing {
     if (side === wside) return way;                                                    // (her goal's at the band's edge on her side: fine)
     s.transit = { lane, dir: -side, line: near(z) }; // (in the lane already: straight on along it)
     return this.pilot(s, u, way);
+  }
+
+  /** How near (x, z) is to the nearest live mine — Infinity if none within `r` (a warship's captain keeps clear of the buoyed field: UnitStack floatBody). */
+  mineGap(x, z, r) {
+    let best = Infinity;
+    for (const m of this.mines) if (m.live) { const d = Math.hypot(m.x - x, m.z - z); if (d < r && d < best) best = d; }
+    return best;
   }
 
   /** The water off the beach, every step: mines cut by a sweeper, mines and obstacles struck. */
@@ -256,7 +266,7 @@ export class Landing {
   launch(f, cargo, x, z0 = null) {
     const g = this.game, type = UNIT_TYPES[cargo.typeId];
     const kind = type?.dd ? 'ddCraft' : type?.kind === 'infantry' ? 'lcvp' : 'lct'; // (a DD tank swims in on its own screen)
-    if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[0] : 400) - DD_START); }
+    if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
     const start = { x, z: z0 ?? sign * (edge - 25) };
@@ -286,7 +296,7 @@ export class Landing {
           const count = g.modeState?.bought ?? this.count; // (one count with what's bought: no two Rifle Squad IIIs)
           count[o.unit] = (count[o.unit] ?? 0) + 1;
           const name = o.name ?? `${forArmy(type.variants, g.armyOf(f), f)?.name ?? type.shortName} ${ROMAN[count[o.unit] - 1] ?? count[o.unit]}`; // (as a bought one is named)
-          const x = (roads[o.sector ?? 0] ?? 0) + (o.dx ?? (Math.random() - 0.5) * 70);
+          const x = (roads[o.sector ?? 0] ?? 0) + (o.dx ?? (Math.random() - 0.5) * 40);
           this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null }, x, Math.sign(g.map.bases[f].z) * (g.world.bounds.z - 25 - (i % 3) * 30));
         });
         if (w.say) g.tell(f, w.say);
@@ -350,6 +360,8 @@ export class Landing {
     const g = this.game, s = r.craft, u = s.units[0];
     if (!s.alive || !u?.alive) return;
     r.t += dt;
+    const band = g.map.landing?.seaMines?.z;
+    if (band && Math.abs(u.pos.z) > band[0] - 60 && Math.abs(u.pos.z) < band[1] + 80) { const safe = this.inLane(u.pos.x, 24); if (safe !== u.pos.x) r.way = { x: safe, z: r.way.z }; } // (pushed toward the lane's edge by the others: back to its middle)
     // a DD tank on its canvas screen: a wave over it and it's gone, crew and all
     if (s.stats.dd && r.phase === 'in' && Math.random() < SWAMP * dt * (g.seaState ?? 1) ** 2) {
       g.tellBoth(s.faction, `${r.cargo.name}: swamped — gone down with her crew`, 'One of their swimming tanks has gone under');
@@ -358,6 +370,10 @@ export class Landing {
     }
     const d = Math.hypot(r.way.x - u.pos.x, r.way.z - u.pos.z);
     if (r.phase === 'in') {
+      // a warship close by in the lane: she waits for it (shoved aside by its hull, she'd be over the mines)
+      const big = g.world.stacks.find((o) => o.alive && o.stats.naval && !o.stats.landingCraft && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < 60 + (o.type.hull?.length ?? 60) / 2);
+      if (big && band && Math.abs(u.pos.z) > band[0] - 80 && Math.abs(u.pos.z) < band[1] + 120) { r.waitWay ??= r.way; r.way = { x: u.pos.x, z: u.pos.z }; r.still = 0; return; }
+      if (r.waitWay) { r.way = r.waitWay; r.waitWay = null; }
       const speed = Math.hypot(u.vel.x, u.vel.z);
       r.still = speed < 0.3 && r.t > 5 ? r.still + dt : 0;
       // there, or past the line (a big craft can't turn tight enough to hit the spot), or stopped short
@@ -373,7 +389,7 @@ export class Landing {
       if (r.landed && r.t > RAMP + UNLOAD) { r.phase = 'back'; r.t = 0; u.beached = false; r.way = { x: u.pos.x, z: u.pos.z + r.sign * BACK }; }
     } else if (r.phase === 'back') {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
-      if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: r.x + (Math.random() - 0.5) * 60, z: r.sign * (g.world.bounds.z + 40) }; }
+      if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: this.inLane(r.x + (Math.random() - 0.5) * 40, 20), z: r.sign * (g.world.bounds.z + 40) }; }
     } else if (r.phase === 'out') {
       if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; this.remove(s); }
     }

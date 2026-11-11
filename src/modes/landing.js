@@ -21,8 +21,8 @@ const fieldStrength = (game, f) => game.world.stacksOf(f).filter((s) => !s.stats
 
 const TIME = 30 * 60;           // to take the villages
 const RESERVES = 2400;          // the landing's CP at H-hour…
-const RESERVES_PER_SECTOR = 600; // …and for each sector first taken
-const BEACH_INCOME = 0.5;       // CP / s for each beach sector held
+const RESERVES_PER_SECTOR = 800; // …and for each sector first taken
+const BEACH_INCOME = 0.9;       // CP / s for each beach sector held (supplies over the beach)
 const DEFENCE_CP = 700;
 const DEFENCE_INCOME = 1.2;     // CP / s
 
