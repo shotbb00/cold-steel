@@ -76,7 +76,7 @@ export function getMap(id) {
  * Where the battle is fought (the menu's second picker, under the years): on land, at sea — and,
  * later, on a coast (landings: land and sea together). A map's `theatre` (land unless it says).
  */
-export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal', soon: true }];
+export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal' }];
 let theatreNow = 'land';
 export const theatre = () => theatreNow;
 export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id && !t.soon) ? id : 'land'; }

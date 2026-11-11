@@ -76,9 +76,10 @@ function onRoad(x: number, z: number) {
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Transport area', x: 0, z: 620, owner: 'nato', sector: 'centre', radius: 90 },
-  { id: 'B', name: 'Dog Green', x: -330, z: shingleZ(-330) + 22, owner: null, sector: 'west', radius: 40 },
-  { id: 'C', name: 'Easy Red', x: 10, z: shingleZ(10) + 22, owner: null, sector: 'centre', radius: 40 },
-  { id: 'D', name: 'Fox Green', x: 330, z: shingleZ(330) + 22, owner: null, sector: 'east', radius: 40 },
+  // the beach sectors (Landing: open from the start; `opens` the village up its draw once taken)
+  { id: 'B', name: 'Dog Green', x: -330, z: shingleZ(-330) + 22, owner: null, sector: 'west', radius: 40, opens: 'E' },
+  { id: 'C', name: 'Easy Red', x: 10, z: shingleZ(10) + 22, owner: null, sector: 'centre', radius: 40, opens: 'F' },
+  { id: 'D', name: 'Fox Green', x: 330, z: shingleZ(330) + 22, owner: null, sector: 'east', radius: 40, opens: 'G' },
   { id: 'E', name: 'Vierville', x: -330, z: -205, owner: null, sector: 'west' },
   { id: 'F', name: 'St-Laurent', x: 10, z: -235, owner: null, sector: 'centre' },
   { id: 'G', name: 'Colleville', x: 330, z: -195, owner: null, sector: 'east' },
@@ -91,8 +92,7 @@ export default {
   description: 'Normandy, 6 June 1944: the tidal flat under the bluffs, three draws the only ways up, the bocage behind. The Americans land from the sea, the Wehrmacht holds the heights.',
   epochs: ['1945'],
   theatre: 'coastal',
-  wip: true, // (coastal step 1: the map; the landing and its mode come next)
-  modes: ['frontline'],
+  modes: ['landing'],
   sides: { nato: 'United States', pact: 'Germany' },
   conditions: { time: 'day', weather: 'overcast' },
   size: SIZE,
@@ -137,6 +137,8 @@ export default {
 
   // H-hour: the first wave, in to all three sectors at once (systems/Landing.js); the destroyers are already off the beach
   landing: {
+    // the defence at H-hour (modes/landing.js): on the bluffs over each sector, in the draws, in the villages
+    hold: [...DRAWS.flatMap((d) => [{ x: d.x - 70, z: topZ(d.x - 70) - 4 }, { x: d.x + 70, z: topZ(d.x + 70) - 4 }, { x: d.x, z: footZ(d.x) - 60 }]), ...DRAWS.map((d) => ({ x: d.x, z: d.vz }))],
     waves: [{ t: 0, say: 'H-hour: the first wave is going in', units: [
       { unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 0 }, { unit: 'tank', sector: 0 },
       { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'engineers', sector: 1 },
