@@ -115,6 +115,7 @@ export class GameEngine {
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.armies = armiesFrom(armies); // which army each side fields (data/factions.js ARMIES)
+    for (const f of ['nato', 'pact']) if (map.armies?.[f] && !map.armies[f].includes(this.armies[f])) this.armies[f] = map.armies[f][0]; // (a map fought by particular armies only: Omaha)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();

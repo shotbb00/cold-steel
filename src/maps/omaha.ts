@@ -109,6 +109,7 @@ export default {
   theatre: 'coastal',
   modes: ['landing'],
   sides: { nato: 'United States', pact: 'Germany' },
+  armies: { nato: ['us'], pact: ['wh'] }, // (the US Army against the Wehrmacht: no Red Army or Fallschirmjäger on Omaha)
   conditions: { time: 'day', weather: 'overcast' },
   size: SIZE,
   segments: 800,

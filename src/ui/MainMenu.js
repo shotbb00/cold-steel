@@ -56,9 +56,20 @@ const TIPS = { 1985: [
   'The Guard comes once a battle. Keep it for the moment that decides the day.',
 ] };
 
+/**
+ * The armies the theatre's maps allow (a map's `armies`: Omaha is the US Army against the Wehrmacht), per side —
+ * null where any of them takes any army.
+ */
+export function theatreArmies() {
+  const maps = mapsFor(epoch());
+  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
+}
+
 /** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
 export function armiesPicker(choice, onChange = () => {}) {
   choice.armies = armiesFrom(choice.armies);
+  const only = theatreArmies();
+  for (const f of ['nato', 'pact']) if (only[f] && !only[f].includes(choice.armies[f])) choice.armies[f] = only[f][0]; // (not one this theatre's maps field: the first that is)
   const box = el('div', 'conditions armies');
   for (const f of ['nato', 'pact']) {
     const row = el('div', 'cond-row');
@@ -71,7 +82,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f)) {
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (!only[f] || only[f].includes(a.id)))) {
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
