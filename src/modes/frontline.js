@@ -31,7 +31,7 @@ const MAX_STACKS = 12;
 const LANDING_CP = 0.6;       // CP / s for each transport in a zone its side holds (the sea maps)
 
 /** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
-const seaAllow = (game, allow) => (t) => !!t.stats?.naval === !!game.world.river?.sea && (!allow || allow(t));        // per side, unless the map sets maxStacks
+const seaAllow = (game, allow) => (t) => (game.world.coastal || !!t.stats?.naval === !!game.world.river?.sea) && (!allow || allow(t)); // (a coastal map: both)        // per side, unless the map sets maxStacks
 
 export default {
   id: 'frontline',
@@ -66,7 +66,7 @@ export default {
     if (this.air === false) for (const f of [game.playerFaction, foe]) game.air.limit[f] = 0;
     game.modeState = state;
     game.systems.push(points, new Economy(game, state)); // the building and support budgets, the side objectives
-    const Director = game.world.river?.sea ? SeaDirector : FrontlineDirector; // (at sea: the admiral, ai/SeaDirector.js)
+    const Director = game.world.openSea ? SeaDirector : FrontlineDirector; // (at sea: the admiral, ai/SeaDirector.js)
     if (!game.net || game.coop) game.systems.push(new Director(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
     game.frontlineHud = new FrontlineHUD(game, state);
 

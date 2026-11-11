@@ -158,6 +158,8 @@ export class GameEngine {
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
     this.world.river = map.river ?? null; // water that stops and slows (a sea map: world/Sea.js)
+    this.world.coastal = map.theatre === 'coastal'; // the sea and the land in one battle (Omaha): ships and armies both
+    this.world.openSea = !!map.river?.sea && !this.world.coastal; // ships only, nothing ashore
     this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there

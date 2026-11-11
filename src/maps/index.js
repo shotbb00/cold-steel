@@ -23,8 +23,10 @@ import aboukir from './aboukir.ts';
 import brest from './brest.ts';
 import caribbean from './caribbean.ts';
 import balticSea from './balticSea.ts';
+import omaha from './omaha.ts';
 
 export const MAPS = {
+  [omaha.id]: omaha,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,

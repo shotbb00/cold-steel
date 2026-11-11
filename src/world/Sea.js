@@ -42,7 +42,7 @@ export function waterGlsl(deep) {
     c = mix(c, deep, smoothstep(6.0, 28.0, d));
     float a = mix(0.45, 1.0, smoothstep(0.0, 11.0, d));
     // surf: a broken, moving band of foam where it shoals to nothing (the reef, the beaches)
-    float band = 1.0 - smoothstep(0.15, 1.5, d);
+    float band = 1.0 - smoothstep(0.15, 0.75, d);
     float n = pNoise(vec3(p * 0.12, t * 0.35)) * 0.6 + pNoise(vec3(p * 0.5, t * 0.8 + 3.0)) * 0.4;
     float foam = band * smoothstep(0.42, 0.72, n + band * 0.25);
     // a few whitecaps out on the open sea
