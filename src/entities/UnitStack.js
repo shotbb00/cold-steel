@@ -2096,7 +2096,7 @@ export class UnitStack {
       });
       if (s.sail) { // the battery's flash and blast on the water (the heavy guns' shockwave ring), and its smoke billowing out of the ports on that side — a bank that drifts off downwind and hides what's behind it
         const out = u.yaw + (m.facing ?? 0), ox = Math.sin(out), oz = Math.cos(out);
-        this.services.effects.muzzle(_p, _w, m.damage >= 250 ? 2.2 : 1.6, 'naval', this.world.river?.level ?? 0, 0xcfccc2); // (black powder: a pale grey-white cloud)
+        this.services.effects.muzzle(_p, _w, m.damage >= 250 ? 2.2 : 1.6, 'naval', this.world.river?.level ?? 0, 0xcfccc2, 0.35); // (black powder: a pale grey-white cloud)
         this.services.smoke?.add(_p.x + ox * 9, _p.z + oz * 9, { radius: 12, duration: 14, powder: true }); // (the sight it blocks)
         const fx = this.services.effects?.smoke; // (what you see: the battery's bank of smoke along its ports, blown out by the blast, then off downwind)
         if (fx) for (let i = 0; i < 7; i++) {
