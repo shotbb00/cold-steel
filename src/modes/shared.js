@@ -55,11 +55,6 @@ export function makeBuyer(game, state) {
       game.tell(faction, `${asked !== null ? 'That road is' : 'Every road is'} busy: the next arrival in ${wait} s`);
       return null;
     }
-    const landing = !type.stats.naval && game.landing?.lands(faction); // (a coastal map's side that lands: it comes in a landing craft)
-    if (landing && game.landing.busy(faction) >= CRAFT) { game.tell(faction, `All ${CRAFT} landing craft are on a run: wait for one to come back`); return null; }
-    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
-    counter[typeId] = (counter[typeId] ?? 0) + 1;
-    let pos = { x: base.x + roads[road] + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
     // a forward command post that is set up and not under fire takes the new arrivals (the one furthest
     // forward) — in co-op only the buyer's own: each player brings their troops in at their post
     const buyer = game.currentOwner ?? 'host';
@@ -67,7 +62,13 @@ export function makeBuyer(game, state) {
       .filter((s) => s.postReady && (!game.coop || faction !== game.playerFaction || s.owner === buyer) && !game.world.stacks.some((e) => e.faction !== faction && e.alive && !e.stats.structure
         && Math.hypot(e.centroid.x - s.centroid.x, e.centroid.z - s.centroid.z) < s.stats.commandPost.safe))
       .sort((a, b) => Math.abs(b.centroid.z - base.z) - Math.abs(a.centroid.z - base.z))[0];
-    if (post && asked === null && !type.stats.structure) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
+    const atPost = !!post && asked === null && !type.stats.structure && !type.stats.naval;
+    const landing = !type.stats.naval && !atPost && game.landing?.lands(faction); // (a coastal map's side that lands: it comes in a landing craft — unless a command post is set up ashore and no beach was asked for)
+    if (landing && game.landing.busy(faction) >= CRAFT) { game.tell(faction, `All ${CRAFT} landing craft are on a run: wait for one to come back`); return null; }
+    game.spend(faction, cost); // (through game.spend: the battle report counts what was spent)
+    counter[typeId] = (counter[typeId] ?? 0) + 1;
+    let pos = { x: base.x + roads[road] + (Math.random() - 0.5) * 40, z: base.z + toward * (8 + Math.random() * 10) };
+    if (atPost) pos = { x: post.centroid.x + (Math.random() - 0.5) * 24, z: post.centroid.z - toward * (12 + Math.random() * 8) };
     else if (game.rules?.roadCooldown !== false) state.entryFree[`${faction}:${road}`] = game.time + ENTRY_GAP; // (battle rule: off — everything bought arrives at once)
     const army = game.armyOf(faction);
     const label = forArmy(type.variants, army, faction)?.name ?? type.shortName; // each army's own name for it
@@ -83,7 +84,7 @@ export function makeBuyer(game, state) {
     const stack = game.spawnStack(typeId, faction, pos, facing, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
     if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
-    game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);
+    game.tell(faction, `${type.shortName} called in — arriving at ${atPost ? post.name : 'base'}`);
     return stack;
   };
 }
