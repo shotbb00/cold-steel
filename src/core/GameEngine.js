@@ -162,6 +162,7 @@ export class GameEngine {
     this.world.coastal = map.theatre === 'coastal'; // the sea and the land in one battle (Omaha): ships and armies both
     this.world.openSea = !!map.river?.sea && !this.world.coastal; // ships only, nothing ashore
     this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
+    this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);

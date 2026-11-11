@@ -650,6 +650,10 @@ export class UnitStack {
       const interval = 0.35 + Math.random() * 0.3;
       u.thinkT = interval;
       thinkSoldier(u, this, world, interval);
+      if (world.steep && this.usesCover) { // (a man on a bluff: climbing, on hands and knees in places)
+        const t = world.terrain, x = u.pos.x, z = u.pos.z;
+        u.steepK = Math.hypot(t.heightAt(x + 1.5, z) - t.heightAt(x - 1.5, z), t.heightAt(x, z + 1.5) - t.heightAt(x, z - 1.5)) / 3 > world.steep ? 0.4 : 1;
+      }
     }
 
     // --- locomotion: seek destination, keep personal space, slide around cover
@@ -657,6 +661,7 @@ export class UnitStack {
     let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
+    if (u.steepK) maxSpeed *= u.steepK;
     if (this.winded) maxSpeed *= 0.8;
     // radars, jammers, command posts: set up while parked (deployK 0 → 1 over `deploy` s: masts and
     // tents go up, the vehicle kit's `deploy`), and when ordered off they pack up first, standing

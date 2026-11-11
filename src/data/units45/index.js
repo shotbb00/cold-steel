@@ -106,6 +106,12 @@ const tank = derive(T.tank, {
   },
 });
 
+/** The DD Sherman (the coastal maps, the US Army only): bought for the landing, it swims in on its own screen (systems/Landing.js) instead of riding an LCT. */
+const ddTank = {
+  ...tank, id: 'ddTank', name: 'DD Tanks', shortName: 'DD tanks', cost: (tank.cost ?? 400) - 40, dd: true, coastal: true, armies: ['us'],
+  variants: { nato: { name: 'M4A1 DD Sherman', weapon: '75 mm M3', text: 'The Duplex Drive Sherman: launched offshore, it swims in on a canvas screen and lands with the first infantry. Cheaper and quicker than waiting for an LCT — but a rough sea swamps it, and it goes down with its crew.' } },
+};
+
 const ifv = derive(T.ifv, {
   name: 'Half-tracks', shortName: 'Half-tracks',
   stats: { nightSight: undefined, atgm: undefined, weapon: 'autocannon', damage: 60, vsArmor: 0.12, range: 150, gunRange: 150, armor: 0.25, hp: 600, smoke: undefined },
@@ -537,7 +543,7 @@ const airAssault = derive(T.airAssault, {
 });
 
 export const TYPES_1945 = {
-  rifles, atTeam, mgTeam, mortar, tank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
+  rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
   artillery, rockets, spMortar, observers, cbRadar,
   aa, towedAA, sam, manpads, airRadar, gunMissile,
   scouts, sniper, engineers,

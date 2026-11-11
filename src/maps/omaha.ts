@@ -25,7 +25,7 @@ const sea = createSea({ level: 0, size: SIZE, color: 0x34525a }); // (the Channe
 export const shingleZ = (x: number) => 140 + fbm(noise, x * 0.004, 1.3, 2) * 14;
 /** The foot and the top of the bluffs behind it. */
 const footZ = (x: number) => shingleZ(x) - 55 - fbm(noise, x * 0.006, 4.1, 2) * 20;
-const topZ = (x: number) => footZ(x) - 60 - fbm(noise, x * 0.005, 7.7, 2) * 18;
+const topZ = (x: number) => footZ(x) - 46 - fbm(noise, x * 0.005, 7.7, 2) * 10; // (steep: no vehicle climbs them — world/Nav.js steep)
 const PLATEAU = 36;
 /** The draws: x of each, its half-width at the floor, the village up it. */
 export const DRAWS = [
@@ -113,6 +113,7 @@ export default {
   size: SIZE,
   segments: 800,
   bounds: BOUNDS,
+  steep: 0.45, // (vehicles: nothing steeper — the bluffs are the draws or nothing; men climb them, slowly)
   camera: { maxHeight: 900, near: 1, far: 6000 },
   seed: 1944,
   height,
@@ -161,9 +162,13 @@ export default {
     // wire along the shingle, mines on the shelf before each draw, tank traps across its mouth (systems/Construction.js)
     works: [
       ...Array.from({ length: 88 }, (_, i) => { const x = -480 + i * 11; return { kind: 'wire', x, z: shingleZ(x) - 2, yaw: 0 }; }),
+      // the shingle bank: no vehicle crosses it until the engineers blow a gap (tank traps: men climb over)
+      ...Array.from({ length: 125 }, (_, i) => { const x = -496 + i * 8; return { kind: 'tankTraps', x, z: shingleZ(x) - 6, yaw: 0 }; }), // (edge to edge: no way round the end)
       ...DRAWS.flatMap((d) => [{ kind: 'mines', x: d.x - 28, z: footZ(d.x) + 22 }, { kind: 'mines', x: d.x + 28, z: footZ(d.x) + 22 }, { kind: 'tankTraps', x: d.x, z: footZ(d.x) + 4 }]),
     ],
     // moored mines across the approach, swept lanes off the three sectors (dan buoys)
+    // the tide: low water at H-hour, coming in over the battle — the obstacles go under, the beach narrows to the shingle
+    tide: { rise: 1.6, over: 1500, band: [90, 430] }, // (band: the rows of the beach the movement grid redoes as it comes in)
     seaMines: { z: [430, 500], count: 60, lanes: [-330, 10, 330], lane: 48, seed: 1944 },
     // what the landing may call in at sea: the destroyers inshore, the minesweepers, the old battleship offshore
     navy: ['destroyer', 'minesweeper', 'oldBattleship'],
@@ -206,8 +211,9 @@ export default {
 
     // ---- the villas along the shelf behind the sea wall (Dog sector: Hamel-au-Prêtre, the Vierville front), the sea wall itself
     for (let x = -470; x < -150; x += 6) {
+      if (Math.abs(x - DRAWS[0].x) < 12) continue; // (the gap where the D-1 road comes down: tank traps close it, systems/Construction.js)
       const z = shingleZ(x) - 6;
-      props.wall({ x, z, yaw: Math.atan2(shingleZ(x + 6) - shingleZ(x), 6), length: 6.2, height: 2.2, thickness: 0.8 });
+      props.wall({ x, z, yaw: Math.atan2(shingleZ(x + 6) - shingleZ(x), 6), length: 6.2, height: 1.1, thickness: 0.8 }); // (men climb it, vehicles don't)
     }
     const nearFort = (x: number) => DRAWS.some((d) => [-1, 1].some((s) => Math.abs(x - (d.x + s * 62)) < 30)); // (the resistance nests at the draw mouths: no house on them)
     for (let i = 0; i < 14; i++) {

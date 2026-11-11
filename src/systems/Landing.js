@@ -19,6 +19,10 @@ import * as THREE from 'three';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forArmy } from '../data/factions.js';
 import { mulberry32 } from '../core/math.js';
+import { TIDE } from '../world/Sea.js';
+
+const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
+const DD_START = 40;           // m inshore of the mine band where the LCTs launch them
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
@@ -141,7 +145,8 @@ export class Landing {
    */
   launch(f, cargo, x, z0 = null) {
     const g = this.game, type = UNIT_TYPES[cargo.typeId];
-    const kind = type?.kind === 'infantry' ? 'lcvp' : 'lct';
+    const kind = type?.dd ? 'ddCraft' : type?.kind === 'infantry' ? 'lcvp' : 'lct'; // (a DD tank swims in on its own screen)
+    if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[0] : 400) - DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     const start = { x, z: z0 ?? sign * (edge - 25) };
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
@@ -178,18 +183,51 @@ export class Landing {
     }
     for (const r of this.runs.slice()) this.step(r, dt);
     this.waters();
+    this.tide();
+  }
+
+  /** The tide coming in (the map's `landing.tide`: { rise m, over s }): the sea's level up, the beach narrower, the obstacles under. */
+  tide() {
+    const T = this.game.map.landing?.tide, g = this.game, river = g.world.river;
+    if (!T || !river) return;
+    this.base ??= river.level;
+    const k = Math.min(1, g.time / T.over), level = this.base + T.rise * k * k * (3 - 2 * k);
+    if (Math.abs(level - river.level) < 0.003) return;
+    river.level = level;
+    if (river.water) river.water.level = level;
+    TIDE.value = level - this.base;
+    for (const m of river.meshes ?? []) m.position.y = level;
+    g.cameraManager.waterLevel = level;
+    if (Math.abs(level - (this.navAt ?? this.base)) >= 0.1) { this.navAt = level; g.world.nav.water(T.band ?? null); } // (men and vehicles: where the water is too deep now)
+    if (!this.tideSaid && TIDE.value > T.rise * 0.35) { this.tideSaid = true; for (const f of ['nato', 'pact']) g.tell(f, 'The tide is coming in: the obstacles are going under, the beach is getting narrower'); }
+  }
+
+  /** Engineers' charges (systems/Construction.js clear): the beach obstacles round (x, z) blown — no craft will run onto them now. */
+  clearObstacles(x, z, r) {
+    let n = 0;
+    for (const o of this.obstacles) if (!o.hit && Math.hypot(o.x - x, o.z - z) < r) { o.hit = true; o.cleared = true; n++; }
+    return n;
   }
 
   step(r, dt) {
     const g = this.game, s = r.craft, u = s.units[0];
     if (!s.alive || !u?.alive) return;
     r.t += dt;
+    // a DD tank on its canvas screen: a wave over it and it's gone, crew and all
+    if (s.stats.dd && r.phase === 'in' && Math.random() < SWAMP * dt * (g.seaState ?? 1) ** 2) {
+      g.tellBoth(s.faction, `${r.cargo.name}: swamped — gone down with her crew`, 'One of their swimming tanks has gone under');
+      s.damageUnit(u, 1e5, null, 1);
+      return;
+    }
     const d = Math.hypot(r.way.x - u.pos.x, r.way.z - u.pos.z);
     if (r.phase === 'in') {
       const speed = Math.hypot(u.vel.x, u.vel.z);
       r.still = speed < 0.3 && r.t > 5 ? r.still + dt : 0;
       // there, or past the line (a big craft can't turn tight enough to hit the spot), or stopped short
-      if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) { r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z }; }
+      if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) {
+        if (s.stats.dd) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
+        r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
+      }
     } else if (r.phase === 'ramp') {
       u.rampK = Math.min(1, r.t / RAMP);
       if (u.rampK >= 1 && !r.landed) { r.landed = true; this.unload(r, u); }
@@ -200,6 +238,22 @@ export class Landing {
     } else if (r.phase === 'out') {
       if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; g.removeStack(s); }
     }
+  }
+
+  /** A DD tank touching bottom: the screen folds, the tank it was carries on as itself. */
+  ashore(r, u) {
+    const g = this.game, s = r.craft;
+    this.runs.splice(this.runs.indexOf(r), 1);
+    let x = u.pos.x, zz = u.pos.z - r.sign * 3; // (in where it can drive: no deeper than a tank wades)
+    for (let i = 0; i < 60 && g.world.river.level - g.terrain.heightAt(x, zz) > 0.7; i++) zz -= r.sign;
+    const stack = g.spawnStack(r.cargo.typeId, s.faction, { x, z: zz }, r.sign > 0 ? Math.PI : 0, r.cargo.name);
+    s.cargo = null;
+    s.run = null;
+    g.removeStack(s);
+    let z = u.pos.z;
+    for (let i = 0; i < 200 && g.terrain.heightAt(u.pos.x, z) < g.world.river.level + 0.8; i++) z -= r.sign;
+    stack.ai.moveTo({ x: u.pos.x, z: z - r.sign * 10 }, { ordered: false });
+    g.bus.emit('landed', { stack, craft: s });
   }
 
   /** Down the ramp and up the beach: the cargo becomes its own stack ahead of her bow, in water shallow enough to wade. */

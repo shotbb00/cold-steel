@@ -12,7 +12,7 @@
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
-import { buildLCVP, buildLCT, buildYMS } from '../models/landingCraft45.js';
+import { buildLCVP, buildLCT, buildYMS, buildDD } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -294,6 +294,18 @@ export const lct = ship({
   },
 });
 
+/** A DD Sherman swimming in on its canvas screen (systems/Landing.js: never bought — a `dd` tank bought on a coastal map comes as one). */
+export const ddCraft = ship({
+  id: 'ddCraft', name: 'DD Tank (swimming)', shortName: 'DD tank', cost: 0, hidden: true, uncapped: true,
+  hull: { length: 6, beam: 3 },
+  stats: { landingCraft: true, dd: true, draft: 1.1, hp: 300, armor: 0.02, speed: 2.4, accel: 0.4, turnRate: 0.25, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 300, smallCraft: true, stealth: 0.5,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
+  mounts: { nato: [], pact: [] },
+  camera: { distance: 18, height: 6, shoulder: 0 },
+  models: { nato: buildDD, pact: buildDD },
+  variants: { nato: { name: 'DD Sherman, swimming', weapon: '— (afloat)', text: 'A Sherman on a canvas screen, driven by two propellers: it swims in with the first wave. A wave over the screen and it sinks like a stone.' }, pact: { name: 'Swimming tank', weapon: '—', text: 'A swimming tank.' } },
+});
+
 /** A motor minesweeper (the coastal maps only: `coastal`): where she steams the sea mines are cut (systems/Landing.js sweeping). */
 export const minesweeper = ship({
   fleet: 'escort', coastal: true,
@@ -332,4 +344,4 @@ export const oldBattleship = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship };
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft };

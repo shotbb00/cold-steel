@@ -70,6 +70,23 @@ export const buildYMS = craft(() => {
   return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, L / 2 - 4] };
 });
 
+/** A DD Sherman afloat: the canvas screen raised all round on its struts, the hull below the water, the turret top inside it, the twin propellers astern. */
+export const buildDD = craft(() => {
+  const L = 6.2, B = 3, CANVAS = 0x8c8a6c, OLIVE = 0x4c5434;
+  const fixed = merge([
+    box(B, 1.2, L, { y: -0.5, color: OLIVE }),                                                  // the hull, awash
+    ...[-1, 1].map((s) => P.box(0.08, 1.9, L * 0.92, { x: s * (B / 2 + 0.25), y: 0.85, color: CANVAS, surf: 'cloth' })), // the screen's sides
+    P.box(B + 0.5, 1.9, 0.08, { y: 0.85, z: L / 2 - 0.1, color: CANVAS, surf: 'cloth' }),       // its bow…
+    P.box(B + 0.5, 1.9, 0.08, { y: 0.85, z: -L / 2 + 0.1, color: CANVAS, surf: 'cloth' }),      // …and stern
+    ...[-1, 1].flatMap((s) => [-2, 0, 2].map((z) => P.cyl(0.04, 0.04, 1.9, { x: s * (B / 2 + 0.2), y: 0.85, z, color: STEEL }, 4))), // the struts
+    P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: -B / 2 - 0.25, color: STEEL }), P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: B / 2 + 0.25, color: STEEL }), // the top rail
+    P.cyl(0.9, 1.0, 0.7, { y: 1.3, z: -0.3, color: OLIVE }, 12),                                // the turret's top, inside it
+    P.cyl(0.07, 0.08, 1.2, { y: 1.3, z: 0.6, rx: Math.PI / 2, color: OLIVE }, 6),               // the gun, stowed
+    ...[-1, 1].map((s) => P.cyl(0.35, 0.35, 0.1, { x: s * 0.8, y: -0.5, z: -L / 2 - 0.4, rx: Math.PI / 2, color: STEEL }, 8)), // the propellers
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [1.4, 1] };
+});
+
 /** The Higgins boat: 10.9 × 3.3 m. */
 export const buildLCVP = craft(() => {
   const L = 10.9, B = 3.3, fb = 1.5;

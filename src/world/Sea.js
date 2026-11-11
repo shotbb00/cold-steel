@@ -17,6 +17,8 @@ import { plantTrees } from './Vegetation.js';
 export const SEA_TIME = { get value() { return (performance.now() / 1000) % 20000; } };
 /** How rough the sea runs (GameEngine.seaState, from the weather): the waves' height, the whitecaps. */
 export const SEA_STATE = { value: 1 };
+/** How far the tide has come in (m above the sea's level when the depths were baked: systems/Landing.js tide) — added to the baked depth. */
+export const TIDE = { value: 0 };
 
 const f = (v) => v.toFixed(4);
 /** The water's GLSL (needs paint.js NOISE): seaHeight(p, t) in metres, seaColor(depth, p, t) → linear rgb, alpha. */
@@ -108,6 +110,8 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
 
     /** The sheet over the map (its depth from `terrain`), and the open ocean round it out past the far plane. */
     build(scene, terrain = null) {
+      TIDE.value = 0;
+      this.meshes = [];
       const deep = new THREE.Color(color);
       // the foam grid (world/SeaFoam.js writes it), over the map
       const N = 1024;
@@ -121,14 +125,15 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
       mat.onBeforeCompile = (sh) => {
         sh.uniforms.uSeaTime = SEA_TIME;
         sh.uniforms.uSeaState = SEA_STATE;
+        sh.uniforms.uTide = TIDE;
         sh.uniforms.uFoam = { value: this.foam.texture };
         sh.uniforms.uFoamBox = { value: this.foam.box };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nattribute float aDepth;\nvarying float vDepth;\nvarying vec3 vSeaW;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDepth = aDepth;\nvSeaW = (modelMatrix * vec4(position, 1.0)).xyz;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform sampler2D uFoam;\nuniform vec4 uFoamBox;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
-          .replace('#include <color_fragment>', '#include <color_fragment>\nvec2 fuv = (vSeaW.xz - uFoamBox.xy) * uFoamBox.zw;\nfloat wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(uFoam, fuv).r;\nvec4 sea = seaColor(vDepth, vSeaW.xz, uSeaTime, wake);\ndiffuseColor.rgb = sea.rgb;\ndiffuseColor.a *= sea.a;')
+          .replace('#include <common>', `#include <common>\nuniform float uSeaTime;\nuniform float uSeaState;\nuniform float uTide;\nuniform sampler2D uFoam;\nuniform vec4 uFoamBox;\nvarying float vDepth;\nvarying vec3 vSeaW;\n${NOISE}\n${glsl}`)
+          .replace('#include <color_fragment>', '#include <color_fragment>\nvec2 fuv = (vSeaW.xz - uFoamBox.xy) * uFoamBox.zw;\nfloat wake = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(uFoam, fuv).r;\nvec4 sea = seaColor(vDepth + uTide, vSeaW.xz, uSeaTime, wake);\ndiffuseColor.rgb = sea.rgb;\ndiffuseColor.a *= sea.a;')
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = pBumpNormal(-vViewPosition, normal, seaHeight(vSeaW.xz, uSeaTime, length(vViewPosition)));');
       };
       mat.customProgramCacheKey = () => `sea:${color}`;
@@ -155,6 +160,7 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
         water.userData.noAO = true;
         water.renderOrder = 1;   // (after the sea floor and the hulls under it)
         scene.add(water);
+        this.meshes.push(water);
         this.waterMesh ??= water;
       }
     },

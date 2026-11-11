@@ -484,7 +484,9 @@ export class Construction {
     if (site.kind === 'clear') {
       const near = this.obstacles.filter((ob) => Math.hypot(ob.x - site.x, ob.z - site.z) < CLEAR_RADIUS + Math.max(ob.hx, ob.hz));
       for (const ob of near) this.removeObstacle(ob);
-      game.tell(site.faction, near.length ? `Engineers: ${near.length === 1 ? 'obstacle' : `${near.length} obstacles`} cleared` : 'Engineers: nothing to clear there');
+      const beach = game.landing?.clearObstacles(site.x, site.z, CLEAR_RADIUS + 3) ?? 0; // (the beach obstacles: blown, no craft will run onto them)
+      const n = near.length + beach;
+      game.tell(site.faction, n ? `Engineers: ${n === 1 ? 'obstacle' : `${n} obstacles`} cleared` : 'Engineers: nothing to clear there');
     } else if (site.kind === 'demolish' && site.bridge) {
       // charges set, fuse lit: the engineers run back to their own bank before it goes
       const c = site.bridge;
@@ -553,7 +555,8 @@ export class Construction {
   /** Tank traps: one low steel line — vehicles are stopped by any cover (world/Nav.js), men climb what is this low. */
   buildTraps(site) {
     site.mesh = this.addMesh(this.partsFor(site));
-    this.game.cover.addBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 1.3, height: 0.9, spots: false });
+    site.collider = this.game.cover.addBox({ x: site.x, z: site.z, yaw: site.yaw, length: site.def.length, thickness: 1.3, height: 0.9, spots: false });
+    this.addObstacle(site); // (engineers can blow them: a gap for the vehicles)
   }
 
   /** Camouflage net: the poles and the net (see-through enough that you still find your own men under it). */
@@ -707,6 +710,7 @@ export class Construction {
     this.obstacles.splice(i, 1);
     ob.site.mesh?.removeFromParent();
     ob.site.signs?.removeFromParent();
+    if (ob.site.collider) this.game.cover.remove(ob.site.collider); // (tank traps: the gap is open)
   }
 
   /**
