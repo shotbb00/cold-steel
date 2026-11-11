@@ -227,7 +227,6 @@ function gunboat(navy) {
     P.box(0.12, 0.4, len * 0.7, { x: beam * 0.46, y: 1.15, color: c.band }), P.box(0.12, 0.4, len * 0.7, { x: -beam * 0.46, y: 1.15, color: c.band }),
     P.box(1.4, 0.7, 2.2, { y: 1.3, z: len * 0.3, color: WOOD }),                               // the gun's slide…
     P.cyl(0.24, 0.3, 3, { y: 1.75, z: len * 0.38, rx: Math.PI / 2, color: IRON }, 8),        // …and the long 24-pounder on it
-    P.cyl(0.18, 0.22, 12, { y: 6.9, z: 1, color: WOOD }, 8),                                   // the mast
   ];
   // the sweeps: each its own, pivoting at its thole on the gunwale (sailRig rows them); shaft out and down to the water, the blade
   const DOWN = 0.37, cs = Math.cos(DOWN), sn = Math.sin(DOWN);
@@ -239,7 +238,7 @@ function gunboat(navy) {
   const sail = merge([P.box(0.08, 7, 6, { y: 7, z: -0.6, rx: 0.08, color: SAIL, surf: 'cloth' }), P.cyl(0.1, 0.1, 7.5, { y: 10.4, z: -0.6, rx: Math.PI / 2 - 0.25, color: WOOD }, 5)]);
   const colours = merge(c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
   parts.push(P.cyl(0.05, 0.05, 2.4, { y: 1.9, z: -len / 2, color: WOOD }, 4));
-  return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail }], colours, len, beam, mastCount: 1, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) } };
+  return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail, spars: merge([P.cyl(0.18, 0.22, 12, { y: 6.9, z: 1, color: WOOD }, 8)]) }], colours, len, beam, mastCount: 1, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) } };
 }
 
 const FIRST_RATE = { len: 57, beam: 16, fb: 8.8, draft: 7, decks: 3, ports: 15, masts: [[17, 54], [1, 60], [-15, 42]] };
