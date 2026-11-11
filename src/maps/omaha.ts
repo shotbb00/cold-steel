@@ -207,13 +207,14 @@ export default {
       const z = shingleZ(x) - 6;
       props.wall({ x, z, yaw: Math.atan2(shingleZ(x + 6) - shingleZ(x), 6), length: 6.2, height: 2.2, thickness: 0.8 });
     }
+    const nearFort = (x: number) => DRAWS.some((d) => [-1, 1].some((s) => Math.abs(x - (d.x + s * 62)) < 30)); // (the resistance nests at the draw mouths: no house on them)
     for (let i = 0; i < 14; i++) {
       const x = -460 + i * 24 + (r() - 0.5) * 8;
-      if (Math.abs(x - DRAWS[0].x) < 22) continue;
+      if (Math.abs(x - DRAWS[0].x) < 22 || nearFort(x)) continue;
       props.townHouse({ x, z: shingleZ(x) - 22 - r() * 10, yaw: Math.PI, width: 8 + r() * 3, depth: 8, storeys: 2, name: 'villa', damaged: 0.35 });
     }
     // Les Moulins: a few houses at the foot of the bluffs (east of E-1)
-    for (let i = 0; i < 5; i++) { const x = 90 + i * 22; props.house({ x, z: footZ(x) + 12 + r() * 6, yaw: Math.PI + (r() - 0.5) * 0.2, width: 8, depth: 6 }); }
+    for (let i = 0; i < 5; i++) { const x = 90 + i * 22; if (nearFort(x)) continue; props.house({ x, z: footZ(x) + 12 + r() * 6, yaw: Math.PI + (r() - 0.5) * 0.2, width: 8, depth: 6 }); }
 
     // ---- the villages up on the plateau, each at the head of its draw: stone farms round a church
     for (const d of DRAWS) {

@@ -8,7 +8,7 @@
 import { buildMgPit } from '../models/fortifications.js';
 import { buildCasemate } from '../models/atlanticWall.js';
 
-const FIXED = { structure: true, speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.2, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand' };
+const FIXED = { structure: true, concealed: true, stealth: 0.55, /* (dug in and camouflaged: found by eye, or by its fire — then it stays marked) */ speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.2, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand' };
 
 const TOBRUK = {
   ...FIXED, hp: 1000, armor: 0.62, radius: 2.3, height: 1.4, aimHeight: 0.9, sight: 600,
