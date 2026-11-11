@@ -37,7 +37,7 @@ import { thinkSoldier } from '../ai/SoldierAI.js';
 import { AIState } from '../ai/StackAI.js';
 import { VisibilitySystem } from '../systems/VisibilitySystem.js';
 import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
-import { sailFactor, sailCourse } from './sailing.js';
+import { sailFactor, sailCourse, offWind, NO_GO } from './sailing.js';
 import { rakeFactor, sailHit, sailUpkeep, mastDrive, GALE } from './sailDamage.js';
 import { wind } from '../world/Wind.js';
 import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
@@ -622,7 +622,8 @@ export class UnitStack {
       if (s.sail) heading = sailCourse(u, heading); // (under sail: no closer than the wind allows — a goal to windward by tacking, entities/sailing.js)
       const way = Math.hypot(u.vel.x, u.vel.z) / s.speed;
       const diff = angleDelta(u.yaw, heading);
-      const rate = s.turnRate * clamp(way * 1.6, 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1) * (s.sail ? 0.45 + 0.55 * mastDrive(u) : 1);
+      const irons = s.sail && way < 0.25 && Math.abs(offWind(u.yaw)) < NO_GO + 0.2; // (in irons, no way on: she casts her head off with a backed sail — no rudder needed)
+      const rate = s.turnRate * clamp(way * 1.6, irons ? 0.55 : 0.12, 1) * (u.rudderHit > this.world.time ? 0.25 : 1) * (s.sail ? 0.45 + 0.55 * mastDrive(u) : 1);
       u.yaw += clamp(diff, -rate * dt, rate * dt);
       u.turning = clamp(diff / 0.6, -1, 1) * Math.min(1, way * 2); // (the heel into the turn: the model)
       const speed = want * (0.45 + 0.55 * Math.max(0, Math.cos(diff)));
