@@ -179,7 +179,7 @@ export class Construction {
         if (site.def.engineers && !s.stats.engineer) continue; // engineer jobs
         const rate = s.stats.engineer ? 3 * (doctrine(this.game, s.faction, 'sperr')?.build ?? 1) : 1;
         for (const u of s.units) {
-          if (!u.alive || u.possessed || u.target || u.reloadT > 0) continue;
+          if (!u.alive || u.possessed || ((u.target || u.reloadT > 0) && !site.def.engineers)) continue; // (engineers set their charges under fire)
           if ((u.pos.x - site.x) ** 2 + (u.pos.z - site.z) ** 2 > REACH * REACH) continue;
           u.working = true;
           workers += rate;

@@ -11,7 +11,7 @@
 //     earns a steady income for its reserves (they come from the inland edge).
 // Either side can be played; the AI takes the other.
 import { ControlPoints } from '../systems/ControlPoints.js';
-import { FrontlineDirector } from '../ai/FrontlineDirector.js';
+import { LandingDirector } from '../ai/LandingDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 import { deploy, makeBuyer, clientSetup, clientUpdate, clock } from './shared.js';
@@ -83,9 +83,9 @@ export default {
     game.systems.push(points);
     const ai = enemyOf(game.playerFaction);
     if (!game.net || game.coop) {
-      game.systems.push(new FrontlineDirector(game, ai, state, ai === def
+      game.systems.push(new LandingDirector(game, ai, state, ai === def
         ? { attack: false, expand: false }
-        : { expand: false, targetable: (p) => !p.locked })); // (the landing AI proper: coastal step 7)
+        : { expand: false, firstAssault: 30, targetable: (p) => !p.locked })); // (ai/LandingDirector.js: the landing's AI, or the defence's)
     }
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));

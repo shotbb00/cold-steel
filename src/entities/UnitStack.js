@@ -700,6 +700,7 @@ export class UnitStack {
     if (u.climbY > 0.2) maxSpeed *= CLIMB_SPEED;            // over a wall
     let way = this.run ? this.run.way : this.steerTo(u, dt); // the next corner on the way to its place (or the place) — a landing craft: her spot on the beach (systems/Landing.js)
     if (s.naval && !u.possessed && !this.run) way = this.shipCourse(u, way); // combing a torpedo track, zig-zagging
+    if (s.naval && !this.run && this.services.game?.landing) { way = this.services.game.landing.pilot(this, u, way); if (u.piloting) maxSpeed = Math.min(maxSpeed, 5); } // (a coastal map: by the swept lanes through the mines, slow ahead near them)
     const dest = this.run ? this.run.way : u.dest;
     const dDest = Math.hypot(dest.x - u.pos.x, dest.z - u.pos.z);
     _v.set(way.x - u.pos.x, 0, way.z - u.pos.z);
@@ -983,6 +984,7 @@ export class UnitStack {
     if (this.stats.naval) { // ships: keep off each other's hulls, looking ahead along the course
       const v = Math.hypot(u.vel.x, u.vel.z);
       this.eachHull(u, v * 8, (o, d, beams) => {
+        if (o.stack?.stats.landingCraft && !this.stats.landingCraft) return; // (the boats keep out of a warship's way, not she out of theirs)
         const want = beams + 30;
         if (d >= want) return;
         let nx = _seg[0] - _seg[2], nz = _seg[1] - _seg[3];

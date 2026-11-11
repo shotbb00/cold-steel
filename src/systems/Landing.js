@@ -137,6 +137,48 @@ export class Landing {
     return mines;
   }
 
+  /**
+   * Pilotage: a warship's next step (`way`, UnitStack.updateUnit) kept to the swept lanes — the buoys mark them, every
+   * captain keeps to them. A move that would take her into or across the mine band goes by the nearest lane: to its
+   * mouth, then straight down the middle of it, then on. A minesweeper goes where she's sent (that's her job), as do craft.
+   */
+  pilot(s, u, way) {
+    const o = this.game.map.landing?.seaMines;
+    u.piloting = false;
+    if (!o || s.stats.sweeper || s.stats.landingCraft || !this.mines.some((m) => m.live)) { s.transit = null; return way; }
+    const [b0, b1] = o.z, M = 22, mid = (b0 + b1) / 2;
+    const sign = Math.sign(this.game.map.bases[s.faction]?.z ?? 1) || 1;
+    const z = u.pos.z * sign;
+    const W = (x, zz) => ({ x, z: zz * sign });
+    // a passage begun is finished: to the mouth, then along the lane's centre line (steering at a point ahead on it:
+    // a ship can't turn onto a spot, she converges on a line) and out the far side — whatever else she's told meanwhile
+    if (s.transit) {
+      const t = s.transit, mouthZ = t.dir < 0 ? b1 + M + 120 : b0 - M - 120, outZ = t.dir < 0 ? b0 - M - 15 : b1 + M + 15;
+      if (t.dir < 0 ? z < outZ : z > outZ) s.transit = null; // (through)
+      else {
+        u.piloting = true;
+        if (!t.line && Math.abs(u.pos.x - t.lane) < 35) t.line = true; // (lined up: only then down the lane)
+        return t.line ? W(t.lane, z + t.dir * 70) : W(t.lane, mouthZ);
+      }
+    }
+    const goal = s.moveTarget ?? way; // (where she's going, not the route's next corner: that cuts through the mines)
+    const wz = goal.z * sign;
+    const near = (q) => q > b0 - M && q < b1 + M;
+    const side = z > mid ? 1 : -1, wside = wz > mid ? 1 : -1;
+    if (!near(z) && !near(wz) && side === wside) return way; // (nowhere near the mines)
+    u.piloting = z > b0 - M - 300 && z < b1 + M + 300; // (close to them: slow ahead, a tight turn — UnitStack)
+    const cost = (x) => Math.abs(x - u.pos.x) + 2 * Math.abs(x - goal.x);
+    const lane = o.lanes.reduce((a, x) => (cost(x) < cost(a) ? x : a), o.lanes[0]);
+    const inLane = (x) => Math.abs(x - lane) < o.lane - 18;
+    if (near(z) && !inLane(u.pos.x)) { // off the lane at (or in) the band: back out the way she came if she can, else on
+      return Math.abs(z - (side > 0 ? b1 : b0)) < 45 ? W(u.pos.x, side > 0 ? b1 + M + 60 : b0 - M - 60) : way;
+    }
+    if (side === wside && near(z)) return W(lane, side > 0 ? b1 + M + 15 : b0 - M - 15); // (in the lane, going back the way she came: out)
+    if (side === wside) return way;                                                    // (her goal's at the band's edge on her side: fine)
+    s.transit = { lane, dir: -side, line: near(z) }; // (in the lane already: straight on along it)
+    return this.pilot(s, u, way);
+  }
+
   /** The water off the beach, every step: mines cut by a sweeper, mines and obstacles struck. */
   waters() {
     const g = this.game, level = g.world.river.level;
@@ -192,6 +234,14 @@ export class Landing {
   /** Craft of faction `f` still on their way in or unloading (the sea-edge limit). */
   busy(f) { return this.runs.filter((r) => r.craft.faction === f && r.phase !== 'out').length; }
 
+  /** x kept `margin` m inside the nearest swept lane (no mines: as it is). */
+  inLane(x, margin) {
+    const o = this.game.map.landing?.seaMines;
+    if (!o) return x;
+    const lane = o.lanes.reduce((a, l) => (Math.abs(l - x) < Math.abs(a - x) ? l : a), o.lanes[0]);
+    return Math.max(lane - o.lane + margin, Math.min(lane + o.lane - margin, x));
+  }
+
   /** Where a craft with this draft grounds off beach x: the first z (coming in from the sea) with the sand that shallow. */
   groundZ(x, draft) {
     const g = this.game, level = g.world.river.level, edge = g.world.bounds.z;
@@ -208,6 +258,7 @@ export class Landing {
     const kind = type?.dd ? 'ddCraft' : type?.kind === 'infantry' ? 'lcvp' : 'lct'; // (a DD tank swims in on its own screen)
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[0] : 400) - DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
+    x = this.inLane(x, 15);
     const start = { x, z: z0 ?? sign * (edge - 25) };
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
@@ -244,6 +295,7 @@ export class Landing {
     for (const r of this.runs.slice()) this.step(r, dt);
     this.waters();
     this.tide();
+    if ((this.wadeT = (this.wadeT ?? 0) - dt) <= 0) { this.wadeT = 0.5; this.wading(); }
   }
 
   /** The tide coming in (the map's `landing.tide`: { rise m, over s }): the sea's level up, the beach narrower, the obstacles under. */
@@ -258,8 +310,32 @@ export class Landing {
     TIDE.value = level - this.base;
     for (const m of river.meshes ?? []) m.position.y = level;
     g.cameraManager.waterLevel = level;
-    if (!guest && Math.abs(level - (this.navAt ?? this.base)) >= 0.1) { this.navAt = level; g.world.nav.water(T.band ?? null); } // (men and vehicles: where the water is too deep now)
+    if (!guest && Math.abs(level - (this.navAt ?? this.base)) >= 0.1) { this.navAt = level; g.world.nav.water(T.band ?? null); this.wadeIn(level); } // (men and vehicles: where the water is too deep now)
     if (!guest && !this.tideSaid && TIDE.value > T.rise * 0.35) { this.tideSaid = true; for (const f of ['nato', 'pact']) g.tell(f, 'The tide is coming in: the obstacles are going under, the beach is getting narrower'); }
+  }
+
+  /** Men and vehicles in water deeper than they can wade (a craft unloaded short, the tide over them): carried a little way in. */
+  wading() {
+    const g = this.game, level = g.world.river.level;
+    for (const s of g.world.stacks) {
+      if (!s.alive || s.stats.naval || s.stats.structure) continue;
+      const sign = this.lands(s.faction) ? Math.sign(g.map.bases[s.faction].z) || 1 : -(Math.sign(g.map.bases[s.faction].z) || 1);
+      for (const u of s.units) if (u.alive && level - g.terrain.heightAt(u.pos.x, u.pos.z) > 0.85) u.pos.z -= sign * 0.8;
+    }
+  }
+
+  /** The tide over men and vehicles standing on the flat: each one caught in water too deep wades in, to where it's shallow. */
+  wadeIn(level) {
+    const g = this.game;
+    for (const s of g.world.stacks) {
+      if (!s.alive || s.stats.naval || s.stats.structure) continue;
+      const deep = level - g.terrain.heightAt(s.centroid.x, s.centroid.z);
+      if (deep < 0.6) continue;
+      const sign = this.lands(s.faction) ? Math.sign(g.map.bases[s.faction].z) || 1 : -(Math.sign(g.map.bases[s.faction].z) || 1); // (toward the land)
+      let z = s.centroid.z;
+      for (let i = 0; i < 200 && level - g.terrain.heightAt(s.centroid.x, z) > 0.2; i++) z -= sign;
+      s.ai.moveTo({ x: s.centroid.x, z: z - sign * 6 }, { ordered: false });
+    }
   }
 
   /** Engineers' charges (systems/Construction.js clear): the beach obstacles round (x, z) blown — no craft will run onto them now. */
@@ -285,7 +361,9 @@ export class Landing {
       const speed = Math.hypot(u.vel.x, u.vel.z);
       r.still = speed < 0.3 && r.t > 5 ? r.still + dt : 0;
       // there, or past the line (a big craft can't turn tight enough to hit the spot), or stopped short
-      if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) {
+      const bowDepth = g.world.river.level - g.terrain.heightAt(u.pos.x, u.pos.z - r.sign * (s.type.hull?.length ?? 10) * 0.5);
+      if (r.still > 2.5 && bowDepth > (s.stats.draft ?? 1) + 0.8) { r.still = 0; r.way = { x: this.inLane(r.way.x + (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 10), 10), z: r.way.z }; } // (jammed short, out in deep water: round the boat ahead)
+      else if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) {
         if (s.stats.dd) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
         r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
       }
@@ -297,8 +375,14 @@ export class Landing {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
       if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: r.x + (Math.random() - 0.5) * 60, z: r.sign * (g.world.bounds.z + 40) }; }
     } else if (r.phase === 'out') {
-      if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; g.removeStack(s); }
+      if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; this.remove(s); }
     }
+  }
+
+  /** A craft off the map (or a DD tank become a tank again): nobody's still aiming at her. */
+  remove(s) {
+    for (const o of this.game.world.stacks) for (const u of o.units) if (u.target?.stack === s) u.target = null;
+    this.game.removeStack(s);
   }
 
   /** A DD tank touching bottom: the screen folds, the tank it was carries on as itself. */
@@ -306,11 +390,11 @@ export class Landing {
     const g = this.game, s = r.craft;
     this.runs.splice(this.runs.indexOf(r), 1);
     let x = u.pos.x, zz = u.pos.z - r.sign * 3; // (in where it can drive: no deeper than a tank wades)
-    for (let i = 0; i < 60 && g.world.river.level - g.terrain.heightAt(x, zz) > 0.7; i++) zz -= r.sign;
+    for (let i = 0; i < 120 && g.world.river.level - g.terrain.heightAt(x, zz) > 0.5; i++) zz -= r.sign;
     const stack = g.spawnStack(r.cargo.typeId, s.faction, { x, z: zz }, r.sign > 0 ? Math.PI : 0, r.cargo.name);
     s.cargo = null;
     s.run = null;
-    g.removeStack(s);
+    this.remove(s);
     let z = u.pos.z;
     for (let i = 0; i < 200 && g.terrain.heightAt(u.pos.x, z) < g.world.river.level + 0.8; i++) z -= r.sign;
     stack.ai.moveTo({ x: u.pos.x, z: z - r.sign * 10 }, { ordered: false });
@@ -322,7 +406,7 @@ export class Landing {
     const g = this.game, s = r.craft, level = g.world.river.level;
     const fx = 0, fz = -r.sign, half = (s.type.hull?.length ?? 10) / 2; // (always out on the landward side, whichever way she swung)
     let x = u.pos.x + fx * (half + 3), z = u.pos.z + fz * (half + 3);
-    for (let i = 0; i < 40 && level - g.terrain.heightAt(x, z) > 0.7; i++) { x += fx; z += fz; }
+    for (let i = 0; i < 120 && level - g.terrain.heightAt(x, z) > 0.5; i++) { x += fx; z += fz; } // (out where it's shallow enough to wade: never in over their heads)
     const stack = g.spawnStack(r.cargo.typeId, s.faction, { x, z }, r.sign > 0 ? Math.PI : 0, r.cargo.name);
     if (r.cargo.kit) stack.setKit?.(r.cargo.kit);
     s.cargo = null;

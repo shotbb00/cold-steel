@@ -79,7 +79,8 @@ export function makeBuyer(game, state) {
       game.tell(faction, `${type.shortName} called in: an ${craft.type.shortName} is taking ${name} in`);
       return craft;
     }
-    const stack = game.spawnStack(typeId, faction, pos, toward > 0 ? 0 : Math.PI, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
+    const facing = type.stats.naval && game.world.coastal ? (pos.x > 0 ? -Math.PI / 2 : Math.PI / 2) : toward > 0 ? 0 : Math.PI; // (a coastal map: along the coast, toward the middle)
+    const stack = game.spawnStack(typeId, faction, pos, facing, type.names?.[faction] ? undefined : name); // (a warship: her own name, UnitStack shipName)
     if (kitted) stack.setKit(kitted);
     game.bus.emit('wave', { faction, units: [typeId], bought: true });
     game.tell(faction, `${type.shortName} called in — arriving at ${post && asked === null ? post.name : 'base'}`);

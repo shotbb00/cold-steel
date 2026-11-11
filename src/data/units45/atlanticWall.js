@@ -11,7 +11,7 @@ import { buildCasemate, buildTobruk } from '../models/atlanticWall.js';
 const FIXED = { structure: true, concealed: true, stealth: 0.55, /* (dug in and camouflaged: found by eye, or by its fire — then it stays marked) */ speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.2, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand' };
 
 const TOBRUK = {
-  ...FIXED, hp: 1000, armor: 0.62, radius: 2.3, height: 1.4, aimHeight: 0.9, sight: 600,
+  ...FIXED, hp: 1000, armor: 0.62, radius: 2.3, height: 1.4, aimHeight: 0.9, sight: 600, flanking: true, // (no MG at a destroyer)
   range: 380, weapon: 'rifle', weaponSound: 'mg', turretRate: 1.8, fireCooldown: 0.1, magSize: 50, reloadTime: 5, // (the MG 42: a long ripping burst, then the barrel change)
   damage: 32, boltSpeed: 700, boltSize: 0.7, tracer: 0.3, spread: 0.034, suppressPower: 2.6, vsArmor: 0.03, pierce: 0,
 };

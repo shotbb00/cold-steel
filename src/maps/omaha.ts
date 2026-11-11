@@ -169,7 +169,7 @@ export default {
     // moored mines across the approach, swept lanes off the three sectors (dan buoys)
     // the tide: low water at H-hour, coming in over the battle — the obstacles go under, the beach narrows to the shingle
     tide: { rise: 1.6, over: 1500, band: [90, 430] }, // (band: the rows of the beach the movement grid redoes as it comes in)
-    seaMines: { z: [430, 500], count: 60, lanes: [-330, 10, 330], lane: 48, seed: 1944 },
+    seaMines: { z: [430, 500], count: 60, lanes: [-330, 10, 330], lane: 60, seed: 1944 },
     // what the landing may call in at sea: the destroyers inshore, the minesweepers, the old battleship offshore
     navy: ['destroyer', 'minesweeper', 'oldBattleship'],
     obstacles: OBSTACLES,
@@ -183,7 +183,7 @@ export default {
   },
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -250, z: 650, facing: Math.PI }, { unit: 'destroyer', x: 260, z: 660, facing: Math.PI }], // (off the mine band, bows to the beach: in through the lanes)
+    nato: [{ unit: 'destroyer', x: -300, z: 700, facing: Math.PI / 2 }, { unit: 'destroyer', x: 300, z: 710, facing: -Math.PI / 2 }], // (well off the mine band, the coast on the beam: in through the lanes)
     pact: [{ unit: 'rifles', x: 10, z: -250, facing: 0, name: '1. Kompanie' }],
   },
 
