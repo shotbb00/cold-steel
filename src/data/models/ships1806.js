@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { P, merge, loft } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
-import { offWind } from '../../entities/sailing.js';
+import { offWind, sailFactor } from '../../entities/sailing.js';
 import { wind } from '../../world/Wind.js';
 
 const BLACK = 0x1c1a17;
@@ -159,6 +159,8 @@ function sailRig(describe) {
       masts[r.mast].add(g);
       return { g, s, fore: !!r.fore };
     });
+    const oars = (d.oars ?? []).map((o) => { const g = new THREE.Group(); g.position.set(...o.at); meshAdder(g)(d.sweep[o.side], mats.body); body.add(g); return { g, side: o.side }; });
+    let stroke = 0;
     const colours = new THREE.Group();
     meshAdder(colours)(d.colours, mats.body);
     body.add(colours);
@@ -179,6 +181,12 @@ function sailRig(describe) {
         for (const r of rig) {
           if (r.fore) r.g.rotation.y = Math.sign(off) * Math.min(0.9, (Math.PI - b) * 0.55);  // the spanker out to leeward
           else r.g.rotation.y = brace + flog;
+        }
+        if (oars.length) { // rowing (under way, the wind giving her less than the sweeps): back through the water, lifted, forward again
+          const rowing = u.moving && !u.struck && sailFactor(u.yaw ?? 0) < 0.5;
+          if (rowing) stroke += dt * 2.6;
+          const swing = rowing ? Math.sin(stroke) * 0.45 : 0, lift = rowing ? Math.max(0, Math.cos(stroke)) * 0.18 : 0.12;
+          for (const o of oars) { o.g.rotation.y = o.side * swing; o.g.rotation.z = o.side * lift; }
         }
         for (let i = 0; i < masts.length; i++) masts[i].visible = u.masts?.[i] !== false;
         colours.visible = !u.struck && !u.prize; // (struck: hauled down; a prize: not her own to fly)
@@ -205,11 +213,17 @@ function gunboat(navy) {
     P.cyl(0.24, 0.3, 3, { y: 1.75, z: len * 0.38, rx: Math.PI / 2, color: IRON }, 8),        // …and the long 24-pounder on it
     P.cyl(0.18, 0.22, 12, { y: 6.9, z: 1, color: WOOD }, 8),                                   // the mast
   ];
-  for (const s of [-1, 1]) for (let i = 0; i < 6; i++) parts.push(P.cyl(0.06, 0.06, 5.5, { x: s * (beam / 2 + 1.6), y: 0.9, z: -5 + i * 1.8, rz: s * 1.2, color: WOOD }, 4)); // the sweeps
+  // the sweeps: each its own, pivoting at its thole on the gunwale (sailRig rows them); shaft out and down to the water, the blade
+  const DOWN = 0.37, cs = Math.cos(DOWN), sn = Math.sin(DOWN);
+  const sweep = (s) => merge([
+    P.cyl(0.06, 0.06, 5.6, { x: s * cs * 1.8, y: -sn * 1.8, rz: s * (Math.PI / 2 - DOWN), color: WOOD }, 4),
+    P.box(0.05, 0.9, 0.32, { x: s * cs * 4.4, y: -sn * 4.4, rz: s * (Math.PI / 2 - DOWN), color: WOOD }),
+  ]);
+  const oars = [-1, 1].flatMap((s) => Array.from({ length: 6 }, (_, i) => ({ at: [s * (beam / 2), 1.15, -5 + i * 1.8], side: s })));
   const sail = merge([P.box(0.08, 7, 6, { y: 7, z: -0.6, rx: 0.08, color: SAIL, surf: 'cloth' }), P.cyl(0.1, 0.1, 7.5, { y: 10.4, z: -0.6, rx: Math.PI / 2 - 0.25, color: WOOD }, 5)]);
   const colours = merge(c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
   parts.push(P.cyl(0.05, 0.05, 2.4, { y: 1.9, z: -len / 2, color: WOOD }, 4));
-  return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail }], colours, len, beam, mastCount: 1 };
+  return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail }], colours, len, beam, mastCount: 1, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) } };
 }
 
 const FIRST_RATE = { len: 57, beam: 16, fb: 8.8, draft: 7, decks: 3, ports: 15, masts: [[17, 54], [1, 60], [-15, 42]] };
