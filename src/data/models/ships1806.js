@@ -67,13 +67,17 @@ function shipOfTheLine(o) {
       }
     }
   }
-  // the decks: the waist, the forecastle and the quarterdeck raised, the poop at the stern
-  hull.push(P.box(beam * 0.88, 0.3, len * 0.9, { y: fb, z: 0, color: DECKW, surf: 'deck' }));
-  hull.push(loft([[0, fb + 1.0, len * 0.22, halfWidth(len * 0.22, len, beam) * 0.96, 1.0, 3.5], [0, fb + 1.0, len * 0.44, halfWidth(len * 0.44, len, beam) * 0.9, 1.0, 3.5]], { color: BLACK, surf: 'plate' }, 10)); // forecastle
-  hull.push(loft([[0, fb + 1.2, -len * 0.5, beam * 0.39, 1.2, 4], [0, fb + 1.2, -len * 0.08, beam * 0.47, 1.2, 4]], { color: BLACK, surf: 'plate' }, 10)); // quarterdeck
-  hull.push(loft([[0, fb + 2.9, -len * 0.5, beam * 0.36, 0.6, 4], [0, fb + 2.9, -len * 0.3, beam * 0.4, 0.6, 4]], { color: BLACK, surf: 'plate' }, 10)); // poop
-  hull.push(P.box(beam * 0.84, 0.2, len * 0.36, { y: fb + 2.3, z: -len * 0.29, color: DECKW, surf: 'deck' }));
-  hull.push(P.box(beam * 0.7, 0.2, len * 0.2, { y: fb + 2.1, z: len * 0.33, color: DECKW, surf: 'deck' }));
+  // the decks, each to the hull's own plan (narrowing to the bow and the stern — boxes overhung her sides): the waist, the forecastle
+  // and the quarterdeck raised (their bulwarks), the poop at the stern
+  const plan = (z0, z1, n = 12) => Array.from({ length: n + 1 }, (_, i) => z0 + ((z1 - z0) * i) / n);
+  const castle = (z0, z1, y, d, k) => loft(plan(z0, z1).map((z) => [0, y, z, halfWidth(z, len, beam) * k, d, 4]), { color: BLACK, surf: 'plate' }, 12);
+  const plate = (z0, z1, y, k) => loft(plan(z0, z1).map((z) => [0, y, z, Math.max(0.3, halfWidth(z, len, beam) * k), 0.12, 6]), { color: DECKW, surf: 'deck' }, 12);
+  hull.push(plate(-len * 0.48, len * 0.47, fb + 0.1, 0.93));
+  hull.push(castle(len * 0.2, len * 0.47, fb + 1.0, 1.0, 0.97));     // forecastle
+  hull.push(castle(-len * 0.5, -len * 0.08, fb + 1.2, 1.2, 0.98));   // quarterdeck
+  hull.push(castle(-len * 0.5, -len * 0.3, fb + 2.9, 0.6, 0.95));    // poop
+  hull.push(plate(-len * 0.48, -len * 0.1, fb + 2.42, 0.92));
+  hull.push(plate(len * 0.21, len * 0.45, fb + 2.02, 0.9));
   for (const s of [-1, 1]) hull.push(P.box(0.15, 0.9, len * 0.3, { x: s * beam * 0.44, y: fb + 0.6, z: len * 0.03, color: c.band })); // the waist's rails
   // the stern: the gallery of windows across the transom, the quarter galleries on its sides
   hull.push(P.box(beam * 0.74, 3.6, 0.5, { y: fb + 1.6, z: -len / 2 - 0.05, color: c.stern }));
@@ -195,7 +199,7 @@ function gunboat(navy) {
   const len = 18, beam = 4.6;
   const parts = [
     loft(Array.from({ length: 11 }, (_, i) => { const z = -len / 2 + (i / 10) * len; return [0, 0.15, z, halfWidth(z, len, beam), 0.95, 2.2]; }), { color: 0x4a3a2a, surf: 'plate' }, 10),
-    P.box(beam * 0.86, 0.12, len * 0.86, { y: 0.9, color: DECKW, surf: 'deck' }),
+    loft(Array.from({ length: 11 }, (_, i) => { const z = -len * 0.45 + (i / 10) * len * 0.9; return [0, 0.9, z, Math.max(0.2, halfWidth(z, len, beam) * 0.9), 0.08, 6]; }), { color: DECKW, surf: 'deck' }, 10), // (her deck to the boat's own plan)
     P.box(0.12, 0.4, len * 0.7, { x: beam * 0.46, y: 1.15, color: c.band }), P.box(0.12, 0.4, len * 0.7, { x: -beam * 0.46, y: 1.15, color: c.band }),
     P.box(1.4, 0.7, 2.2, { y: 1.3, z: len * 0.3, color: WOOD }),                               // the gun's slide…
     P.cyl(0.24, 0.3, 3, { y: 1.75, z: len * 0.38, rx: Math.PI / 2, color: IRON }, 8),        // …and the long 24-pounder on it
