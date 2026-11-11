@@ -23,8 +23,13 @@ function height(x: number, z: number) {
   const [ix, iz, r, top] = ISLAND;
   h = Math.max(h, island(r - Math.hypot(x - ix, z - iz) + fbm(noise, x * 0.01, z * 0.01, 2) * 40, r, top, 0.5, 6));
   // the shoals: a wide shallow shelf from the island along the inner side of the bay (the French line lies just outside it)
-  const shelf = 900 - z - (x + 1450) * 0.35 + fbm(noise, x * 0.004, z * 0.004, 2) * 120;
-  if (shelf < 0 && x < 600) h = Math.max(h, -3 + Math.min(1.5, -shelf / 300) + fbm(noise, x * 0.02, z * 0.02, 2));
+  // it rises gently (a 250 m slope: a cliff from the deep to the shelf drew as a staircase), and starts inshore of the line,
+  // which lies in deep water with room between it and the shelf for a ship to go round inside it
+  const shelf = 1150 - z - (x + 1450) * 0.35 + fbm(noise, x * 0.004, z * 0.004, 2) * 120;
+  if (shelf < 0 && x < 700) {
+    const k = Math.min(1, -shelf / 250), e = k * k * (3 - 2 * k);
+    h = Math.max(h, h + (-3 + Math.min(1.5, -shelf / 400) + fbm(noise, x * 0.02, z * 0.02, 2) - h) * e);
+  }
   return h;
 }
 

@@ -823,7 +823,7 @@ export class CommandSystem {
     this.addMarker(p, hold ? 'hold' : 'move');
     // the same spot ordered twice in quick succession: at the run
     const now = performance.now();
-    if (this.lastMove && now - this.lastMove.time < 400 && Math.hypot(x - this.lastMove.x, y - this.lastMove.y) < 24) { this.lastMove = null; this.runCommand('sprint'); }
+    if (this.lastMove && now - this.lastMove.time < 400 && Math.hypot(x - this.lastMove.x, y - this.lastMove.y) < 24) { this.lastMove = null; if ([...this.selected].some((s) => s.alive && s.usesCover && !s.stats.naval)) this.runCommand('sprint'); } // (a double click: the infantry run — ships, vehicles: nothing to say)
     else this.lastMove = { time: now, x, y };
   }
 
