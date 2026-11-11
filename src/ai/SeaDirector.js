@@ -21,7 +21,7 @@ import { windFrom } from '../entities/sailing.js';
 
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
-const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer'];
+const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer']; // (missileSub: 1985 only — the others skip what their year doesn't have)
 const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };

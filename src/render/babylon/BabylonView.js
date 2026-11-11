@@ -430,6 +430,7 @@ export class BabylonView {
     if (tm.userData?.water) mesh.alphaIndex = 0; // the sea first among the see-through: splashes, smoke and decals above it are drawn over it, not under
     if (o.castShadow && this.shadowGen) this.shadowGen.addShadowCaster(mesh, false);
     if (o.frustumCulled === false || o.isInstancedMesh) mesh.alwaysSelectAsActiveMesh = true;
+    mesh.ignoreNonUniformScaling = true; // (one shader variant for all: a mesh made mid-battle under a non-uniform scale needed its own, compiled for seconds while it stayed invisible — and the frame hitched)
     const rec = { mesh, material, tm: o.material, matrix: new Float32Array(16).fill(NaN), versions: {}, instanceVersion: -1, colorVersion: -1, count: -1 };
     this.snapshotVersions(geo, rec);
     if (o.isInstancedMesh) this.syncInstances(o, rec, true);

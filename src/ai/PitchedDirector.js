@@ -17,9 +17,11 @@ import { FrontlineDirector } from './FrontlineDirector.js';
 import { AIState } from './StackAI.js';
 import { SeaDirector } from './SeaDirector.js';
 import { getUnitType } from '../data/units/index.js';
+import { year } from '../data/epoch.js';
 
 // at sea: the fleet it buys, in this order (within the class limits), and where each class goes
-const FLEET = ['destroyer', 'cruiser', 'destroyer', 'lightCruiser', 'ptBoat', 'frigate', 'battleship', 'submarine', 'carrier', 'destroyer', 'cruiser', 'escortCarrier', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'lightCruiser', 'destroyer'];
+const FLEET = ['destroyer', 'cruiser', 'destroyer', 'lightCruiser', 'ptBoat', 'frigate', 'battleship', 'submarine', 'carrier', 'missileSub', 'destroyer', 'cruiser', 'escortCarrier', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'lightCruiser', 'destroyer'];
+const FLEET_1806 = ['cruiser', 'frigate', 'cruiser', 'battleship', 'destroyer', 'cruiser', 'fireship', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'cruiser']; // (under sail: the line of battle first)
 
 const RESERVE = 0.12;       // of the budget kept for support
 const HOLD = [35, 70];      // s standing before it advances
@@ -60,8 +62,12 @@ export class PitchedDirector {
     const army = g.armyOf(f);
     const budget = this.state.cp[f];
     const bought = [];
-    for (let i = 0, misses = 0; misses < FLEET.length && i < 200; i++) {
-      const t = getUnitType(FLEET[i % FLEET.length]);
+    const list = year() < 1900 ? FLEET_1806 : FLEET;
+    for (let i = 0, misses = 0; misses < list.length && i < 200; i++) {
+      const id = list[i % list.length];
+      const t = UNIT_TYPES[id] && getUnitType(id);
+      if (!t || !this.state.allow?.(t) && this.state.allow) { misses++; continue; } // (a ship this year hasn't got: the next — it used to stop buying there)
+      if (t.armies && !t.armies.includes(army)) { misses++; continue; }
       const had = bought.filter((s) => s.type.id === t.id).length;
       if ((t.limit && had >= t.limit) || unitCost(t, army) > this.state.cp[f] - budget * RESERVE) { misses++; continue; }
       const s = this.state.buy(f, t.id);
