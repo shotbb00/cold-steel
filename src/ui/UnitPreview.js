@@ -164,7 +164,7 @@ export class UnitPreview {
     this.orbit.target.set(0, vehicle ? 1.2 : 0.9, 0);
     this.orbit.zoom = 1;
     this.fit = vehicle ? { w: 4.4, h: 2.1 } : { w: 0.55 + n * 0.5, h: 1.1 };
-    if (type.stats?.naval) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships: framed by their size)
+    if (type.stats?.naval || type.stats?.structure) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships and fortifications: framed by their size)
     this.atSea(!!type.stats?.naval);
     this.setPose('idle');
     this.compile();

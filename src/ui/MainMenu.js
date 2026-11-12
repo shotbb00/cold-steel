@@ -588,7 +588,15 @@ export class MainMenu {
     const list = el('div', 'unit-list');
     // the theatre's roster (the picker under the years): at sea the warships and the carriers' aircraft, on land the rest
     const sea = theatre() === 'sea' && hasTheatre(epoch(), 'sea');
-    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !!t.stats?.naval === sea);
+    // on the coast also what only a landing brings (the coastal maps' `landing`): the craft, the landing's warships, the shore's fortifications, the swimmers
+    const coast = new Set();
+    if (theatre() === 'coastal' && hasTheatre(epoch(), 'coastal')) {
+      for (const m of mapsFor(epoch(), 'coastal')) {
+        const L = m.landing ?? {};
+        [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...(L.forts ?? []).map((f) => f.unit), ...Object.values(L.swim ?? {})].forEach((id) => coast.add(id));
+      }
+    }
+    const types = Object.values(UNIT_TYPES).filter((t) => (!t.hidden && !!t.stats?.naval === sea) || coast.has(t.id));
     if (!types.some((t) => t.id === this.unit.id)) this.unit.id = types[0]?.id ?? this.unit.id;
     const labels = []; // the army's own names on the list
     const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name

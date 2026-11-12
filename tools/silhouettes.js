@@ -48,7 +48,7 @@ function trim(canvas) {
 const ARMIES = {
   1985: [['nato', 'us', null], ['pact', 'sov', null], ['nato', 'bw', 'bw'], ['pact', 'nva', 'nva']],
   1945: [['nato', 'us', null], ['pact', 'wh', null], ['nato', 'sov', 'sov'], ['pact', 'fj', 'fj']],
-  1806: [['nato', 'fr', null], ['pact', 'pr', null], ['nato', 'by', 'by'], ['pact', 'sx', 'sx']],
+  1806: [['nato', 'fr', null], ['pact', 'pr', null], ['nato', 'by', 'by'], ['pact', 'sx', 'sx'], ['pact', 'gb', 'gb']],
 };
 
 window.silhouettes = (year = '1985') => {
@@ -61,8 +61,9 @@ window.silhouettes = (year = '1985') => {
     for (const [faction, army, own] of ARMIES[year]) {
       if (own && !p.aircraft[own]) continue;
       preview.showAircraft(kind, faction, army);
+      preview.sea.visible = preview.ground.visible = false; preview.hold = false; // (no waiting for the background compile: here a stall doesn't matter)
       const plane = kind !== 'heli' && !(kind === 'lift' && year === '1985'); // (1945's air assault is a paradrop: a plane)
-      Object.assign(preview.orbit, plane ? { yaw: -Math.PI / 2, pitch: 1.5, zoom: 1, idle: 0 } : { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 });
+      Object.assign(preview.orbit, plane ? { yaw: -Math.PI / 2, pitch: 1.5, zoom: 4, idle: 0 } : { yaw: -Math.PI / 2, pitch: 0.04, zoom: 1, idle: 0 });
       preview.setPose('hover');
       for (let i = 0; i < 3; i++) preview.frame();
       out[`air-${kind}-${prefix}${own ?? faction}`] = trim(preview.canvas);
@@ -75,6 +76,8 @@ window.silhouettes = (year = '1985') => {
       const key = own ?? faction;
       if (own && !type.models[army]) continue;
       preview.show(type.id, faction, army);
+      preview.hold = false; // (draw now: the menu's background compile would leave the frame empty)
+      preview.sea.visible = preview.ground.visible = false; // (a ship: no water disc — overrideMaterial would draw it white round her)
       const units = preview.stack.units;
       // infantry: the men one behind the other along their line of march, so the side view
       // shows them in file; each faces straight ahead
