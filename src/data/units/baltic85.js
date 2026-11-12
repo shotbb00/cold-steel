@@ -8,6 +8,7 @@ import { buildFrosch, buildPolnocny, buildAist, buildParchim, buildOsa, buildNat
 import tank from './tank.ts';
 import ifv from './ifv.ts';
 import reconVehicle from './reconVehicle.ts';
+import rockets from './rockets.ts';
 
 const NAVAL = { naval: true, eyeHeight: 14, aimHeight: 3, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -148,3 +149,23 @@ export const swimRecon = swimmer('swimRecon', reconVehicle, 1.2);
 export const swimPT76 = swimmer('swimPT76', pt76, 1.2);
 
 Object.assign(BALTIC_85, { pt76, swimIfv, swimRecon, swimPT76 });
+
+// ---------------------------------------------------------------- the coast's defence
+
+/** The Bundeswehr's coastal missile battery (placed by the map, `landing.forts`; never bought): two launcher trucks
+ *  hidden inland that fire on the landing's ships only (systems/Landing.js batteries) — one missile, then away to a
+ *  new hide before the ships' guns find them. Nothing against the land. */
+export const coastMissile = {
+  ...rockets, id: 'coastMissile', name: 'Coastal Missile Battery', shortName: 'Missile battery', hidden: true, coastal: true, cost: 0, armies: undefined,
+  formation: { count: 2, columns: 2, spacing: 24 },
+  stats: { ...rockets.stats, range: 0, minRange: 0, preferredRange: 0, damage: 0, sight: 300, stealth: 0.8, hp: 380,
+    antiShip: { name: 'Exocet', range: 2800, reload: 70, load: 4, count: 1, speed: 300, damage: 900, pierce: 0.6, seeker: 1400, skim: true } },
+  factionStats: undefined,
+  variants: {
+    bw: { name: 'MM38 Exocet battery', weapon: '2 × MM38 Exocet launchers', text: 'Two launcher trucks hidden behind the coast: a sea-skimming missile at the biggest ship in reach, then away to a new hide. Find them before they find the Frosch.' },
+    nato: { name: 'Coastal missile battery', weapon: 'anti-ship missiles', text: 'Launcher trucks hidden inland that fire on ships, then move.' },
+    pact: { name: 'Coastal missile battery', weapon: 'anti-ship missiles', text: 'Launcher trucks hidden inland that fire on ships, then move.' },
+  },
+};
+
+Object.assign(BALTIC_85, { coastMissile });

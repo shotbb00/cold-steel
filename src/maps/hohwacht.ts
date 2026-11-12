@@ -149,6 +149,22 @@ export default {
     craft: { infantry: ['aist', 'aist', 'polnocny'], vehicle: ['frosch', 'polnocny'] },
     // what the landing may call in at sea: the Volksmarine's escorts (the Tarantul is the ptBoat slot)
     navy: ['parchim', 'osa', 'natya', 'ptBoat'],
+    // the Bundesmarine's mine barrier across the bay, a lane left off each sector (dan buoys) for the sweepers to widen
+    seaMines: { z: [520, 580], count: 60, lanes: [-320, 20, 330], lane: 80, seed: 1985 },
+    // the coastal missile battery inland: two launcher trucks that fire on the ships, then move (systems/Landing.js batteries)
+    forts: [{ unit: 'coastMissile', ...W(-150, -300), facing: Math.PI }, { unit: 'coastMissile', ...W(200, -420), facing: Math.PI }],
+    // prepared positions, no concrete: wire along the back of the beach, minefields and trenches on the dunes over each sector
+    works: [
+      ...Array.from({ length: 90 }, (_, i) => { const x = -490 + i * 11; return { kind: 'wire', ...W(x, shoreZ(x) - (cliffK(x) > 0.3 ? 18 : 30)), yaw: 0 }; }),
+      ...SECTORS.flatMap((s) => [-38, 38].map((dx) => ({ kind: 'mines', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 40 : 64)) }))),
+      ...SECTORS.flatMap((s) => [-45, 0, 45].map((dx) => ({ kind: 'trench', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 58 : 52)), yaw: 0 }))),
+    ],
+    // the defence at dawn: Heimatschutz (the territorial army's reservists) in the trenches over each sector and in the villages
+    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'atTeam', 'rifles', 'atTeam', 'mortar', 'rifles', 'mortar', 'scouts'],
+    names: { rifles: 'Heimatschutzzug' },
+    hold: [...SECTORS.flatMap((s) => [-45, 45].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - 56))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
+    // the armoured counter-attack: the division's reserve, down from inland after seven minutes
+    counter: { t: 420, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv'], say: 'The division\'s reserve is coming up: Leopards and Marders, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Leopard 2s and Marders' },
     // the amphibious vehicles swim in on their own, put in off the beach: BMPs, BTRs and BRDMs, the PT-76s
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon', pt76: 'swimPT76' },
     // the first wave at dawn, in to all three sectors at once

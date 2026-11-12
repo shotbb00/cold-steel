@@ -17,7 +17,7 @@
 //              the rest stop her short, and her men wade in from there.
 import * as THREE from 'three';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { forArmy } from '../data/factions.js';
+import { forArmy, enemyOf } from '../data/factions.js';
 import { mulberry32 } from '../core/math.js';
 import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
@@ -116,11 +116,12 @@ export class Landing {
   layMines(o) {
     if (!o) return [];
     const g = this.game, r = mulberry32(o.seed ?? 6), bx = g.world.bounds.x, [z0, z1] = o.z;
+    const f = ['nato', 'pact'].find((q) => this.lands(q)), sign = Math.sign(g.map.bases[f]?.z ?? 1) || 1; // (the band is in m out from the middle, on the lander's side: +z at Omaha, -z at Hohwacht)
     const inLane = (x) => o.lanes.some((lx) => Math.abs(x - lx) < o.lane);
     const mines = [];
     for (let i = 0; mines.length < o.count && i < o.count * 20; i++) {
       const x = (r() * 2 - 1) * bx, z = z0 + r() * (z1 - z0);
-      if (!inLane(x)) mines.push({ x, z, live: true });
+      if (!inLane(x)) mines.push({ x, z: z * sign, live: true });
     }
     // the dan buoys: each lane's edges, red to port and green to starboard coming in
     const level = g.world.river.level;
@@ -129,7 +130,7 @@ export class Landing {
     const red = mat(0xb8321e), green = mat(0x2e7a3a), dark = mat(0x222222);
     for (const lx of o.lanes) for (const side of [-1, 1]) for (let z = z0 - 10; z <= z1 + 10; z += (z1 - z0 + 20) / 3) {
       const b = new THREE.Mesh(geo, side < 0 ? green : red);
-      b.position.set(lx + side * o.lane, level + 0.9, z);
+      b.position.set(lx + side * o.lane, level + 0.9, z * sign);
       const p = new THREE.Mesh(pole, dark);
       p.position.set(0, 1.9, 0);
       b.add(p);
@@ -229,6 +230,33 @@ export class Landing {
     }
   }
 
+  /**
+   * The defence's anti-ship missile batteries (a unit with `stats.antiShip`: 1985, Hohwacht): hidden inland, halted, they
+   * fire a missile at a ship of the landing in reach (the biggest first), then drive off to another hide before the
+   * ships' guns come looking (the launch gives a bearing: systems/Sensors.js) — shoot and scoot.
+   */
+  batteries(dt) {
+    const g = this.game, ms = g.missiles;
+    if (!ms) return;
+    for (const s of g.world.stacks) {
+      const A = s.stats.antiShip;
+      if (!A || !s.alive || this.lands(s.faction)) continue;
+      const m = (s.ssm ??= { ...A, left: A.load, cd: 20 + Math.random() * 20 });
+      if ((m.cd -= dt) > 0 || m.left <= 0 || s.moveTarget) continue;
+      const u = s.units.find((q) => q.alive);
+      if (!u) continue;
+      const ships = g.world.stacks.filter((o) => o.alive && o.stats.naval && o.faction !== s.faction && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < m.range);
+      const t = ships.sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0)).map((o) => o.units.find((q) => q.alive)).find((q) => q && ms.inbound(q) < 2);
+      if (!t) { m.cd = 3; continue; }
+      const d = Math.hypot(t.pos.x - u.pos.x, t.pos.z - u.pos.z), flight = d / m.speed;
+      ms.launch(s, u, { x: u.pos.x, y: u.pos.y + 3, z: u.pos.z }, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
+      m.cd = m.reload;
+      // and away: a new hide a couple of hundred metres off, further from the sea
+      const sea = Math.sign(g.map.bases[enemyOf(s.faction)]?.z ?? -1) || -1, a = Math.random() * Math.PI * 2, r = 150 + Math.random() * 120;
+      s.ai.moveTo({ x: Math.max(-g.world.bounds.x + 40, Math.min(g.world.bounds.x - 40, u.pos.x + Math.cos(a) * r)), z: u.pos.z - sea * Math.abs(Math.sin(a)) * r * 0.5 }, { ordered: false });
+    }
+  }
+
   blast(s, u, at, damage, size) {
     const g = this.game, pos = { x: at.x, y: g.world.river.level, z: at.z };
     g.effects.waterSplash?.(pos, size);
@@ -315,6 +343,7 @@ export class Landing {
       }
     }
     for (const r of this.runs.slice()) this.step(r, dt);
+    this.batteries(dt);
     this.waters();
     this.tide();
     if ((this.wadeT = (this.wadeT ?? 0) - dt) <= 0) { this.wadeT = 0.5; this.wading(); }
@@ -404,6 +433,9 @@ export class Landing {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
       if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: this.inLane(r.x + (Math.random() - 0.5) * 40, 20), z: r.sign * (g.world.bounds.z + 40) }; }
     } else if (r.phase === 'out') {
+      // inside the mines still: along the beach to the swept lane first (a big ship backing off drifts out of it), then straight out down it
+      const lx = this.inLane(u.pos.x, 30);
+      if (band && Math.abs(u.pos.z) < band[1] + 20) r.way = Math.abs(u.pos.z) < band[0] - 40 && Math.abs(lx - u.pos.x) > 1 ? { x: lx, z: u.pos.z + r.sign * 15 } : { x: lx, z: r.sign * (g.world.bounds.z + 40) };
       if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; this.remove(s); }
     }
   }

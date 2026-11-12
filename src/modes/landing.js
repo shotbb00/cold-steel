@@ -71,9 +71,12 @@ export default {
     for (const sp of map.spawns?.[att] ?? []) game.spawnStack(sp.unit, att, sp, sp.facing ?? 0); // (the landing's ships, already off the beach)
     // the defence: its men on the bluffs over the beach and in the villages (the bunkers are the map's: coastal step 4)
     const hold = map.landing?.hold ?? map.points.filter((p) => p.owner !== att);
-    deploy(game, def, map.landing?.defence ?? DEFENCE_FORCE, hold, { back: 6, spread: 16 });
+    deploy(game, def, map.landing?.defence ?? DEFENCE_FORCE, hold, { back: 6, spread: 16, names: map.landing?.names ?? {} });
     // the Atlantic Wall: the map's resistance nests and batteries, its wire, mines and tank traps
-    for (const f of map.landing?.forts ?? []) game.spawnStack(f.unit, def, f, f.facing ?? 0);
+    for (const f of map.landing?.forts ?? []) {
+      const s = game.spawnStack(f.unit, def, f, f.facing ?? 0);
+      if (s.stats.antiShip) s.autonomous = true; // (a missile battery: its own hides — systems/Landing.js batteries)
+    }
     for (const w of map.landing?.works ?? []) {
       const site = game.construction.place(w.kind, w.x, w.z, w.yaw ?? 0, def);
       if (site) { site.quiet = true; game.construction.finish(site); }
@@ -124,12 +127,33 @@ export default {
       const p = state.points.points.find((q) => q.id === id), to = state.points.points.find((q) => q.id === this.opens[id]);
       game.tellBoth(att, `${p.name} is ours — the way up to ${to.name} is open. More boats are coming in.`, `${p.name} is lost — they are coming up the draw to ${to.name}!`);
     }
+    this.counter(game, state, def, att);
     if ([...this.inland].every(held)) return this.finish(game, def, `Every village is taken: the beachhead holds.`);
     if (game.time >= state.deadline) return this.finish(game, att, 'The landing has run out of time.');
     const spent = (f) => game.world.stacksOf(f).filter((s) => !s.stats.naval || s.cargo).length === 0 && Math.max(state.cp[f], state.cp[`${f}:guest`] ?? 0) < 150;
     if (game.time > 120 && spent(att)) return this.finish(game, att, 'The landing has spent itself on the beach.');
     if (spent(def)) return this.finish(game, def, 'The defence has been wiped out.');
     game.frontlineHud.update();
+  },
+
+  /**
+   * The map's `landing.counter` ({ t, units, say }): the defence's armoured reserve, in from its base at time t and
+   * straight at what the landing holds (the inland villages first, then the beach), one platoon per road.
+   */
+  counter(game, state, def, att) {
+    const c = game.map.landing?.counter;
+    if (!c || state.countered || game.time < c.t) return;
+    state.countered = true;
+    const base = game.map.bases[def], roads = base.entries ?? [base.x];
+    const held = state.points.points.filter((p) => p.owner === att && !p.locked && p.id !== 'A');
+    const goals = held.length ? held : state.points.points.filter((p) => this.opens[p.id]);
+    c.units.forEach((id, i) => {
+      const x = roads[i % roads.length] + (Math.random() - 0.5) * 20;
+      const s = game.spawnStack(id, def, { x, z: base.z }, base.z > 0 ? Math.PI : 0);
+      const goal = goals.reduce((a, p) => (Math.abs(p.x - x) < Math.abs(a.x - x) ? p : a), goals[0]);
+      if (goal) s.ai.moveTo({ x: goal.x, z: goal.z }, { ordered: false });
+    });
+    game.tellBoth(def, c.say ?? 'The armoured reserve is coming up', c.sayOther ?? 'Enemy armour is coming down from inland');
   },
 
   finish(game, loser, why) {
