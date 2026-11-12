@@ -142,7 +142,26 @@ export const buildBwMarder = vehicle(() => {
       P.box(1.6, 1.0, 0.08, { y: 1.3, z: -3.38, color: BW_DK }),                                        // the rear ramp
       ...pair((s) => P.cyl(0.25, 0.25, 0.06, { x: s * 0.9, y: 1.96, z: -1.5, color: BW_DK }, 12)),      // roof hatches
       P.box(0.5, 0.06, 0.45, { x: -0.65, y: 1.93, z: 1.2, color: BW_DK }),                              // driver's hatch
+      ...[-0.2, 0, 0.2].map((x) => P.box(0.12, 0.08, 0.05, { x: -0.65 + x, y: 1.97, z: 1.47, rx: -0.3, color: GLASS })), // his periscopes
       ...pair((s) => P.cyl(0.06, 0.06, 0.1, { x: s * 1.2, y: 1.1, z: 3.1, rx: Math.PI / 2, color: STEEL }, 10)),
+      // the headlights in their guards and the convoy lights on the glacis, tow hooks under the nose, mud flaps
+      ...pair((s) => P.box(0.26, 0.18, 0.14, { x: s * 1.18, y: 1.33, z: 2.92, rx: 0.4, color: STEEL })),
+      ...pair((s) => P.box(0.16, 0.1, 0.02, { x: s * 1.18, y: 1.35, z: 3.0, rx: 0.4, color: GLASS })),
+      ...pair((s) => P.box(0.3, 0.24, 0.03, { x: s * 1.18, y: 1.4, z: 3.02, rx: 0.4, color: STEEL })),
+      ...pair((s) => P.box(0.14, 0.14, 0.2, { x: s * 0.75, y: 0.78, z: 3.36, color: STEEL })),
+      ...pair((s) => P.box(0.42, 0.34, 0.03, { x: s * 1.5, y: 0.86, z: 3.0, color: RUBBER, surf: 'rubber' })),
+      // the engine's air grilles on the right of the glacis (the Marder's engine is at the front)
+      ...Array.from({ length: 6 }, (_, k) => P.box(0.95, 0.03, 0.07, { x: 0.62, y: 1.92 - (1.45 + k * 0.17 - 1.3) * 0.4 + 0.03, z: 1.45 + k * 0.17, rx: 0.38, color: BW_DK })),
+      // periscopes along the troop compartment's roof edges, the antennas' feet and whips at the back
+      ...[-2.7, -2.15, -1.6, -1.05, -0.5].map((z) => pair((s) => P.box(0.16, 0.09, 0.1, { x: s * 1.28, y: 1.96, z, ry: s * 0.25, color: GLASS }))).flat(),
+      ...pair((s) => P.cyl(0.08, 0.1, 0.12, { x: s * 1.15, y: 1.98, z: -2.95, color: STEEL }, 10)),
+      ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.15, y: 3.2, z: -2.95, color: STEEL }, 4)),
+      // the ramp's hinges, handle and lights; jerrycans in their racks either side of it
+      ...[-0.6, 0.6].map((x) => P.box(0.2, 0.1, 0.1, { x, y: 0.82, z: -3.42, color: STEEL })),
+      P.box(0.5, 0.06, 0.06, { y: 1.45, z: -3.43, color: STEEL }),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.1, y: 1.65, z: -3.4, color: 0x5a1a14 })),
+      ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 1.18, y: 1.25, z: -3.44, color: 0x4a4e36 })),
+      ...pair((s) => P.box(0.4, 0.06, 0.16, { x: s * 1.18, y: 1.0, z: -3.44, color: STEEL })),
     ]), 1.3, 0.3),
     turret: {
       geo: grime(merge([
@@ -153,6 +172,13 @@ export const buildBwMarder = vehicle(() => {
         P.box(0.16, 0.3, 0.2, { x: 0.62, y: 0.55, z: -0.15, color: BW_DK }),                             // its bracket on the roof
         ...pair((s) => smoke(s * 0.82, 0.18, 0.5, 3, s * 0.6)).flat(),
         P.cyl(0.24, 0.24, 0.05, { x: -0.45, y: 0.44, z: -0.35, color: BW_DK }, 12),                      // commander's hatch
+        ...[0, 1, 2, 3, 4].map((k) => P.box(0.1, 0.07, 0.04, { x: -0.45 + Math.sin(k * 0.7 - 1.4) * 0.3, y: 0.46, z: -0.35 + Math.cos(k * 0.7 - 1.4) * 0.3, ry: k * 0.7 - 1.4, color: GLASS })), // its periscopes
+        P.box(0.26, 0.32, 0.3, { x: -0.5, y: 0.6, z: 0.3, color: BW_DK }),                                // the PERI Z11 sight head…
+        P.box(0.2, 0.14, 0.02, { x: -0.5, y: 0.66, z: 0.46, color: GLASS }),                              // …its window
+        P.cyl(0.13, 0.13, 0.2, { x: 0.28, y: 0.6, z: 0.42, rx: Math.PI / 2, color: STEEL }, 12),          // the searchlight beside the cannon
+        P.cyl(0.11, 0.11, 0.02, { x: 0.28, y: 0.6, z: 0.53, rx: Math.PI / 2, color: GLASS }, 12),
+        P.box(1.4, 0.28, 0.36, { y: 0.25, z: -0.88, color: BW_DK }),                                     // the stowage basket on the turret's back
+        ...[-0.6, 0, 0.6].map((x) => P.box(0.04, 0.32, 0.04, { x, y: 0.27, z: -1.06, color: STEEL })),
       ]), 0.6, 0, 0.4),
       at: [0, 1.92, 0.4],
     },

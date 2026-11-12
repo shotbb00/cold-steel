@@ -21,6 +21,7 @@ const NVA = 0x4a5636;
 const NVA_DK = 0x37422a;
 const STEEL = 0x2b2d28;
 const RUBBER = 0x1f201c;
+const GLASS = 0x1a1d1c;
 const WHITE = 0xd8d6cc;
 const C = { camo: 1 };
 const tyre = (x, y, z, r, w = 0.3) => P.cyl(r, r, w, { x, y, z, rz: Math.PI / 2, color: RUBBER, surf: 'rubber' }, 14);
@@ -51,6 +52,16 @@ export const buildBwGepard = vehicle(() => ({
       P.cyl(0.42, 0.42, 0.55, { y: 1.15, z: 1.25, rx: Math.PI / 2, color: BW_DK }, 16),              // the tracking radar's dish in front
       P.cyl(0.08, 0.1, 0.5, { y: 1.25, z: -1.0, color: STEEL }, 8),                                   // the search radar's mast
       ...pair((s) => P.box(0.4, 0.75, 1.6, { x: s * 1.45, y: 0.55, z: 0.1, color: BW, ...C })),       // the gun housings on the sides
+      ...pair((s) => P.box(0.32, 0.5, 0.65, { x: s * 1.42, y: 0.42, z: -0.95, color: BW_DK })),          // the ammunition feeds behind them
+      ...pair((s) => P.box(0.03, 0.62, 0.95, { x: s * 1.255, y: 0.5, z: -0.35, color: BW_DK })),        // the turret's side access doors…
+      ...pair((s) => P.box(0.04, 0.05, 0.2, { x: s * 1.27, y: 0.55, z: -0.75, color: STEEL })),         // …their handles
+      P.box(0.4, 0.34, 0.45, { x: 0.55, y: 1.17, z: 0.75, color: BW_DK }),                             // the optical sight on the roof
+      P.box(0.3, 0.18, 0.02, { x: 0.55, y: 1.2, z: 0.98, color: GLASS }),
+      ...[[-0.5, 0.1], [0.45, -0.3]].map(([x, z]) => P.cyl(0.3, 0.3, 0.06, { x, y: 1.03, z, color: BW_DK }, 14)), // commander's and gunner's hatches
+      ...[[-0.5, 0.1], [0.45, -0.3]].flatMap(([x, z]) => [0, 1, 2].map((k) => P.box(0.1, 0.07, 0.04, { x: x + Math.sin(k * 0.8 - 0.8) * 0.33, y: 1.06, z: z + Math.cos(k * 0.8 - 0.8) * 0.33, ry: k * 0.8 - 0.8, color: GLASS }))),
+      ...pair((s) => Array.from({ length: 4 }, (_, k) => P.cyl(0.05, 0.05, 0.26, { x: s * (1.0 + k * 0.08), y: 0.88, z: 1.32, rx: -0.6, ry: s * 0.4, color: STEEL }, 8))).flat(), // smoke dischargers
+      P.box(2.2, 0.32, 0.4, { y: 0.35, z: -1.62, color: 0x575a40 }),                                     // the stowage box across the turret's back
+      P.cyl(0.006, 0.006, 2.2, { x: -1.0, y: 2.1, z: -1.3, color: STEEL }, 4),                           // the radio whip
     ]), 0.9, 0, 0.4),
     at: [0, 1.38, -0.3],
   },

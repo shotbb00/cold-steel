@@ -143,6 +143,17 @@ export const buildBwM109G = vehicle(() => {
       trackedHull([[-3.1, 1.4, 0.5], [-2.9, 1.45, 0.45], [1.8, 1.45, 0.45], [3.1, 1.1, 0.6]], { belly: 1.1, fender: 1.6, fenderY: 1.1, chamfer: 0.05 }, { color: BW, ...C }),
       P.box(0.5, 0.06, 0.45, { x: -0.6, y: 1.48, z: 2.4, color: BW_DK }),
       ...pair((s) => P.box(0.4, 0.3, 1.2, { x: s * 1.45, y: 1.3, z: -2.2, color: BW_DK })),            // German stowage boxes
+      ...[-0.15, 0, 0.15].map((x) => P.box(0.1, 0.07, 0.05, { x: -0.6 + x, y: 1.52, z: 2.64, rx: -0.3, color: GLASS })), // the driver's periscopes
+      // headlights in their guards, tow hooks, the engine's grille on the right of the glacis (the M109's engine is at the front)
+      ...pair((s) => P.box(0.24, 0.17, 0.13, { x: s * 1.15, y: 1.25, z: 2.95, rx: 0.4, color: STEEL })),
+      ...pair((s) => P.box(0.15, 0.1, 0.02, { x: s * 1.15, y: 1.27, z: 3.02, rx: 0.4, color: GLASS })),
+      ...pair((s) => P.box(0.14, 0.14, 0.2, { x: s * 0.7, y: 0.8, z: 3.12, color: STEEL })),
+      ...Array.from({ length: 6 }, (_, k) => P.box(0.9, 0.03, 0.07, { x: 0.55, y: 1.45 - (2.0 + k * 0.15 - 1.8) * 0.27 + 0.03, z: 2.0 + k * 0.15, rx: 0.26, color: BW_DK })),
+      // the rear: the big door, its handle, the spade brackets, the lights
+      P.box(0.9, 0.85, 0.06, { y: 1.0, z: -3.12, color: BW_DK }),
+      P.box(0.04, 0.16, 0.05, { x: 0.3, y: 1.0, z: -3.16, color: STEEL }),
+      ...pair((s) => P.box(0.18, 0.4, 0.2, { x: s * 1.0, y: 0.75, z: -3.15, color: STEEL })),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.2, y: 1.3, z: -3.13, color: 0x5a1a14 })),
     ]), 1.2, 0.3),
     turret: {
       geo: grime(merge([
@@ -151,6 +162,19 @@ export const buildBwM109G = vehicle(() => {
         P.cyl(0.32, 0.34, 0.2, { x: 0.8, y: 1.2, z: -0.4, color: BW }, 14),                            // commander's cupola
         P.box(0.12, 0.12, 0.4, { x: 0.8, y: 1.35, z: -0.2, color: STEEL }),
         P.box(1.0, 0.8, 0.4, { y: 0.55, z: 1.3, color: BW }),                                          // mantlet
+        ...[0, 1, 2, 3, 4].map((k) => P.box(0.1, 0.07, 0.04, { x: 0.8 + Math.sin(k * 0.7 - 1.4) * 0.34, y: 1.32, z: -0.4 + Math.cos(k * 0.7 - 1.4) * 0.34, ry: k * 0.7 - 1.4, color: GLASS })), // the cupola's vision blocks
+        P.cyl(0.3, 0.3, 0.05, { x: -0.7, y: 1.17, z: -0.6, color: BW_DK }, 12),                         // the loader's hatch
+        P.box(0.3, 0.28, 0.32, { x: -0.75, y: 1.3, z: 0.65, color: BW_DK }),                            // the panoramic sight's head
+        // the A3G's German kit: 2 × 4 smoke dischargers on the front corners, stowage boxes along the turret's sides
+        ...pair((s) => Array.from({ length: 4 }, (_, k) => P.cyl(0.05, 0.05, 0.26, { x: s * (1.15 + (k % 2) * 0.12), y: 0.95 + Math.floor(k / 2) * 0.12, z: 1.15, rx: -0.6, ry: s * 0.5, color: STEEL }, 8))).flat(),
+        ...pair((s) => P.box(0.3, 0.45, 1.5, { x: s * 1.6, y: 0.6, z: -0.7, color: BW_DK })),
+        ...pair((s) => [-1.2, -0.2].map((z) => P.box(0.04, 0.05, 0.16, { x: s * 1.76, y: 0.7, z, color: STEEL }))).flat(),
+        // the side doors, the ammunition hatch and the basket on the bustle's back
+        ...pair((s) => P.box(0.03, 0.8, 0.7, { x: s * 1.455, y: 0.6, z: 0.5, color: BW_DK })),
+        P.box(0.7, 0.55, 0.03, { y: 0.6, z: -2.02, color: BW_DK }),
+        P.box(2.6, 0.3, 0.45, { y: 0.35, z: -2.25, color: 0x575a40 }),
+        ...[-1.1, 0, 1.1].map((x) => P.box(0.04, 0.32, 0.04, { x, y: 0.37, z: -2.47, color: STEEL })),
+        P.cyl(0.006, 0.006, 2.4, { x: -1.2, y: 2.35, z: -1.8, color: STEEL }, 4),                        // the radio whip
       ]), 0.9, 0, 0.4),
       at: [0, 1.45, -0.9],
     },

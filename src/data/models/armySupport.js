@@ -77,6 +77,20 @@ function mtlb(extra = [], roof = 1.85) {
       trackedHull([[-3.2, roof, 0.45], [-3.0, roof, 0.4], [1.6, roof, 0.4], [2.6, 1.55, 0.45], [3.2, 0.95, 0.75]], { belly: 1.0, fender: 1.45, fenderY: 0.95, chamfer: 0.08 }, { color: NVA }),
       P.box(0.5, 0.06, 0.45, { x: -0.55, y: 1.57, z: 2.3, color: NVA_DK }),
       ...pair((s) => P.box(0.7, 0.06, 0.6, { x: s * 0.6, y: roof + 0.02, z: -1.8, color: NVA_DK })),     // roof hatches
+      // the cab up front: the driver's and commander's windows, their periscopes, the headlights, tow hooks
+      ...pair((s) => P.box(0.45, 0.2, 0.04, { x: s * 0.55, y: 1.45, z: 2.62, rx: 0.5, color: GLASS })),
+      ...pair((s) => [-0.15, 0.15].map((x) => P.box(0.1, 0.07, 0.04, { x: s * 0.55 + x, y: roof + 0.04, z: 1.4, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.24, 0.16, 0.12, { x: s * 1.05, y: 1.2, z: 2.95, rx: 0.6, color: STEEL })),
+      ...pair((s) => P.box(0.15, 0.1, 0.02, { x: s * 1.05, y: 1.22, z: 3.01, rx: 0.6, color: GLASS })),
+      ...pair((s) => P.box(0.14, 0.14, 0.18, { x: s * 0.7, y: 0.8, z: 3.2, color: STEEL })),
+      // the troop compartment: vision blocks down its sides, the rear doors with their handles, the exhaust on the left
+      ...[-2.6, -1.9, -1.2].map((z) => pair((s) => P.box(0.04, 0.12, 0.2, { x: s * 1.46, y: roof - 0.25, z, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.75, 0.85, 0.06, { x: s * 0.45, y: 1.2, z: -3.22, color: NVA_DK })),
+      ...pair((s) => P.box(0.04, 0.16, 0.05, { x: s * 0.15, y: 1.25, z: -3.27, color: STEEL })),
+      P.box(0.14, 0.24, 0.8, { x: -1.5, y: 1.3, z: 0.6, color: STEEL }),
+      // stowage along the fenders, the unditching log across the back
+      ...pair((s) => P.box(0.3, 0.28, 1.1, { x: s * 1.3, y: 1.1, z: 0.9, color: NVA_DK })),
+      P.cyl(0.13, 0.13, 2.3, { y: roof + 0.12, z: -3.0, rz: Math.PI / 2, color: 0x5a4632 }, 10),
       ...extra,
     ]), 1.1, 0.3),
   };
@@ -91,6 +105,24 @@ function fuchs(extra = []) {
       P.box(1.8, 0.3, 0.05, { y: 2.05, z: 2.35, rx: -0.6, color: GLASS }),                                // the windscreen
       P.box(1.0, 1.3, 0.06, { y: 1.5, z: -3.32, color: BW_DK }),                                          // the rear doors
       ...pair((s) => P.box(0.06, 0.06, 5.6, { x: s * 1.38, y: 1.3, z: 0.0, color: BW_DK })),             // the side rubbing strips
+      // the cab: its side windows, the mirrors on their arms, the headlights and convoy lights low on the nose, tow eyes
+      ...pair((s) => P.box(0.04, 0.32, 0.6, { x: s * 1.3, y: 1.95, z: 1.6, color: GLASS })),
+      ...pair((s) => P.box(0.4, 0.04, 0.04, { x: s * 1.5, y: 2.05, z: 2.0, color: STEEL })),
+      ...pair((s) => P.box(0.05, 0.22, 0.16, { x: s * 1.7, y: 2.05, z: 2.0, color: STEEL })),
+      ...pair((s) => P.box(0.26, 0.16, 0.1, { x: s * 0.95, y: 1.3, z: 3.35, rx: 0.5, color: STEEL })),
+      ...pair((s) => P.box(0.18, 0.1, 0.02, { x: s * 0.95, y: 1.32, z: 3.4, rx: 0.5, color: GLASS })),
+      ...pair((s) => P.box(0.12, 0.16, 0.18, { x: s * 0.6, y: 0.95, z: 3.45, color: STEEL })),
+      // the troop compartment: vision blocks down both sides, the side door on the right, roof hatches, smoke dischargers
+      ...[-2.4, -1.6, -0.8].map((z) => pair((s) => P.box(0.04, 0.12, 0.22, { x: s * 1.32, y: 2.0, z, color: GLASS }))).flat(),
+      P.box(0.04, 1.05, 0.75, { x: 1.33, y: 1.55, z: -0.3, color: BW_DK }),
+      P.box(0.05, 0.05, 0.2, { x: 1.36, y: 1.6, z: -0.55, color: STEEL }),
+      ...[[-0.55, -1.0], [0.55, -1.0], [0, 0.6]].map(([x, z]) => P.box(0.6, 0.05, 0.6, { x, y: 2.32, z, color: BW_DK })),
+      ...pair((s) => [0, 1, 2].map((k) => P.cyl(0.05, 0.05, 0.24, { x: s * (0.9 + k * 0.13), y: 2.36, z: 1.1, rx: -0.7, ry: s * 0.5, color: STEEL }, 8))).flat(),
+      // the swimmer's stern: its two propellers in their guards, the rear lights and the jerrycan racks
+      ...pair((s) => P.cyl(0.32, 0.32, 0.12, { x: s * 0.75, y: 0.75, z: -3.3, rx: Math.PI / 2, color: STEEL }, 14)),
+      ...pair((s) => [0, 1, 2].map((k) => P.box(0.05, 0.5, 0.03, { x: s * 0.75, y: 0.75, z: -3.37, rz: k * 1.05, color: STEEL }))).flat(),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.05, y: 1.9, z: -3.32, color: 0x5a1a14 })),
+      ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 1.0, y: 1.5, z: -3.4, color: 0x4a4e36 })),
       ...extra,
     ]), 1.1, 0.3),
   };
