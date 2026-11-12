@@ -304,6 +304,31 @@ export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen
       P.box(1.0, 0.7, length / 2 - (tail + length * 0.55 + 1.15), { y: 1.15, z: (length / 2 + tail + length * 0.55 + 1.15) / 2, color, ...C }), // bonnet, from the cab forward
       ...pair((s) => P.box(hw - 0.3, 0.06, 1.1, { x: s * (0.5 + (hw - 0.3) / 2), y: 1.05, z: wheelZ, rx: 0.1, color: dark })), // front wings, from the bonnet out
       P.box(width * 0.9, 0.3, 0.15, { y: 0.75, z: length / 2, color: STEEL }),                                    // the roller bumper
+      // the unditching roller on its brackets, the armoured radiator louvres, the headlights in their guards on the wings
+      P.cyl(0.19, 0.19, width * 0.82, { y: 0.72, z: length / 2 + 0.18, rz: Math.PI / 2, color: STEEL }, 14),
+      ...pair((s) => P.box(0.08, 0.14, 0.4, { x: s * width * 0.42, y: 0.74, z: length / 2 + 0.05, color: STEEL })),
+      ...[0.95, 1.05, 1.15, 1.25, 1.35].map((y) => P.box(0.9, 0.035, 0.03, { y, z: length / 2 + 0.01, color: dark })),
+      ...pair((s) => P.cyl(0.1, 0.1, 0.1, { x: s * 0.78, y: 1.2, z: wheelZ + 0.45, rx: Math.PI / 2, color: dark }, 12)),
+      ...pair((s) => P.cyl(0.08, 0.08, 0.02, { x: s * 0.78, y: 1.2, z: wheelZ + 0.51, rx: Math.PI / 2, color: 0x9a9a88 }, 12)),
+      ...pair((s) => P.box(0.24, 0.24, 0.03, { x: s * 0.78, y: 1.22, z: wheelZ + 0.55, color: STEEL })),
+      // the cab: the vision slits in the armoured windscreen, the doors and their handles; the troop compartment's benches
+      ...pair((s) => P.box(0.55, 0.05, 0.02, { x: s * 0.42, y: 1.97, z: tail + length * 0.55 + 1.23, rx: -0.3, color: 0x141414 })),
+      ...pair((s) => P.box(0.03, 0.6, 0.72, { x: s * (width * 0.45 + 0.01), y: 1.35, z: tail + length * 0.55 + 0.6, color: dark })),
+      ...pair((s) => P.box(0.04, 0.04, 0.12, { x: s * (width * 0.45 + 0.03), y: 1.4, z: tail + length * 0.55 + 0.35, color: STEEL })),
+      ...pair((s) => P.box(0.4, 0.38, length * 0.48, { x: s * (hw - 0.3), y: 1.15, z: tail + length * 0.27, color: dark })),
+      // the back: the door, the tail lights, the stowage rack and its jerrycans
+      P.box(0.62, 0.82, 0.04, { y: 1.38, z: tail - 0.03, color: dark }),
+      P.box(0.04, 0.14, 0.05, { x: 0.22, y: 1.4, z: tail - 0.06, color: STEEL }),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * (hw - 0.15), y: 1.05, z: tail - 0.04, color: 0x6a2a20 })),
+      P.box(width * 0.8, 0.06, 0.42, { y: 0.98, z: tail - 0.24, color: STEEL }),
+      ...pair((s) => P.box(0.34, 0.46, 0.15, { x: s * 0.55, y: 1.24, z: tail - 0.24, color: dark })),
+      // the US Army's: the mine racks along the sides with their M1 mines, the bedrolls strapped along the top edges, the whip
+      ...(color === OD ? [
+        ...pair((s) => P.box(0.12, 0.28, 2.3, { x: s * (hw + 0.07), y: 1.18, z: tail + length * 0.3, color: dark })),
+        ...pair((s) => [0, 1, 2, 3].map((k) => P.cyl(0.13, 0.13, 0.08, { x: s * (hw + 0.14), y: 1.22, z: tail + length * 0.3 - 0.8 + k * 0.53, rz: Math.PI / 2, color: 0x4e5038 }, 10))).flat(),
+        ...pair((s) => P.cyl(0.11, 0.11, 2.4, { x: s * (hw - 0.04), y: 1.96, z: tail + length * 0.28, rx: Math.PI / 2, color: 0x5a5c42 }, 10)),
+        P.cyl(0.006, 0.006, 2.4, { x: hw - 0.15, y: 3.1, z: tail + 0.3, color: STEEL }, 4),
+      ] : []),
     ]);
   return {
     gear,
