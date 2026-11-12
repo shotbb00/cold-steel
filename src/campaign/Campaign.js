@@ -296,6 +296,32 @@ export function sighted(c) {
 // ------------------------------------------------------------------ orders and the turn
 
 /** Order battalion `bid` down the road to `to` (an adjacent sector), or to hold (to = null). */
+// ------------------------------------------------------------------ co-op
+
+/** The battalions the co-op friend commands (ui/Lobby.js): the host gives them; at first the second one. */
+export const friendOf = (c) => c.friend ?? (c.battalions[1] ? [c.battalions[1].id] : []);
+
+/** Give battalion `bid` to the friend, or take it back. */
+export function setFriend(c, bid, on) {
+  const f = new Set(friendOf(c));
+  if (on) f.add(bid); else f.delete(bid);
+  c.friend = [...f].filter((id) => c.battalions.some((b) => b.id === id));
+  saveCampaign(c);
+}
+
+/**
+ * A planning action on the campaign, as data (the co-op friend's are sent to the host, who runs them here):
+ * { a: 'order', bid, to } | { a: 'refill', bid, cid } | { a: 'recruit', bid, type } | { a: 'endTurn' } | { a: 'resolve' }.
+ */
+export function applyAction(c, a) {
+  if (a.a === 'order') return orderMove(c, a.bid, a.to);
+  if (a.a === 'refill') return refill(c, a.bid, a.cid);
+  if (a.a === 'recruit') return recruit(c, a.bid, a.type);
+  if (a.a === 'endTurn') return endTurn(c);
+  if (a.a === 'resolve') return autoResolve(c);
+  return false;
+}
+
 export function orderMove(c, bid, to) {
   const b = c.battalions.find((x) => x.id === bid);
   if (!b || c.battles.length || c.over) return false;
@@ -430,11 +456,12 @@ export function battleChoice(c) {
   return {
     mode: 'breakthrough', map: b.map, side: c.side, time: b.time, weather: b.weather, armies: c.armies,
     campaign: {
-      attacker: b.attacker, sector: b.name, event: b.event ?? 'quiet', scars: c.scars?.[b.sector] ?? null,
+      attacker: b.attacker, sector: b.name, event: b.event ?? 'quiet', scars: c.scars?.[b.sector] ?? null, friend: friendOf(c),
       // cut off: fewer command points; from the second turn no aircraft and shaken men (modes/breakthrough.js)
       cut: { [c.side]: Math.max(0, ...ours.map((x) => cutLevel(c, x))), [enemyOf(c.side)]: Math.max(0, ...sides(c, b).theirs.map((x) => cutLevel(c, x))) },
       forces: {
-        [c.side]: [...ours.flatMap((x) => x.stacks.map((u) => ({ ...u }))), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : []), ...neighbourSupport(c, b, c.side)],
+        // (bid: its battalion — co-op, the friend's battalions' stacks are the friend's)
+        [c.side]: [...ours.flatMap((x) => x.stacks.map((u) => ({ ...u, bid: x.id }))), ...(b.event === 'guns' ? [{ type: 'artillery', cid: 'attached', name: 'Attached battery' }] : []), ...neighbourSupport(c, b, c.side)],
         [enemyOf(c.side)]: enemyForce(c, b),
       },
     },

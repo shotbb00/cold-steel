@@ -446,10 +446,17 @@ export class UnitStack {
     out.set(a.x + x * lo, 0, a.z + z * lo);
   }
 
+  /** Into single file: whoever is nearest the anchor goes first (by their number, a wing vehicle turned right round to get to the back). */
+  fallIn() {
+    const a = this.anchor;
+    this.units.filter((u) => u.alive).sort((p, q) => Math.hypot(p.pos.x - a.x, p.pos.z - a.z) - Math.hypot(q.pos.x - a.x, q.pos.z - a.z)).forEach((u, i) => { u.colRank = i; });
+  }
+
   /** Single file: each man his place along the way the anchor came, the first right behind it. */
   columnSlot(u, out) {
     let rank = 0;
-    for (const o of this.units) { if (o === u) break; if (o.alive) rank++; }
+    if (u.colRank != null) rank = u.colRank; // (the order they fell in: the nearest to the anchor first — updateTrail)
+    else for (const o of this.units) { if (o === u) break; if (o.alive) rank++; }
     let back = rank * this.type.formation.spacing * COLUMN.gap;
     let px = this.anchor.x;
     let pz = this.anchor.z;
@@ -603,7 +610,7 @@ export class UnitStack {
     const nav = this.world.nav;
     const room = nav ? nav.clearance(a.x, a.z, this.navFoot) : Infinity;
     if (!this.moveTarget || this.units.length < 2 || this.form) this.column = false; // (1806: a formed company keeps its ranks — the slots squeeze in round trees and walls, fitSlot)
-    else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; } }
+    else if (!this.column) { if (room < COLUMN.narrow) { this.column = true; this.wideFor = 0; this.fallIn(); } }
     else if (room <= COLUMN.wide) this.wideFor = 0;
     else if (step && ++this.wideFor > (this.usesCover ? COLUMN.after : COLUMN.afterVehicle)) this.column = false;
   }

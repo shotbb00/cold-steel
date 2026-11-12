@@ -255,7 +255,11 @@ export class GameEngine {
     }
     // co-op: the opening forces are shared out between the two players
     if (this.coop && this.net.isHost) {
-      this.world.stacksOf(playerFaction).forEach((s, i) => { s.owner = i % 2 ? 'guest' : 'host'; });
+      // (a campaign battle: the stacks of the battalions the friend commands are the friend's — unless that leaves one of you with nothing)
+      const fr = this.campaign?.friend ?? [], mine = this.world.stacksOf(playerFaction);
+      const byBn = mine.map((s) => (s.campBid ? (fr.includes(s.campBid) ? 'guest' : 'host') : null));
+      const split = fr.length && byBn.includes('guest') && byBn.includes('host');
+      mine.forEach((s, i) => { s.owner = split && byBn[i] ? byBn[i] : i % 2 ? 'guest' : 'host'; });
       if (this.world.stacksOf(playerFaction).length < 2) {
         const first = this.world.stacksOf(playerFaction)[0];
         if (first) { this.currentOwner = 'guest'; this.spawnStack(first.type.id, playerFaction, { x: first.anchor.x + 14, z: first.anchor.z }, first.facing, `${first.name} (2)`); this.currentOwner = null; }

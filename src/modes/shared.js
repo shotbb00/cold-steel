@@ -135,6 +135,7 @@ export function deploy(game, faction, units, anchors, { back = 25, spread = 28, 
     const s = game.spawnStack(id, faction, pos, facing, name, saved?.men ? { count: saved.men } : {});
     if (saved?.xp) s.setXp(saved.xp);
     if (saved?.cid) s.cid = saved.cid;
+    if (saved?.bid) s.campBid = saved.bid; // (its campaign battalion: co-op, the friend's are the friend's — GameEngine)
     return s;
   });
 }

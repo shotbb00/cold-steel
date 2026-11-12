@@ -47,7 +47,7 @@ export class MenuMusic {
     this.ctx = null;
     this.bar = 0;
     this.next = 0;
-    this.unlock = () => (this.ctx ? this.ctx.resume() : this.start());
+    this.unlock = () => (this.ctx ? this.ctx.resume().catch(() => {}) : this.start());
     window.addEventListener('pointerdown', this.unlock);
     window.addEventListener('keydown', this.unlock);
     this.off = settings.on((key) => { if ((key === 'music' || key === 'volume') && this.out) this.out.gain.setTargetAtTime(this.level, this.ctx.currentTime, 0.3); });
@@ -97,7 +97,7 @@ export class MenuMusic {
     this.next = t + 0.2;
     this.schedule();
     this.timer = setInterval(() => this.schedule(), 250);
-    if (ctx.state === 'suspended') ctx.resume(); // allowed without a click where the browser trusts the site
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {}); // (closed before a click came: the pending resume fails) — allowed without a click where the browser trusts the site
     ctx.onstatechange = () => {
       if (ctx.state !== 'running') return;
       window.removeEventListener('pointerdown', this.unlock);
@@ -114,7 +114,7 @@ export class MenuMusic {
     if (!this.ctx) return;
     clearInterval(this.timer);
     this.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.4);
-    setTimeout(() => this.ctx.close(), 2000);
+    setTimeout(() => { if (this.ctx.state !== 'closed') this.ctx.close().catch(() => {}); }, 2000); // (stopped twice — a multiplayer start: closed once)
   }
 
   schedule() {

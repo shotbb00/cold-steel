@@ -5,6 +5,9 @@
 // orders list), click a sector next to it to move or attack, its own sector to hold; End turn.
 // With battles queued, the card briefs the first one: Fight it, or resolve it by the numbers.
 // Below: each battalion's stacks (refill, recruit), the latest letter home, the war so far.
+// Co-op (ui/Lobby.js, `source`): the host's campaign on both screens. The host gives battalions to the friend; each
+// orders, refills and recruits for their own; the friend's actions go to the host, who runs and saves them and sends
+// the campaign back. Only the host ends the turn and starts (or resolves) the battle.
 import { FACTIONS, ARMIES, DEFAULT_ARMY, enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { MAPS } from '../maps/index.js';
@@ -14,8 +17,8 @@ import { unitCost } from '../data/doctrine.js';
 import { armiesPicker } from './MainMenu.js';
 import { epoch } from '../data/epoch.js';
 import {
-  loadCampaign, newCampaign, clearCampaign, battleChoice, orderMove, endTurn, autoResolve, sides, intel, sighted,
-  refill, refillCost, recruit, recruitable, sectorsOf, neighbours, hour, day, power, supplied, cutLevel,
+  loadCampaign, newCampaign, clearCampaign, battleChoice, applyAction, friendOf, setFriend, sides, intel, sighted,
+  refillCost, recruitable, sectorsOf, neighbours, hour, day, power, supplied, cutLevel,
   SECTORS, ROADS, EVENTS, TIMETABLE, MAX_STACKS,
 } from '../campaign/Campaign.js';
 
@@ -46,26 +49,47 @@ const SIDE_TEXT = () => (epoch() === '1806'
   : { nato: 'Hold the border, keep Fulda and Bad Hersfeld, then throw them back.', pact: 'Break the NATO line and drive for Fulda and Bad Hersfeld.' });
 
 export class CampaignPanel {
-  /** `onPreview(mapId, side)`: the map the coming battle is fought on, for the menu's map table. */
-  constructor({ onBattle, onPreview = () => {} }) {
+  /**
+   * `onPreview(mapId, side)`: the map the coming battle is fought on, for the menu's map table.
+   * `source` (co-op): { role: 'host' | 'guest', load() → the campaign, send(action) (guest: to the host), changed() (host: to the guest) }.
+   */
+  constructor({ onBattle, onPreview = () => {}, source = null }) {
     this.onBattle = onBattle;
     this.onPreview = onPreview;
+    this.source = source;
     this.root = el('div', 'campaign');
     this.choice = { side: 'nato', armies: { ...DEFAULT_ARMY }, length: 'endless' };
     this.sel = null;
     this.render();
   }
 
+  get guest() { return this.source?.role === 'guest'; }
+
+  /** May this player order battalion `b`? (Co-op: the friend's are the friend's, the rest the host's.) */
+  commands(b) {
+    if (!this.source) return true;
+    return friendOf(this.c).includes(b.id) === this.guest;
+  }
+
+  /** Run a planning action (Campaign.applyAction): here, or — the co-op friend — at the host's. */
+  act(a) {
+    if (this.guest) { this.source.send(a); return; }
+    applyAction(this.c, a);
+    this.source?.changed();
+    this.render();
+  }
+
   render() {
     const r = this.root;
-    r.replaceChildren(el('h2', '', 'Campaign'));
-    const c = loadCampaign();
+    r.replaceChildren(this.source ? el('h3', 'menu-sub', 'The campaign') : el('h2', '', 'Campaign'));
+    const c = this.source ? this.source.load() : loadCampaign();
+    if (!c && this.guest) { r.append(el('p', 'mp-wait', 'Waiting for the host’s campaign…')); return; }
     if (!c) {
       this.renderNew();
       return this.onPreview('fulda-gap', this.choice.side);
     }
     this.c = c;
-    if (!c.battalions.some((b) => b.id === this.sel)) this.sel = c.battalions[0]?.id ?? null;
+    if (!c.battalions.some((b) => b.id === this.sel)) this.sel = (c.battalions.find((b) => this.commands(b)) ?? c.battalions[0])?.id ?? null;
     this.onPreview(c.battles[0]?.map ?? 'fulda-gap', c.side);
     const me = c.side;
     const army = ARMIES[c.armies[me]]?.name ?? FACTIONS[me].name;
@@ -82,6 +106,7 @@ export class CampaignPanel {
     log.append(el('h3', 'menu-sub', 'The war so far'));
     for (const line of c.log.slice(0, 10)) log.append(el('p', '', esc(line)));
     r.append(log);
+    if (this.source) return; // (co-op: no abandoning the war from the lobby)
     const end = el('div', 'deploy-row');
     end.append(btn('Abandon campaign', 'mp-btn', () => {
       if (!this.confirming) { this.confirming = true; end.firstChild.textContent = 'Click again to abandon'; return; }
@@ -129,7 +154,7 @@ export class CampaignPanel {
   mapView(c) {
     const me = c.side;
     const sel = c.battalions.find((b) => b.id === this.sel);
-    const canOrder = !c.over && !c.battles.length && sel;
+    const canOrder = !c.over && !c.battles.length && sel && this.commands(sel);
     const reach = new Set(canOrder ? [sel.at, ...neighbours(sel.at)] : []);
     const battleAt = new Set(c.battles.map((b) => b.sector));
     let svg = ROADS.map(([a, b]) => `<line class="cp-road" x1="${SECTORS[a].x}" y1="${SECTORS[a].y}" x2="${SECTORS[b].x}" y2="${SECTORS[b].y}"/>`).join('');
@@ -170,7 +195,7 @@ export class CampaignPanel {
       const id = g.dataset.id;
       const bn = ev.target.closest('.cp-bn')?.dataset.bn;
       if (bn && bn !== this.sel) { this.sel = bn; return this.render(); }
-      if (canOrder && reach.has(id)) { orderMove(c, sel.id, id === sel.at ? null : id); return this.render(); }
+      if (canOrder && reach.has(id)) return this.act({ a: 'order', bid: sel.id, to: id === sel.at ? null : id });
       const here = c.battalions.find((b) => b.at === id);
       if (here) { this.sel = here.id; this.render(); }
     }));
@@ -187,10 +212,11 @@ export class CampaignPanel {
       const full = b.stacks.reduce((a, u) => a + UNIT_TYPES[u.type].formation.count, 0);
       const cut = cutLevel(c, b);
       const what = (cut ? `<em>cut off${cut > 1 ? ` · ${cut} turns` : ''}</em> · ` : '') + (!b.order ? `holds ${esc(SECTORS[b.at].name)}` : c.owner[b.order] === c.side ? `moves to ${esc(SECTORS[b.order].name)}` : `<b>attacks ${esc(SECTORS[b.order].name)}</b>`);
-      const row = btn(`<span class="cp-num">${i + 1}</span><span class="cp-bname">${esc(b.name)}<small>${what}</small></span><span class="cp-men">${men} / ${full}</span>`, `cp-order-row${b.id === this.sel ? ' on' : ''}`, () => { this.sel = b.id; this.render(); });
+      const whose = this.source ? ` · ${this.commands(b) ? 'yours' : this.guest ? 'the host’s' : 'your friend’s'}` : '';
+      const row = btn(`<span class="cp-num">${i + 1}</span><span class="cp-bname">${esc(b.name)}<small>${what}${whose}</small></span><span class="cp-men">${men} / ${full}</span>`, `cp-order-row${b.id === this.sel ? ' on' : ''}`, () => { this.sel = b.id; this.render(); });
       list.append(row);
     });
-    card.append(list, btn('End turn', 'deploy', () => { endTurn(c); this.render(); }));
+    card.append(list, this.guest ? el('p', 'cp-hint', 'Order your battalions; the host ends the turn.') : btn('End turn', 'deploy', () => this.act({ a: 'endTurn' })));
     return card;
   }
 
@@ -218,9 +244,14 @@ export class CampaignPanel {
     box.append(dl);
     if (!scouted) box.append(el('p', 'cp-hint', 'Scouts or a recon vehicle in the battalion would give us numbers.'));
     card.append(box);
+    if (this.source) { // co-op: fought together from the lobby
+      if (!this.guest) card.append(btn('Resolve by the numbers', 'mp-btn', () => this.act({ a: 'resolve' })));
+      card.append(el('p', 'cp-hint', this.guest ? 'Press Ready: the host starts the battle, and you fight it together.' : 'Start the battle below to fight it together — or resolve it by the numbers (our strength counts 15 % less).'));
+      return card;
+    }
     const row = el('div', 'cp-actions');
     row.append(btn('Fight', 'deploy', () => this.onBattle(battleChoice(c))));
-    row.append(btn('Resolve by the numbers', 'mp-btn', () => { autoResolve(c); this.render(); }));
+    row.append(btn('Resolve by the numbers', 'mp-btn', () => this.act({ a: 'resolve' })));
     card.append(row, el('p', 'cp-hint', 'By the numbers, our strength counts 15 % less than if you fight it yourself.'));
     return card;
   }
@@ -228,7 +259,7 @@ export class CampaignPanel {
   overCard(c) {
     const card = el('div', 'cp-battle');
     card.append(el('h3', '', c.over.won ? 'Victory' : 'Defeat'), el('p', '', esc(c.over.text)));
-    card.append(btn('New campaign', 'deploy', () => { clearCampaign(); this.render(); }));
+    if (!this.source) card.append(btn('New campaign', 'deploy', () => { clearCampaign(); this.render(); }));
     return card;
   }
 
@@ -252,6 +283,11 @@ export class CampaignPanel {
     const b = c.battalions.find((x) => x.id === this.sel);
     if (!b) return box;
     box.append(el('h3', 'menu-sub', `${esc(b.name)} · ${esc(SECTORS[b.at].name)} · ${b.stacks.length} / ${MAX_STACKS} stacks · strength ${Math.round(power(b))}`));
+    const own = this.commands(b);
+    if (this.source && !this.guest) { // the host: who commands it
+      const theirs = friendOf(c).includes(b.id);
+      box.append(btn(theirs ? 'Your friend commands it — take it back' : 'Give it to your friend', 'mp-btn', () => { setFriend(c, b.id, !theirs); this.source.changed(); this.render(); }));
+    } else if (this.guest && !own) box.append(el('p', 'cp-hint', 'The host commands this battalion.'));
     const cut = cutLevel(c, b);
     if (cut) box.append(el('p', 'cp-event cut', esc(cut >= 3 ? 'Cut off for three turns or more: a man in ten lost every turn, and at half strength it surrenders unless it attacks. Break out, or open the road to it.'
       : cut === 2 ? 'Cut off for a second turn: no refills, no aircraft in its battles, and its men are shaken. Break out, or open the road to it.'
@@ -264,8 +300,8 @@ export class CampaignPanel {
       const hurt = u.wounded ? ` <i title="Wounded, back after the next battle or a quiet turn">+${u.wounded}</i>` : '';
       row.append(el('span', 'cp-name', `${rank}${esc(u.name)}`), el('span', 'cp-men', `${u.men} / ${T.formation.count}${hurt}`));
       const cost = refillCost(c, u);
-      const r = btn(cost ? `Refill ${cost}` : 'Full', 'mp-btn', () => { if (refill(c, b.id, u.cid)) this.render(); });
-      r.disabled = !cost || cost > c.points || !!cut;
+      const r = btn(cost ? `Refill ${cost}` : 'Full', 'mp-btn', () => this.act({ a: 'refill', bid: b.id, cid: u.cid }));
+      r.disabled = !cost || cost > c.points || !!cut || !own;
       row.append(r);
       list.append(row);
     }
@@ -274,8 +310,8 @@ export class CampaignPanel {
     const rec = el('div', 'cp-recruit');
     for (const T of recruitable(c)) {
       const cost = unitCost(T, c.armies[c.side]);
-      const r = btn(`${esc(T.variants?.[c.armies[c.side]]?.name ?? T.shortName)}<small>${cost}</small>`, 'mp-btn', () => { if (recruit(c, b.id, T.id)) this.render(); });
-      r.disabled = cost > c.points || b.stacks.length >= MAX_STACKS || !!cut;
+      const r = btn(`${esc(T.variants?.[c.armies[c.side]]?.name ?? T.shortName)}<small>${cost}</small>`, 'mp-btn', () => this.act({ a: 'recruit', bid: b.id, type: T.id }));
+      r.disabled = cost > c.points || b.stacks.length >= MAX_STACKS || !!cut || !own;
       rec.append(r);
     }
     box.append(rec);

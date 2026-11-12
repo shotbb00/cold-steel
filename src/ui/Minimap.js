@@ -298,7 +298,7 @@ export class Minimap {
 
     // stacks
     for (const s of game.world.stacks) {
-      if (!s.alive) continue;
+      if (!s.alive || s.stats.loose || s.stats.dismounted) continue; // (1806: loose horses and men on foot aren't units — not on the map)
       const mine = s.faction === game.playerFaction;
       if (!mine && s.visible === false) continue;
       const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
@@ -323,7 +323,7 @@ export class Minimap {
     const t = game.world.time;
     c.strokeStyle = 'rgba(255,120,60,0.85)';
     for (const s of game.world.stacks) {
-      if (!s.alive || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
+      if (!s.alive || s.stats.loose || s.stats.dismounted || !(t - (s.firedAt ?? -99) < 4) || (s.faction !== game.playerFaction && s.visible === false)) continue;
       // yours: only while it fights something you can see (not blind at a sonar contact, a sound, a flash)
       if (s.faction === game.playerFaction && !s.units.some((u) => u.alive && u.target?.alive !== false && u.target?.visible === true)) continue;
       const [mx, my] = this.toMap(s.centroid.x, s.centroid.z);
