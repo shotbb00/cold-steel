@@ -24,7 +24,7 @@ const CHAFF = { count: 6, cooldown: 10 };
 const ship = (o) => ({
   category: 'naval', kind: 'vehicle', role: 'fighter', coastal: true,
   formation: { count: 1, columns: 1, spacing: 0 },
-  weaponSound: 'naval', engine: 'engine.diesel', tracks: 'wash',
+  weaponSound: 'naval', engine: 'engine.ship', tracks: 'wash', // (audio: the screws' beat, the bow wave — as the other navies')
   ...o,
   stats: { ...NAVAL, weapon: 'cannon', leash: 60, spread: 0.012, boltSpeed: 900, boltSize: 1.2, splash: 2.5, pierce: 0.25, fireCooldown: 1.2, ...o.stats },
 });
@@ -102,7 +102,7 @@ export const polnocny = craftType({
 });
 
 export const aist = craftType({
-  id: 'aist', name: 'Hovercraft (Aist)', shortName: 'Aist',
+  id: 'aist', name: 'Hovercraft (Aist)', shortName: 'Aist', engine: 'engine.hover', // (audio/SoundBank.js: the propellers' thrum and the turbines' whine — heard from far out)
   names: { pact: ['MDK-89', 'MDK-102', 'MDK-113', 'MDK-118', 'MDK-121', 'MDK-123'], nato: ['H-1'] },
   hull: { length: 47, beam: 17.8 },
   stats: { hover: true, draft: -1, hp: 1100, armor: 0.02, speed: 16, accel: 0.5, turnRate: 0.22, turretRate: 1, radius: 7, height: 10, sight: 1400, ...AA(500, 0.15, 0.03), damage: 40 },

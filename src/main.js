@@ -31,6 +31,7 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
   window.game = game; // handy for poking at the simulation from the dev console
 }
 
+window.startBattle = start; // (the dev console and the multiplayer tests: a battle with a Link of your own)
 const params = new URLSearchParams(location.search);
 const replay = takeReplay();
 setEpoch(params.get('epoch') ?? replay?.epoch ?? settings.get('epoch')); // the war the menu and the battle are set in (data/epoch.js)
