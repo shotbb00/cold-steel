@@ -289,6 +289,7 @@ export class GameEngine {
         const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && u.models?.[army]);
         try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
       }
+      this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)
       this.babylon.render(0);
       this.babylon.scene.whenReadyAsync().then(begin, begin);
     } else begin();

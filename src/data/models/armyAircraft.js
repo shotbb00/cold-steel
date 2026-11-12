@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { P, merge, pair, limb } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
-import { body, surface, fin, blades, rocketPod } from './airKit.js';
+import { body, surface, fin, blades, rocketPod, missile } from './airKit.js';
 
 const BW = 0x3b4a2c;        // the Heeresflieger in the army's three-tone (paint does the rest)
 const LW = 0x4e5440;        // Luftwaffe Norm 72: yellow-olive and basalt grey
@@ -238,4 +238,29 @@ export function buildNvaSu22(mats) {
   add(SU22.body, mats.body);
   add(SU22.marks, mats.glow, false);
   return { root, gun: point(root, 0.62, 1.65, 3.15), pods: [point(root, -1.5, 1.12, 0.6), point(root, 1.5, 1.12, 0.6)], jet: true };
+}
+
+let TORNADO = null;
+/** Tornado IDS, Marinefliegergeschwader 1 and 2: the long nose, the boxy fuselage with its side intakes, the tandem
+ *  canopy, the wings swept right back for the low run, the tall fin — and two Kormoran under the belly. */
+export function buildBwTornado(mats) {
+  const G = 0x5d6266, G_DK = 0x474c50; // (the Marineflieger's grey)
+  TORNADO ??= {
+    body: merge([
+      body([[8.6, 1.75, 0.08, 0.08, 2], [8.0, 1.75, 0.42, 0.45, 2], [6.2, 1.8, 0.62, 0.68, 2.1], [4.0, 1.85, 0.78, 0.8, 2.3], [1.0, 1.85, 1.35, 0.85, 3], [-3.0, 1.85, 1.3, 0.85, 3], [-6.5, 1.9, 1.1, 0.75, 2.6], [-8.0, 1.9, 0.95, 0.6, 2.4], [-8.3, 1.9, 0.9, 0.55]], { color: G, ...C }),
+      ...pair((s) => body([[3.3, 1.62, 0.32, 0.55, 4], [0.5, 1.62, 0.4, 0.62, 4]], { x: s * 1.05, color: G, ...C })), // the side intakes…
+      ...pair((s) => P.box(0.05, 0.95, 0.55, { x: s * 1.08, y: 1.62, z: 3.3, color: HOLE })),                            // …their mouths
+      body([[6.3, 2.35, 0.05, 0.05], [5.8, 2.62, 0.42, 0.32], [4.2, 2.72, 0.45, 0.36], [2.9, 2.6, 0.32, 0.2]], { color: GLASS }), // pilot and navigator in tandem
+      body([[3.0, 2.55, 0.36, 0.25], [-1.5, 2.65, 0.45, 0.3], [-5.5, 2.55, 0.35, 0.2]], { color: G, ...C }),            // the spine
+      ...pair((s) => P.cyl(0.42, 0.42, 0.05, { x: s * 0.45, y: 1.85, z: -8.33, rx: Math.PI / 2, color: HOLE }, 12)),     // the RB199s' nozzles
+      ...pair((s) => surface([[s * 1.2, 1.95, 0.4, 3.0, 0.18], [s * 2.2, 1.9, -1.2, 1.6, 0.12], [s * 4.3, 1.85, -4.2, 0.9, 0.06]], { color: G, ...C })), // glove and wing, swept to 67°
+      surface([[-3.3, 1.8, -7.6, 0.9, 0.05], [0, 1.85, -6.4, 2.2, 0.1], [3.3, 1.8, -7.6, 0.9, 0.05]], { color: G, ...C }),  // the tailerons
+      fin([[2.4, -4.6, 3.2, 0.14], [3.0, -5.3, 2.7, 0.12], [4.9, -7.2, 1.4, 0.07], [5.6, -7.9, 0.9, 0.05]], { color: G, ...C }),
+      ...pair((s) => missile(s * 0.55, 1.0, -2.6, 1.8, 0.17, 0xc8c8c0, G_DK)).flat(),                                      // two Kormoran
+      ...pair((s) => balken(s * 0.08, 4.3, -6.6, 0.8)).flat(),
+    ]),
+  };
+  const root = new THREE.Group();
+  meshAdder(root)(TORNADO.body, mats.body);
+  return { root, gun: point(root, 0.5, 1.7, 4.0), pods: [point(root, -0.55, 1.0, 1.8), point(root, 0.55, 1.0, 1.8)], jet: true };
 }

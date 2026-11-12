@@ -10,6 +10,7 @@ import { FrontlineDirector } from './FrontlineDirector.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { enemyOf } from '../data/factions.js';
+import { KINDS } from '../systems/AirStrike.js';
 
 const ORDER = ['rifles', 'rifles', 'engineers', 'ddTank', 'rifles', 'mgTeam', 'tank', 'rifles', 'engineers', 'mortar', 'rifles', 'tank', 'atTeam'];
 const FOCUS_HOLD = 150;     // s it keeps landing in one sector before it looks again
@@ -28,6 +29,7 @@ export class LandingDirector extends FrontlineDirector {
 
   update(dt) {
     const due = this.timer - dt <= 0;
+    if (due && !this.lands) this.strikeShips(); // (before the buying spends it all: the landing ships are the defence's best target)
     super.update(dt);
     if (!due) return;
     if (this.lands) { this.pickFocus(); this.ships(); this.engineers(); this.stayInshore(); } else this.reserves();
@@ -143,6 +145,14 @@ export class LandingDirector extends FrontlineDirector {
   }
 
   /** Defence: a sector lost — reserves into the village up its draw, before the landing gets there. */
+  /** The defence's anti-ship strike (a coastal map's, AirStrike KINDS.coastStrike): whenever it's ready and affordable, at the landing's biggest ship. */
+  strikeShips() {
+    const air = this.game.air;
+    if (!air || KINDS.coastStrike?.off || !air.ready(this.faction, 'coastStrike') || !this.supportOver(KINDS.coastStrike.cost + 40)) return;
+    const t = this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => s.alive && s.stats.naval).sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0))[0];
+    if (t) air.call(this.faction, t.centroid.x, t.centroid.z, null, 'coastStrike');
+  }
+
   reserves() {
     for (const id of this.state.taken ?? []) {
       const to = this.game.map.points.find((q) => q.id === id)?.opens;
