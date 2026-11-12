@@ -32,7 +32,7 @@ const cyl = (rt, rb, h, o, n = 10) => P.cyl(rt, rb, h, { surf: 'plate', ...o }, 
  * the bottom rising and the sheer lifting toward the stem, which rakes forward. `blunt`: a landing ship's
  * bow, wide enough at the stem for its bow doors and ramp. The boot topping at the waterline.
  */
-function hull(L, B, fb, draft, c = GREY, blunt = false) {
+function hull(L, B, fb, draft, c = GREY, blunt = false, raise = 0) { // (`raise`: a forecastle that much higher, lofted in with the bow)
   const bowL = L * 0.22, z0 = L / 2 - bowL, h = B / 2;
   const stem = blunt ? h * 0.55 : 0.18;
   const st = (z, w, bot, sheer, flare = 1) => [z, [[0, bot], [w * 0.75, bot], [w * flare * 0.96, bot + (fb - bot) * 0.35], [w * flare, sheer - 0.05], [w * flare - 0.06, sheer], [0, sheer]]];
@@ -40,14 +40,14 @@ function hull(L, B, fb, draft, c = GREY, blunt = false) {
     box(B, fb + draft, L - bowL, { y: (fb - draft) / 2, z: -bowL / 2, color: c }),
     stationHull([
       st(z0 - 0.05, h, -draft, fb),
-      st(z0 + bowL * 0.35, h * (blunt ? 0.95 : 0.88), -draft * 0.95, fb + 0.25),
-      st(z0 + bowL * 0.7, h * (blunt ? 0.82 : 0.6), -draft * 0.8, fb + 0.55, 1.05),
-      st(L / 2 - 0.4, stem, -draft * (blunt ? 0.6 : 0.4), fb + 0.85, 1.1),
-      st(L / 2, Math.max(0.06, stem * 0.6), -draft * (blunt ? 0.5 : 0.2), fb + 0.9, 1.1),
+      st(z0 + bowL * 0.35, h * (blunt ? 0.95 : 0.88), -draft * 0.95, fb + 0.25 + raise),
+      st(z0 + bowL * 0.7, h * (blunt ? 0.82 : 0.6), -draft * 0.8, fb + 0.55 + raise, 1.05),
+      st(L / 2 - 0.4, stem, -draft * (blunt ? 0.6 : 0.4), fb + 0.85 + raise, 1.1),
+      st(L / 2, Math.max(0.06, stem * 0.6), -draft * (blunt ? 0.5 : 0.2), fb + 0.9 + raise, 1.1),
     ], { color: c, surf: 'plate' }),
     // the forecastle's deck over it and the jackstaff at the stem
-    box(h * (blunt ? 1.5 : 1.2), 0.08, bowL * 0.7, { y: fb + 0.35, z: z0 + bowL * 0.4, color: DECK, surf: 'deck' }),
-    cyl(0.05, 0.06, 2.2, { y: fb + 2.0, z: L / 2 - 0.5, color: DARK }, 5),
+    box(h * (blunt ? 1.5 : 1.2), 0.08, bowL * 0.5, { y: fb + 0.35 + raise, z: z0 + bowL * 0.55, color: DECK, surf: 'deck' }),
+    cyl(0.05, 0.06, 2.2, { y: fb + 2.0 + raise, z: L / 2 - 0.5, color: DARK }, 5),
     box(B * 1.01, 0.4, L - bowL, { y: -0.1, z: -bowL / 2, color: RED }),
     box(B - 0.4, 0.1, L - bowL - 1, { y: fb + 0.05, z: -bowL / 2, color: DECK, surf: 'deck' }),
     // the guard rails along the deck edges, their stanchions every three metres
@@ -90,16 +90,15 @@ const bridge = (y, z, w, h, d) => [
 export const buildFrosch = craft(() => {
   const L = 98, B = 11, fb = 4.5;
   const fixed = merge([
-    ...hull(L, B, fb, 2.8, GREY, true),
-    box(B * 0.66, 3, 14, { y: fb + 1.5, z: L / 2 - 14, color: GREY }),         // the high bow
+    ...hull(L, B, fb, 2.8, GREY, true, 3),                                      // (the high forecastle lofted with the bow)
     ...bridge(fb, -26, 9, 7, 16), ...bridge(fb + 7, -24, 6, 3, 8),
     cyl(1.2, 1.4, 5, { y: fb + 9, z: -32, color: DARK }),                        // the funnel
     ...mast(0, fb + 10, -20, 9),
-    ...twin(0, fb + 3, L / 2 - 22, 1.4, 3.6), ...twin(0, fb + 7, -36, 1.1, 2.6, true),
+    ...twin(0, fb + 3.3, L / 2 - 11, 1.4, 3.6), ...twin(0, fb + 7, -36, 1.1, 2.6, true),
     box(B - 1.2, 0.3, 40, { y: fb + 0.2, z: 8, color: DARK }),                  // the tank deck's hatch covers
   ]);
   const ramp = merge([box(B * 0.5, 4.5, 0.3, { y: 2.25, color: STEEL, surf: 'metal' })]);
-  return { fixed, ramp, hinge: [0.6, L / 2 - 1.5], gunAt: [fb + 4, L / 2 - 20] };
+  return { fixed, ramp, hinge: [0.6, L / 2 - 1.5], gunAt: [fb + 4.3, L / 2 - 9] };
 });
 
 /** Polnocny: 73 × 8.6 m. */

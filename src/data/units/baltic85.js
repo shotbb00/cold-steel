@@ -84,7 +84,7 @@ export const frosch = craftType({
   names: { pact: ['Hoyerswerda', 'Hagenow', 'Frankfurt (Oder)', 'Eisleben', 'Lübben', 'Schwerin', 'Neubrandenburg', 'Cottbus'], nato: ['L-1'] },
   hull: { length: 98, beam: 11 },
   stats: { draft: 2.2, hp: 3200, armor: 0.06, speed: 8, accel: 0.12, turnRate: 0.1, turretRate: 0.8, radius: 6, height: 14, sight: 1800, ...AA(600, 0.16, 0.04), defence: { point: OSA_SAM, chaff: CHAFF }, damage: 110 },
-  mounts: { pact: [gun([0, 7.5, 27], FWD, G57), gun([0, 11.5, -36], AFT, G30)], nato: [] },
+  mounts: { pact: [gun([0, 8.8, 38], FWD, G57), gun([0, 11.5, -36], AFT, G30)], nato: [] }, // (the 57s on the raised forecastle)
   camera: { distance: 90, height: 26, shoulder: 0 },
   models: { pact: buildFrosch, nato: buildFrosch },
   variants: { pact: { name: 'Frosch I tank landing ship', weapon: 'twin 57 mm, twin 30 mm', text: 'The Volksmarine\'s big landing ship: tanks and IFVs straight onto the beach through her bow doors.' }, nato: { name: 'Landing ship', weapon: '—', text: 'A landing ship.' } },
