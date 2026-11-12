@@ -37,6 +37,8 @@ const LINES = {
     rally: ['Ko mne!', 'Vperyod!', 'Za mnoy!'],
     bail: ['Pokinut\' mashinu!', 'Gorim! Vylezay!'],
     officer: ['Leytenanta ubili!', 'Komandir ranen!', 'Kto komanduyet?!'],
+    // the naval infantry off the boats (the coastal maps: Hohwacht) — 'Polundra!', their old battle cry
+    landing: ['Polundra!', 'Vperyod, vperyod!', 'Iz katera — begom!', 'S plyazha — vperyod!', 'Za mnoy!', 'Ne skuchivat\'sya!'],
     // the Soviet Navy's ships (1985 at sea)
     shipHit: ['Popadaniye!', 'Pozhar v nadstroyke!', 'Popadaniye v kormu!', 'Avariynaya partiya — v nos!'],
     shipBad: ["Postupayet voda!", "Kren na bort!", "Vse na bor'bu za zhivuchest'!", "Ne uderzhim!"],
@@ -45,6 +47,7 @@ const LINES = {
   },
   de: {
     boats: ['Landungsboote!', 'Feuer auf die Boote!', 'Sie kommen!', 'Alarm — Landung!', 'Da, am Strand!'], // (the coastal maps: the boats coming in)
+    landing: ['Rampe runter!', 'Los, los, los!', 'Raus aus dem Boot!', 'Runter vom Strand!', 'Mir nach!', 'Auseinander, nicht zusammenballen!'], // (the NVA's naval infantry off the boats, Hohwacht)
     contact: ['Feind!', 'Feindkontakt!', 'Feind voraus!', 'Achtung, Feind!', 'Bewegung, elf Uhr!'],
     cover: ['Deckung!', 'In Deckung!', 'Runter!', 'Hinter die Mauer!'],
     reload: ['Nachladen!', 'Magazin leer!', 'Feuerschutz!'],

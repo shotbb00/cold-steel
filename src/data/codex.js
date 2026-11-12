@@ -243,6 +243,37 @@ export const CODEX = {
     nato: 'The 101st Airborne (Air Assault) — "Screaming Eagles" — who made helicopter assault their whole doctrine.',
     pact: 'The VDV, the Soviet airborne troops in their blue berets and striped vests, an elite meant to drop on NATO\'s rear.',
   },
+  // the coastal maps (Hohwacht): the Pact's amphibians and Baltic ships, the coast's own strike
+  pt76: {
+    use: 'An amphibious light tank: bought for the landing, it swims in from a few hundred metres out and drives straight up the beach. Use its 76 mm on trenches, MG nests and houses while the infantry close in.',
+    strong: 'Getting armour ashore with the first waves, infantry in trenches', weak: 'Any real tank or AT missile: its armour stops machine-gun fire and little else; it can\'t fire while it swims',
+    counter: 'Shoot it in the water, where it can\'t answer; ashore, a Jaguar or a Panzerfaust ends it.',
+    pact: 'The PT-76 of 1951, still the naval infantry\'s and the NVA\'s swimming tank in 1985: water jets drive it at 10 km/h, the hull is a boat with tracks.',
+  },
+  parchim: {
+    use: 'A corvette for the landing: it goes in through the swept lane and lies off the beach, its 57 mm on what\'s spotted, its missiles and 30 mm against the jets.',
+    strong: 'Fire support close in, air defence over the boats', weak: 'Mines off the lanes, the coastal missiles, Tornados with Kormorans',
+    counter: 'Find it with the missile battery or a Tornado strike; it has to lie close in to help.',
+    pact: 'The Volksmarine\'s Parchim class (Project 133.1), built at Wolgast from 1981: small sub-hunters that would have covered the Baltic landing.',
+  },
+  osa: {
+    use: 'A fast missile boat, its two twin 30 mm mounts raking the beach and the dunes; its Styx missiles are for ships the defence doesn\'t have here.',
+    strong: 'Speed, quick fire on the shore', weak: 'Anything that hits it: it has no armour at all',
+    counter: 'Any hit; it\'s fragile.',
+    pact: 'The Osa I (Project 205): the boat whose Styx missiles sank the Israeli destroyer Eilat in 1967 — the first ship ever sunk by a missile from a ship.',
+  },
+  natya: {
+    use: 'A minesweeper: wherever it steams the moored mines are cut — widen a lane, or open a new one off the sector you need.',
+    strong: 'Clearing the way for the bigger ships', weak: 'Slow, lightly armed; it has to go where the mines are',
+    counter: 'Shoot it while it sweeps: the lane stays narrow.',
+    pact: 'The Natya class (Project 266M): steel-hulled ocean sweepers, the Soviet Navy\'s and its allies\' mine hunters through the Cold War.',
+  },
+  'air:coastStrike': {
+    use: 'The coast\'s defence only: two Tornados fly in from the shore and fire four sea-skimming missiles at the landing ship nearest the spot, then turn for home.',
+    strong: 'The landing ships and their escorts, from beyond their guns', weak: 'Ship air defence and chaff; it can\'t hit anything on land',
+    counter: 'Keep the escorts\' air defence close to the landing ships, and their radars on.',
+    nato: 'Marinefliegergeschwader 1 and 2 at Jagel and Eggebek flew the Tornado IDS with the Kormoran from 1982: their war was the Baltic, against exactly this landing.',
+  },
   'air:heli': {
     use: 'An attack helicopter called in ({heli}) along a line you set: rockets and the chin gun on everything it sees, then it flies home.',
     strong: 'Vehicles and infantry in the open, fast reaction',
