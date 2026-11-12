@@ -144,13 +144,29 @@ export default {
   landing: {
     // the fleet's boats (systems/Landing.js): the foot in flatboats, the guns and horses in the launches
     craft: { infantry: 'flatboat', vehicle: 'horseBoat' },
-    launchZ: 560, // (the transports anchored a mile out: here the boats are put in the water half a kilometre off)
+    launchZ: 700, // (the transports anchored a mile out: here the boats are put in the water half a kilometre off)
     // the dawn signal: the first boats lie in line until the flagship's gun, then all pull for the shore together
     signal: { t: 25, say: 'The signal gun from the flagship — every boat pulls for the shore', sayOther: 'A gun from the British flagship: the boats are coming in, all together' },
     // what the landing may call in at sea: frigates and brig-sloops inshore to cover the boats with their broadsides
     navy: ['frigate', 'destroyer'],
-    // the French at dawn (step 4 adds the castle's guns, the batteries and the earthworks): Friant's foot on the sand hills, guns on the great hill
-    defence: ['rifles', 'mgTeam', 'rifles', 'artillery', 'mgTeam', 'rifles', 'atTeam', 'artillery', 'rifles', 'mgTeam', 'mortar', 'rifles'],
+    // the coast's guns: the castle's battery on the point, two earthwork batteries along the sand hills, all laid on the bay
+    // with their furnaces (heated shot); and Friant's field guns on the crest of the great sand hill (canister into the boats)
+    forts: [
+      { unit: 'shoreBattery', ...W(-395, shoreZ(-395) - 16), facing: Math.PI },
+      { unit: 'shoreBattery', ...W(170, shoreZ(170) - 45), facing: Math.PI },
+      { unit: 'shoreBattery', ...W(450, shoreZ(450) - 40), facing: Math.PI },
+      { unit: 'artillery', ...W(10, 92), facing: Math.PI }, { unit: 'artillery', ...W(75, 88), facing: Math.PI },
+    ],
+    // the entrenchments on the sand hills over each beach, an abatis along the back of the sand in front of them (in 1806 the wire is drawn as felled trees)
+    works: [
+      ...SECTORS.flatMap((s) => [-45, 0, 45].map((dx) => ({ kind: 'trench', ...W(s.x + dx, shoreZ(s.x + dx) - 58), yaw: 0 }))),
+      ...SECTORS.flatMap((s) => [-50, -38, -26, 26, 38, 50, -14, 14].map((dx) => ({ kind: 'wire', ...W(s.x + dx, shoreZ(s.x + dx) - 34), yaw: 0 }))),
+    ],
+    // Friant's foot at dawn: in the entrenchments over each beach, in Mandara and the dunes behind
+    defence: ['rifles', 'mgTeam', 'rifles', 'rifles', 'mgTeam', 'atTeam', 'rifles', 'mgTeam', 'rifles', 'mortar', 'reconVehicle'],
+    names: { reconVehicle: 'Hussards de piquet' },
+    // the cavalry counter-charge: the dragoons and hussars from the Alexandria road, down onto the beach while the boats are still coming in
+    counter: { t: 120, units: ['ifv', 'reconVehicle', 'ifv', 'tank'], say: 'The dragoons are going in — charge them on the beach before they form!', sayOther: 'French cavalry coming down the sand hills — form square!' },
     hold: [...SECTORS.flatMap((s) => [-30, 30].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - 60))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
     // the British AI (ai/LandingDirector.js): what it buys next, a frigate inshore off the focus sector
     ai: { order: ['rifles', 'mgTeam', 'marines', 'rifles', 'atTeam', 'artillery', 'rifles', 'sailors', 'sniper', 'rifles', 'reconVehicle', 'atTeam', 'rifles'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 300 },

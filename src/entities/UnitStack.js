@@ -1784,6 +1784,7 @@ export class UnitStack {
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
+      if (s.seaward && e.stack.stats.naval) score -= 400; // (a shore battery: laid on the sea — the boats and the ships before anyone on the sand)
       if (e.stack.stats.airRadar) score -= 25;     // the radar first: it is the enemy's air defence's eyes
       if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches
       if (s.marksman) {
@@ -2456,6 +2457,8 @@ export class UnitStack {
    */
   damageUnit(u, amount, source, pierce = 0, dir = null, vsArmor = 1) {
     if (!u.alive) return;
+    const hot = (source?.stats ?? source?.stack?.stats)?.hotShot; // (1801: a shore battery's red-hot shot in a ship's timbers)
+    if (hot && this.stats.sail && Math.random() < hot) { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.3); if (!u.hotTold) { u.hotTold = true; this.services.tell?.(this.faction, `${this.name}: red-hot shot in her timbers — fire aboard!`); } }
     if (this.markedUntil > this.world.time) amount *= this.markDamage; // spotted by the US Army's Cavalry screen
     if (u.invulnerable) {
       // a fortification that can't be attacked yet (modes/lanes.js): the round just spalls off

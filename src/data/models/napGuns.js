@@ -141,3 +141,54 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
     },
   };
 }
+
+/**
+ * A shore gun (the coastal battle, Aboukir 1801: data/units1806 shoreBattery): a 24-pounder on its garrison carriage
+ * behind a sand parapet with an embrasure, laid on the sea; beside it the furnace where the shot is heated red
+ * (the glow at its mouth) and a pile of cold shot. Fixed: the barrel traverses within the embrasure.
+ */
+export function buildShoreGun() {
+  const SAND = 0xc8ab78, BRICK = 0x8a4a32;
+  const base = merge([
+    // the parapet: a long bank of sand in front, cut by the embrasure, the cheeks of the cut faced with fascines
+    ...[-1, 1].map((s) => loft([[s * 3.2, 0, 2.8, 2.4, 0.05, 2], [s * 3.2, 1.2, 2.6, 2.2, 1.4, 2.2], [s * 3.2, 1.6, 2.4, 1.9, 0.9, 2]], { color: SAND }, 10)),
+    loft([[0, 0, 3.4, 1.2, 0.05, 2], [0, 0.6, 3.2, 1.1, 1.0, 2.2]], { color: SAND }, 8),                // the sole of the embrasure, lower
+    ...[-1, 1].map((s) => P.box(0.25, 1.5, 2.4, { x: s * 1.0, y: 0.8, z: 2.6, color: 0x6a5a3a })),       // the fascines
+    P.box(4.6, 0.12, 4.4, { y: 0.06, color: 0x8a7458, surf: 'deck' }),                                    // the platform
+    // the furnace for the heated shot: a squat brick oven, its mouth glowing
+    P.box(1.6, 1.3, 1.6, { x: 4.4, y: 0.65, z: -1.6, color: BRICK }),
+    P.cyl(0.2, 0.25, 1.2, { x: 4.4, y: 1.8, z: -1.9, color: 0x5a3a2a }, 8),
+    P.box(0.6, 0.5, 0.05, { x: 4.4, y: 0.5, z: -0.79, color: 0xff7a2a }),
+    // the shot, piled
+    ...[[0, 0], [0.32, 0], [0.16, 0.28], [0.16, 0.1]].map(([x, z], i) => P.sphere(0.15, { x: -3.6 + x, y: 0.15 + (i === 3 ? 0.24 : 0), z: -1.2 + z, color: IRON }, 8, 6)),
+  ]);
+  const gunGeo = merge([
+    P.box(0.9, 0.5, 1.8, { y: 0.4, z: -0.1, color: 0x5a4a34 }),                                              // the garrison carriage (trucks, not wheels)
+    ...[-1, 1].flatMap((s) => [-0.6, 0.5].map((z) => P.cyl(0.22, 0.22, 0.12, { x: s * 0.5, y: 0.22, z, rz: Math.PI / 2, color: 0x4a3a2a }, 10))),
+    P.cyl(0.17, 0.27, 3.0, { y: 0.85, z: 0.6, rx: Math.PI / 2, color: IRON }, 12),                          // the long iron 24-pounder
+    P.cyl(0.2, 0.2, 0.15, { y: 0.85, z: 2.1, rx: Math.PI / 2, color: IRON }, 12),
+    P.sphere(0.16, { y: 0.85, z: -0.95, color: IRON }, 8, 6),                                                // the cascabel
+  ]);
+  return (mats) => {
+    const mat = mats?.body ?? material();
+    const root = new THREE.Group();
+    root.add(mesh(base, mat));
+    const gun = new THREE.Group();
+    gun.position.set(0, 0.12, 0.6);
+    gun.add(mesh(gunGeo, mat));
+    root.add(gun);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0.85, 2.2);
+    gun.add(muzzle);
+    return {
+      root,
+      muzzle,
+      animate(u) {
+        const rel = Math.atan2(Math.sin((u.turretYaw ?? u.yaw) - u.yaw), Math.cos((u.turretYaw ?? u.yaw) - u.yaw));
+        gun.rotation.y = Math.max(-0.7, Math.min(0.7, rel));
+        gun.position.z = 0.6 - (u.recoil ?? 0) * 0.8;
+      },
+      die(time) { gun.rotation.z = Math.min(0.35, time * 0.5); gun.rotation.x = Math.min(0.25, time * 0.4); },
+    };
+  };
+}

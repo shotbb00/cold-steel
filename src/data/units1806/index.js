@@ -10,7 +10,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildNapSoldier } from '../models/napSoldier.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
-import { buildFieldGun } from '../models/napGuns.js';
+import { buildFieldGun, buildShoreGun } from '../models/napGuns.js';
 import { buildWagon } from '../models/napWagons.js';
 import { SHIPS_1806 } from './ships.js';
 
@@ -355,10 +355,30 @@ const sailors = {
   variants: { pact: { name: 'Seamen', weapon: 'Cutlass, pike, musket', text: 'A naval brigade off the ships: they haul the guns through the sand, throw up breastworks and clear the abatis (they work as pioneers) — and with cutlass and pike they are terrible at close quarters.' } },
 };
 
+// the coast's guns (the coastal battle: placed by the map's `landing.forts`, never bought): a battery of two 24-pounders
+// behind a sand parapet, or on the castle's walls. Laid on the sea (`seaward`: the boats and the ships first), and their
+// shot comes red-hot from the furnace (`hotShot`: a hit may set a ship's timbers alight — sailDamage/UnitStack blaze).
+const shoreBattery = {
+  id: 'shoreBattery', name: 'Shore Battery', shortName: 'Shore guns', kind: 'vehicle', category: 'fire', hidden: true, cost: 600,
+  formation: { count: 2, columns: 2, spacing: 12 },
+  weaponSound: 'arty',
+  stats: {
+    structure: true, concealed: true, stealth: 0.7, speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.4, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand',
+    hp: 1600, armor: 0.5, radius: 3, height: 2, aimHeight: 1, sight: 900, seaward: true, hotShot: 0.35,
+    range: 400, weapon: 'cannon', turretRate: 0.3, fireCooldown: 1, magSize: 1, reloadTime: 26, damage: 320, splash: 2.5, pierce: 0.5,
+    boltSpeed: 260, boltSize: 1.3, tracer: 1, spread: 0.03, antiArmor: true, vsArmor: 1, gun: { through: 3, bounce: 2 },
+  },
+  models: { nato: buildShoreGun(), pact: buildShoreGun() },
+  variants: {
+    nato: { name: 'Batterie de côte', weapon: '2 × 24-pounders, heated shot', text: 'Two heavy guns behind a sand parapet, laid on the sea, the furnace beside them: red-hot shot into the boats as they come in, and into any frigate that stands in to cover them — her timbers catch.' },
+    pact: { name: 'Shore battery', weapon: '2 × 24-pounders', text: 'Heavy guns behind a parapet, laid on the sea.' },
+  },
+};
+
 export const TYPES_1806 = {
   ...SHIPS_1806,   // the sea maps' sailing ships (./ships.js)
   rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
-  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer, marines, sailors,
+  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer, marines, sailors, shoreBattery,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)
 };
 

@@ -40,6 +40,7 @@ import { P, merge } from '../data/units/geometry.js';
 import { smoothstep } from '../core/math.js';
 import { enemyOf } from '../data/factions.js';
 import { doctrine } from '../data/doctrine.js';
+import { epoch } from '../data/epoch.js';
 
 export const STRUCTURES = {
   sandbags: { id: 'sandbags', name: 'Sandbags', cost: 15, work: 60, length: 4.5, width: 0.8 },
@@ -266,6 +267,17 @@ export class Construction {
       for (const sx of [-1, 1]) {
         const [x, z] = this.local(site, sx * (halfX + 1.1), 0.8);
         parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 0.6, sy: REVETMENT.berm * 0.7, sz: 2.6, color: EARTH }, 10, 6));
+      }
+    } else if (site.kind === 'wire' && epoch() === '1806') { // (no wire before 1870: an abatis — felled trees laid with their sharpened branches toward the enemy)
+      const L = site.def.length, r = mulberry(site.id * 977 + 13);
+      for (let i = 0; i < 4; i++) {
+        const [x, z] = this.local(site, -L / 2 + (i + 0.5) * (L / 4), (r() - 0.5) * 0.4);
+        const y = terrain.heightAt(x, z), yaw = site.yaw + (r() - 0.5) * 0.5;
+        parts.push(P.cyl(0.14, 0.2, 3, { x, y: y + 0.25, z, ry: yaw, rx: Math.PI / 2, color: LOG }, 6)); // the trunk, its crown toward the front
+        for (let k = 0; k < 5; k++) {
+          const a = (k - 2) * 0.5 + (r() - 0.5) * 0.3;
+          parts.push(P.cyl(0.03, 0.06, 1.6, { x: x + Math.sin(yaw + a) * 1.2, y: y + 0.4 + r() * 0.3, z: z + Math.cos(yaw + a) * 1.2, ry: yaw + a, rx: Math.PI / 2 - 0.25, color: 0x5a4a32 }, 4)); // the branches, sharpened
+        }
       }
     } else if (site.kind === 'wire') {
       const L = site.def.length;

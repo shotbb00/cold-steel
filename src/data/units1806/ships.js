@@ -150,7 +150,7 @@ const boat = (o) => ({ ...lcvp, engine: 'engine.sail', ...o, stats: { ...lcvp.st
 export const flatboat = boat({
   id: 'flatboat', name: 'Flatboat', shortName: 'Flatboat',
   hull: { length: 12, beam: 3 },
-  stats: { draft: 0.6, hp: 200, armor: 0, speed: 5.5, accel: 0.6, turnRate: 0.5, radius: 2.2, height: 1.6, eyeHeight: 2, stealth: 0.5 },
+  stats: { draft: 0.6, hp: 450, armor: 0, speed: 6.5, accel: 0.6, turnRate: 0.5, radius: 2.2, height: 1.6, eyeHeight: 2, stealth: 0.5 },
   camera: { distance: 26, height: 9, shoulder: 0 },
   models: { nato: buildFlatboat, pact: buildFlatboat },
   variants: {
