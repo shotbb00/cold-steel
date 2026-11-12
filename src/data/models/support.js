@@ -978,6 +978,15 @@ export const buildNatoFAAR = vehicle(() => ({
     P.box(0.5, 0.8, 0.03, { x: 0.86, y: 1.6, z: -1.0, color: NATO_DK }),                            // its door
     P.box(0.5, 0.3, 0.5, { x: -0.6, y: 2.25, z: -0.6, color: NATO_DK }),                            // generator
     P.cyl(0.4, 0.4, 1.4, { x: -0.65, y: 2.25, z: -1.6, rx: Math.PI / 2, color: 0x56583e }, 10),     // cable reels
+    // the Gama Goat's headlights and tow eye, the mirrors, the jerrycans and spare tyre, the shelter's ladder and lights
+    ...pair((s) => P.cyl(0.08, 0.08, 0.08, { x: s * 0.7, y: 1.05, z: 2.32, rx: Math.PI / 2, color: STEEL }, 10)),
+    ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.7, y: 1.05, z: 2.37, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
+    P.box(0.14, 0.14, 0.18, { y: 0.7, z: 2.38, color: STEEL }),
+    ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.08, y: 1.75, z: 1.8, color: STEEL })),
+    ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 0.5, y: 0.95, z: -2.48, color: 0x4a4e36 })),
+    P.cyl(0.36, 0.36, 0.22, { x: 0.6, y: 1.55, z: -2.45, rx: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14),
+    ...[0, 1, 2].map((k) => P.box(0.4, 0.04, 0.05, { x: -0.5, y: 0.9 + k * 0.25, z: -2.3, color: STEEL })),
+    ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 0.8, y: 1.0, z: -2.42, color: 0x6a2a20 })),
   ]), 1.0, 0.3),
   deploy: { geo: merge([P.cyl(0.08, 0.1, 1.2, { y: 0.6, color: STEEL }, 8)]), at: [0, 2.1, -1.9] }, // the mast…
   spin: { geo: faarAntenna(NATO, NATO_DK), at: [0, 1.15, 0], rate: 1.6, onDeploy: true }, // …and the antenna turning on it
@@ -1320,6 +1329,19 @@ export const buildNatoTACJAM = vehicle(() => {
       P.box(0.7, 0.4, 0.5, { x: -0.7, y: 3.05, z: 0.2, color: NATO_DK }),                             // air conditioner
       ...pair((s) => P.cyl(0.006, 0.006, 2.6, { x: s * 1.1, y: 4.1, z: -2.0, color: STEEL }, 4)),     // whip antennas
       ...pair((s) => P.box(0.06, 0.06, 0.4, { x: s * 1.3, y: 1.12, z: 2.3, color: STEEL })),
+      // the cab: its doors, side windows and mirrors, headlights, tow hooks
+      ...pair((s) => P.box(0.03, 0.75, 0.8, { x: s * 1.26, y: 1.68, z: 1.85, color: NATO_DK })),
+      ...pair((s) => P.box(0.03, 0.3, 0.45, { x: s * 1.27, y: 1.85, z: 1.85, color: GLASS })),
+      ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.5, y: 1.95, z: 2.2, color: STEEL })),
+      ...pair((s) => P.cyl(0.08, 0.08, 0.1, { x: s * 0.9, y: 1.3, z: 2.62, rx: Math.PI / 2, color: STEEL }, 10)),
+      ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.9, y: 1.3, z: 2.68, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
+      ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.6, y: 0.85, z: 2.8, color: STEEL })),
+      // the shelter: corner posts, ribs, the ladder at its door, cable boxes, rear lights
+      ...[-2.24, 0.74].flatMap((z) => pair((s) => P.box(0.07, 1.6, 0.07, { x: s * 1.31, y: 2.05, z, color: NATO_DK }))),
+      ...pair((s) => [-1.5, -0.75, 0].map((z) => P.box(0.035, 1.5, 0.05, { x: s * 1.31, y: 2.05, z, color: NATO_DK }))).flat(),
+      ...[0, 1, 2, 3].map((k) => P.box(0.5, 0.04, 0.06, { x: 0.5, y: 0.75 + k * 0.25, z: -2.32, color: STEEL })),
+      P.box(0.06, 0.45, 0.9, { x: -1.33, y: 1.5, z: -1.2, color: NATO_DK }),
+      ...pair((s) => P.box(0.14, 0.1, 0.04, { x: s * 1.0, y: 1.15, z: -2.62, color: 0x6a2a20 })),
     ]), 1.0, 0.3),
     deploy: { geo: merge([P.cyl(0.14, 0.18, 3.6, { y: 1.8, color: STEEL }, 10)]), at: [0, 2.85, -1.8] }, // the telescopic mast…
     spin: { geo: merge([P.box(0.3, 0.3, 0.3, { color: NATO_DK }), ...logPeriodic(STEEL).map((g2) => g2)]), at: [0, 3.65, 0], rate: 0.25, onDeploy: true }, // …its antenna on top

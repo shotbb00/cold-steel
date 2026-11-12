@@ -158,11 +158,14 @@ export default {
       ...Array.from({ length: 90 }, (_, i) => { const x = -490 + i * 11; return { kind: 'wire', ...W(x, shoreZ(x) - (cliffK(x) > 0.3 ? 18 : 30)), yaw: 0 }; }),
       ...SECTORS.flatMap((s) => [-38, 38].map((dx) => ({ kind: 'mines', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 40 : 64)) }))),
       ...SECTORS.flatMap((s) => [-45, 0, 45].map((dx) => ({ kind: 'trench', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 58 : 52)), yaw: 0 }))),
+      // MG nests on the dunes over each beach, in the sector's zone; a strip of mines on the sand in front of them, behind the wire
+      ...SECTORS.flatMap((s) => [-22, 22].map((dx) => ({ kind: 'mgNest', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 50 : 47)), yaw: 0 }))),
+      ...SECTORS.flatMap((s) => [-12, 12].map((dx) => ({ kind: 'mines', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 22 : 38)) }))),
     ],
     // the defence at dawn: Heimatschutz (the territorial army's reservists) in the trenches over each sector and in the villages
-    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'atTeam', 'mgTeam', 'atTeam', 'mgTeam', 'rifles', 'tankDestroyer', 'mortar', 'rifles', 'tankDestroyer', 'mortar', 'scouts'],
+    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'mgTeam', 'atTeam', 'mgTeam', 'rifles', 'tankDestroyer', 'mortar', 'rifles', 'tankDestroyer', 'mortar', 'scouts'],
     names: { rifles: 'Heimatschutzzug' },
-    hold: [...SECTORS.flatMap((s) => [-45, 45].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - 56))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
+    hold: [...SECTORS.flatMap((s) => [-45, -22, 22, 45].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - (Math.abs(dx) < 30 ? 47 : 56)))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
     // the armoured counter-attack: the division's reserve, down from inland after four and a half minutes
     counter: { t: 270, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv', 'heavyTank'], say: 'The division\'s reserve is coming up: Leopards and Marders, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Leopard 2s and Marders' },
     // the landing's AI (ai/LandingDirector.js): the naval infantry's buying order, two Parchims inshore off the focus sector
@@ -173,9 +176,10 @@ export default {
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon', pt76: 'swimPT76' },
     // the first wave at dawn, in to all three sectors at once
     waves: [{ t: 0, say: 'The first wave is going in', units: [
-      { unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 0 }, { unit: 'ifv', sector: 0 },
-      { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'pt76', sector: 1 }, { unit: 'tank', sector: 1 }, { unit: 'engineers', sector: 1 },
-      { unit: 'rifles', sector: 2 }, { unit: 'rifles', sector: 2 }, { unit: 'ifv', sector: 2 },
+      // (one squad and its vehicle a sector, the PT-76 and the engineers in the middle: the beaches are fought for, not walked onto)
+      { unit: 'rifles', sector: 0 }, { unit: 'ifv', sector: 0 },
+      { unit: 'rifles', sector: 1 }, { unit: 'pt76', sector: 1 }, { unit: 'tank', sector: 1 }, { unit: 'engineers', sector: 1 },
+      { unit: 'rifles', sector: 2 }, { unit: 'ifv', sector: 2 },
     ] }],
   },
 

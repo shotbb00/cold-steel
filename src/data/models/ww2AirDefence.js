@@ -50,14 +50,19 @@ const aaTrack = (o, mount) => {
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
     hull: g.hull,
     turret: { geo: mount.turret, at: [0, o.faceted ? 1.5 : 0.97, -1.3] }, // (an M3's floor: the mount stands on it)
-    gun: { geo: mount.gun, at: [0, 0.55, 0.0], pitch: null },
+    gun: { geo: mount.gun, at: [0, mount.gunY ?? 0.55, 0.0], pitch: null },
     muzzle: [0, 0, mount.len],
     recoil: 0.03,
   }));
 };
-const maxson = (color) => ({ // the Maxson mount: four .50s round the gunner's armoured seat
-  turret: grime(merge([P.cyl(0.55, 0.6, 0.35, { y: 0.18, color: STEEL }, 14), P.box(0.9, 0.55, 0.06, { y: 0.55, z: 0.3, rx: -0.2, color })]), 0.8, 0, 0.3),
-  gun: barrels(4, 0.025, 1.3, 0.3, STEEL), len: 1.3,
+const maxson = (color) => ({ // the Maxson mount: four .50s round the gunner's armoured seat, on its pedestal above the half-track's sides
+  turret: grime(merge([
+    P.cyl(0.3, 0.38, 0.85, { y: 0.42, color: STEEL }, 12),                       // the pedestal up from the floor
+    P.cyl(0.55, 0.6, 0.2, { y: 0.92, color: STEEL }, 14),                        // the turntable and the gunner's seat
+    P.box(0.95, 0.6, 0.06, { y: 1.25, z: 0.32, rx: -0.2, color }),               // his armoured shield
+    ...[-1, 1].map((s) => P.box(0.3, 0.32, 0.5, { x: s * 0.5, y: 1.15, z: -0.05, color: STEEL })), // the ammunition chests either side
+  ]), 0.8, 0, 0.3),
+  gun: barrels(4, 0.025, 1.3, 0.3, STEEL), len: 1.3, gunY: 1.25, // (the guns over the sides, not behind them)
 });
 export const buildUsM16 = aaTrack({ color: OD, dark: OD_DK, length: 6.2, width: 2.2, wheelZ: 2.0, trackZ: -1.6, trackLen: 2.0, faceted: false, mg: 'ring' }, maxson(OD));
 export const buildSovM17 = aaTrack({ color: SOV, dark: SOV_DK, length: 6.2, width: 2.2, wheelZ: 2.0, trackZ: -1.6, trackLen: 2.0, faceted: false, mg: 'ring' }, maxson(SOV));
