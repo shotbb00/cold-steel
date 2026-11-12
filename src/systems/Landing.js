@@ -23,6 +23,9 @@ import { mulberry32 } from '../core/math.js';
 import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
 
+const SURF = 0.03;             // an open boat's chance a second of broaching in the surf (map `landing.surf` swell + the sea state over calm, squared): 1801, Aboukir
+const SURF_ZONE = 70;          // m out from where she grounds: the breakers over the bar
+const DROWNED = 0.25;          // the share of a swamped boat's men lost in the surf
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
 // What an open craft carries is seen aboard (Landing.board): the men in rows on the floor of the well, the vehicles
 // nose to tail on the tank deck — the game's own renderers on stand-ins, in her body's frame (local y up, z to the bow).
@@ -387,8 +390,10 @@ export class Landing {
 
   update(dt) {
     const g = this.game;
+    const late = 1 + Math.max(0, (g.seaState ?? 1) - 1) * 0.8; // (a rough sea: the boats are slow to load alongside the transports — every later wave comes in late)
     for (const w of this.waves) {
-      if (w.done || g.time < (w.t ?? 0)) continue;
+      if (!w.done && late > 1.1 && w.t > 0 && !w.lateSaid && g.time >= w.t) { w.lateSaid = true; for (const f of ['nato', 'pact']) if (this.lands(f)) g.tell(f, 'Heavy seas: the boats are slow to load alongside — the next wave is late'); }
+      if (w.done || g.time < (w.t ?? 0) * late) continue;
       w.done = true;
       for (const f of ['nato', 'pact']) {
         if (!this.lands(f)) continue;
@@ -485,6 +490,14 @@ export class Landing {
     const d = Math.hypot(r.way.x - u.pos.x, r.way.z - u.pos.z);
     if (r.phase === 'in') {
       this.alarm(r, u);
+      // the surf (an open boat: the flatboats and launches of 1801): over the bar the breakers may turn her broadside and fill her
+      const swell = g.map.landing?.surf;
+      if (swell != null && s.stats.rowed && (u.pos.z - r.way.z) * r.sign < SURF_ZONE && Math.random() < SURF * (swell + Math.max(0, (g.seaState ?? 1) - 1)) ** 2 * dt) {
+        r.swamped = true; r.phase = 'ramp'; r.t = RAMP; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
+        g.effects?.waterSplash?.({ x: u.pos.x, y: g.world.river.level, z: u.pos.z }, 3);
+        g.tellBoth(s.faction, `${r.cargo.name}: the boat broached in the surf — the men are in the water`, 'A boat has overturned in the surf');
+        return;
+      }
       // a warship close by in the lane: she waits for it (shoved aside by its hull, she'd be over the mines)
       const big = g.world.stacks.find((o) => o.alive && o.stats.naval && !o.stats.landingCraft && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < 60 + (o.type.hull?.length ?? 60) / 2);
       if (big && band && Math.abs(u.pos.z) > band[0] - 80 && Math.abs(u.pos.z) < band[1] + 120) { r.waitWay ??= r.way; r.way = { x: u.pos.x, z: u.pos.z }; r.still = 0; return; }
@@ -563,6 +576,13 @@ export class Landing {
     g.bus.emit('landed', { stack, craft: s });
     const man = stack.units.find((m) => m.alive);
     if (man) stack.bark?.(man, 'landing', 0.8, true);
+    if (r.swamped) { // (overturned in the surf: some of them went under with their packs; the boat is lost)
+      for (const m of stack.units) if (m.alive && Math.random() < DROWNED) stack.damageUnit(m, 1e5, null, 1);
+      r.phase = 'swamped';
+      this.runs.splice(this.runs.indexOf(r), 1);
+      s.run = null;
+      this.remove(s);
+    }
   }
 
   /** The defence sees the boats close in: a shout from whoever's nearest (now and then). */

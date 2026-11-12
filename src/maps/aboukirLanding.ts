@@ -144,7 +144,9 @@ export default {
   landing: {
     // the fleet's boats (systems/Landing.js): the foot in flatboats, the guns and horses in the launches
     craft: { infantry: 'flatboat', vehicle: 'horseBoat' },
-    launchZ: 700, // (the transports anchored a mile out: here the boats are put in the water half a kilometre off)
+    launchZ: 700,
+    // the surf over the bar (the swell left by a week of gales): an open boat may broach and fill — more so in worse weather; rough seas also hold the later waves back
+    surf: 0.3, // (the transports anchored a mile out: here the boats are put in the water half a kilometre off)
     // the dawn signal: the first boats lie in line until the flagship's gun, then all pull for the shore together
     signal: { t: 25, say: 'The signal gun from the flagship — every boat pulls for the shore', sayOther: 'A gun from the British flagship: the boats are coming in, all together' },
     // what the landing may call in at sea: frigates and brig-sloops inshore to cover the boats with their broadsides
