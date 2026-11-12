@@ -26,6 +26,7 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
+      gb: { id: 'gb', faction: 'pact', name: 'British Army', coastal: true }, // (only where a map names it: the Aboukir landing)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -46,6 +47,11 @@ export const EPOCHS = {
       sx: [
         { id: 'squares', name: 'Steady squares', text: 'Squares never break against cavalry and lose less nerve under artillery (the Saxon grenadiers left Jena in square).' },
         { id: 'gardeDuCorps', name: 'Garde du Corps', text: 'Heavy cavalry starts as Veterans.' },
+      ],
+      // (the British reuse Prussia's and France's mechanics under their own names: line fire, skirmishers)
+      gb: [
+        { id: 'peloton', name: 'Two-deep line', text: 'Line infantry in line aims 25 % better: every musket of the thin two-rank line can fire.', reload: 1, spread: 0.75 },
+        { id: 'tirailleurs', name: 'Rifles and light bobs', text: 'Light infantry and riflemen in skirmish order are harder to spot, and their fire pins 30 % more.', stealth: 1.3, suppress: 1.3 },
       ],
     },
   },

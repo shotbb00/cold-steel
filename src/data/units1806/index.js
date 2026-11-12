@@ -18,6 +18,7 @@ const T = TYPES_1985;
 const men = (o = {}) => ({
   nato: () => buildNapSoldier({ army: 'fr', ...o }), by: () => buildNapSoldier({ army: 'by', ...o }),
   pact: () => buildNapSoldier({ army: 'pr', ...o }), sx: () => buildNapSoldier({ army: 'sx', ...o }),
+  gb: () => buildNapSoldier({ army: 'gb', ...o }),
 });
 
 /** Smoothbore musket and drill, shared by the foot. */
@@ -54,7 +55,7 @@ const rifles = {
 // weapon is the charge (UnitStack.startCharge): at the gallop into the enemy, the shock to its nerve,
 // then the sabres; a square stops them. Pistols and carbines for close range. A trooper's death may
 // leave a loose horse or a man on foot (UnitStack.unhorse).
-const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx' };
+const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx', gb: 'gb' };
 const mounts = (kind, mounted = true) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildCavalry({ army, kind, mounted })]));
 const HORSE = {
   armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
@@ -309,6 +310,33 @@ const bridgeLayer = wagon('bridgeLayer', 'pontoon', {
     sx: { name: 'Brückentrain', weapon: 'Pontoon bridge', text: 'A bridge of boats over the river.' },
   },
 });
+
+// ------------------------------------------------------------------ the British (Egypt 1801)
+// Abercromby's army at Aboukir (data/epoch.js 'gb', the coastal battle only): each type's British name
+// and look. The Highlanders take the grenadiers' place, the Foot Guards the Guard's.
+const GB = {
+  rifles: { name: 'Regiment of Foot', weapon: 'India Pattern musket, bayonet', text: 'The British line infantry in red: two ranks, not three, so every musket fires. Steady volleys, then the bayonet.' },
+  mgTeam: { name: 'Light Infantry', weapon: 'Light musket, bayonet', text: 'The light companies, the "light bobs": out in front in open order, shooting the enemy\'s skirmishers and gunners.' },
+  atTeam: { name: 'Highlanders', weapon: 'Musket, bayonet', text: 'The 42nd Black Watch and the Gordon Highlanders in kilt and feather bonnet: first up the sand hills, last to give way.' },
+  sniper: { name: 'Riflemen', weapon: 'Baker rifle', text: 'The new Rifle Corps in green: rifles that reach twice as far as a musket, slow to load, aimed at officers and gunners.' },
+  engineers: { name: 'Royal Military Artificers', weapon: 'Musket, pick, axe', text: 'The engineers\' working men: breastworks on the sand, a way through the abatis, gun platforms on the beach.' },
+  observers: { name: 'Royal Artillery officers', weapon: 'Telescope, sword', text: 'Gunner officers with their telescopes: every gun of yours lands tight on what they can see.' },
+  guard: { name: 'Foot Guards', weapon: 'Musket, bayonet', text: 'The Brigade of Guards, the Coldstream and the Third: picked men who do not break.' },
+  reconVehicle: { name: 'Light Dragoons', weapon: 'Sabre, carbine', text: 'The 12th and 26th Light Dragoons in their Tarleton helmets: few horses, and every one of them shipped from Malta.' },
+  ifv: { name: 'Dragoons', weapon: 'Sabre, carbine', text: 'British dragoons in red: line cavalry, heavy enough to charge.' },
+  tank: { name: 'Dragoon Guards', weapon: 'Heavy sword, pistols', text: 'The heavy cavalry of the line on big English horses: the charge that decides the day.' },
+  artillery: { name: 'Royal Artillery', weapon: '6-pounder guns', text: 'The field guns, hauled through the sand by sailors as often as by horses.' },
+  spMortar: { name: 'Royal Artillery, 12-pounders', weapon: '12-pounder guns', text: 'The heavy guns: far-reaching and slow, and harder still to land.' },
+  rockets: { name: 'Royal Horse Artillery', weapon: 'Light 6-pounders', text: 'Guns that keep up with the cavalry: in action in moments.' },
+  mortar: { name: 'Howitzers', weapon: '5½-inch howitzers', text: 'Shells over the sand hills onto troops behind them.' },
+  jammer: { name: 'Ammunition cart', weapon: 'Cartridges, men', text: 'Companies within 60 m take in new men and refill their pouches.' },
+  ambulance: { name: 'Hospital wagon', weapon: 'Surgeons', text: 'Wounded men near it are patched up and go back to the line.' },
+  commandPost: { name: 'Headquarters', weapon: 'Aides, couriers', text: 'Abercromby\'s staff: reinforcements come forward to it; troops near it hold their nerve.' },
+  bridgeLayer: { name: 'Pontoon train', weapon: 'Pontoon bridge', text: 'A bridge of boats over the water.' },
+};
+const BRITISH = { rifles, mgTeam, atTeam, sniper, engineers, observers, guard, reconVehicle, ifv, tank, artillery, spMortar, rockets, mortar, jammer, ambulance, commandPost, bridgeLayer };
+for (const [id, v] of Object.entries(GB)) BRITISH[id].variants = { ...BRITISH[id].variants, gb: v };
+atTeam.models = { ...atTeam.models, gb: () => buildNapSoldier({ army: 'gb', kind: 'highland' }) };
 
 export const TYPES_1806 = {
   ...SHIPS_1806,   // the sea maps' sailing ships (./ships.js)

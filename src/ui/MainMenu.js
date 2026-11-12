@@ -82,7 +82,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (!only[f] || only[f].includes(a.id)))) {
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal))) {
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {

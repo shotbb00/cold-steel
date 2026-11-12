@@ -11,7 +11,7 @@ import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { buildNapSoldier, ARMIES_1806 } from './napSoldier.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a };   // carriages: French olive green, the Germans' blue-grey
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670 };   // carriages: French olive green, the Germans' blue-grey
 const BRONZE = 0x9a7a3a;
 const IRON = 0x2a2a28;
 const SIZES = {

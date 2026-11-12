@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { P, merge, loft, limb, pair } from '../units/geometry.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, finish } from './soldierBody.js';
 import { buildHorse } from './horse.js';
-import { bicorne, shako, raupenhelm } from './napSoldier.js';
+import { bicorne, shako, raupenhelm, stovepipe } from './napSoldier.js';
 
 const BLACK = 0x161616;
 const STEEL = 0xb8bab6;
@@ -54,7 +54,12 @@ const CAV = {
     heavy: { coat: 0xd9c88a, facing: 0xa82a2a, breeches: 0xe2ddcf, hat: (c) => bicorne(c, null), cloth: 0xa82a2a, trim: 0xe6e2d6 },
   },
 };
-const COCKADE = { fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a] };
+CAV.gb = { // the light dragoons in the Tarleton helmet (blue jackets), the dragoons and dragoon guards in red
+  light: { coat: 0x1d2a5c, facing: 0xd8b54a, breeches: 0xe2ddcf, hat: () => raupenhelm(0xe6e2d6), cloth: 0x1d2a5c, trim: 0xe6e2d6, lace: 0xe6e2d6 },
+  medium: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: () => stovepipe(0xe6e2d6), cloth: 0x1d2a5c, trim: 0xe6e2d6 },
+  heavy: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: (c) => bicorne(c, 0xe6e2d6), cloth: 0xb0261e, trim: 0xd8b54a },
+};
+const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a] };
 
 /** The trooper's parts in standing coordinates (feet at 0, hips at 0.96): torso, arms, a thigh, a shin. */
 function trooper(army, kind) {

@@ -110,7 +110,7 @@ LINES.de1806 = {
   rally: ['Zu mir!', 'Sammeln!', 'Zur Fahne!'],
   officer: ['Der Hauptmann ist gefallen!', 'Der Offizier ist getroffen!', 'Wer führt?'],
 };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn' };
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'rn' };
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {

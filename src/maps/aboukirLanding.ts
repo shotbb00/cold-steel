@@ -96,7 +96,7 @@ export default {
   wip: true, // (1806 coastal step 1: the map; the British army and its boats come next)
   modes: ['landing'],
   sides: { nato: 'France', pact: 'Britain' },
-  armies: { nato: ['fr'], pact: ['pr'] }, // (the British army is step 2: Prussia stands in for it till then)
+  armies: { nato: ['fr'], pact: ['gb'] },
   conditions: { time: 'dawn', weather: 'clear' },
   size: SIZE,
   segments: 800,
