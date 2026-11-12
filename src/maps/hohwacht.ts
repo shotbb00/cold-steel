@@ -82,9 +82,10 @@ const W = (x: number, z: number) => ({ x, z: F * z }); // local → world
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Landing area', ...W(0, 770), owner: 'pact', sector: 'centre', radius: 90 },
   // the beach sectors (Landing: open from the start; `opens` the village behind once taken)
-  { id: 'B', name: 'Hohwacht beach', ...W(-320, shoreZ(-320) - 14), owner: null, sector: 'west', radius: 38, opens: 'E' },
-  { id: 'C', name: 'Seestrand', ...W(20, shoreZ(20) - 22), owner: null, sector: 'centre', radius: 40, opens: 'F' },
-  { id: 'D', name: 'Sehlendorf beach', ...W(330, shoreZ(330) - 18), owner: null, sector: 'east', radius: 40, opens: 'G' },
+  // (each out to the dunes or the cliff path: the trenches over the beach are in it — take them to take the sector)
+  { id: 'B', name: 'Hohwacht beach', ...W(-320, shoreZ(-320) - 40), owner: null, sector: 'west', radius: 50, opens: 'E' },
+  { id: 'C', name: 'Seestrand', ...W(20, shoreZ(20) - 44), owner: null, sector: 'centre', radius: 50, opens: 'F' },
+  { id: 'D', name: 'Sehlendorf beach', ...W(330, shoreZ(330) - 44), owner: null, sector: 'east', radius: 50, opens: 'G' },
   { id: 'E', name: 'Hohwacht', ...W(-320, -60), owner: null, sector: 'west' },
   { id: 'F', name: 'Neudorf', ...W(30, -240), owner: null, sector: 'centre' },
   { id: 'G', name: 'Sehlendorf', ...W(360, -90), owner: null, sector: 'east' },
@@ -97,7 +98,6 @@ export default {
   description: 'Holstein, 1985: a sandy Baltic bay, the clay cliff at Hohwacht, the lagoon behind the dunes, the Knicks and woods inland. The Warsaw Pact lands from the sea; the Bundeswehr holds the coast.',
   epochs: ['1985'],
   theatre: 'coastal',
-  wip: true, // (WW3 coastal step 1: the map; the Pact's landing craft come next)
   modes: ['landing'],
   sides: { nato: 'Bundeswehr', pact: 'Warsaw Pact' },
   armies: { nato: ['bw'], pact: ['nva', 'sov'] }, // (the Bundeswehr defends; the NVA and Soviet naval infantry land)
@@ -139,7 +139,7 @@ export default {
   },
 
   bases: { nato: { x: 0, z: 830, entries: [-200, 40, 260] }, pact: { x: 0, z: -830, entries: [-320, 20, 330] } }, // (the Pact lands: its roads are the beach sectors)
-  maxStacks: 26,
+  maxStacks: 22,
   cameraStart: { nato: { x: 0, z: 150 }, pact: { x: 0, z: -330 } },
   points,
   spawns: { nato: [], pact: [] },
@@ -160,11 +160,15 @@ export default {
       ...SECTORS.flatMap((s) => [-45, 0, 45].map((dx) => ({ kind: 'trench', ...W(s.x + dx, shoreZ(s.x + dx) - (cliffK(s.x) > 0.3 ? 58 : 52)), yaw: 0 }))),
     ],
     // the defence at dawn: Heimatschutz (the territorial army's reservists) in the trenches over each sector and in the villages
-    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'atTeam', 'rifles', 'atTeam', 'mortar', 'rifles', 'mortar', 'scouts'],
+    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'atTeam', 'mgTeam', 'atTeam', 'mgTeam', 'rifles', 'tankDestroyer', 'mortar', 'rifles', 'tankDestroyer', 'mortar', 'scouts'],
     names: { rifles: 'Heimatschutzzug' },
     hold: [...SECTORS.flatMap((s) => [-45, 45].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - 56))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
-    // the armoured counter-attack: the division's reserve, down from inland after seven minutes
-    counter: { t: 420, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv'], say: 'The division\'s reserve is coming up: Leopards and Marders, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Leopard 2s and Marders' },
+    // the armoured counter-attack: the division's reserve, down from inland after four and a half minutes
+    counter: { t: 270, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv', 'heavyTank'], say: 'The division\'s reserve is coming up: Leopards and Marders, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Leopard 2s and Marders' },
+    // the landing's AI (ai/LandingDirector.js): the naval infantry's buying order, two Parchims inshore off the focus sector
+    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'pt76', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'parchim', gunships: 1, heavy: null, inshore: 380 },
+    // no concrete to hold the beach: a poorer landing, a richer defence than Omaha's (modes/landing.js economy)
+    economy: { reserves: 1800, perSector: 500, beachIncome: 0.6, defenceCp: 1000, defenceIncome: 2 },
     // the amphibious vehicles swim in on their own, put in off the beach: BMPs, BTRs and BRDMs, the PT-76s
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon', pt76: 'swimPT76' },
     // the first wave at dawn, in to all three sectors at once

@@ -26,6 +26,9 @@ const BEACH_INCOME = 0.9;       // CP / s for each beach sector held (supplies o
 const DEFENCE_CP = 700;
 const DEFENCE_INCOME = 1.2;     // CP / s
 
+/** The CP of both sides: these, or the map's own (`landing.economy`: { reserves, perSector, beachIncome, defenceCp, defenceIncome }). */
+const economy = (map) => ({ reserves: RESERVES, perSector: RESERVES_PER_SECTOR, beachIncome: BEACH_INCOME, defenceCp: DEFENCE_CP, defenceIncome: DEFENCE_INCOME, ...map.landing?.economy });
+
 const DEFENCE_FORCE = ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'mortar', 'atTeam', 'rifles', 'atTeam', 'mortar', 'scouts'];
 
 export default {
@@ -49,7 +52,7 @@ export default {
     const points = new ControlPoints(game, map.points.map((p) => ({ ...p, owner: p.owner ?? (opens[p.id] || inland.has(p.id) ? def : null) })));
     const state = {
       points,
-      cp: { [att]: RESERVES, [def]: DEFENCE_CP },
+      cp: { [att]: economy(map).reserves, [def]: economy(map).defenceCp },
       attacker: att,
       strength: { [att]: 1, [def]: 1 },
       maxStrength: 1,
@@ -82,7 +85,7 @@ export default {
       if (site) { site.quiet = true; game.construction.finish(site); }
     }
     state.strength[def] = fieldStrength(game, def);
-    state.maxStrength = Math.max(state.strength[def], RESERVES) * 1.2;
+    state.maxStrength = Math.max(state.strength[def], economy(map).reserves) * 1.2;
     game.systems.push(points);
     const ai = enemyOf(game.playerFaction);
     if (!game.net || game.coop) {
@@ -113,8 +116,9 @@ export default {
     const def = enemyOf(att);
     const held = (id) => state.points.points.find((p) => p.id === id)?.owner === att;
     const sectors = Object.keys(this.opens);
-    state.cp[def] += dt * DEFENCE_INCOME;
-    state.cp[att] += dt * BEACH_INCOME * sectors.filter(held).length;
+    const E = economy(game.map);
+    state.cp[def] += dt * E.defenceIncome;
+    state.cp[att] += dt * E.beachIncome * sectors.filter(held).length;
     state.strength[att] = fieldStrength(game, att);
     state.strength[def] = fieldStrength(game, def);
 
@@ -122,7 +126,7 @@ export default {
     for (const id of sectors) {
       if (state.taken.has(id) || !held(id)) continue;
       state.taken.add(id);
-      state.cp[att] += RESERVES_PER_SECTOR;
+      state.cp[att] += E.perSector;
       this.lock(state);
       const p = state.points.points.find((q) => q.id === id), to = state.points.points.find((q) => q.id === this.opens[id]);
       game.tellBoth(att, `${p.name} is ours — the way up to ${to.name} is open. More boats are coming in.`, `${p.name} is lost — they are coming up the draw to ${to.name}!`);
