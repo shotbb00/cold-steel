@@ -25,10 +25,12 @@ import caribbean from './caribbean.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import hohwacht from './hohwacht.ts';
+import aboukirLanding from './aboukirLanding.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
   [hohwacht.id]: hohwacht,
+  [aboukirLanding.id]: aboukirLanding,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
