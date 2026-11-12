@@ -28,7 +28,7 @@ export function makeBuyer(game, state) {
   return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
-    if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
+    if (!type || type.hidden || type.airOnly || (type.coastal && !game.world.coastal) || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
     const cost = unitCost(type, game.armyOf(faction));
     if (state.cp[game.wallet(faction)] < cost) {
       game.tell(faction, `Not enough command points for ${type.shortName} (${cost})`);

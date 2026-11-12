@@ -149,10 +149,12 @@ export default {
     craft: { infantry: ['aist', 'aist', 'polnocny'], vehicle: ['frosch', 'polnocny'] },
     // what the landing may call in at sea: the Volksmarine's escorts (the Tarantul is the ptBoat slot)
     navy: ['parchim', 'osa', 'natya', 'ptBoat'],
+    // the amphibious vehicles swim in on their own, put in off the beach: BMPs, BTRs and BRDMs, the PT-76s
+    swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon', pt76: 'swimPT76' },
     // the first wave at dawn, in to all three sectors at once
     waves: [{ t: 0, say: 'The first wave is going in', units: [
       { unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 0 }, { unit: 'ifv', sector: 0 },
-      { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'tank', sector: 1 }, { unit: 'engineers', sector: 1 },
+      { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'pt76', sector: 1 }, { unit: 'tank', sector: 1 }, { unit: 'engineers', sector: 1 },
       { unit: 'rifles', sector: 2 }, { unit: 'rifles', sector: 2 }, { unit: 'ifv', sector: 2 },
     ] }],
   },

@@ -23,6 +23,7 @@ import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
 
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
+const SWIM_START = 320;        // m off the beach where the landing ships put the Pact's swimmers in (about 90 s at 3.5 m/s)
 const DD_START = 60;           // m outside the mine band where the LCTs launch them (in through the lane: a two-minute swim on Omaha)
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -274,10 +275,12 @@ export class Landing {
     const g = this.game, type = UNIT_TYPES[cargo.typeId];
     // the craft: the map's own (`landing.craft`: { infantry, vehicle, dd } — a type id or a list to pick from), else 1944's
     const pick = (k, fb) => { const l = g.map.landing?.craft?.[k]; const id = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l; return id && UNIT_TYPES[id] ? id : fb; };
-    const kind = type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
+    const swim = g.map.landing?.swim?.[cargo.typeId]; // (an amphibious vehicle: it swims in itself — `landing.swim`: { cargo type: swimmer })
+    const kind = swim && UNIT_TYPES[swim] ? swim : type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
+    if (UNIT_TYPES[kind].stats.swims) z0 = this.groundZ(x, 1, sign) + sign * SWIM_START; // (launched off the beach: a slow paddle in)
     const start = { x, z: z0 ?? sign * this.launchZ() };
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
@@ -390,7 +393,7 @@ export class Landing {
       const bowDepth = g.world.river.level - g.terrain.heightAt(u.pos.x, u.pos.z - r.sign * (s.type.hull?.length ?? 10) * 0.5);
       if (r.still > 2.5 && bowDepth > (s.stats.draft ?? 1) + 0.8) { r.still = 0; r.way = { x: this.inLane(r.way.x + (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 10), 10), z: r.way.z }; } // (jammed short, out in deep water: round the boat ahead)
       else if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) {
-        if (s.stats.dd) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
+        if (s.stats.dd || s.stats.swims) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
         r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
       }
     } else if (r.phase === 'ramp') {

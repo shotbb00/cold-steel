@@ -4,7 +4,10 @@
 //   craft     Frosch I and Polnocny landing ships, the Aist hovercraft — never bought: what the Pact buys for the
 //             land comes in one (map `landing.craft`, systems/Landing.js launch). The hovercraft (`hover`) runs
 //             over the mines and up onto the dry sand.
-import { buildFrosch, buildPolnocny, buildAist, buildParchim, buildOsa, buildNatya } from '../models/baltic85.js';
+import { buildFrosch, buildPolnocny, buildAist, buildParchim, buildOsa, buildNatya, buildPT76, afloat } from '../models/baltic85.js';
+import tank from './tank.ts';
+import ifv from './ifv.ts';
+import reconVehicle from './reconVehicle.ts';
 
 const NAVAL = { naval: true, eyeHeight: 14, aimHeight: 3, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -108,4 +111,40 @@ export const aist = craftType({
   variants: { pact: { name: 'Aist assault hovercraft', weapon: '2 × twin 30 mm', text: 'Fast and loud, riding over the mines on her skirt and straight up the beach: the naval infantry come off her ramp dry-shod.' }, nato: { name: 'Hovercraft', weapon: '—', text: 'A hovercraft.' } },
 });
 
-export const BALTIC_85 = { parchim, osa, natya, frosch, polnocny, aist };
+export const BALTIC_85 = { parchim, osa, natya, frosch, polnocny, aist }; // (+ the swimmers, below)
+
+// ---------------------------------------------------------------- the swimmers
+// The Pact's amphibious vehicles swim in on their own (a map's `landing.swim`: cargo type → swimmer; systems/Landing.js):
+// launched a few hundred metres out, a slow paddle in, then up the beach on their tracks or wheels. No canvas screen
+// to swamp, unlike 1944's DD tanks.
+
+/** PT-76 (the coastal maps, the NVA and the Soviets): the amphibious light tank of the naval infantry. */
+export const pt76 = {
+  ...tank, id: 'pt76', name: 'Amphibious Tanks', shortName: 'PT-76', cost: 260, coastal: true, armies: ['nva', 'sov'],
+  stats: { ...tank.stats, hp: 650, armor: 0.12, speed: 6.2, damage: 210, pierce: 0.35, splash: 2.5, fireCooldown: 4.5, reloadTime: 6, nightSight: { nato: 0.5, pact: 0.5 }, smoke: undefined },
+  factionStats: undefined,
+  models: { pact: buildPT76, nva: buildPT76, nato: buildPT76 },
+  engine: 'engine.dieselSmall', tracks: 'tracks.light',
+  variants: {
+    nva: { name: 'PT-76B', weapon: '76 mm D-56TS', text: 'The amphibious light tank: it swims in with the first wave and drives straight up the beach. Thin armour and a small gun — a fire-support tank against bunkers and infantry, not against Leopards.' },
+    pact: { name: 'PT-76B', weapon: '76 mm D-56TS', text: 'The naval infantry\'s amphibious light tank: it swims in with the first wave and drives straight up the beach. Thin armour and a small gun — support for the infantry, not a tank killer.' },
+    nato: { name: 'Light tank', weapon: '76 mm', text: 'An amphibious light tank.' },
+  },
+};
+
+/** A vehicle swimming in: `of` its land type, drawn with that type's own models (low in the water). */
+const swimmer = (id, of, sink) => craftType({
+  id, name: `${of.name} (swimming)`, shortName: 'Afloat', engine: 'engine.dieselSmall',
+  hull: { length: 7, beam: 3 },
+  stats: { swims: true, draft: 1.2, hp: 400, armor: 0.08, speed: 3.5, accel: 0.5, turnRate: 0.3, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 400, smallCraft: true, stealth: 0.5,
+    range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0 },
+  mounts: { pact: [], nato: [] },
+  camera: { distance: 18, height: 6, shoulder: 0 },
+  models: Object.fromEntries(Object.entries(of.models).map(([k, b]) => [k, afloat(b, sink)])),
+  variants: { pact: { name: 'Swimming', weapon: '— (afloat)', text: 'An amphibious vehicle swimming in: it can\'t fire till it is ashore.' }, nato: { name: 'Swimming', weapon: '—', text: 'Afloat.' } },
+});
+export const swimIfv = swimmer('swimIfv', ifv, 1.25);
+export const swimRecon = swimmer('swimRecon', reconVehicle, 1.2);
+export const swimPT76 = swimmer('swimPT76', pt76, 1.2);
+
+Object.assign(BALTIC_85, { pt76, swimIfv, swimRecon, swimPT76 });

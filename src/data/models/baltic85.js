@@ -10,7 +10,10 @@
 //   Parchim    Volksmarine anti-submarine corvette, 72 m: a long forecastle, twin 57 mm aft, twin 30 mm, RBU
 //   Osa        missile boat, 39 m: four big Termit (Styx) boxes, two twin 30 mm
 //   Natya      minesweeper, 61 m: twin 30 mm fore and aft, the sweep gear on the quarterdeck
-import { P, merge } from '../units/geometry.js';
+import * as THREE from 'three';
+import { P, merge, grime } from '../units/geometry.js';
+import { trackedHull, castTurret } from './vehicleCommon.js';
+import { vehicle, tracked } from './support.js';
 import { craft } from './landingCraft45.js';
 
 const GREY = 0x8c969c;
@@ -135,3 +138,58 @@ export const buildNatya = craft(() => {
   ]);
   return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, 22] };
 });
+
+// ---------------------------------------------------------------- the swimmers
+
+const OLIVE = 0x4a5636;
+const OLIVE_DK = 0x37422a;
+
+/** PT-76: the long flat boat hull with its water-jet ports at the stern, six big road wheels, the
+ *  flat-sided round turret with the 76 mm D-56T and its slotted muzzle brake. */
+export const buildPT76 = vehicle(() => {
+  const g = tracked({ halfWidth: 1.4, length: 5.6, wheels: 6, wheelR: 0.36, sprocket: -1, rollers: 0, trackWidth: 0.36, wheelColor: OLIVE_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.8, 1.5, 0.5], [-3.6, 1.55, 0.45], [1.6, 1.6, 0.45], [3.2, 1.2, 0.55], [3.85, 0.85, 0.75]],
+        { belly: 1.25, fender: 1.6, fenderY: 1.0, chamfer: 0.1 }, { color: OLIVE }),
+      P.box(1.9, 0.06, 0.5, { y: 1.3, z: 3.1, rx: -0.6, color: OLIVE_DK }),                                // the trim vane, folded on the glacis
+      ...[-1, 1].map((s) => P.cyl(0.2, 0.2, 0.08, { x: s * 0.6, y: 0.75, z: -3.8, rx: Math.PI / 2, color: 0x1f201c }, 12)), // water-jet ports
+      P.box(1.6, 0.05, 1.6, { y: 1.57, z: -2.5, color: OLIVE_DK }),                                        // engine deck
+      P.box(0.5, 0.06, 0.45, { x: -0.5, y: 1.62, z: 2.2, color: OLIVE_DK }),                               // driver's hatch
+    ]), 1.1, 0.3),
+    turret: {
+      geo: grime(merge([
+        castTurret([[1.1, 0.75, 0.35], [0.9, 0.95, 0.58], [0.3, 1.0, 0.62], [-0.5, 0.98, 0.6], [-1.0, 0.85, 0.5], [-1.15, 0.6, 0.3]], { color: OLIVE }, 2.2),
+        P.cyl(0.32, 0.34, 0.16, { x: -0.4, y: 0.66, z: -0.2, color: OLIVE_DK }, 14),                        // the big commander's hatch
+        P.box(0.5, 0.3, 0.25, { y: 0.3, z: 1.15, color: OLIVE }),                                           // mantlet
+      ]), 0.6, 0, 0.4),
+      at: [0, 1.6, 0.6],
+    },
+    gun: {
+      geo: merge([
+        P.cyl(0.06, 0.07, 3.4, { z: 1.7, rx: Math.PI / 2, color: OLIVE }, 12),
+        P.cyl(0.1, 0.1, 0.35, { z: 3.4, rx: Math.PI / 2, color: OLIVE_DK }, 12),                             // muzzle brake
+      ]),
+      at: [0, 0.3, 1.2],
+      pitch: 0,
+    },
+    muzzle: [0, 0, 3.6],
+    recoil: 0.25,
+    marks: merge([...[-1, 1].map((s) => P.box(0.02, 0.22, 0.55, { x: s * 1.42, y: 1.35, z: 0 }))]),
+  };
+});
+
+const FLAT = { terrain: { normalAt: (x, z, n) => n.set(0, 1, 0) } }; // (afloat: level)
+
+/** An amphibious vehicle afloat (systems/Landing.js, a map's `landing.swim`): its own model, low in the water. */
+export function afloat(build, sink) {
+  return (mats) => {
+    const rig = build(mats);
+    const root = new THREE.Group();
+    rig.root.position.y = -sink;
+    root.add(rig.root);
+    return { ...rig, root, animate: (u, dt, t) => rig.animate?.({ ...u, vel: { x: 0, z: 0 }, recoil: u.recoil ?? 0, turretYaw: u.turretYaw ?? u.yaw }, dt, t, FLAT) };
+  };
+}
