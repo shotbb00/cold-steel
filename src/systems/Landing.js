@@ -17,12 +17,23 @@
 //              the rest stop her short, and her men wade in from there.
 import * as THREE from 'three';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { forArmy, enemyOf } from '../data/factions.js';
+import { forArmy, enemyOf, FACTIONS } from '../data/factions.js';
+import { createRenderer } from '../render/index.js';
 import { mulberry32 } from '../core/math.js';
 import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
 
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
+// What an open craft carries is seen aboard (Landing.board): the men in rows on the floor of the well, the vehicles
+// nose to tail on the tank deck — the game's own renderers on stand-ins, in her body's frame (local y up, z to the bow).
+// When the ramp is down they are the real stack, each man or vehicle starting from his place aboard and off down it.
+const HOLDS = { lcvp: { y: 0.42, z: [-3.4, 3.0], w: 2.1, cols: 3 }, lct: { y: 1.0, z: [-9, 11], w: 0, cols: 1 } };
+/** A stand-in for entities/Unit: what the renderers read (as ui/UnitPreview.js). */
+const rider = (stack, index) => ({
+  stack, index, alive: true, visible: true, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, turretYaw: 0, aimYaw: 0, prone: 0, crouch: 0.35,
+  gait: 0, run: false, moving: false, walkPhase: index * 1.3, phase: index * 2.1 + 0.5, tint: 0.95 + (index % 5) * 0.03, flash: 0, flinch: 0, recoil: 0,
+  reloadAnim: 0, reloadT: 0, working: false, wounded: false, target: null, possessed: false, peekT: 0, deathTime: 0, cooldown: 0, aimPitch: 0, stats: stack.stats,
+});
 const SWIM_START = 320;        // m off the beach where the landing ships put the Pact's swimmers in (about 90 s at 3.5 m/s)
 const DD_START = 60;           // m outside the mine band where the LCTs launch them (in through the lane: a two-minute swim on Omaha)
 
@@ -47,6 +58,7 @@ export class Landing {
     this.drawObstacles();
     this.sweptN = 0;
     game.bus.on('stack:destroyed', (s) => {
+      this.drop(s);
       const r = this.runs.find((q) => q.craft === s);
       if (!r) return;
       this.runs.splice(this.runs.indexOf(r), 1);
@@ -110,7 +122,53 @@ export class Landing {
   }
 
   /** On a multiplayer guest, each frame: the tide (by the clock: no route grid here, the host does the moving). */
-  clientUpdate() { this.tide(true); }
+  clientUpdate(dt = 0) { this.tide(true); this.ride(dt); }
+
+  /** Who's aboard open craft `s` (a squad, a vehicle platoon of `typeId`), drawn in their places in her hold. Host and guest alike (net 'aboard'). */
+  board(s, typeId, army) {
+    const hold = HOLDS[s.type.id], type = UNIT_TYPES[typeId];
+    if (!hold || !type || s.aboard || !this.game.scene) return;
+    const f = s.faction, vehicle = type.kind !== 'infantry';
+    const n = Math.max(1, Math.min(type.formation.count, vehicle ? 3 : 12));
+    const deck = { y: 0 };
+    const stack = {
+      type, faction: f, army, kind: type.kind, stats: { ...type.stats, ...type.factionStats?.[f], ...type.factionStats?.[army] }, units: [],
+      glowColor: new THREE.Color(FACTIONS[f].marking), services: { effects: { dust() {}, explosion() {}, burn() {} }, audio: null },
+      world: { terrain: { heightAt: () => deck.y, normalAt: (x, z, o) => o.set(0, 1, 0) } },
+    };
+    for (let i = 0; i < n; i++) stack.units.push(rider(stack, i));
+    const cols = vehicle ? 1 : hold.cols, rows = Math.ceil(n / cols), [z0, z1] = hold.z;
+    const seats = stack.units.map((u, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      return new THREE.Vector3(cols > 1 ? (c - (cols - 1) / 2) * (hold.w / (cols - 1)) : 0, hold.y, rows > 1 ? z1 - r * ((z1 - z0) / (rows - 1)) : (z0 + z1) / 2);
+    });
+    let view;
+    try { view = createRenderer(stack, this.game.scene); } catch { return; } // (a model that needs a battle around it: an empty hold)
+    s.aboard = { stack, view, seats, deck };
+  }
+
+  /** Each frame: the riders where their places in the hold are now (she rolls and pitches); gone when the ramp is down or she is. */
+  ride(dt) {
+    const t = this.game.world.time;
+    for (const s of this.game.world.stacks) {
+      const a = s.aboard;
+      if (!a) continue;
+      const cu = s.units[0], body = s.renderer?.rigs?.[0]?.root?.children[0];
+      if (!s.alive || !cu?.alive || (cu.rampK ?? 0) >= 1 || !body) { this.drop(s); continue; }
+      body.updateWorldMatrix(true, false);
+      a.stack.units.forEach((u, i) => { u.pos.copy(a.seats[i]).applyMatrix4(body.matrixWorld); u.yaw = u.turretYaw = u.aimYaw = cu.yaw; });
+      a.deck.y = a.stack.units[0].pos.y;
+      a.view.done = false;
+      a.view.update(dt, t);
+    }
+  }
+
+  /** The riders' stand-ins off the scene (landed, sunk, gone). */
+  drop(s) {
+    if (!s?.aboard) return;
+    s.aboard.view.dispose?.();
+    s.aboard = null;
+  }
 
   /** The moored mines (seeded: host and guest lay the same), and the dan buoys along the swept lanes. */
   layMines(o) {
@@ -313,6 +371,8 @@ export class Landing {
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
     craft.cargo = cargo;
+    this.board(craft, cargo.typeId, g.armyOf(f));
+    g.netEvent?.('aboard', craft.id, cargo.typeId, g.armyOf(f));
     const draft = craft.stats.draft ?? 1;
     const half = (craft.type.hull?.length ?? 10) / 2;
     const bowZ = this.groundZ(x, draft, sign);
@@ -343,6 +403,7 @@ export class Landing {
       }
     }
     for (const r of this.runs.slice()) this.step(r, dt);
+    this.ride(dt);
     this.batteries(dt);
     this.waters();
     this.tide();
@@ -442,6 +503,7 @@ export class Landing {
 
   /** A craft off the map (or a DD tank become a tank again): nobody's still aiming at her. */
   remove(s) {
+    this.drop(s);
     for (const o of this.game.world.stacks) for (const u of o.units) if (u.target?.stack === s) u.target = null;
     this.game.removeStack(s);
   }
@@ -478,6 +540,10 @@ export class Landing {
     const stack = this.spawnCargo(r, { x, z });
     if (r.cargo.kit) stack.setKit?.(r.cargo.kit);
     s.cargo = null;
+    // they were aboard: each from his place in the hold, off down the ramp to the stack's formation
+    const seen = s.aboard?.stack.units;
+    if (seen?.length) stack.units.forEach((m, k) => { const p = seen[k % seen.length].pos; m.pos.set(p.x, g.terrain.heightAt(p.x, p.z), p.z); m.yaw = u.yaw; });
+    this.drop(s);
     // up out of the water onto the dry sand, a little way: from there it's yours to command
     let ux = x, uz = z;
     for (let i = 0; i < 300 && g.terrain.heightAt(ux, uz) < level + 0.8; i++) { ux += fx; uz += fz; }
