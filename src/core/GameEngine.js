@@ -290,7 +290,7 @@ export class GameEngine {
       // Babylon compiles its shaders in the background: keep the loading screen up until the
       // opening view is ready, so the battle doesn't start on a half-drawn field
       for (const f of ['nato', 'pact']) { // (and the vehicles' paint, though none is on the field yet)
-        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && u.models?.[army]);
+        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && (u.models?.[army] ?? u.models?.[f])); // (an army with no vehicle of its own, the British of 1801: its side's boats, in its own paint)
         try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
       }
       this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)

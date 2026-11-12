@@ -184,13 +184,13 @@ function sailRig(describe) {
         const flog = b < 1.05 || u.struck ? Math.sin(t * 9 + phase) * 0.06 : 0; // head to wind, or her sheets let fly when she strikes: the sails flog (a shiver of the yards — never a non-uniform scale: Babylon draws nothing for one made mid-battle)
         const want = b < 1.05 ? 0 : Math.sign(off) * Math.min(0.6, (Math.PI - b) * 0.45); // braced round: square before the wind, sharp up close-hauled
         brace += (want - brace) * Math.min(1, dt * 0.6);
-        heel += (-Math.sign(off) * Math.sin(Math.min(b, Math.PI / 2)) * 0.07 * Math.min(1.5, wind.speed / 7) * (b < 1.05 ? 0.2 : 1) - heel) * Math.min(1, dt * 0.5);
+        if (!d.rowOnly) heel += (-Math.sign(off) * Math.sin(Math.min(b, Math.PI / 2)) * 0.07 * Math.min(1.5, wind.speed / 7) * (b < 1.05 ? 0.2 : 1) - heel) * Math.min(1, dt * 0.5);
         for (const r of rig) {
           if (r.fore) r.g.rotation.y = Math.sign(off) * Math.min(0.9, (Math.PI - b) * 0.55);  // the spanker out to leeward
           else r.g.rotation.y = brace + flog;
         }
         if (oars.length) { // rowing (under way, the wind giving her less than the sweeps): back through the water, lifted, forward again
-          const rowing = u.moving && !u.struck && sailFactor(u.yaw ?? 0) < 0.5;
+          const rowing = u.moving && !u.struck && (d.rowOnly || sailFactor(u.yaw ?? 0) < 0.5); // (a boat with no sail: always)
           if (rowing) stroke += dt * 2.6;
           const swing = rowing ? Math.sin(stroke) * 0.45 : 0, lift = rowing ? Math.max(0, Math.cos(stroke)) * 0.18 : 0.12;
           for (const o of oars) { o.g.rotation.y = o.side * swing; o.g.rotation.z = o.side * lift; }
@@ -253,6 +253,56 @@ export const buildBrigFR = sailRig(() => shipOfTheLine({ ...BRIG, navy: 'fr' }))
 export const buildFireship = sailRig(() => shipOfTheLine({ ...BRIG, navy: 'fire' })); // (an old brig, her ports nailed shut and her hold full of pitch and powder)
 export const buildGunboatRN = sailRig(() => gunboat('rn'));
 export const buildGunboatFR = sailRig(() => gunboat('fr'));
+
+/**
+ * The landing boats (1801, Aboukir: data/units1806/ships.js flatboat, horseBoat): open and flat-bottomed, raked at both
+ * ends, rowed by the fleet's seamen. The rowers sit on the thwarts along each side, the troops between them on the
+ * floor (systems/Landing.js HOLDS); the coxswain and a midshipman in the stern sheets, the ensign over them. No sail:
+ * she rows (sailRig `rowOnly`). Hollow to the floor, so the men aboard are seen.
+ */
+function landingBoat({ len, beam, oarsASide, gun = false }) {
+  const HULL = 0x4a3c2c, PAINT = 0xd8cfb8, JACKET = 0x1d2a5c, SKIN = 0xd8b090, CAP = 0x1a1a1a;
+  const floor = 0.3, side = 0.95; // (the floor just above the water; the gunwale over it)
+  const parts = [
+    P.box(beam - 0.2, 0.5, len - 1.6, { y: floor - 0.25, color: HULL }),                                              // the flat bottom
+    ...[-1, 1].map((s) => P.box(0.1, side, len - 1.4, { x: s * (beam / 2 - 0.05), y: floor + side / 2 - 0.2, color: HULL })), // the sides
+    ...[-1, 1].map((s) => P.box(0.12, 0.12, len - 1.2, { x: s * (beam / 2 - 0.05), y: floor + side - 0.15, color: PAINT })),  // the gunwale's white strake
+    ...[-1, 1].map((e) => P.box(beam - 0.1, side + 0.3, 0.12, { y: floor + 0.2, z: e * (len / 2 - 0.45), rx: e * 0.55, color: HULL })), // the raked ends
+    P.box(beam - 0.3, 0.06, len - 1.8, { y: floor + 0.02, color: 0x8a7458, surf: 'deck' }),                           // the floor boards
+    P.box(beam - 0.3, 0.35, 1.4, { y: floor + 0.2, z: -len / 2 + 1.3, color: 0x7a6448 }),                            // the stern sheets
+  ];
+  // the rowers: one to an oar on the thwarts along each side, leaning to the stroke (a blue jacket, white trousers, a tarred hat)
+  const at = (i) => -len / 2 + 2.6 + i * ((len - 4.6) / Math.max(1, oarsASide - 1));
+  for (const s of [-1, 1]) for (let i = 0; i < oarsASide; i++) {
+    const x = s * (beam / 2 - 0.45), z = at(i);
+    parts.push(
+      P.box(0.5, 0.06, 0.25, { x, y: floor + 0.4, z, color: 0x7a6448 }),                                  // the thwart
+      P.box(0.34, 0.4, 0.22, { x, y: floor + 0.75, z: z + 0.05, rx: -0.3, color: JACKET }),               // the body, leaning aft
+      P.box(0.3, 0.2, 0.42, { x, y: floor + 0.5, z: z + 0.25, color: 0xe6e2d6 }),                         // the thighs, forward
+      P.sphere(0.1, { x, y: floor + 1.05, z: z - 0.05, color: SKIN }, 6, 5),
+      P.cyl(0.13, 0.13, 0.03, { x, y: floor + 1.13, z: z - 0.05, color: CAP }, 8), P.cyl(0.08, 0.09, 0.08, { x, y: floor + 1.18, z: z - 0.05, color: CAP }, 8),
+    );
+  }
+  // the coxswain at the tiller, the midshipman by him; the ensign on its staff
+  parts.push(
+    P.box(0.36, 0.6, 0.26, { x: 0.35, y: floor + 0.75, z: -len / 2 + 1.1, color: JACKET }), P.sphere(0.1, { x: 0.35, y: floor + 1.15, z: -len / 2 + 1.1, color: SKIN }, 6, 5),
+    P.box(0.36, 0.6, 0.26, { x: -0.35, y: floor + 0.75, z: -len / 2 + 1.3, color: JACKET }), P.sphere(0.1, { x: -0.35, y: floor + 1.15, z: -len / 2 + 1.3, color: SKIN }, 6, 5),
+    P.box(0.06, 0.6, 0.9, { y: floor - 0.1, z: -len / 2 - 0.2, color: HULL }),                            // the rudder
+    P.cyl(0.03, 0.03, 2.2, { y: floor + 1.2, z: -len / 2 + 0.4, color: 0x6e5236 }, 4),
+  );
+  if (gun) parts.push(P.cyl(0.14, 0.2, 2.2, { y: floor + 0.6, z: len / 2 - 2.2, rx: Math.PI / 2, color: IRON }, 8)); // (a carronade in her bow)
+  const colours = merge([P.box(0.04, 0.6, 1.0, { y: floor + 2.0, z: -len / 2 - 0.1, color: 0xb8221e }), P.box(0.05, 0.3, 0.5, { y: floor + 2.15, z: -len / 2 + 0.15, color: 0x1f2e6e })]);
+  // the oars: shaft out over the gunwale and down to the water, each pivoting at its thole
+  const DOWN = 0.42, cs = Math.cos(DOWN), sn = Math.sin(DOWN);
+  const sweep = (s) => merge([
+    P.cyl(0.04, 0.04, 3.6, { x: s * cs * 1.1, y: -sn * 1.1, rz: s * (Math.PI / 2 - DOWN), color: 0x8a7458 }, 4),
+    P.box(0.04, 0.6, 0.18, { x: s * cs * 2.7, y: -sn * 2.7, rz: s * (Math.PI / 2 - DOWN), color: 0x8a7458 }),
+  ]);
+  const oars = [-1, 1].flatMap((s) => Array.from({ length: oarsASide }, (_, i) => ({ at: [s * (beam / 2), floor + side - 0.1, at(i)], side: s })));
+  return { fixed: merge(parts), rig: [], colours, len, beam, mastCount: 0, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) }, rowOnly: true };
+}
+export const buildFlatboat = sailRig(() => landingBoat({ len: 12, beam: 3, oarsASide: 6 }));
+export const buildHorseBoat = sailRig(() => landingBoat({ len: 15, beam: 4.4, oarsASide: 8, gun: true }));
 
 const SEVENTY_FOUR = { len: 52, beam: 14.6, fb: 6.2, draft: 6.4, decks: 2, ports: 14, masts: [[15, 46], [0.5, 52], [-14, 36]] };
 export const buildSeventyFourRN = sailRig(() => shipOfTheLine({ ...SEVENTY_FOUR, navy: 'rn' }));

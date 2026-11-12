@@ -92,12 +92,12 @@ export default {
   description: 'Egypt, 8 March 1801: at dawn the British army rows ashore in the fleet\'s flatboats, straight at the French on the sand hills. Aboukir castle on its point, Lake Maadieh behind the dunes, the road to Alexandria inland.',
   epochs: ['1806'],
   theatre: 'coastal',
-  climate: 'desert',
   wip: true, // (1806 coastal step 1: the map; the British army and its boats come next)
   modes: ['landing'],
   sides: { nato: 'France', pact: 'Britain' },
   armies: { nato: ['fr'], pact: ['gb'] },
   conditions: { time: 'dawn', weather: 'clear' },
+  wind: { from: 290, speed: 3, veer: 0.15 }, // (8 March 1801: a light air off the sea after a week of gales — the frigates can work in)
   size: SIZE,
   segments: 800,
   bounds: BOUNDS,
@@ -140,6 +140,33 @@ export default {
   cameraStart: { nato: { x: 0, z: 150 }, pact: { x: 0, z: -330 } },
   points,
   spawns: { nato: [], pact: [] },
+
+  landing: {
+    // the fleet's boats (systems/Landing.js): the foot in flatboats, the guns and horses in the launches
+    craft: { infantry: 'flatboat', vehicle: 'horseBoat' },
+    launchZ: 560, // (the transports anchored a mile out: here the boats are put in the water half a kilometre off)
+    // the dawn signal: the first boats lie in line until the flagship's gun, then all pull for the shore together
+    signal: { t: 25, say: 'The signal gun from the flagship — every boat pulls for the shore', sayOther: 'A gun from the British flagship: the boats are coming in, all together' },
+    // what the landing may call in at sea: frigates and brig-sloops inshore to cover the boats with their broadsides
+    navy: ['frigate', 'destroyer'],
+    // the French at dawn (step 4 adds the castle's guns, the batteries and the earthworks): Friant's foot on the sand hills, guns on the great hill
+    defence: ['rifles', 'mgTeam', 'rifles', 'artillery', 'mgTeam', 'rifles', 'atTeam', 'artillery', 'rifles', 'mgTeam', 'mortar', 'rifles'],
+    hold: [...SECTORS.flatMap((s) => [-30, 30].map((dx) => W(s.x + dx, shoreZ(s.x + dx) - 60))), ...SECTORS.map((s) => W(s.inland.x, s.inland.z))],
+    // the British AI (ai/LandingDirector.js): what it buys next, a frigate inshore off the focus sector
+    ai: { order: ['rifles', 'mgTeam', 'marines', 'rifles', 'atTeam', 'artillery', 'rifles', 'sailors', 'sniper', 'rifles', 'reconVehicle', 'atTeam', 'rifles'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 300 },
+    economy: { reserves: 2000, perSector: 600, beachIncome: 0.7, defenceCp: 800, defenceIncome: 1.4 },
+    waves: [
+      // the first wave (the reserve brigades and the Guards' flank companies, the 23rd and 28th, the 40th's light companies, the 42nd)
+      { t: 0, units: [
+        { unit: 'rifles', sector: 0 }, { unit: 'mgTeam', sector: 0 }, { unit: 'marines', sector: 0 },
+        { unit: 'atTeam', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 },
+        { unit: 'rifles', sector: 2 }, { unit: 'mgTeam', sector: 2 }, { unit: 'guard', sector: 2 },
+      ] },
+      // the guns and their seamen, then the horses
+      { t: 150, say: 'The launches are coming in with the guns, the seamen to haul them', units: [{ unit: 'artillery', sector: 1 }, { unit: 'sailors', sector: 1 }, { unit: 'rifles', sector: 0 }] },
+      { t: 300, say: 'The dragoons\' horses are coming ashore', units: [{ unit: 'reconVehicle', sector: 2 }, { unit: 'artillery', sector: 0 }] },
+    ],
+  },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });

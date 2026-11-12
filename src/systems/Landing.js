@@ -27,7 +27,8 @@ const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (
 // What an open craft carries is seen aboard (Landing.board): the men in rows on the floor of the well, the vehicles
 // nose to tail on the tank deck — the game's own renderers on stand-ins, in her body's frame (local y up, z to the bow).
 // When the ramp is down they are the real stack, each man or vehicle starting from his place aboard and off down it.
-const HOLDS = { lcvp: { y: 0.42, z: [-3.4, 3.0], w: 2.1, cols: 3 }, lct: { y: 1.0, z: [-9, 11], w: 0, cols: 1 } };
+const HOLDS = { lcvp: { y: 0.42, z: [-3.4, 3.0], w: 2.1, cols: 3 }, lct: { y: 1.0, z: [-9, 11], w: 0, cols: 1 },
+  flatboat: { y: 0.33, z: [-3.4, 3.8], w: 0.8, cols: 2 }, horseBoat: { y: 0.33, z: [-4, 4], w: 0, cols: 1 } }; // (1801: the troops between the rowers)
 /** A stand-in for entities/Unit: what the renderers read (as ui/UnitPreview.js). */
 const rider = (stack, index) => ({
   stack, index, alive: true, visible: true, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, turretYaw: 0, aimYaw: 0, prone: 0, crouch: 0.35,
@@ -334,7 +335,7 @@ export class Landing {
 
   /** How far out the craft are put in the water: just outside the mine band (the transports lie further out — the run in is what matters), else the sea edge. */
   launchZ() {
-    const edge = this.game.world.bounds.z - 25, band = this.game.map.landing?.seaMines?.z;
+    const edge = Math.min(this.game.world.bounds.z - 25, this.game.map.landing?.launchZ ?? Infinity), band = this.game.map.landing?.seaMines?.z; // (`launchZ`: the transports anchored closer in — Aboukir's rowing boats)
     return band ? Math.min(edge, band[1] + 130) : edge;
   }
 
@@ -377,6 +378,8 @@ export class Landing {
     const half = (craft.type.hull?.length ?? 10) / 2;
     const bowZ = this.groundZ(x, draft, sign);
     const r = { craft, cargo, phase: 'in', t: 0, sign, x, way: { x, z: bowZ + sign * half * 0.9 }, still: 0 };
+    const sig = g.map.landing?.signal; // (the dawn signal: the first boats lie in line where they were put in the water until the signal gun)
+    if (sig && g.time < sig.t) { r.go = r.way; r.way = { ...start }; }
     craft.run = r;
     this.runs.push(r);
     return craft;
@@ -401,6 +404,14 @@ export class Landing {
         });
         if (w.say) g.tell(f, w.say);
       }
+    }
+    const sig = g.map.landing?.signal;
+    if (sig && !this.signalled && g.time >= sig.t) { // the signal gun from the flagship: every boat waiting pulls for the shore
+      this.signalled = true;
+      for (const r of this.runs) if (r.go) { r.way = r.go; r.go = null; }
+      const f = ['nato', 'pact'].find((q) => this.lands(q)), b = f && g.map.bases[f];
+      if (b) g.audio?.play('arty', { x: b.x, y: 4, z: b.z * 0.8 }, { volume: 1 });
+      if (f) g.tellBoth?.(f, sig.say ?? 'The signal gun — the boats pull for the shore', sig.sayOther ?? 'A gun out at sea: the boats are coming in');
     }
     for (const r of this.runs.slice()) this.step(r, dt);
     this.ride(dt);
@@ -461,6 +472,7 @@ export class Landing {
   step(r, dt) {
     const g = this.game, s = r.craft, u = s.units[0];
     if (!s.alive || !u?.alive) return;
+    if (r.go) return; // (waiting in line for the signal gun)
     r.t += dt;
     const band = g.map.landing?.seaMines?.z;
     if (band && Math.abs(u.pos.z) > band[0] - 60 && Math.abs(u.pos.z) < band[1] + 80) { const safe = this.inLane(u.pos.x, 24); if (safe !== u.pos.x) r.way = { x: safe, z: r.way.z }; } // (pushed toward the lane's edge by the others: back to its middle)

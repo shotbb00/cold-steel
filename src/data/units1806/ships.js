@@ -5,7 +5,8 @@
 // guns forward and aft, so a broadside ripples down her side), firing roundshot at what bears on that beam.
 // Speeds are twice the real ones (a 74 makes 8 knots; the game's 16), the ranges the game's sea scale.
 // Ids follow the other eras' ships, so the modes and the AI work: the 74 is `cruiser` (the line of battle).
-import { buildSeventyFourRN, buildSeventyFourFR, buildFirstRateRN, buildFirstRateFR, buildFrigateRN, buildFrigateFR, buildBrigRN, buildBrigFR, buildFireship, buildGunboatRN, buildGunboatFR } from '../models/ships1806.js';
+import { lcvp } from '../units45/ships.js';
+import { buildFlatboat, buildHorseBoat, buildSeventyFourRN, buildSeventyFourFR, buildFirstRateRN, buildFirstRateFR, buildFrigateRN, buildFrigateFR, buildBrigRN, buildBrigFR, buildFireship, buildGunboatRN, buildGunboatFR } from '../models/ships1806.js';
 
 const SAIL = {
   naval: true, sail: true, eyeHeight: 40, aimHeight: 5, nightSight: { nato: 0.45, pact: 0.45 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0,
@@ -140,4 +141,33 @@ export const ptBoat = ship({
   },
 });
 
-export const SHIPS_1806 = { cruiser, battleship, frigate, destroyer, fireship, ptBoat };
+/**
+ * The landing boats (the coastal battle, Aboukir 1801: systems/Landing.js). Never bought: what the British buy for the
+ * land comes ashore in them — the foot in a flatboat (fifty men, rowed by the fleet's seamen), the guns and horses in
+ * the launches. Rowed, not sailed (no `sail`: they go where they're steered, whatever the wind).
+ */
+const boat = (o) => ({ ...lcvp, engine: 'engine.sail', ...o, stats: { ...lcvp.stats, ...o.stats }, mounts: { nato: [], pact: [] } });
+export const flatboat = boat({
+  id: 'flatboat', name: 'Flatboat', shortName: 'Flatboat',
+  hull: { length: 12, beam: 3 },
+  stats: { draft: 0.6, hp: 200, armor: 0, speed: 5.5, accel: 0.6, turnRate: 0.5, radius: 2.2, height: 1.6, eyeHeight: 2, stealth: 0.5 },
+  camera: { distance: 26, height: 9, shoulder: 0 },
+  models: { nato: buildFlatboat, pact: buildFlatboat },
+  variants: {
+    nato: { name: 'Flatboat', weapon: 'none', text: 'An open, flat-bottomed boat: fifty soldiers sitting packed between the rowers.' },
+    pact: { name: 'Flatboat', weapon: 'none', text: 'The fleet\'s flatboats: fifty soldiers sit packed on the floor while the seamen pull. When she grounds they go over the bow into the surf, muskets held high.' },
+  },
+});
+export const horseBoat = boat({
+  id: 'horseBoat', name: 'Launch', shortName: 'Launch',
+  hull: { length: 15, beam: 4.4 },
+  stats: { draft: 0.8, hp: 320, armor: 0, speed: 4.6, accel: 0.45, turnRate: 0.35, radius: 3, height: 1.8, eyeHeight: 2.2 },
+  camera: { distance: 32, height: 11, shoulder: 0 },
+  models: { nato: buildHorseBoat, pact: buildHorseBoat },
+  variants: {
+    nato: { name: 'Launch', weapon: 'carronade', text: 'A ship\'s launch: guns and horses.' },
+    pact: { name: 'Ship\'s launch', weapon: 'carronade', text: 'The big boats of the ships of the line: the field guns and their teams, the dragoons\' horses, swum or slung ashore.' },
+  },
+});
+
+export const SHIPS_1806 = { cruiser, battleship, frigate, destroyer, fireship, ptBoat, flatboat, horseBoat };

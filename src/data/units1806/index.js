@@ -338,10 +338,27 @@ const BRITISH = { rifles, mgTeam, atTeam, sniper, engineers, observers, guard, r
 for (const [id, v] of Object.entries(GB)) BRITISH[id].variants = { ...BRITISH[id].variants, gb: v };
 atTeam.models = { ...atTeam.models, gb: () => buildNapSoldier({ army: 'gb', kind: 'highland' }) };
 
+// the fleet's men ashore (the coastal battle: coastal + armies — only the British buy them)
+const navyMen = (kind) => ({ gb: () => buildNapSoldier({ army: 'gb', kind }), pact: () => buildNapSoldier({ army: 'gb', kind }) });
+const marines = {
+  ...rifles, id: 'marines', name: 'Marines', shortName: 'Marines', cost: 170, coastal: true, armies: ['gb'],
+  formation: { count: 20, columns: 10, spacing: 0.95 },
+  stats: { ...rifles.stats, hp: 105, breakMorale: 0.18, spread: 0.027 },
+  models: navyMen('marine'),
+  variants: { pact: { name: 'Marines', weapon: 'Sea Service musket, bayonet', text: 'The fleet\'s soldiers in red with white facings and round hats: drilled like the line, used to landing under fire. First out of the boats.' } },
+};
+const sailors = {
+  ...engineers, id: 'sailors', name: 'Seamen', shortName: 'Seamen', cost: 120, coastal: true, armies: ['gb'],
+  formation: { count: 16, columns: 8, spacing: 1.2 },
+  stats: { ...engineers.stats, hp: 95, speed: 1.8, range: 60, spread: 0.05, reloadTime: 22, bayonet: 140, breakMorale: 0.3 }, // (poor shots, savage at close quarters: cutlasses, boarding pikes)
+  models: navyMen('sailor'),
+  variants: { pact: { name: 'Seamen', weapon: 'Cutlass, pike, musket', text: 'A naval brigade off the ships: they haul the guns through the sand, throw up breastworks and clear the abatis (they work as pioneers) — and with cutlass and pike they are terrible at close quarters.' } },
+};
+
 export const TYPES_1806 = {
   ...SHIPS_1806,   // the sea maps' sailing ships (./ships.js)
   rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
-  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer,
+  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer, marines, sailors,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)
 };
 
