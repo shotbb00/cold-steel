@@ -144,6 +144,19 @@ export default {
   points,
   spawns: { nato: [], pact: [] },
 
+  landing: {
+    // what the Pact's land troops come in (systems/Landing.js): the naval infantry by hovercraft or Polnocny, vehicles by Frosch or Polnocny
+    craft: { infantry: ['aist', 'aist', 'polnocny'], vehicle: ['frosch', 'polnocny'] },
+    // what the landing may call in at sea: the Volksmarine's escorts (the Tarantul is the ptBoat slot)
+    navy: ['parchim', 'osa', 'natya', 'ptBoat'],
+    // the first wave at dawn, in to all three sectors at once
+    waves: [{ t: 0, say: 'The first wave is going in', units: [
+      { unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 0 }, { unit: 'ifv', sector: 0 },
+      { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 1 }, { unit: 'tank', sector: 1 }, { unit: 'engineers', sector: 1 },
+      { unit: 'rifles', sector: 2 }, { unit: 'rifles', sector: 2 }, { unit: 'ifv', sector: 2 },
+    ] }],
+  },
+
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
     const r = mulberry32(1985);

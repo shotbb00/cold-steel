@@ -42,6 +42,13 @@ function materialsFor(army, glowColor) {
   return materialCache.get(key);
 }
 
+/** Compile the vehicles' paint shader while the loading screen is up (BabylonView.warm): every vehicle and
+ *  ship shares it, and on a battle that opens without one (Hohwacht: the landing craft come later) the
+ *  first to appear was invisible for half a minute while it compiled. */
+export function warmRig(babylon, type, army, glowColor) {
+  babylon.warm(type.models[army](materialsFor(army, glowColor)).root);
+}
+
 const _p = new THREE.Vector3();
 
 const COMPACT = new Set(['cavalry', 'gun', 'wagon']);

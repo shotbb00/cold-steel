@@ -7,7 +7,7 @@
 //            so the armour can get off the sand
 //   defence  holds (no offensives); when a sector falls, its reserves go to the village up that draw
 import { FrontlineDirector } from './FrontlineDirector.js';
-import { getUnitType } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { enemyOf } from '../data/factions.js';
 
@@ -85,7 +85,7 @@ export class LandingDirector extends FrontlineDirector {
     if (!this.lands) return super.buy();
     const f = this.faction, army = this.game.armyOf(f), cp = this.state.cp[f];
     const cost = (id) => unitCost(getUnitType(id), army);
-    const allowed = (id) => !!getUnitType(id) && (!this.state.allow || this.state.allow(getUnitType(id), f));
+    const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(UNIT_TYPES[id], f)); // (not in this war: skipped — 1985 has no DD tank)
     const ships = this.fleet;
     const road = () => (this.focus && Math.random() < 0.75 ? this.focus.road : null);
     // the ships first, when there's room: two destroyers inshore, the battleship once

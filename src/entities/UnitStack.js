@@ -1102,7 +1102,7 @@ export class UnitStack {
       u.pos.x = qx;
       u.pos.z = qz;
     });
-    u.pos.y = (w?.level ?? 0) - (u.sink ?? 0) - (u.depth ?? 0);
+    u.pos.y = this.stats.hover ? Math.max(w?.level ?? 0, this.world.terrain.heightAt(u.pos.x, u.pos.z)) + 0.3 : (w?.level ?? 0) - (u.sink ?? 0) - (u.depth ?? 0); // (a hovercraft: on her cushion, over the water or the sand)
     u.climbY = 0;
     const speed = Math.hypot(u.vel.x, u.vel.z);
     u.moving = speed > 0.5;

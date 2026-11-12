@@ -2,6 +2,7 @@
 // (kind, formation, stats, models per faction, weaponSound, cost) and register it below.
 // Maps and modes refer to types by id.
 import rifles from './vanguard.ts';
+import { BALTIC_85 } from './baltic85.js';
 import atTeam from './atTeam.ts';
 import mgTeam from './mgTeam.ts';
 import tank from './tank.ts';
@@ -75,6 +76,7 @@ export const UNIT_TYPES = {
   [strongpoint.id]: strongpoint,
   [hq.id]: hq,
   ...SHIPS_1985,   // the open-sea maps' warships (./ships85.js)
+  ...BALTIC_85,    // the coastal maps' Pact ships and landing craft (./baltic85.js)
 };
 
 /** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */

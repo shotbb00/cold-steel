@@ -199,6 +199,7 @@ export class Landing {
       if (!m.live) continue;
       if (sweepers.some((u) => Math.hypot(u.pos.x - m.x, u.pos.z - m.z) < u.stats.sweeper)) { m.live = false; cut++; continue; }
       for (const s of ships) {
+        if (s.stats.hover) continue; // (a hovercraft rides over them)
         const u = s.units[0];
         if (!u?.alive || Math.hypot(u.pos.x - m.x, u.pos.z - m.z) > MINE_REACH + u.radius) continue;
         m.live = false;
@@ -214,7 +215,7 @@ export class Landing {
     }
     // the obstacles: only under the water (at low tide they stand dry on the sand)
     for (const r of this.runs) {
-      if (r.phase !== 'in') continue;
+      if (r.phase !== 'in' || r.craft.stats.hover) continue;
       const s = r.craft, u = s.units[0];
       if (!u?.alive) continue;
       for (const o of this.obstacles) {
@@ -259,9 +260,9 @@ export class Landing {
   }
 
   /** Where a craft with this draft grounds off beach x: the first z (coming in from the sea) with the sand that shallow. */
-  groundZ(x, draft) {
+  groundZ(x, draft, sign = 1) { // (`sign`: the side the sea is on — the lander's base's, +z on Omaha, -z at Hohwacht)
     const g = this.game, level = g.world.river.level, edge = g.world.bounds.z;
-    for (let z = edge; z > -edge; z -= 2) if (g.terrain.heightAt(x, z) > level - draft) return z;
+    for (let z = sign * edge; z * sign > -edge; z -= sign * 2) if (g.terrain.heightAt(x, z) > level - draft) return z;
     return 0;
   }
 
@@ -271,7 +272,9 @@ export class Landing {
    */
   launch(f, cargo, x, z0 = null) {
     const g = this.game, type = UNIT_TYPES[cargo.typeId];
-    const kind = type?.dd ? 'ddCraft' : type?.kind === 'infantry' ? 'lcvp' : 'lct'; // (a DD tank swims in on its own screen)
+    // the craft: the map's own (`landing.craft`: { infantry, vehicle, dd } — a type id or a list to pick from), else 1944's
+    const pick = (k, fb) => { const l = g.map.landing?.craft?.[k]; const id = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l; return id && UNIT_TYPES[id] ? id : fb; };
+    const kind = type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
@@ -281,7 +284,7 @@ export class Landing {
     craft.cargo = cargo;
     const draft = craft.stats.draft ?? 1;
     const half = (craft.type.hull?.length ?? 10) / 2;
-    const bowZ = this.groundZ(x, draft);
+    const bowZ = this.groundZ(x, draft, sign);
     const r = { craft, cargo, phase: 'in', t: 0, sign, x, way: { x, z: bowZ + sign * half * 0.9 }, still: 0 };
     craft.run = r;
     this.runs.push(r);

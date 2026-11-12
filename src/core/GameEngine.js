@@ -40,7 +40,8 @@ import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { EPOCHS, epoch } from '../data/epoch.js';
-import { getUnitType } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
+import { warmRig } from '../render/RigRenderer.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -284,6 +285,10 @@ export class GameEngine {
     if (this.babylon) {
       // Babylon compiles its shaders in the background: keep the loading screen up until the
       // opening view is ready, so the battle doesn't start on a half-drawn field
+      for (const f of ['nato', 'pact']) { // (and the vehicles' paint, though none is on the field yet)
+        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && u.models?.[army]);
+        try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
+      }
       this.babylon.render(0);
       this.babylon.scene.whenReadyAsync().then(begin, begin);
     } else begin();

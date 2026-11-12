@@ -18,7 +18,7 @@ const BLACK = 0x1c1e20;
 const plate = (o) => ({ surf: 'plate', ...o });
 const box = (w, h, d, o) => P.box(w, h, d, plate(o));
 
-function craft(describe) {
+export function craft(describe) {
   let d = null;
   return (mats) => {
     d ??= describe();
