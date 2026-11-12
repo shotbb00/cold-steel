@@ -17,12 +17,24 @@
 //              the rest stop her short, and her men wade in from there.
 import * as THREE from 'three';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { forArmy } from '../data/factions.js';
+import { forArmy, enemyOf, FACTIONS } from '../data/factions.js';
+import { createRenderer } from '../render/index.js';
 import { mulberry32 } from '../core/math.js';
 import { TIDE } from '../world/Sea.js';
 import { P, merge } from '../data/units/geometry.js';
 
 const SWAMP = 0.0032;          // a DD tank's chance a second of being swamped (times the sea state squared): at Omaha most went down
+// What an open craft carries is seen aboard (Landing.board): the men in rows on the floor of the well, the vehicles
+// nose to tail on the tank deck — the game's own renderers on stand-ins, in her body's frame (local y up, z to the bow).
+// When the ramp is down they are the real stack, each man or vehicle starting from his place aboard and off down it.
+const HOLDS = { lcvp: { y: 0.42, z: [-3.4, 3.0], w: 2.1, cols: 3 }, lct: { y: 1.0, z: [-9, 11], w: 0, cols: 1 } };
+/** A stand-in for entities/Unit: what the renderers read (as ui/UnitPreview.js). */
+const rider = (stack, index) => ({
+  stack, index, alive: true, visible: true, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, turretYaw: 0, aimYaw: 0, prone: 0, crouch: 0.35,
+  gait: 0, run: false, moving: false, walkPhase: index * 1.3, phase: index * 2.1 + 0.5, tint: 0.95 + (index % 5) * 0.03, flash: 0, flinch: 0, recoil: 0,
+  reloadAnim: 0, reloadT: 0, working: false, wounded: false, target: null, possessed: false, peekT: 0, deathTime: 0, cooldown: 0, aimPitch: 0, stats: stack.stats,
+});
+const SWIM_START = 320;        // m off the beach where the landing ships put the Pact's swimmers in (about 90 s at 3.5 m/s)
 const DD_START = 60;           // m outside the mine band where the LCTs launch them (in through the lane: a two-minute swim on Omaha)
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -46,6 +58,7 @@ export class Landing {
     this.drawObstacles();
     this.sweptN = 0;
     game.bus.on('stack:destroyed', (s) => {
+      this.drop(s);
       const r = this.runs.find((q) => q.craft === s);
       if (!r) return;
       this.runs.splice(this.runs.indexOf(r), 1);
@@ -109,17 +122,64 @@ export class Landing {
   }
 
   /** On a multiplayer guest, each frame: the tide (by the clock: no route grid here, the host does the moving). */
-  clientUpdate() { this.tide(true); }
+  clientUpdate(dt = 0) { this.tide(true); this.ride(dt); }
+
+  /** Who's aboard open craft `s` (a squad, a vehicle platoon of `typeId`), drawn in their places in her hold. Host and guest alike (net 'aboard'). */
+  board(s, typeId, army) {
+    const hold = HOLDS[s.type.id], type = UNIT_TYPES[typeId];
+    if (!hold || !type || s.aboard || !this.game.scene) return;
+    const f = s.faction, vehicle = type.kind !== 'infantry';
+    const n = Math.max(1, Math.min(type.formation.count, vehicle ? 3 : 12));
+    const deck = { y: 0 };
+    const stack = {
+      type, faction: f, army, kind: type.kind, stats: { ...type.stats, ...type.factionStats?.[f], ...type.factionStats?.[army] }, units: [],
+      glowColor: new THREE.Color(FACTIONS[f].marking), services: { effects: { dust() {}, explosion() {}, burn() {} }, audio: null },
+      world: { terrain: { heightAt: () => deck.y, normalAt: (x, z, o) => o.set(0, 1, 0) } },
+    };
+    for (let i = 0; i < n; i++) stack.units.push(rider(stack, i));
+    const cols = vehicle ? 1 : hold.cols, rows = Math.ceil(n / cols), [z0, z1] = hold.z;
+    const seats = stack.units.map((u, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      return new THREE.Vector3(cols > 1 ? (c - (cols - 1) / 2) * (hold.w / (cols - 1)) : 0, hold.y, rows > 1 ? z1 - r * ((z1 - z0) / (rows - 1)) : (z0 + z1) / 2);
+    });
+    let view;
+    try { view = createRenderer(stack, this.game.scene); } catch { return; } // (a model that needs a battle around it: an empty hold)
+    s.aboard = { stack, view, seats, deck };
+  }
+
+  /** Each frame: the riders where their places in the hold are now (she rolls and pitches); gone when the ramp is down or she is. */
+  ride(dt) {
+    const t = this.game.world.time;
+    for (const s of this.game.world.stacks) {
+      const a = s.aboard;
+      if (!a) continue;
+      const cu = s.units[0], body = s.renderer?.rigs?.[0]?.root?.children[0];
+      if (!s.alive || !cu?.alive || (cu.rampK ?? 0) >= 1 || !body) { this.drop(s); continue; }
+      body.updateWorldMatrix(true, false);
+      a.stack.units.forEach((u, i) => { u.pos.copy(a.seats[i]).applyMatrix4(body.matrixWorld); u.yaw = u.turretYaw = u.aimYaw = cu.yaw; });
+      a.deck.y = a.stack.units[0].pos.y;
+      a.view.done = false;
+      a.view.update(dt, t);
+    }
+  }
+
+  /** The riders' stand-ins off the scene (landed, sunk, gone). */
+  drop(s) {
+    if (!s?.aboard) return;
+    s.aboard.view.dispose?.();
+    s.aboard = null;
+  }
 
   /** The moored mines (seeded: host and guest lay the same), and the dan buoys along the swept lanes. */
   layMines(o) {
     if (!o) return [];
     const g = this.game, r = mulberry32(o.seed ?? 6), bx = g.world.bounds.x, [z0, z1] = o.z;
+    const f = ['nato', 'pact'].find((q) => this.lands(q)), sign = Math.sign(g.map.bases[f]?.z ?? 1) || 1; // (the band is in m out from the middle, on the lander's side: +z at Omaha, -z at Hohwacht)
     const inLane = (x) => o.lanes.some((lx) => Math.abs(x - lx) < o.lane);
     const mines = [];
     for (let i = 0; mines.length < o.count && i < o.count * 20; i++) {
       const x = (r() * 2 - 1) * bx, z = z0 + r() * (z1 - z0);
-      if (!inLane(x)) mines.push({ x, z, live: true });
+      if (!inLane(x)) mines.push({ x, z: z * sign, live: true });
     }
     // the dan buoys: each lane's edges, red to port and green to starboard coming in
     const level = g.world.river.level;
@@ -128,7 +188,7 @@ export class Landing {
     const red = mat(0xb8321e), green = mat(0x2e7a3a), dark = mat(0x222222);
     for (const lx of o.lanes) for (const side of [-1, 1]) for (let z = z0 - 10; z <= z1 + 10; z += (z1 - z0 + 20) / 3) {
       const b = new THREE.Mesh(geo, side < 0 ? green : red);
-      b.position.set(lx + side * o.lane, level + 0.9, z);
+      b.position.set(lx + side * o.lane, level + 0.9, z * sign);
       const p = new THREE.Mesh(pole, dark);
       p.position.set(0, 1.9, 0);
       b.add(p);
@@ -199,6 +259,7 @@ export class Landing {
       if (!m.live) continue;
       if (sweepers.some((u) => Math.hypot(u.pos.x - m.x, u.pos.z - m.z) < u.stats.sweeper)) { m.live = false; cut++; continue; }
       for (const s of ships) {
+        if (s.stats.hover) continue; // (a hovercraft rides over them)
         const u = s.units[0];
         if (!u?.alive || Math.hypot(u.pos.x - m.x, u.pos.z - m.z) > MINE_REACH + u.radius) continue;
         m.live = false;
@@ -214,7 +275,7 @@ export class Landing {
     }
     // the obstacles: only under the water (at low tide they stand dry on the sand)
     for (const r of this.runs) {
-      if (r.phase !== 'in') continue;
+      if (r.phase !== 'in' || r.craft.stats.hover) continue;
       const s = r.craft, u = s.units[0];
       if (!u?.alive) continue;
       for (const o of this.obstacles) {
@@ -224,6 +285,33 @@ export class Landing {
         else { s.damageUnit(u, 60, null); r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z }; g.tell(s.faction, `${s.name}: stuck on the obstacles — the men go in from here`); }
         break;
       }
+    }
+  }
+
+  /**
+   * The defence's anti-ship missile batteries (a unit with `stats.antiShip`: 1985, Hohwacht): hidden inland, halted, they
+   * fire a missile at a ship of the landing in reach (the biggest first), then drive off to another hide before the
+   * ships' guns come looking (the launch gives a bearing: systems/Sensors.js) — shoot and scoot.
+   */
+  batteries(dt) {
+    const g = this.game, ms = g.missiles;
+    if (!ms) return;
+    for (const s of g.world.stacks) {
+      const A = s.stats.antiShip;
+      if (!A || !s.alive || this.lands(s.faction)) continue;
+      const m = (s.ssm ??= { ...A, left: A.load, cd: 20 + Math.random() * 20 });
+      if ((m.cd -= dt) > 0 || m.left <= 0 || s.moveTarget) continue;
+      const u = s.units.find((q) => q.alive);
+      if (!u) continue;
+      const ships = g.world.stacks.filter((o) => o.alive && o.stats.naval && o.faction !== s.faction && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < m.range);
+      const t = ships.sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0)).map((o) => o.units.find((q) => q.alive)).find((q) => q && ms.inbound(q) < 2);
+      if (!t) { m.cd = 3; continue; }
+      const d = Math.hypot(t.pos.x - u.pos.x, t.pos.z - u.pos.z), flight = d / m.speed;
+      ms.launch(s, u, { x: u.pos.x, y: u.pos.y + 3, z: u.pos.z }, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
+      m.cd = m.reload;
+      // and away: a new hide a couple of hundred metres off, further from the sea
+      const sea = Math.sign(g.map.bases[enemyOf(s.faction)]?.z ?? -1) || -1, a = Math.random() * Math.PI * 2, r = 150 + Math.random() * 120;
+      s.ai.moveTo({ x: Math.max(-g.world.bounds.x + 40, Math.min(g.world.bounds.x - 40, u.pos.x + Math.cos(a) * r)), z: u.pos.z - sea * Math.abs(Math.sin(a)) * r * 0.5 }, { ordered: false });
     }
   }
 
@@ -259,9 +347,9 @@ export class Landing {
   }
 
   /** Where a craft with this draft grounds off beach x: the first z (coming in from the sea) with the sand that shallow. */
-  groundZ(x, draft) {
+  groundZ(x, draft, sign = 1) { // (`sign`: the side the sea is on — the lander's base's, +z on Omaha, -z at Hohwacht)
     const g = this.game, level = g.world.river.level, edge = g.world.bounds.z;
-    for (let z = edge; z > -edge; z -= 2) if (g.terrain.heightAt(x, z) > level - draft) return z;
+    for (let z = sign * edge; z * sign > -edge; z -= sign * 2) if (g.terrain.heightAt(x, z) > level - draft) return z;
     return 0;
   }
 
@@ -271,17 +359,23 @@ export class Landing {
    */
   launch(f, cargo, x, z0 = null) {
     const g = this.game, type = UNIT_TYPES[cargo.typeId];
-    const kind = type?.dd ? 'ddCraft' : type?.kind === 'infantry' ? 'lcvp' : 'lct'; // (a DD tank swims in on its own screen)
+    // the craft: the map's own (`landing.craft`: { infantry, vehicle, dd } — a type id or a list to pick from), else 1944's
+    const pick = (k, fb) => { const l = g.map.landing?.craft?.[k]; const id = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l; return id && UNIT_TYPES[id] ? id : fb; };
+    const swim = g.map.landing?.swim?.[cargo.typeId]; // (an amphibious vehicle: it swims in itself — `landing.swim`: { cargo type: swimmer })
+    const kind = swim && UNIT_TYPES[swim] ? swim : type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
+    if (UNIT_TYPES[kind].stats.swims) z0 = this.groundZ(x, 1, sign) + sign * SWIM_START; // (launched off the beach: a slow paddle in)
     const start = { x, z: z0 ?? sign * this.launchZ() };
     const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
     craft.cargo = cargo;
+    this.board(craft, cargo.typeId, g.armyOf(f));
+    g.netEvent?.('aboard', craft.id, cargo.typeId, g.armyOf(f));
     const draft = craft.stats.draft ?? 1;
     const half = (craft.type.hull?.length ?? 10) / 2;
-    const bowZ = this.groundZ(x, draft);
+    const bowZ = this.groundZ(x, draft, sign);
     const r = { craft, cargo, phase: 'in', t: 0, sign, x, way: { x, z: bowZ + sign * half * 0.9 }, still: 0 };
     craft.run = r;
     this.runs.push(r);
@@ -309,6 +403,8 @@ export class Landing {
       }
     }
     for (const r of this.runs.slice()) this.step(r, dt);
+    this.ride(dt);
+    this.batteries(dt);
     this.waters();
     this.tide();
     if ((this.wadeT = (this.wadeT ?? 0) - dt) <= 0) { this.wadeT = 0.5; this.wading(); }
@@ -387,7 +483,7 @@ export class Landing {
       const bowDepth = g.world.river.level - g.terrain.heightAt(u.pos.x, u.pos.z - r.sign * (s.type.hull?.length ?? 10) * 0.5);
       if (r.still > 2.5 && bowDepth > (s.stats.draft ?? 1) + 0.8) { r.still = 0; r.way = { x: this.inLane(r.way.x + (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 10), 10), z: r.way.z }; } // (jammed short, out in deep water: round the boat ahead)
       else if (d < 3 + s.stats.radius || (u.pos.z - r.way.z) * r.sign < 0 || r.still > 2.5) {
-        if (s.stats.dd) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
+        if (s.stats.dd || s.stats.swims) { this.ashore(r, u); return; } // (her tracks on the sand: the screen comes down, she drives out)
         r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
       }
     } else if (r.phase === 'ramp') {
@@ -398,12 +494,16 @@ export class Landing {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
       if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: this.inLane(r.x + (Math.random() - 0.5) * 40, 20), z: r.sign * (g.world.bounds.z + 40) }; }
     } else if (r.phase === 'out') {
+      // inside the mines still: along the beach to the swept lane first (a big ship backing off drifts out of it), then straight out down it
+      const lx = this.inLane(u.pos.x, 30);
+      if (band && Math.abs(u.pos.z) < band[1] + 20) r.way = Math.abs(u.pos.z) < band[0] - 40 && Math.abs(lx - u.pos.x) > 1 ? { x: lx, z: u.pos.z + r.sign * 15 } : { x: lx, z: r.sign * (g.world.bounds.z + 40) };
       if (Math.abs(u.pos.z) > g.world.bounds.z - 30) { this.runs.splice(this.runs.indexOf(r), 1); s.run = null; this.remove(s); }
     }
   }
 
   /** A craft off the map (or a DD tank become a tank again): nobody's still aiming at her. */
   remove(s) {
+    this.drop(s);
     for (const o of this.game.world.stacks) for (const u of o.units) if (u.target?.stack === s) u.target = null;
     this.game.removeStack(s);
   }
@@ -440,6 +540,10 @@ export class Landing {
     const stack = this.spawnCargo(r, { x, z });
     if (r.cargo.kit) stack.setKit?.(r.cargo.kit);
     s.cargo = null;
+    // they were aboard: each from his place in the hold, off down the ramp to the stack's formation
+    const seen = s.aboard?.stack.units;
+    if (seen?.length) stack.units.forEach((m, k) => { const p = seen[k % seen.length].pos; m.pos.set(p.x, g.terrain.heightAt(p.x, p.z), p.z); m.yaw = u.yaw; });
+    this.drop(s);
     // up out of the water onto the dry sand, a little way: from there it's yours to command
     let ux = x, uz = z;
     for (let i = 0; i < 300 && g.terrain.heightAt(ux, uz) < level + 0.8; i++) { ux += fx; uz += fz; }

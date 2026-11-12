@@ -167,6 +167,18 @@ export class UnitPreview {
     if (type.stats?.naval) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships: framed by their size)
     this.atSea(!!type.stats?.naval);
     this.setPose('idle');
+    this.compile();
+  }
+
+  /**
+   * A model's shaders compiled in the background before it is drawn (KHR_parallel_shader_compile): the paint shader
+   * takes many seconds on some graphics chips, and drawn uncompiled it froze the whole menu while it compiled. Until
+   * it's ready the stage isn't redrawn (the menu stays responsive); then the unit is there.
+   */
+  compile() {
+    const n = (this.compiling = (this.compiling ?? 0) + 1);
+    this.hold = true;
+    this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => { if (this.compiling === n) this.hold = false; });
   }
 
   /**
@@ -210,6 +222,7 @@ export class UnitPreview {
     this.orbit.zoom = 1;
     this.fit = jet ? { w: kind === 'jet' ? 9.5 : 12.5, h: 3.4 } : { w: (rig.rotorRadius ?? 7) + 1.2, h: 3.4 };
     this.setPose('hover');
+    this.compile();
   }
 
   setPose(pose) {
@@ -232,6 +245,7 @@ export class UnitPreview {
 
   frame() {
     const dt = Math.min(this.clock.getDelta(), 0.05);
+    if (this.hold) return; // (its shaders still compiling: UnitPreview.compile)
     this.time += dt;
     const t = this.time;
     if (this.aircraft) {

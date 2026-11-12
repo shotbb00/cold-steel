@@ -144,6 +144,15 @@ export function truck({
     add(...pair((s) => P.box(0.04, 0.65, 0.04, { x: -0.35 + s * 0.25, y: deck - 0.33, z: -0.02, color: STEEL }))); // …its rails
     add(...pair((s) => P.box(0.03, 0.3, 0.5, { x: s * (hw + 0.035), y: deck + bodyH * 0.65, z: bodyFront * 0.6, color: GLASS }))); // side windows
     add(P.box(0.5, 0.12, 0.5, { y: top + 0.06, z: bodyFront * 0.5, color: dark }));                       // a roof vent
+    // the shelter's frame: its corner posts and the ribs along the sides, the rain gutter round the roof
+    add(...[0.06, bodyFront - 0.02].flatMap((z) => pair((s) => P.box(0.07, bodyH, 0.07, { x: s * (hw + 0.02), y: deck + bodyH / 2, z, color: dark }))));
+    for (let k = 1; k < Math.max(2, Math.round(bodyFront / 0.9)); k++) add(...pair((s) => P.box(0.035, bodyH - 0.1, 0.05, { x: s * (hw + 0.035), y: deck + bodyH / 2, z: (bodyFront * k) / Math.max(2, Math.round(bodyFront / 0.9)), color: dark })));
+    add(...pair((s) => P.box(0.06, 0.05, bodyFront, { x: s * (hw + 0.03), y: top - 0.05, z: bodyFront / 2, color: dark })));
+    // the air conditioner on the front of the roof with its louvres, a cable box low on the left, the lights on the back
+    add(P.box(Math.min(1.0, width * 0.4), 0.42, 0.7, { x: hw * 0.35, y: top + 0.21, z: bodyFront - 0.5, color: dark }));
+    for (let k = 0; k < 4; k++) add(P.box(Math.min(0.9, width * 0.36), 0.03, 0.04, { x: hw * 0.35, y: top + 0.08 + k * 0.09, z: bodyFront - 0.14, color: 0x141414 }));
+    add(P.box(0.06, 0.45, 0.9, { x: -(hw + 0.05), y: deck + 0.3, z: bodyFront * 0.35, color: dark }));
+    add(...pair((s) => P.box(0.14, 0.1, 0.04, { x: s * (hw - 0.15), y: deck + 0.2, z: 0.02, color: 0x6a2a20 })));
   }
   // where things are, for whoever puts something on it (a launcher, an antenna, red crosses)
   parts.layout = { deck, cabFront, cabRear, cabTop, bodyFront, top: deck + bodyH, hw, axles };

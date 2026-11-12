@@ -18,7 +18,7 @@ const BLACK = 0x1c1e20;
 const plate = (o) => ({ surf: 'plate', ...o });
 const box = (w, h, d, o) => P.box(w, h, d, plate(o));
 
-function craft(describe) {
+export function craft(describe) {
   let d = null;
   return (mats) => {
     d ??= describe();
@@ -91,8 +91,11 @@ export const buildDD = craft(() => {
 export const buildLCVP = craft(() => {
   const L = 10.9, B = 3.3, fb = 1.5;
   const fixed = merge([
-    box(B, 1.6, L - 1.2, { y: fb - 0.8, z: -0.6, color: GREY }),                      // the hull
-    box(B - 0.5, 0.12, L - 2.6, { y: 0.35, z: -0.3, color: WOOD, surf: 'deck' }),      // the well's floor
+    // the hull, open: the bottom under the well, the sides and the stern sheets round it, all of it up to the ramp's hinge
+    box(B, 0.45, L - 0.55 + 0.1, { y: 0.125, z: -0.275 + 0.05, color: GREY }),
+    ...[-1, 1].map((s) => box(0.15, 2.1, L - 0.55 + 0.1, { x: s * (B / 2 - 0.075), y: 0.95, z: -0.275 + 0.05, color: GREY })),
+    box(B, 2.1, 2.0, { y: 0.95, z: -L / 2 + 1.0, color: GREY }),
+    box(B - 0.3, 0.12, L - 2.0 - 0.55, { y: 0.35, z: (-L / 2 + 2.0 + L / 2 - 0.55) / 2, color: WOOD, surf: 'deck' }), // the well's floor
     ...[-1, 1].map((s) => box(0.1, 0.5, L - 2.2, { x: s * (B / 2 - 0.05), y: fb + 0.25, z: -0.5, color: GREY })), // her high sides
     box(B, 0.6, 1.4, { y: fb + 0.3, z: -L / 2 + 0.7, color: GREY }),                   // the stern sheets
     box(1.1, 0.8, 1.0, { x: 0.6, y: fb + 0.6, z: -L / 2 + 1.6, color: DARK }),         // the coxswain's station
@@ -113,8 +116,11 @@ export const buildLCVP = craft(() => {
 export const buildLCT = craft(() => {
   const L = 36.6, B = 9.8, fb = 2.4;
   const fixed = merge([
-    box(B, 2.4, L - 1, { y: fb - 1.2, z: -0.5, color: GREY }),                       // the hull
-    box(B - 1.4, 0.15, L - 7, { y: 0.9, z: 1.2, color: STEEL, surf: 'deck' }),       // the tank deck
+    // the hull, open: the bottom under the tank deck, the wing walls either side of it, the stern, up to the ramp's hinge
+    box(B, 0.9, L - 0.3 + 0.1, { y: 0.45, z: -0.15 + 0.05, color: GREY }),
+    ...[-1, 1].map((s) => box(0.6, 3.8, L - 0.3 + 0.1, { x: s * (B / 2 - 0.3), y: 1.9, z: -0.15 + 0.05, color: GREY })),
+    box(B, 3.8, 4.7, { y: 1.9, z: -L / 2 + 2.35, color: GREY }),
+    box(B - 1.2, 0.15, L - 4.7 - 0.8, { y: 0.9, z: (-L / 2 + 4.7 + L / 2 - 0.8) / 2, color: STEEL, surf: 'deck' }), // the tank deck
     ...[-1, 1].map((s) => box(0.6, 1.4, L - 6, { x: s * (B / 2 - 0.3), y: fb + 0.7, z: 1.5, color: GREY })), // the wing walls
     box(B, 1.4, 5, { y: fb + 0.7, z: -L / 2 + 2.5, color: GREY }),                   // the stern
     box(4.6, 2.4, 3.2, { x: -2, y: fb + 2.6, z: -L / 2 + 3, color: GREY }),          // the wheelhouse

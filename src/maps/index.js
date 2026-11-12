@@ -24,9 +24,11 @@ import brest from './brest.ts';
 import caribbean from './caribbean.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
+import hohwacht from './hohwacht.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
+  [hohwacht.id]: hohwacht,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,

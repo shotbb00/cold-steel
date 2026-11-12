@@ -44,6 +44,13 @@ function leo1(extra = []) {
       P.box(1.9, 0.06, 1.5, { y: 1.36, z: -2.5, color: BW_DK }),
       ...[-3.0, -2.7, -2.4, -2.1].map((z) => P.box(1.8, 0.03, 0.06, { y: 1.4, z, color: STEEL })),
       ...pair((s) => P.cyl(0.07, 0.07, 0.1, { x: s * 1.25, y: 1.15, z: 3.1, rx: Math.PI / 2, color: STEEL }, 10)),
+      // Leopard 1: the headlights in their guards, tow hooks and shackles, the driver's periscopes, the tow cables on the deck
+      ...pair((s) => P.box(0.26, 0.2, 0.16, { x: s * 1.3, y: 1.22, z: 3.0, rx: 0.4, color: STEEL })),
+      ...pair((s) => P.box(0.16, 0.1, 0.02, { x: s * 1.3, y: 1.24, z: 3.08, rx: 0.4, color: GLASS })),
+      ...pair((s) => P.box(0.14, 0.14, 0.22, { x: s * 0.75, y: 0.75, z: 3.5, color: STEEL })),
+      ...[-0.18, 0, 0.18].map((x) => P.box(0.1, 0.07, 0.05, { x: -0.65 + x, y: 1.42, z: 2.15, rx: -0.3, color: GLASS })),
+      ...pair((s) => P.cyl(0.035, 0.035, 3.2, { x: s * 1.1, y: 1.42, z: -1.2, rx: Math.PI / 2, color: STEEL }, 6)),
+      ...pair((s) => P.box(0.14, 0.12, 0.06, { x: s * 1.2, y: 1.2, z: -3.56, color: 0x5a1a14 })),
       ...extra,
     ]), 1.2, 0.3),
   };
@@ -62,6 +69,15 @@ function t55(extra = []) {
       ...[0.4, 1.0, 1.6].map((z) => P.box(0.42, 0.3, 0.5, { x: 1.4, y: 1.2, z: -z, color: NVA_DK })),
       P.box(1.7, 0.05, 1.2, { y: 1.34, z: -2.15, color: NVA_DK }),
       ...pair((s) => P.cyl(0.07, 0.07, 0.1, { x: s * 1.25, y: 1.12, z: 2.9, rx: Math.PI / 2, color: STEEL }, 10)),
+      // T-55: the headlights and IR light on the glacis, tow hooks, the driver's periscopes, the unditching log, the tow cable, the rear lights
+      ...pair((s) => P.cyl(0.08, 0.08, 0.12, { x: s * 1.05, y: 1.18, z: 2.75, rx: Math.PI / 2 - 0.5, color: STEEL }, 10)),
+      ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 1.05, y: 1.21, z: 2.81, rx: Math.PI / 2 - 0.5, color: 0x9a9a88 }, 10)),
+      P.cyl(0.11, 0.11, 0.16, { x: 1.05, y: 1.36, z: 2.62, rx: Math.PI / 2, color: STEEL }, 10),
+      ...pair((s) => P.box(0.14, 0.14, 0.22, { x: s * 0.75, y: 0.75, z: 3.15, color: STEEL })),
+      ...[-0.15, 0.15].map((x) => P.box(0.1, 0.07, 0.05, { x: -0.6 + x, y: 1.4, z: 1.95, rx: -0.3, color: GLASS })),
+      P.cyl(0.14, 0.14, 2.9, { y: 1.5, z: -3.3, rz: Math.PI / 2, color: 0x5a4632 }, 10),
+      P.cyl(0.035, 0.035, 3.0, { x: -1.4, y: 1.2, z: 0.6, rx: Math.PI / 2, color: STEEL }, 6),
+      ...pair((s) => P.box(0.14, 0.12, 0.06, { x: s * 1.1, y: 1.15, z: -3.12, color: 0x5a1a14 })),
       ...extra,
     ]), 1.2, 0.3),
   };
@@ -77,6 +93,20 @@ function mtlb(extra = [], roof = 1.85) {
       trackedHull([[-3.2, roof, 0.45], [-3.0, roof, 0.4], [1.6, roof, 0.4], [2.6, 1.55, 0.45], [3.2, 0.95, 0.75]], { belly: 1.0, fender: 1.45, fenderY: 0.95, chamfer: 0.08 }, { color: NVA }),
       P.box(0.5, 0.06, 0.45, { x: -0.55, y: 1.57, z: 2.3, color: NVA_DK }),
       ...pair((s) => P.box(0.7, 0.06, 0.6, { x: s * 0.6, y: roof + 0.02, z: -1.8, color: NVA_DK })),     // roof hatches
+      // the cab up front: the driver's and commander's windows, their periscopes, the headlights, tow hooks
+      ...pair((s) => P.box(0.45, 0.2, 0.04, { x: s * 0.55, y: 1.45, z: 2.62, rx: 0.5, color: GLASS })),
+      ...pair((s) => [-0.15, 0.15].map((x) => P.box(0.1, 0.07, 0.04, { x: s * 0.55 + x, y: roof + 0.04, z: 1.4, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.24, 0.16, 0.12, { x: s * 1.05, y: 1.2, z: 2.95, rx: 0.6, color: STEEL })),
+      ...pair((s) => P.box(0.15, 0.1, 0.02, { x: s * 1.05, y: 1.22, z: 3.01, rx: 0.6, color: GLASS })),
+      ...pair((s) => P.box(0.14, 0.14, 0.18, { x: s * 0.7, y: 0.8, z: 3.2, color: STEEL })),
+      // the troop compartment: vision blocks down its sides, the rear doors with their handles, the exhaust on the left
+      ...[-2.6, -1.9, -1.2].map((z) => pair((s) => P.box(0.04, 0.12, 0.2, { x: s * 1.46, y: roof - 0.25, z, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.75, 0.85, 0.06, { x: s * 0.45, y: 1.2, z: -3.22, color: NVA_DK })),
+      ...pair((s) => P.box(0.04, 0.16, 0.05, { x: s * 0.15, y: 1.25, z: -3.27, color: STEEL })),
+      P.box(0.14, 0.24, 0.8, { x: -1.5, y: 1.3, z: 0.6, color: STEEL }),
+      // stowage along the fenders, the unditching log across the back
+      ...pair((s) => P.box(0.3, 0.28, 1.1, { x: s * 1.3, y: 1.1, z: 0.9, color: NVA_DK })),
+      P.cyl(0.13, 0.13, 2.3, { y: roof + 0.12, z: -3.0, rz: Math.PI / 2, color: 0x5a4632 }, 10),
       ...extra,
     ]), 1.1, 0.3),
   };
@@ -91,6 +121,24 @@ function fuchs(extra = []) {
       P.box(1.8, 0.3, 0.05, { y: 2.05, z: 2.35, rx: -0.6, color: GLASS }),                                // the windscreen
       P.box(1.0, 1.3, 0.06, { y: 1.5, z: -3.32, color: BW_DK }),                                          // the rear doors
       ...pair((s) => P.box(0.06, 0.06, 5.6, { x: s * 1.38, y: 1.3, z: 0.0, color: BW_DK })),             // the side rubbing strips
+      // the cab: its side windows, the mirrors on their arms, the headlights and convoy lights low on the nose, tow eyes
+      ...pair((s) => P.box(0.04, 0.32, 0.6, { x: s * 1.3, y: 1.95, z: 1.6, color: GLASS })),
+      ...pair((s) => P.box(0.4, 0.04, 0.04, { x: s * 1.5, y: 2.05, z: 2.0, color: STEEL })),
+      ...pair((s) => P.box(0.05, 0.22, 0.16, { x: s * 1.7, y: 2.05, z: 2.0, color: STEEL })),
+      ...pair((s) => P.box(0.26, 0.16, 0.1, { x: s * 0.95, y: 1.3, z: 3.35, rx: 0.5, color: STEEL })),
+      ...pair((s) => P.box(0.18, 0.1, 0.02, { x: s * 0.95, y: 1.32, z: 3.4, rx: 0.5, color: GLASS })),
+      ...pair((s) => P.box(0.12, 0.16, 0.18, { x: s * 0.6, y: 0.95, z: 3.45, color: STEEL })),
+      // the troop compartment: vision blocks down both sides, the side door on the right, roof hatches, smoke dischargers
+      ...[-2.4, -1.6, -0.8].map((z) => pair((s) => P.box(0.04, 0.12, 0.22, { x: s * 1.32, y: 2.0, z, color: GLASS }))).flat(),
+      P.box(0.04, 1.05, 0.75, { x: 1.33, y: 1.55, z: -0.3, color: BW_DK }),
+      P.box(0.05, 0.05, 0.2, { x: 1.36, y: 1.6, z: -0.55, color: STEEL }),
+      ...[[-0.55, -1.0], [0.55, -1.0], [0, 0.6]].map(([x, z]) => P.box(0.6, 0.05, 0.6, { x, y: 2.32, z, color: BW_DK })),
+      ...pair((s) => [0, 1, 2].map((k) => P.cyl(0.05, 0.05, 0.24, { x: s * (0.9 + k * 0.13), y: 2.36, z: 1.1, rx: -0.7, ry: s * 0.5, color: STEEL }, 8))).flat(),
+      // the swimmer's stern: its two propellers in their guards, the rear lights and the jerrycan racks
+      ...pair((s) => P.cyl(0.32, 0.32, 0.12, { x: s * 0.75, y: 0.75, z: -3.3, rx: Math.PI / 2, color: STEEL }, 14)),
+      ...pair((s) => [0, 1, 2].map((k) => P.box(0.05, 0.5, 0.03, { x: s * 0.75, y: 0.75, z: -3.37, rz: k * 1.05, color: STEEL }))).flat(),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.05, y: 1.9, z: -3.32, color: 0x5a1a14 })),
+      ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 1.0, y: 1.5, z: -3.4, color: 0x4a4e36 })),
       ...extra,
     ]), 1.1, 0.3),
   };
@@ -110,11 +158,25 @@ export const buildBwPionier = vehicle(() => ({
     P.box(2.6, 0.9, 2.2, { x: 0.15, y: 1.85, z: 0.6, color: BW, ...C }),                               // the superstructure
     P.cyl(0.12, 0.12, 2.0, { x: -1.24, y: 1.7, z: -0.2, rx: Math.PI / 2, color: STEEL }, 10),          // the auger on the side
     P.box(0.5, 0.3, 0.5, { x: 0.8, y: 2.45, z: 0.2, color: BW_DK }),
+    // the crew compartment: its hatches with their periscopes, the vision blocks round it, a stowage basket, the whips
+    ...[[0.7, 0.9], [-0.4, 0.9]].map(([x, z]) => P.cyl(0.28, 0.28, 0.06, { x, y: 2.33, z, color: BW_DK }, 14)),
+    ...pair((s) => [0.0, 0.6, 1.2].map((z) => P.box(0.04, 0.12, 0.2, { x: s * 1.46, y: 2.05, z, color: GLASS }))).flat(),
+    ...[-0.6, 0, 0.6].map((x) => P.box(0.12, 0.08, 0.04, { x, y: 2.0, z: 1.72, rx: -0.3, color: GLASS })),
+    P.box(2.0, 0.25, 0.6, { y: 2.42, z: -0.8, color: 0x575a40 }),
+    ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.1, y: 3.5, z: -0.5, color: STEEL }, 4)),
+    // the tow bar carried on the left, the winch's cable fairlead at the back, a spare track link or two
+    P.box(0.1, 0.12, 3.0, { x: -1.72, y: 1.5, z: -0.6, color: STEEL }),
+    P.box(0.8, 0.4, 0.2, { y: 1.1, z: -3.62, color: STEEL }),
+    ...[0.0, 0.5].map((z) => P.box(0.55, 0.06, 0.4, { x: 0.9, y: 1.42, z: 2.4 + z, rx: 0.35, color: STEEL })),
   ]),
   turret: {
     geo: grime(merge([
       P.box(0.35, 0.35, 4.2, { y: 0.2, z: 1.2, rx: -0.2, color: BW, ...C }),                            // the crane jib laid forward
       P.cyl(0.2, 0.2, 0.4, { color: BW_DK }, 12),
+      P.cyl(0.12, 0.12, 0.3, { y: 0.62, z: 3.2, rz: Math.PI / 2, color: STEEL }, 10),                    // the sheave at its head…
+      P.cyl(0.015, 0.015, 0.9, { y: 0.2, z: 3.25, color: STEEL }, 4),                                    // …the cable down from it…
+      P.box(0.16, 0.24, 0.1, { y: -0.3, z: 3.25, color: STEEL }),                                        // …and the hook block
+      ...pair((s) => P.cyl(0.06, 0.07, 1.6, { x: s * 0.24, y: 0.0, z: 0.9, rx: Math.PI / 2 - 0.35, color: STEEL }, 8)), // the lifting rams
     ]), 0.6, 0, 0.3),
     at: [-0.8, 2.3, 0.0],
   },
@@ -267,12 +329,21 @@ export const buildNvaT55Recovery = vehicle(() => ({
     ...blade(3.35, 2.8, NVA, NVA_DK).map((g) => g.rotateY(Math.PI)),                                    // the spade at the rear
     P.box(2.2, 0.9, 2.2, { y: 1.8, z: 0.6, color: NVA }),                                                // the superstructure
     P.box(0.7, 0.06, 0.6, { x: 0.5, y: 2.27, z: 0.4, color: NVA_DK }),
+    P.cyl(0.28, 0.3, 0.12, { x: -0.5, y: 2.3, z: 1.1, color: NVA_DK }, 14),                              // the commander's cupola…
+    ...[0, 1, 2, 3].map((k) => P.box(0.1, 0.07, 0.04, { x: -0.5 + Math.sin(k * 0.8 - 1.2) * 0.32, y: 2.34, z: 1.1 + Math.cos(k * 0.8 - 1.2) * 0.32, ry: k * 0.8 - 1.2, color: GLASS })),
+    P.box(0.12, 0.1, 0.5, { x: -0.5, y: 2.45, z: 1.3, color: STEEL }),                                    // …and its DShK
+    ...pair((s) => [0.0, 0.8].map((z) => P.box(0.04, 0.12, 0.2, { x: s * 1.11, y: 2.0, z, color: GLASS }))).flat(),
+    P.box(1.8, 0.4, 1.0, { y: 1.6, z: -1.6, color: 0x575a40 }),                                         // the spare-parts load on the deck
+    ...[[-0.5, -1.6], [0.5, -1.6]].map(([x, z]) => P.cyl(0.3, 0.3, 0.3, { x, y: 1.95, z, color: NVA_DK }, 12)),
   ]),
   turret: {
     geo: grime(merge([
       P.cyl(0.22, 0.22, 0.4, { color: NVA_DK }, 12),
       P.box(0.28, 0.28, 3.2, { y: 0.3, z: 1.2, rx: -0.35, color: NVA }),                                  // the jib, raised a little
       P.box(0.12, 0.45, 0.12, { y: 1.0, z: 2.7, color: STEEL }),
+      P.cyl(0.015, 0.015, 0.8, { y: 0.55, z: 2.75, color: STEEL }, 4),                                    // the cable…
+      P.box(0.14, 0.22, 0.1, { y: 0.1, z: 2.75, color: STEEL }),                                          // …the hook block
+      ...pair((s) => P.box(0.06, 0.06, 1.4, { x: s * 0.2, y: 0.05, z: 0.6, rx: -0.6, color: STEEL })),     // the jib's stays
     ]), 0.6, 0, 0.3),
     at: [-0.8, 2.25, 1.3],
   },

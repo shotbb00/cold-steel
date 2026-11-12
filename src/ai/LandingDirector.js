@@ -7,11 +7,14 @@
 //            so the armour can get off the sand
 //   defence  holds (no offensives); when a sector falls, its reserves go to the village up that draw
 import { FrontlineDirector } from './FrontlineDirector.js';
-import { getUnitType } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { enemyOf } from '../data/factions.js';
+import { KINDS } from '../systems/AirStrike.js';
 
 const ORDER = ['rifles', 'rifles', 'engineers', 'ddTank', 'rifles', 'mgTeam', 'tank', 'rifles', 'engineers', 'mortar', 'rifles', 'tank', 'atTeam'];
+// a map's own (map.landing.ai): what the landing buys, its gunships (how many lie inshore), its heavy ship (offshore, later)
+const AI = { order: ORDER, gunship: 'destroyer', gunships: 2, heavy: 'oldBattleship' };
 const FOCUS_HOLD = 150;     // s it keeps landing in one sector before it looks again
 const INSHORE = 395;        // z (from the sea's side) the destroyers lie at: a few hundred metres off the strongpoints
 const WAVES_THROUGH = 150; // s: the destroyers wait in the offing till the first waves are through the lanes
@@ -24,10 +27,12 @@ export class LandingDirector extends FrontlineDirector {
     this.lands = state.attacker === faction;
     this.orderIndex = 0;
     this.focusUntil = 0;
+    this.ai = { ...AI, ...game.map.landing?.ai };
   }
 
   update(dt) {
     const due = this.timer - dt <= 0;
+    if (due && !this.lands) this.strikeShips(); // (before the buying spends it all: the landing ships are the defence's best target)
     super.update(dt);
     if (!due) return;
     if (this.lands) { this.pickFocus(); this.ships(); this.engineers(); this.stayInshore(); } else this.reserves();
@@ -38,13 +43,13 @@ export class LandingDirector extends FrontlineDirector {
     const sign = Math.sign(this.game.map.bases[this.faction].z) || 1, band = this.game.map.landing?.seaMines?.z;
     if (!band) return;
     for (const s of this.fleet) {
-      if (!s.inshoreAt && s.type.id !== 'oldBattleship' && !s.owner) { s.offing ??= { x: s.centroid.x, z: s.centroid.z }; if (s.moveTarget && Math.hypot(s.moveTarget.x - s.offing.x, s.moveTarget.z - s.offing.z) > 40) s.ai.halt(); continue; } // (waiting in the offing: there, not wandering)
-      if (s.type.id === 'oldBattleship' && !s.owner) { // (the old battleship: out in the transport area, her guns reach the bluffs from there)
+      if (!s.inshoreAt && s.type.id !== this.ai.heavy && !s.owner) { s.offing ??= { x: s.centroid.x, z: s.centroid.z }; if (s.moveTarget && Math.hypot(s.moveTarget.x - s.offing.x, s.moveTarget.z - s.offing.z) > 40) s.ai.halt(); continue; } // (waiting in the offing: there, not wandering)
+      if (s.type.id === this.ai.heavy && !s.owner) { // (the old battleship: out in the transport area, her guns reach the bluffs from there)
         const off = { x: 0, z: sign * (band[1] + 230) };
         if (!s.moveTarget ? Math.abs(s.centroid.z) < band[1] + 150 : Math.abs(s.moveTarget.z) < band[1] + 150) s.ai.moveTo(off, { hold: true, ordered: false });
         continue;
       }
-      if (s.type.id !== 'destroyer' || !s.inshoreAt || s.owner) continue;
+      if (s.type.id !== this.ai.gunship || !s.inshoreAt || s.owner) continue;
       this.roles.delete(s); // (no jobs from the frontline AI: she fires from her station — any manoeuvre in there swings her toward the mines)
       const t = s.moveTarget, there = Math.hypot(s.centroid.x - s.inshoreAt.x, s.centroid.z - s.inshoreAt.z) < 60;
       if (there && t) { s.ai.halt(); continue; } // (on her station: she lies there and fires — no chasing targets round inside the mines)
@@ -85,14 +90,15 @@ export class LandingDirector extends FrontlineDirector {
     if (!this.lands) return super.buy();
     const f = this.faction, army = this.game.armyOf(f), cp = this.state.cp[f];
     const cost = (id) => unitCost(getUnitType(id), army);
-    const allowed = (id) => !!getUnitType(id) && (!this.state.allow || this.state.allow(getUnitType(id), f));
+    const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(UNIT_TYPES[id], f)); // (not in this war: skipped — 1985 has no DD tank)
     const ships = this.fleet;
     const road = () => (this.focus && Math.random() < 0.75 ? this.focus.road : null);
     // the ships first, when there's room: two destroyers inshore, the battleship once
-    if (ships.filter((s) => s.type.id === 'destroyer').length < 2 && allowed('destroyer') && cp >= cost('destroyer') + 250) { this.state.buy(f, 'destroyer'); return; }
-    if (this.now > 300 && !ships.some((s) => s.type.id === 'oldBattleship') && allowed('oldBattleship') && cp >= cost('oldBattleship') + 800) { this.state.buy(f, 'oldBattleship'); return; } // (once the troops are ashore and there's CP to spare)
-    for (let tries = 0; tries < ORDER.length; tries++) {
-      const id = ORDER[this.orderIndex % ORDER.length];
+    const { gunship, heavy, order } = this.ai;
+    if (ships.filter((s) => s.type.id === gunship).length < this.ai.gunships && allowed(gunship) && cp >= cost(gunship) + 250) { this.state.buy(f, gunship); return; }
+    if (heavy && this.now > 300 && !ships.some((s) => s.type.id === heavy) && allowed(heavy) && cp >= cost(heavy) + 800) { this.state.buy(f, heavy); return; } // (once the troops are ashore and there's CP to spare)
+    for (let tries = 0; tries < order.length; tries++) {
+      const id = order[this.orderIndex % order.length];
       if (!allowed(id)) { this.orderIndex++; continue; }
       if (cp < cost(id)) return; // (saving up for it)
       if (this.state.buy(f, id, road())) this.orderIndex++;
@@ -106,14 +112,13 @@ export class LandingDirector extends FrontlineDirector {
     const sign = Math.sign(this.game.map.bases[this.faction].z) || 1;
     const lanes = this.game.map.landing?.seaMines?.lanes ?? [this.focus.p.x];
     const lane = lanes.reduce((a, x) => (Math.abs(x - this.focus.p.x) < Math.abs(a - this.focus.p.x) ? x : a), lanes[0]);
-    const dds = this.fleet.filter((s) => s.type.id === 'destroyer');
-    const band = this.game.map.landing?.seaMines?.z ?? [INSHORE + 20, INSHORE + 20];
+    const dds = this.fleet.filter((s) => s.type.id === this.ai.gunship), inshore = this.ai.inshore ?? INSHORE;
     dds.forEach((s, i) => {
       if (s.inshoreLane === lane || s.owner) return; // (sent already; a co-op player's own)
       s.inshoreLane = lane;
       const off = (i % 2 ? 1 : -1) * 95; // (off the lane, between it and the next: the boats come down the lane itself)
       s.waypoints = null;
-      s.inshoreAt = { x: lane + off, z: sign * INSHORE }; // (not s.station: that's a ship's place in a formation)
+      s.inshoreAt = { x: lane + off, z: sign * inshore }; // (not s.station: that's a ship's place in a formation)
       s.ai.moveTo(s.inshoreAt, { hold: true, ordered: false }); // (systems/Landing.js pilot: by the lane through the mines)
     });
   }
@@ -140,6 +145,14 @@ export class LandingDirector extends FrontlineDirector {
       this.clearing = { eng, ob, since: this.now };
       return;
     }
+  }
+
+  /** The defence's anti-ship strike (a coastal map's, AirStrike KINDS.coastStrike): whenever it's ready and affordable, at the landing's biggest ship. */
+  strikeShips() {
+    const air = this.game.air;
+    if (!air || KINDS.coastStrike?.off || !air.ready(this.faction, 'coastStrike') || !this.supportOver(KINDS.coastStrike.cost + 40)) return;
+    const t = this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => s.alive && s.stats.naval).sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0))[0];
+    if (t) air.call(this.faction, t.centroid.x, t.centroid.z, null, 'coastStrike');
   }
 
   /** Defence: a sector lost — reserves into the village up its draw, before the landing gets there. */

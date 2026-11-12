@@ -167,7 +167,7 @@ export class StackLabels {
 
     for (const stack of world.stacks) {
       let item = this.items.get(stack);
-      if (!stack.alive) {
+      if (!stack.alive || stack.stats.loose || stack.stats.dismounted) { // (1806: a loose horse, a man on foot — no tag: a cavalry fight would be all labels)
         if (item) {
           item.el.remove();
           this.items.delete(stack);

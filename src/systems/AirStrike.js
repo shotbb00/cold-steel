@@ -28,7 +28,7 @@ import { JAM } from './Jamming.js';
 import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT, FIGHTERS, RECON } from '../data/air.ts';
-import { SEA_STRIKE, SEA_CAP, ASW, AEW, HELO } from '../data/air85sea.js';
+import { SEA_STRIKE, SEA_CAP, ASW, AEW, HELO, COAST_STRIKE } from '../data/air85sea.js';
 import { FACTIONS, enemyOf, forArmy } from '../data/factions.js';
 import { paintMaterial } from '../render/paint.js';
 import { dist2DSq, angleDelta, clamp } from '../core/math.js';
@@ -164,9 +164,14 @@ export const KINDS = {
   // 1985 at sea (data/air85sea.js): off a carrier that has the mission aboard, else in from the map edge
   // (the jets fly off a carrier that has them aboard, like 1945's; `deck: 'optional'` — the patrol planes from the shore: the Orions, the Mays, the Bears)
   seaStrike: { // stand-off missile strike: in to `standoff` m from the spot, every plane fires, home (Sortie.update)
-    aircraft: SEA_STRIKE, sea: true, flight: 2, label: 'Missile strike', key: 'J', cost: 200, cooldown: 120, delay: 10,
+    aircraft: SEA_STRIKE, sea: true, asmStrike: true, flight: 2, label: 'Missile strike', key: 'J', cost: 200, cooldown: 120, delay: 10,
     approach: 3600, cruiseAlt: 160, attackAlt: 120, cruiseSpeed: 170, attackSpeed: 170,
     rocketsFrom: 2400, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0.5, pitchDown: 0,
+  },
+  coastStrike: { // the defence's anti-ship strike on a coastal map (1985 Hohwacht): from the shore, as a missile strike at sea
+    aircraft: COAST_STRIKE, coast: true, asmStrike: true, flight: 2, label: 'Anti-ship strike', key: 'none', cost: 200, cooldown: 120, delay: 10,
+    approach: 3000, cruiseAlt: 120, attackAlt: 60, cruiseSpeed: 200, attackSpeed: 220,
+    rocketsFrom: 2000, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0.5, pitchDown: 0,
   },
   seaCap: {
     aircraft: SEA_CAP, sea: true, flight: 2, label: 'Fighter cover', key: 'I', cost: 130, cooldown: 90, delay: 8,
@@ -294,7 +299,7 @@ class Sortie {
     this.speed = this.p.cruiseSpeed;
     this.homeT = 0;
     this.landT = 0;
-    if (this.p.sea && !this.p.deck) this.fromCarrier(); // (1985's: AirStrike.call, once it knows whether a carrier launches it; a ship's helicopter from her)
+    if ((this.p.sea && !this.p.deck) || this.p.coast) this.fromCarrier(); // (1985's: AirStrike.call, once it knows whether a carrier launches it; a ship's helicopter from her)
   }
 
   /** A carrier mission: off the deck of its carrier, straight for the spot — and onto the enemy ship nearest it. */
@@ -307,8 +312,8 @@ class Sortie {
       this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
       this.side.set(this.dir.z, 0, -this.dir.x);
     }
-    if (this.kind === 'diveBomb' || this.kind === 'torpBomb' || this.kind === 'seaStrike') {
-      let best = this.kind === 'seaStrike' ? 900 : 450;
+    if (this.kind === 'diveBomb' || this.kind === 'torpBomb' || this.p.asmStrike) {
+      let best = this.p.asmStrike ? 900 : 450;
       for (const s of g.world.stacksOf(enemyOf(this.faction))) {
         if (!s.stats.naval) continue;
         for (const u of s.units) {
@@ -501,14 +506,14 @@ class Sortie {
     this.roll += (wantRoll - this.roll) * Math.min(1, dt * 2);
     this.place(dt);
 
-    if (this.kind === 'seaStrike' && this.state === 'attack' && !this.dropped) this.fireMissiles(); // (from stand-off: then away)
+    if (this.p.asmStrike && this.state === 'attack' && !this.dropped) this.fireMissiles(); // (from stand-off: then away)
     if (this.kind === 'torpBomb' && this.state === 'attack' && !this.dropped && this.ship?.alive && d < p.drop) { // the fish goes in, then away low over the water
       this.dropped = true;
       if (!game.net?.isClient) game.torpedoes?.launch(this, _p.set(this.pos.x, game.world.river?.level ?? 0, this.pos.z), this.ship, { ...this.type.torpedo, count: 1 + (this.wing?.length ?? 0) }); // (each plane of the flight its fish)
       this.state = 'break';
     }
     if (this.state === 'attack' || this.state === 'land') {
-      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon' || this.kind === 'navScout') this.photograph(dt); else if (this.kind === 'asw') { this.photograph(dt); this.huntSubs(dt); } else if (this.kind !== 'torpBomb' && this.kind !== 'seaStrike') this.fireWeapons(dt, d);
+      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon' || this.kind === 'navScout') this.photograph(dt); else if (this.kind === 'asw') { this.photograph(dt); this.huntSubs(dt); } else if (this.kind !== 'torpBomb' && !this.p.asmStrike) this.fireWeapons(dt, d);
     }
     this.fireT -= dt;
     const exposed = this.state === 'attack' || this.state === 'land' || (this.state === 'ingress' && d < p.rocketsFrom + 120);
@@ -1271,6 +1276,7 @@ export class AirStrike {
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
     if (!!p.sea !== !!game.world.openSea) return false; // (the carrier missions at sea, the land's air support on land)
+    if (p.coast && (!game.world.coastal || game.landing?.lands(faction))) return false; // (the coast's defence only: no ships to strike otherwise)
     let deck = null;
     if (p.sea) { // off a carrier with a flight of this kind aboard and her deck free (1985: else from the shore)
       const optional = p.deck === 'optional';
@@ -1441,7 +1447,7 @@ export class AirStrike {
     this.warmed = true;
     const sea = !!g.world.openSea;
     for (const [kind, p] of Object.entries(KINDS)) {
-      if (p.off || !!p.sea !== sea) continue;
+      if (p.off || !!p.sea !== sea || (p.coast && !g.world.coastal)) continue;
       for (const f of ['nato', 'pact']) { try { g.babylon.warm(buildAircraft(kind, f, g.armyOf(f)).root); } catch { /* (a kind this war has no aircraft for) */ } }
     }
   }

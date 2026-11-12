@@ -121,7 +121,7 @@ export class ReinforceWindow {
       return { b, i };
     });
     const allow = state?.allow; // the mode may bar some types (modes/infantry.js)
-    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
+    const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && (!t.coastal || game.world.coastal) && (!t.armies || t.armies.includes(army)) && (!allow || allow(t)) && (!t.needsRiver || game.world.river)); // air assault squads come by helicopter; bridge layers need a river
     // the kit the next rifle squads bring (data/kits.js; same price)
     game.reinforceKit = null;
     const kitSeg = root.querySelector('.rw-kit .seg');

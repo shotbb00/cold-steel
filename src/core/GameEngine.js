@@ -40,7 +40,8 @@ import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { EPOCHS, epoch } from '../data/epoch.js';
-import { getUnitType } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
+import { warmRig } from '../render/RigRenderer.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -254,7 +255,11 @@ export class GameEngine {
     }
     // co-op: the opening forces are shared out between the two players
     if (this.coop && this.net.isHost) {
-      this.world.stacksOf(playerFaction).forEach((s, i) => { s.owner = i % 2 ? 'guest' : 'host'; });
+      // (a campaign battle: the stacks of the battalions the friend commands are the friend's — unless that leaves one of you with nothing)
+      const fr = this.campaign?.friend ?? [], mine = this.world.stacksOf(playerFaction);
+      const byBn = mine.map((s) => (s.campBid ? (fr.includes(s.campBid) ? 'guest' : 'host') : null));
+      const split = fr.length && byBn.includes('guest') && byBn.includes('host');
+      mine.forEach((s, i) => { s.owner = split && byBn[i] ? byBn[i] : i % 2 ? 'guest' : 'host'; });
       if (this.world.stacksOf(playerFaction).length < 2) {
         const first = this.world.stacksOf(playerFaction)[0];
         if (first) { this.currentOwner = 'guest'; this.spawnStack(first.type.id, playerFaction, { x: first.anchor.x + 14, z: first.anchor.z }, first.facing, `${first.name} (2)`); this.currentOwner = null; }
@@ -284,6 +289,11 @@ export class GameEngine {
     if (this.babylon) {
       // Babylon compiles its shaders in the background: keep the loading screen up until the
       // opening view is ready, so the battle doesn't start on a half-drawn field
+      for (const f of ['nato', 'pact']) { // (and the vehicles' paint, though none is on the field yet)
+        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && u.models?.[army]);
+        try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
+      }
+      this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)
       this.babylon.render(0);
       this.babylon.scene.whenReadyAsync().then(begin, begin);
     } else begin();

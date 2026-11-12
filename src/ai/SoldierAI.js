@@ -11,6 +11,37 @@ import { AIState } from './StackAI.js';
 import { dist2DSq } from '../core/math.js';
 
 const _center = { x: 0, z: 0 };
+const _slot = { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } };
+
+/**
+ * A vehicle's place in the formation on the move, eased: a slot pulled in behind a hedge (UnitStack.fitSlot) and out
+ * again past it jumps metres in a step, and the hull swerved after every jump — tanks snaking. The place it drives for
+ * follows its slot no faster than the platoon moves plus a little; halted, or in single file, it is the slot itself.
+ */
+function easedSlot(u, stack) {
+  const now = stack.world.time;
+  const dt = Math.min(0.5, Math.max(0, now - (u.slotT ?? now)));
+  u.slotT = now;
+  stack.slotPosition(u, _slot);
+  // its place across a hedge or a wall from it (the leader went through a gap): it follows the leader's track through
+  // the gap, as a crew would, instead of a route back round to it — until it has its place in sight a while (TRACK_HOLD)
+  const nav = stack.world.nav;
+  if (nav && stack.moveTarget && !stack.column) {
+    if (!nav.visible(u.pos, _slot, stack.navFoot, u.radius)) u.trackUntil = now + TRACK_HOLD;
+    if (now < (u.trackUntil ?? 0)) { if (u.colRank == null) stack.fallIn(); stack.columnSlot(u, _slot); }
+  } else u.trackUntil = 0;
+  const e = u.slotEase;
+  if (!e || !stack.moveTarget || stack.column) u.slotEase = { x: _slot.x, z: _slot.z };
+  else {
+    const dx = _slot.x - e.x, dz = _slot.z - e.z, d = Math.hypot(dx, dz), max = (stack.stats.speed * SLOT_EASE + 1.5) * dt;
+    if (d > max) { e.x += (dx / d) * max; e.z += (dz / d) * max; } else { e.x = _slot.x; e.z = _slot.z; }
+  }
+  // in single file, its place still behind it (the way the stack goes): it waits for the file to come by — not a turn right round
+  if ((stack.column || now < (u.trackUntil ?? 0)) && stack.moveTarget && (_slot.x - u.pos.x) * Math.sin(stack.facing) + (_slot.z - u.pos.z) * Math.cos(stack.facing) < -3) { u.dest.copy(u.pos); return; }
+  u.dest.set(u.slotEase.x, stack.world.terrain.heightAt(u.slotEase.x, u.slotEase.z), u.slotEase.z);
+}
+const TRACK_HOLD = 3;   // s its place must be in sight before it leaves the leader's track for it again
+const SLOT_EASE = 1.15; // the eased place's speed, times the stack's: it keeps up, a jump becomes a drift
 
 export function thinkSoldier(u, stack, world, interval) {
   const s = stack.stats;
@@ -74,7 +105,7 @@ export function thinkSoldier(u, stack, world, interval) {
       u.dest.set(doz.x + Math.sin(doz.yaw) * k, 0, doz.z + Math.cos(doz.yaw) * k);
       u.dest.y = stack.world.terrain.heightAt(u.dest.x, u.dest.z);
     } else if (pos) u.dest.set(pos.x, stack.world.terrain.heightAt(pos.x, pos.z), pos.z);
-    else stack.slotPosition(u, u.dest);
+    else easedSlot(u, stack);
     return;
   }
 

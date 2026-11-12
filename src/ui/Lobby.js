@@ -23,7 +23,8 @@ import { DIFFICULTY } from '../data/rules.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { settings } from '../core/Settings.js';
 import { ChatBox } from './Chat.js';
-import { loadCampaign, battleChoice } from '../campaign/Campaign.js';
+import { loadCampaign, battleChoice, applyAction, friendOf } from '../campaign/Campaign.js';
+import { CampaignPanel } from './CampaignPanel.js';
 
 // After a battle both players come back here connected again: the battle's start remembers
 // who hosted and the join code (sessionStorage, SESSION); leaving the after-action report sets
@@ -204,18 +205,18 @@ export class Lobby {
     };
     // the host's campaign (campaign/Campaign.js, this browser's save): its next battle, fought together
     const camp = epoch() === '1985' ? loadCampaign() : null; // (the campaign is 1985's)
-    if (camp?.battles?.length || (this.choice.campaignBattle && camp)) {
+    if (camp) {
       const seg = el('div', 'seg mp-together');
       for (const [on, label] of [[false, 'A battle of our own'], [true, 'Our campaign’s next battle']]) {
-        const b = button(label, !!this.choice.campaignBattle === on ? 'on' : '', () => { this.choice.campaignBattle = on; this.render(); this.sendLobby(); });
-        b.disabled = on && !camp?.battles?.length;
+        const b = button(label, !!this.choice.campaignBattle === on ? 'on' : '', () => { this.choice.campaignBattle = on; this.render(); this.sendLobby(); this.sendCampaign(); });
         seg.append(b);
       }
       const c = this.campaignBattle();
-      q('Your campaign', seg, el('p', 'map-about', c
-        ? `<b>${c.campaign.sector}</b> · ${c.campaign.attacker === c.side ? 'we attack' : 'they attack'} · ${MAPS[c.map]?.name ?? c.map}. Your friend commands half the battalion; the result goes into your campaign.`
-        : camp?.battles?.length ? 'Fight the next battle of your campaign together: your friend takes half the battalion.' : 'Your campaign has no battle waiting: plan the turn in the Campaign tab first.'));
-      if (c) return; // the campaign sets the rest
+      q('Your campaign', seg, el('p', 'map-about', !this.choice.campaignBattle
+        ? 'Plan your campaign together and fight its battles together: your friend commands the battalions you give them.'
+        : c ? `<b>${c.campaign.sector}</b> · ${c.campaign.attacker === c.side ? 'we attack' : 'they attack'} · ${MAPS[c.map]?.name ?? c.map}. Each of you commands your own battalions' stacks; the result goes into your campaign.`
+          : 'No battle waiting: plan the turn below — your friend orders their battalions — then end it.'));
+      if (this.choice.campaignBattle) { box.append(this.campaignPanel('host').root); this.campPanel.render(); return; } // the campaign sets the rest
     }
     const together = el('div', 'seg mp-together');
     const setTogether = () => {
@@ -400,8 +401,9 @@ export class Lobby {
     if (host) {
       this.choices(r);
       const row = el('div', 'deploy-row mp-row');
-      const go = button(this.peerReady ? 'Start battle' : 'Waiting for your friend to be ready', 'deploy', () => this.start());
-      go.disabled = !this.peerReady;
+      const plan = this.choice.campaignBattle && !this.campaignBattle(); // (the campaign's: none waiting until the turn is ended)
+      const go = button(plan ? 'Plan and end the turn first' : this.peerReady ? 'Start battle' : 'Waiting for your friend to be ready', 'deploy', () => this.start());
+      go.disabled = !this.peerReady || plan;
       row.append(go);
       row.append(button('Leave', 'mp-btn', () => this.leave()));
       r.append(row);
@@ -412,9 +414,11 @@ export class Lobby {
       const modeName = info ? MODES[info.mode]?.name ?? info.mode : '…';
       const when = info ? `${TIMES[info.time]?.name ?? 'Day'}, ${(WEATHER[info.weather]?.name ?? 'Overcast').toLowerCase()}` : '…';
       const rules = info?.rules ? ` · ${info.coop ? `${DIFFICULTY[info.rules.difficulty]?.label ?? 'Regular'} enemy · ` : ''}${info.rules.air === false ? 'no air support' : 'air support'}` : '';
-      r.append(el('p', 'mp-wait', info?.campaign
-        ? `The host’s campaign: the next battle, fought together.<br><b>${info.campaign.sector}</b> · ${info.campaign.attacker === info.side ? 'we attack' : 'they attack'} · <b>${map}</b> · You command half of <b>${side.replace(' together with the host', '')}</b>’s battalion · <b>${when}</b>.`
+      r.append(el('p', 'mp-wait', info?.campaignOn && !info?.campaign ? 'The host’s campaign, planned together: order your battalions on the map — the host ends the turn.'
+        : info?.campaign
+        ? `The host’s campaign: the next battle, fought together.<br><b>${info.campaign.sector}</b> · ${info.campaign.attacker === info.side ? 'we attack' : 'they attack'} · <b>${map}</b> · You command your battalions’ stacks · <b>${when}</b>.`
         : `The host picks the mode, map, sides, conditions and rules.<br><b>${info?.epoch ?? '1985'}</b> · <b>${modeName}</b> on <b>${map}</b> · You command <b>${side}</b> · <b>${when}</b>${rules}.`));
+      if (info?.campaignOn && this.campaignState) { r.append(this.campaignPanel('guest').root); this.campPanel.render(); }
       r.append(this.status(this.peerReady ? 'Ready — waiting for the host to start the battle…' : 'Press Ready when you are, then the host can start.'));
       const row = el('div', 'deploy-row mp-row');
       row.append(button(this.peerReady ? 'Not ready' : 'Ready', 'deploy', () => {
@@ -503,12 +507,23 @@ export class Lobby {
         }
         this.peerName = String(m.name ?? '').slice(0, 24) || 'Your friend';
         this.sendLobby();
+        this.sendCampaign();
         this.render();
       });
       link.on('lobbyReady', (m) => { this.peerReady = !!m.ready; this.render(); });
+      link.on('campaign-act', (m) => { // the friend's planning: run here, on their own battalions only, then sent back
+        const c = this.choice.campaignBattle ? loadCampaign() : null;
+        const a = m.a ?? {};
+        if (!c || !['order', 'refill', 'recruit'].includes(a.a) || !friendOf(c).includes(a.bid)) return;
+        applyAction(c, a);
+        this.sendCampaign();
+        this.sendLobby();
+        this.render();
+      });
     } else {
       link.on('lobby', (m) => { this.lobbyInfo = m; this.peerName = String(m.name ?? '').slice(0, 24) || 'Host'; this.render(); this.preview(); });
       link.on('refuse', (m) => { this.refused = m.reason; });
+      link.on('campaign', (m) => { this.campaignState = m.c ?? null; this.render(); });
       link.on('start', (m) => this.begin({ mode: m.mode, map: m.map, side: m.coop ? m.side : enemyOf(m.side), time: m.time, weather: m.weather, coop: !!m.coop, rules: m.rules ?? null, armies: m.armies ?? null, campaign: m.campaign ?? null, epoch: m.epoch ?? '1985', net: { role: 'client', link, names: { me: myName(), peer: this.peerName ?? 'Host' } } }));
       link.send({ k: 'hello', v: NET_VERSION, name: myName() });
     }
@@ -543,13 +558,34 @@ export class Lobby {
 
   /** What the host would start: its own choices, or the campaign's battle. */
   battle() {
+    // (planning the campaign, no battle yet: you're both on its side all the same)
+    const planning = !this.campaignBattle() && this.choice.campaignBattle && epoch() === '1985' ? loadCampaign() : null;
+    if (planning) return { ...this.choice, side: planning.side, armies: planning.armies, coop: true, campaign: null, epoch: epoch() };
     return { ...(this.campaignBattle() ?? { ...this.choice, campaign: null }), epoch: epoch() }; // (the guest plays the host's war)
   }
 
   sendLobby() {
     this.drawPlayers();
     this.preview();
-    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.battle(), name: myName() });
+    if (this.link && this.role === 'host') this.link.send({ k: 'lobby', ...this.battle(), campaignOn: !!this.choice.campaignBattle && epoch() === '1985', name: myName() });
+  }
+
+  /** The host's campaign to the friend (planning it together): the whole of it, after every change. */
+  sendCampaign() {
+    if (!this.link || this.role !== 'host') return;
+    this.link.send({ k: 'campaign', c: this.choice.campaignBattle && epoch() === '1985' ? loadCampaign() : null });
+  }
+
+  /** The campaign map in the lobby (ui/CampaignPanel.js): one for the session, the host's campaign on both screens. */
+  campaignPanel(role) {
+    this.campPanel ??= new CampaignPanel({
+      onBattle: () => {},
+      onPreview: (map, side) => this.onPreview(map, side),
+      source: role === 'host'
+        ? { role, load: () => loadCampaign(), changed: () => { this.sendCampaign(); this.sendLobby(); this.render(); } }
+        : { role, load: () => this.campaignState, send: (a) => this.link?.send({ k: 'campaign-act', a }) },
+    });
+    return this.campPanel;
   }
 
   /** The map and the side this player would fight on, for the map table. */
@@ -561,7 +597,7 @@ export class Lobby {
   }
 
   start() {
-    if (!this.peerReady) return;
+    if (!this.peerReady || (this.choice.campaignBattle && !this.campaignBattle())) return;
     const link = this.link;
     const battle = this.battle();
     link.send({ k: 'start', ...battle });
@@ -569,7 +605,7 @@ export class Lobby {
   }
 
   begin(choice) {
-    for (const k of ['hello', 'lobby', 'refuse', 'start', 'lobbyReady']) this.link.off(k);
+    for (const k of ['hello', 'lobby', 'refuse', 'start', 'lobbyReady', 'campaign', 'campaign-act']) this.link.off(k);
     // for coming back here together after the battle (manual codes have no code to come back by)
     saveSession({ role: this.role, code: this.code ?? null, choice: this.role === 'host' ? this.choice : null });
     this.chat?.dispose();   // the battle's chat takes over (ui/Chat.js BattleChat)

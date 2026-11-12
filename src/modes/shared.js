@@ -28,7 +28,7 @@ export function makeBuyer(game, state) {
   return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
-    if (!type || type.hidden || type.airOnly || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
+    if (!type || type.hidden || type.airOnly || (type.coastal && !game.world.coastal) || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
     const cost = unitCost(type, game.armyOf(faction));
     if (state.cp[game.wallet(faction)] < cost) {
       game.tell(faction, `Not enough command points for ${type.shortName} (${cost})`);
@@ -135,6 +135,7 @@ export function deploy(game, faction, units, anchors, { back = 25, spread = 28, 
     const s = game.spawnStack(id, faction, pos, facing, name, saved?.men ? { count: saved.men } : {});
     if (saved?.xp) s.setXp(saved.xp);
     if (saved?.cid) s.cid = saved.cid;
+    if (saved?.bid) s.campBid = saved.bid; // (its campaign battalion: co-op, the friend's are the friend's — GameEngine)
     return s;
   });
 }

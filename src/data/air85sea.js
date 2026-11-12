@@ -4,6 +4,7 @@
 // `pactDeck` is what flies off the Kiev (her Yak-38s).
 import { buildF14, buildA6, buildE2, buildP3, buildTu22M, buildYak38, buildIl38, buildTu95 } from './models/navalAir85.js';
 import { buildPactMiG23 } from './models/fighters.js';
+import { buildBwTornado } from './models/armyAircraft.js';
 import { buildSH60, buildKa27 } from './models/navalAir85.js';
 
 const GREY = { colors: [0x8c949a, 0x868e94, 0x929aa0, 0x828a90], scale: 0.9 };
@@ -19,6 +20,13 @@ export const SEA_STRIKE = {
   nato: { name: 'A-6E Intruder', weapon: '3 Harpoon each', text: 'The Navy\'s all-weather attack jet: a flight of two comes in low, fires six Harpoons from beyond the defences and turns for home.', model: buildA6, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 9, asm: { ...HARPOON, perPlane: 3 } },
   pactDeck: { name: 'Yak-38 Forger', weapon: '2 Kh-23 each', text: "The Kiev's jump jets on a strike: short-legged, two radio-guided Kh-23s each — a sting, not a blow. The Soviet Navy's real strike is in its missile ships.", model: buildYak38, paint: SOV, engineSound: 'jet', gun: NOGUN, hp: 5, asm: { ...KH23, perPlane: 2 } },
   pact: { name: 'Tu-22M3 Backfire', weapon: '2 Kh-22 each', text: 'The Soviet Navy\'s carrier killer: three supersonic bombers, six huge Kh-22s diving from high up. Each one can gut a cruiser.', model: buildTu22M, paint: SOV, engineSound: 'jet', gun: NOGUN, hp: 14, asm: { ...KH22, perPlane: 2 } },
+};
+// the coast's own strike (KINDS.coastStrike: a coastal map's defence, from the shore): the Marineflieger's Tornados
+const KORMORAN = { name: 'Kormorans', speed: 220, range: 3000, seeker: 1000, skim: true, damage: 1700, pierce: 0.6 };
+export const COAST_STRIKE = {
+  bw: { name: 'Tornado IDS', weapon: '2 Kormoran each', text: 'Marinefliegergeschwader 2 from Eggebek: two Tornados come in under the radar, fire four sea-skimming Kormorans at the landing ships from beyond their guns and turn for home.', model: buildBwTornado, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 9, asm: { ...KORMORAN, perPlane: 2 } },
+  nato: { name: 'Tornado IDS', weapon: '2 Kormoran each', text: 'Two Tornados with sea-skimming Kormorans: fired at the landing ships from beyond their guns.', model: buildBwTornado, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 9, asm: { ...KORMORAN, perPlane: 2 } },
+  pact: { name: 'Tu-22M3 Backfire', weapon: '2 Kh-23 each', text: 'Bombers with radio-guided missiles against ships off the coast.', model: buildTu22M, paint: SOV, engineSound: 'jet', gun: NOGUN, hp: 9, asm: { ...KH23, perPlane: 2 } },
 };
 export const SEA_CAP = {
   nato: { name: 'F-14A Tomcat', weapon: 'Phoenix, Sparrow, Sidewinder', text: 'The fleet defender: four Tomcats circle the spot and shoot down the bombers before they can fire.', model: buildF14, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 8 },

@@ -85,11 +85,11 @@
 .set-label small { font-size: 12.5px; color: var(--muted); }
 
 /* unit preview */
-.units { display: grid; grid-template-columns: 190px minmax(0, 1fr) 300px; gap: 16px; height: calc(100vh - 140px); min-height: 460px; }
-.unit-left { display: flex; flex-direction: column; gap: 12px; }
+.units { display: grid; grid-template-columns: 190px minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); gap: 16px; height: calc(100vh - 140px); min-height: 460px; } /* (the row the height of the page, not of the list: the long roster scrolls, the stage keeps the unit in view) */
+.unit-left { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 .faction-seg { display: grid; grid-template-columns: 1fr 1fr; } /* the four armies, two a side */
 .faction-seg button { flex: 1; text-align: center; padding: 8px 6px; font-size: 12.5px; }
-.unit-list { display: flex; flex-direction: column; gap: 4px; }
+.unit-list { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; }
 .unit-list button {
   all: unset; cursor: pointer; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid transparent;
   font: 600 15px var(--font-ui); letter-spacing: 0.06em;
@@ -148,7 +148,7 @@
   .menu-blurb { display: none; }
   .menu-panel { padding: 20px 16px 32px; overflow: visible; }
   .menu-panel h2 { font-size: 22px; }
-  .units { grid-template-columns: 1fr; height: auto; }
+  .units { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
   .unit-list { flex-direction: row; flex-wrap: wrap; }
   .unit-list button { padding: 8px 10px; font-size: 14px; }
   .unit-stage { height: 56vh; min-height: 320px; }

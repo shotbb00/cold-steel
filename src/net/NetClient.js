@@ -340,6 +340,7 @@ export class NetClient {
         if (ob) { ob.revealed = true; g.construction.showObstacle(ob); }
         break;
       }
+      case 'aboard': { const s = g.world.stackById(e[1]); if (s) g.landing?.board(s, e[2], e[3]); break; } // (coastal: who's in a landing craft, seen aboard)
       case 'beach': { const o = g.landing?.obstacles[e[1]]; if (o) g.landing.hideObstacle(o, !!e[2]); break; } // (coastal: a beach obstacle blown)
       case 'cleared': {
         const ob = g.construction.obstacles.find((o) => o.site.id === e[1]);

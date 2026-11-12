@@ -552,6 +552,14 @@ const mtlbHull = (extra = [], roof = 1.55) => {
       ...pair((s) => P.cyl(0.07, 0.07, 0.1, { x: s * 1.1, y: 1.15, z: 3.0, rx: Math.PI / 2 - 0.6, color: STEEL }, 10)),
       P.box(0.12, 0.25, 0.7, { x: -1.47, y: 1.3, z: 0.9, color: STEEL }),
       ...pair((s) => P.box(0.06, 0.05, 6.3, { x: s * 1.46, y: 0.98, z: -0.1, color: PACT_DK })),
+      // the cab's periscopes and headlight glass, tow hooks; vision blocks down the troop compartment, fender stowage, rear lights, the log
+      ...pair((s) => [-0.15, 0.15].map((x) => P.box(0.1, 0.07, 0.04, { x: s * 0.55 + x, y: roof + 0.04, z: 1.5, color: GLASS }))).flat(),
+      ...pair((s) => P.cyl(0.055, 0.055, 0.02, { x: s * 1.1, y: 1.17, z: 3.05, rx: Math.PI / 2 - 0.6, color: 0x9a9a88 }, 10)),
+      ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.7, y: 0.85, z: 3.25, color: STEEL })),
+      ...[-2.6, -1.9, -1.2].map((z) => pair((s) => P.box(0.04, 0.12, 0.2, { x: s * 1.46, y: roof - 0.25, z, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.3, 0.28, 1.1, { x: s * 1.3, y: 1.12, z: 1.0, color: PACT_DK })),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.15, y: 1.3, z: -3.26, color: 0x5a1a14 })),
+      P.cyl(0.13, 0.13, 2.3, { y: roof + 0.12, z: -3.05, rz: Math.PI / 2, color: 0x5a4632 }, 10),
       ...extra,
     ]), 1.1, 0.3),
   };
@@ -970,6 +978,15 @@ export const buildNatoFAAR = vehicle(() => ({
     P.box(0.5, 0.8, 0.03, { x: 0.86, y: 1.6, z: -1.0, color: NATO_DK }),                            // its door
     P.box(0.5, 0.3, 0.5, { x: -0.6, y: 2.25, z: -0.6, color: NATO_DK }),                            // generator
     P.cyl(0.4, 0.4, 1.4, { x: -0.65, y: 2.25, z: -1.6, rx: Math.PI / 2, color: 0x56583e }, 10),     // cable reels
+    // the Gama Goat's headlights and tow eye, the mirrors, the jerrycans and spare tyre, the shelter's ladder and lights
+    ...pair((s) => P.cyl(0.08, 0.08, 0.08, { x: s * 0.7, y: 1.05, z: 2.32, rx: Math.PI / 2, color: STEEL }, 10)),
+    ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.7, y: 1.05, z: 2.37, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
+    P.box(0.14, 0.14, 0.18, { y: 0.7, z: 2.38, color: STEEL }),
+    ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.08, y: 1.75, z: 1.8, color: STEEL })),
+    ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 0.5, y: 0.95, z: -2.48, color: 0x4a4e36 })),
+    P.cyl(0.36, 0.36, 0.22, { x: 0.6, y: 1.55, z: -2.45, rx: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14),
+    ...[0, 1, 2].map((k) => P.box(0.4, 0.04, 0.05, { x: -0.5, y: 0.9 + k * 0.25, z: -2.3, color: STEEL })),
+    ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 0.8, y: 1.0, z: -2.42, color: 0x6a2a20 })),
   ]), 1.0, 0.3),
   deploy: { geo: merge([P.cyl(0.08, 0.1, 1.2, { y: 0.6, color: STEEL }, 8)]), at: [0, 2.1, -1.9] }, // the mast…
   spin: { geo: faarAntenna(NATO, NATO_DK), at: [0, 1.15, 0], rate: 1.6, onDeploy: true }, // …and the antenna turning on it
@@ -1000,6 +1017,13 @@ export const buildPactP19 = vehicle(() => ({
     P.box(0.5, 0.35, 0.5, { x: -0.6, y: 3.15, z: 0.3, color: PACT_DK }),
     ...pair((s) => P.box(0.46, 0.05, 2.3, { x: s * 1.0, y: 1.2, z: -1.45, color: PACT_DK })),
     P.cyl(0.14, 0.17, 0.35, { y: 3.18, z: -1.5, color: STEEL }, 10),                                 // the antenna turntable
+    ...[[-1.16, -2.95], [1.16, -2.95], [-1.16, 0.65], [1.16, 0.65]].map(([x, z]) => P.box(0.06, 1.85, 0.06, { x, y: 2.08, z, color: PACT_DK })), // the KUNG's corner posts
+    ...pair((s) => [-2.1, -1.2, -0.3].map((z) => P.box(0.03, 1.8, 0.05, { x: s * 1.165, y: 2.08, z, color: PACT_DK }))).flat(),       // its ribs
+    P.box(0.03, 1.3, 0.7, { x: 1.17, y: 1.85, z: -0.7, color: PACT_DK }),                             // the side door…
+    P.box(0.05, 0.05, 0.14, { x: 1.19, y: 1.85, z: -0.45, color: STEEL }),
+    ...[0.6, 0.9].map((y) => P.box(0.3, 0.04, 0.5, { x: 1.3, y, z: -0.7, color: STEEL })),            // …and its steps
+    ...pair((s) => P.box(0.04, 0.4, 0.6, { x: s * 1.17, y: 2.45, z: -2.3, color: GLASS })),          // shuttered windows
+    ...[0, 1, 2, 3].map((k) => P.box(0.4, 0.04, 0.03, { x: -0.6, y: 3.05 + k * 0.06, z: 0.56, color: 0x141414 })), // the air conditioner's louvres
   ]), 1.0, 0.4),
   spin: {
     geo: merge([
@@ -1069,7 +1093,14 @@ export const buildPactTunguska = vehicle(() => {
         { belly: 1.12, fender: 1.65, fenderY: 1.05, chamfer: 0.05 }, { color: PACT }),
       ...pair((s) => P.box(0.04, 0.5, 6.6, { x: s * 1.66, y: 0.85, z: -0.1, color: 0x1f201c, surf: 'rubber' })), // rubber skirts
       P.box(0.6, 0.05, 0.6, { x: -0.7, y: 1.66, z: 2.4, color: PACT_DK }),                           // driver's hatch
+      ...[-0.18, 0, 0.18].map((x) => P.box(0.1, 0.07, 0.05, { x: -0.7 + x, y: 1.71, z: 2.73, rx: -0.3, color: GLASS })),
       ...pair((s) => P.box(0.18, 0.12, 0.1, { x: s * 1.2, y: 1.35, z: 3.35, color: STEEL })),
+      ...pair((s) => P.cyl(0.08, 0.08, 0.12, { x: s * 1.05, y: 1.45, z: 3.28, rx: Math.PI / 2 - 0.5, color: STEEL }, 10)),
+      ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 1.05, y: 1.48, z: 3.34, rx: Math.PI / 2 - 0.5, color: 0x9a9a88 }, 10)),
+      // the engine deck's grilles, stowage on the fenders, the rear lights
+      ...Array.from({ length: 7 }, (_, k) => P.box(2.2, 0.03, 0.08, { y: 1.62, z: -3.2 + k * 0.18, color: PACT_DK })),
+      ...pair((s) => P.box(0.35, 0.3, 1.4, { x: s * 1.45, y: 1.2, z: -2.4, color: PACT_DK })),
+      ...pair((s) => P.box(0.14, 0.12, 0.08, { x: s * 1.1, y: 1.3, z: -3.55, color: 0x5a1a14 })),
     ]), 1.2, 0.3),
     turret: {
       geo: grime(merge([
@@ -1082,6 +1113,14 @@ export const buildPactTunguska = vehicle(() => {
         P.cyl(0.38, 0.38, 0.04, { y: 0.75, z: 2.09, rx: Math.PI / 2, color: 0x2a2f26 }, 16),            // …and its dish face
         P.box(0.35, 0.5, 0.5, { x: 0.8, y: 1.25, z: 0.5, color: PACT_DK }),                             // optical sight
         P.box(0.3, 0.5, 0.3, { y: 1.3, z: -1.35, color: STEEL }),                                       // radar pedestal
+        // the commander's and gunner's hatches with their periscopes, the access doors, smoke dischargers, the whips
+        ...[[-0.55, -0.2], [0.35, -0.7]].map(([x, z]) => P.cyl(0.3, 0.3, 0.06, { x, y: 1.12, z, color: PACT_DK }, 14)),
+        ...[[-0.55, -0.2], [0.35, -0.7]].flatMap(([x, z]) => [0, 1, 2].map((k) => P.box(0.1, 0.07, 0.04, { x: x + Math.sin(k * 0.8 - 0.8) * 0.34, y: 1.15, z: z + Math.cos(k * 0.8 - 0.8) * 0.34, ry: k * 0.8 - 0.8, color: GLASS }))),
+        ...pair((s) => P.box(0.03, 0.6, 0.9, { x: s * 1.31, y: 0.45, z: -0.6, color: PACT_DK })),
+        ...pair((s) => [-1.05, -0.15].map((z) => P.box(0.05, 0.1, 0.06, { x: s * 1.33, y: 0.6, z, color: STEEL }))).flat(),
+        ...pair((s) => Array.from({ length: 3 }, (_, k) => P.cyl(0.045, 0.045, 0.22, { x: s * (0.75 + k * 0.12), y: 1.05, z: 1.45, rx: -0.6, ry: s * 0.4, color: STEEL }, 8))).flat(),
+        ...pair((s) => P.cyl(0.006, 0.006, 2.2, { x: s * 1.0, y: 2.1, z: -1.4, color: STEEL }, 4)),
+        P.box(1.8, 0.28, 0.35, { y: 0.35, z: -1.85, color: PACT_DK }),                                  // stowage across the back
       ]), 0.8, 0, 0.3),
       at: [0, 1.62, -0.6],
     },
@@ -1232,6 +1271,15 @@ export const buildPactUR77 = vehicle(() => {
       P.box(0.08, 0.1, 0.6, { x: 0.6, y: 1.95, z: 1.85, color: STEEL }),                                 // …and the PKT
       ...pair((s) => P.cyl(0.07, 0.07, 0.1, { x: s * 1.15, y: 1.2, z: 3.25, rx: Math.PI / 2 - 0.6, color: STEEL }, 10)),
       ...pair((s) => P.box(0.06, 0.05, 6.8, { x: s * 1.49, y: 1.0, z: -0.1, color: PACT_DK })),
+      // the nose's headlights and tow hooks, vision blocks down the sides, stowage on the fenders, the rear doors and lights, the exhaust
+      ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 1.15, y: 1.23, z: 3.31, rx: Math.PI / 2 - 0.6, color: 0x9a9a88 }, 10)),
+      ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.7, y: 0.85, z: 3.45, color: STEEL })),
+      ...[-2.6, -1.8, -1.0, -0.2].map((z) => pair((s) => P.box(0.04, 0.12, 0.2, { x: s * 1.49, y: 1.45, z, color: GLASS }))).flat(),
+      ...pair((s) => P.box(0.3, 0.28, 1.3, { x: s * 1.3, y: 1.12, z: 1.3, color: PACT_DK })),
+      ...pair((s) => P.box(0.7, 0.85, 0.06, { x: s * 0.45, y: 1.15, z: -3.42, color: PACT_DK })),
+      ...pair((s) => P.box(0.04, 0.16, 0.05, { x: s * 0.15, y: 1.2, z: -3.47, color: STEEL })),
+      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.2, y: 1.45, z: -3.42, color: 0x5a1a14 })),
+      P.box(0.14, 0.24, 0.8, { x: -1.52, y: 1.3, z: 0.5, color: STEEL }),
     ]), 1.1, 0.3),
     turret: {
       geo: merge([
@@ -1281,6 +1329,19 @@ export const buildNatoTACJAM = vehicle(() => {
       P.box(0.7, 0.4, 0.5, { x: -0.7, y: 3.05, z: 0.2, color: NATO_DK }),                             // air conditioner
       ...pair((s) => P.cyl(0.006, 0.006, 2.6, { x: s * 1.1, y: 4.1, z: -2.0, color: STEEL }, 4)),     // whip antennas
       ...pair((s) => P.box(0.06, 0.06, 0.4, { x: s * 1.3, y: 1.12, z: 2.3, color: STEEL })),
+      // the cab: its doors, side windows and mirrors, headlights, tow hooks
+      ...pair((s) => P.box(0.03, 0.75, 0.8, { x: s * 1.26, y: 1.68, z: 1.85, color: NATO_DK })),
+      ...pair((s) => P.box(0.03, 0.3, 0.45, { x: s * 1.27, y: 1.85, z: 1.85, color: GLASS })),
+      ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.5, y: 1.95, z: 2.2, color: STEEL })),
+      ...pair((s) => P.cyl(0.08, 0.08, 0.1, { x: s * 0.9, y: 1.3, z: 2.62, rx: Math.PI / 2, color: STEEL }, 10)),
+      ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.9, y: 1.3, z: 2.68, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
+      ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.6, y: 0.85, z: 2.8, color: STEEL })),
+      // the shelter: corner posts, ribs, the ladder at its door, cable boxes, rear lights
+      ...[-2.24, 0.74].flatMap((z) => pair((s) => P.box(0.07, 1.6, 0.07, { x: s * 1.31, y: 2.05, z, color: NATO_DK }))),
+      ...pair((s) => [-1.5, -0.75, 0].map((z) => P.box(0.035, 1.5, 0.05, { x: s * 1.31, y: 2.05, z, color: NATO_DK }))).flat(),
+      ...[0, 1, 2, 3].map((k) => P.box(0.5, 0.04, 0.06, { x: 0.5, y: 0.75 + k * 0.25, z: -2.32, color: STEEL })),
+      P.box(0.06, 0.45, 0.9, { x: -1.33, y: 1.5, z: -1.2, color: NATO_DK }),
+      ...pair((s) => P.box(0.14, 0.1, 0.04, { x: s * 1.0, y: 1.15, z: -2.62, color: 0x6a2a20 })),
     ]), 1.0, 0.3),
     deploy: { geo: merge([P.cyl(0.14, 0.18, 3.6, { y: 1.8, color: STEEL }, 10)]), at: [0, 2.85, -1.8] }, // the telescopic mast…
     spin: { geo: merge([P.box(0.3, 0.3, 0.3, { color: NATO_DK }), ...logPeriodic(STEEL).map((g2) => g2)]), at: [0, 3.65, 0], rate: 0.25, onDeploy: true }, // …its antenna on top
@@ -1360,6 +1421,20 @@ export const buildPactBTR60PU = vehicle(() => ({
     P.box(1.6, 0.5, 1.6, { y: 2.35, z: -1.6, color: PACT }),                                            // radio equipment boxes
     P.cyl(0.25, 0.25, 1.6, { x: 0.25, y: 2.3, z: 0.2, rz: Math.PI / 2, color: 0x5a5a3c }, 10),         // camouflage net roll
     ...[[0.9, 0.6], [0.6, -3.0], [-1.0, 1.0]].map(([x, z]) => P.cyl(0.006, 0.006, 2.8, { x, y: 3.5, z, color: STEEL }, 4)),
+    // the nose: headlights in their guards, the IR light, tow hooks; the trim vane folded on the glacis
+    ...pair((s) => P.cyl(0.09, 0.09, 0.12, { x: s * 0.6, y: 1.5, z: 3.55, rx: Math.PI / 2 - 0.6, color: STEEL }, 10)),
+    ...pair((s) => P.cyl(0.07, 0.07, 0.02, { x: s * 0.6, y: 1.53, z: 3.61, rx: Math.PI / 2 - 0.6, color: 0x9a9a88 }, 10)),
+    ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.45, y: 1.05, z: 3.86, color: STEEL })),
+    P.box(1.4, 0.05, 0.5, { y: 1.62, z: 3.25, rx: 0.9, color: PACT_DK }),
+    // the sides: the roof hatches over the troop compartment, the firing ports, the wheel-well stowage
+    ...pair((s) => P.box(0.6, 0.05, 0.9, { x: s * 0.55, y: 2.1, z: 0.6, color: PACT_DK })),
+    ...pair((s) => [-2.3, -1.5, -0.7, 0.1].map((z) => P.cyl(0.05, 0.05, 0.04, { x: s * 1.32, y: 1.75, z, rz: Math.PI / 2, color: STEEL }, 8))).flat(),
+    ...pair((s) => P.box(0.06, 0.4, 0.9, { x: s * 1.3, y: 1.3, z: 0.0, color: PACT_DK })),
+    // the stern: the engine's grilles, the water-jet's door, the lights, jerrycans
+    ...Array.from({ length: 6 }, (_, k) => P.box(1.8, 0.03, 0.08, { y: 2.08, z: -3.5 + k * 0.17, color: PACT_DK })),
+    P.box(0.5, 0.5, 0.05, { y: 1.1, z: -3.72, color: PACT_DK }),
+    ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 0.95, y: 1.7, z: -3.71, color: 0x5a1a14 })),
+    ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 0.65, y: 1.55, z: -3.8, color: 0x4a4e36 })),
   ]), 1.0, 0.4),
   deploy: { // the antenna mast and its cross-bar, raised once it is set up
     geo: merge([P.cyl(0.07, 0.09, 2.6, { y: 1.3, color: STEEL }, 8), P.box(1.6, 0.06, 0.06, { y: 2.6, color: STEEL })]),

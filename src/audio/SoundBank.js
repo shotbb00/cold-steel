@@ -525,6 +525,18 @@ function shipEngine(ctx) {
   });
 }
 
+/** A hovercraft (loop, the Aist): her four big air propellers' thrum, the gas turbines' whine over it, the rush of the cushion under her. */
+function hoverEngine(ctx) {
+  let ph = 0, wph = 0, lp = 0;
+  return seamless(ctx, 2, (t, sr) => {
+    ph += (TAU * 55) / sr;                                     // the propellers
+    wph += (TAU * 1450) / sr;                                  // the turbines
+    const beat = 0.6 + 0.4 * Math.abs(Math.sin(TAU * 7 * t)); // the blades going round: fourteen beats a second
+    lp += lpCoef(600, sr) * (Math.random() * 2 - 1 - lp);     // the air blasting out under the skirt
+    return (Math.sin(ph) * 0.45 + Math.sin(ph * 2) * 0.25) * beat + Math.sin(wph) * 0.06 + lp * 1.6;
+  });
+}
+
 /** White water (loop): a bow wave or wake — hiss over a low rush, surging a little. */
 function wash(ctx, dur = 4) {
   let hi = 0, lo = 0;
@@ -908,6 +920,7 @@ export function soundDefinitions(ctx) {
     'sonar.ping': () => ping(ctx),
     klaxon: () => klaxon(ctx),
     'engine.ship': () => shipEngine(ctx),
+    'engine.hover': () => hoverEngine(ctx),
     wash: () => wash(ctx),
     sea: () => sea(ctx),
     'ship.sink': () => sinking(ctx),

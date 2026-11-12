@@ -21,6 +21,7 @@ const NVA = 0x4a5636;
 const NVA_DK = 0x37422a;
 const STEEL = 0x2b2d28;
 const RUBBER = 0x1f201c;
+const GLASS = 0x1a1d1c;
 const WHITE = 0xd8d6cc;
 const C = { camo: 1 };
 const tyre = (x, y, z, r, w = 0.3) => P.cyl(r, r, w, { x, y, z, rz: Math.PI / 2, color: RUBBER, surf: 'rubber' }, 14);
@@ -51,6 +52,16 @@ export const buildBwGepard = vehicle(() => ({
       P.cyl(0.42, 0.42, 0.55, { y: 1.15, z: 1.25, rx: Math.PI / 2, color: BW_DK }, 16),              // the tracking radar's dish in front
       P.cyl(0.08, 0.1, 0.5, { y: 1.25, z: -1.0, color: STEEL }, 8),                                   // the search radar's mast
       ...pair((s) => P.box(0.4, 0.75, 1.6, { x: s * 1.45, y: 0.55, z: 0.1, color: BW, ...C })),       // the gun housings on the sides
+      ...pair((s) => P.box(0.32, 0.5, 0.65, { x: s * 1.42, y: 0.42, z: -0.95, color: BW_DK })),          // the ammunition feeds behind them
+      ...pair((s) => P.box(0.03, 0.62, 0.95, { x: s * 1.255, y: 0.5, z: -0.35, color: BW_DK })),        // the turret's side access doors…
+      ...pair((s) => P.box(0.04, 0.05, 0.2, { x: s * 1.27, y: 0.55, z: -0.75, color: STEEL })),         // …their handles
+      P.box(0.4, 0.34, 0.45, { x: 0.55, y: 1.17, z: 0.75, color: BW_DK }),                             // the optical sight on the roof
+      P.box(0.3, 0.18, 0.02, { x: 0.55, y: 1.2, z: 0.98, color: GLASS }),
+      ...[[-0.5, 0.1], [0.45, -0.3]].map(([x, z]) => P.cyl(0.3, 0.3, 0.06, { x, y: 1.03, z, color: BW_DK }, 14)), // commander's and gunner's hatches
+      ...[[-0.5, 0.1], [0.45, -0.3]].flatMap(([x, z]) => [0, 1, 2].map((k) => P.box(0.1, 0.07, 0.04, { x: x + Math.sin(k * 0.8 - 0.8) * 0.33, y: 1.06, z: z + Math.cos(k * 0.8 - 0.8) * 0.33, ry: k * 0.8 - 0.8, color: GLASS }))),
+      ...pair((s) => Array.from({ length: 4 }, (_, k) => P.cyl(0.05, 0.05, 0.26, { x: s * (1.0 + k * 0.08), y: 0.88, z: 1.32, rx: -0.6, ry: s * 0.4, color: STEEL }, 8))).flat(), // smoke dischargers
+      P.box(2.2, 0.32, 0.4, { y: 0.35, z: -1.62, color: 0x575a40 }),                                     // the stowage box across the turret's back
+      P.cyl(0.006, 0.006, 2.2, { x: -1.0, y: 2.1, z: -1.3, color: STEEL }, 4),                           // the radio whip
     ]), 0.9, 0, 0.4),
     at: [0, 1.38, -0.3],
   },
@@ -161,6 +172,18 @@ export const buildBwHawkRadar = vehicle(() => ({
     ...pair((s) => tyre(s * 0.95, 0.45, -0.8, 0.42, 0.25)),
     P.box(1.4, 1.0, 1.4, { y: 1.25, z: -0.6, color: BW_DK }),                                         // the transmitter housing
     P.cyl(0.14, 0.16, 0.5, { y: 2.0, z: -0.6, color: STEEL }, 10),
+    // the drawbar and its jockey wheel, mudguards over the wheels, the levelling jacks let down at the corners
+    P.box(0.12, 0.12, 1.4, { y: 0.55, z: 2.2, color: STEEL }),
+    P.cyl(0.12, 0.12, 0.08, { y: 0.15, z: 2.6, rz: Math.PI / 2, color: RUBBER }, 10),
+    P.box(0.06, 0.4, 0.06, { y: 0.35, z: 2.6, color: STEEL }),
+    ...pair((s) => P.box(0.36, 0.05, 1.0, { x: s * 0.95, y: 0.92, z: -0.8, color: BW_DK })),
+    ...[[-1, -1.4], [1, -1.4], [-1, 1.4], [1, 1.4]].map(([x, z]) => P.box(0.12, 0.55, 0.12, { x: x * 0.82, y: 0.3, z, color: STEEL })),
+    ...[[-1, -1.4], [1, -1.4], [-1, 1.4], [1, 1.4]].map(([x, z]) => P.box(0.3, 0.05, 0.3, { x: x * 0.82, y: 0.03, z, color: STEEL })),
+    // the housing's doors and louvres, the cable reels and the waveguide up to the antenna
+    ...pair((s) => P.box(0.03, 0.7, 0.55, { x: s * 0.71, y: 1.25, z: -0.6, color: BW })),
+    ...[0, 1, 2, 3].map((k) => P.box(0.9, 0.03, 0.04, { y: 1.05 + k * 0.1, z: 0.11, color: 0x141414 })),
+    ...pair((s) => P.cyl(0.3, 0.3, 0.35, { x: s * 0.45, y: 1.05, z: 0.9, rz: Math.PI / 2, color: 0x3a3a30 }, 12)),
+    P.box(0.1, 0.8, 0.1, { x: 0.3, y: 1.9, z: -0.25, color: STEEL }),
   ]), 1, 0.3),
   spin: { // the PAR's long rectangular antenna
     geo: merge([P.box(3.4, 0.7, 0.12, { y: 0.4, color: BW_DK }), P.box(0.2, 0.4, 0.5, { y: 0.0, z: 0.2, color: STEEL })]),
@@ -319,6 +342,16 @@ export const buildNvaP40 = vehicle(() => {
       ...pair((s) => P.box(0.3, 0.5, 1.6, { x: s * 1.67, y: 1.37, z: -2.4, color: NVA_DK })),            // stowage on the track guards
       P.cyl(0.32, 0.34, 0.25, { y: roof + 0.16, z: -0.6, color: STEEL }, 16),                           // the antenna's turntable
       P.cyl(0.06, 0.06, 0.9, { x: -1.1, y: roof + 0.45, z: 2.0, color: STEEL }, 6),                     // the exhaust stack
+      // the cabin's frame: corner posts, ribs along the sides, the rail round the roof and its posts
+      ...[[-1.5, -3.8], [1.5, -3.8], [-1.5, 2.2], [1.5, 2.2]].map(([x, z]) => P.box(0.08, roof - top, 0.08, { x, y: (roof + top) / 2, z, color: NVA_DK })),
+      ...pair((s) => [-3.0, -1.5, 0.2].map((z) => P.box(0.035, roof - top - 0.1, 0.05, { x: s * 1.515, y: (roof + top) / 2, z, color: NVA_DK }))).flat(),
+      ...pair((s) => P.box(0.04, 0.04, 5.8, { x: s * 1.42, y: roof + 0.45, z: -0.8, color: STEEL })),
+      ...pair((s) => [-3.4, -1.6, 0.2, 1.8].map((z) => P.box(0.04, 0.42, 0.04, { x: s * 1.42, y: roof + 0.24, z, color: STEEL }))).flat(),
+      // the hull: tow hooks, the cab's wipers, the rear lights, cable reels on the back
+      ...pair((s) => P.box(0.14, 0.14, 0.22, { x: s * 0.8, y: 0.85, z: 4.05, color: STEEL })),
+      ...pair((s) => P.box(0.4, 0.03, 0.03, { x: s * 0.6, y: top + 0.5, z: 3.25, rz: s * 0.5, color: STEEL })),
+      ...pair((s) => P.box(0.14, 0.12, 0.06, { x: s * 1.2, y: top - 0.1, z: -4.02, color: 0x5a1a14 })),
+      ...pair((s) => P.cyl(0.32, 0.32, 0.3, { x: s * 1.0, y: top + 0.6, z: -3.95, rz: Math.PI / 2, color: 0x3a3a30 }, 12)),
     ]), 1.1, 0.3),
     spin: {
       geo: merge([
