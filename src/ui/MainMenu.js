@@ -65,6 +65,12 @@ export function theatreArmies() {
   return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
 }
 
+/** A side's name as the theatre's maps give it (Aboukir: France and Britain, not 1806's Prussia), else the war's. */
+export function sideName(f) {
+  const maps = mapsFor(epoch()), n = maps[0]?.sides?.[f];
+  return n && maps.every((m) => m.sides?.[f] === n) ? n : FACTIONS[f].name;
+}
+
 /** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
 export function armiesPicker(choice, onChange = () => {}) {
   choice.armies = armiesFrom(choice.armies);
@@ -73,7 +79,7 @@ export function armiesPicker(choice, onChange = () => {}) {
   const box = el('div', 'conditions armies');
   for (const f of ['nato', 'pact']) {
     const row = el('div', 'cond-row');
-    row.append(el('span', 'cond-label', FACTIONS[f].name));
+    row.append(el('span', 'cond-label', sideName(f)));
     const seg = el('div', 'seg');
     const perks = el('ul', 'army-perks');
     const showPerks = () => perks.replaceChildren(...(DOCTRINE[choice.armies[f]] ?? []).map((d) => {
@@ -460,12 +466,14 @@ export class MainMenu {
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
         : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
-    }[atSea ? 'sea' : epoch()] ?? {
+      coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
+      coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
+    }[atSea ? 'sea' : theatre() === 'coastal' && hasTheatre(epoch(), 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
     for (const f of ['nato', 'pact']) {
-      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyName()[f] : FACTIONS[f].name}</b><span>${sideText[f]}</span>`);
+      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyName()[f] : sideName(f)}</b><span>${sideText[f]}</span>`);
       b.type = 'button';
       b.setAttribute('aria-pressed', String(c.side === f));
       b.addEventListener('click', () => {

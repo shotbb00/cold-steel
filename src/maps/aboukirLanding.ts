@@ -92,7 +92,6 @@ export default {
   description: 'Egypt, 8 March 1801: at dawn the British army rows ashore in the fleet\'s flatboats, straight at the French on the sand hills. Aboukir castle on its point, Lake Maadieh behind the dunes, the road to Alexandria inland.',
   epochs: ['1806'],
   theatre: 'coastal',
-  wip: true, // (1806 coastal step 1: the map; the British army and its boats come next)
   modes: ['landing'],
   sides: { nato: 'France', pact: 'Britain' },
   armies: { nato: ['fr'], pact: ['gb'] },
@@ -136,7 +135,7 @@ export default {
   },
 
   bases: { nato: { x: 0, z: 830, entries: [-200, 60, 280] }, pact: { x: 0, z: -830, entries: [-300, 30, 330] } }, // (the British land: their roads are the beach sectors)
-  maxStacks: 24,
+  maxStacks: 26, // (the landing brings its boats' loads, seamen and guns: a little more room than a land battle)
   cameraStart: { nato: { x: 0, z: 150 }, pact: { x: 0, z: -330 } },
   points,
   spawns: { nato: [], pact: [] },

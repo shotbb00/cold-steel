@@ -146,7 +146,7 @@ export const ptBoat = ship({
  * land comes ashore in them — the foot in a flatboat (fifty men, rowed by the fleet's seamen), the guns and horses in
  * the launches. Rowed, not sailed (no `sail`: they go where they're steered, whatever the wind).
  */
-const boat = (o) => ({ ...lcvp, engine: 'engine.sail', ...o, stats: { ...lcvp.stats, rowed: true, ...o.stats }, mounts: { nato: [], pact: [] } }); // (`rowed`: open boats — the surf can fill them: systems/Landing.js)
+const boat = (o) => ({ ...lcvp, engine: 'engine.oars', ...o, stats: { ...lcvp.stats, rowed: true, ...o.stats }, mounts: { nato: [], pact: [] } }); // (`rowed`: open boats — the surf can fill them: systems/Landing.js)
 export const flatboat = boat({
   id: 'flatboat', name: 'Flatboat', shortName: 'Flatboat',
   hull: { length: 12, beam: 3 },

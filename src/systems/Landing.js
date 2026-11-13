@@ -415,7 +415,7 @@ export class Landing {
       this.signalled = true;
       for (const r of this.runs) if (r.go) { r.way = r.go; r.go = null; }
       const f = ['nato', 'pact'].find((q) => this.lands(q)), b = f && g.map.bases[f];
-      if (b) g.audio?.play('arty', { x: b.x, y: 4, z: b.z * 0.8 }, { volume: 1 });
+      if (b) { g.audio?.play('arty', { x: b.x, y: 4, z: b.z * 0.8 }, { volume: 1 }); for (const r of this.runs) { const u = r.craft.units[0]; if (u?.alive && Math.random() < 0.35) g.audio?.play('bosun.pipe', { x: u.pos.x, y: 2, z: u.pos.z }, { volume: 0.7 }); } } // (the flagship's gun; the coxswains' pipes along the line)
       if (f) g.tellBoth?.(f, sig.say ?? 'The signal gun — the boats pull for the shore', sig.sayOther ?? 'A gun out at sea: the boats are coming in');
     }
     for (const r of this.runs.slice()) this.step(r, dt);

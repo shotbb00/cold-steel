@@ -537,6 +537,35 @@ function hoverEngine(ctx) {
   });
 }
 
+/** Oars (loop, the 1801 landing boats): the blades taking the water together, the rush of the stroke, the thole pins knocking. */
+function oars(ctx) {
+  let lp = 0, ph = 0;
+  return seamless(ctx, 2.6, (t, sr) => {
+    const k = (t % 1.3) / 1.3;                                       // two strokes a loop
+    const catchK = k < 0.08 ? Math.sin((Math.PI * k) / 0.08) : 0;    // the blades going in: a deep splash
+    const pull = k < 0.5 ? Math.sin((Math.PI * k) / 0.5) : 0;        // the drive: water rushing past
+    lp += lpCoef(420, sr) * (Math.random() * 2 - 1 - lp);
+    const knock = k > 0.52 && k < 0.56 ? Math.sin(TAU * 380 * t) * Math.exp(-(k - 0.52) * 90) : 0; // the looms knocking in the tholes as they feather
+    ph += (TAU * 70) / sr;
+    return lp * (catchK * 3.2 + pull * 1.4 + 0.15) + Math.sin(ph) * catchK * 0.5 + knock * 0.35;
+  });
+}
+
+/** The bosun's pipe (the dawn signal): a breathy whistle climbing, trilled, falling away. */
+function bosunPipe(ctx) {
+  return makeBuffer(ctx, 1.7, (d, sr, n) => {
+    let ph = 0, lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const f = t < 0.3 ? 1500 + (t / 0.3) * 800 : t < 1.25 ? 2300 + Math.sin(TAU * 13 * t) * 90 : 2300 - ((t - 1.25) / 0.45) * 700;
+      ph += (TAU * f) / sr;
+      lp += lpCoef(3000, sr) * (Math.random() * 2 - 1 - lp);
+      const env = Math.min(1, t / 0.05) * Math.min(1, (1.7 - t) / 0.2);
+      d[i] = (Math.sin(ph) * 0.8 + lp * 0.12) * env;
+    }
+  });
+}
+
 /** White water (loop): a bow wave or wake — hiss over a low rush, surging a little. */
 function wash(ctx, dur = 4) {
   let hi = 0, lo = 0;
@@ -921,6 +950,8 @@ export function soundDefinitions(ctx) {
     klaxon: () => klaxon(ctx),
     'engine.ship': () => shipEngine(ctx),
     'engine.hover': () => hoverEngine(ctx),
+    'engine.oars': () => oars(ctx),
+    'bosun.pipe': () => bosunPipe(ctx),
     wash: () => wash(ctx),
     sea: () => sea(ctx),
     'ship.sink': () => sinking(ctx),

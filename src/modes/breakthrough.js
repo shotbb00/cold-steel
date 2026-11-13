@@ -29,6 +29,9 @@ const DEFENCE_INCOME = 1.4;      // CP / s
 const ATTACK_FORCE = ['rifles', 'rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'tank', 'tank', 'ifv', 'mortar', 'engineers', 'scouts', 'aa'];
 const DEFENCE_FORCE = ['rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'atTeam', 'tank', 'mortar', 'engineers', 'scouts'];
 
+/** "Britain is beaten.", "The Warsaw Pact is beaten.", "The Allies are beaten." (a side's name: a country, or an alliance) */
+const beaten = (n) => `${/Pact|Allies/.test(n) ? 'The ' : ''}${n} ${n === 'Allies' ? 'are' : 'is'} beaten.`;
+
 export default {
   id: 'breakthrough',
   name: 'Breakthrough',
@@ -154,7 +157,7 @@ export default {
   finish(game, loser, why) {
     const result = (f) => (f === loser
       ? { victory: false, title: 'Defeat', subtitle: why }
-      : { victory: true, title: 'Victory', subtitle: `${why} The ${FACTIONS[loser].name} is beaten.` });
+      : { victory: true, title: 'Victory', subtitle: `${why} ${beaten(FACTIONS[loser].name)}` });
     game.net?.sendEnd(result(game.net.remoteFaction));
     const mine = result(game.playerFaction);
     if (game.campaign) {
