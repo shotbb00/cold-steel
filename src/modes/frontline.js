@@ -33,6 +33,9 @@ const LANDING_CP = 0.6;       // CP / s for each transport in a zone its side ho
 /** A sea map fields warships only, the land maps none (and the mode's own rule on top). */
 const seaAllow = (game, allow) => (t, f = game.playerFaction) => (!t.coastal || game.world.coastal) && (game.world.coastal ? !t.stats?.naval || (!!game.landing?.lands(f) && (game.map.landing?.navy ?? [t.id]).includes(t.id)) : !!t.stats?.naval === !!game.world.river?.sea && !t.coastal) && (!allow || allow(t)); // (a coastal map: the land for both, ships for the side that lands)        // per side, unless the map sets maxStacks
 
+/** Whose front: "Germany's", "NATO's", "The Allies'", "The Warsaw Pact's". */
+const collapsed = (n) => `${/Pact|Allies/.test(n) ? 'The ' : ''}${n}${n.endsWith('s') ? "'" : "'s"}`;
+
 export default {
   id: 'frontline',
   name: 'Frontline',
@@ -132,7 +135,7 @@ export default {
     // each side's own banner (the multiplayer client gets its version from the host)
     const result = (f) => (f === loser
       ? { victory: false, title: 'Defeat', subtitle: 'Your front has collapsed.' }
-      : { victory: true, title: 'Victory', subtitle: `The ${FACTIONS[loser].name}'s front has collapsed.` });
+      : { victory: true, title: 'Victory', subtitle: `${collapsed(FACTIONS[loser].name)} front has collapsed.` });
     game.net?.sendEnd(result(game.net.remoteFaction));
     game.end(result(me));
   },

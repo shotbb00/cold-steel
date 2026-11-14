@@ -145,7 +145,7 @@ export function shellField(seed, bounds, density) {
       const n = density(x + 5, z + 5) * 0.1;               // (a 10 × 10 m cell: a tenth of 1000 m²)
       for (let i = 0; i < Math.floor(n) + (r() < n % 1 ? 1 : 0); i++) {
         const cx = x + r() * 10, cz = z + r() * 10, big = r();
-        const blast = [Math.round(cx * 10) / 10, Math.round(cz * 10) / 10, 4 + big * 7, 0.25 + big * big * 1.1]; // most shallow, a few deep (the heavies)
+        const blast = [Math.round(cx * 10) / 10, Math.round(cz * 10) / 10, 4 + big * 7, 0.4 + big * big * 1.8]; // most shallow, a few deep (the heavies: two metres)
         blasts.push(blast, [-blast[0], -blast[1], blast[2], blast[3]]);
       }
     }

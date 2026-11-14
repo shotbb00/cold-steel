@@ -2,10 +2,11 @@
 // the German Heer and its Sturmtruppen. Variants, stats and models are keyed `nato` (British Army),
 // `fr` (French Army), `pact` (German Heer), `st` (Sturmtruppen). Like 1945, each type keeps a 1985
 // id so the modes, maps and the AI work, and derives from its 1985 counterpart.
-// Step 1: the riflemen and the machine guns. Everything else stands in through ALIAS_1918 (units/index.js
+// Step 1: the riflemen and the machine guns; step 3 the tanks and armoured cars. Everything else stands in through ALIAS_1918 (units/index.js
 // typeOf) until its step (see the 1918 design notes): tanks 3, guns and gas 4, cavalry and the rest 5.
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
+import { buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -50,8 +51,78 @@ const mgTeam = derive(T.mgTeam, {
   },
 });
 
+// ------------------------------------------------------------------ armour (step 3)
+// The first tanks: slow, blind, proof against rifle bullets and not much more. Every one of them
+//   breakdown: the chance a second, while it drives, that something gives (systems/Breakdowns.js):
+//              it stops while the crew mends it (a supply tank close by: sooner)
+//   ditch:     the chance a second, crossing a trench or a shell hole, that it bellies and sticks
+// and none fires on the move with any hope of hitting (noStabilizer).
+const TANK_1918 = { nightSight: undefined, smoke: undefined, noStabilizer: true, sight: 60, aggroRange: 120, preferredRange: 80, aimTime: 1.6, turnRate: 0.35, turretRate: 0.5, spread: 0.008 };
+const MG_FIRE = { weapon: 'rifle', weaponSound: 'mg', antiArmor: false, damage: 60, vsArmor: 0.03, pierce: 0, splash: 0, fireCooldown: 0.12, burst: 1, magSize: 250, reloadTime: 5, boltSize: 0.5, range: 150, playerFireInterval: 0.12 };
+
+const tank = derive(T.tank, {
+  name: 'Tanks', shortName: 'Tanks',
+  stats: { ...TANK_1918, hp: 900, armor: 0.4, speed: 1.9, range: 160, damage: 260, splash: 2.5, pierce: 0.35, fireCooldown: 5, reloadTime: 6, crew: 4, bailChance: 0.7, height: 2.7, radius: 2.6, breakdown: 1 / 240, ditch: 0.02 },
+  factionStats: {
+    nato: {},                                                                                                                    // Mark V: the 6-pounders, crosses trenches best
+    fr: { hp: 520, armor: 0.35, speed: 2.4, damage: 150, splash: 1.5, fireCooldown: 3.5, crew: 2, radius: 1.5, height: 2.2, breakdown: 1 / 300, ditch: 0.06, turnRate: 0.6, turretRate: 0.9 }, // Renault FT: small, a real turret, falls into big holes
+    pact: { hp: 1100, armor: 0.45, speed: 1.6, damage: 280, fireCooldown: 4.5, height: 3.3, radius: 2.8, breakdown: 1 / 200, ditch: 0.15, sight: 70 }, // A7V: thick, high, and bad over broken ground
+    st: { speed: 1.7, breakdown: 1 / 200 },                                                                                      // the captured Mark IV: older, worn
+  },
+  armyCost: { fr: 320 },
+  models: { nato: buildMarkV, fr: buildRenaultFT, pact: buildA7V, st: buildBeuteMarkIV },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'Mark V', weapon: 'two 6-pounders, four Hotchkiss MGs', text: 'The rhomboid: its tracks run right round the hull, so it climbs out of trenches the others fall into. Slow, deaf, half-blind, proof against bullets — and it breaks down. Stops to fire.' },
+    fr: { name: 'Renault FT', weapon: 'Puteaux 37 mm', text: 'The first tank with a turret that turns all the way round. Small, cheap, built by the thousand: a swarm of them goes where one Mark V can\'t. Big shell holes swallow it.' },
+    pact: { name: 'A7V', weapon: '5.7 cm Maxim-Nordenfelt, six MG 08', text: 'Germany\'s own tank, a steel fortress for eighteen men: thick armour, a good gun — and a belly so low that every shell hole is a trap. Only twenty were built.' },
+    st: { name: 'Beutepanzer IV', weapon: 'two 6-pounders, MG 08s', text: 'A captured British Mark IV under the iron cross: there were more of these in German hands than A7Vs. Worn out before it was taken.' },
+  },
+});
+
+const heavyTank = derive(T.heavyTank, {
+  name: 'Fast Tanks', shortName: 'Fast tanks',
+  stats: { ...TANK_1918, ...MG_FIRE, hp: 700, armor: 0.3, speed: 3.6, crew: 3, bailChance: 0.7, height: 2.75, radius: 2.4, breakdown: 1 / 300, ditch: 0.08, aggroRange: 130 },
+  factionStats: {
+    nato: {},                                                                                                                   // Whippet: four Hotchkiss MGs, fast
+    fr: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 300, vsArmor: 1, pierce: 0.3, splash: 3, fireCooldown: 6, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 140, playerFireInterval: 6, hp: 800, speed: 2.2, ditch: 0.12, breakdown: 1 / 220 }, // Schneider CA1: the short 75
+    pact: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 270, vsArmor: 1, pierce: 0.35, splash: 2.5, fireCooldown: 5, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 160, playerFireInterval: 5, hp: 1300, armor: 0.45, speed: 1.8, ditch: 0.03 }, // A7V-U: the German rhomboid
+    st: {},                                                                                                                     // the captured Whippet
+  },
+  models: { nato: buildWhippet, fr: buildSchneiderCA1, pact: buildA7VU, st: buildBeuteWhippet },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'Medium A Whippet', weapon: 'four Hotchkiss machine guns', text: 'Twice as fast as a Mark V: the tank to go through the gap and run down the guns and the reserves behind it. Machine guns only.' },
+    fr: { name: 'Schneider CA1', weapon: 'Blockhaus Schneider 75 mm', text: 'A box on a tractor\'s tracks, the short 75 in its right side and a beak to cut wire. Overhangs front and back: it bellies in trenches.' },
+    pact: { name: 'A7V-U', weapon: 'two 5.7 cm guns', text: 'The German answer to the rhomboid, built in 1918 — one prototype, here the tank they would have built in numbers. It crosses trenches like a Mark V.' },
+    st: { name: 'Beute-Whippet', weapon: 'Hotchkiss and MG 08', text: 'A captured Whippet, turned round against its makers: fast, machine guns only.' },
+  },
+});
+
+const reconVehicle = derive(T.reconVehicle, {
+  name: 'Armoured Cars', shortName: 'Armoured cars',
+  stats: { ...MG_FIRE, nightSight: undefined, smoke: undefined, hp: 320, armor: 0.15, speed: 7, sight: 90, breakdown: 1 / 400, ditch: 0.35 }, // (wheels: hopeless off the roads in a crater field)
+  factionStats: {
+    fr: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 150, vsArmor: 1, pierce: 0.3, splash: 1.5, fireCooldown: 3, magSize: 40, reloadTime: 5, boltSize: 1, playerFireInterval: 3 }, // Peugeot: the 37 mm
+  },
+  models: { nato: buildRollsRoyceAC, fr: buildPeugeotAC, pact: buildEhrhardtAC, st: buildEhrhardtAC },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'Rolls-Royce Armoured Car', weapon: 'Vickers machine gun', text: 'A Silver Ghost chassis in armour: fast and reliable on roads, useless in a crater field. For the open ground behind the line.' },
+    fr: { name: 'Peugeot AC', weapon: 'Puteaux 37 mm', text: 'An open armoured car with the 37 mm behind a shield: quick, light, and it needs the roads.' },
+    pact: { name: 'Ehrhardt E-V/4', weapon: 'three MG 08', text: 'A big four-wheel-drive armoured car with a turret: built for the east and for the streets — keep it out of the shell holes.' },
+    st: { name: 'Ehrhardt E-V/4', weapon: 'three MG 08', text: 'A big four-wheel-drive armoured car with a turret: built for the east and for the streets — keep it out of the shell holes.' },
+  },
+});
+
+const CREW_TEXT = 'The crew of a knocked-out tank: a few men with pistols and a machine gun pulled from the wreck.';
+const crew = derive(T.crew, {
+  models: men({ crew: true }),
+  variants: { nato: { name: 'Tank Crew', weapon: 'revolvers, a Lewis', text: CREW_TEXT }, fr: { name: 'Équipage', weapon: 'pistols', text: CREW_TEXT }, pact: { name: 'Besatzung', weapon: 'pistols, an MG 08', text: CREW_TEXT }, st: { name: 'Besatzung', weapon: 'pistols', text: CREW_TEXT } },
+});
+
 export const TYPES_1918 = {
-  rifles, mgTeam,
+  rifles, mgTeam, tank, heavyTank, reconVehicle, crew,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 
