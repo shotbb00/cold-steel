@@ -123,6 +123,7 @@ export class ActionBar {
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
       if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
       if (cmd === 'air:lift' && epoch() === '1945') [label, tip] = ['Paradrop', 'A transport flies over the spot and drops a stick of paratroopers']
+      if (epoch() === '1918') [label, tip] = { 'air:jet': ['Ground attack', 'Biplanes low over the line: machine guns and small bombs'], 'air:cap': ['Fighters', 'A flight of fighters circles the spot and dives on enemy aircraft'], 'air:recon': ['Spotter', 'A two-seater flies along the line: every enemy it sees shows on your map'] }[cmd] ?? [label, tip];
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;

@@ -14,6 +14,7 @@ import { TYPES_1806, ALIAS_1806 } from './units1806/index.js';
 import { TYPES_1918, ALIAS_1918 } from './units1918/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
+import { AIR_1918 } from './air18.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
 
@@ -67,7 +68,7 @@ export const EPOCHS = {
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
     },
     defaults: { nato: 'uk', pact: 'de' },
-    types: TYPES_1918, alias: ALIAS_1918, air: {},
+    types: TYPES_1918, alias: ALIAS_1918, air: AIR_1918,
     // each army's two signatures (ponytail: their effects are wired as the units they need arrive — tanks, guns)
     doctrine: {
       uk: [
@@ -164,7 +165,7 @@ export function setEpoch(id) {
     const aircraft = e.air[kind];
     k.off = !aircraft;           // no helicopters in 1945 (nor a recon flight yet)
     k.label0 ??= k.label;
-    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || k.label0;
+    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || (e.id === '1918' && { jet: 'Ground attack', recon: 'Spotter flight' }[kind]) || k.label0;
     if (aircraft) k.aircraft = aircraft;
   }
   return e;

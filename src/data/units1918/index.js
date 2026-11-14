@@ -7,7 +7,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
-import { buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
+import { buildBalloonUK, buildBalloonFR, buildBalloonDE, buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -207,9 +207,23 @@ const cbRadar = derive(T.observers, {
   },
 });
 
+/** The kite balloon (the air-radar slot): two observers in a basket forty metres up on a cable from a winch lorry — they see over every hill, and what they see the guns hit. Hauled down to move. */
+const airRadar = derive(T.airRadar, {
+  name: 'Observation Balloon', shortName: 'Balloon', category: 'fire', cost: 220,
+  stats: { airRadar: undefined, observer: { scatter: 0.5 }, sight: 330, fov: 6.3, eyeHeight: 40, speed: 3.2, hp: 260, armor: 0.02, height: 3 },
+  models: { nato: buildBalloonUK, fr: buildBalloonFR, pact: buildBalloonDE, st: buildBalloonDE },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'Kite Balloon Section', weapon: 'telephone, binoculars', text: 'A Caquot balloon on its winch lorry: two observers forty metres up see far over the enemy line and talk the guns onto it. A prize for enemy fighters.' },
+    fr: { name: 'Ballon Caquot', weapon: 'telephone, binoculars', text: 'The French observation balloon: from its basket the whole sector is laid out for the 75s.' },
+    pact: { name: 'Fesselballon', weapon: 'Fernsprecher, Fernglas', text: 'The "Drachen": a tethered balloon over the German line, its observers directing the guns onto everything that moves.' },
+    st: { name: 'Fesselballon', weapon: 'Fernsprecher, Fernglas', text: 'The "Drachen": a tethered balloon over the German line, its observers directing the guns onto everything that moves.' },
+  },
+});
+
 export const TYPES_1918 = {
   rifles, mgTeam, tank, heavyTank, reconVehicle, crew,
-  artillery, spMortar, rockets, mortar, observers, cbRadar,
+  artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 

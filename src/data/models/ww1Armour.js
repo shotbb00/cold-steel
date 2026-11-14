@@ -255,3 +255,28 @@ export const buildEhrhardtAC = car('ehrhardt', {
   gun: [P.cyl(0.05, 0.05, 0.6, { z: 0.3, rx: Math.PI / 2, color: STEEL }, 8)],                       // an MG 08
   turretAt: [0, 2.35, -0.5], gunAt: [0, 0.3, 0.6], muzzle: 0.62,
 });
+
+// ---------------------------------------------------------------- the kite balloon and its winch lorry
+
+const BALLOON_Y = 40;   // m: the observers' basket, on its cable (data/units1918 eyeHeight)
+const balloonParts = (color, kind) => [
+  P.cyl(0.015, 0.015, BALLOON_Y - 2, { y: BALLOON_Y / 2 + 1, z: -0.8, color: 0x222222 }, 4),                       // the cable
+  P.sphere(1, { y: BALLOON_Y + 3, z: -0.8, sx: 3.6, sy: 3.4, sz: 9, color, ...C }, 16, 10),                          // the envelope (Caquot)
+  ...[0, 2.09, 4.19].map((a) => P.sphere(1, { x: Math.sin(a) * 2.6, y: BALLOON_Y + 3 + Math.cos(a) * 2.6, z: -8.5, sx: 1.1, sy: 1.1, sz: 2.4, color, ...C }, 10, 6)), // the three tail lobes
+  P.box(0.9, 0.9, 0.9, { y: BALLOON_Y - 1.5, z: -0.8, color: 0x6a5a3a }),                                         // the observers' basket
+  ...(kind === 'de' ? [] : [P.cyl(1.1, 1.1, 0.03, { x: 3.55, y: BALLOON_Y + 3, z: -0.8, rz: Math.PI / 2, color: kind === 'fr' ? 0xa8231c : 0x22325c }, 16)]),
+];
+const winch = (key, color, dark, kind) => car(key, {
+  color, dark, length: 5.6, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.6],
+  body: [
+    plated([[1.2, 0.72, 0.85, 0.85, 1.6, 0.75, 2.1], [2.6, 0.72, 0.8, 0.8, 1.4, 0.6, 1.7]], { color, ...C }),          // the cab and bonnet
+    P.box(1.9, 0.5, 3.2, { y: 1.0, z: -0.8, color: dark }),                                                             // the bed
+    P.cyl(0.45, 0.45, 1.5, { y: 1.65, z: -0.8, rz: Math.PI / 2, color: 0x3a3a34 }, 14),                                 // the winch drum
+    ...balloonParts(kind === 'de' ? 0x9a9a88 : 0xb8b49a, kind),
+  ],
+  turret: [P.box(0.2, 0.2, 0.2, { color: dark })], gun: [P.box(0.05, 0.05, 0.05, { color: dark })],
+  turretAt: [0, 1.9, -0.8], gunAt: [0, 0, 0], muzzle: 0.1,
+});
+export const buildBalloonUK = winch('balloonUK', BR, BR_DK, 'uk');
+export const buildBalloonFR = winch('balloonFR', FR, FR_DK, 'fr');
+export const buildBalloonDE = winch('balloonDE', DE, DE_DK, 'de');

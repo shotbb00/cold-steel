@@ -275,10 +275,10 @@ class Sortie {
     this.id = id;
     this.kind = kind;
     this.owner = owner;       // co-op: whose squad an air assault brings
-    this.p = KINDS[kind];
     this.faction = faction;
     this.army = game.armyOf(faction);
     this.type = airType(kind, faction, this.army);
+    this.p = this.type?.flight ? { ...KINDS[kind], ...this.type.flight } : KINDS[kind]; // (1918's biplanes: their own speeds and heights, data/air18.ts)
     this.target = new THREE.Vector3(x, game.terrain.heightAt(x, z), z);
     this.yaw = yaw;
     this.dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
