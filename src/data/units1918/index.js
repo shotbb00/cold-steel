@@ -58,17 +58,20 @@ const mgTeam = derive(T.mgTeam, {
 //              it stops while the crew mends it (a supply tank close by: sooner)
 //   ditch:     the chance a second, crossing a trench or a shell hole, that it bellies and sticks
 // and none fires on the move with any hope of hitting (noStabilizer).
+// sideGuns (UnitStack.updateSideGuns): the machine guns in the sponsons, the hull and the cab, each covering its own sector
+const MKV_MGS = [{ at: Math.PI / 2, arc: 1.1, range: 140, damage: 60, rate: 8, burst: 10 }, { at: -Math.PI / 2, arc: 1.1, range: 140, damage: 60, rate: 8, burst: 10 }, { at: 0, arc: 0.5, range: 140, damage: 60, rate: 8, burst: 10, y: 2.2 }, { at: Math.PI, arc: 0.8, range: 140, damage: 60, rate: 8, burst: 10 }];
+const WHIP_MGS = [{ at: Math.PI / 2, arc: 1.0, range: 140, damage: 60, rate: 8, burst: 10, y: 2.0 }, { at: -Math.PI / 2, arc: 1.0, range: 140, damage: 60, rate: 8, burst: 10, y: 2.0 }, { at: Math.PI, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10, y: 2.0 }]; // (the Whippet's other three Hotchkiss, round the compartment)
 const TANK_1918 = { nightSight: undefined, smoke: undefined, noStabilizer: true, sight: 60, aggroRange: 120, preferredRange: 80, aimTime: 1.6, turnRate: 0.35, turretRate: 0.5, spread: 0.008 };
 const MG_FIRE = { weapon: 'rifle', weaponSound: 'mg', antiArmor: false, damage: 60, vsArmor: 0.03, pierce: 0, splash: 0, fireCooldown: 0.12, burst: 1, magSize: 250, reloadTime: 5, boltSize: 0.5, range: 150, playerFireInterval: 0.12 };
 
 const tank = derive(T.tank, {
   name: 'Tanks', shortName: 'Tanks',
-  stats: { ...TANK_1918, hp: 900, armor: 0.4, speed: 1.9, range: 160, damage: 260, splash: 2.5, pierce: 0.35, fireCooldown: 5, reloadTime: 6, crew: 4, bailChance: 0.7, height: 2.7, radius: 2.6, breakdown: 1 / 240, ditch: 0.02 },
+  stats: { ...TANK_1918, hp: 900, armor: 0.4, speed: 1.9, range: 160, damage: 260, splash: 2.5, pierce: 0.35, fireCooldown: 5, reloadTime: 6, crew: 4, bailChance: 0.7, height: 2.7, radius: 2.6, breakdown: 1 / 240, ditch: 0.02, traverse: 1.4, sideGuns: MKV_MGS }, // (traverse: the sponson's arc — beyond it the hull swings round)
   factionStats: {
     nato: {},                                                                                                                    // Mark V: the 6-pounders, crosses trenches best
-    fr: { hp: 520, armor: 0.35, speed: 2.4, damage: 150, splash: 1.5, fireCooldown: 3.5, crew: 2, radius: 1.5, height: 2.2, breakdown: 1 / 300, ditch: 0.06, turnRate: 0.6, turretRate: 0.9 }, // Renault FT: small, a real turret, falls into big holes
-    pact: { hp: 1100, armor: 0.45, speed: 1.6, damage: 280, fireCooldown: 4.5, height: 3.3, radius: 2.8, breakdown: 1 / 200, ditch: 0.15, sight: 70 }, // A7V: thick, high, and bad over broken ground
-    st: { speed: 1.7, breakdown: 1 / 200 },                                                                                      // the captured Mark IV: older, worn
+    fr: { hp: 520, armor: 0.35, speed: 2.4, damage: 150, splash: 1.5, fireCooldown: 3.5, crew: 2, radius: 1.5, height: 2.2, breakdown: 1 / 300, ditch: 0.06, turnRate: 0.6, turretRate: 0.9, traverse: undefined, sideGuns: undefined }, // Renault FT: small, a real turret, falls into big holes
+    pact: { hp: 1100, armor: 0.45, speed: 1.6, damage: 280, fireCooldown: 4.5, height: 3.3, radius: 2.8, breakdown: 1 / 200, ditch: 0.15, sight: 70, traverse: 0.8, sideGuns: [{ at: Math.PI / 2, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10 }, { at: Math.PI / 2, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10 }, { at: -Math.PI / 2, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10 }, { at: -Math.PI / 2, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10 }, { at: Math.PI, arc: 0.8, range: 140, damage: 60, rate: 8, burst: 10 }, { at: Math.PI, arc: 0.8, range: 140, damage: 60, rate: 8, burst: 10 }] }, // (the six MG 08s: two a side, two in the tail) // A7V: thick, high, and bad over broken ground
+    st: { hp: 900, armor: 0.4, speed: 1.7, damage: 260, fireCooldown: 5, height: 2.7, radius: 2.6, sight: 60, breakdown: 1 / 200, ditch: 0.02, traverse: 1.4, sideGuns: MKV_MGS }, // (the Sturmtruppen ride on the German Army's numbers: a Mark IV's own, not the A7V's)                                                                                      // the captured Mark IV: older, worn
   },
   armyCost: { fr: 320 },
   models: { nato: buildMarkV, fr: buildRenaultFT, pact: buildA7V, st: buildBeuteMarkIV },
@@ -83,12 +86,12 @@ const tank = derive(T.tank, {
 
 const heavyTank = derive(T.heavyTank, {
   name: 'Fast Tanks', shortName: 'Fast tanks',
-  stats: { ...TANK_1918, ...MG_FIRE, hp: 700, armor: 0.3, speed: 3.6, crew: 3, bailChance: 0.7, height: 2.75, radius: 2.4, breakdown: 1 / 300, ditch: 0.08, aggroRange: 130 },
+  stats: { ...TANK_1918, ...MG_FIRE, hp: 700, armor: 0.3, speed: 3.6, crew: 3, bailChance: 0.7, height: 2.75, radius: 2.4, breakdown: 1 / 300, ditch: 0.08, aggroRange: 130, traverse: 1.2, sideGuns: WHIP_MGS }, // (the Whippet's other three Hotchkiss, round the compartment)
   factionStats: {
     nato: {},                                                                                                                   // Whippet: four Hotchkiss MGs, fast
-    fr: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 300, vsArmor: 1, pierce: 0.3, splash: 3, fireCooldown: 6, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 140, playerFireInterval: 6, hp: 800, speed: 2.2, ditch: 0.12, breakdown: 1 / 220 }, // Schneider CA1: the short 75
-    pact: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 270, vsArmor: 1, pierce: 0.35, splash: 2.5, fireCooldown: 5, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 160, playerFireInterval: 5, hp: 1300, armor: 0.45, speed: 1.8, ditch: 0.03 }, // A7V-U: the German rhomboid
-    st: {},                                                                                                                     // the captured Whippet
+    fr: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 300, vsArmor: 1, pierce: 0.3, splash: 3, fireCooldown: 6, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 140, playerFireInterval: 6, hp: 800, speed: 2.2, ditch: 0.12, breakdown: 1 / 220, traverse: 0.6, sideGuns: [{ at: Math.PI / 2, arc: 1.2, range: 140, damage: 60, rate: 8, burst: 10 }, { at: -Math.PI / 2, arc: 1.2, range: 140, damage: 60, rate: 8, burst: 10 }] }, // Schneider CA1: the short 75, a Hotchkiss in each side dome
+    pact: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 270, vsArmor: 1, pierce: 0.35, splash: 2.5, fireCooldown: 5, magSize: 40, reloadTime: 6, boltSize: 1.4, range: 160, playerFireInterval: 5, hp: 1300, armor: 0.45, speed: 1.8, ditch: 0.03, traverse: 1.4, sideGuns: MKV_MGS }, // A7V-U: the German rhomboid
+    st: { ...MG_FIRE, hp: 700, armor: 0.3, speed: 3.6, ditch: 0.08, traverse: 1.2, sideGuns: WHIP_MGS },  // (the Whippet's own, not the A7V-U's)                                                                                                                     // the captured Whippet
   },
   models: { nato: buildWhippet, fr: buildSchneiderCA1, pact: buildA7VU, st: buildBeuteWhippet },
   engine: 'engine.diesel',
@@ -105,6 +108,7 @@ const reconVehicle = derive(T.reconVehicle, {
   stats: { ...MG_FIRE, nightSight: undefined, smoke: undefined, hp: 320, armor: 0.15, speed: 7, sight: 90, breakdown: 1 / 400, ditch: 0.35 }, // (wheels: hopeless off the roads in a crater field)
   factionStats: {
     fr: { weapon: 'cannon', weaponSound: undefined, antiArmor: true, damage: 150, vsArmor: 1, pierce: 0.3, splash: 1.5, fireCooldown: 3, magSize: 40, reloadTime: 5, boltSize: 1, playerFireInterval: 3 }, // Peugeot: the 37 mm
+    pact: { sideGuns: [{ at: Math.PI / 2, arc: 1.1, range: 140, damage: 60, rate: 8, burst: 10, y: 1.8 }, { at: -Math.PI / 2, arc: 1.1, range: 140, damage: 60, rate: 8, burst: 10, y: 1.8 }] }, // Ehrhardt: the turret's MG and one in each side
   },
   models: { nato: buildRollsRoyceAC, fr: buildPeugeotAC, pact: buildEhrhardtAC, st: buildEhrhardtAC },
   engine: 'engine.dieselSmall',

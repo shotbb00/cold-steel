@@ -89,12 +89,12 @@ const mortar = derive(T.mortar, {
 
 const tank = derive(T.tank, {
   name: 'Tanks', shortName: 'Tanks',
-  stats: { nightSight: undefined, noStabilizer: true, armor: 0.55, hp: 1100, range: 180, damage: 360, smoke: { charges: 1 } },
+  stats: { nightSight: undefined, noStabilizer: true, armor: 0.55, hp: 1100, range: 180, damage: 360, smoke: { charges: 1 }, sideGuns: [{ turret: true, at: 0, arc: 0.18, range: 160, damage: 60, rate: 10, burst: 12, y: 2.0, out: 2.2 }, { at: 0, arc: 0.45, range: 130, damage: 60, rate: 9, burst: 10, y: 1.4, out: 2.4 }] }, // (the coaxial and the bow machine guns: UnitStack.updateSideGuns)
   factionStats: {
     nato: { noStabilizer: false, armor: 0.5, damage: 330, speed: 5.4, fireCooldown: 6 },   // Sherman: the gyrostabiliser, more but thinner
     sov: { noStabilizer: true, armor: 0.55, damage: 360, speed: 5.6, fireCooldown: 8, carries: { unit: 'rifles', count: 8 } }, // (Tank riders: data/epoch.js)      // T-34-85: fast, sloped armour (everything the US entry sets: stats layer side, then army)
     pact: { armor: 0.6, damage: 380, fireCooldown: 6.5 },                    // Panzer IV H: the long 7.5 cm
-    fj: { armor: 0.6, damage: 380, speed: 4.6, fireCooldown: 7, traverse: 0.17 },            // StuG III G: low, the same gun, no turret
+    fj: { armor: 0.6, damage: 380, speed: 4.6, fireCooldown: 7, traverse: 0.17, sideGuns: [{ at: 0, arc: 1.2, range: 140, damage: 70, rate: 10, burst: 10, y: 2.2, out: 0.5 }] },            // StuG III G: low, the same gun, no turret (the loader's MG behind its shield on the roof)
   },
   models: { nato: buildUsSherman, sov: buildSovT34, pact: buildWhPanzerIV, fj: buildFjStuG },
   engine: 'engine.diesel',
@@ -140,10 +140,10 @@ const crew = derive(T.crew, {
 // (factionStats layer side, then army: `sov` sets every key `nato` sets, `fj` every key `pact` sets)
 const heavyTank = derive(T.heavyTank, {
   name: 'Heavy Tanks', shortName: 'Heavy tanks',
-  stats: { nightSight: undefined, noStabilizer: true, smoke: { charges: 1 }, armor: 0.78, hp: 1650, damage: 450, range: 210 },
+  stats: { nightSight: undefined, noStabilizer: true, smoke: { charges: 1 }, armor: 0.78, hp: 1650, damage: 450, range: 210, sideGuns: [{ turret: true, at: 0, arc: 0.18, range: 160, damage: 60, rate: 10, burst: 12, y: 2.0, out: 2.2 }, { at: 0, arc: 0.45, range: 130, damage: 60, rate: 9, burst: 10, y: 1.4, out: 2.4 }] },
   factionStats: {
     nato: { armor: 0.7, damage: 430, fireCooldown: 7, speed: 5.4 },                // M26: the 90 mm, quick for a heavy
-    sov: { armor: 0.74, damage: 540, fireCooldown: 16, speed: 4.8 },                  // IS-2: the 122 mm, two-piece rounds: slow to load
+    sov: { armor: 0.74, damage: 540, fireCooldown: 16, speed: 4.8, sideGuns: [{ turret: true, at: 0, arc: 0.18, range: 160, damage: 60, rate: 10, burst: 12, y: 2.0, out: 2.2 }] },                  // IS-2: the 122 mm, two-piece rounds: slow to load (no bow gunner)
     pact: { armor: 0.8, damage: 470, speed: 5.2, fireCooldown: 7 },                   // Panther: the long 7.5 cm, the sloped front
     fj: { armor: 0.8, damage: 480, speed: 4.2, fireCooldown: 8 },                     // Tiger I: thick, slow, the 8.8
   },
@@ -486,9 +486,9 @@ const mineClear = derive(T.mineClear, {
     sov: { minePlough: true },
     // Goliath: blows a lane through a minefield, or — driven up to a tank, a bunker, a held house — goes off against it
     pact: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0,
-      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50 },
+      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50, sideGuns: undefined },
     fj: { minePlough: false, lineCharge: { count: 1, range: 110 }, hp: 150, armor: 0.1, speed: 3, radius: 0.8, height: 0.7, range: 1, weapon: 'rifle', damage: 0,
-      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50 },
+      aggroRange: 45, preferredRange: 0, antiArmor: true, goliath: { trigger: 3.5, radius: 6, damage: 1800 }, stealth: 0.5, sight: 50, sideGuns: undefined },
   },
   armyCost: { wh: 120, fj: 120 },   // the Goliath: cheap — it is used up
   models: { nato: buildUsT1E3, sov: buildSovPT3, pact: buildDeGoliath, fj: buildDeGoliath },

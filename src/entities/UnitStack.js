@@ -1204,6 +1204,7 @@ export class UnitStack {
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
     if (!this.usesCover) {
+      if (this.stats.sideGuns) this.updateSideGuns(u, dt); // the hull and sponson machine guns, on their own (whatever the main gun is doing)
       if (u.gunOut) { u.target = null; u.airTarget = null; return; }
       if (s.antiAir && (s.antiAir.missile ? this.engageAirMissile(u, dt) : this.engageAir(u, dt))) return; // aircraft first
       this.updateHeavyWeapon(u);
@@ -1742,6 +1743,65 @@ export class UnitStack {
     u.mag--;
     u.cooldown = s.fireCooldown * (0.85 + Math.random() * 0.3);
     if (u.mag <= 0) this.startReload(u);
+  }
+
+  /**
+   * A vehicle's machine guns besides its main armament (stats.sideGuns: [{ at, arc, range, damage, rate, burst, turret }]):
+   * `at` the gun's bearing from the nose (rad: 0 the bow, ±π/2 the sides, π the rear) — or from the gun (`turret`: a
+   * coaxial MG) — and `arc` either side of it. Each picks its own man among the enemy foot (and gun crews, and riders)
+   * it can see in its sector and fires bursts at him on its own: the 1918 tanks' sponson and hull guns, a later tank's
+   * bow and coaxial MGs. Fired from a moving hull it sprays.
+   */
+  updateSideGuns(u, dt) {
+    const guns = u.stats.sideGuns;
+    const st = (u.side ??= guns.map(() => ({ t: Math.random(), foe: null, left: 0 })));
+    if (this.holdFire) return;
+    const sector = (m, e) => {
+      const d2 = dist2DSq(u.pos, e.pos);
+      if (d2 > m.range * m.range) return false;
+      return Math.abs(angleDelta((m.turret ? u.turretYaw : u.yaw) + (m.at ?? 0), Math.atan2(e.pos.x - u.pos.x, e.pos.z - u.pos.z))) <= m.arc;
+    };
+    const eyeY = u.pos.y + 2;
+    for (let i = 0; i < guns.length; i++) {
+      const m = guns[i], g = st[i];
+      if ((g.t -= dt) > 0) continue;
+      const e0 = g.foe;
+      if (!e0?.alive || !e0.spotted || !sector(m, e0) || g.left <= 0) { // a new burst: the nearest man it can see in its sector
+        g.foe = null;
+        let best = Infinity;
+        for (const e of this.world.combatants(enemyOf(this.faction))) {
+          if (!e.alive || !e.spotted || !(e.stack.usesCover || e.stack.kind === 'gun' || e.stack.kind === 'cavalry')) continue;
+          const d2 = dist2DSq(u.pos, e.pos);
+          if (d2 >= best || !sector(m, e)) continue;
+          if (!this.world.terrain.lineOfSight(u.pos.x, eyeY, u.pos.z, e.pos.x, e.pos.y + e.aimHeight, e.pos.z)) continue;
+          best = d2;
+          g.foe = e;
+        }
+        if (!g.foe) { g.t = 0.7 + Math.random() * 0.4; continue; }
+        g.left = m.burst ?? 10;
+      }
+      const e = g.foe;
+      const yaw = (m.turret ? u.turretYaw : u.yaw) + (m.at ?? 0);
+      _p.set(u.pos.x + Math.sin(yaw) * (m.out ?? 1.4), u.pos.y + (m.y ?? 1.5), u.pos.z + Math.cos(yaw) * (m.out ?? 1.4));
+      _v.set(e.pos.x, e.pos.y + e.aimHeight, e.pos.z);
+      const d = _v.distanceTo(_p);
+      _w.subVectors(_v, _p).normalize();
+      const spread = 0.025 * (1 + d / m.range) * (u.moving ? 2.2 : 1) * (1 + u.suppression);
+      _w.x += (Math.random() - 0.5) * spread * 2;
+      _w.y += (Math.random() - 0.5) * spread;
+      _w.z += (Math.random() - 0.5) * spread * 2;
+      _w.normalize();
+      this.services.projectiles.spawn({
+        origin: _p, dir: _w, speed: 700, damage: (m.damage ?? 60) * u.damageMult, faction: this.faction, color: this.boltColor, size: 0.5, source: this,
+        life: (m.range * 1.4) / 700 + 0.2, splash: 0, pierce: 0.1, vsArmor: 0.03, suppress: 1.2, tracer: Math.random() < 0.3,
+      });
+      this.services.effects.muzzle(_p, _w, 0.7, 'rifle');
+      this.services.audio?.weapon(this.faction, 'mg', _p, false, this.army);
+      this.firedAt = this.world.time;
+      VisibilitySystem.revealShooter(u);
+      g.left--;
+      g.t = g.left > 0 ? 1 / (m.rate ?? 8) : (m.pause ?? 1.4) * (0.8 + Math.random() * 0.4);
+    }
   }
 
   startReload(u) {
