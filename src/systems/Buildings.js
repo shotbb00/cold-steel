@@ -260,7 +260,7 @@ export class Buildings {
   }
 
   /** The walls coming down: rubble, lower cover, dust and noise (no casualties — that's collapse()). */
-  collapseVisual(b) {
+  collapseVisual(b, quiet = false) {
     if (b.collapsed) return;
     const game = this.game;
     b.collapsed = true;
@@ -272,6 +272,7 @@ export class Buildings {
     }
     for (const c of b.colliders) c.top = Math.min(c.top, c.y + 0.6 + 0.85);
     for (const s of game.cover.spots) if (s.collider.building === b) { s.height = s.collider.top - s.y; s.interior = null; }
+    if (quiet) return; // (a ruin from before the battle: no dust, no bang)
     // dust and debris
     for (let i = 0; i < 5; i++) {
       const p = { x: b.x + (Math.random() - 0.5) * b.w, y: b.ground + 1, z: b.z + (Math.random() - 0.5) * b.d };

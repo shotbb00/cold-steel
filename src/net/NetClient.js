@@ -324,7 +324,7 @@ export class NetClient {
       case 'chaff': g.missiles?.remoteChaff(e[1], e[2], e[3], e[4]); break;   // (systems/Torpedoes.js: to watch, the host deals the damage)
       case 'dcs': g.torpedoes?.remoteCharges(e[1]); break;
       case 'house': { const b = g.buildings.list[e[1]]; if (b) g.buildings.upgrade(b, e[2], e[3]); break; } // (systems/Buildings.js)
-      case 'site': g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true, stackId: e[7] ?? null }); break;
+      case 'site': if (!g.construction.siteById(e[1])) g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true, stackId: e[7] ?? null }); break; // (one this machine built itself already: a map's trench system, maps/common.js)
       case 'unsite': {
         const site = g.construction.sites.find((s) => s.id === e[1]);
         if (site) g.construction.cancel(site);

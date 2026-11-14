@@ -240,6 +240,14 @@ export class GameEngine {
 
     this.bindControls();
     if (campaign) { this.blasts = []; if (campaign.scars) this.replayScars(campaign.scars); } // the sector as the last battle left it
+    // a fought-over field (1918: maps/common.js trenchLine, shellField), the same on every machine (seeded alike): the craters,
+    // the ruins, the trenches and the wire — built quietly by each, first, so their site ids match (a stretch of wire cut later is cleared by id)
+    const field = map.battlefield?.(this);
+    if (field) {
+      field.paint?.(this.terrain); // (the churned ground first: the craters dig into it)
+      this.replayScars({ blasts: field.blasts, ruins: field.ruins });
+      this.quietly(() => this.replayScars({ works: field.works.map((w) => [w.kind, w.x, w.z, w.yaw, w.faction]) }));
+    }
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
@@ -426,18 +434,21 @@ export class GameEngine {
         for (const f of this.cover.forests ?? []) f.fell(x, z, r * 0.9, (d) => Math.random() < 0.65 * (1 - d / (r * 0.9)));
         if (crater >= CRATER_COVER) this.cover.addCraterSpots(x, z, cr + 1, t.heightAt(x, z) + crater);
       }
-      for (const i of ruins) { const b = this.buildings.list[i]; if (b) this.buildings.collapseVisual(b); }
+      for (const i of ruins) { const b = this.buildings.list[i]; if (b) this.buildings.collapseVisual(b, true); }
       if (river) {
         for (const id of blown) { const c = river.crossings.find((k) => k.id === id); if (c) river.blow(c, t, this.scene); }
         for (const [x, z] of laid) river.lay(x, t, this.scene, z);
       }
     });
+    const C = this.construction;
+    if (works.length) C.startBatch(); // (built in one go: no work in progress, the ground changed once, one mesh for the trenches and one for the wire)
     for (const [kind, x, z, yaw, faction] of works) {
-      const site = this.construction.place(kind, x, z, yaw, faction, null, { force: true });
+      const site = C.place(kind, x, z, yaw, faction, null, { force: true });
       if (!site) continue;
       site.quiet = true;
-      this.construction.finish(site);
+      C.finish(site);
     }
+    C.endBatch();
     this.blasts = [...blasts]; // this battle adds to them
     if (blown.length || laid.length) this.bus.emit('terrain:changed');
   }

@@ -109,3 +109,46 @@ export function mirrored(props, seed, fn) {
     fn(m, m > 0 ? 0 : Math.PI);
   }
 }
+
+/**
+ * A trench line along `points` ([[x, z], …], left to right as its owner looks at the enemy) for the
+ * Western Front maps: 9 m trench bays end to end (`zig` m steps them back and forth), and `belts` of wire `wireAt` m in front
+ * (rows 5 m apart, a gap every `gapEvery` m for the patrols). Returns works for game.replayScars.
+ */
+export function trenchLine(points, faction, { zig = 0, wireAt = 24, belts = 2, gapEvery = 90 } = {}) {
+  const works = [];
+  const walk = (offset, step, fn) => { // along the polyline, `offset` m out in front, every `step` m
+    let k = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const [ax, az] = points[i], [bx, bz] = points[i + 1];
+      const len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
+      const nx = dz, nz = -dx;  // the front: to the right of the way along, as its owner faces
+      for (let t = step / 2; t < len; t += step, k++) fn(ax + dx * t + nx * offset, az + dz * t + nz * offset, Math.atan2(nx, nz), k, t + i * 1e4, nx, nz);
+    }
+  };
+  walk(0, 8.6, (x, z, yaw, k, _t, nx, nz) => { const o = k % 2 ? zig : -zig; works.push({ kind: 'trench', x: x + nx * o, z: z + nz * o, yaw, faction }); });
+  for (let b = 0; b < belts; b++) {
+    walk(wireAt + b * 5, 10.2, (x, z, yaw, k) => { if ((k + b * 4) % Math.round(gapEvery / 10.2) !== 0) works.push({ kind: 'wire', x, z, yaw, faction }); });
+  }
+  return works;
+}
+
+/**
+ * Shell craters over a fought-over field, point-mirrored like the maps: `density(x, z)` (craters
+ * per 1000 m², the half with z > 0 asked) over `bounds`. Returns blasts for game.replayScars
+ * ([x, z, splash radius, depth]: core/GameEngine.js digs them, scorches them, fells the trees).
+ */
+export function shellField(seed, bounds, density) {
+  const r = mulberry32(seed), blasts = [];
+  for (let z = 0; z < bounds.z; z += 10) {
+    for (let x = -bounds.x; x < bounds.x; x += 10) {
+      const n = density(x + 5, z + 5) * 0.1;               // (a 10 × 10 m cell: a tenth of 1000 m²)
+      for (let i = 0; i < Math.floor(n) + (r() < n % 1 ? 1 : 0); i++) {
+        const cx = x + r() * 10, cz = z + r() * 10, big = r();
+        const blast = [Math.round(cx * 10) / 10, Math.round(cz * 10) / 10, 4 + big * 7, 0.25 + big * big * 1.1]; // most shallow, a few deep (the heavies)
+        blasts.push(blast, [-blast[0], -blast[1], blast[2], blast[3]]);
+      }
+    }
+  }
+  return blasts;
+}

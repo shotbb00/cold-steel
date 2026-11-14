@@ -26,13 +26,13 @@ import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
-import hangard from './hangard.ts';
+import villersBretonneux from './villersBretonneux.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
-  [hangard.id]: hangard,
+  [villersBretonneux.id]: villersBretonneux,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
