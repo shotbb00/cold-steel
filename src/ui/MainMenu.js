@@ -198,7 +198,7 @@ const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fig
 const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
-const COMING_EPOCHS = [{ id: '1917', name: '1917', title: 'The Great War, 1917' }, { id: '2025', name: '2025', title: 'Near future, 2025' }];
+const COMING_EPOCHS = [{ id: '2025', name: '2025', title: 'Near future, 2025' }];
 const airLabel = (kind) => (epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind] ?? KINDS[kind]?.label; // (1985 at sea: the powers' own labels — Missile strike, Fighter cover…)
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
@@ -337,7 +337,8 @@ export class MainMenu {
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
       const b = el('button', '', label);
       b.type = 'button';
-      b.addEventListener('click', () => this.open(id));
+      if (epoch() === '1918' && (id === 'bootcamp' || id === 'campaign')) { b.disabled = true; b.classList.add('soon'); b.title = 'Coming with 1918'; } // (ponytail: until 1918's own boot camp and campaign)
+      else b.addEventListener('click', () => this.open(id));
       nav.append(b);
       this.tabs[id] = b;
     }
@@ -465,6 +466,7 @@ export class MainMenu {
       sea: epoch() === '1985'
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
         : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
+      1918: { nato: 'Break the line: infantry behind the barrage, the tanks to flatten the wire, then the cavalry through the gap.', pact: 'Hold the trenches in depth, and storm theirs: the storm troops slip past the strongpoints, the machine guns hold what they take.' },
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
       coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
       coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
