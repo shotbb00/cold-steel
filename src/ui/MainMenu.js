@@ -597,21 +597,29 @@ export class MainMenu {
     // the theatre's roster (the picker under the years): at sea the warships and the carriers' aircraft, on land the rest
     const sea = theatre() === 'sea' && hasTheatre(epoch(), 'sea');
     // on the coast also what only a landing brings (the coastal maps' `landing`): the craft, the landing's warships, the shore's fortifications, the swimmers
-    const coast = new Set();
-    if (theatre() === 'coastal' && hasTheatre(epoch(), 'coastal')) {
+    // — per side: the side that lands (its base out at sea, as systems/Landing.js lands()) its craft, warships and swimmers; the other its forts
+    const coast = { nato: new Set(), pact: new Set() }, landers = new Set();
+    const onCoast = theatre() === 'coastal' && hasTheatre(epoch(), 'coastal');
+    if (onCoast) {
       for (const m of mapsFor(epoch(), 'coastal')) {
         const L = m.landing ?? {};
-        [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...(L.forts ?? []).map((f) => f.unit), ...Object.values(L.swim ?? {})].forEach((id) => coast.add(id));
+        for (const f of ['nato', 'pact']) {
+          const b = m.bases?.[f], lands = !!(b && m.river && m.height(b.x, b.z) < m.river.level);
+          if (lands) landers.add(f);
+          (lands ? [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...Object.values(L.swim ?? {})] : (L.forts ?? []).map((x) => x.unit)).forEach((id) => coast[f].add(id));
+        }
       }
     }
-    const types = Object.values(UNIT_TYPES).filter((t) => (!t.hidden && !!t.stats?.naval === sea) || coast.has(t.id));
+    const coastal = (t) => coast.nato.has(t.id) || coast.pact.has(t.id);
+    const types = Object.values(UNIT_TYPES).filter((t) => (!t.hidden && !!t.stats?.naval === sea && (!t.coastal || onCoast)) || coastal(t)); // (what this year and theatre can field: the buy menu's rules)
     if (!types.some((t) => t.id === this.unit.id)) this.unit.id = types[0]?.id ?? this.unit.id;
-    const labels = []; // the army's own names on the list
+    const labels = []; // the army's own names on the list (and who may field each)
     const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name
     for (const t of types) {
       const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
-      labels.push([b, t]);
-      b.hidden = !!t.armies && !t.armies.includes(this.unit.army); // an army's own unit (the NVA's Kampfgruppe)
+      const off = (a, f) => (!!t.armies && !t.armies.includes(a)) || (coastal(t) && !coast[f].has(t.id)); // an army's own unit (the NVA's Kampfgruppe); on the coast the other side's craft or forts
+      labels.push([b, t, off]);
+      b.hidden = off(this.unit.army, this.unit.faction);
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
@@ -622,9 +630,10 @@ export class MainMenu {
       list.append(b);
     }
     // the support powers' aircraft
-    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off && !!KINDS[k].sea === sea)) { // (this war's: data/epoch.js; the theatre's)
+    for (const kind of Object.keys(KINDS).filter((k) => !KINDS[k].off && !!KINDS[k].sea === sea && (!KINDS[k].coast || onCoast))) { // (this war's: data/epoch.js; the theatre's)
       const id = `air:${kind}`;
       const b = el('button', id === this.unit.id ? 'on air' : 'air', airLabel(kind));
+      if (KINDS[kind].coast) { const off = (a, f) => landers.has(f); b.hidden = off(this.unit.army, this.unit.faction); labels.push([b, null, off]); } // (the coast's strike: the defence's only)
       b.type = 'button';
       b.addEventListener('click', () => {
         for (const o of list.children) o.classList.toggle('on', o === b);
@@ -634,8 +643,10 @@ export class MainMenu {
       });
       list.append(b);
     }
+    const firstShown = () => { if (!list.querySelector('.on:not([hidden])')) list.querySelector('button:not([hidden])')?.click(); }; // (the shown unit isn't this side's: the first that is)
     const sideToggle = el('div', 'seg faction-seg');
-    const armies = Object.values(ARMIES).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i); // (at sea: one navy a side)
+    const only = theatreArmies(); // (the armies this theatre's maps field, as the battle picker: Aboukir France and Britain, no British on land)
+    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : !a.coastal)).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i); // (at sea: one navy a side)
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
       const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? navyName()[a.faction] ?? a.name : a.name);
@@ -644,8 +655,8 @@ export class MainMenu {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;
         this.unit.army = a.id;
-        for (const [lb, t] of labels) { lb.textContent = label(t); lb.hidden = !!t.armies && !t.armies.includes(a.id); }
-        this.showUnit();
+        for (const [lb, t, off] of labels) { if (t) lb.textContent = label(t); lb.hidden = off(a.id, a.faction); }
+        if (list.querySelector('.on:not([hidden])')) this.showUnit(); else firstShown();
       });
       sideToggle.append(b);
     }
@@ -660,7 +671,8 @@ export class MainMenu {
     wrap.append(left, stage, this.info);
     p.append(wrap);
     this.preview = new UnitPreview(canvas);
-    this.showUnit();
+    for (const [lb, t, off] of labels) { if (t) lb.textContent = label(t); lb.hidden = off(this.unit.army, this.unit.faction); } // (the army may have changed with the theatre)
+    if (list.querySelector('.on:not([hidden])')) this.showUnit(); else firstShown();
   }
 
   showAircraft(kind, faction, army) {

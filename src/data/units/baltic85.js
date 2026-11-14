@@ -142,7 +142,7 @@ const swimmer = (id, of, sink) => craftType({
   mounts: { pact: [], nato: [] },
   camera: { distance: 18, height: 6, shoulder: 0 },
   models: Object.fromEntries(Object.entries(of.models).map(([k, b]) => [k, afloat(b, sink)])),
-  variants: { pact: { name: 'Swimming', weapon: '— (afloat)', text: 'An amphibious vehicle swimming in: it can\'t fire till it is ashore.' }, nato: { name: 'Swimming', weapon: '—', text: 'Afloat.' } },
+  variants: Object.fromEntries(Object.entries(of.variants ?? {}).map(([k, v]) => [k, { name: `${v.name} (afloat)`, weapon: '— (afloat)', text: 'An amphibious vehicle swimming in: it can\'t fire till it is ashore.' }])), // (each army's own vehicle)
 });
 export const swimIfv = swimmer('swimIfv', ifv, 1.25);
 export const swimRecon = swimmer('swimRecon', reconVehicle, 1.2);
