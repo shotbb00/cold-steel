@@ -13,6 +13,7 @@ import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS, SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { barrageOf } from '../systems/Barrage.js';
+import { GAS } from '../systems/Gas.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { keyOf } from '../core/Keys.js';
@@ -86,6 +87,7 @@ const SUPPORT = [
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
+  ['gas', 'flare', 'lift', 'Gas', 'Gas bombardment: shells that leave clouds drifting with the wind — men without masks fall, masked men move and shoot worse (1918)'],
   ['air:diveBomb', 'diveBomb', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],
   ['air:torpBomb', 'torpBomb', 'heli', 'Torpedo bombers', 'From the carrier: low over the water, a torpedo into the ship nearest the spot'],
   ['air:navCap', 'fighter', 'cap', 'Fighter cover', 'From the carrier: fighters circle the spot and go for enemy aircraft'],
@@ -161,6 +163,15 @@ export class ActionBar {
         if (small.textContent !== text) small.textContent = text;
         b.classList.toggle('cooling', left > 0);
         b.style.setProperty('--cd', left === Infinity ? '0' : left > 0 ? String(1 - left / P.cooldown) : '1');
+        continue;
+      }
+      if (cmd === 'gas') { // (1918: systems/Gas.js)
+        b.hidden = off || !g.gas?.has();
+        if (b.hidden) continue;
+        const left = Math.ceil(g.gas.cooldownLeft(me)), text = left > 0 ? `${left} s` : String(GAS.cost);
+        if (small.textContent !== text) small.textContent = text;
+        b.classList.toggle('cooling', left > 0);
+        b.style.setProperty('--cd', left > 0 ? String(1 - left / GAS.cooldown) : '1');
         continue;
       }
       const mass = cmd === 'barrage' ? barrageOf(g, me) ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target, 1918's creeping barrage

@@ -669,7 +669,7 @@ export class UnitStack {
 
     // --- locomotion: seek destination, keep personal space, slide around cover
     const mud = this.world.conditions?.mud;
-    let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
+    let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.masked ? 0.8 : 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
     if (u.steepK) maxSpeed *= u.steepK;
@@ -2391,6 +2391,7 @@ export class UnitStack {
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
       * (u.wounded ? 1.3 : 1)
+      * (u.masked ? 1.6 : 1)                  // a gas mask's fogged eyepieces (1918: systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3)            // an MG fired from the hip sprays
       / (this.doc?.aim ?? 1);                 // the army's doctrine (systems/Doctrine.js)

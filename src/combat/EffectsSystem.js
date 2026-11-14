@@ -597,14 +597,14 @@ export class EffectsSystem {
   }
 
   /** A smoke screen: dense white billows filling `radius` for `duration` seconds (systems/Smoke.js). */
-  screen(pos, radius, duration) {
-    const e = { kind: 'screen', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size: radius, acc: 0 };
+  screen(pos, radius, duration, { color = 0xd6d4cd, low = false } = {}) { // (low, coloured: gas — systems/Gas.js)
+    const e = { kind: 'screen', pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: 0, duration, size: radius, acc: 0, color, low };
     this.emitters.push(e);
     for (let i = 0; i < 10; i++) {  // the initial burst
       const a = Math.random() * 6.283;
       this.smoke.spawn(pos.x, pos.y + 1, pos.z, {
         vx: Math.cos(a) * radius * 0.9, vy: rnd(0.5, 2), vz: Math.sin(a) * radius * 0.9, size: rnd(2.5, 4), grow: 2.5,
-        life: rnd(10, 16), alpha: 0.85, color: 0xd8d6d0, drag: 1.2, wind: 0.3,
+        life: rnd(10, 16), alpha: low ? 0.5 : 0.85, color: low ? color : 0xd8d6d0, drag: 1.2, wind: 0.3,
       });
     }
     return e; // the smoke system moves it with its drifting cloud
@@ -619,9 +619,9 @@ export class EffectsSystem {
       e.acc -= 1;
       const a = Math.random() * 6.283;
       const r = Math.sqrt(Math.random()) * e.size * 0.8;
-      this.smoke.spawn(e.pos.x + Math.cos(a) * r, e.pos.y + rnd(0.5, 4.5), e.pos.z + Math.sin(a) * r, {
-        vx: rnd(-0.4, 0.4), vy: rnd(0.4, 1.3), vz: rnd(-0.4, 0.4), size: rnd(3.5, 5.5), grow: 1.6,
-        life: rnd(9, 13), alpha: 0.75 * k + 0.1, color: 0xd6d4cd, drag: 0.6, wind: 0.35,
+      this.smoke.spawn(e.pos.x + Math.cos(a) * r, e.pos.y + (e.low ? rnd(0.2, 1.6) : rnd(0.5, 4.5)), e.pos.z + Math.sin(a) * r, {
+        vx: rnd(-0.4, 0.4), vy: e.low ? rnd(0.05, 0.25) : rnd(0.4, 1.3), vz: rnd(-0.4, 0.4), size: rnd(3.5, 5.5), grow: 1.6,
+        life: rnd(9, 13), alpha: (e.low ? 0.45 : 0.75) * k + 0.1, color: e.color, drag: 0.6, wind: 0.35,
       });
     }
   }

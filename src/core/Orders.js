@@ -12,6 +12,7 @@
 //   { t: 'flare', s: [ids], x, z }             { t: 'buy', u: unitTypeId, e?: road (base entry index), k?: squad kit (data/kits.js) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
+//   { t: 'gas', x, z }                           (1918's gas bombardment, systems/Gas.js)
 //   { t: 'walze', s: [ids], x, z }               (the NVA's creeping barrage: its artillery, UnitStack.startBarrage)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
@@ -383,6 +384,8 @@ export class Orders {
       }
       case 'barrage':
         return g.barrage.call(faction, cmd.x, cmd.z);
+      case 'gas':
+        return g.gas.call(faction, cmd.x, cmd.z);
       case 'walze':
         for (const s of mine(cmd.s)) s.startBarrage?.(cmd.x, cmd.z);
         return null;

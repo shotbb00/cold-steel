@@ -13,6 +13,7 @@ import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
 import { barrageOf } from './Barrage.js';
+import { GAS } from './Gas.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
@@ -193,6 +194,7 @@ export class CommandSystem {
     else if (year() < 1900 && (keys.is(code, 'barrage') || keys.is(code, 'jet') || keys.is(code, 'lift'))) this.runCommand(`power:${keys.is(code, 'barrage') ? 'battery' : keys.is(code, 'jet') ? 'reserve' : 'guard'}`); // (1806's support powers)
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
+    else if (year() === 1918 && keys.is(code, 'lift')) this.runCommand('gas'); // (1918: gas in the air assault's place)
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
     else if (keys.is(code, 'cap')) this.runCommand('air:cap');
     else if (keys.is(code, 'recon')) this.runCommand('air:recon');
@@ -395,6 +397,12 @@ export class CommandSystem {
       const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect);
       if (!guns.length) return this.game.bus.emit('toast', 'Select artillery, rocket launchers or mortars');
       this.startTargeting({ kind: 'smoke', fire: cmd === 'salvo' ? 'salvo' : 'area', stacks: guns });
+    } else if (cmd === 'gas') {
+      const g = this.game;
+      if (!g.gas?.has()) return;
+      if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
+      if (!g.gas.ready(this.faction)) return g.bus.emit('toast', `Gas not ready (${Math.ceil(g.gas.cooldownLeft(this.faction))} s)`);
+      return this.startTargeting({ kind: 'smoke', gas: true });
     } else if (cmd === 'barrage') {
       const g = this.game;
       if (barrageOf(g, this.faction)) { // (the Soviets' barrage, the US Army's Time on Target, 1918's creeping barrage: systems/Barrage.js)
@@ -461,8 +469,9 @@ export class CommandSystem {
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
+      if (t.gas) t.decal.mesh.material.color.set(0xc8c46a);
       const bar = barrageOf(this.game, this.faction);
-      t.hint = t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
+      t.hint = t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
@@ -622,6 +631,9 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.gas) {
+      if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.fire === 'helo') {
       this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
@@ -687,7 +699,7 @@ export class CommandSystem {
       t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
-      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? barrageOf(this.game, this.faction)?.radius ?? 10 : 10);
+      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.gas ? 32 : t.barrage ? barrageOf(this.game, this.faction)?.radius ?? 10 : 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;
