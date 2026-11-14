@@ -21,7 +21,7 @@ const FR_DK = 0x5c5840;
 const DE = 0x6a6a5a;     // German field grey, the camouflage over it
 const DE_DK = 0x52524a;
 const STEEL = 0x2b2d28;
-const TRACK = 0x2a2a26;
+const TRACK = 0x3a3a34;
 const WHITE = 0xd8d6cc;
 const RED = 0xa8231b;
 const BLUE = 0x2a3a7a;
@@ -38,10 +38,12 @@ function linksRound(outline, x, width) {
   const parts = [];
   for (let i = 0; i < outline.length; i++) {
     const [z0, y0] = outline[i], [z1, y1] = outline[(i + 1) % outline.length];
-    const len = Math.hypot(z1 - z0, y1 - y0), n = Math.max(1, Math.round(len / 0.32)), a = Math.atan2(y1 - y0, z1 - z0);
+    const len = Math.hypot(z1 - z0, y1 - y0), n = Math.max(1, Math.round(len / 0.3)), a = Math.atan2(y1 - y0, z1 - z0);
+    const nz = (y1 - y0) / len, ny = -(z1 - z0) / len;    // out of the outline (it runs counter-clockwise, z forward, y up)
     for (let k = 0; k < n; k++) {
-      const t = (k + 0.5) / n;
-      parts.push(P.box(width + 0.06, 0.07, 0.27, { x, y: y0 + (y1 - y0) * t, z: z0 + (z1 - z0) * t, rx: -a, color: TRACK }));
+      const t = (k + 0.5) / n, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t;
+      parts.push(P.box(width + 0.14, 0.1, 0.27, { x, y: y + ny * 0.06, z: z + nz * 0.06, rx: -a, color: TRACK, surf: 'metal' }));      // the shoe
+      parts.push(P.box(width + 0.14, 0.05, 0.06, { x, y: y + ny * 0.13, z: z + nz * 0.13, rx: -a, color: 0x1e1e1a, surf: 'metal' }));  // its cleat
     }
   }
   return parts;
@@ -162,8 +164,11 @@ export const buildSchneiderCA1 = (mats) => rig(once('ca1', () => {
     gear, wheel: roadWheelGeometry(0.18, 0.26, FR_DK),
     hull: grime(merge([
       ...gear.parts,
-      plated([[-3.0, 0.55, 0.95, 1.0, 1.9, 0.8, 2.12], [1.2, 0.55, 1.0, 1.05, 1.95, 0.85, 2.25], [2.5, 0.5, 0.62, 0.7, 1.35, 0.5, 1.65], [3.25, 0.45, 0.1, 0.14, 0.8, 0.08, 1.0]], { color: FR, ...C }), // the box, narrowing to the prow
-      P.box(0.1, 0.45, 0.8, { y: 0.6, z: 3.45, rx: 0.5, color: STEEL }),                              // the wire-cutter beak
+      plated([[-3.0, 0.55, 0.95, 1.0, 1.9, 0.8, 2.12], [1.2, 0.55, 1.0, 1.05, 1.95, 0.85, 2.25], [2.4, 0.55, 0.8, 0.85, 1.55, 0.62, 1.88], [3.05, 0.55, 0.45, 0.5, 1.05, 0.36, 1.28]], { color: FR, ...C }), // the box, its bow tapering to a blunt nose
+      P.box(0.92, 0.62, 0.05, { y: 0.88, z: 3.06, color: FR_DK, ...C }),                                // the nose plate
+      P.box(0.14, 0.45, 1.25, { y: 1.0, z: 3.48, rx: -0.75, color: STEEL, surf: 'metal' }),             // the wire-cutter spur, rising ahead from the foot of the nose
+      ...pair((sd) => P.box(0.04, 0.3, 0.8, { x: sd * 0.12, y: 0.85, z: 3.3, rx: -0.75, ry: sd * 0.2, color: STEEL, surf: 'metal' })), // its cheeks
+      P.cyl(0.24, 0.26, 0.3, { x: -0.45, y: 2.32, z: 1.0, color: FR_DK, ...C }, 10), slit(-0.45, 2.36, 1.2, 0.2),               // the driver's cupola
       P.cyl(0.36, 0.38, 0.75, { x: 0.85, y: 1.25, z: 1.75, color: FR, ...C }, 12),                    // the gun's bulge on the right
       ...pair((sd) => [...rivets(sd * 1.0, 1.9, -2.9, 1.1, FR_DK), ...rivets(sd * 0.96, 0.7, -2.9, 1.1, FR_DK)]).flat(),
       ...pair((sd) => P.box(0.5, 1.0, 0.03, { x: sd * 0.28, y: 1.3, z: -3.02, color: FR_DK })), // the rear doors
@@ -207,8 +212,9 @@ const car = (key, { color, dark, length, width, wheelR, track, base, body, turre
   return {
     gear: { wheels, wheelR }, wheel: roadWheelGeometry(wheelR, 0.16, 0x2a2a24, 0, 0.3),
     hull: grime(merge([
-      P.box(width * 0.9, 0.18, length, { y: wheelR + 0.05, color: STEEL }),                           // the chassis
-      ...pair((s) => P.box(0.3, 0.06, length * 0.9, { x: s * (width / 2), y: wheelR + 0.35, color: dark })), // the running boards / mudguards
+      P.box(width * 0.8, 0.3, length * 0.95, { y: wheelR + 0.15, color: STEEL }),                     // the chassis, up to the body
+      ...wheels.flatMap((w) => [-0.9, -0.45, 0, 0.45, 0.9].map((a) => P.box(0.3, 0.04, 0.32, { x: w.x, y: wheelR + Math.cos(a) * (wheelR + 0.1), z: w.z + Math.sin(a) * (wheelR + 0.1), rx: a, color: dark }))), // the mudguards, arched over each wheel
+      ...pair((s) => P.box(0.28, 0.04, Math.abs(base[0] - base[1]) - wheelR * 2.2, { x: s * (track + 0.05), y: wheelR * 0.75, z: (base[0] + base[1]) / 2, color: dark })), // the running boards
       ...body,
     ]), wheelR + 0.6, 0.3),
     turret: merge(turret), gun: merge(gun),
@@ -236,42 +242,56 @@ export const buildPeugeotAC = car('peugeot', {
     plated([[0.65, 0.72, 0.46, 0.46, 1.1, 0.36, 1.35], [2.15, 0.72, 0.44, 0.44, 1.05, 0.3, 1.2]], { color: FR, ...C }), // the bonnet
     plated([[-1.9, 0.72, 0.8, 0.8, 1.2, 0.7, 1.42], [0.65, 0.72, 0.84, 0.84, 1.25, 0.76, 1.5]], { color: FR, ...C }), // the open body, its sides sloping in
     P.box(1.4, 0.05, 2.4, { y: 1.44, z: -0.6, color: 0x1e1e1a }),                                     // (open: dark inside)
-    P.cyl(0.1, 0.12, 0.6, { y: 1.6, z: -0.9, color: STEEL }, 8),                                      // the pedestal
+    P.cyl(0.1, 0.14, 0.35, { y: 1.55, z: -0.9, color: STEEL, surf: 'metal' }, 8),                     // the pedestal, on the floor of the body
     ...pair((s) => roundel(s * 0.86, 1.1, -0.6, 0.18)).flat(),
   ],
-  turret: [P.box(0.9, 0.7, 0.06, { y: 0.15, z: 0.3, color: FR, ...C })],                              // the gun shield
+  turret: [P.cyl(0.14, 0.14, 0.12, { y: 0.06, color: STEEL, surf: 'metal' }, 8), P.box(0.24, 0.24, 0.55, { y: 0.24, color: STEEL, surf: 'metal' }), P.box(0.9, 0.62, 0.06, { y: 0.36, z: 0.3, color: FR, ...C })], // the swivel, the cradle, the gun shield
   gun: [P.cyl(0.045, 0.05, 0.75, { z: 0.38, rx: Math.PI / 2, color: STEEL }, 10)],                    // the 37 mm
-  turretAt: [0, 1.95, -0.9], gunAt: [0, 0.1, 0.3], muzzle: 0.78,
+  turretAt: [0, 1.72, -0.9], gunAt: [0, 0.3, 0.1], muzzle: 0.78,
 });
 
 export const buildEhrhardtAC = car('ehrhardt', {
-  color: DE, dark: DE_DK, length: 5.6, width: 2.0, wheelR: 0.5, track: 0.9, base: [1.8, -1.7],
+  color: DE, dark: DE_DK, length: 5.6, width: 2.0, wheelR: 0.5, track: 0.95, base: [1.8, -1.7],
   body: [
-    sideProfile([[-2.8, 0.85], [-2.8, 2.1], [-2.3, 2.35], [1.4, 2.35], [2.8, 1.55], [2.8, 0.85]], 2.0, { color: DE, ...C }),
+    plated([[-2.8, 0.8, 0.92, 0.95, 1.7, 0.78, 2.25], [0.9, 0.8, 0.95, 0.98, 1.75, 0.82, 2.35]], { color: DE, ...C }),              // the hull
+    plated([[0.9, 0.8, 0.7, 0.7, 1.4, 0.55, 1.7], [2.55, 0.8, 0.66, 0.66, 1.3, 0.48, 1.52], [2.8, 0.8, 0.62, 0.6, 1.2, 0.42, 1.35]], { color: DE, ...C }), // the armoured bonnet
+    P.box(0.9, 0.3, 0.04, { y: 1.95, z: 0.92, rx: -0.3, color: DE_DK }), slit(0, 2.0, 0.93, 0.6),                                       // the driver's visor
+    ...[-0.25, 0, 0.25].map((x) => P.box(0.12, 0.42, 0.03, { x, y: 1.05, z: 2.82, color: DE_DK })),                                      // the radiator louvres
     ...pair((s) => [-1.4, 0.2].map((z) => P.cyl(0.06, 0.06, 0.3, { x: s * 1.05, y: 1.8, z, rz: Math.PI / 2, color: STEEL }, 8))).flat(),
     ...pair((s) => cross(s * 1.01, 1.4, -0.6, 0.32)).flat(),
   ],
   turret: [P.cyl(0.6, 0.65, 0.55, { y: 0.27, color: DE, ...C }, 12)],
   gun: [P.cyl(0.05, 0.05, 0.6, { z: 0.3, rx: Math.PI / 2, color: STEEL }, 8)],                       // an MG 08
-  turretAt: [0, 2.35, -0.5], gunAt: [0, 0.3, 0.6], muzzle: 0.62,
+  turretAt: [0, 2.32, -0.7], gunAt: [0, 0.3, 0.6], muzzle: 0.62,
 });
 
 // ---------------------------------------------------------------- the kite balloon and its winch lorry
 
 const BALLOON_Y = 40;   // m: the observers' basket, on its cable (data/units1918 eyeHeight)
 const balloonParts = (color, kind) => [
-  P.cyl(0.015, 0.015, BALLOON_Y - 2, { y: BALLOON_Y / 2 + 1, z: -0.8, color: 0x222222 }, 4),                       // the cable
+  P.cyl(0.015, 0.015, BALLOON_Y - 4, { y: BALLOON_Y / 2 + 0.3, z: -0.8, color: 0x222222 }, 4),                     // the cable
   P.sphere(1, { y: BALLOON_Y + 3, z: -0.8, sx: 3.6, sy: 3.4, sz: 9, color, ...C }, 16, 10),                          // the envelope (Caquot)
   ...[0, 2.09, 4.19].map((a) => P.sphere(1, { x: Math.sin(a) * 2.6, y: BALLOON_Y + 3 + Math.cos(a) * 2.6, z: -8.5, sx: 1.1, sy: 1.1, sz: 2.4, color, ...C }, 10, 6)), // the three tail lobes
   P.box(0.9, 0.9, 0.9, { y: BALLOON_Y - 1.5, z: -0.8, color: 0x6a5a3a }),                                         // the observers' basket
   ...(kind === 'de' ? [] : [P.cyl(1.1, 1.1, 0.03, { x: 3.55, y: BALLOON_Y + 3, z: -0.8, rz: Math.PI / 2, color: kind === 'fr' ? 0xa8231c : 0x22325c }, 16)]),
 ];
 const winch = (key, color, dark, kind) => car(key, {
-  color, dark, length: 5.6, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.6],
+  color, dark, length: 5.8, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.7],
   body: [
-    plated([[1.2, 0.72, 0.85, 0.85, 1.6, 0.75, 2.1], [2.6, 0.72, 0.8, 0.8, 1.4, 0.6, 1.7]], { color, ...C }),          // the cab and bonnet
-    P.box(1.9, 0.5, 3.2, { y: 1.0, z: -0.8, color: dark }),                                                             // the bed
-    P.cyl(0.45, 0.45, 1.5, { y: 1.65, z: -0.8, rz: Math.PI / 2, color: 0x3a3a34 }, 14),                                 // the winch drum
+    P.box(0.82, 0.55, 1.35, { y: 1.05, z: 2.05, color, ...C }),                                                         // the bonnet
+    P.cyl(0.41, 0.41, 1.35, { y: 1.32, z: 2.05, rx: Math.PI / 2, sx: 1, sy: 0.45, color, ...C }, 12),                   // its rounded top
+    P.box(0.86, 0.78, 0.08, { y: 1.1, z: 2.76, color: 0x26261f }), P.box(0.88, 0.08, 0.1, { y: 1.52, z: 2.76, color: 0x9a7a3a, surf: 'metal' }), // the radiator, its brass top
+    P.box(1.7, 0.08, 1.2, { y: 0.78, z: 0.85, color: dark }),                                                           // the cab floor
+    P.box(1.5, 0.35, 0.45, { y: 1.0, z: 0.55, color: 0x3a2c1e }),                                                       // the bench seat
+    P.box(1.75, 1.2, 0.06, { y: 1.4, z: 0.3, color, ...C }),                                                            // the cab's back
+    ...pair((s) => [0.32, 1.42].map((z) => P.box(0.05, 1.5, 0.05, { x: s * 0.85, y: 1.55, z, color: dark }))).flat(),   // the roof posts
+    P.box(1.85, 0.05, 1.35, { y: 2.32, z: 0.87, color, ...C }),                                                         // the roof
+    P.box(1.9, 0.12, 3.3, { y: 0.92, z: -1.4, color: dark }),                                                           // the bed
+    ...pair((s) => P.box(0.05, 0.3, 3.3, { x: s * 0.93, y: 1.12, z: -1.4, color })),                                   // its sides
+    ...pair((s) => [-0.6, -2.0].map((z) => P.box(0.08, 1.0, 0.08, { x: s * 0.7, y: 1.45, z, rx: z < -1 ? 0.35 : -0.35, color: STEEL }))).flat(), // the winch's A-frames
+    P.cyl(0.42, 0.42, 1.2, { y: 1.6, z: -1.3, rz: Math.PI / 2, color: 0x3a3a34, surf: 'metal' }, 16),                 // the winch drum
+    ...pair((s) => P.cyl(0.5, 0.5, 0.05, { x: s * 0.62, y: 1.6, z: -1.3, rz: Math.PI / 2, color: dark }, 16)),          // its flanges
+    P.cyl(0.18, 0.18, 0.1, { y: 2.25, z: -0.8, rz: Math.PI / 2, color: STEEL, surf: 'metal' }, 12),                    // the pulley the cable leaves by
     ...balloonParts(kind === 'de' ? 0x9a9a88 : 0xb8b49a, kind),
   ],
   turret: [P.box(0.2, 0.2, 0.2, { color: dark })], gun: [P.box(0.05, 0.05, 0.05, { color: dark })],

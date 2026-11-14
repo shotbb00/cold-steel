@@ -69,7 +69,10 @@ export const plane = (key, o) => (mats) => {
       // the struts: the interplane pair either side, the cabane over the fuselage, the bracing wires
       ...pair((s) => [0.35, -0.55].map((dz) => P.box(0.05, (wings === 3 ? 1.56 : 1.5) + 0.05, 0.06, { x: s * span * 0.66, y: 2.02, z: len * 0.1 + dz + 0.12, color: WOOD }))),
       ...pair((s) => P.box(0.04, 0.6, 0.04, { x: s * 0.32, y: 2.45, z: len * 0.15, rz: s * 0.25, color: STEEL })),
-      ...pair((s) => P.box(0.012, 2.1, 0.012, { x: s * span * 0.38, y: 2.0, z: len * 0.1, rz: s * 0.8, color: STEEL })),
+      ...(wings === 2 ? pair((s) => { // the bracing wires: from the lower wing's root up to the outer strut
+        const dx = span * 0.66 - 0.45, dy = 1.45;
+        return P.box(0.012, Math.hypot(dx, dy), 0.012, { x: s * (0.45 + span * 0.66) / 2, y: 1.3 + dy / 2, z: len * 0.1, rz: -s * Math.atan2(dx, dy), color: STEEL });
+      }) : []),
       // the tail: the tailplane, the fin and rudder
       ...pair((s) => surface([[s * 0.05, 1.76, -len * 0.47, 0.75, 0.05], [s * 1.45, 1.76, -len * 0.5, 0.5, 0.03]], { color, ...C })),
       fin([[1.76, -len * 0.48, 0.9, 0.05], [2.45, -len * 0.53, 0.6, 0.04], [2.6, -len * 0.55, 0.35, 0.03]], { color: kind === 'fr' ? WHITE : color, ...C }),
@@ -81,7 +84,7 @@ export const plane = (key, o) => (mats) => {
       ...(armour ? pair((s) => [0.6, 1.0].map((y) => P.box(0.02, 0.04, len * 0.6, { x: s * 0.45, y: 1.3 + y * 0.5, z: len * 0.05, color: STEEL }))) : []), // the corrugations
       ...(bombs ? pair((s) => Array.from({ length: bombs }, (_, i) => P.capsule(0.1, 0.45, { x: s * (0.9 + i * 0.45), y: 1.05, z: len * 0.1, rx: Math.PI / 2, color: DARK }))) : []),
       // the markings: on the upper wing's tips, the fuselage sides, (the French) the rudder
-      ...pair((s) => mark(kind, s * span * 0.78, 1.25 + (wings - 1) * (wings === 3 ? 0.78 : 1.5) + 0.06, len * 0.1 + (wings - 1) * 0.25, 0.55, true)),
+      ...pair((s) => mark(kind, s * span * (wings === 3 ? 0.62 : 0.78), 1.25 + (wings - 1) * (wings === 3 ? 0.78 : 1.5) + 0.06, len * 0.1 + (wings - 1) * 0.25, wings === 3 ? 0.4 : 0.55, true)), // (inside the wing's chord and tip)
       ...pair((s) => mark(kind, s * 0.37, 1.72, -len * 0.25, 0.32)),
     ]),
     prop: propeller(1.3),
