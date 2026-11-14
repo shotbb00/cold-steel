@@ -12,6 +12,7 @@ import { POWERS_1806 } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
+import { barrageOf } from './Barrage.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
@@ -396,7 +397,7 @@ export class CommandSystem {
       this.startTargeting({ kind: 'smoke', fire: cmd === 'salvo' ? 'salvo' : 'area', stacks: guns });
     } else if (cmd === 'barrage') {
       const g = this.game;
-      if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
+      if (barrageOf(g, this.faction)) { // (the Soviets' barrage, the US Army's Time on Target, 1918's creeping barrage: systems/Barrage.js)
         if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
         if (!g.barrage.ready(this.faction)) return g.bus.emit('toast', `Barrage not ready (${Math.ceil(g.barrage.cooldownLeft(this.faction))} s)`);
         return this.startTargeting({ kind: 'smoke', barrage: true });
@@ -460,8 +461,8 @@ export class CommandSystem {
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
-      const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
-      t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
+      const bar = barrageOf(this.game, this.faction);
+      t.hint = t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
@@ -686,7 +687,7 @@ export class CommandSystem {
       t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
-      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? doctrine(this.game, this.faction, 'mass').radius : 10);
+      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? barrageOf(this.game, this.faction)?.radius ?? 10 : 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;

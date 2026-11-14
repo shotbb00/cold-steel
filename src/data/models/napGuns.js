@@ -22,7 +22,7 @@ const SIZES = {
 };
 
 /** A spoked wheel standing on the ground, facing x (as a geometry list). */
-function wheel(x, r, color) {
+export function wheel(x, r, color) {
   const parts = [P.torus(r - 0.03, 0.035, { x, y: r, ry: Math.PI / 2, color: IRON }, 20), P.cyl(0.09, 0.09, 0.16, { x, y: r, rz: Math.PI / 2, color })];
   for (let k = 0; k < 12; k++) {
     const a = (k / 12) * Math.PI * 2;
@@ -63,9 +63,8 @@ function piece(army, size) {
   return { group: g, barrel, muzzle, trail: S.cheek };
 }
 
-/** The limber: an ammunition chest on two wheels, its pole forward. */
-function limber(army) {
-  const wood = WOOD[army] ?? WOOD.fr;
+/** The limber: an ammunition chest on two wheels, its pole forward (`wood`: its paint, else the 1806 army's). */
+export function limber(army, wood = WOOD[army] ?? WOOD.fr) {
   return mesh(merge([
     ...wheel(0.62, 0.6, wood), ...wheel(-0.62, 0.6, wood),
     P.cyl(0.05, 0.05, 1.3, { y: 0.6, rz: Math.PI / 2, color: IRON }),
@@ -81,9 +80,13 @@ function gunner(army, mat) {
   return mesh(merge([m.torso, m.arms, m.thigh.clone().translate(0.12, 0.96, 0), m.thigh.clone().translate(-0.12, 0.96, 0), m.shin.clone().translate(0.12, 0.48, 0), m.shin.clone().translate(-0.12, 0.48, 0)]), mat);
 }
 
-export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
+/**
+ * `make(army, size)` and `man(army, mat)` build another era's piece and gunners on the same team and limber
+ * (1918: models/ww1Guns.js), `paint` the limber's colour.
+ */
+export function buildFieldGun({ army = 'fr', size = 'field', make = piece, man = gunner, paint } = {}) {
   const root = new THREE.Group();
-  const gun = piece(army, size);
+  const gun = make(army, size);
   root.add(gun.group);
   // the team: four horses in pairs, a driver on each near horse; then the limber
   const team = new THREE.Group();
@@ -94,7 +97,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
     team.add(h.root);
     horses.push(h);
   }
-  const lim = limber(army);
+  const lim = limber(army, paint);
   lim.position.z = 1.6;
   team.add(lim);
   root.add(team);
@@ -102,7 +105,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
   const crewMat = material();
   const crew = [];
   for (const [x, z, yaw] of [[1.0, 0.4, 0], [-1.0, 0.4, 0], [0.9, -1.0, 0.3], [-0.9, -1.0, -0.3], [1.6, -0.4, 0.4], [0.0, -2.2, 0]]) {
-    const c = gunner(army, crewMat);
+    const c = man(army, crewMat);
     c.userData.set = { x, z, yaw };
     root.add(c);
     crew.push(c);
@@ -123,6 +126,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
       gait = v > 3.5 ? 'trot' : v > 0.4 ? 'walk' : 'halt';
       for (const h of horses) h.update(dt, towing ? gait : 'halt');
       gun.barrel.rotation.y = towing ? 0 : Math.max(-0.4, Math.min(0.4, Math.atan2(Math.sin(u.turretYaw - u.yaw), Math.cos(u.turretYaw - u.yaw))));
+      if (gun.elevate) gun.barrel.rotation.x = towing ? 0 : -gun.elevate; // (1918: laid high for indirect fire)
       gun.barrel.position.z = 0.1 - (u.recoil ?? 0) * 0.35;                                // the recoil
       gun.group.position.z += towing ? 0 : -(u.recoil ?? 0) * 0.5;                         // the whole carriage runs back
       crew.forEach((c, i) => {

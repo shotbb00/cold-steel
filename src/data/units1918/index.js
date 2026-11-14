@@ -6,6 +6,7 @@
 // typeOf) until its step (see the 1918 design notes): tanks 3, guns and gas 4, cavalry and the rest 5.
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
+import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
 
 const T = TYPES_1985;
@@ -121,8 +122,94 @@ const crew = derive(T.crew, {
   variants: { nato: { name: 'Tank Crew', weapon: 'revolvers, a Lewis', text: CREW_TEXT }, fr: { name: 'Équipage', weapon: 'pistols', text: CREW_TEXT }, pact: { name: 'Besatzung', weapon: 'pistols, an MG 08', text: CREW_TEXT }, st: { name: 'Besatzung', weapon: 'pistols', text: CREW_TEXT } },
 });
 
+// ------------------------------------------------------------------ fire (step 4)
+// The guns: quick-firing, horse-drawn (the 1806 team and limber: models/ww1Guns.js), firing indirect —
+// what an observer or a balloon sees, they hit (the 1985 artillery rules). kind 'gun': limbered to move,
+// unlimbered (towed.deploy) to fire. The gunners stand in the open.
+const GUN_1918 = { nightSight: undefined, armor: 0.05, crew: 0, turnRate: 0.6, radius: 1.8, height: 1.8, eyeHeight: 1.7, aimHeight: 1, breakMorale: 0.25, noStabilizer: true, smokeRounds: 4 };
+const gunsOf = (size) => ({ nato: () => buildWw1Gun({ army: 'uk', size }), fr: () => buildWw1Gun({ army: 'fr', size }), pact: () => buildWw1Gun({ army: 'de', size }), st: () => buildWw1Gun({ army: 'st', size }) });
+
+const artillery = derive(T.artillery, {
+  kind: 'gun', name: 'Field Guns', shortName: 'Field guns', cost: 300, weaponSound: 'arty',
+  formation: { count: 2, columns: 2, spacing: 9 },
+  stats: { ...GUN_1918, hp: 300, speed: 2.8, range: 330, preferredRange: 220, damage: 150, splash: 6, crater: 0.5, fireCooldown: 4, magSize: 6, reloadTime: 8, towed: { deploy: 20 }, traverse: 0.1 },
+  factionStats: { st: { range: 240, damage: 130, towed: { deploy: 10 }, speed: 3.2 } },   // the infantry gun: lighter, shorter, quick into action
+  models: gunsOf('field'),
+  variants: {
+    nato: { name: '18-pounder', weapon: '18-pdr QF, 84 mm', text: 'The British field gun: shrapnel to sweep the wire and the open, high explosive for the trenches. Horses bring it up; unlimbered, it fires as fast as the crew can load.' },
+    fr: { name: 'Canon de 75', weapon: '75 mm mle 1897', text: 'The famous 75: the first gun that stayed laid as it fired, its recoil taken by oil and air — fifteen rounds a minute from a good crew.' },
+    pact: { name: '7.7 cm FK 16', weapon: '7.7 cm field gun', text: 'The German field gun of 1916, longer than the old one: it reaches further and hits the enemy batteries back.' },
+    st: { name: '7.7 cm Infanteriegeschütz', weapon: '7.7 cm infantry gun', text: 'A light gun that goes forward with the storm battalion: shorter reach, but into action in moments, close behind the assault.' },
+  },
+});
+
+const spMortar = derive(T.spMortar, {
+  kind: 'gun', name: 'Heavy Howitzers', shortName: 'Howitzers', cost: 380, weaponSound: 'arty',
+  formation: { count: 2, columns: 2, spacing: 10 },
+  stats: { ...GUN_1918, hp: 380, speed: 2.2, range: 430, minRange: 80, preferredRange: 300, damage: 260, splash: 9, crater: 0.9, scatter: 4, fireCooldown: 9, magSize: 4, reloadTime: 16, towed: { deploy: 35 }, traverse: 0.08, muzzleKind: 'artillery', smokeRounds: 0 },
+  factionStats: { st: { range: 380, damage: 210, splash: 8, towed: { deploy: 25 } } },   // the 10.5 cm light field howitzer
+  models: gunsOf('heavy'),
+  variants: {
+    nato: { name: '6-inch Howitzer', weapon: 'BL 6-inch 26 cwt', text: 'The heavy howitzer that broke the German trenches in 1918: shells that dig the dugouts in, from far behind the line.' },
+    fr: { name: '155 mm Schneider', weapon: '155 C mle 1917', text: 'The French heavy howitzer: a big shell at a steep angle, into the trenches.' },
+    pact: { name: '15 cm sFH 13', weapon: '15 cm heavy field howitzer', text: 'The German heavy howitzer: the backbone of the hurricane bombardments of 1918.' },
+    st: { name: '10.5 cm leFH 16', weapon: '10.5 cm light field howitzer', text: 'The light field howitzer that follows the storm troops: a lighter shell, sooner into action.' },
+  },
+});
+
+const rockets = derive(T.rockets, {
+  kind: 'gun', name: 'Heavy Trench Mortars', shortName: 'Heavy mortars', cost: 280, weaponSound: 'mortar',
+  formation: { count: 1, columns: 1, spacing: 10 },
+  stats: { ...GUN_1918, hp: 260, speed: 1.6, range: 230, minRange: 40, preferredRange: 160, damage: 380, splash: 11, crater: 1.3, scatter: 6, scatterPerM: 0.05, fireCooldown: 20, magSize: 1, reloadTime: 20, towed: { deploy: 30 }, traverse: 0.15, muzzleKind: 'mortar', trail: false, smokeRounds: 0 },
+  factionStats: { st: { damage: 240, splash: 8, crater: 0.8, fireCooldown: 10, reloadTime: 10 } }, // the medium Minenwerfer
+  models: gunsOf('mortar'),
+  variants: {
+    nato: { name: '9.45-inch Mortar', weapon: '9.45 in trench mortar', text: 'The "Flying Pig": a huge bomb that tumbles slowly over and lands with a blast that flattens wire, dugouts and men. Short reach, slow to fire.' },
+    fr: { name: 'Mortier de 240', weapon: '240 mm trench mortar', text: 'The French heavy trench mortar: one bomb at a time, each one a crater.' },
+    pact: { name: 'Schwerer Minenwerfer', weapon: '25 cm trench mortar', text: 'The heavy Minenwerfer: its bombs come down almost straight on the trench, and nothing in it survives.' },
+    st: { name: 'Mittlerer Minenwerfer', weapon: '17 cm trench mortar', text: 'The medium Minenwerfer: lighter bombs, faster, carried forward behind the storm troops.' },
+  },
+});
+
+const mortar = derive(T.mortar, {
+  models: men(),
+  specialistModels: men({ weapon: 'mortar' }),
+  stats: { lightAT: 0, nightSight: undefined, smoke: undefined },
+  variants: {
+    nato: { name: 'Stokes Mortar Team', weapon: '3-inch Stokes mortar', text: 'The Stokes: a plain tube on a baseplate, a bomb every few seconds into the next trench.' },
+    fr: { name: 'Crapouillot', weapon: '58 mm trench mortar', text: 'The "little toad": the French trench mortar, lobbing its winged bombs over into the German line.' },
+    pact: { name: 'Leichter Minenwerfer', weapon: '7.58 cm leMW', text: 'The light Minenwerfer: it can fire flat as well as high, and goes forward with the infantry.' },
+    st: { name: 'Leichter Minenwerfer', weapon: '7.58 cm leMW', text: 'The storm battalion\'s own mortars: they shell the strongpoint while the Stoßtrupp works round it.' },
+  },
+});
+
+const observers = derive(T.observers, {
+  models: men({ scout: true, radio: true }),
+  variants: {
+    nato: { name: 'Forward Observation Officer', weapon: 'revolver, field telephone, binoculars', text: 'An artillery officer up with the infantry, a telephone wire running back to the guns: what he sees, the guns hit.' },
+    fr: { name: 'Observateurs', weapon: 'pistol, telephone, binoculars', text: 'The artillery\'s observers in the front line: within their sight the 75s hit.' },
+    pact: { name: 'Artilleriebeobachter', weapon: 'Pistole, Feldfernsprecher, Scherenfernrohr', text: 'The artillery observer with his scissors telescope and his telephone: within his sight the guns are accurate.' },
+    st: { name: 'Artilleriebeobachter', weapon: 'Pistole, Feldfernsprecher', text: 'The observers who go forward with the storm troops and bring the guns along behind them.' },
+  },
+});
+
+/** Sound ranging (1918 invented it): microphones out, every gun that fires within reach is plotted. */
+const cbRadar = derive(T.observers, {
+  id: 'cbRadar', name: 'Sound Ranging Section', shortName: 'Sound ranging', category: 'fire', cost: 200,
+  formation: { count: 3, columns: 3, spacing: 4 },
+  stats: { observer: undefined, cbRadar: { range: 450, arc: 6.3, deploy: 25 } },
+  models: men({ radio: true }),
+  variants: {
+    nato: { name: 'Sound Ranging Section', weapon: 'Bull-Tucker microphones', text: 'The new science of 1918: a line of microphones times the bang of each German gun, and the plot puts your guns on it. Needs 25 s to lay out.' },
+    fr: { name: 'Section de repérage', weapon: 'microphones, plotting board', text: 'Sound ranging: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+    pact: { name: 'Schallmesstrupp', weapon: 'microphones, plotting board', text: 'The sound-ranging troop: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+    st: { name: 'Schallmesstrupp', weapon: 'microphones, plotting board', text: 'The sound-ranging troop: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' },
+  },
+});
+
 export const TYPES_1918 = {
   rifles, mgTeam, tank, heavyTank, reconVehicle, crew,
+  artillery, spMortar, rockets, mortar, observers, cbRadar,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 

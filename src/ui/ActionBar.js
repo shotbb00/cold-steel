@@ -12,6 +12,7 @@ import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS, SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
+import { barrageOf } from '../systems/Barrage.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { keyOf } from '../core/Keys.js';
@@ -162,7 +163,7 @@ export class ActionBar {
         b.style.setProperty('--cd', left === Infinity ? '0' : left > 0 ? String(1 - left / P.cooldown) : '1');
         continue;
       }
-      const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? doctrine(g, me, 'tot') ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target
+      const mass = cmd === 'barrage' ? barrageOf(g, me) ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target, 1918's creeping barrage
       const kind = mass !== null ? null : cmd.slice(4) || 'heli';
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
@@ -176,6 +177,7 @@ export class ActionBar {
       b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
         || (mass !== null ? !!g.world.openSea : !!KINDS[kind]?.sea !== !!g.world.openSea) // (at sea: the carrier missions only)
         || !!(KINDS[kind]?.coast && (!g.world.coastal || g.landing?.lands(me))); // (the coast's strike: the defence of a coastal map only)
+      if (mass?.id === 'creep' && b.querySelector('.sup-name').textContent !== 'Creeping barrage') { b.querySelector('.sup-name').textContent = 'Creeping barrage'; b.title = 'Creeping barrage — a belt of shells that walks forward toward the enemy; follow it with your infantry'; }
       if (mass?.id === 'tot' && b.querySelector('.sup-name').textContent !== 'Time on Target') { b.querySelector('.sup-name').textContent = 'Time on Target'; b.title = 'Time on Target — every gun in range fires one salvo; all the shells land at the same moment'; }
     }
   }

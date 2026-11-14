@@ -44,6 +44,7 @@ const tip = (to, bayonet = 0) => ({ x: 0.2, y: 1.335, z: to + Math.max(0, bayone
 
 function weapon(kind, army) {
   switch (kind) {
+    case 'none': return { parts: [], muzzle: { x: 0.2, y: 1.3, z: 0.4 } }; // (a gunner: hands free)
     case 'smg': // MP 18: the wooden stock, the perforated barrel jacket, the snail drum out to the left
       return { parts: [
         loft([[0.2, 1.3, 0.2, 0.022, 0.034, 3], [0.2, 1.28, 0.0, 0.024, 0.05, 3], [0.2, 1.27, -0.1, 0.024, 0.058, 3]], { color: WOOD }, 8),
