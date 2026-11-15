@@ -611,7 +611,7 @@ export class BabylonView {
       if (m.albedoTexture) m.albedoTexture.hasAlpha = true;
     } else if (tm.transparent) {
       m.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
-      if (m.albedoTexture) m.useAlphaFromAlbedoTexture = true;
+      if (m.albedoTexture) { m.albedoTexture.hasAlpha = true; m.useAlphaFromAlbedoTexture = true; } // (a canvas texture says it has no alpha: the see-through in it was lost)
     }
     if (tm.blending === 2) m.alphaMode = Engine.ALPHA_ADD; // THREE.AdditiveBlending
     if (tm.userData?.matte) { m.specularIntensity = 0; m.environmentIntensity = 0; m.reflectionColor?.set?.(0, 0, 0); } // (the open sea: a 25 km² flat sheet throws the sun's highlight up as a white blot)

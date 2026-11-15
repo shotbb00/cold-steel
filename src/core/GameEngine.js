@@ -46,6 +46,7 @@ import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
+import { BlobShadows } from '../render/BlobShadows.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -236,6 +237,7 @@ export class GameEngine {
     if (this.net?.isHost) this.setWaiting(true); // until the other player has loaded
     if (this.net) this.showNetStatus();
     this.quality = new Quality(this); // after the map is decorated: it thins detail meshes
+    this.blobs = new BlobShadows(this); // contact shadows where the preset has no sun shadows (Very low)
     this.hud = new HUD(this);
     this.labels = new StackLabels(this);
     this.buildingMarkers = new BuildingMarkers(this);
@@ -817,6 +819,7 @@ export class GameEngine {
     this.chat?.update(dt);
     this.touchControls?.update();
     this.fow.update(dt);
+    this.blobs.update();
     this.ranges.update();
     this.ambience.update(dt);
     this.rain?.update(dt);
