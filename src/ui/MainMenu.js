@@ -204,10 +204,10 @@ const airLabel = (kind) => (epoch() === '1918' ? { jet: 'Ground attack', cap: 'F
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
 function aircraftRows(kind, faction, army) {
-  const p = KINDS[kind];
   const a = airType(kind, faction, army);
+  const p = { ...KINDS[kind], ...a.flight }; // (an aircraft's own speeds and heights over its kind's: data/air18.ts flight — the Zeppelin's crawl)
   const rows = [
-    ['Support power', touchScreen() ? p.label : `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon' }[kind]) ?? p.key}`],
+    ['Support power', touchScreen() ? p.label : `${p.label} · key ${keyOf({ heli: 'heli', jet: 'jet', lift: 'lift', cap: 'cap', recon: 'recon', torpBomb: 'heli', diveBomb: 'jet', navCap: 'cap', navScout: 'recon', asw: epoch() === '1918' ? 'jet' : 'heli' }[kind]) ?? p.key}`],
     ['Cost', `${p.cost} CP · ready again after ${p.cooldown} s`],
     ['Speed', `${Math.round(p.attackSpeed * 3.6)}–${Math.round(p.cruiseSpeed * 3.6)} km/h`],
     ['Toughness', `${a.hp} hits from ground fire; missiles do several at once`],
