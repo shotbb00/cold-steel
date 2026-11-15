@@ -731,8 +731,122 @@ const CHAPTERS_1806 = [
     outro: 'That is boot camp done. In battle the enemy plays the same game: it masses its guns, keeps its horse for the moment, and forms square when yours comes. Try a <b>Frontline</b> battle on Jena on Recruit, and look up any unit in the <b>Units</b> tab of the menu.' },
 ];
 
+// ------------------------------------------------------------------ 1918
+
+const BARRAGE_1918 = {
+  title: 'The creeping barrage',
+  touch: 'Infantry crossing no man\'s land is cut down by machine guns — unless the guns keep the enemy\'s heads down. The <b>creeping barrage</b> is a belt of shells that lands where you tap and walks forward toward the enemy, a step every few seconds: your infantry follows close behind it and reaches the enemy trench as the shells lift. Open <b>Orders</b>, tap <b>Creeping barrage</b>, then tap just in front of the machine gun. Then send the section after it.',
+  text: 'Infantry crossing no man\'s land is cut down by machine guns — unless the guns keep the enemy\'s heads down. The <b>creeping barrage</b> is a belt of shells that lands where you click and walks forward toward the enemy, a step every few seconds: your infantry follows close behind it and reaches the enemy trench as the shells lift. Press <kbd data-key="barrage"></kbd> (or Creeping barrage), click just in front of the machine gun — then send the section into the ring behind it.',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    game.air.limit[me] = undefined;           // (support powers open for this chapter)
+    game.modeState.cp[me] += 250;
+    ctx.mg = game.world.stacksOf(enemyOf(me)).find((s) => s.alive && s.type.id === 'mgTeam') ?? target(game, 'mgTeam', spot(game, 250, -15), 'MG nest');
+    ctx.at = spot(game, 190, -15);
+    ctx.ring = game.tutorial.marker(ctx.at, 12);
+    game.tutorial.show(ctx.mg);
+  },
+  tasks: [
+    ['Call the creeping barrage', (g) => (g.barrage.readyAt[g.playerFaction] ?? 0) > 0],
+    ['Follow it with the section into the ring', (g, c) => near(c.squad, c.at, 14)],
+  ],
+  end(game, ctx) { ctx.ring.remove(); },
+};
+
+const GAS_1918 = {
+  title: 'Gas',
+  touch: '<b>Gas</b> shells leave low yellow clouds that drift with the wind and pool in hollows. Men caught without their masks fall; masked men move slowly and shoot badly — so gas is for pinning a position before your attack, or for holding up theirs. Watch the wind: a cloud can drift back onto your own men. Open <b>Orders</b>, tap <b>Gas</b>, then tap the machine gun.',
+  text: '<b>Gas</b> shells leave low yellow clouds that drift with the wind and pool in hollows. Men caught without their masks fall; masked men move slowly and shoot badly — so gas is for pinning a position before your attack, or for holding up theirs. Watch the wind: a cloud can drift back onto your own men. Press <kbd data-key="lift"></kbd> (or Gas), then click the machine gun.',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    game.air.limit[me] = undefined;
+    game.modeState.cp[me] += 200;
+    ctx.mg = game.world.stacksOf(enemyOf(me)).find((s) => s.alive && s.type.id === 'mgTeam') ?? target(game, 'mgTeam', spot(game, 250, -15), 'MG nest');
+    game.tutorial.show(ctx.mg);
+  },
+  tasks: [
+    ['Call gas on the machine gun', (g) => (g.gas.readyAt[g.playerFaction] ?? 0) > 0],
+    ['Watch their masks go on', (g, c) => !c.mg.alive || c.mg.units.some((u) => u.alive && u.masked)],
+  ],
+};
+
+const AIR_1918 = as1945(AIR, {
+  touch: 'Aircraft are slow and low in 1918, but they reach where the guns can\'t see. Open <b>Orders</b> and tap <b>Ground attack</b>, then tap the machine gun: biplanes come in low along a line through it, machine guns and small bombs. Every support power costs command points and has a cooldown. Enemy AA guns and machine guns shoot back.',
+  text: 'Aircraft are slow and low in 1918, but they reach where the guns can\'t see. Press <kbd data-key="jet"></kbd> (or Ground attack), then click the machine gun: biplanes come in low along a line through it, machine guns and small bombs (<kbd data-key="turnLeft"></kbd> / <kbd data-key="turnRight"></kbd> turn the run first). Every support power costs command points and has a cooldown. Enemy AA guns and machine guns shoot back.',
+  tasks: [['Call the ground attack onto the machine gun', AIR.tasks[0][1]]],
+});
+const RECON_1918 = as1945(RECON, {
+  touch: 'You cannot hit what you cannot see. Tap <b>Spotter</b> in Orders, then the ground: a two-seater flies along the line, and every enemy near its track shows on your map for thirty seconds — your guns fire on them first. <b>Fighters</b> beside it circle a spot and dive on enemy aircraft. And an <b>observation balloon</b> behind your line watches the whole sector for your guns.',
+  text: 'You cannot hit what you cannot see. Press <kbd data-key="recon"></kbd> (or Spotter), then click the ground: a two-seater flies along the line, and every enemy near its track shows on your map for thirty seconds — your guns fire on them first. <kbd data-key="cap"></kbd> (Fighters) circles a spot and dives on enemy aircraft. And an <b>observation balloon</b> behind your line watches the whole sector for your guns.',
+  tasks: [['Send a spotter over the machine gun', RECON.tasks[0][1]], ['See what it found', RECON.tasks[1][1]]],
+});
+
+const WIRE_1918 = {
+  title: 'Through the wire',
+  touch: 'In front of every enemy trench lies wire: infantry in it crawls, and machine guns cover it. Tanks flatten it; shells cut a little. Your <b>wire cutters</b> carry Bangalore torpedoes — pipes of explosive pushed under the wire that blow a lane straight through. Select them, tap <b>Line charge</b> in Orders, then tap the far side of the enemy wire.',
+  text: 'In front of every enemy trench lies wire: infantry in it crawls, and machine guns cover it. Tanks flatten it; shells cut a little. Your <b>wire cutters</b> carry Bangalore torpedoes — pipes of explosive pushed under the wire that blow a lane straight through. Select them, press <kbd data-key="engineer"></kbd> (or Line charge), then click the far side of the enemy wire.',
+  start(game, ctx) {
+    const me = game.playerFaction, foe = enemyOf(me);
+    ctx.cutters = game.spawnStack('mineClear', me, spot(game, 120, -40), facing(game), 'Bangalore team');
+    ctx.wire = [];
+    for (const side of [-40, -30, -50]) { // a belt of the enemy's wire across the way
+      const p = spot(game, 150, side);
+      const site = game.construction.place('wire', p.x, p.z, facing(game) + Math.PI / 2, foe, null, { force: true });
+      if (!site) continue;
+      site.quiet = true;
+      game.construction.finish(site);
+      ctx.wire.push(site);
+    }
+    game.tutorial.highlight(ctx.cutters);
+    game.tutorial.show(spot(game, 150, -40));
+  },
+  tasks: [['Blow a lane through the wire', (g, c) => c.wire.some((w) => !g.construction.obstacles.some((o) => o.site === w))]],
+};
+
+const TANKS_1918 = {
+  title: 'Tanks that break down',
+  touch: 'The tanks of 1918 are slow and half-blind, and they break down: a tank stops where it is while its crew mends the engine, and in a shell hole or a trench it can belly and stick. Keep infantry close round your tanks, and bring the <b>supply tank</b> up behind them: a broken-down or ditched tank near it gets going three times sooner. One of your Mark Vs has broken down — move the supply tank up to it.',
+  text: 'The tanks of 1918 are slow and half-blind, and they break down: a tank stops where it is while its crew mends the engine, and in a shell hole or a trench it can belly and stick. Keep infantry close round your tanks, and bring the <b>supply tank</b> up behind them: a broken-down or ditched tank near it gets going three times sooner. One of your Mark Vs has broken down — move the supply tank up to it.',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    ctx.tank = mineOf(game, (s) => s.alive && s.type.id === 'tank') ?? game.spawnStack('tank', me, spot(game, 80, 30), facing(game), 'Tank section');
+    ctx.tank.ai.halt?.();
+    ctx.broken = ctx.tank.units.find((u) => u.alive);
+    ctx.broken.fault = { t: 90, prev: ctx.broken.speedMul ?? 1 };
+    ctx.broken.speedMul = 0;
+    ctx.rec = game.spawnStack('recovery', me, spot(game, 15, 70), facing(game), 'Supply tank');
+    game.tutorial.highlight(ctx.rec);
+    game.bus.emit('toast', 'Mark V broken down — the crew is at the engine');
+  },
+  tasks: [
+    ['Bring the supply tank up to the broken-down tank', (g, c) => near(c.rec, c.broken.pos, 35)],
+    ['Get it moving again', (g, c) => !c.broken.alive || !c.broken.fault],
+  ],
+};
+
+const CAVALRY_1918 = as1945(CAVALRY, {
+  touch: 'Cavalry is back for 1918\'s open battles: fast, and deadly to infantry caught in the open — through a gap, behind the line, into the broken. Against machine guns and wire it dies. Enemy infantry stands in the open: select the squadron and tap <b>Charge!</b>',
+  text: 'Cavalry is back for 1918\'s open battles: fast, and deadly to infantry caught in the open — through a gap, behind the line, into the broken. Against machine guns and wire it dies. Enemy infantry stands in the open: select the squadron and press <kbd data-key="charge"></kbd> (or Charge! in Orders).',
+  start(game, ctx) {
+    ctx.cav = game.spawnStack('ifv', game.playerFaction, spot(game, 60, -70), facing(game), 'Lancers');
+    ctx.enemy = target(game, 'rifles', spot(game, 200, -70), 'German section');
+    game.tutorial.highlight(ctx.cav);
+  },
+});
+
+const CHAPTERS_1918 = [
+  { ...CHAPTERS[0], outro: 'That is the core of command. Next: <b>The trenches</b>.' },
+  { id: 'trenches', title: 'The trenches', blurb: 'Digging in, wire, blowing a lane through the enemy\'s wire.', steps: [TRENCH, OBSTACLES, WIRE_1918],
+    outro: 'A trench behind wire holds against anything but guns and tanks. Next: <b>Guns, gas and aircraft</b>.' },
+  { id: 'fire', title: 'Guns, gas and aircraft', blurb: 'Mortar smoke, observers, the creeping barrage, gas, ground attack, the spotter.', steps: [SMOKE, SPOTTING, BARRAGE_1918, GAS_1918, AIR_1918, RECON_1918],
+    outro: 'The guns win the battles of 1918 — if someone can see for them. Next: <b>Tanks and horses</b>.' },
+  { id: 'armour', title: 'Tanks and horses', blurb: 'Reinforcements, tanks that break down and the supply tank, the cavalry charge.', steps: [REINFORCE, TANKS_1918, CAVALRY_1918],
+    outro: 'Tanks, infantry, guns and aircraft as one plan: that is how 1918 was won. Last: <b>Fighting in person</b>.' },
+  { ...CHAPTERS[CHAPTERS.length - 1], outro: 'That is boot camp done. In battle the enemy plays the same game: it shells what its observers see, gasses your trenches and comes behind its own barrage. Try a <b>Frontline</b> battle on Villers-Bretonneux on Recruit, and look up any unit in the <b>Units</b> tab of the menu.' },
+];
+
 /** This war's chapters. */
-export const chapters = () => ({ 1945: CHAPTERS_1945, 1806: CHAPTERS_1806 }[epoch()] ?? CHAPTERS);
+export const chapters = () => ({ 1945: CHAPTERS_1945, 1918: CHAPTERS_1918, 1806: CHAPTERS_1806 }[epoch()] ?? CHAPTERS);
 
 /** Chapters finished on this browser (the menu ticks them). */
 export function chaptersDone() {
@@ -746,7 +860,7 @@ function markDone(id) {
 }
 
 /** The battle that runs boot camp chapter `id` (also what the menu deploys). */
-export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: epoch() === '1806' ? 'jena' : 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
+export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: { 1806: 'jena', 1918: 'villers-bretonneux' }[epoch()] ?? 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
 
 export default {
   id: 'bootcamp',
@@ -760,10 +874,10 @@ export default {
     const foe = enemyOf(me);
     const all = chapters();
     const chapter = all.find((c) => c.id === game.rules?.chapter) ?? all[0];
-    const squad = game.spawnStack('rifles', me, spot(game, 40, -20), facing(game), epoch() === '1806' ? '1st Company' : '1st Squad');
+    const squad = game.spawnStack('rifles', me, spot(game, 40, -20), facing(game), { 1806: '1st Company', 1918: '1st Section' }[epoch()] ?? '1st Squad');
     const at = spot(game, 330, -30);
     const state = {
-      points: new ControlPoints(game, [{ id: 'A', name: epoch() === '1806' ? 'Dornberg' : 'Hill 214', x: at.x, z: at.z, radius: 14, owner: null }]),
+      points: new ControlPoints(game, [{ id: 'A', name: { 1806: 'Dornberg', 1918: 'Hill 104' }[epoch()] ?? 'Hill 214', x: at.x, z: at.z, radius: 14, owner: null }]),
       cp: { [me]: 0, [foe]: 0 },
       strength: { [me]: 1000, [foe]: 1000 },
       maxStrength: 1000,

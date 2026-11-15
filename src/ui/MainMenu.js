@@ -338,8 +338,7 @@ export class MainMenu {
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
       const b = el('button', '', label);
       b.type = 'button';
-      if (epoch() === '1918' && (id === 'bootcamp' || id === 'campaign')) { b.disabled = true; b.classList.add('soon'); b.title = 'Coming with 1918'; } // (ponytail: until 1918's own boot camp and campaign)
-      else b.addEventListener('click', () => this.open(id));
+      b.addEventListener('click', () => this.open(id));
       nav.append(b);
       this.tabs[id] = b;
     }
@@ -347,7 +346,7 @@ export class MainMenu {
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
     this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
-    this.sheet.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side);
+    this.sheet.show(MAPS[mapIn(this.choice.map, epoch())] ?? MAPS[mapsFor(epoch())[0].id], this.choice.side); // (one of this year's maps: a 1985 choice is no 1918 map)
   }
 
   open(id) {
@@ -357,15 +356,15 @@ export class MainMenu {
     this.panel.dataset.panel = id;
     // the map table beside a battle being set up or about to be fought (single player, multiplayer,
     // boot camp, the campaign's next battle); units and settings on the plain table
-    if (id === 'battle') this.sheet?.show(MAPS[this.choice.map] ?? Object.values(MAPS)[0], this.choice.side, true, 'menu');
-    else if (id === 'bootcamp') this.sheet?.show(MAPS[chapterBattle('basics').map] ?? Object.values(MAPS)[0], 'nato', true, 'menu'); // where the exercise runs
+    if (id === 'battle') this.sheet?.show(MAPS[mapIn(this.choice.map, epoch())] ?? MAPS[mapsFor(epoch())[0].id], this.choice.side, true, 'menu');
+    else if (id === 'bootcamp') this.sheet?.show(MAPS[chapterBattle('basics').map] ?? MAPS[mapsFor(epoch())[0].id], 'nato', true, 'menu'); // where the exercise runs
     else if (id !== 'multi' && id !== 'campaign') this.sheet?.hide(); // campaign: its panel says which map (below)
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
       this.panel.append(new CampaignPanel({
         onBattle: (choice) => this.deploy(choice),
-        onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? Object.values(MAPS)[0], side, true, 'menu'); },
+        onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? MAPS[mapsFor(epoch())[0].id], side, true, 'menu'); },
       }).root);
     } else if (id === 'multi') {
       this.lobby ??= new Lobby({

@@ -10,7 +10,7 @@
 // the campaign back. Only the host ends the turn and starts (or resolves) the battle.
 import { FACTIONS, ARMIES, DEFAULT_ARMY, enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { MAPS } from '../maps/index.js';
+import { MAPS, mapsFor } from '../maps/index.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { unitCost } from '../data/doctrine.js';
@@ -36,13 +36,19 @@ const btn = (label, cls, fn) => {
   return b;
 };
 const ww2 = () => epoch() === '1945';
-const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '1806'
+/** The map the campaign screen shows before a battle is planned: this war's first (1985: the Fulda Gap; 1918: Villers-Bretonneux). */
+const homeMap = () => (epoch() === '1985' || epoch() === '1945' ? 'fulda-gap' : mapsFor(epoch())[0].id); // (1985 and 1945 fight their campaigns over Hesse)
+const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '1918'
+  ? 'The Allies must take Péronne and St Quentin in 16 turns; the Germans hold them, or take Amiens and Villers-Bretonneux.'
+  : epoch() === '1806'
   ? 'The French must take Weimar and Naumburg in 16 turns; the Prussians hold them, or carry the war back to Coburg and Hof.'
   : ww2()
   ? 'The Allies must take Eisenach and Meiningen in 16 turns; the Germans hold them, or win back Fulda and Bad Hersfeld.'
   : 'The Pact must take Fulda and Bad Hersfeld in 16 turns; NATO holds them, or takes Eisenach.'] });
 /** What each side's war is, on the side cards. */
-const SIDE_TEXT = () => (epoch() === '1806'
+const SIDE_TEXT = () => (epoch() === '1918'
+  ? { nato: 'August 1918, the Hundred Days: out of Amiens with tanks behind the barrage — take Péronne and St Quentin.', pact: 'Hold the old Somme battlefield against the tanks, and take Amiens and Villers-Bretonneux.' }
+  : epoch() === '1806'
   ? { nato: 'October 1806: through the Thuringian Forest to the Saale — take Weimar and Naumburg.', pact: 'Stop the French at the passes and on the Saale, and carry the war back to Coburg and Hof.' }
   : ww2()
   ? { nato: 'April 1945: across the Fulda and east into Thuringia — take Eisenach and Meiningen.', pact: 'Hold the hills before Eisenach and Meiningen, and throw the Allies back over the Fulda.' }
@@ -86,11 +92,11 @@ export class CampaignPanel {
     if (!c && this.guest) { r.append(el('p', 'mp-wait', 'Waiting for the host’s campaign…')); return; }
     if (!c) {
       this.renderNew();
-      return this.onPreview('fulda-gap', this.choice.side);
+      return this.onPreview(homeMap(), this.choice.side);
     }
     this.c = c;
     if (!c.battalions.some((b) => b.id === this.sel)) this.sel = (c.battalions.find((b) => this.commands(b)) ?? c.battalions[0])?.id ?? null;
-    this.onPreview(c.battles[0]?.map ?? 'fulda-gap', c.side);
+    this.onPreview(c.battles[0]?.map ?? homeMap(), c.side);
     const me = c.side;
     const army = ARMIES[c.armies[me]]?.name ?? FACTIONS[me].name;
     r.append(el('p', 'mp-lead', `${esc(army)} · day ${day(c)}, ${esc(TIMES[hour(c)]?.name.toLowerCase() ?? hour(c))} · turn ${c.turn}${c.length === 'timetable' ? ` of ${TIMETABLE}` : ''} · we hold ${sectorsOf(c, me).length} of ${Object.keys(SECTORS).length} sectors · <b>${c.points}</b> replacement points`));
@@ -120,7 +126,7 @@ export class CampaignPanel {
   renderNew() {
     const r = this.root;
     const ch = this.choice;
-    r.append(el('p', 'mp-lead', epoch() === '1806' ? 'October 1806, on the road map from Franconia to the Saale. You command three regiments and brigades: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
+    r.append(el('p', 'mp-lead', epoch() === '1918' ? 'August 1918, on the road map of the Somme east of Amiens. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : epoch() === '1806' ? 'October 1806, on the road map from Franconia to the Saale. You command three regiments and brigades: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
     r.append(el('h3', 'menu-sub', 'Your side'));
     const sideCards = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {
@@ -128,7 +134,7 @@ export class CampaignPanel {
       const card = btn(`<b>${FACTIONS[f].name}</b><span>${text}</span>`, `card ${f}${ch.side === f ? ' on' : ''}`, () => {
         ch.side = f;
         for (const o of sideCards.children) o.classList.toggle('on', o === card);
-        this.onPreview('fulda-gap', f);
+        this.onPreview(homeMap(), f);
       });
       sideCards.append(card);
     }

@@ -31,6 +31,8 @@
 // (Saalfeld, Schleiz) to the Saale (Jena, Auerstedt), and must take Weimar and Naumburg in the eight
 // days (SECTORS_1806; syncEpoch swaps the map in place). The Prussians hold them, or carry the war
 // back to Coburg and Hof. Battalions are regiments and brigades of 1806.
+// 1918: Picardy in August, the Hundred Days — the Allies attack east out of Amiens (SECTORS_1918) and must
+// take Péronne and St Quentin in the eight days; the Germans hold, or take Amiens and Villers-Bretonneux.
 // Saved in localStorage ('coldsteel.campaign.2', other wars: 'coldsteel.campaign.<year>'); the old column campaign's saves are left alone.
 import { UNIT_TYPES } from '../data/units/index.js';
 import { writeLetter } from './Letters.js';
@@ -40,9 +42,10 @@ import { epoch } from '../data/epoch.js';
 
 const ww2 = () => epoch() === '1945';
 const y06 = () => epoch() === '1806';
+const y18 = () => epoch() === '1918';
 const key = () => (epoch() === '1985' ? 'coldsteel.campaign.2' : `coldsteel.campaign.${epoch()}`);
 /** The side that attacks on the timetable: the Pact in 1985, the Allies (the NATO slot) in 1945, the French in 1806. */
-export const attacker = () => (ww2() || y06() ? 'nato' : 'pact');
+export const attacker = () => (ww2() || y06() || y18() ? 'nato' : 'pact');
 export const TIMETABLE = 16;        // turns in the eight-day war
 export const MAX_STACKS = 18;       // per battalion
 const REPLACEMENTS = 300;           // replacement points a turn…
@@ -112,6 +115,35 @@ const START_1806 = {
   nato: ['graefenthal', 'lobenstein', 'kronach', 'coburg', 'hof', 'graefenthal'],
   pact: ['saalfeld', 'schleiz', 'rudolstadt', 'poessneck', 'jena', 'weimar', 'gera'],
 };
+// 1918: Picardy, the Somme valley east of Amiens (north is up). The Allies hold the west, the Germans the ground they took in the spring.
+const SECTORS_1918 = {
+  amiens: { name: 'Amiens', x: 60, y: 210, map: 'villers-bretonneux', home: 'nato', depot: true, objective: 'pact' },
+  corbie: { name: 'Corbie', x: 150, y: 110, map: 'le-hamel', home: 'nato' },
+  villers: { name: 'Villers-Bretonneux', x: 170, y: 220, map: 'villers-bretonneux', home: 'nato', objective: 'pact' },
+  boves: { name: 'Boves', x: 120, y: 320, map: 'st-quentin', home: 'nato' },
+  moreuil: { name: 'Moreuil', x: 190, y: 390, map: 'le-hamel', home: 'nato' },
+  hamel: { name: 'Le Hamel', x: 270, y: 110, map: 'le-hamel', home: 'pact' },
+  marcelcave: { name: 'Marcelcave', x: 290, y: 225, map: 'villers-bretonneux', home: 'pact' },
+  demuin: { name: 'Démuin', x: 280, y: 330, map: 'st-quentin', home: 'pact' },
+  proyart: { name: 'Proyart', x: 410, y: 100, map: 'le-hamel', home: 'pact' },
+  harbonnieres: { name: 'Harbonnières', x: 400, y: 210, map: 'villers-bretonneux', home: 'pact' },
+  rosieres: { name: 'Rosières', x: 420, y: 320, map: 'st-quentin', home: 'pact' },
+  peronne: { name: 'Péronne', x: 570, y: 100, map: 'le-hamel', home: 'pact', depot: true, objective: 'nato' },
+  chaulnes: { name: 'Chaulnes', x: 540, y: 240, map: 'villers-bretonneux', home: 'pact' },
+  roye: { name: 'Roye', x: 540, y: 380, map: 'st-quentin', home: 'pact', depot: true },
+  stquentin: { name: 'St Quentin', x: 670, y: 230, map: 'st-quentin', home: 'pact', depot: true, objective: 'nato' },
+};
+const ROADS_1918 = [
+  ['amiens', 'corbie'], ['amiens', 'villers'], ['amiens', 'boves'], ['corbie', 'villers'], ['villers', 'boves'], ['boves', 'moreuil'],
+  ['corbie', 'hamel'], ['villers', 'hamel'], ['villers', 'marcelcave'], ['boves', 'demuin'], ['moreuil', 'demuin'],
+  ['hamel', 'marcelcave'], ['marcelcave', 'demuin'], ['hamel', 'proyart'], ['marcelcave', 'harbonnieres'], ['demuin', 'rosieres'],
+  ['proyart', 'harbonnieres'], ['harbonnieres', 'rosieres'], ['proyart', 'peronne'], ['harbonnieres', 'chaulnes'], ['rosieres', 'chaulnes'],
+  ['rosieres', 'roye'], ['peronne', 'chaulnes'], ['chaulnes', 'roye'], ['peronne', 'stquentin'], ['chaulnes', 'stquentin'], ['roye', 'stquentin'],
+];
+const START_1918 = {
+  nato: ['corbie', 'villers', 'boves', 'moreuil', 'amiens', 'villers'],
+  pact: ['hamel', 'marcelcave', 'demuin', 'proyart', 'harbonnieres', 'rosieres', 'chaulnes'],
+};
 const BASE = { sectors: Object.fromEntries(Object.entries(SECTORS).map(([k, v]) => [k, { ...v }])), roads: ROADS.map((r) => [...r]) };
 const LINKS = {};
 function link() {
@@ -151,7 +183,12 @@ const KINDS_1806 = {
   mech: ['rifles', 'rifles', 'rifles', 'rifles', 'rifles', 'atTeam', 'mgTeam', 'mgTeam', 'sniper', 'artillery', 'engineers', 'reconVehicle'],
   support: ['rifles', 'rifles', 'rifles', 'mgTeam', 'artillery', 'artillery', 'spMortar', 'mortar', 'observers', 'jammer', 'reconVehicle'],
 };
-const kinds = () => (y06() ? KINDS_1806 : KINDS);
+const KINDS_1918 = {
+  armour: ['tank', 'tank', 'heavyTank', 'ifv', 'ifv', 'reconVehicle', 'rifles', 'rifles', 'mgTeam', 'recovery'],
+  mech: ['rifles', 'rifles', 'rifles', 'rifles', 'rifles', 'atTeam', 'mgTeam', 'mgTeam', 'sniper', 'mortar', 'engineers', 'scouts'],
+  support: ['rifles', 'rifles', 'rifles', 'mgTeam', 'artillery', 'artillery', 'spMortar', 'rockets', 'observers', 'cbRadar', 'airRadar'],
+};
+const kinds = () => (y06() ? KINDS_1806 : y18() ? KINDS_1918 : KINDS);
 const BRIGADE = ['armour', 'mech', 'support'];
 const NAMES = {
   us: { armour: 'Armor Battalion', mech: 'Infantry Battalion', support: 'Field Artillery Battalion' },
@@ -165,6 +202,12 @@ const NAMES_1945 = { // (army ids repeat across the wars: us, sov)
   wh: { armour: 'Panzer-Abteilung', mech: 'Panzergrenadier-Bataillon', support: 'Artillerie-Abteilung' },
   fj: { armour: 'Fallschirm-Sturmgeschütz-Brigade', mech: 'Fallschirmjäger-Bataillon', support: 'Fallschirm-Artillerie-Abteilung' },
 };
+const NAMES_1918 = {
+  uk: { armour: 'Tank Battalion', mech: 'Infantry Battalion', support: 'Field Artillery Brigade' },
+  fr: { armour: 'Bataillon de chars légers', mech: 'Bataillon d\'infanterie', support: 'Groupe d\'artillerie' },
+  de: { armour: 'Sturm-Panzerkraftwagen-Abteilung', mech: 'Infanterie-Regiment', support: 'Feldartillerie-Regiment' },
+  st: { armour: 'Beute-Panzer-Abteilung', mech: 'Sturm-Bataillon', support: 'Artillerie-Abteilung' },
+};
 const NAMES_1806 = {
   fr: { armour: 'Brigade de cavalerie', mech: 'Régiment d\'infanterie de ligne', support: 'Brigade d\'artillerie' },
   by: { armour: 'Chevaulegers-Regiment', mech: 'Linien-Infanterie-Regiment', support: 'Artillerie-Bataillon' },
@@ -172,9 +215,9 @@ const NAMES_1806 = {
   sx: { armour: 'Kavallerie-Regiment', mech: 'Infanterie-Regiment', support: 'Artillerie-Brigade' },
 };
 const ordinal = (n) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
-const GERMAN = new Set(['bw', 'nva', 'wh', 'fj', 'by', 'pr', 'sx']);
+const GERMAN = new Set(['bw', 'nva', 'wh', 'fj', 'by', 'pr', 'sx', 'de', 'st']);
 const battalionName = (army, kind, n) => {
-  const name = (y06() ? NAMES_1806 : ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  const name = (y06() ? NAMES_1806 : y18() ? NAMES_1918 : ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
   if (army === 'fr') return `${n === 1 ? '1er' : `${n}e`} ${name}`;
   return GERMAN.has(army) ? `${name} ${n}` : `${ordinal(n)} ${name}`;
 };
@@ -211,20 +254,22 @@ export function clearCampaign() {
 /** The map as this war has it: 1806 its own; 1945 has no Point Alpha yet, and Meiningen is an Allied objective too. */
 let START = START_BASE;
 function syncEpoch() {
-  const src = y06() ? { sectors: SECTORS_1806, roads: ROADS_1806 } : BASE;
+  const src = y06() ? { sectors: SECTORS_1806, roads: ROADS_1806 } : y18() ? { sectors: SECTORS_1918, roads: ROADS_1918 } : BASE;
   for (const k of Object.keys(SECTORS)) delete SECTORS[k];
   for (const [k, v] of Object.entries(src.sectors)) SECTORS[k] = { ...v };
   ROADS.splice(0, ROADS.length, ...src.roads.map((r) => [...r]));
   link();
-  START = y06() ? START_1806 : START_BASE;
-  if (y06()) return;
+  START = y06() ? START_1806 : y18() ? START_1918 : START_BASE;
+  if (y06() || y18()) return;
   SECTORS.rasdorf.name = ww2() ? 'Rasdorf' : 'Rasdorf · Point Alpha';
   if (ww2()) SECTORS.meiningen.objective = 'nato';
   else delete SECTORS.meiningen.objective;
 }
 
 /** The first line of the war's log. */
-const opening = (side) => (y06()
+const opening = (side) => (y18()
+  ? (side === 'nato' ? '8 August 1918: the Allied armies attack out of the mist east of Amiens. The black day of the German army.' : 'The enemy has attacked out of the mist with tanks. Hold before the old Somme battlefield.')
+  : y06()
   ? (side === 'nato' ? 'The Grande Armée is through the Thuringian Forest: forward to the Saale.' : 'The French are across the passes of the Thuringian Forest. Stop them before the Saale.')
   : ww2()
   ? (side === 'nato' ? 'The Allies are across the Fulda: the drive east into Thuringia begins.' : 'The enemy is across the Fulda. Hold them before Eisenach.')
@@ -619,11 +664,15 @@ function checkEnd(c) {
   if (c.over) return;
   const me = c.side;
   const holds = (f, ids) => ids.every((id) => c.owner[id] === f);
-  const pactGoal = y06() ? ['coburg', 'hof'] : ['fulda', 'hersfeld'];
+  const pactGoal = y06() ? ['coburg', 'hof'] : y18() ? ['amiens', 'villers'] : ['fulda', 'hersfeld'];
   if (!c.battalions.length) c.over = { won: false, text: 'The brigade has been destroyed.' };
   else if (!c.enemy.length) c.over = { won: true, text: 'The enemy has no battalions left in the field. The war on this front is won.' };
   else if (c.length === 'timetable') {
-    if (y06()) { // October 1806: the French must reach Weimar and Naumburg in time
+    if (y18()) { // August 1918: the Allies must reach Péronne and St Quentin in time
+      if (holds('nato', ['peronne', 'stquentin'])) c.over = { won: me === 'nato', text: 'Péronne and St Quentin are taken: the Hindenburg Line lies open, and the German army will not recover.' };
+      else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Amiens and Villers-Bretonneux are taken: the railway is cut, and the British and French are split apart.' };
+      else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Péronne and St Quentin still hold: the Allied offensive has run out of tanks and of men.' };
+    } else if (y06()) { // October 1806: the French must reach Weimar and Naumburg in time
       if (holds('nato', ['weimar', 'naumburg'])) c.over = { won: me === 'nato', text: 'Weimar and Naumburg are taken: the Prussian army is broken, and the road to Berlin lies open.' };
       else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Coburg and Hof are taken: the French are thrown back into Franconia.' };
       else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Weimar and Naumburg still hold: winter is coming, and the French advance has stalled on the Saale.' };

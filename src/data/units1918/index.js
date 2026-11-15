@@ -322,7 +322,7 @@ const engineers = derive(T.engineers, {
 const mineClear = derive(T.engineers, {
   id: 'mineClear', name: 'Wire Cutters', shortName: 'Wire cutters', category: 'support', cost: 160,
   formation: { count: 4, columns: 4, spacing: 2.4 },
-  stats: { lineCharge: { count: 3, range: 45 } },
+  stats: { lineCharge: { count: 3, range: 60 } },
   models: men(),
   specialist: undefined,
   variants: {

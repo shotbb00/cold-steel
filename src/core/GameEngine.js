@@ -248,7 +248,9 @@ export class GameEngine {
     if (field) {
       field.paint?.(this.terrain); // (the churned ground first: the craters dig into it)
       this.replayScars({ blasts: field.blasts, ruins: field.ruins });
+      const n0 = this.construction.structures.length;
       this.quietly(() => this.replayScars({ works: field.works.map((w) => [w.kind, w.x, w.z, w.yaw, w.faction]) }));
+      for (const st of this.construction.structures.slice(n0)) st.fromMap = true; // (the map's own: not a scar the campaign keeps — the map lays them again)
     }
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
@@ -417,7 +419,7 @@ export class GameEngine {
     const river = this.world.river;
     return {
       blasts: this.blasts ?? [],
-      works: this.construction.structures.filter((s) => !s.def.action).map((s) => [s.kind, Math.round(s.x * 10) / 10, Math.round(s.z * 10) / 10, Math.round(s.yaw * 100) / 100, s.faction]),
+      works: this.construction.structures.filter((s) => !s.def.action && !s.fromMap).map((s) => [s.kind, Math.round(s.x * 10) / 10, Math.round(s.z * 10) / 10, Math.round(s.yaw * 100) / 100, s.faction]),
       ruins: this.buildings.list.filter((b) => b.collapsed).map((b) => b.index),
       blown: river ? river.crossings.filter((c) => c.blown && !c.laid).map((c) => c.id) : [],
       laid: river ? river.crossings.filter((c) => c.laid && !c.blown).map((c) => [Math.round(c.x * 10) / 10, Math.round(c.z * 10) / 10]) : [],
