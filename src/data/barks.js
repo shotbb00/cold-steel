@@ -115,6 +115,19 @@ LINES.gb = {
 LINES.fr.boats = ['Les chaloupes!', 'Feu sur les barques!', 'Ils débarquent!', 'Aux armes — les Anglais!', 'Mitraille sur la plage!']; // (Aboukir: the boats coming in)
 
 // the British infantry of 1918: the Tommies' own words (the 1918 Germans shout the German lines, the French the French)
+// 1918 at sea: the Royal Navy's English of the Grand Fleet, the Kaiserliche Marine's German
+LINES.rn18 = {
+  straddle: ['Straddle!', 'Spotting top reports a straddle!', 'Hitting now — rapid salvoes!', 'Down two hundred, fire!'],
+  shipHit: ['We\'re hit!', 'Shell aboard aft!', 'Hit on Q turret!', 'Fire in the battery!', 'Flood the magazine!'],
+  shipBad: ['She\'s taking water forward!', 'We\'re listing, sir!', 'Pumps can\'t hold it!', 'Clear lower deck — all hands to the pumps!'],
+  shipContact: ['Enemy in sight!', 'Smoke on the horizon, sir!', 'Enemy battlecruisers bearing east!', 'Zeppelin, fine on the bow!'],
+};
+LINES.km = {
+  straddle: ['Deckend!', 'Gabel — Salve gut!', 'Wirkung! Schnellfeuer!', 'Zwei hundert ab, Feuer!'],
+  shipHit: ['Treffer!', 'Treffer achtern!', 'Treffer in der Kasematte!', 'Feuer im Turm!', 'Munitionskammer fluten!'],
+  shipBad: ['Wassereinbruch vorn!', 'Das Schiff krängt!', 'Die Pumpen schaffen es nicht!', 'Alle Mann an die Lenzpumpen!'],
+  shipContact: ['Feind in Sicht!', 'Rauchwolken am Horizont!', 'Feindliche Schlachtkreuzer, Backbord voraus!', 'Unterseeboot, Steuerbord!'],
+};
 LINES.uk18 = {
   contact: ['Jerry! Over there!', 'Enemy front!', 'Huns in the wood!', 'Here they come!', 'Movement by the wire!'],
   cover: ['Get down!', 'Into the shell hole!', 'Keep your heads down!', 'Down in the trench!'],
@@ -145,11 +158,11 @@ LINES.de1806 = {
   rally: ['Zu mir!', 'Sammeln!', 'Zur Fahne!'],
   officer: ['Der Hauptmann ist gefallen!', 'Der Offizier ist getroffen!', 'Wer führt?'],
 };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

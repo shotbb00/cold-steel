@@ -565,6 +565,22 @@ function trenchWhistle(ctx) {
   });
 }
 
+/** The engine-room telegraph (1918 at sea: an order): the handle rung over to the new speed — two strikes of its bell. */
+function telegraph(ctx) {
+  return makeBuffer(ctx, 1.1, (d, sr, n) => {
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      let v = 0;
+      for (const at of [0, 0.26]) {
+        const u = t - at;
+        if (u < 0) continue;
+        v += (Math.sin(TAU * 1180 * u) * Math.exp(-u * 5) + Math.sin(TAU * 2960 * u) * 0.5 * Math.exp(-u * 9) + Math.sin(TAU * 4410 * u) * 0.25 * Math.exp(-u * 14)) * Math.min(1, u / 0.002);
+      }
+      d[i] = v * 0.45;
+    }
+  });
+}
+
 /** The bosun's pipe (the dawn signal): a breathy whistle climbing, trilled, falling away. */
 function bosunPipe(ctx) {
   return makeBuffer(ctx, 1.7, (d, sr, n) => {
@@ -967,6 +983,7 @@ export function soundDefinitions(ctx) {
     'engine.oars': () => oars(ctx),
     'bosun.pipe': () => bosunPipe(ctx),
     'whistle': () => trenchWhistle(ctx),
+    'telegraph': () => telegraph(ctx),
     wash: () => wash(ctx),
     sea: () => sea(ctx),
     'ship.sink': () => sinking(ctx),
