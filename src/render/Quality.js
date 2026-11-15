@@ -34,7 +34,7 @@ export const QUALITY = {
   verylow: {
     label: 'Very low', resolution: 0.5, maxRes: 0.75, msaa: 0, ao: false, aoScale: 0.5, bloom: false,
     shadowSize: 512, shadowType: THREE.PCFShadowMap, detail: { grass: 0.1, hedge: 0.3, clutter: 0.15, foliage: 0 },
-    shadowFilter: 'low', shadowEvery: 2, babylonAO: false, shadows: false, lod: 0,
+    shadowFilter: 'low', shadowEvery: 2, babylonAO: false, shadows: false, post: false, lod: 0, // (post: false — what the header promises: no post-processing pass at all)
   },
   low: {
     label: 'Low', resolution: 0.75, maxRes: 1, msaa: 0, ao: false, aoScale: 0.5, bloom: false,

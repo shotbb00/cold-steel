@@ -37,6 +37,8 @@ import { SSAO2RenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipe
 import { ReflectionProbe } from '@babylonjs/core/Probes/reflectionProbe.js';
 import { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
 import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration.js';
+import { ColorCurves } from '@babylonjs/core/Materials/colorCurves.js';
+import { epoch } from '../../data/epoch.js';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
 import { Vector3, Matrix, Quaternion } from '@babylonjs/core/Maths/math.vector.js';
 // side-effect registrations: thin instances, shadows, the rendering pipeline manager
@@ -93,6 +95,15 @@ export class BabylonView {
     ip.toneMappingEnabled = true;
     ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     ip.exposure = exposure * EXPOSURE;
+    // each war its own film: a colour grade in the tone mapping pass (a few instructions, no extra pass)
+    const grade = GRADES[epoch()];
+    if (grade) {
+      const cc = new ColorCurves();
+      Object.assign(cc, grade.curves);
+      ip.colorCurves = cc;
+      ip.colorCurvesEnabled = true;
+      ip.contrast = grade.contrast ?? 1;
+    }
 
     this.camera = new FreeCamera('camera', new Vector3(0, 10, 0), scene);
     this.camera.rotationQuaternion = new Quaternion();
@@ -120,9 +131,9 @@ export class BabylonView {
       this.probe = probe;
     }
 
-    this.ssao = new SSAO2RenderingPipeline('ssao', scene, { ssaoRatio: 0.5, blurRatio: 1 }, [this.camera], false);
-    Object.assign(this.ssao, { radius: 2.2, totalStrength: 1.1, base: 0.12, samples: 12, maxZ: 220, minZAspect: 0.5, expensiveBlur: false });
-    this.ssaoOn = true;
+    this.ssao = null;      // ambient occlusion: built the first time a preset asks for it (High) — its buffers never exist on the others
+    this.ssaoOn = false;
+    this.watchContext();
 
     this.pipeline = new DefaultRenderingPipeline('post', true, scene, [this.camera]);
     this.pipeline.fxaaEnabled = true;
@@ -137,6 +148,39 @@ export class BabylonView {
 
   resize() {
     this.engine.resize();
+  }
+
+  /**
+   * The graphics device can drop the WebGL context (a phone short of memory, a driver reset, the tab long
+   * asleep). Babylon rebuilds what it drew when the context comes back; meanwhile the player is told so,
+   * and if it doesn't come back he can reload rather than look at a frozen picture.
+   */
+  watchContext() {
+    const say = (text, reload = false) => {
+      let el = document.getElementById('gpu-reset');
+      if (!text) { el?.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'gpu-reset';
+        el.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:9999;padding:16px 22px;background:rgba(16,18,20,.92);color:#e8e2d0;font:600 15px/1.4 system-ui,sans-serif;border:1px solid #c9a24a;border-radius:6px;text-align:center;max-width:80vw';
+        document.body.appendChild(el);
+      }
+      el.textContent = text;
+      if (reload) {
+        const b = document.createElement('button');
+        b.textContent = 'Reload';
+        b.style.cssText = 'display:block;margin:12px auto 0;padding:8px 18px;font:600 14px system-ui,sans-serif;background:#c9a24a;color:#111;border:0;border-radius:4px';
+        b.onclick = () => location.reload();
+        el.appendChild(b);
+      }
+    };
+    let timer = null;
+    this.engine.onContextLostObservable.add(() => {
+      say('Graphics were reset by the device — restoring…');
+      clearTimeout(timer);
+      timer = setTimeout(() => say('The graphics did not come back.', true), 8000);
+    });
+    this.engine.onContextRestoredObservable.add(() => { clearTimeout(timer); say(null); });
   }
 
   /** The weather changed the sky (systems/WeatherChange.js): new colours, and the sky light re-rendered. */
@@ -164,6 +208,12 @@ export class BabylonView {
     this.pipeline.bloomEnabled = q.bloom;
     const ao = q.babylonAO ?? q.ao;
     const mgr = this.scene.postProcessRenderPipelineManager;
+    if (ao && !this.ssao) {
+      this.ssao = new SSAO2RenderingPipeline('ssao', this.scene, { ssaoRatio: 0.5, blurRatio: 1 }, [this.camera], false);
+      Object.assign(this.ssao, { radius: 2.2, totalStrength: 1.1, base: 0.12, samples: 12, maxZ: 220, minZAspect: 0.5, expensiveBlur: false });
+      this.ssaoOn = true;
+      if (this.postOn) { mgr.detachCamerasFromRenderPipeline('post', this.camera); mgr.attachCamerasToRenderPipeline('post', this.camera); } // (AO before the post pass, as when both were built at start)
+    }
     if (ao && !this.ssaoOn) mgr.attachCamerasToRenderPipeline('ssao', this.camera);
     if (!ao && this.ssaoOn) mgr.detachCamerasFromRenderPipeline('ssao', this.camera);
     this.ssaoOn = ao;
@@ -430,6 +480,7 @@ export class BabylonView {
     if (tm.userData?.water) mesh.alphaIndex = 0; // the sea first among the see-through: splashes, smoke and decals above it are drawn over it, not under
     if (o.castShadow && this.shadowGen) this.shadowGen.addShadowCaster(mesh, false);
     if (o.frustumCulled === false || o.isInstancedMesh) mesh.alwaysSelectAsActiveMesh = true;
+    if (o.isInstancedMesh) mesh.doNotSyncBoundingInfo = true; // (always drawn: no per-instance bounding boxes to build — memory and a pass over every instance on each update)
     mesh.ignoreNonUniformScaling = true; // (one shader variant for all: a mesh made mid-battle under a non-uniform scale needed its own, compiled for seconds while it stayed invisible — and the frame hitched)
     const rec = { mesh, material, tm: o.material, matrix: new Float32Array(16).fill(NaN), versions: {}, instanceVersion: -1, colorVersion: -1, count: -1 };
     this.snapshotVersions(geo, rec);
@@ -450,13 +501,7 @@ export class BabylonView {
     vd.positions = pos.array;
     if (geo.attributes.normal) vd.normals = geo.attributes.normal.array;
     if (geo.attributes.uv) vd.uvs = geo.attributes.uv.array;
-    if (geo.index) vd.indices = geo.index.array;
-    else {
-      const n = pos.count;
-      const idx = new Uint32Array(n);
-      for (let i = 0; i < n; i++) idx[i] = i;
-      vd.indices = idx;
-    }
+    vd.indices = geo.index ? geo.index.array : sequence(pos.count); // (unindexed: a view of one shared 0, 1, 2, … — not a fresh array per mesh)
     if (!geo.attributes.normal) {
       const normals = new Float32Array(pos.array.length);
       VertexData.ComputeNormals(vd.positions, vd.indices, normals);
@@ -464,7 +509,7 @@ export class BabylonView {
     }
     vd.applyToMesh(mesh, true);
     const col = geo.attributes.color;
-    if (col) mesh.setVerticesData(VertexBuffer.ColorKind, toRGBA(col), true, 4);
+    if (col) mesh.setVerticesData(VertexBuffer.ColorKind, col.array, true, col.itemSize); // (Three's own array: no RGBA copy — 35–45 MB a battle)
     // the game's own attributes (paint, aFurrow…) keep their names: the plugins read them
     for (const [name, a] of Object.entries(geo.attributes)) {
       if (!STANDARD.has(name) && !a.isInstancedBufferAttribute) mesh.setVerticesData(name, a.array, true, a.itemSize);
@@ -496,7 +541,7 @@ export class BabylonView {
       rec.versions.normal = a.normal.version;
     }
     if (a.color && a.color.version !== rec.versions.color) {
-      mesh.updateVerticesData(VertexBuffer.ColorKind, toRGBA(a.color), false, false);
+      mesh.updateVerticesData(VertexBuffer.ColorKind, a.color.array, false, false);
       rec.versions.color = a.color.version;
     }
     for (const [name, attr] of Object.entries(a)) {
@@ -566,7 +611,7 @@ export class BabylonView {
       if (m.albedoTexture) m.albedoTexture.hasAlpha = true;
     } else if (tm.transparent) {
       m.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
-      if (m.albedoTexture) m.useAlphaFromAlbedoTexture = true;
+      if (m.albedoTexture) { m.albedoTexture.hasAlpha = true; m.useAlphaFromAlbedoTexture = true; } // (a canvas texture says it has no alpha: the see-through in it was lost)
     }
     if (tm.blending === 2) m.alphaMode = Engine.ALPHA_ADD; // THREE.AdditiveBlending
     if (tm.userData?.matte) { m.specularIntensity = 0; m.environmentIntensity = 0; m.reflectionColor?.set?.(0, 0, 0); } // (the open sea: a 25 km² flat sheet throws the sun's highlight up as a white blot)
@@ -682,16 +727,27 @@ function scene_render(scene) {
   scene.render();
 }
 
-/** Three colour attributes are RGB (sometimes RGBA); Babylon wants RGBA. */
-function toRGBA(attr) {
-  if (attr.itemSize === 4) return attr.array;
-  const n = attr.count;
-  const src = attr.array;
-  const out = new Float32Array(n * 4);
-  for (let i = 0, j = 0; i < n; i++, j += 3) {
-    out[i * 4] = src[j]; out[i * 4 + 1] = src[j + 1]; out[i * 4 + 2] = src[j + 2]; out[i * 4 + 3] = 1;
+/**
+ * Colour grades per epoch (Babylon ColorCurves: hue in degrees, density -100…100 how strongly it tints,
+ * saturation -100…100). Kept subtle: the battlefield must still read.
+ *   1806: warm, a little rich, like the battle paintings      1918: drained and cold, sepia in the light
+ *   1945: olive-warm film, softened colour                    1985: plain, a cool cast in the shadows
+ */
+const GRADES = {
+  1806: { curves: { globalSaturation: 6, highlightsHue: 38, highlightsDensity: 22, shadowsHue: 25, shadowsDensity: 12 }, contrast: 1.04 },
+  1918: { curves: { globalSaturation: -24, highlightsHue: 42, highlightsDensity: 18, shadowsHue: 205, shadowsDensity: 14 }, contrast: 1.08 },
+  1945: { curves: { globalSaturation: -12, highlightsHue: 45, highlightsDensity: 16, shadowsHue: 200, shadowsDensity: 10 }, contrast: 1.05 },
+  1985: { curves: { globalSaturation: -4, shadowsHue: 215, shadowsDensity: 14 }, contrast: 1.03 },
+};
+
+/** 0, 1, 2, … n-1 as a view of one shared array (grown as needed): the index list of every unindexed geometry. */
+let SEQ = new Uint32Array(0);
+function sequence(n) {
+  if (SEQ.length < n) {
+    SEQ = new Uint32Array(Math.max(n, SEQ.length * 2));
+    for (let i = 0; i < SEQ.length; i++) SEQ[i] = i;
   }
-  return out;
+  return SEQ.subarray(0, n);
 }
 
 /** A DataTexture's pixels as 8-bit RGBA. */

@@ -127,6 +127,44 @@ export const NOISE = /* glsl */ `
     c = mix(c, vec3(0.045, 0.045, 0.04), smoothstep(0.81, 0.85, pNoise(p * 17.0)) * near * 0.6 * chipK);     // chips (few: more read as noise)
     return c;
   }
+  // cloth and hair (paintMaterial option fabric): a plain-coloured part is cloth on a man (PAINT_CLOTH) and the
+  // coat on a horse (PAINT_COAT); metal, skin and glass keep their own. pFab: 1 where it is fabric, else 0
+  float pFab(float px) { float s = pSurf(px); return (s < 0.5 || (s > 3.5 && s < 4.5)) ? 1.0 : 0.0; }
+  // the folds (0…1): long creases down a sleeve or trouser leg, finer ones across them; a coat: the lie of the
+  // muscles and the hair, softer and larger
+  float pFold(vec3 p) {
+    #ifdef PAINT_COAT
+      return pNoise(p * vec3(6.0, 10.0, 4.0)) * 0.7 + pNoise(p * vec3(19.0, 23.0, 13.0)) * 0.3;
+    #else
+      return pNoise(p * vec3(14.0, 3.6, 14.0)) * 0.75 + pNoise(p * vec3(33.0, 10.0, 33.0)) * 0.25;
+    #endif
+  }
+  // their relief in metres, gone where a pixel spans them (no shimmer from afar)
+  float pFoldH(vec3 p, float fold) {
+    vec3 w = fwidth(p);
+    float near = 1.0 - smoothstep(0.006, 0.03, max(max(w.x, w.y), w.z));
+    #ifdef PAINT_COAT
+      return fold * 0.005 * near;
+    #else
+      return fold * 0.012 * near;
+    #endif
+  }
+  // the sheen of fabric and hair at the silhouette (light caught by the fibres): a lift of the colour, so it is
+  // lit or shadowed with the rest
+  float pSheen(vec3 n, vec3 v) {
+    float r = 1.0 - abs(dot(n, v));
+    #ifdef PAINT_COAT
+      return r * r * r * 0.7;
+    #else
+      return r * r * r * 0.45;
+    #endif
+  }
+  // roughness of fabric: matte wool and drill, a groomed coat smoother
+  #ifdef PAINT_COAT
+    const float FAB_ROUGH = 0.55;
+  #else
+    const float FAB_ROUGH = 0.9;
+  #endif
   // bump by screen derivatives: pos and n in the same space
   vec3 pBumpNormal(vec3 pos, vec3 n, float h) {
     vec3 dpdx = dFdx(pos), dpdy = dFdy(pos);
@@ -141,7 +179,7 @@ export const NOISE = /* glsl */ `
  * @param {object} o  { colors: 4 hex (camo), scale: pattern frequency per metre, mud: hex, wear,
  *                      surfaces: per-part roughness / metalness / relief from `surf` }
  */
-export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false, weather = false } = {}) {
+export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2c, wear = 0.14, surfaces = false, smock = false, weather = false, fabric = null } = {}) {
   const uniforms = {
     uClimate: CLIMATE.amount,
     uClimateColor: CLIMATE.color,
@@ -155,6 +193,7 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
   };
   if (surfaces) mat.defines = { ...mat.defines, PAINT_SURF: '' };
   if (weather) mat.defines = { ...mat.defines, PAINT_WEATHER: '', ...(weather === 'air' && { PAINT_AIR: '' }) }; // ('air': streaks along the airflow)
+  if (fabric) mat.defines = { ...mat.defines, [fabric === 'coat' ? 'PAINT_COAT' : 'PAINT_CLOTH']: '' }; // ('cloth': a soldier's clothes, 'coat': a horse)
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -204,6 +243,11 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
         #ifdef PAINT_WEATHER
           diffuseColor.rgb = pWeather(diffuseColor.rgb, pSurf(vPaint.x), vPaintPos);
         #endif
+        #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+          float fab = pFab(vPaint.x);
+          float fold = pFold(vPaintPos);
+          diffuseColor.rgb *= mix(1.0, 0.76 + 0.42 * fold, fab);
+        #endif
         if (uClimate > 0.0) { // the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
           float sf = pSurf(vPaint.x);
           float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -214,6 +258,10 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
         #ifdef PAINT_SURF
           vec2 surfRM = pSurfRM(pSurf(vPaint.x), pNoise(pp * 3.7));
+          #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+            surfRM = mix(surfRM, vec2(FAB_ROUGH + (pNoise(pp * 3.7) - 0.5) * 0.1, 0.0), fab);
+            if (abs(pSurf(vPaint.x) - 2.0) < 0.5) surfRM.x = 0.6; // skin: a little sheen of its own
+          #endif
           roughnessFactor = surfRM.x;
         #endif
         roughnessFactor = mix(roughnessFactor, 1.0, clamp(vPaint.y, 0.0, 1.0) * 0.6); // mud is matte`)
@@ -222,12 +270,15 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
           metalnessFactor = surfRM.y * (1.0 - clamp(vPaint.y, 0.0, 1.0));
         #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-        #ifdef PAINT_SURF
+        #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+          normal = pBumpNormal(-vViewPosition, normal, fab > 0.5 ? pFoldH(vPaintPos, fold) : pBump(pSurf(vPaint.x), vPaintPos));
+          diffuseColor.rgb *= 1.0 + pSheen(normal, normalize(vViewPosition)) * fab;
+        #elif defined(PAINT_SURF)
           normal = pBumpNormal(-vViewPosition, normal, pBump(pSurf(vPaint.x), vPaintPos));
         #endif`);
   };
-  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}:${weather}`;
+  mat.customProgramCacheKey = () => `paint:${colors.join(',')}:${scale}:${surfaces}:${smock}:${weather}:${fabric}`;
   // the same paint for the Babylon renderer (render/babylon/plugins.js PaintPlugin)
-  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock, weather };
+  mat.userData.paint = { colors: uniforms.uCamo.value, scale, mud: uniforms.uMud.value, wear, surfaces, smock, weather, fabric };
   return mat;
 }

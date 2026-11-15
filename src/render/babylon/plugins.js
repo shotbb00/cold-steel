@@ -41,8 +41,8 @@ export class FowPlugin extends GlslPlugin {
 
   getUniforms() {
     return {
-      ubo: [{ name: 'fowBox', size: 4, type: 'vec4' }, { name: 'fowAmount', size: 1, type: 'float' }],
-      fragment: '#ifdef FOW\nuniform vec4 fowBox;\nuniform float fowAmount;\n#endif\n',
+      ubo: [{ name: 'fowBox', size: 4, type: 'vec4' }, { name: 'fowAmount', size: 1, type: 'float' }, { name: 'fowTime', size: 1, type: 'float' }, { name: 'fowJitter', size: 1, type: 'float' }],
+      fragment: '#ifdef FOW\nuniform vec4 fowBox;\nuniform float fowAmount, fowTime, fowJitter;\n#endif\n',
     };
   }
 
@@ -50,6 +50,8 @@ export class FowPlugin extends GlslPlugin {
     const b = this.fow.uniforms.fowBox.value;
     ubo.updateFloat4('fowBox', b.x, b.y, b.z, b.w);
     ubo.updateFloat('fowAmount', this.fow.uniforms.fowAmount.value);
+    ubo.updateFloat('fowTime', this.fow.uniforms.fowTime.value);
+    ubo.updateFloat('fowJitter', this.fow.uniforms.fowJitter.value);
     ubo.setTexture('fowMap', this.fow.babylonTexture);
   }
 
@@ -60,9 +62,14 @@ export class FowPlugin extends GlslPlugin {
       CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR: /* glsl */ `
         #ifdef FOW
         {
-          vec2 fuv = (vPositionW.xz - fowBox.xy) * fowBox.zw;
+          vec2 vFowP = vPositionW.xz;
+          vec2 fwp = vFowP;
+          vec2 fj = vec2(sin(fwp.y * 0.071 + fowTime * 0.37) + sin(fwp.x * 0.113 - fowTime * 0.29), sin(fwp.x * 0.063 + fowTime * 0.33) + sin(fwp.y * 0.127 + fowTime * 0.23)) * fowJitter;
+          vec2 fuv = (fwp + fj - fowBox.xy) * fowBox.zw;
           float fv = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(fowMap, fuv).r;
           float k = mix(1.0, fv, fowAmount);
+          float fedge = clamp(4.0 * k * (1.0 - k), 0.0, 1.0) * fowAmount;    // 1 in the middle of the edge, 0 well inside or well out
+          float fbreath = 0.55 + 0.45 * sin(fwp.x * 0.05 + fwp.y * 0.043 + fowTime * 0.6) * sin(fwp.y * 0.031 - fowTime * 0.41);
           vec3 c = finalColor.rgb;
           #ifdef FOG
             vec3 fogPart = vFogColor * (1.0 - fog);
@@ -70,6 +77,7 @@ export class FowPlugin extends GlslPlugin {
           #endif
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
           c = mix(vec3(l) * vec3(0.88, 0.94, 1.08), c, 0.12 + 0.88 * k) * (0.3 + 0.7 * k); // unseen: grey, a little cold, dark
+          c = mix(c, vec3(0.62, 0.65, 0.68) * (0.35 + 0.65 * l + 0.25), fedge * fbreath * 0.16); // the edge's haze
           #ifdef FOG
             c += fogPart;
           #endif
@@ -83,7 +91,7 @@ export class FowPlugin extends GlslPlugin {
 export class PaintPlugin extends GlslPlugin {
   /** @param {object} paint  { colors: 4 × Three Color (linear), scale, mud (Three Color), wear } */
   constructor(material, paint) {
-    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false });
+    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false, PAINT_CLOTH: false, PAINT_COAT: false });
     this.paint = paint;
     this._enable(true);
   }
@@ -95,6 +103,8 @@ export class PaintPlugin extends GlslPlugin {
     defines.PAINT_SURF = defines.PAINT && !!this.paint.surfaces;
     defines.PAINT_WEATHER = defines.PAINT && !!this.paint.weather;
     defines.PAINT_AIR = defines.PAINT && this.paint.weather === 'air';
+    defines.PAINT_CLOTH = defines.PAINT && this.paint.fabric === 'cloth';
+    defines.PAINT_COAT = defines.PAINT && this.paint.fabric === 'coat';
   }
 
   getAttributes(attributes, scene, mesh) {
@@ -171,6 +181,11 @@ export class PaintPlugin extends GlslPlugin {
           #ifdef PAINT_WEATHER
             surfaceAlbedo = pWeather(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
           #endif
+          #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+            float fab = pFab(vPaint.x);
+            float fold = pFold(vPaintPos);
+            surfaceAlbedo *= mix(1.0, 0.76 + 0.42 * fold, fab);
+          #endif
           if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
             float sf = pSurf(vPaint.x);
             float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -178,7 +193,10 @@ export class PaintPlugin extends GlslPlugin {
             float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
             surfaceAlbedo = mix(surfaceAlbedo, uClimateColor * vTint, uClimate * paintable * k);
           }
-          #ifdef PAINT_SURF
+          #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+            normalW = pBumpNormal(vPositionW, normalW, fab > 0.5 ? pFoldH(vPaintPos, fold) : pBump(pSurf(vPaint.x), vPaintPos));
+            surfaceAlbedo *= 1.0 + pSheen(normalW, viewDirectionW) * fab;
+          #elif defined(PAINT_SURF)
             normalW = pBumpNormal(vPositionW, normalW, pBump(pSurf(vPaint.x), vPaintPos));
           #endif
         }
@@ -189,6 +207,10 @@ export class PaintPlugin extends GlslPlugin {
           float mud = clamp(vPaint.y, 0.0, 1.0);
           #ifdef PAINT_SURF
             vec2 surfRM = pSurfRM(pSurf(vPaint.x), pNoise(vPaintPos * uCamoScale * 3.7));
+            #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+              surfRM = mix(surfRM, vec2(FAB_ROUGH + (pNoise(vPaintPos * uCamoScale * 3.7) - 0.5) * 0.1, 0.0), pFab(vPaint.x));
+              if (abs(pSurf(vPaint.x) - 2.0) < 0.5) surfRM.x = 0.6; // skin
+            #endif
             metallicRoughness = vec2(surfRM.y * (1.0 - mud), surfRM.x);
           #endif
           metallicRoughness.g = mix(metallicRoughness.g, 1.0, mud * 0.6); // mud is matte

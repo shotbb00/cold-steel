@@ -14,6 +14,9 @@
 // buildHorse({ coat, saddle }) → { root, update(dt, gait) }; gait: 'halt' | 'walk' | 'trot' | 'canter' | 'gallop'.
 import * as THREE from 'three';
 import { P, loft } from '../units/geometry.js';
+import { paintMaterial } from '../../render/paint.js';
+
+const COAT_MAT = paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0 }), { scale: 4, wear: 0.1, surfaces: true, fabric: 'coat' });
 
 /** Footfall patterns. off: when in the stride each hoof sets down (LF, RF, LH, RH); speed in m/s. */
 export const GAITS = {
@@ -50,7 +53,7 @@ const smooth = (s) => s * s * (3 - 2 * s);
 
 export function buildHorse({ coat = 'bay', saddle = false } = {}) {
   const C = COATS[coat] ?? COATS.bay;
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 });
+  const mat = COAT_MAT;
   const root = new THREE.Group();
   const body = new THREE.Group();           // bobs and rocks over the legs
   body.position.set(0, 1.2, 0);

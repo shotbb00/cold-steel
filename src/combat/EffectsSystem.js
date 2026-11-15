@@ -457,6 +457,15 @@ export class EffectsSystem {
       });
     }
     this.flashLight(pos, 350 * size * size, 35 * size, 0.25);
+    if (soot && fire > 0) { // a vehicle: burning bits thrown out, arcing down and going out
+      for (let i = 0; i < 10 * size; i++) {
+        const a = Math.random() * 6.283, out = rnd(3, 11) * k;
+        F.spawn(pos.x, pos.y + 0.8 * size, pos.z, {
+          vx: Math.cos(a) * out, vy: rnd(5, 13) * k, vz: Math.sin(a) * out, size: rnd(0.1, 0.22), grow: -0.1,
+          life: rnd(0.8, 1.8), color: SPARK, bright: 3, gravity: 9, drag: 0.3,
+        });
+      }
+    }
     if (ground) {
       // the dirt column: fast dark plumes fanning upward, then falling back
       for (let i = 0; i < 14; i++) {
@@ -656,6 +665,12 @@ export class EffectsSystem {
         if (Math.random() < k) {
           this.fire.spawn(e.pos.x + rnd(-0.7, 0.7) * s, e.pos.y + rnd(0, 0.5), e.pos.z + rnd(-0.7, 0.7) * s, {
             vy: rnd(1, 2.5), size: rnd(0.5, 0.9) * s, grow: 0.3, life: rnd(0.4, 0.8), color: FIRE, bright: 2.2, drag: 1,
+          });
+        }
+        if (Math.random() < 0.35 * k) { // an ember riding up on the heat, swirling, going out
+          this.fire.spawn(e.pos.x + rnd(-0.6, 0.6) * s, e.pos.y + rnd(0.3, 1.2), e.pos.z + rnd(-0.6, 0.6) * s, {
+            vx: rnd(-0.8, 0.8), vy: rnd(2.5, 5) * Math.sqrt(s), vz: rnd(-0.8, 0.8), size: rnd(0.07, 0.14), grow: -0.2,
+            life: rnd(1.4, 2.8), color: SPARK, bright: 3, drag: 0.6, wind: 1.4, spin: rnd(-3, 3),
           });
         }
       }

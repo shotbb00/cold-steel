@@ -156,6 +156,7 @@ export default {
   size: SIZE,
   segments: 900,
   bounds: BOUNDS,
+  navCell: 1.5, // (routing cells: 1.6 × 2 km at 1 m was 130 MB of grids — half of it sea; the Mole's narrowest ways are still several cells wide)
   steep: 0.5,
   camera: { maxHeight: 1000, near: 1, far: 7000 },
   seed: 1918,

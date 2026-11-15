@@ -46,6 +46,7 @@ import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
+import { BlobShadows } from '../render/BlobShadows.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -236,6 +237,7 @@ export class GameEngine {
     if (this.net?.isHost) this.setWaiting(true); // until the other player has loaded
     if (this.net) this.showNetStatus();
     this.quality = new Quality(this); // after the map is decorated: it thins detail meshes
+    this.blobs = new BlobShadows(this); // contact shadows where the preset has no sun shadows (Very low)
     this.hud = new HUD(this);
     this.labels = new StackLabels(this);
     this.buildingMarkers = new BuildingMarkers(this);
@@ -309,6 +311,9 @@ export class GameEngine {
         const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && (u.models?.[army] ?? u.models?.[f])); // (an army with no vehicle of its own, the British of 1801: its side's boats, in its own paint)
         try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
       }
+      // horses and riders (render/paint.js fabric 'coat' and 'cloth'): one shared shader each — compiled now, or the first squadron rides in invisible for seconds
+      const cav = Object.values(UNIT_TYPES).find((u) => u.kind === 'cavalry' && u.models);
+      try { if (cav) warmRig(this.babylon, cav, this.armyOf('nato'), new THREE.Color(FACTIONS.nato.marking)); } catch { /* (as above) */ }
       this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)
       this.babylon.render(0);
       this.babylon.scene.whenReadyAsync().then(begin, begin);
@@ -814,6 +819,7 @@ export class GameEngine {
     this.chat?.update(dt);
     this.touchControls?.update();
     this.fow.update(dt);
+    this.blobs.update();
     this.ranges.update();
     this.ambience.update(dt);
     this.rain?.update(dt);
