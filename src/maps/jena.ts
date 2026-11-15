@@ -36,15 +36,15 @@ function height(x, z) {
 
 const POINTS: ControlPointDef[] = [
   { id: 'A', name: 'Landgrafenberg', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Cospeda', x: -300, z: 300, owner: null, sector: 'west' },
-  { id: 'C', name: 'Lützeroda', x: 0, z: 310, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Closewitz', x: 300, z: 300, owner: null, sector: 'east' },
-  { id: 'E', name: 'Isserstedt', x: -320, z: 20, owner: null, sector: 'west', radius: 22 },
-  { id: 'F', name: 'Vierzehnheiligen', x: 0, z: 0, owner: null, sector: 'centre', radius: 24 },
-  { id: 'G', name: 'Krippendorf', x: 320, z: -20, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Kleinromstedt', x: -300, z: -300, owner: null, sector: 'west' },
-  { id: 'I', name: 'Hohlstedt', x: 0, z: -310, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Großromstedt', x: 300, z: -300, owner: null, sector: 'east' },
+  { id: 'B', name: 'Cospeda', x: -390, z: 330, owner: null, sector: 'west' },
+  { id: 'C', name: 'Lützeroda', x: -110, z: 245, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Closewitz', x: 210, z: 375, owner: null, sector: 'east' },
+  { id: 'E', name: 'Isserstedt', x: -265, z: 105, owner: null, sector: 'west', radius: 22 },
+  { id: 'F', name: 'Vierzehnheiligen', x: 0, z: 0, owner: null, sector: 'centre', radius: 28 },
+  { id: 'G', name: 'Krippendorf', x: 265, z: -105, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Kleinromstedt', x: -210, z: -375, owner: null, sector: 'west' },
+  { id: 'I', name: 'Hohlstedt', x: 110, z: -245, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Großromstedt', x: 390, z: -330, owner: null, sector: 'east' },
   { id: 'K', name: 'Kapellendorf', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 

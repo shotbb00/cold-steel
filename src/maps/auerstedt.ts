@@ -42,15 +42,15 @@ function height(x, z) {
 
 const POINTS: ControlPointDef[] = [
   { id: 'A', name: 'Kösen', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Punschrau', x: -330, z: 290, owner: null, sector: 'west' },
-  { id: 'C', name: 'Taugwitz', x: 60, z: 280, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Poppel', x: 340, z: 320, owner: null, sector: 'east' },
-  { id: 'E', name: 'Spielberg', x: -320, z: 60, owner: null, sector: 'west', radius: 22 },
+  { id: 'B', name: 'Punschrau', x: -420, z: 175, owner: null, sector: 'west' },
+  { id: 'C', name: 'Taugwitz', x: -40, z: 300, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Poppel', x: 300, z: 255, owner: null, sector: 'east' },
+  { id: 'E', name: 'Spielberg', x: -180, z: 45, owner: null, sector: 'west', radius: 22 },
   { id: 'F', name: 'Hassenhausen', x: 0, z: 0, owner: null, sector: 'centre', radius: 26 },
-  { id: 'G', name: 'Sonnendorf', x: 320, z: -60, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Benndorf', x: -340, z: -320, owner: null, sector: 'west' },
-  { id: 'I', name: 'Rehehausen', x: -60, z: -280, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Gernstedt', x: 330, z: -290, owner: null, sector: 'east' },
+  { id: 'G', name: 'Sonnendorf', x: 180, z: -45, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Benndorf', x: -300, z: -255, owner: null, sector: 'west' },
+  { id: 'I', name: 'Rehehausen', x: 40, z: -300, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Gernstedt', x: 420, z: -175, owner: null, sector: 'east' },
   { id: 'K', name: 'Auerstedt', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 

@@ -30,15 +30,15 @@ function roadDist(x, z) {
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Forsthaus Schmücke', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Oberhof', x: -340, z: 300, owner: null, sector: 'west' },
-  { id: 'C', name: 'Sägewerk', x: 0, z: 270, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Steinbruch', x: 340, z: 280, owner: null, sector: 'east' },
-  { id: 'E', name: 'Jagdhütte', x: -330, z: 30, owner: null, sector: 'west' },
+  { id: 'B', name: 'Oberhof', x: -420, z: 230, owner: null, sector: 'west' },
+  { id: 'C', name: 'Sägewerk', x: -60, z: 340, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Steinbruch', x: 270, z: 390, owner: null, sector: 'east' },
+  { id: 'E', name: 'Jagdhütte', x: -190, z: 95, owner: null, sector: 'west', radius: 20 },
   { id: 'F', name: 'Rennsteig', x: 0, z: 0, owner: null, sector: 'centre', radius: 20 },
-  { id: 'G', name: 'Kickelhahn', x: 330, z: -30, owner: null, sector: 'east' },
-  { id: 'H', name: 'Schleusingen Bruch', x: -340, z: -280, owner: null, sector: 'west' },
-  { id: 'I', name: 'Holzplatz', x: 0, z: -270, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Frauenwald', x: 340, z: -300, owner: null, sector: 'east' },
+  { id: 'G', name: 'Kickelhahn', x: 190, z: -95, owner: null, sector: 'east', radius: 20 },
+  { id: 'H', name: 'Schleusingen Bruch', x: -270, z: -390, owner: null, sector: 'west' },
+  { id: 'I', name: 'Holzplatz', x: 60, z: -340, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Frauenwald', x: 420, z: -230, owner: null, sector: 'east' },
   { id: 'K', name: 'Allzunah', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(points.map((p) => [p.id, p]));
