@@ -138,7 +138,7 @@ const GUN_1918 = { nightSight: undefined, armor: 0.05, crew: 0, turnRate: 0.6, r
 const gunsOf = (size) => ({ nato: () => buildWw1Gun({ army: 'uk', size }), fr: () => buildWw1Gun({ army: 'fr', size }), pact: () => buildWw1Gun({ army: 'de', size }), st: () => buildWw1Gun({ army: 'st', size }) });
 
 const artillery = derive(T.artillery, {
-  kind: 'gun', name: 'Field Guns', shortName: 'Field guns', cost: 300, weaponSound: 'arty',
+  kind: 'gun', name: 'Field Guns', shortName: 'Field guns', cost: 300, weaponSound: 'arty', engine: undefined, tracks: undefined, // (horse-drawn: none of the 1985 gun's diesel or tracks)
   formation: { count: 2, columns: 2, spacing: 9 },
   stats: { ...GUN_1918, hp: 300, speed: 2.8, range: 330, preferredRange: 220, damage: 150, splash: 6, crater: 0.5, fireCooldown: 4, magSize: 6, reloadTime: 8, towed: { deploy: 20 }, traverse: 0.1 },
   factionStats: { st: { range: 240, damage: 130, towed: { deploy: 10 }, speed: 3.2 } },   // the infantry gun: lighter, shorter, quick into action
@@ -152,7 +152,7 @@ const artillery = derive(T.artillery, {
 });
 
 const spMortar = derive(T.spMortar, {
-  kind: 'gun', name: 'Heavy Howitzers', shortName: 'Howitzers', cost: 380, weaponSound: 'arty',
+  kind: 'gun', name: 'Heavy Howitzers', shortName: 'Howitzers', cost: 380, weaponSound: 'arty', engine: undefined, tracks: undefined,
   formation: { count: 2, columns: 2, spacing: 10 },
   stats: { ...GUN_1918, hp: 380, speed: 2.2, range: 430, minRange: 80, preferredRange: 300, damage: 260, splash: 9, crater: 0.9, scatter: 4, fireCooldown: 9, magSize: 4, reloadTime: 16, towed: { deploy: 35 }, traverse: 0.08, muzzleKind: 'artillery', smokeRounds: 0 },
   factionStats: { st: { range: 380, damage: 210, splash: 8, towed: { deploy: 25 } } },   // the 10.5 cm light field howitzer
@@ -166,7 +166,7 @@ const spMortar = derive(T.spMortar, {
 });
 
 const rockets = derive(T.rockets, {
-  kind: 'gun', name: 'Heavy Trench Mortars', shortName: 'Heavy mortars', cost: 280, weaponSound: 'mortar',
+  kind: 'gun', name: 'Heavy Trench Mortars', shortName: 'Heavy mortars', cost: 280, weaponSound: 'mortar', engine: undefined, tracks: undefined,
   formation: { count: 1, columns: 1, spacing: 10 },
   stats: { ...GUN_1918, hp: 260, speed: 1.6, range: 230, minRange: 40, preferredRange: 160, damage: 380, splash: 11, crater: 1.3, scatter: 6, scatterPerM: 0.05, fireCooldown: 20, magSize: 1, reloadTime: 20, towed: { deploy: 30 }, traverse: 0.15, muzzleKind: 'mortar', trail: false, smokeRounds: 0 },
   factionStats: { st: { damage: 240, splash: 8, crater: 0.8, fireCooldown: 10, reloadTime: 10 } }, // the medium Minenwerfer
