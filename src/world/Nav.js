@@ -80,7 +80,7 @@ export class NavGrid {
       for (let i = i0; i <= i1; i++) {
         const k = j * this.nx + i;
         const d = cover._distTo(c, this.ox + i * this.cell, this.oz + j * this.cell);
-        if (d < this.seedAll[k]) this.seedAll[k] = d;
+        if (!c.drive && d < this.seedAll[k]) this.seedAll[k] = d; // (a trench's parapet and spoil: vehicles drive over)
         if (tall && d < this.seedTall[k]) this.seedTall[k] = d;
       }
     }

@@ -907,9 +907,9 @@ export class Construction {
     if (this.batch) this.batch.trench.push({ site, geo: merge(this.partsFor(site)) }); // (a batch's trenches: merged by chunk, never taken away)
     else site.mesh = this.addMesh(this.partsFor(site));
     const [fx, fz] = this.local(site, 0, 1.6);
-    const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: L, thickness: 0.6, height: 0.55, spots: false });
+    const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: L, thickness: 0.6, height: 0.55, spots: false, drive: true }); // (tanks drive over the earthworks)
     const [bx, bz] = this.local(site, 0, -1.75);
-    cover.addBox({ x: bx, z: bz, yaw: site.yaw, length: L, thickness: 0.9, height: 0.35, spots: false });
+    cover.addBox({ x: bx, z: bz, yaw: site.yaw, length: L, thickness: 0.9, height: 0.35, spots: false, drive: true });
     cover.addTrenchSpots({ x: site.x, z: site.z, yaw: site.yaw, length: L - 1.6, collider: front, spacing: 1.1 });
   }
 }
