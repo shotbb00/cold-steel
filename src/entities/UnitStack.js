@@ -1096,6 +1096,17 @@ export class UnitStack {
       const keep = u.radius + 17, now = L.mineGap(u.pos.x, u.pos.z, keep + 30);
       if (now < keep && now < L.mineGap(px, pz, keep + 30)) { u.pos.x = px; u.pos.z = pz; u.vel.multiplyScalar(0.2); }
     }
+    // a found enemy mine (systems/Minefields.js): her captain won't close on it — she slides along it instead, skirting the field (a sweeper goes where she's sent)
+    const MF = this.stats.sweeper ? null : this.services.game?.mines;
+    if (MF?.mines.length) {
+      const a = MF.nearestKnown(u.pos.x, u.pos.z, this.faction, u.radius + 24);
+      const b = a && Math.hypot(px - a.x, pz - a.z);
+      if (a && b > 0.01 && a.d < b) {
+        const nx = (px - a.x) / b, nz = (pz - a.z) / b, inward = (u.pos.x - px) * nx + (u.pos.z - pz) * nz;
+        u.pos.x -= nx * inward;
+        u.pos.z -= nz * inward;
+      }
+    }
     // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
     // (after the shallows: a ship stopped by them still gets out of another's way — turning on the spot
     // beside a shoal she would otherwise swing her hull into her neighbour's) — but never shoved onto them:

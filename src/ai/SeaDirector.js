@@ -23,6 +23,8 @@ const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
 const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer']; // (missileSub: 1985 only — the others skip what their year doesn't have)
 const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
+const ORDER_1918 = ['destroyer', 'lightCruiser', 'frigate', 'destroyer', 'cruiser', 'minesweeper', 'ptBoat', 'submarine', 'destroyer', 'minelayer', 'battleship', 'carrier', 'lightCruiser', 'transport', 'destroyer', 'minesweeper', 'cruiser', 'submarine', 'frigate']; // (the North Sea: the sweepers and layers among them)
+const order = () => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : ORDER);
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
@@ -67,8 +69,8 @@ export class SeaDirector {
     const army = this.game.armyOf(this.faction);
     const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(getUnitType(id)));
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
-    for (let tries = 0; tries < (year() < 1900 ? ORDER_1806 : ORDER).length; tries++) {
-      const list = year() < 1900 ? ORDER_1806 : ORDER;
+    for (let tries = 0; tries < order().length; tries++) {
+      const list = order();
       const id = list[this.buyIndex % list.length];
       if (!allowed(id) || capped(id)) { this.buyIndex++; continue; }
       if (this.state.cp[this.faction] >= unitCost(getUnitType(id), army)) {
@@ -183,6 +185,11 @@ export class SeaDirector {
         if (held && d(held) > held.radius * 0.5 && !s.moveTarget) this.move(s, held.x, held.z);
         continue;
       }
+      if (s.stats.sweeper && g.mines) { // a sweeper: to the found enemy mine nearest her, sweeping as she goes (systems/Minefields.js); none found: with the fleet
+        const m = g.mines.mines.filter((q) => q.live && q.f !== this.faction && q.seen[this.faction]).sort((a, b) => d(a) - d(b))[0];
+        if (m) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - m.x, s.moveTarget.z - m.z) > 60) this.move(s, m.x, m.z); continue; }
+      }
+      if (s.stats.minelayer && !s.laying && (s.minesLeft ?? s.stats.minelayer.count) > 0 && d(home) > 1400) g.orders.run(this.faction, { t: 'layMines', s: [s.id], on: 1 }, 'ai'); // (a minelayer: lays once well out, across the way to the objective)
       if (s.stats.smallCraft) { // a PT boat: a torpedo run at the biggest enemy ship within reach (at night from anywhere), else with the fleet
         const prey = this.foes().filter((f) => f.units[0]?.spotted && (VALUE[f.type.id] ?? 0) >= 2 && (night || d(f.centroid) < 1400)).sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0) || d(a.centroid) - d(b.centroid))[0];
         if (prey) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - prey.centroid.x, s.moveTarget.z - prey.centroid.z) > 150) this.move(s, prey.centroid.x, prey.centroid.z); continue; }
@@ -283,7 +290,7 @@ export class SeaDirector {
     const g = this.game;
     const f = this.faction;
     const fleet = this.ships();
-    if (!fleet.some((s) => s.stats.carrier && s.units[0]?.alive)) return;
+    if (year() < 1900 || (year() > 1930 && !fleet.some((s) => s.stats.carrier && s.units[0]?.alive))) return; // (1918: the seaplanes and the Zeppelins from the shore, carrier or none)
     const support = this.state.support?.[f] ?? this.state.cp?.[f] ?? 0;
     const seen = this.foes().filter((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1));
     const best = seen.sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0))[0];

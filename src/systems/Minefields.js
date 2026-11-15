@@ -39,6 +39,17 @@ export class Minefields {
     }
   }
 
+  /** The live enemy mine faction `f` knows of nearest (x, z) within `within` m, and how far: { x, z, d } or null. */
+  nearestKnown(x, z, f, within) {
+    let best = null;
+    for (const m of this.mines) {
+      if (!m.live || m.f === f || !m.seen[f]) continue;
+      const d = Math.hypot(m.x - x, m.z - z);
+      if (d < within && (!best || d < best.d)) best = { x: m.x, z: m.z, d };
+    }
+    return best;
+  }
+
   /** Can faction `f` see mine `m`? (its own, or one it has found) */
   known(m, f) { return m.f === f || !!m.seen[f]; }
 
