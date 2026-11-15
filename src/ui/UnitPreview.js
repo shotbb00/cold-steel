@@ -178,7 +178,15 @@ export class UnitPreview {
   compile() {
     const n = (this.compiling = (this.compiling ?? 0) + 1);
     this.hold = true;
-    this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => { if (this.compiling === n) this.hold = false; });
+    // three's compileAsync, by hand: its poll threw from a timer when the preview was disposed mid-compile (a campaign
+    // battle started from the menu: "reading 'isReady'"); this one stops when it's gone or a newer compile began
+    const mats = this.renderer.compile(this.scene, this.camera);
+    const poll = () => {
+      if (this.disposed || this.compiling !== n) return;
+      for (const m of mats) { const prog = this.renderer.properties.get(m)?.currentProgram; if (prog && !prog.isReady()) { setTimeout(poll, 10); return; } }
+      this.hold = false;
+    };
+    poll();
   }
 
   /**
@@ -305,6 +313,7 @@ export class UnitPreview {
   }
 
   dispose() {
+    this.disposed = true; // (a compile still polling: it stops)
     this.clear();
     this.ro.disconnect();
     this.renderer.setAnimationLoop(null);
