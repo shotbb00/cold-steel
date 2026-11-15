@@ -23,6 +23,7 @@ const AWARE = 12;            // metres seen all round (as in VisibilitySystem)
 const TARGET_H = 1.2;        // the height that has to show over the terrain
 const SHIP_H = 6;           // at sea: a ship's upperworks that have to show over an island
 const FADE = 5;              // per second toward the new picture
+const GROUND_EVERY = 2;      // s at least between refreshes of the ground heights the rays use (craters, trenches)
 const PATCHED = Symbol('fow');
 
 export class FogOfWar {
@@ -43,6 +44,8 @@ export class FogOfWar {
       fowMap: { value: this.texture },
       fowBox: { value: new THREE.Vector4(-this.half, -this.half, 1 / (this.half * 2), 1 / (this.half * 2)) },
       fowAmount: { value: 1 },
+      fowTime: { value: 0 },      // the edge's drift (the shaders)
+      fowJitter: { value: 0 },    // m it wanders: about half a cell
     };
     this.timer = 0;
     this.sweepT = 0;
@@ -62,6 +65,8 @@ export class FogOfWar {
   update(dt, force = false) {
     // at night the dark is already doing much of the job: unseen ground is dimmed less
     this.uniforms.fowAmount.value = this.game.visibility.enabled === false ? 0 : (this.game.conditions?.night ? 0.6 : 1) * (this.game.map.fow ?? 1); // (a sea map: lighter — most of a 5 km sea is out of sight)
+    this.uniforms.fowTime.value += dt;
+    this.uniforms.fowJitter.value = this.cell * 0.45;
     this.timer -= dt;
     if (force) this.compute();
     else if (this.queue.length) this.work();
@@ -124,6 +129,7 @@ export class FogOfWar {
       if (this.queue.length && performance.now() - t0 > budget) return; // (the last one done: the picture goes up now, or the next begin() threw it away)
     }
     this.markLocated();
+    soften(this.next, (this.blurTmp ??= new Float32Array(N * N)));
     const done = this.target;
     this.target = this.next;
     this.next = done;
@@ -152,8 +158,9 @@ export class FogOfWar {
     const { cell, half, next: t } = this;
     const terrain = this.game.terrain;
     const sea = this.game.world.river?.sea ? this.game.world.river.level : -Infinity; // (at sea the ground is the water: the sea floor's hills cast no sight shadows over it)
-    const smoke = this.game.smoke;
-    const smoky = smoke?.clouds?.length > 0;
+    const near = []; // the smoke clouds this view could reach (each step tested against these, not every cloud on the map)
+    for (const c of this.game.smoke?.clouds ?? []) if (Math.hypot(c.x - u.pos.x, c.z - u.pos.z) < (u.stats.sight ?? 100) * 1.6 + c.r) near.push(c);
+    const ground = this.groundTable();
     const st = u.stats;
     const cond = this.game.conditions;
     const flares = this.game.flares;
@@ -210,16 +217,33 @@ export class FogOfWar {
       for (let d = step; d <= far; d += step) {
         const x = u.pos.x + sx * d;
         const z = u.pos.z + sz * d;
-        if (smoky && smoke.inside(x, z)) break;
-        const ground = Math.max(sea, terrain.heightAt(x, z));
+        let hid = false;
+        for (let q = 0; q < near.length; q++) { const c = near[q]; if ((x - c.x) * (x - c.x) + (z - c.z) * (z - c.z) < c.r * c.r) { hid = true; break; } }
+        if (hid) break;
+        const gx = Math.floor((x + half) / cell), gz = Math.floor((z + half) / cell);
+        if (gx < 0 || gz < 0 || gx >= N || gz >= N) break;
+        const groundH = Math.max(sea, ground[gz * N + gx]);
         const reach = d <= range ? range : flares.lit(x, z) ? litRange : 0;
-        if (reach && (ground + TARGET_H - eye) / d >= maxSlope) {
+        if (reach && (groundH + TARGET_H - eye) / d >= maxSlope) {
           if (!mark(x, z, Math.min(1, (reach - d) / 10 + 0.15))) break;
         }
-        const slope = (ground + 0.2 - eye) / d;
+        const slope = (groundH + 0.2 - eye) / d;
         if (slope > maxSlope) maxSlope = slope;
       }
     }
+  }
+
+  /** The ground's height at each cell's centre, for the rays (a lookup, not a terrain sample a step); refreshed when the terrain changes, at most every GROUND_EVERY s. */
+  groundTable() {
+    const g = this.game;
+    if (!this.groundH) { this.groundH = new Float32Array(N * N); this.groundStale = true; g.bus?.on('terrain:changed', () => { this.groundStale = true; }); }
+    if (this.groundStale && g.time - (this.groundT ?? -1e9) >= GROUND_EVERY) {
+      const { cell, half } = this, T = g.terrain;
+      for (let k = 0; k < N * N; k++) this.groundH[k] = T.heightAt((k % N + 0.5) * cell - half, (Math.floor(k / N) + 0.5) * cell - half);
+      this.groundStale = false;
+      this.groundT = g.time;
+    }
+    return this.groundH;
   }
 
   // ---------------------------------------------------------------- shading
@@ -276,19 +300,39 @@ export class FogOfWar {
           fw = modelMatrix * fw;
           vFowXZ = fw.xz;
         }`);
-      shader.fragmentShader = `uniform sampler2D fowMap;\nuniform vec4 fowBox;\nuniform float fowAmount;\nvarying vec2 vFowXZ;\n${shader.fragmentShader}`
+      shader.fragmentShader = `uniform sampler2D fowMap;\nuniform vec4 fowBox;\nuniform float fowAmount, fowTime, fowJitter;\nvarying vec2 vFowXZ;\n${shader.fragmentShader}`
         .replace('#include <fog_fragment>', `{
-          vec2 fuv = ( vFowXZ - fowBox.xy ) * fowBox.zw;
+          vec2 fwp = vFowXZ;   // the edge drifts: the grid read a little off, moving slowly (as render/babylon/plugins.js FowPlugin)
+          vec2 fj = vec2( sin( fwp.y * 0.071 + fowTime * 0.37 ) + sin( fwp.x * 0.113 - fowTime * 0.29 ), sin( fwp.x * 0.063 + fowTime * 0.33 ) + sin( fwp.y * 0.127 + fowTime * 0.23 ) ) * fowJitter;
+          vec2 fuv = ( fwp + fj - fowBox.xy ) * fowBox.zw;
           float fv = ( fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0 ) ? 0.0 : texture2D( fowMap, fuv ).r;
           float k = mix( 1.0, fv, fowAmount );
+          float fedge = clamp( 4.0 * k * ( 1.0 - k ), 0.0, 1.0 ) * fowAmount;
+          float fbreath = 0.55 + 0.45 * sin( fwp.x * 0.05 + fwp.y * 0.043 + fowTime * 0.6 ) * sin( fwp.y * 0.031 - fowTime * 0.41 );
           vec3 c = gl_FragColor.rgb;
           float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
           c = mix( vec3( l ) * vec3( 0.88, 0.94, 1.08 ), c, 0.12 + 0.88 * k ); // unseen: grey, a little cold
-          gl_FragColor.rgb = c * ( 0.3 + 0.7 * k );                            // … and dark
+          c *= ( 0.3 + 0.7 * k );                                              // … and dark
+          gl_FragColor.rgb = mix( c, vec3( 0.62, 0.65, 0.68 ) * ( 0.35 + 0.65 * l + 0.25 ), fedge * fbreath * 0.16 ); // the edge's haze
         }
         #include <fog_fragment>`);
     };
     m.customProgramCacheKey = () => `${key}|fow`;
     m.needsUpdate = true;
+  }
+}
+
+/**
+ * One pass of a 1-2-1 blur across and down the grid (in place, `tmp` its scratch): the cells' staircase gone from the
+ * edge of what's seen — a soft border two cells wide. Inside and well outside nothing changes. (~0.1 ms, every 0.2 s.)
+ */
+function soften(a, tmp) {
+  for (let j = 0; j < N; j++) {
+    const r = j * N;
+    for (let i = 0; i < N; i++) tmp[r + i] = (a[r + Math.max(0, i - 1)] + 2 * a[r + i] + a[r + Math.min(N - 1, i + 1)]) * 0.25;
+  }
+  for (let j = 0; j < N; j++) {
+    const up = Math.max(0, j - 1) * N, dn = Math.min(N - 1, j + 1) * N, r = j * N;
+    for (let i = 0; i < N; i++) a[r + i] = (tmp[up + i] + 2 * tmp[r + i] + tmp[dn + i]) * 0.25;
   }
 }

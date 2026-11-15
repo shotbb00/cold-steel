@@ -41,8 +41,8 @@ export class FowPlugin extends GlslPlugin {
 
   getUniforms() {
     return {
-      ubo: [{ name: 'fowBox', size: 4, type: 'vec4' }, { name: 'fowAmount', size: 1, type: 'float' }],
-      fragment: '#ifdef FOW\nuniform vec4 fowBox;\nuniform float fowAmount;\n#endif\n',
+      ubo: [{ name: 'fowBox', size: 4, type: 'vec4' }, { name: 'fowAmount', size: 1, type: 'float' }, { name: 'fowTime', size: 1, type: 'float' }, { name: 'fowJitter', size: 1, type: 'float' }],
+      fragment: '#ifdef FOW\nuniform vec4 fowBox;\nuniform float fowAmount, fowTime, fowJitter;\n#endif\n',
     };
   }
 
@@ -50,6 +50,8 @@ export class FowPlugin extends GlslPlugin {
     const b = this.fow.uniforms.fowBox.value;
     ubo.updateFloat4('fowBox', b.x, b.y, b.z, b.w);
     ubo.updateFloat('fowAmount', this.fow.uniforms.fowAmount.value);
+    ubo.updateFloat('fowTime', this.fow.uniforms.fowTime.value);
+    ubo.updateFloat('fowJitter', this.fow.uniforms.fowJitter.value);
     ubo.setTexture('fowMap', this.fow.babylonTexture);
   }
 
@@ -60,9 +62,14 @@ export class FowPlugin extends GlslPlugin {
       CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR: /* glsl */ `
         #ifdef FOW
         {
-          vec2 fuv = (vPositionW.xz - fowBox.xy) * fowBox.zw;
+          vec2 vFowP = vPositionW.xz;
+          vec2 fwp = vFowP;
+          vec2 fj = vec2(sin(fwp.y * 0.071 + fowTime * 0.37) + sin(fwp.x * 0.113 - fowTime * 0.29), sin(fwp.x * 0.063 + fowTime * 0.33) + sin(fwp.y * 0.127 + fowTime * 0.23)) * fowJitter;
+          vec2 fuv = (fwp + fj - fowBox.xy) * fowBox.zw;
           float fv = (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) ? 0.0 : texture2D(fowMap, fuv).r;
           float k = mix(1.0, fv, fowAmount);
+          float fedge = clamp(4.0 * k * (1.0 - k), 0.0, 1.0) * fowAmount;    // 1 in the middle of the edge, 0 well inside or well out
+          float fbreath = 0.55 + 0.45 * sin(fwp.x * 0.05 + fwp.y * 0.043 + fowTime * 0.6) * sin(fwp.y * 0.031 - fowTime * 0.41);
           vec3 c = finalColor.rgb;
           #ifdef FOG
             vec3 fogPart = vFogColor * (1.0 - fog);
@@ -70,6 +77,7 @@ export class FowPlugin extends GlslPlugin {
           #endif
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
           c = mix(vec3(l) * vec3(0.88, 0.94, 1.08), c, 0.12 + 0.88 * k) * (0.3 + 0.7 * k); // unseen: grey, a little cold, dark
+          c = mix(c, vec3(0.62, 0.65, 0.68) * (0.35 + 0.65 * l + 0.25), fedge * fbreath * 0.16); // the edge's haze
           #ifdef FOG
             c += fogPart;
           #endif

@@ -40,14 +40,14 @@ export class NavGrid {
     this.seedTall = new Float32Array(n).fill(Infinity);
     this.dAll = new Float32Array(n);
     this.dTall = new Float32Array(n);
-    this.dWater = new Float32Array(n);
-    this.dShore = new Float32Array(n); // ships: how far to water too shallow for a hull (SHIP_DEPTH)
+    // water: only on a map that has any (a dry map's would be all "no water" — 2 grids of memory for nothing)
+    this.dWater = world.river ? new Float32Array(n) : null;
+    this.dShore = world.river ? new Float32Array(n) : null; // ships: how far to water too shallow for a hull (SHIP_DEPTH)
     // A* scratch, reused (`stamp` marks what belongs to the current search)
     this.g = new Float32Array(n);
     this.f = new Float32Array(n);
     this.from = new Int32Array(n);
-    this.seen = new Uint32Array(n);
-    this.shut = new Uint32Array(n);
+    this.mark = new Uint32Array(n); // a search's own cells: 2·stamp seen, 2·stamp + 1 closed (one grid, not two)
     this.stamp = 0;
     this.version = 0; // bumped on every change: routes planned before may be wrong
     for (const c of world.cover.colliders) this.seed(c);
@@ -113,6 +113,7 @@ export class NavGrid {
   /** `band` [z0, z1]: only those rows (the tide coming in over a beach: the rest of the map is as it was). */
   water(band = null) {
     const d = this.dWater;
+    if (!d) return; // (a dry map)
     const w = this.world.river?.water;
     const terrain = this.world.terrain;
     const j0 = band ? Math.max(0, Math.floor((band[0] - this.oz) / this.cell)) : 0, j1 = band ? Math.min(this.nz, Math.ceil((band[1] - this.oz) / this.cell) + 1) : this.nz;
@@ -144,7 +145,7 @@ export class NavGrid {
     this.dTall.set(this.seedTall);
     chamfer(this.dAll, this.nx, this.nz, this.cell);
     chamfer(this.dTall, this.nx, this.nz, this.cell);
-    if (this.waterDirty) { chamfer(this.dWater, this.nx, this.nz, this.cell); chamfer(this.dShore, this.nx, this.nz, this.cell); }
+    if (this.waterDirty && this.dWater) { chamfer(this.dWater, this.nx, this.nz, this.cell); chamfer(this.dShore, this.nx, this.nz, this.cell); }
     this.waterDirty = false;
     this.dirty = false;
     this.version++;
@@ -166,7 +167,7 @@ export class NavGrid {
   /** May a body of radius r (men: `foot`) stand in cell k? */
   open(k, foot, r) {
     if (foot === SHIP) return this.dShore[k] >= r;
-    return (foot ? this.dTall : this.dAll)[k] >= r && this.dWater[k] >= WATER_CLEAR;
+    return (foot ? this.dTall : this.dAll)[k] >= r && (!this.dWater || this.dWater[k] >= WATER_CLEAR);
   }
 
   passable(x, z, foot, r) {
@@ -179,7 +180,7 @@ export class NavGrid {
     this.ensure();
     const k = this.index(x, z);
     if (foot === SHIP) return this.dShore[k];
-    return Math.min((foot ? this.dTall : this.dAll)[k], this.dWater[k]);
+    return Math.min((foot ? this.dTall : this.dAll)[k], this.dWater ? this.dWater[k] : Infinity);
   }
 
   /** A straight walk from a to b is open all the way (a's own spot aside). */
@@ -243,20 +244,20 @@ export class NavGrid {
       const dz = Math.abs(Math.floor(k / nx) - gj);
       return (Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz)) * this.cell;
     };
-    const stamp = ++this.stamp;
-    const { g, f, seen, shut } = this;
+    const stamp = ++this.stamp, S = stamp * 2;   // (this search's marks: S seen, S + 1 closed)
+    const { g, f, mark } = this;
     const heap = [start];
     g[start] = 0;
     const wt = foot === SHIP ? SHIP_WEIGHT : WEIGHT; // (a ship: greedier — her shore margin's cost makes plain A* comb a whole harbour on a fine coastal grid)
     f[start] = h(start) * wt;
-    seen[start] = stamp;
+    mark[start] = S;
     this.from[start] = -1;
     let best = start;
     let bestH = h(start);
     for (let n = 0; heap.length && n < max; n++) {
       const k = pop(heap, f);
-      if (shut[k] === stamp) continue;
-      shut[k] = stamp;
+      if (mark[k] === S + 1) continue;
+      mark[k] = S + 1;
       const hk = h(k);
       if (hk < bestH) { bestH = hk; best = k; }
       if (k === goal) break;
@@ -269,13 +270,13 @@ export class NavGrid {
           const nj = j + dj;
           if (ni < 0 || nj < 0 || ni >= nx || nj >= this.nz) continue;
           const m = nj * nx + ni;
-          if (shut[m] === stamp || !this.open(m, foot, r)) continue;
+          if (mark[m] === S + 1 || !this.open(m, foot, r)) continue;
           if (di && dj && (!this.open(j * nx + ni, foot, r) || !this.open(nj * nx + i, foot, r))) continue; // no cutting corners
           let cost = (di && dj ? Math.SQRT2 : 1) * this.cell * (1 + (foot === SHIP ? Math.max(0, r + SHIP_MARGIN - d[m]) * SHIP_COST : Math.max(0, r + 1.5 - d[m]) * WALL_COST));
           if (foot === true && this.dAll[m] < r) cost *= LOW_COST;
           const ng = g[k] + cost;
-          if (seen[m] === stamp && ng >= g[m]) continue;
-          seen[m] = stamp;
+          if (mark[m] === S && ng >= g[m]) continue;
+          mark[m] = S;
           g[m] = ng;
           f[m] = ng + h(m) * wt;
           this.from[m] = k;
