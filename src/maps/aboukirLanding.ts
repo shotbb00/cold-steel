@@ -193,13 +193,15 @@ export default {
     // ---- Aboukir castle on its point: a square of curtain walls, the round tower, barracks inside
     const C = W(-440, shoreZ(-440) - 30);
     // (sandstone boxes: the Props wall is timber and its tower is the 1985 border's)
-    const STONE = 0xc8ae84, g0 = terrain.heightAt(C.x, C.z);
+    const STONE = 0xe2dac6, TOP = 0xcfc6b0, PLINTH = 0x8e826c, g0 = terrain.heightAt(C.x, C.z); // (whitewashed limestone over a weathered plinth: it stands out from the tan rock and sand)
     for (const [dx, dz, yaw] of [[0, -22, 0], [0, 22, 0], [-22, 0, Math.PI / 2], [22, 0, Math.PI / 2]] as [number, number, number][]) {
       for (const k of [-1, 0, 1]) {
         const x = C.x + dx + (yaw ? 0 : k * 14.5), z = C.z + dz + (yaw ? k * 14.5 : 0);
         const foot = Math.min(...[-7, 0, 7].map((m) => terrain.heightAt(x + (yaw ? 0 : m), z + (yaw ? m : 0)))) - 1.5; // (down to the lowest ground under it)
         props.box('stone', x, (foot + g0 + 5.7) / 2, z, 15, g0 + 5.7 - foot, 2.2, yaw, STONE);
-        for (let m = -6; m <= 6; m += 2.4) props.box('stone', x + (yaw ? 0 : m), g0 + 6.1, z + (yaw ? m : 0), 1.1, 0.9, 2.2, yaw, STONE); // merlons
+        props.box('stone', x, (foot + g0 + 1.2) / 2, z, 15.1, g0 + 1.2 - foot, 2.4, yaw, PLINTH);   // the weathered plinth
+        props.box('stone', x, g0 + 5.55, z, 15.1, 0.3, 2.35, yaw, TOP);                               // the string course under the battlements
+        for (let m = -6; m <= 6; m += 2.4) props.box('stone', x + (yaw ? 0 : m), g0 + 6.1, z + (yaw ? m : 0), 1.1, 0.9, 2.2, yaw, TOP); // merlons
         props.cover.addBox({ x, z, yaw, length: 15, thickness: 2.2, height: 5.5 });
       }
     }
@@ -207,11 +209,14 @@ export default {
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       const x = C.x + sx * 22, z = C.z + sz * 22, foot = terrain.heightAt(x, z) - 1.5;
       props.box('stone', x, (foot + g0 + 6.8) / 2, z, 7, g0 + 6.8 - foot, 7, Math.PI / 4, STONE);
+      props.box('stone', x, (foot + g0 + 1.4) / 2, z, 7.2, g0 + 1.4 - foot, 7.2, Math.PI / 4, PLINTH);
     }
     const keep = W(-440, shoreZ(-440) - 12);
     const kf = terrain.heightAt(keep.x, keep.z) - 1.5;
-    props.box('stone', keep.x, (kf + g0 + 12) / 2, keep.z, 9, g0 + 12 - kf, 9, 0, 0xbca27a);
-    props.box('stone', keep.x, g0 + 12.5, keep.z, 10, 1, 10, 0, 0xb09670);
+    props.box('stone', keep.x, (kf + g0 + 12) / 2, keep.z, 9, g0 + 12 - kf, 9, 0, 0xd8cfb8);
+    props.box('stone', keep.x, g0 + 12.5, keep.z, 10, 1, 10, 0, TOP);
+    props.box('plain', keep.x, g0 + 16, keep.z, 0.15, 6, 0.15, 0, 0x4a3a28);                                 // the flagstaff
+    for (const [i, c] of [[-1, 0x1d2a8c], [0, 0xf0f0f0], [1, 0xc02020]] as [number, number][]) props.box('plain', keep.x + 0.8 + i * 0.75, g0 + 18.2, keep.z, 0.75, 1.4, 0.05, 0, c); // the tricolour
     props.cover.addCylinder({ x: keep.x, z: keep.z, radius: 5, height: 12, spots: false });
     props.flatHouse({ x: C.x + 4, z: C.z - 6, yaw: 0, width: 16, depth: 8, storeys: 2, name: 'barracks' });
     props.flatHouse({ x: C.x - 6, z: C.z + 8, yaw: Math.PI / 2, width: 10, depth: 7, name: 'magazine' });

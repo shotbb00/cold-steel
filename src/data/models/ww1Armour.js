@@ -12,7 +12,7 @@
 // Contract: render/RigRenderer.js (ww2Armour.js rig).
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
-import { sideProfile, planProfile, stationHull, runningGear, roadWheelGeometry, meshAdder } from './vehicleCommon.js';
+import { sideProfile, planProfile, stationHull, runningGear, roadWheelGeometry, meshAdder, distanceDriven } from './vehicleCommon.js';
 import { rig, balkenkreuz } from './ww2Armour.js';
 
 const BR = 0x5c5638;     // British tank brown-green
@@ -34,15 +34,15 @@ const once = (key, make) => (cache[key] ??= make());
 const rollers = (x, z0, z1, n, r = 0.2) => ({ wheelR: r, wheels: pair((s) => Array.from({ length: n }, (_, i) => ({ x: s * x, y: r + 0.05, z: z0 + ((z1 - z0) * i) / (n - 1) }))).flat() });
 const roller = (r = 0.2) => roadWheelGeometry(r, 0.3, STEEL);
 
-/** Track links round a side outline [[z, y], …] at x (a rhomboid's or a track frame's edge). */
-function linksRound(outline, x, width) {
+/** Track links round a side outline [[z, y], …] at x (a rhomboid's or a track frame's edge), `phase` (0..1) of a shoe along it. */
+function linksRound(outline, x, width, phase = 0) {
   const parts = [];
   for (let i = 0; i < outline.length; i++) {
     const [z0, y0] = outline[i], [z1, y1] = outline[(i + 1) % outline.length];
     const len = Math.hypot(z1 - z0, y1 - y0), n = Math.max(1, Math.round(len / 0.3)), a = Math.atan2(y1 - y0, z1 - z0);
     const nz = (y1 - y0) / len, ny = -(z1 - z0) / len;    // out of the outline (it runs counter-clockwise, z forward, y up)
     for (let k = 0; k < n; k++) {
-      const t = (k + 0.5) / n, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t;
+      const t = (k + 0.5 + phase) / n, z = z0 + (z1 - z0) * t, y = y0 + (y1 - y0) * t;
       parts.push(P.box(width + 0.14, 0.1, 0.27, { x, y: y + ny * 0.06, z: z + nz * 0.06, rx: -a, color: TRACK, surf: 'metal' }));      // the shoe
       parts.push(P.box(width + 0.14, 0.05, 0.06, { x, y: y + ny * 0.13, z: z + nz * 0.13, rx: -a, color: 0x1e1e1a, surf: 'metal' }));  // its cleat
     }
@@ -50,11 +50,25 @@ function linksRound(outline, x, width) {
   return parts;
 }
 
-/** A track frame either side: the steel plate cut to `outline` and the links round its edge. */
-const frames = (outline, halfWidth, width, color) => pair((s) => [
-  sideProfile(outline, width, { x: s * halfWidth, color, ...C }),
-  ...linksRound(outline, s * halfWidth, width),
-]).flat();
+/** A track frame either side: the steel plate cut to `outline` (its shoes: `running`). */
+const frames = (outline, halfWidth, width, color) => pair((s) => sideProfile(outline, width, { x: s * halfWidth, color, ...C }));
+
+const PITCH = 0.3;   // m: one track shoe
+/**
+ * The tracks seem to run (cheaply): the shoes round both frames in three sets a third of a shoe apart, shown in
+ * turn as the tank drives — the cleats creep backward along the bottom run and forward over the top. Mounted on
+ * the rig's hull, after it is built.
+ */
+function running(r, key, outline, halfWidth, width, mats) {
+  const sets = [0, 1 / 3, 2 / 3].map((ph, i) => meshAdder(r.root.children[0])(once(`${key}:tread${i}`, () => merge(pair((s) => linksRound(outline, s * halfWidth, width, ph)).flat())), mats.body));
+  const animate = r.animate;
+  r.animate = (u, dt, t, ctx) => {
+    animate(u, dt, t, ctx);
+    const k = (3 - (Math.floor(distanceDriven(u) / (PITCH / 3)) % 3)) % 3;   // (driving forward: the phase steps back along the outline)
+    sets.forEach((m, i) => { m.visible = i === k; });
+  };
+  return r;
+}
 
 const cross = (x, y, z, r) => balkenkreuz(x, y, z, r);
 /**
@@ -117,7 +131,7 @@ const rhomboidHull = (key, { color, dark, marks, cab = true, beam = true, supply
  * `cannon`): it swings toward the target its own crew has picked, within the sponson's arc, and back to the front when idle.
  */
 const rhomboid = (key, o) => (mats) => {
-  const r = rhomboidHull(key, o)(mats);
+  const r = running(rhomboidHull(key, o)(mats), 'rhomb', RHOMB, 1.15, 0.55, mats);
   if (o.supply) return r;
   const left = new THREE.Group();
   left.position.set(-1.75, 1.35, 1.45);
@@ -148,7 +162,7 @@ export const buildA7VU = rhomboid('a7vu', { color: DE, dark: DE_DK, beam: false,
 
 const WHIP = [[-3.05, 0.3], [-2.6, 0.0], [1.9, 0.0], [2.9, 0.7], [3.05, 1.25], [2.6, 1.45], [-3.0, 1.45]];
 
-const whippet = (key, { color, dark, marks }) => (mats) => rig(once(key, () => ({
+const whippet = (key, { color, dark, marks }) => (mats) => running(rig(once(key, () => ({
   gear: rollers(1.05, -2.5, 1.7, 7), wheel: roller(),
   hull: grime(merge([
     ...frames(WHIP, 1.05, 0.5, color),
@@ -163,7 +177,7 @@ const whippet = (key, { color, dark, marks }) => (mats) => rig(once(key, () => (
   ]), 1.0, 0.3),
   turret: merge([P.box(0.3, 0.3, 0.12, { color: dark })]),                                         // the front MG's ball mount
   gun: merge([P.cyl(0.03, 0.035, 0.6, { z: 0.3, rx: Math.PI / 2, color: STEEL }, 8)]),
-})), mats, { turretAt: [0.3, 2.0, -0.28], gunAt: [0, 0, 0.05], muzzle: 0.62, arc: 1.2, recoil: 0.05 });
+})), mats, { turretAt: [0.3, 2.0, -0.28], gunAt: [0, 0, 0.05], muzzle: 0.62, arc: 1.2, recoil: 0.05 }), 'whip', WHIP, 1.05, 0.5, mats);
 
 export const buildWhippet = whippet('whippet', { color: BR, dark: BR_DK, marks: pair((s) => stripes(s * 1.31, 0.9, 2.2)).flat() });
 export const buildBeuteWhippet = whippet('beuteWhippet', { color: DE, dark: DE_DK, marks: pair((s) => cross(s * 1.01, 1.6, -1.6, 0.36)).flat() });
@@ -172,7 +186,7 @@ export const buildBeuteWhippet = whippet('beuteWhippet', { color: DE, dark: DE_D
 
 const FT = [[-1.95, 0.55], [-1.7, 0.05], [0.9, 0.05], [1.85, 0.65], [2.05, 1.05], [1.75, 1.3], [-1.3, 1.15], [-1.95, 0.95]];
 
-export const buildRenaultFT = (mats) => rig(once('ft', () => ({
+export const buildRenaultFT = (mats) => running(rig(once('ft', () => ({
   gear: rollers(0.66, -1.5, 0.8, 5, 0.17), wheel: roller(0.17),
   hull: grime(merge([
     ...frames(FT, 0.66, 0.36, FR),
@@ -187,7 +201,7 @@ export const buildRenaultFT = (mats) => rig(once('ft', () => ({
     ...pair((s) => roundel(s * 0.53, 0.42, -0.1, 0.12)).flat(),
   ]), 0.5, 0.0, 0.3),
   gun: merge([P.cyl(0.045, 0.05, 0.62, { z: 0.31, rx: Math.PI / 2, color: STEEL }, 10)]),           // the short Puteaux 37 mm
-})), mats, { turretAt: [0, 1.25, 0.15], gunAt: [0, 0.4, 0.48], muzzle: 0.65, recoil: 0.08 });
+})), mats, { turretAt: [0, 1.25, 0.15], gunAt: [0, 0.4, 0.48], muzzle: 0.65, recoil: 0.08 }), 'ft', FT, 0.66, 0.36, mats);
 
 // ---------------------------------------------------------------- Schneider CA1
 
