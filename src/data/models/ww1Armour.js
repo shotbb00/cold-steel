@@ -10,8 +10,9 @@
 //   armoured cars   Rolls-Royce (the turret, the long bonnet), Peugeot (the 37 mm behind its shield,
 //                   open), Ehrhardt (the big box with its turret)
 // Contract: render/RigRenderer.js (ww2Armour.js rig).
+import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
-import { sideProfile, planProfile, stationHull, runningGear, roadWheelGeometry } from './vehicleCommon.js';
+import { sideProfile, planProfile, stationHull, runningGear, roadWheelGeometry, meshAdder } from './vehicleCommon.js';
 import { rig, balkenkreuz } from './ww2Armour.js';
 
 const BR = 0x5c5638;     // British tank brown-green
@@ -79,7 +80,7 @@ const roundel = (x, y, z, r) => [P.cyl(r, r, 0.02, { x, y, z, rz: Math.PI / 2, c
 
 const RHOMB = [[-4.0, 1.25], [-3.55, 0.25], [-2.8, 0.0], [2.0, 0.0], [3.3, 0.55], [4.0, 1.55], [3.75, 2.35], [3.0, 2.55], [-3.3, 2.55], [-3.95, 2.0]];
 
-const rhomboid = (key, { color, dark, marks, cab = true, beam = true, supply = false }) => (mats) => rig(once(key, () => ({
+const rhomboidHull = (key, { color, dark, marks, cab = true, beam = true, supply = false }) => (mats) => rig(once(key, () => ({
   gear: rollers(1.15, -2.6, 1.8, 7), wheel: roller(),
   hull: grime(merge([
     ...frames(RHOMB, 1.15, 0.55, color),
@@ -104,7 +105,6 @@ const rhomboid = (key, { color, dark, marks, cab = true, beam = true, supply = f
       ...rivets(sd * 2.13, 1.8, 0.1, 0.9, dark, 0.2), ...rivets(sd * 2.13, 0.8, 0.1, 0.9, dark, 0.2),
       ...door(sd * 2.13, 1.2, 0.5, 0.5, 0.75, dark),
     ]).flat()),
-    ...(supply ? [] : [P.cyl(0.05, 0.06, 1.4, { x: -2.05, y: 1.35, z: 1.9, rx: Math.PI / 2, color: STEEL }, 10)]), // the left sponson's 6-pdr (fixed here)
     ...pair((s) => [-1.8, -0.6].map((z) => P.cyl(0.07, 0.07, 0.06, { x: s * 1.43, y: 2.0, z, rz: Math.PI / 2, color: 0x111111 }, 8))).flat(), // pistol ports
     ...marks,
   ]), 1.2, 0.3),
@@ -112,6 +112,33 @@ const rhomboid = (key, { color, dark, marks, cab = true, beam = true, supply = f
   gun: merge([supply ? P.box(0.04, 0.04, 0.04, { color: dark }) : P.cyl(0.05, 0.06, 1.4, { z: 0.7, rx: Math.PI / 2, color: STEEL }, 10)]),
 })), mats, { turretAt: [1.75, 1.35, 1.45], gunAt: [0.18, 0, 0.1], muzzle: 1.45, arc: 1.4, recoil: 0.15 });
 
+/**
+ * The rhomboid with its left sponson gun turning too (a second gun: data/units1918 LEFT_6PDR, UnitStack.updateSideGuns
+ * `cannon`): it swings toward the target its own crew has picked, within the sponson's arc, and back to the front when idle.
+ */
+const rhomboid = (key, o) => (mats) => {
+  const r = rhomboidHull(key, o)(mats);
+  if (o.supply) return r;
+  const left = new THREE.Group();
+  left.position.set(-1.75, 1.35, 1.45);
+  meshAdder(left)(once(`${key}:left`, () => merge([P.box(0.42, 0.55, 0.3, { x: -0.18, color: o.dark, ...C }), P.cyl(0.05, 0.06, 1.4, { x: -0.18, z: 0.8, rx: Math.PI / 2, color: STEEL }, 10)])), mats.body);
+  r.root.children[0].add(left);
+  const animate = r.animate;
+  r.animate = (u, dt, t, ctx) => {
+    animate(u, dt, t, ctx);
+    const guns = u.stats?.sideGuns;
+    const i = guns ? guns.findIndex((m) => m.cannon) : -1;
+    const foe = i >= 0 ? u.side?.[i]?.foe : null;
+    let want = 0;
+    if (foe?.alive) {
+      const b = Math.atan2(foe.pos.x - u.pos.x, foe.pos.z - u.pos.z) - u.yaw;
+      const m = guns[i];
+      want = Math.max(m.at - m.arc, Math.min(m.at + m.arc, Math.atan2(Math.sin(b), Math.cos(b))));
+    }
+    left.rotation.y += (want - left.rotation.y) * Math.min(1, dt * 1.5);
+  };
+  return r;
+};
 export const buildSupplyTank = rhomboid('supplyTank', { color: BR, dark: BR_DK, beam: false, supply: true, marks: [] });
 export const buildMarkV = rhomboid('markV', { color: BR, dark: BR_DK, marks: pair((s) => stripes(s * 1.44, 1.9, 3.1)).flat() });
 export const buildBeuteMarkIV = rhomboid('beuteIV', { color: DE, dark: DE_DK, cab: false, marks: [...pair((s) => cross(s * 2.17, 1.3, 0.5, 0.32)).flat(), ...pair((s) => cross(s * 1.44, 1.9, -2.2, 0.38)).flat()] });
