@@ -8,7 +8,7 @@
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
 import { SHIP_SPEEDS } from '../entities/UnitStack.js';
-import { POWERS_1806 } from './Powers1806.js';
+import { POWERS_1806, ownPowers, powerOnKey } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
@@ -191,6 +191,7 @@ export class CommandSystem {
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
     else if (keys.is(code, 'mines')) this.runCommand('build:mines');
+    else if (ownPowers(this.game) && ['barrage', 'jet', 'lift'].some((k) => keys.is(code, k))) { const p = powerOnKey(this.game, this.faction, ['barrage', 'jet', 'lift'].find((k) => keys.is(code, k))); if (p) this.runCommand(`power:${p}`); } // (Zeebrugge's own, by side)
     else if (year() < 1900 && (keys.is(code, 'barrage') || keys.is(code, 'jet') || keys.is(code, 'lift'))) this.runCommand(`power:${keys.is(code, 'barrage') ? 'battery' : keys.is(code, 'jet') ? 'reserve' : 'guard'}`); // (1806's support powers)
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');

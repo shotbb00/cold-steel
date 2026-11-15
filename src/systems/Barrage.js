@@ -51,6 +51,7 @@ export class Barrage {
     const g = this.game;
     const tot = doctrine(g, faction, 'tot');
     if (tot) return this.timeOnTarget(faction, x, z, tot);
+    if (g.map.landing?.blockships) return false; // (Zeebrugge: its own three powers — the monitors use the shells directly)
     const m = doctrine(g, faction, 'mass') ?? creepFor(g, faction);
     if (!m) return false;
     if (g.air.limit[faction] === 0) return g.tell(faction, 'No support in this battle') ?? false;
@@ -128,7 +129,7 @@ export class Barrage {
       const b = this.active[i];
       if (g.time > b.end) { this.active.splice(i, 1); continue; }
       if (g.time < b.start) continue;
-      for (b.acc += dt * (b.creep ? CREEP_RATE : RATE); b.acc >= 1; b.acc--) this.shell(b);
+      for (b.acc += dt * (b.rate ?? (b.creep ? CREEP_RATE : RATE)); b.acc >= 1; b.acc--) this.shell(b); // (b.rate, b.shell: a caller's own — Zeebrugge's monitors)
     }
   }
 
@@ -145,11 +146,11 @@ export class Barrage {
       x = b.x + Math.cos(a) * r;
       z = b.z + Math.sin(a) * r;
     }
-    const y = this.game.terrain.heightAt(x, z);
+    const y = this.game.terrain.heightAt(x, z), S = b.shell ? { ...SHELL, ...b.shell } : SHELL;
     this.game.projectiles.spawn({
-      origin: _o.set(x, y + SHELL.height, z), dir: DOWN, speed: SHELL.speed, damage: SHELL.damage, faction: b.faction,
-      color: COLOR, size: 1.5, life: SHELL.height / SHELL.speed + 1, splash: SHELL.splash, pierce: 0.3, vsArmor: 0.8, suppress: 3,
-      target: _t.set(x, y, z), whistleAt: Math.max(0.2, SHELL.height / SHELL.speed - 1.1), crater: SHELL.crater, tracer: false,
+      origin: _o.set(x, y + S.height, z), dir: DOWN, speed: S.speed, damage: S.damage, faction: b.faction,
+      color: COLOR, size: b.shell ? 2.4 : 1.5, life: S.height / S.speed + 1, splash: S.splash, pierce: 0.3, vsArmor: 0.8, suppress: 3,
+      target: _t.set(x, y, z), whistleAt: Math.max(0.2, S.height / S.speed - 1.1), crater: S.crater, tracer: false,
     });
   }
 }

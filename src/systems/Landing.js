@@ -385,6 +385,7 @@ export class Landing {
     const sig = g.map.landing?.signal; // (the dawn signal: the first boats lie in line where they were put in the water until the signal gun)
     if (sig && g.time < sig.t) { r.go = r.way; r.way = { ...start }; }
     craft.run = r;
+    if (craft.stats.smokeGen) craft.smokeUntil = g.world.time + (craft.stats.smokeGen.last ?? 50); // (a motor launch makes smoke as she runs in)
     this.runs.push(r);
     return craft;
   }

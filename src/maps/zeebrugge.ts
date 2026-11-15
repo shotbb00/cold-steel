@@ -150,7 +150,9 @@ export default {
   sides: { nato: 'Britain', pact: 'Germany' },
   armies: { nato: ['uk'], pact: ['de'] },
   conditions: { time: 'night', weather: 'clear' },
-  wind: { from: 30, speed: 4, veer: 0.1 }, // (a light north-easterly off the sea at first: the smoke blows in over the Mole — step 5 shifts it)
+  // a light north-easterly off the sea at first — the smoke blows in over the Mole and hides the ships; then, as on the night,
+  // the wind swings round to the south-west and blows the smoke back out to sea, leaving the ships in the searchlights
+  wind: { from: 210, speed: 4, veer: 0.1, shift: { t: 240, from: 30, over: 60, /* (the game's compass: north is -z — here the land; the sea, +z, is its south) */ say: 'The wind has backed to the south-west — the smoke is blowing back out to sea!' } },
   size: SIZE,
   segments: 900,
   bounds: BOUNDS,
@@ -218,7 +220,7 @@ export default {
     // the guns: the battery on the Mole's head over the harbour mouth, the heavy coastal batteries behind the dunes; the torpedo boats lying in the harbour
     forts: [
       { unit: 'moleBattery', x: -205, z: 457, facing: 0 },
-      { unit: 'coastBattery', x: -440, z: -100, facing: 0 }, { unit: 'coastBattery', x: 715, z: -230, facing: 0 },
+      { unit: 'coastBattery', x: -440, z: -72, facing: 0 }, { unit: 'coastBattery', x: 720, z: -72, facing: 0 }, // (up on the dunes' crest: from behind them they'd see nothing of the sea)
       { unit: 'destroyer', x: 324, z: 391, facing: -1.33 }, { unit: 'destroyer', x: 68, z: 430, facing: -1.51 }, // (moored alongside the Mole's inner quay, as S 53 and V 69 lay that night)
     ],
     works: [...barrier(3, 0.75), ...barrier(2, 0.45), ...barrier(0, 0.6)],

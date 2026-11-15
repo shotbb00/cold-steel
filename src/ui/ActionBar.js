@@ -5,7 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { POWERS_1806, powerHere } from '../systems/Powers1806.js';
+import { POWERS_1806, powerHere, ownPowers } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
@@ -158,9 +158,9 @@ export class ActionBar {
     const me = g.playerFaction;
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
-      if (cmd.startsWith('power:') || year() < 1900) { // 1806: its own three powers, nothing else
+      if (cmd.startsWith('power:') || year() < 1900 || ownPowers(g)) { // 1806: its own three powers, nothing else (Zeebrugge too)
         const k = cmd.startsWith('power:') ? cmd.slice(6) : null;
-        b.hidden = off || !k || year() >= 1900 || !powerHere(k, g); // (at sea the sea's three, ashore the land's)
+        b.hidden = off || !k || !powerHere(k, g, me); // (at sea the sea's three, ashore the land's; Zeebrugge's by side)
         if (b.hidden) continue;
         const P = POWERS_1806[k], left = g.powers.cooldownLeft(me, k);
         const text = left === Infinity ? 'used' : left > 0 ? `${Math.ceil(left)} s` : String(P.cost);
