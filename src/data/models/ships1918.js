@@ -286,6 +286,39 @@ export const buildMBoot = ship(() => warship(KM, {
   gallows: -27,
 }));
 
+// ---------------------------------------------------------------- the carrier
+
+/**
+ * HMS Furious as in 1918: 240 m, her big guns gone for a flying-off deck over a hangar forward and a landing-on
+ * deck over another aft, the funnel, bridge and mast left standing between them with gangways down either side.
+ */
+export const buildFurious = ship(() => {
+  const fb = 7, len = 240;
+  const w = warship(RN, {
+    len, beam: 27, fb, draft: 7.3, sheer: 2,
+    guns: [{ x: 11, z: 18, arc: 3, len: 5, cal: 0.11 }, { x: -11, z: 18, arc: 3, len: 5, cal: 0.11 }, { x: 11, z: -12, aft: true, arc: 3, len: 5, cal: 0.11 }, { x: -11, z: -12, aft: true, arc: 3, len: 5, cal: 0.11 }],
+    bridge: { z: 16, w: 10, d: 7, h: 7 },
+    funnels: [[0, 3.6, 13]],
+    fore: { z: 8, h: 26, tripod: true, topR: 2, y: 2 },
+    boats: [[10, -2, 9, 1], [-10, -2, 9, -1]],
+  });
+  const DECK = 0x6e6a5e, hy = fb + 8;
+  const fixed = merge([
+    w.fixed,
+    box(17, 8, 70, { y: fb + 4, z: 64, color: RN.upper }),                                        // the forward hangar
+    box(21, 0.6, 84, { y: hy, z: 66, color: DECK, surf: 'flight' }),                                 // the flying-off deck, sloping to the bow
+    P.box(1.2, 0.05, 80, { y: hy + 0.32, z: 66, color: 0xd8d6cc }),
+    box(19, 9, 80, { y: fb + 4.5, z: -70, color: RN.upper }),                                       // the after hangar
+    box(23, 0.6, 92, { y: hy + 1, z: -70, color: DECK, surf: 'flight' }),                            // the landing-on deck
+    P.box(1.2, 0.05, 88, { y: hy + 1.32, z: -70, color: 0xd8d6cc }),
+    ...[-1, 1].map((s) => box(2.6, 0.4, 56, { x: s * 11.5, y: hy + 0.5, z: -2, color: DECK })),      // the gangways either side of the funnel
+    ...every(-28, 24, 8).flatMap((z) => [-1, 1].map((s) => P.box(0.2, hy - fb, 0.2, { x: s * 11.5, y: fb + (hy - fb) / 2, z, color: RN.upper, surf: 'metal' }))),
+    P.box(20, 6, 0.3, { y: hy + 4, z: -24, color: 0x3a3c3a, surf: 'cloth' }),                        // the crash barrier of ropes at the landing deck's fore end
+    ...every(-112, -30, 8).map((z) => P.box(22, 0.08, 0.15, { y: hy + 1.34, z, color: 0x2a2a28, surf: 'metal' })), // the arrester wires (fore and aft ones, 1918)
+  ]);
+  return { fixed, mounts: w.mounts, torps: [] };
+});
+
 // ---------------------------------------------------------------- submarines
 
 /** A First War submarine: the casing over the hull, a small conning tower, the deck gun forward, the jumping wires from bow to stern over the tower. */

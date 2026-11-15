@@ -124,7 +124,8 @@ export class ActionBar {
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
       if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
       if (cmd === 'air:lift' && epoch() === '1945') [label, tip] = ['Paradrop', 'A transport flies over the spot and drops a stick of paratroopers']
-      if (epoch() === '1918') [label, tip] = { 'air:jet': ['Ground attack', 'Biplanes low over the line: machine guns and small bombs'], 'air:cap': ['Fighters', 'A flight of fighters circles the spot and dives on enemy aircraft'], 'air:recon': ['Spotter', 'A two-seater flies along the line: every enemy it sees shows on your map'] }[cmd] ?? [label, tip];
+      if (epoch() === '1918') [label, tip] = { 'air:jet': ['Ground attack', 'Biplanes low over the line: machine guns and small bombs'], 'air:cap': ['Fighters', 'A flight of fighters circles the spot and dives on enemy aircraft'], 'air:recon': ['Spotter', 'A two-seater flies along the line: every enemy it sees shows on your map'], 'air:navCap': ['Fighter cover', 'Fighters (off HMS Furious, or from the shore stations) circle the spot and go for enemy aircraft and Zeppelins'], 'air:torpBomb': ['Torpedo seaplanes', 'Low over the water: a torpedo into the ship nearest the spot, dropped close in'], 'air:navScout': ['Air scouting', 'A Zeppelin or a flying boat on a long slow leg: every ship it sees shows on your map'], 'air:asw': ['Sub hunt', 'A flying boat searches along a line: submarines it finds show on your map, and it bombs one'] }[cmd] ?? [label, tip];
+      if (epoch() === '1918' && cmd === 'air:asw') key = 'jet'; // (no dive bombers in 1918: the sub hunt on their key)
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;

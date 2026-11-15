@@ -5,6 +5,11 @@
 //   span, len the size; `seats` 2: the observer's cockpit behind the pilot with its Lewis on a ring
 //   rotary    a round cowl (Camel, Dr.I) — else an inline engine's flat nose and radiator
 //   bombs     small bombs under the lower wing (the ground-attack and day bombers)
+//   floats    two pontoons on struts instead of wheels (the seaplanes); `boat`: a flying boat's planing hull
+//             under the wings, wing-tip floats, `engines` 2 in nacelles between the wings; `torpedo` slung under
+//             the fuselage; `scale` the whole machine (the big flying boats)
+// And the Zeppelin (`zeppelin`): the naval airship, a long cigar of doped cotton over a ring-girder frame,
+// cruciform fins aft, the control car forward and the engine cars under it.
 // Markings in fixed colours: the RFC/RAF roundel, the French cocarde, the 1918 Balkenkreuz.
 import * as THREE from 'three';
 import { P, merge, pair, loft } from '../units/geometry.js';
@@ -49,7 +54,7 @@ const cache = {};
  * seats (1 | 2), rotary, bombs, armour (the Junkers J.I: corrugated metal, square).
  */
 export const plane = (key, o) => (mats) => {
-  const { color, kind, span = 4.2, len = 5.8, wings = 2, seats = 1, rotary = false, bombs = 0, armour = false } = o;
+  const { color, kind, span = 4.2, len = 5.8, wings = 2, seats = 1, rotary = false, bombs = 0, armour = false, floats = false, boat = false, engines = 1, torpedo = false, scale = 1 } = o;
   const m = (cache[key] ??= {
     body: M([
       // the fuselage: slab-sided (fabric over a box girder), deep at the cockpit, tapering to the tail
@@ -76,11 +81,24 @@ export const plane = (key, o) => (mats) => {
       // the tail: the tailplane, the fin and rudder
       ...pair((s) => surface([[s * 0.05, 1.76, -len * 0.47, 0.75, 0.05], [s * 1.45, 1.76, -len * 0.5, 0.5, 0.03]], { color, ...C })),
       fin([[1.76, -len * 0.48, 0.9, 0.05], [2.45, -len * 0.53, 0.6, 0.04], [2.6, -len * 0.55, 0.35, 0.03]], { color: kind === 'fr' ? WHITE : color, ...C }),
-      // the undercarriage: two wheels on a V of struts, the tail skid
-      ...pair((s) => [P.cyl(0.36, 0.36, 0.1, { x: s * 0.72, y: 0.36, z: len * 0.3, rz: Math.PI / 2, color: 0x2a2a26 }, 14),
-        P.box(0.04, 1.0, 0.04, { x: s * 0.45, y: 0.85, z: len * 0.34, rz: s * -0.35, rx: 0.2, color: STEEL }), P.box(0.04, 1.0, 0.04, { x: s * 0.45, y: 0.85, z: len * 0.2, rz: s * -0.35, rx: -0.3, color: STEEL })]),
-      P.cyl(0.03, 0.03, 1.5, { y: 0.36, z: len * 0.3, rz: Math.PI / 2, color: STEEL }, 6),
-      P.box(0.04, 0.5, 0.04, { y: 1.45, z: -len * 0.47, rx: 0.5, color: STEEL }),
+      // the undercarriage: two wheels on a V of struts, the tail skid — or a seaplane's floats, or a flying boat's hull
+      ...(floats ? [
+        ...pair((s) => body([[len * 0.42, 0.25, 0.04, 0.05, 2], [len * 0.32, 0.2, 0.26, 0.2, 2.4], [0, 0.18, 0.3, 0.24, 2.6], [-len * 0.22, 0.25, 0.24, 0.18, 2.4], [-len * 0.3, 0.32, 0.06, 0.06, 2]], { x: s * 0.95, color: 0x8a8a7c })),
+        ...pair((s) => [len * 0.25, -len * 0.08].map((z) => P.box(0.04, 1.15, 0.04, { x: s * 0.72, y: 0.95, z, rz: s * 0.3, color: STEEL }))),
+      ] : boat ? [
+        body([[len * 0.5, 0.95, 0.15, 0.2, 2], [len * 0.38, 0.75, 0.7, 0.62, 2.2], [len * 0.05, 0.75, 0.8, 0.7, 2.4], [-len * 0.1, 0.85, 0.7, 0.6, 2.4], [-len * 0.3, 1.25, 0.35, 0.3, 2.4], [-len * 0.5, 1.6, 0.1, 0.1, 2]], { color: 0x8a7a5a }), // the hull: varnished planking, a planing bottom
+        ...pair((s) => body([[len * 0.1 + 0.5, 0.95, 0.06, 0.08, 2], [len * 0.1, 0.95, 0.16, 0.14, 2.4], [len * 0.1 - 0.5, 1.0, 0.06, 0.08, 2]], { x: s * span * 0.85, color })),           // the wing-tip floats
+      ] : [
+        ...pair((s) => [P.cyl(0.36, 0.36, 0.1, { x: s * 0.72, y: 0.36, z: len * 0.3, rz: Math.PI / 2, color: 0x2a2a26 }, 14),
+          P.box(0.04, 1.0, 0.04, { x: s * 0.45, y: 0.85, z: len * 0.34, rz: s * -0.35, rx: 0.2, color: STEEL }), P.box(0.04, 1.0, 0.04, { x: s * 0.45, y: 0.85, z: len * 0.2, rz: s * -0.35, rx: -0.3, color: STEEL })]),
+        P.cyl(0.03, 0.03, 1.5, { y: 0.36, z: len * 0.3, rz: Math.PI / 2, color: STEEL }, 6),
+        P.box(0.04, 0.5, 0.04, { y: 1.45, z: -len * 0.47, rx: 0.5, color: STEEL }),
+      ]),
+      ...(engines === 2 ? pair((s) => [   // the twin engines in nacelles between the wings, their propellers still
+        body([[len * 0.12 + 1.0, 2.0, 0.08, 0.1, 2], [len * 0.12 + 0.7, 2.0, 0.3, 0.34, 2.4], [len * 0.12 - 0.9, 2.0, 0.25, 0.3, 2.4], [len * 0.12 - 1.4, 2.0, 0.06, 0.06, 2]], { x: s * span * 0.32, color: DARK }),
+        P.box(0.08, 2.4, 0.12, { x: s * span * 0.32, y: 2.0, z: len * 0.12 + 1.05, color: WOOD }),
+      ]) : []),
+      ...(torpedo ? [P.capsule(0.22, 3.6, { y: floats ? 0.75 : 0.95, z: len * 0.05, rx: Math.PI / 2, color: 0x4a4c48 })] : []), // the torpedo slung under the fuselage
       ...(armour ? pair((s) => [0.6, 1.0].map((y) => P.box(0.02, 0.04, len * 0.6, { x: s * 0.45, y: 1.3 + y * 0.5, z: len * 0.05, color: STEEL }))) : []), // the corrugations
       ...(bombs ? pair((s) => Array.from({ length: bombs }, (_, i) => P.capsule(0.1, 0.45, { x: s * (0.9 + i * 0.45), y: 1.05, z: len * 0.1, rx: Math.PI / 2, color: DARK }))) : []),
       // the markings: on the upper wing's tips, the fuselage sides, (the French) the rudder
@@ -90,10 +108,52 @@ export const plane = (key, o) => (mats) => {
     prop: propeller(1.3),
   });
   const root = new THREE.Group();
+  const g = new THREE.Group();
+  g.scale.setScalar(scale);
+  root.add(g);
+  meshAdder(g)(m.body, mats.body);
+  const p = new THREE.Group();
+  p.position.set(0, engines === 2 ? 2.0 : 1.62, len * 0.45 + 0.3);
+  if (engines === 2) p.visible = false; // (the twins' props are on their nacelles)
+  g.add(p);
+  meshAdder(p)(m.prop, mats.body);
+  return { root, gun: point(g, 0, 2.2, len * 0.5), pods: pair((s) => point(g, s * 1.1, 1.0, len * 0.1)), prop: p };
+};
+
+/** The naval Zeppelin: `len` m of hull (the rig at true size), `color` the cotton (the late ships black underneath for the night raids). */
+export const zeppelin = (key, { len = 160, r = 11, color = 0x9a968a, belly = 0x2a2a28 } = {}) => (mats) => {
+  const m = (cache[key] ??= (() => {
+    const N = 20, secs = [], low = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, z = -len / 2 + t * len;
+      const k = t < 0.25 ? Math.sin((t / 0.25) * Math.PI / 2) ** 0.7 : t > 0.82 ? Math.max(0.04, Math.max(0, Math.cos(((t - 0.82) / 0.18) * Math.PI / 2)) ** 0.6) : 1;
+      const rr = Math.max(0.3, r * k);
+      secs.push([0, r + 6, z, rr, rr, 2]);
+      low.push([0, r + 6 - rr * 0.55, z, rr * 0.86, rr * 0.5, 2]);
+    }
+    const y = r + 6;
+    return {
+      body: M([
+        loft(secs, { color, surf: 'paint' }, 20),
+        loft(low, { color: belly, surf: 'paint' }, 16),                                                              // the dark underside
+        ...[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((a) => fin([[0, -len * 0.36, r * 0.3, 0.3], [r * 0.95, -len * 0.42, r * 0.5, 0.2], [r * 1.25, -len * 0.47, r * 0.35, 0.15]], { color }).rotateZ(a).translate(0, y, 0)), // the cruciform fins
+        P.box(2.4, 2.4, 14, { y: y - r - 2.4, z: len * 0.3, color: DARK }), P.box(2.5, 0.8, 4, { y: y - r - 2.2, z: len * 0.3 + 6, color: 0x2a3a44 }), // the control car, its windows
+        P.box(0.3, 2.2, 0.3, { y: y - r - 1.0, z: len * 0.3 - 4, color: STEEL }), P.box(0.3, 2.2, 0.3, { y: y - r - 1.0, z: len * 0.3 + 4, color: STEEL }),
+        ...[[0, len * 0.05], [-4.5, -len * 0.12], [4.5, -len * 0.12], [0, -len * 0.28]].flatMap(([x, z]) => [   // the engine cars on their struts
+          body([[z + 3, y - r - 2.4, 0.3, 0.3, 2], [z + 1.5, y - r - 2.4, 1.1, 1.1, 2.2], [z - 2.5, y - r - 2.4, 1.0, 1.0, 2.2], [z - 3.5, y - r - 2.4, 0.3, 0.3, 2]], { x, color: DARK }),
+          P.box(0.25, 2, 0.25, { x, y: y - r - 0.8, z, color: STEEL }),
+        ]),
+        ...pair((s) => mark('de', s * r * 0.97, y + r * 0.2, -len * 0.2, 5)),   // (on the full-width hull, clear of the taper aft)
+      ]),
+      prop: propeller(2.2),
+    };
+  })());
+  const root = new THREE.Group();
   meshAdder(root)(m.body, mats.body);
   const p = new THREE.Group();
-  p.position.set(0, 1.62, len * 0.45 + 0.3);
+  p.position.set(0, r + 6 - r - 2.4, -len * 0.28 - 3.8);
+  p.rotation.y = Math.PI; // (the after car's pusher)
   root.add(p);
   meshAdder(p)(m.prop, mats.body);
-  return { root, gun: point(root, 0, 2.2, len * 0.5), pods: pair((s) => point(root, s * 1.1, 1.0, len * 0.1)), prop: p };
+  return { root, gun: point(root, 0, r * 2 + 6, len * 0.2), pods: [point(root, 0, -1, len * 0.3), point(root, 0, -1, len * 0.3)], prop: p };
 };

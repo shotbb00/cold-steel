@@ -5,7 +5,13 @@
 //   jet    – ground attack: down low along a line, machine guns and a few small bombs
 //   cap    – fighter patrol: circles the spot, dives on enemy aircraft with its guns
 //   recon  – the spotter: one run along the line, what it sees shows on the map
-import { plane } from './models/ww1Aircraft.js';
+// At sea (the North Sea maps: KINDS' sea missions, from the shore stations unless HMS Furious has them aboard —
+// data/epoch.js makes every 1918 sea mission's deck optional):
+//   navCap   – fighter cover: the Ship's Camel / the Brandenburg seaplane fighter, circling the spot
+//   torpBomb – the torpedo seaplanes: low over the water, a torpedo into the ship nearest the spot
+//   navScout – air scouting: the Zeppelin (a long slow leg, seeing far) / the Felixstowe flying boat
+//   asw      – the sub hunt: a flying boat or patrol seaplane along a line, bombs on the boat it finds
+import { plane, zeppelin } from './models/ww1Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const VICKERS = { rate: 14, damage: 70, splash: 0.3, vsArmor: 0.04, pierce: 0.1, speed: 750, tracer: 0.25, size: 0.6, sound: 'nato.mg' };   // twin rifle-calibre guns
@@ -40,5 +46,32 @@ const SPOTTER: Record<string, Plane> = {
   st: { name: 'DFW C.V', weapon: 'camera, wireless', text: 'The most-built German two-seater: photographs of the enemy line for the next morning\'s attack.', model: plane('dfw', { color: 0x6a6e60, kind: 'de', span: 6.0, len: 7.9, seats: 2 }), paint: STREAK, engineSound: 'prop', gun: NOGUN, hp: 6, flight: SPOT },
 };
 
+// ---------------------------------------------------------------- at sea
+const SEA_FIGHT = { approach: 2200, cruiseSpeed: 58, attackSpeed: 54, cruiseAlt: 200, attackAlt: 200, orbit: 260, station: 90, aam: { count: 8, range: 260, speed: 420, pk: 0.22, hits: 99, every: 2 } }; // (the guns, as the kit's air-to-air shots: short, many, few hits)
+const SEA_TORP = { approach: 2200, cruiseSpeed: 44, attackSpeed: 40, cruiseAlt: 90, attackAlt: 14, drop: 450 };
+const SEA_SCOUT = { approach: 2200, cruiseSpeed: 42, attackSpeed: 40, cruiseAlt: 260, attackAlt: 240, runLength: 1800, swath: 550, hold: 40 };
+const ZEPP = { approach: 1400, cruiseSpeed: 12, attackSpeed: 11,   // (a quarter of a fighter's speed: she hangs over the fleet a long time — and the fighters catch her)
+  cruiseAlt: 420, attackAlt: 400, runLength: 1800, swath: 900, hold: 60, turn: 0.15 };
+const SEA_ASW = { approach: 2200, cruiseSpeed: 40, attackSpeed: 38, cruiseAlt: 140, attackAlt: 70, runLength: 2000, swath: 450, hold: 45 };
+const RNAS = { colors: [0x8a8a7c, 0x7e7e70, 0x94948a, 0x84846e] as [number, number, number, number], scale: 0.8 };     // the seaplanes' clear doped linen, grey-washed
+const MARINE = { colors: [0x8a8e8a, 0x7a807c, 0x969a94, 0x6e7470] as [number, number, number, number], scale: 0.6 };
+
+const NAV_FIGHTER: Record<string, Plane> = {
+  nato: { name: 'Sopwith 2F.1 Ship\'s Camel', weapon: 'Vickers · Lewis', text: 'The Camel for the fleet: off HMS Furious or a platform on a turret, after the Zeppelins and the seaplanes.', model: plane('camel2f', { color: 0x4e4a30, kind: 'uk', span: 4.1, len: 5.5, rotary: true }), paint: PC10, engineSound: 'prop', gun: VICKERS, hp: 5, guns: true, flight: SEA_FIGHT },
+  pact: { name: 'Hansa-Brandenburg W.29', weapon: '2 × MG 08/15 · Parabellum', text: 'Christiansen\'s monoplane-looking seaplane fighter from Zeebrugge: fast for a floatplane, it shot down British flying boats and motor boats alike.', model: plane('w29', { color: 0x8a8e8a, kind: 'de', span: 4.5, len: 7.0, seats: 2, floats: true }), paint: MARINE, engineSound: 'prop', gun: SPANDAU, hp: 6, guns: true, flight: SEA_FIGHT },
+};
+const SEA_TORPEDO: Record<string, Plane> = {
+  nato: { name: 'Sopwith Cuckoo', weapon: '18-inch torpedo', text: 'The first landplane torpedo bomber built to fly from a carrier\'s deck: low and level at the ship, the torpedo dropped close in.', model: plane('cuckoo', { color: 0x4e4a30, kind: 'uk', span: 7.0, len: 8.7, torpedo: true }), paint: PC10, engineSound: 'prop', gun: NOGUN, hp: 7, torpedo: { count: 1, speed: 15, range: 900, damage: 1900 }, flight: SEA_TORP },
+  pact: { name: 'Gotha WD.11', weapon: '45 cm torpedo', text: 'A twin-engined torpedo seaplane from the Flanders stations: slow and big, it goes for the ship nearest the spot and drops at close range.', model: plane('wd11', { color: 0x8a8e8a, kind: 'de', span: 8.8, len: 13.4, seats: 2, floats: true, torpedo: true, engines: 2, scale: 1 }), paint: MARINE, engineSound: 'prop', gun: NOGUN, hp: 8, torpedo: { count: 1, speed: 15, range: 900, damage: 1900 }, flight: SEA_TORP },
+};
+const SEA_SCOUTING: Record<string, Plane> = {
+  nato: { name: 'Felixstowe F.2A', weapon: 'wireless, Lewis guns', text: 'The big flying boat from Felixstowe and Great Yarmouth: a long patrol leg over the North Sea, and what it sees is on the plot by wireless.', model: plane('f2a', { color: 0x8a8a7c, kind: 'uk', span: 6.2, len: 6.6, seats: 2, boat: true, engines: 2, scale: 2.2 }), paint: RNAS, engineSound: 'prop', gun: NOGUN, hp: 12, flight: SEA_SCOUT },
+  pact: { name: 'Zeppelin (L 53 type)', weapon: 'wireless, machine guns', text: 'The fleet\'s eyes: a naval airship on a slow leg high over the sea, seeing further than anything afloat. Hydrogen-filled — one incendiary burst and she goes up in flames.', model: zeppelin('l53', { len: 160, r: 11 }), paint: { colors: [0x9a968a, 0x8e8a80, 0xa4a094, 0x949086] as [number, number, number, number], scale: 0.4 }, engineSound: 'prop', gun: NOGUN, hp: 24, flight: ZEPP },
+};
+const SEA_HUNT: Record<string, Plane> = {
+  nato: { name: 'Curtiss H.12 Large America', weapon: '4 × 100 lb bombs', text: 'The flying boat on the "Spider Web" patrol over the U-boats\' routes: a search along the line, bombs on the boat it catches at periscope depth.', model: plane('h12', { color: 0x8a8a7c, kind: 'uk', span: 6.6, len: 6.4, seats: 2, boat: true, engines: 2, scale: 2.1 }), paint: RNAS, engineSound: 'prop', gun: NOGUN, hp: 12, torpedo: { count: 1, radius: 30, damage: 1800 }, flight: SEA_ASW },
+  pact: { name: 'Friedrichshafen FF.49', weapon: 'bombs, Parabellum', text: 'The patrol seaplane over the German Bight and the Flanders coast: it searches a line for the British submarines and bombs the one it finds.', model: plane('ff49', { color: 0x8a8e8a, kind: 'de', span: 8.6, len: 11.6, seats: 2, floats: true, bombs: 2 }), paint: MARINE, engineSound: 'prop', gun: NOGUN, hp: 8, torpedo: { count: 1, radius: 30, damage: 1600 }, flight: SEA_ASW },
+};
+
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (fr, st). */
-export const AIR_1918 = { jet: STRIKE, cap: FIGHTER, recon: SPOTTER };
+export const AIR_1918 = { jet: STRIKE, cap: FIGHTER, recon: SPOTTER, navCap: NAV_FIGHTER, torpBomb: SEA_TORPEDO, navScout: SEA_SCOUTING, asw: SEA_HUNT };

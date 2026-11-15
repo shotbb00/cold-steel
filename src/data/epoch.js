@@ -165,7 +165,9 @@ export function setEpoch(id) {
     const aircraft = e.air[kind];
     k.off = !aircraft;           // no helicopters in 1945 (nor a recon flight yet)
     k.label0 ??= k.label;
-    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || (e.id === '1918' && { jet: 'Ground attack', recon: 'Spotter flight' }[kind]) || k.label0;
+    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || (e.id === '1918' && { jet: 'Ground attack', recon: 'Spotter flight', navScout: 'Air scouting', torpBomb: 'Torpedo seaplanes' }[kind]) || k.label0;
+    if (!('deck0' in k)) k.deck0 = k.deck;
+    k.deck = e.id === '1918' && k.sea && k.deck0 !== 'ship' ? 'optional' : k.deck0; // (1918: the seaplanes from their shore stations — off HMS Furious if she has them aboard)
     if (aircraft) k.aircraft = aircraft;
   }
   return e;

@@ -221,6 +221,12 @@ export class UnitPreview {
     this.orbit.target.set(0, jet ? 3.2 : 3, 0);
     this.orbit.zoom = 1;
     this.fit = jet ? { w: kind === 'jet' ? 9.5 : 12.5, h: 3.4 } : { w: (rig.rotorRadius ?? 7) + 1.2, h: 3.4 };
+    // a big one (the flying boats, a Zeppelin): framed by its own size
+    const box = new THREE.Box3().setFromObject(rig.root), size = box.getSize(new THREE.Vector3());
+    const half = Math.max(size.x, size.z) / 2 + 1;
+    if (half > this.fit.w) { this.fit = { w: half, h: Math.max(this.fit.h, size.y / 2 + 1) }; this.orbit.target.set(0, (box.min.y + box.max.y) / 2, 0); }
+    this.camera.far = Math.max(200, half * 10); // (the camera stands well back for a Zeppelin: still inside its reach)
+    this.camera.updateProjectionMatrix();
     this.setPose('hover');
     this.compile();
   }

@@ -5,7 +5,7 @@
 // searchlight drill, Jutland's night action) — no ASDIC, only hydrophones that hear a boat close by;
 // slower torpedoes that run shorter; little anti-aircraft fire; coal smoke. German rangefinders and
 // shells: the tighter salvoes; British guns: the heavier ones. Battlecruisers: big guns on thin armour.
-import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot } from '../models/ships1918.js';
+import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious } from '../models/ships1918.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.4, pact: 0.48 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -259,4 +259,29 @@ export const minesweeper = ship({
   },
 });
 
-export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper };
+// ---------------------------------------------------------------- the carrier (the Royal Navy's only: the Germans flew from the shore)
+
+const FIVE_FIVE = { range: 1900, reload: 6, damage: 220, splash: 4, pierce: 0.3 };
+export const carrier = ship({
+  fleet: 'carrier', armies: ['uk', 'fr'],
+  id: 'carrier', name: 'Aircraft Carrier', shortName: 'Carrier', cost: 900, limit: 1,
+  names: { nato: ['Furious'], pact: ['Furious'] },
+  hull: { length: 240, beam: 27 },
+  stats: {
+    carrier: { deck: 15, deckLen: 84, deckZ: 66, airGroup: { navCap: 3, torpBomb: 2 } }, // (the flying-off deck forward: Ship's Camels and Cuckoos)
+    hp: 15000, armor: 0.3, speed: 14.5, accel: 0.07, turnRate: 0.05, turretRate: 0.4, radius: 13, height: 26, eyeHeight: 24, sight: 2800, ...AA(500, 0.12, 0.03),
+    range: 1900, aggroRange: 1900, preferredRange: 2400, leash: 100, damage: 220, fireCooldown: 6, spread: 0.013, boltSpeed: 760, boltSize: 1.8, splash: 4, pierce: 0.3,
+  },
+  mounts: {
+    nato: [gun([11, 9, 18], BEAM, { ...FIVE_FIVE, arc: 3 }), gun([-11, 9, 18], -BEAM, { ...FIVE_FIVE, arc: 3 }), gun([11, 9, -12], BEAM, { ...FIVE_FIVE, arc: 3 }), gun([-11, 9, -12], -BEAM, { ...FIVE_FIVE, arc: 3 })],
+    pact: [],
+  },
+  camera: { distance: 200, height: 62, shoulder: 0 },
+  models: { nato: buildFurious, pact: buildFurious },
+  variants: {
+    nato: { name: 'HMS Furious', weapon: 'Ship\'s Camels, Cuckoos · 10 × 5.5-inch', text: 'A battlecruiser rebuilt with a deck forward to fly off and one aft to land on: her Camels raided the Zeppelin sheds at Tondern in July 1918. With her the fighters and torpedo planes come from the fleet, close by — without her, from the shore.' },
+    pact: { name: 'HMS Furious', weapon: '—', text: 'The Royal Navy\'s carrier.' },
+  },
+});
+
+export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier };
