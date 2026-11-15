@@ -18,6 +18,7 @@ const WALL_COST = 0.8;     // extra cost per metre closer than 1.5 m beyond the 
 const MAX = 200000;        // cells searched at most (then: as near as it got); a man to his place: LOCAL
 export const LOCAL = 6000;
 const WEIGHT = 1.15;       // a little greedy: much less searching for paths a few % longer
+const SHIP_WEIGHT = 6;     // …and a ship much more (her margin cost runs up to ~9× the distance: Zeebrugge's harbour never finished)
 const SNAP = 10;           // m searched round a blocked start or goal for open ground
 /** Ships (UnitStack `naval`): pass this as `foot` — only water at least SHIP_DEPTH deep, cover ignored. */
 export const SHIP = 'ship';
@@ -246,7 +247,8 @@ export class NavGrid {
     const { g, f, seen, shut } = this;
     const heap = [start];
     g[start] = 0;
-    f[start] = h(start) * WEIGHT;
+    const wt = foot === SHIP ? SHIP_WEIGHT : WEIGHT; // (a ship: greedier — her shore margin's cost makes plain A* comb a whole harbour on a fine coastal grid)
+    f[start] = h(start) * wt;
     seen[start] = stamp;
     this.from[start] = -1;
     let best = start;
@@ -275,7 +277,7 @@ export class NavGrid {
           if (seen[m] === stamp && ng >= g[m]) continue;
           seen[m] = stamp;
           g[m] = ng;
-          f[m] = ng + h(m) * WEIGHT;
+          f[m] = ng + h(m) * wt;
           this.from[m] = k;
           push(heap, m, f);
         }

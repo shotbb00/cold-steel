@@ -266,9 +266,10 @@ export class FogOfWar {
       before?.call(this, shader, renderer);
       if (!shader.vertexShader.includes('#include <fog_vertex>') || !shader.fragmentShader.includes('#include <fog_fragment>')) return;
       Object.assign(shader.uniforms, uniforms);
+      const local = shader.vertexShader.includes('#include <begin_vertex>') ? 'transformed' : 'vec3( 0.0 )'; // (a sprite's shader has no `transformed`: its centre)
       shader.vertexShader = `varying vec2 vFowXZ;\n${shader.vertexShader}`.replace('#include <fog_vertex>', `#include <fog_vertex>
         {
-          vec4 fw = vec4( transformed, 1.0 );
+          vec4 fw = vec4( ${local}, 1.0 );
           #ifdef USE_INSTANCING
             fw = instanceMatrix * fw;
           #endif

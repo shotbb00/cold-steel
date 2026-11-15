@@ -17,6 +17,7 @@ import { enemyOf } from '../data/factions.js';
 import { UNIT_TYPES, getUnitType } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { year } from '../data/epoch.js';
+import { KINDS } from '../systems/AirStrike.js';
 import { windFrom } from '../entities/sailing.js';
 
 const THINK = 3;          // s between looks at the fleet
@@ -295,6 +296,10 @@ export class SeaDirector {
     const seen = this.foes().filter((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1));
     const best = seen.sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0))[0];
     const call = (kind, x, z) => g.air.ready(f, kind) && support >= g.air.terms(f, kind).cost && g.air.call(f, x, z, null, kind);
+    // the searches spend only what's over a torpedo strike's price (where this war has one): found, the enemy gets the strike —
+    // else the cheaper scouts and sub hunts ate it every time and the torpedo planes never flew
+    const reserve = KINDS.torpBomb && !KINDS.torpBomb.off ? g.air.terms(f, 'torpBomb').cost : 0;
+    const search = (kind, x, z) => g.air.ready(f, kind) && support - reserve >= g.air.terms(f, kind).cost && g.air.call(f, x, z, null, kind);
     if (best) {
       const c = best.centroid;
       if (call('seaStrike', c.x, c.z)) return; // (1985: the missile strike)
@@ -305,7 +310,7 @@ export class SeaDirector {
     if (g.air.nearestThreat(f, { x: mid.x, y: 0, z: mid.z }, 2500) && (call('seaCap', mid.x, mid.z) || call('navCap', mid.x, mid.z))) return;
     const foeHome = g.world.bases[enemyOf(f)];
     const ahead = { x: (mid.x + foeHome.x) / 2, z: (mid.z + foeHome.z) / 2 };
-    if (this.foes().some((s) => s.stats.submarine && !s.units.some((u) => u.alive && u.spotted)) && Math.random() < 0.3 && call('asw', (mid.x + ahead.x) / 2, (mid.z + ahead.z) / 2)) return; // (1985: a patrol plane ahead of the fleet)
-    if (!seen.length) call('aew', ahead.x, ahead.z) || call('navScout', ahead.x, ahead.z);
+    if (this.foes().some((s) => s.stats.submarine && !s.units.some((u) => u.alive && u.spotted)) && Math.random() < 0.3 && search('asw', (mid.x + ahead.x) / 2, (mid.z + ahead.z) / 2)) return; // (1985: a patrol plane ahead of the fleet)
+    if (!seen.length) search('aew', ahead.x, ahead.z) || search('navScout', ahead.x, ahead.z);
   }
 }

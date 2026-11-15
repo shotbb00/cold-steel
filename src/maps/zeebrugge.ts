@@ -116,8 +116,8 @@ function barrier(i: number, t: number) {
   const cx = ax + (bx - ax) * t, cz = az + (bz - az) * t;
   const wireYaw = Math.atan2(-nz, nx);                                            // (a wire's length along its local x: across the Mole)
   return [
-    ...[-20, -10, 0, 10, 20].map((o) => ({ kind: 'wire', x: cx + nx * o, z: cz + nz * o, yaw: wireYaw })),
-    ...[-10, 8].map((o) => ({ kind: 'mgNest', x: cx + nx * o - tx * 10, z: cz + nz * o - tz * 10, yaw: Math.atan2(tx, tz) })), // (behind the wire toward the shore end, facing along the Mole to the head)
+    ...[-22, -4, 5, 14, 22].map((o) => ({ kind: 'wire', x: cx + nx * o, z: cz + nz * o, yaw: wireYaw })), // (round the shed on the inner side: it closes that part)
+    ...[-5, 8].map((o) => ({ kind: 'mgNest', x: cx + nx * o - tx * 10, z: cz + nz * o - tz * 10, yaw: Math.atan2(tx, tz) })), // (behind the wire toward the shore end, facing along the Mole to the head)
   ];
 }
 /** Where the Mole's sectors are (the storming ships come alongside there, step 2) and what each opens ashore. */

@@ -158,11 +158,19 @@ LINES.de1806 = {
   rally: ['Zu mir!', 'Sammeln!', 'Zur Fahne!'],
   officer: ['Der Hauptmann ist gefallen!', 'Der Offizier ist getroffen!', 'Wer führt?'],
 };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
+// Zeebrugge's storming parties (stats.raid: the Royal Marines and the bluejackets): the raid's own, the rest as the 1918 British
+LINES.raid18 = {
+  ...LINES.uk18,
+  landing: ['Over the brows!', 'On to the Mole, lads!', 'Get those guns!', 'Follow me — St George for England!', 'Down the ladders — go!'],
+  contact: ['Germans on the Mole!', 'Machine gun at the wire!', 'The battery — rush it!', 'Destroyer alongside the Mole!', 'They\'re in the sheds!'],
+  flank: ['Along the parapet!', 'Lewis gun, cover the wire!', 'Round by the sheds!', 'Bomb them out!'],
+  retreat: ['Back to the ship!', 'Fall back on Vindictive!', 'Back to the brows!'],
+};
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }
