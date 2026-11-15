@@ -58,7 +58,7 @@ export const EPOCHS = {
     },
   },
   1918: {
-    id: '1918', name: '1918', title: 'The Western Front, 1918', beta: true,
+    id: '1918', name: '1918', title: 'The Western Front, 1918',
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
     sides: { nato: 'Allies', pact: 'Germany' },
     armies: {
