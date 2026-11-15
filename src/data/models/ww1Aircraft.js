@@ -12,7 +12,7 @@
 // cruciform fins aft, the control car forward and the engine cars under it.
 // Markings in fixed colours: the RFC/RAF roundel, the French cocarde, the 1918 Balkenkreuz.
 import * as THREE from 'three';
-import { P, merge, pair, loft } from '../units/geometry.js';
+import { P, merge, pair, loft, part } from '../units/geometry.js';
 import { meshAdder } from './vehicleCommon.js';
 import { body, surface, fin } from './airKit.js';
 
@@ -120,6 +120,15 @@ export const plane = (key, o) => (mats) => {
   return { root, gun: point(g, 0, 2.2, len * 0.5), pods: pair((s) => point(g, s * 1.1, 1.0, len * 0.1)), prop: p };
 };
 
+/**
+ * The Balkenkreuz laid on a round hull (axis along z at height y0, radius r): each bar a strip of cylinder curved
+ * with the skin — the black cross over a white border — centred at angle `phi` round the hull (0: the starboard beam).
+ */
+function hullCross(y0, r, z, phi, h) {
+  const strip = (rr, a, hl, color) => part(new THREE.CylinderGeometry(rr, rr, hl * 2, 16, 1, true, phi + Math.PI / 2 - a, a * 2), { y: y0, z, rx: Math.PI / 2, color });
+  return [strip(r + 0.04, (h + 0.6) / r, 1.5, WHITE), strip(r + 0.04, 1.5 / r, h + 0.6, WHITE), strip(r + 0.08, h / r, 0.9, 0x161616), strip(r + 0.08, 0.9 / r, h, 0x161616)];
+}
+
 /** The naval Zeppelin: `len` m of hull (the rig at true size), `color` the cotton (the late ships black underneath for the night raids). */
 export const zeppelin = (key, { len = 160, r = 11, color = 0x9a968a, belly = 0x2a2a28 } = {}) => (mats) => {
   const m = (cache[key] ??= (() => {
@@ -143,7 +152,7 @@ export const zeppelin = (key, { len = 160, r = 11, color = 0x9a968a, belly = 0x2
           body([[z + 3, y - r - 2.4, 0.3, 0.3, 2], [z + 1.5, y - r - 2.4, 1.1, 1.1, 2.2], [z - 2.5, y - r - 2.4, 1.0, 1.0, 2.2], [z - 3.5, y - r - 2.4, 0.3, 0.3, 2]], { x, color: DARK }),
           P.box(0.25, 2, 0.25, { x, y: y - r - 0.8, z, color: STEEL }),
         ]),
-        ...pair((s) => mark('de', s * r * 0.97, y + r * 0.2, -len * 0.2, 5)),   // (on the full-width hull, clear of the taper aft)
+        ...[Math.asin(0.2), Math.PI - Math.asin(0.2)].flatMap((phi) => hullCross(y, r, -len * 0.2, phi, 5)),   // the crosses, curved to the hull either side (on its full width, clear of the taper aft)
       ]),
       prop: propeller(2.2),
     };
