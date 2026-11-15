@@ -25,6 +25,7 @@ import caribbean from './caribbean.ts';
 import heligolandBight from './heligolandBight.ts';
 import doggerBank from './doggerBank.ts';
 import doverStrait from './doverStrait.ts';
+import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import hohwacht from './hohwacht.ts';
@@ -64,6 +65,7 @@ export const MAPS = {
   [heligolandBight.id]: heligolandBight,
   [doggerBank.id]: doggerBank,
   [doverStrait.id]: doverStrait,
+  [zeebrugge.id]: zeebrugge,
   [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
 };
