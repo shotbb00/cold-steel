@@ -21,6 +21,7 @@
 //   { t: 'shipSpeed', s: [ids], v }              (ships' engine orders: slow / half / full / flank, UnitStack SHIP_SPEEDS)
 //   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
 //   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
+//   { t: 'layMines', s: [ids], on }              (minelayers: mines off the stern while under way)
 //   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
 //   { t: 'searchlight', s: [ids], on }           (ships at night: light the target up — and show yourself)
 //   { t: 'radar', s: [ids], on }                 (1985 ships: radar on — see, and be heard — or silent: systems/Sensors.js)
@@ -185,6 +186,13 @@ export class Orders {
         return null;
       case 'searchlight': // ships at night: the beam on the target — she lights it up for everyone, and shows herself
         for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.searchlight = !!cmd.on;
+        return null;
+      case 'layMines': // a minelayer: mines off the stern while she's under way, until she's laid them all (systems/Minefields.js)
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.minelayer) continue;
+          if ((s.minesLeft ?? s.stats.minelayer.count) <= 0) { g.tell(faction, `${s.name}: no mines left`); continue; }
+          s.laying = !!cmd.on;
+        }
         return null;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {

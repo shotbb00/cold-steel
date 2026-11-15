@@ -12,6 +12,11 @@ export default northSea({
   floor: 18,   // (the bank: shallow, the swell short and steep)
   conditions: { time: 'day', weather: 'clear' },
   sky: { fogDensity: 0.00022, sunDir: [0.3, 0.3, 0.8], sunIntensity: 1.8, clouds: 0.45, skyHorizon: 0xc4ccd2 },
+  // each squadron's line of retreat covered by a field, a channel left through the middle
+  minefields: [
+    { owner: 'nato', x: 0, z: -1000, w: 1100, d: 100, count: 40, gaps: [0], gap: 160 },
+    { owner: 'pact', x: 0, z: 1000, w: 1100, d: 100, count: 40, gaps: [0], gap: 160 },
+  ],
   points: [
     { id: 'A', name: 'Beatty\'s squadron', x: 0, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
     { id: 'B', name: 'The Tail End', x: -1250, z: -150, owner: null, sector: 'west', radius: 180 },

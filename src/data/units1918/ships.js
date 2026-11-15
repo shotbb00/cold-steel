@@ -5,7 +5,7 @@
 // searchlight drill, Jutland's night action) — no ASDIC, only hydrophones that hear a boat close by;
 // slower torpedoes that run shorter; little anti-aircraft fire; coal smoke. German rangefinders and
 // shells: the tighter salvoes; British guns: the heavier ones. Battlecruisers: big guns on thin armour.
-import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM } from '../models/ships1918.js';
+import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot } from '../models/ships1918.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.4, pact: 0.48 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -219,4 +219,44 @@ export const transport = ship({
   },
 });
 
-export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport };
+// ---------------------------------------------------------------- mine warfare (systems/Minefields.js)
+
+export const minelayer = ship({
+  fleet: 'escort',
+  id: 'minelayer', name: 'Minelayer', shortName: 'Minelayer', cost: 420, limit: 2,
+  names: { nato: ['Abdiel', 'Gabriel', 'Ithuriel', 'Legion', 'Telemachus', 'Tarpon'], pact: ['Brummer', 'Bremse', 'Albatross', 'Nautilus'] },
+  hull: { length: 80, beam: 8 },
+  stats: { minelayer: { count: 30, spacing: 30 }, flareRounds: 2, hp: 2600, armor: 0.1, speed: 16, accel: 0.13, turnRate: 0.1, turretRate: 0.55, radius: 6, height: 9, sight: 2200, smokeGen: SMOKE_GEN, ...AA(400, 0.08, 0.02), range: 1900, aggroRange: 1900, preferredRange: 1500, leash: 60, damage: 160, fireCooldown: 4.5, spread: 0.014, boltSpeed: 750, boltSize: 1.5, splash: 3.5, pierce: 0.25 },
+  factionStats: { pact: { minelayer: { count: 40, spacing: 30 }, hp: 5800, armor: 0.25, speed: 15, radius: 8, height: 13, sight: 2600, flareRounds: 6, smokeGen: undefined, range: 2400, aggroRange: 2400, preferredRange: 1800, damage: 300, fireCooldown: 7 } },   // (Brummer: a cruiser, bigger and better armed, a knot slower)
+  mounts: {
+    nato: [gun([0, 6, 32], FWD, FOUR_INCH), gun([0, 5, 2], FWD, { ...FOUR_INCH, arc: 3.6 }), gun([0, 5, -10], AFT, { ...FOUR_INCH, arc: 3.6 })],
+    pact: [gun([0, 9, 54], FWD, FIFTEEN_CM), gun([0, 11, 26], FWD, FIFTEEN_CM), gun([0, 9, -24], AFT, FIFTEEN_CM), gun([0, 7, -36], AFT, FIFTEEN_CM)],
+  },
+  camera: { distance: 95, height: 30, shoulder: 0 },
+  models: { nato: buildAbdiel, pact: buildBrummer },
+  variants: {
+    nato: { name: 'Abdiel-class fast minelayer', weapon: '3 × 4-inch, 30 mines', text: 'A destroyer leader with her after tubes swapped for mine rails: in fast at night, a field laid across their path, out by dawn. Your ships know where the mines are; theirs find out the hard way.' },
+    pact: { name: 'Brummer-class minelaying cruiser', weapon: '4 × 15 cm, 40 mines', text: 'A cruiser built to lay mines, disguised as a British light cruiser from afar: more mines and bigger guns than the British layer, a knot slower.' },
+  },
+});
+
+export const minesweeper = ship({
+  fleet: 'escort',
+  id: 'minesweeper', name: 'Minesweeper', shortName: 'Minesweeper', cost: 200, limit: 3,
+  names: { nato: ['Aberdare', 'Abingdon', 'Albury', 'Alresford', 'Ambleside', 'Burslem', 'Bootle', 'Pangbourne'], pact: ['M 57', 'M 58', 'M 59', 'M 60', 'M 61', 'M 62', 'M 63', 'M 64'] },
+  hull: { length: 70, beam: 8.5 },
+  stats: { sweeper: 45, hp: 1500, armor: 0.05, speed: 9, accel: 0.2, turnRate: 0.13, turretRate: 0.7, radius: 5, height: 7, eyeHeight: 9, sight: 1800, ...AA(400, 0.06, 0.01), range: 1700, aggroRange: 1700, preferredRange: 1200, leash: 50, damage: 150, fireCooldown: 4.5, spread: 0.014, boltSpeed: 750, boltSize: 1.4, splash: 3, pierce: 0.2 },
+  factionStats: { pact: { hp: 1400, speed: 9.5 } },
+  mounts: {
+    nato: [gun([0, 6, 26], FWD, FOUR_INCH), gun([0, 5, -10], AFT, { ...FOUR_INCH, damage: 90, range: 1400 })],
+    pact: [gun([0, 5, 22], FWD, EIGHT_EIGHT), gun([0, 5, -12], AFT, EIGHT_EIGHT)],
+  },
+  camera: { distance: 75, height: 24, shoulder: 0 },
+  models: { nato: buildHuntSweeper, pact: buildMBoot },
+  variants: {
+    nato: { name: 'Hunt-class minesweeper', weapon: '4-inch, 12-pounder, the sweep', text: 'Her sweep streamed astern: under way she cuts every mine in her path and finds the field round it. Slow and soft — sweep ahead of the fleet, not under the enemy\'s guns.' },
+    pact: { name: 'M-boat (Minensuchboot)', weapon: '2 × 8.8 cm, the sweep', text: 'The High Seas Fleet\'s sweeper: she clears the swept channels through the British fields in the Bight, ahead of the fleet when it sails.' },
+  },
+});
+
+export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper };

@@ -34,6 +34,13 @@ export default northSea({
     if (x > 1380 && y > -0.6) return [0xd8cca4, 1];                                     // the Düne: all sand
     return null;
   },
+  // the German fields guarding the Bight (a swept channel through the western one), the British laid off the Amrum Bank in 1917
+  minefields: [
+    { owner: 'pact', x: -700, z: 950, w: 900, d: 120, count: 40, gaps: [200], gap: 120 },
+    { owner: 'pact', x: 1500, z: 1200, w: 700, d: 100, count: 30 },
+    { owner: 'nato', x: -900, z: -1000, w: 900, d: 120, count: 40, gaps: [-100], gap: 120 },
+    { owner: 'nato', x: 900, z: -1100, w: 700, d: 100, count: 30 },
+  ],
   points: [
     { id: 'A', name: 'Harwich Force', x: 0, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
     { id: 'B', name: 'Amrum Bank', x: -1100, z: -350, owner: null, sector: 'west', radius: 170 },

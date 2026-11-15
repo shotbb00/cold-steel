@@ -315,6 +315,13 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'searchlight', s: ids(surface), on: on ? 1 : 0 });
         for (const s of surface) s.searchlight = on;
         this.game.bus.emit('toast', on ? 'Searchlights on: she lights her target — and shows herself' : 'Searchlights off');
+      } else if (k === 'mines') {
+        const layers = ships.filter((s) => s.stats.minelayer);
+        if (!layers.length) return this.game.bus.emit('toast', 'Select a minelayer');
+        const on = !layers.every((s) => s.laying);
+        this.game.orders.issue({ t: 'layMines', s: ids(layers), on: on ? 1 : 0 });
+        for (const s of layers) s.laying = on && (s.minesLeft ?? s.stats.minelayer.count) > 0;
+        this.game.bus.emit('toast', on ? 'Laying mines while under way — steer her across their path' : 'Stopped laying');
       } else if (k === 'smoke') {
         const gens = ships.filter((s) => s.stats.smokeGen);
         if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');

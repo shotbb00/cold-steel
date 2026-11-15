@@ -23,6 +23,8 @@ type Sea = {
   conditions: { time: string; weather: string };
   sky?: Record<string, unknown>;
   floor?: number;   // the sea floor's depth (Dogger Bank: shallow)
+  /** the fields laid before the battle (systems/Minefields.js): each side's own, its ships know the gaps */
+  minefields?: { owner: 'nato' | 'pact'; x: number; z: number; w: number; d: number; count: number; yaw?: number; gaps?: number[]; gap?: number }[];
   decorate?: (props: PropBuilder, height: (x: number, z: number) => number, rand: () => number) => void;
 };
 
@@ -77,6 +79,7 @@ export function northSea(o: Sea) {
     maxStacks: 12,
     cameraStart: { nato: { x: o.points[0].x, z: o.points[0].z }, pact: { x: o.points[o.points.length - 1].x, z: o.points[o.points.length - 1].z } },
     points: o.points,
+    minefields: o.minefields ?? [],
     spawns: o.spawns ?? {
       nato: [{ unit: 'lightCruiser', x: 0, z: -2200, facing: 0 }, { unit: 'destroyer', x: -350, z: -2050, facing: 0 }, { unit: 'destroyer', x: 350, z: -2050, facing: 0 }],
       pact: [{ unit: 'lightCruiser', x: 0, z: 2200, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 2050, facing: Math.PI }, { unit: 'destroyer', x: 350, z: 2050, facing: Math.PI }],

@@ -326,6 +326,7 @@ export class NetClient {
       case 'house': { const b = g.buildings.list[e[1]]; if (b) g.buildings.upgrade(b, e[2], e[3]); break; } // (systems/Buildings.js)
       case 'site': if (!g.construction.siteById(e[1])) g.construction.place(e[2], e[3], e[4], e[5], e[6], null, { id: e[1], force: true, stackId: e[7] ?? null }); break; // (one this machine built itself already: a map's trench system, maps/common.js)
       case 'gas': g.gas?.cloud(e[1], e[2], e[3]); break; // (systems/Gas.js: the host's gas cloud)
+      case 'mine': g.mines?.net(e[1], e[2], e[3], e[4], e[5]); break; // (systems/Minefields.js: laid, cut, struck, found)
       case 'unsite': {
         const site = g.construction.sites.find((s) => s.id === e[1]);
         if (site) g.construction.cancel(site);

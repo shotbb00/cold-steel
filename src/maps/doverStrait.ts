@@ -30,6 +30,12 @@ export default northSea({
     if (x > 0 && y > 3) return [0xbcb08a, 1];                     // the dunes
     return null;
   },
+  // the Dover Barrage right across the strait (two gaps for the patrols), the Flanders flotillas' fields off the English side
+  minefields: [
+    { owner: 'nato', x: 0, z: 1150, w: 4200, d: 140, count: 100, gaps: [-500, 900], gap: 140 },
+    { owner: 'pact', x: -700, z: -1100, w: 900, d: 110, count: 36, gaps: [-150], gap: 110 },
+    { owner: 'pact', x: 1100, z: -900, w: 700, d: 100, count: 28 },
+  ],
   points: [
     { id: 'A', name: 'Dover Patrol', x: -600, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
     { id: 'B', name: 'Dover', x: -1550, z: -550, owner: null, sector: 'west', radius: 160 },

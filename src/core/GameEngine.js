@@ -20,6 +20,7 @@ import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
 import { Squalls } from '../systems/Squalls.js';
 import { Landing } from '../systems/Landing.js';
+import { Minefields } from '../systems/Minefields.js';
 import { Searchlights } from '../systems/Searchlights.js';
 import { Missiles } from '../systems/Missiles.js';
 import { Sensors } from '../systems/Sensors.js';
@@ -190,6 +191,7 @@ export class GameEngine {
     if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
     if (map.river?.sea) { this.squalls = new Squalls(this); this.missiles = new Missiles(this); this.sensors = new Sensors(this); this.searchlights = new Searchlights(this); this.systems.push(this.squalls, this.searchlights, this.missiles, this.sensors); } // (1985: anti-ship missiles and their defence, radar and ESM bearings) // rain squalls and the sea state; searchlight beams at night
     if (this.world.coastal) { this.landing = new Landing(this); this.systems.push(this.landing); } // the side that lands comes ashore in landing craft
+    if (map.theatre === 'sea') { this.mines = new Minefields(this); this.systems.push(this.mines); } // moored mines: the map's fields, the minelayers', the sweepers (1918)
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;

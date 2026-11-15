@@ -82,6 +82,20 @@ function warship(c, o) {
     parts.push(...mast(c, 0, y, m.z, m.h, { tripod: !!m.tripod, yard: m.yard ?? 6, legsY: y }));
     if (m.topR) parts.push(...top(c, 0, y + m.h * 0.86, m.z, m.topR, m.round));
   }
+  if (o.mineRails) { // the mine rails: two tracks along the after deck to the stern, the mines on their sinkers along them
+    const [z0, z1] = o.mineRails;
+    for (const s of [-1, 1]) {
+      const x = s * Math.min(beam * 0.3, H.side(z0, (H.top(z0) - draft) / 2) - 1);
+      parts.push(P.box(0.5, 0.15, z1 - z0, { x, y: deckAt((z0 + z1) / 2) + 0.08, z: (z0 + z1) / 2, color: BLACK, surf: 'metal' }));
+      for (const z of every(z0 + 0.8, z1 - 0.8, 1.6)) parts.push(box(0.8, 0.5, 0.8, { x, y: deckAt(z) + 0.4, z, color: c.gun }), P.sphere(0.55, { x, y: deckAt(z) + 1.1, z, color: BLACK }));
+    }
+  }
+  if (o.gallows != null) { // the sweep: a gallows over the stern, the winch drum before it, the otter boards stowed either side
+    const z = o.gallows, y = deckAt(z);
+    parts.push(strut([-beam * 0.25, y, z], [-beam * 0.25, y + 4, z], 0.15, c.upper), strut([beam * 0.25, y, z], [beam * 0.25, y + 4, z], 0.15, c.upper), strut([-beam * 0.25, y + 4, z], [beam * 0.25, y + 4, z], 0.12, c.upper));
+    parts.push(P.cyl(0.7, 0.7, 2.4, { y: y + 0.9, z: z + 4, rz: Math.PI / 2, color: c.gun }, 12), box(1.2, 0.6, 1.4, { y: y + 0.3, z: z + 4, color: c.gun }));
+    for (const s of [-1, 1]) parts.push(box(0.15, 1.6, 2.6, { x: s * (H.side(z + 2, H.top(z + 2) - 1) - 0.3), y: y + 0.6, z: z + 2, color: 0x6a5a40, surf: 'cloth' }));
+  }
   for (const [z, n, x = 0] of o.tubeHouse ?? []) parts.push(box(1.4, 0.4, n * 0.8, { x, y: deckAt(z) + 0.2, z, color: c.gun }));
   for (const [x, z, l, s] of o.boats ?? []) parts.push(boat(c, x, deckAt(z) + (o.casing ?? 0) * 0.5, z, l, s));
   for (const [x, z] of o.vents ?? []) parts.push(...vent(c, x, deckAt(z), z, x > 0 ? Math.PI / 2 : -Math.PI / 2));
@@ -227,6 +241,49 @@ export const buildABoot = ship(() => warship(KM, {
   funnels: [[1, 1.1, 4.5]],
   fore: { z: 8, h: 9, y: 1.4 },
   tubeMounts: [[0, -8, 1]],
+}));
+
+// ---------------------------------------------------------------- mine warfare
+
+/** HMS Abdiel: a flotilla leader turned fast minelayer — 80 m, three 4-inch, the after tubes gone for mine rails to the stern. */
+export const buildAbdiel = ship(() => warship(RN, {
+  len: 80, beam: 8, fb: 3.4, draft: 3, fc: [18, 2], rake: 0.08,
+  guns: [{ z: 32, len: 4.5, cal: 0.09 }, { z: 2, len: 4.5, cal: 0.09, arc: 3.6 }, { z: -10, aft: true, len: 4.5, cal: 0.09, arc: 3.6 }],
+  bridge: { z: 19, w: 5, d: 4, h: 3 },
+  funnels: [[11, 1.3, 6], [-1, 1.3, 6]],
+  fore: { z: 15, h: 13, y: 2 },
+  mineRails: [-38, -14],
+}));
+/** SMS Brummer: a fast cruiser built to lay mines — 140 m, four 15 cm, rails for 400 mines down both sides of the after deck. */
+export const buildBrummer = ship(() => warship(KM, {
+  len: 140, beam: 13.2, fb: 5, draft: 6, fc: [28, 2.4],
+  guns: [{ z: 54, len: 6, cal: 0.13 }, { z: 26, y: 2.6, len: 6, cal: 0.13 }, { z: -24, y: 2.4, aft: true, len: 6, cal: 0.13 }, { z: -36, aft: true, len: 6, cal: 0.13 }],
+  bridge: { z: 34, w: 7, d: 6, h: 4 },
+  house: [[-12, 22, 7, 2.4]],
+  funnels: [[12, 2.4, 9], [-2, 2.4, 9]],
+  fore: { z: 30, h: 20, y: 2.4, topR: 1.4, round: true },
+  main: { z: -18, h: 16 },
+  mineRails: [-66, -40],
+}));
+/** HMS Aberdare (a Hunt-class sweeper): 70 m, one funnel, a 4-inch forward, the sweep gear over the stern. */
+export const buildHuntSweeper = ship(() => warship(RN, {
+  len: 70, beam: 8.5, fb: 3.4, draft: 2.3, fc: [12, 2],
+  guns: [{ z: 26, len: 4.5, cal: 0.09 }, { z: -10, aft: true, len: 3.5, cal: 0.07 }],
+  bridge: { z: 14, w: 5.5, d: 4, h: 3 },
+  house: [[-8, 8, 5.5, 2.2]],
+  funnels: [[0, 1.5, 6]],
+  fore: { z: 11, h: 12, y: 2 },
+  gallows: -32,
+  boats: [[3.5, -2, 5, 1]],
+}));
+/** SMS M 57 (a 1916 Minensuchboot): 59 m, two 8.8 cm, one funnel, the sweep gear aft. */
+export const buildMBoot = ship(() => warship(KM, {
+  len: 59, beam: 7.3, fb: 3, draft: 2.2, fc: [10, 1.8],
+  guns: [{ z: 22, len: 3.6, cal: 0.08 }, { z: -12, aft: true, len: 3.6, cal: 0.08 }],
+  bridge: { z: 12, w: 5, d: 3.5, h: 2.6 },
+  funnels: [[1, 1.3, 5.5]],
+  fore: { z: 9, h: 11, y: 1.8 },
+  gallows: -27,
 }));
 
 // ---------------------------------------------------------------- submarines
