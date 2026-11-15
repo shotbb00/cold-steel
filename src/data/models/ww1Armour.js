@@ -79,7 +79,7 @@ const roundel = (x, y, z, r) => [P.cyl(r, r, 0.02, { x, y, z, rz: Math.PI / 2, c
 
 const RHOMB = [[-4.0, 1.25], [-3.55, 0.25], [-2.8, 0.0], [2.0, 0.0], [3.3, 0.55], [4.0, 1.55], [3.75, 2.35], [3.0, 2.55], [-3.3, 2.55], [-3.95, 2.0]];
 
-const rhomboid = (key, { color, dark, marks, cab = true, beam = true }) => (mats) => rig(once(key, () => ({
+const rhomboid = (key, { color, dark, marks, cab = true, beam = true, supply = false }) => (mats) => rig(once(key, () => ({
   gear: rollers(1.15, -2.6, 1.8, 7), wheel: roller(),
   hull: grime(merge([
     ...frames(RHOMB, 1.15, 0.55, color),
@@ -94,19 +94,25 @@ const rhomboid = (key, { color, dark, marks, cab = true, beam = true }) => (mats
       ...pair((s) => P.box(0.08, 0.08, 6.0, { x: s * 0.95, y: 2.62, z: -0.4, color: STEEL })),
       P.box(2.9, 0.3, 0.3, { y: 2.85, z: -2.9, color: 0x5a4630 }),
     ] : []),
-    ...pair((sd) => [ // the sponsons, cut back at the front and the rear so the guns can swing, a 6-pdr in each (the right one turns: the rig's gun)
+    ...(supply ? [ // the supply tank: no guns — sponson-boxes for stores, and the cargo stacked on top
+      ...pair((sd) => P.box(0.6, 0.9, 2.2, { x: sd * 1.72, y: 1.2, z: 0.3, color: dark, ...C })).flat(),
+      ...[[-0.4, -1.4], [0.4, -1.4], [-0.4, -0.5], [0.4, -0.5], [0, 0.4]].map(([x, z]) => P.box(0.7, 0.45, 0.8, { x, y: 2.68, z, color: 0x6a5a3a })),
+      P.box(1.5, 0.35, 0.6, { y: 2.62, z: 1.0, color: 0x4a4a3a }),
+    ] : []).flat(),
+    ...(supply ? [] : pair((sd) => [ // the sponsons, cut back at the front and the rear so the guns can swing, a 6-pdr in each (the right one turns: the rig's gun)
       planProfile([[1.42, -0.55], [1.42, 1.55], [1.85, 1.35], [2.12, 0.95], [2.12, 0.05], [1.85, -0.35]].map(([x, z]) => [sd * x, z]), 1.15, { y: 0.72, color, ...C }),
       ...rivets(sd * 2.13, 1.8, 0.1, 0.9, dark, 0.2), ...rivets(sd * 2.13, 0.8, 0.1, 0.9, dark, 0.2),
       ...door(sd * 2.13, 1.2, 0.5, 0.5, 0.75, dark),
-    ]).flat(),
-    P.cyl(0.05, 0.06, 1.4, { x: -2.05, y: 1.35, z: 1.9, rx: Math.PI / 2, color: STEEL }, 10),       // the left sponson's 6-pdr (fixed here)
+    ]).flat()),
+    ...(supply ? [] : [P.cyl(0.05, 0.06, 1.4, { x: -2.05, y: 1.35, z: 1.9, rx: Math.PI / 2, color: STEEL }, 10)]), // the left sponson's 6-pdr (fixed here)
     ...pair((s) => [-1.8, -0.6].map((z) => P.cyl(0.07, 0.07, 0.06, { x: s * 1.43, y: 2.0, z, rz: Math.PI / 2, color: 0x111111 }, 8))).flat(), // pistol ports
     ...marks,
   ]), 1.2, 0.3),
   turret: merge([P.box(0.42, 0.55, 0.3, { x: 0.18, color: dark, ...C })]),    // the right sponson's gun shield
-  gun: merge([P.cyl(0.05, 0.06, 1.4, { z: 0.7, rx: Math.PI / 2, color: STEEL }, 10)]),
+  gun: merge([supply ? P.box(0.04, 0.04, 0.04, { color: dark }) : P.cyl(0.05, 0.06, 1.4, { z: 0.7, rx: Math.PI / 2, color: STEEL }, 10)]),
 })), mats, { turretAt: [1.75, 1.35, 1.45], gunAt: [0.18, 0, 0.1], muzzle: 1.45, arc: 1.4, recoil: 0.15 });
 
+export const buildSupplyTank = rhomboid('supplyTank', { color: BR, dark: BR_DK, beam: false, supply: true, marks: [] });
 export const buildMarkV = rhomboid('markV', { color: BR, dark: BR_DK, marks: pair((s) => stripes(s * 1.44, 1.9, 3.1)).flat() });
 export const buildBeuteMarkIV = rhomboid('beuteIV', { color: DE, dark: DE_DK, cab: false, marks: [...pair((s) => cross(s * 2.17, 1.3, 0.5, 0.32)).flat(), ...pair((s) => cross(s * 1.44, 1.9, -2.2, 0.38)).flat()] });
 export const buildA7VU = rhomboid('a7vu', { color: DE, dark: DE_DK, beam: false, marks: [...pair((s) => cross(s * 1.44, 1.9, -1.4, 0.42)).flat()] });
@@ -300,3 +306,68 @@ const winch = (key, color, dark, kind) => car(key, {
 export const buildBalloonUK = winch('balloonUK', BR, BR_DK, 'uk');
 export const buildBalloonFR = winch('balloonFR', FR, FR_DK, 'fr');
 export const buildBalloonDE = winch('balloonDE', DE, DE_DK, 'de');
+
+// ---------------------------------------------------------------- lorries and the staff car (the support of 1918)
+
+/** A 1918 lorry's front: bonnet, radiator, the open cab under its roof (the winch lorry's, the AA lorry's, the ambulance's, the supply lorry's). */
+const lorryFront = (color, dark) => [
+  P.box(0.82, 0.55, 1.35, { y: 1.05, z: 2.05, color, ...C }),
+  P.cyl(0.41, 0.41, 1.35, { y: 1.32, z: 2.05, rx: Math.PI / 2, sx: 1, sy: 0.45, color, ...C }, 12),
+  P.box(0.86, 0.78, 0.08, { y: 1.1, z: 2.76, color: 0x26261f }), P.box(0.88, 0.08, 0.1, { y: 1.52, z: 2.76, color: 0x9a7a3a, surf: 'metal' }),
+  P.box(1.7, 0.08, 1.2, { y: 0.78, z: 0.85, color: dark }),
+  P.box(1.5, 0.35, 0.45, { y: 1.0, z: 0.55, color: 0x3a2c1e }),
+  P.box(1.75, 1.2, 0.06, { y: 1.4, z: 0.3, color, ...C }),
+  ...pair((s) => [0.32, 1.42].map((z) => P.box(0.05, 1.5, 0.05, { x: s * 0.85, y: 1.55, z, color: dark }))).flat(),
+  P.box(1.85, 0.05, 1.35, { y: 2.32, z: 0.87, color, ...C }),
+  P.box(1.9, 0.12, 3.3, { y: 0.92, z: -1.4, color: dark }),
+];
+const lorry = (key, color, dark, load, { turret = [P.box(0.1, 0.1, 0.1, { color: dark })], gun = [P.box(0.04, 0.04, 0.04, { color: dark })], turretAt = [0, 1.9, -1.4], gunAt = [0, 0, 0], muzzle = 0.1 } = {}) =>
+  car(key, { color, dark, length: 5.8, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.7], body: [...lorryFront(color, dark), ...load], turret, gun, turretAt, gunAt, muzzle });
+
+const RED_CROSS = (x, y, z, face = 'x') => [face === 'x' ? P.box(0.02, 0.62, 0.62, { x, y, z, color: 0xe8e4da }) : P.box(0.62, 0.62, 0.02, { x, y, z, color: 0xe8e4da }),
+  ...[[0.42, 0.13], [0.13, 0.42]].map(([a, b]) => (face === 'x' ? P.box(0.03, a, b, { x, y, z, color: 0xb02020 }) : P.box(b, a, 0.03, { x, y, z, color: 0xb02020 })))];
+const ambulanceBody = (color) => [
+  P.box(1.9, 1.5, 3.0, { y: 1.75, z: -1.45, color, ...C }),                                                         // the box body
+  ...pair((s) => RED_CROSS(s * 0.96, 1.85, -1.5)).flat(), ...RED_CROSS(0, 2.0, -2.96, 'z'),
+];
+const supplyLoad = [
+  ...pair((s) => P.box(0.05, 0.35, 3.3, { x: s * 0.93, y: 1.12, z: -1.4, color: 0x5a4a34 })),
+  ...[[-0.45, -0.4], [0.45, -0.4], [-0.45, -1.4], [0.45, -1.4], [-0.45, -2.4], [0.45, -2.4], [0, -0.9]].map(([x, z], i) => P.box(0.75, 0.5, 0.85, { x, y: 1.25 + (i === 6 ? 0.5 : 0), z, color: i % 2 ? 0x6a5a3a : 0x5a4e34 })), // crates of shells
+];
+/** The AA lorry: a field gun on a high pedestal on the bed, laid up at the sky (the 13-pounder, the auto-canon de 75, the K-Flak). */
+const aaLorry = (key, color, dark) => lorry(key, color, dark, [
+  ...pair((s) => P.box(0.05, 0.3, 3.3, { x: s * 0.93, y: 1.1, z: -1.4, color: dark })),
+  P.cyl(0.25, 0.4, 0.7, { y: 1.35, z: -1.4, color: STEEL, surf: 'metal' }, 10),
+], {
+  turret: [P.cyl(0.35, 0.35, 0.2, { y: 0.1, color: STEEL, surf: 'metal' }, 12), P.box(0.5, 0.45, 0.9, { y: 0.4, color, ...C }), P.box(1.0, 0.7, 0.05, { y: 0.55, z: 0.5, rx: -0.4, color, ...C })],
+  gun: [P.cyl(0.06, 0.07, 2.4, { y: 0.85, z: 0.75, rx: Math.PI / 2 - 0.9, color: STEEL, surf: 'metal' }, 10)],   // laid up at about 50°
+  turretAt: [0, 1.7, -1.4], gunAt: [0, 0.2, 0], muzzle: 1.5,
+});
+export const buildAALorryUK = aaLorry('aaUK', BR, BR_DK);
+export const buildAALorryFR = aaLorry('aaFR', FR, FR_DK);
+export const buildAALorryDE = aaLorry('aaDE', DE, DE_DK);
+export const buildAmbulanceUK = lorry('ambUK', BR, BR_DK, ambulanceBody(BR));
+export const buildAmbulanceFR = lorry('ambFR', FR, FR_DK, ambulanceBody(FR));
+export const buildAmbulanceDE = lorry('ambDE', DE, DE_DK, ambulanceBody(DE));
+export const buildSupplyLorryFR = lorry('supFR', FR, FR_DK, supplyLoad);
+export const buildSupplyLorryDE = lorry('supDE', DE, DE_DK, supplyLoad);
+
+/** The staff car: an open tourer, its hood folded, a pennant on the wing — the command post of 1918, wherever the general is. */
+const staffCar = (key, color, dark, flag) => car(key, {
+  color, dark, length: 4.4, width: 1.7, wheelR: 0.4, track: 0.72, base: [1.3, -1.2],
+  body: [
+    P.box(0.75, 0.5, 1.3, { y: 1.0, z: 1.3, color, ...C }),                                                          // the bonnet
+    P.box(0.78, 0.6, 0.06, { y: 1.0, z: 1.97, color: 0x26261f }),
+    P.box(1.55, 0.55, 2.4, { y: 0.98, z: -0.5, color, ...C }),                                                       // the open body
+    P.box(1.4, 0.05, 2.2, { y: 1.26, z: -0.5, color: 0x1e1a14 }),                                                    // (open: the seats inside)
+    ...[0.25, -1.0].map((z) => P.box(1.35, 0.35, 0.45, { y: 1.35, z, color: 0x3a2a1c })),                          // the seats' backs
+    P.box(1.5, 0.3, 0.35, { y: 1.4, z: -1.75, rx: 0.3, color: 0x2a2a24 }),                                         // the folded hood
+    P.box(1.3, 0.4, 0.04, { y: 1.5, z: 0.65, rx: -0.2, color: 0x9ab0b8 }),                                          // the windscreen
+    P.cyl(0.01, 0.01, 0.6, { x: 0.6, y: 1.5, z: 1.9, color: STEEL }, 4), P.box(0.01, 0.16, 0.25, { x: 0.6, y: 1.72, z: 1.78, color: flag }), // the pennant
+  ],
+  turret: [P.box(0.1, 0.1, 0.1, { color: dark })], gun: [P.box(0.04, 0.04, 0.04, { color: dark })],
+  turretAt: [0, 1.3, -0.5], gunAt: [0, 0, 0], muzzle: 0.1,
+});
+export const buildStaffCarUK = staffCar('staffUK', BR, BR_DK, 0xb02020);
+export const buildStaffCarFR = staffCar('staffFR', FR, FR_DK, 0x22325c);
+export const buildStaffCarDE = staffCar('staffDE', DE, DE_DK, 0x161616);

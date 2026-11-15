@@ -195,3 +195,6 @@ export function buildWw1Soldier({ army = 'uk', weapon: kind = 'rifle', crew = fa
     muzzle: w.muzzle,
   };
 }
+
+/** An army's 1918 helmet (Brodie, Adrian, Stahlhelm), as parts on a standing man's head: the 1918 cavalry's (napCavalry.js). */
+export const ww1Helmet = (army) => headgear(army, ARMY[army] ?? ARMY.uk, false);

@@ -7,7 +7,8 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
-import { buildBalloonUK, buildBalloonFR, buildBalloonDE, buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
+import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
+import { buildBalloonUK, buildBalloonFR, buildBalloonDE, buildSupplyTank, buildAALorryUK, buildAALorryFR, buildAALorryDE, buildAmbulanceUK, buildAmbulanceFR, buildAmbulanceDE, buildSupplyLorryFR, buildSupplyLorryDE, buildStaffCarUK, buildStaffCarFR, buildStaffCarDE, buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -225,9 +226,181 @@ const airRadar = derive(T.airRadar, {
   },
 });
 
+// ------------------------------------------------------------------ the rest of the roster (step 5)
+
+// cavalry (the IFV slot; 1806's horses and charge: kind 'cavalry', UnitStack.startCharge / unhorse): carbines at a distance,
+// the sword and the lance at the charge — deadly against men caught in the open, slaughtered by machine guns
+const RIDERS = { nato: 'uk18', fr: 'fr18', pact: 'de18', st: 'st18' };
+const mounts = (mounted = true) => Object.fromEntries(Object.entries(RIDERS).map(([k, army]) => [k, () => buildCavalry({ army, kind: 'medium', mounted })]));
+const HORSE_18 = {
+  armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
+  aggroRange: 110, preferredRange: 60, fireCooldown: 2.2, aimTime: 0.6, burst: 1, burstInterval: 0, spread: 0.05, boltSpeed: 500,
+  boltSize: 0.5, tracer: 0, magSize: 5, reloadTime: 5, weapon: 'rifle', vsArmor: 0.05, pierce: 0, breakMorale: 0.25, noStabilizer: false,
+};
+const ifv = {
+  id: 'ifv', category: 'cavalry', kind: 'cavalry', role: 'frontline', weaponSound: 'rifle', name: 'Cavalry', shortName: 'Cavalry', cost: 260,
+  formation: { count: 10, columns: 5, spacing: 2.8 },
+  stats: { ...HORSE_18, hp: 150, speed: 5, sight: 140, range: 100, damage: 90, cavalry: { chargeSpeed: 11, shock: 0.3, sabre: 115, reach: 2.8 } },
+  factionStats: { nato: { cavalry: { chargeSpeed: 11, shock: 0.32, sabre: 125, reach: 3.3 } }, fr: { cavalry: { chargeSpeed: 11, shock: 0.3, sabre: 115, reach: 2.8 } }, pact: { cavalry: { chargeSpeed: 11, shock: 0.32, sabre: 125, reach: 3.3 } }, st: { cavalry: { chargeSpeed: 11, shock: 0.3, sabre: 115, reach: 2.8 }, range: 110, damage: 95 } },
+  models: mounts(),
+  variants: {
+    nato: { name: 'Lancers', weapon: 'lance, 1908 sword, SMLE', text: 'British cavalry of 1918: they fight on foot with the rifle as often as they charge — but through a gap in the line, over open ground, the lance still decides. Machine guns cut them down.' },
+    fr: { name: 'Dragons', weapon: 'sword, Berthier carbine', text: 'The French dragoons in horizon blue: mounted infantry with a sword, quick to plug a gap or to ride through one.' },
+    pact: { name: 'Ulanen', weapon: 'lance, Karabiner 98 AZ', text: 'The German lancers, their steel-tubed lances: in 1918 few were left mounted — kept for the breakthrough.' },
+    st: { name: 'Kavallerie-Schützen', weapon: 'Karabiner 98 AZ, sword', text: 'Cavalry turned riflemen: they ride up behind the storm troops and fight on foot or in the saddle.' },
+  },
+};
+const looseHorse = {
+  id: 'looseHorse', name: 'Loose horse', shortName: 'Horse', hidden: true, uncapped: true, category: 'other', kind: 'cavalry', role: 'support', cost: 0,
+  formation: { count: 1, columns: 1, spacing: 1 },
+  stats: { ...HORSE_18, hp: 90, speed: 2, sight: 60, fov: 6.2, range: 1, damage: 0, reloadTime: 1, weapon: undefined, loose: true, breakMorale: undefined },
+  models: mounts(false),
+  variants: { nato: { name: 'Loose horse', text: 'Its rider is down: it bolts from the fire and wanders.' } },
+};
+const dismounted = {
+  id: 'dismounted', name: 'Dismounted troopers', shortName: 'On foot', hidden: true, uncapped: true, category: 'other', kind: 'infantry', role: 'support', cost: 0,
+  formation: { count: 1, columns: 1, spacing: 1.5 },
+  stats: { ...T.rifles.stats, lightAT: 0, smoke: undefined, nightSight: undefined, speed: 1.6, range: 90, damage: 70, fireCooldown: 2.4, magSize: 5, reloadTime: 4, breakMorale: 0.5, dismounted: true },
+  weaponSound: 'rifle',
+  models: Object.fromEntries(Object.entries(RIDERS).map(([k, army]) => [k, () => buildCavalryFoot({ army, kind: 'medium' })])),
+  variants: { nato: { name: 'Dismounted troopers', text: 'His horse went down: he looks for another, or makes his way back.' } },
+};
+
+// anti-tank: the British and French rifle grenade (a light bomb off the rifle's cup: weak against armour), the German Tankgewehr (a giant single-shot rifle: the first anti-tank rifle)
+const atTeam = derive(T.atTeam, {
+  models: men({ weapon: 'at' }),
+  specialist: { count: 2, stats: { ...rifles.stats, lightAT: 0, weapon: undefined, splash: 0, trail: undefined, antiArmor: undefined }, armyStats: Object.fromEntries(Object.entries(rifles.factionStats).map(([k, v]) => [k, { ...v, lightAT: 0, grenades: 0 }])) },
+  specialistModels: men(),
+  stats: { lightAT: 0, nightSight: undefined, smoke: undefined, damage: 230, range: 80, splash: 2.5, vsArmor: 0.55, pierce: 0.3, trail: false, boltSpeed: 60, reloadTime: 6 },
+  factionStats: { pact: { weapon: 'rifle', damage: 190, range: 110, splash: 0, vsArmor: 1, pierce: 0.55, boltSpeed: 700, boltSize: 0.6, magSize: 1, reloadTime: 4, fireCooldown: 3, weaponSound: 'rifle' } },
+  variants: {
+    nato: { name: 'Rifle Grenadiers', weapon: 'SMLE with No. 36 rifle grenades', text: 'Mills bombs fired from a cup on the rifle: a light bomb at a hundred yards, enough for a machine-gun post — a tank shrugs them off unless it is hit just right.' },
+    fr: { name: 'Grenadiers VB', weapon: 'Lebel with Viven-Bessières grenades', text: 'The VB rifle grenade: fired straight from the Lebel\'s cup, a bomb into the next trench. Against tanks only at the weak spots.' },
+    pact: { name: 'Tankgewehr', weapon: 'Mauser T-Gewehr M1918, 13.2 mm', text: 'The first anti-tank rifle: a Mauser grown to 16 kilos, its bullet through a Mark V\'s side. The kick breaks collarbones.' },
+    st: { name: 'Tankgewehr', weapon: 'Mauser T-Gewehr M1918, 13.2 mm', text: 'The first anti-tank rifle: a Mauser grown to 16 kilos, its bullet through a Mark V\'s side. The kick breaks collarbones.' },
+  },
+});
+
+const sniper = derive(T.sniper, {
+  models: men({ scout: true }),
+  specialistModels: men({ weapon: 'sniper', scout: true }),
+  variants: {
+    nato: { name: 'Sniper Pair', weapon: 'SMLE with Aldis scope', text: 'A sniper and his observer behind a steel loophole: officers and machine-gunners first.' },
+    fr: { name: 'Tireurs d\'élite', weapon: 'Lebel with APX scope', text: 'The French marksmen: patient, hidden in the ruins, deadly to anyone who looks over the parapet.' },
+    pact: { name: 'Scharfschützen', weapon: 'Gewehr 98 with Zielfernrohr', text: 'The German snipers, the first to be organised: a scoped Mauser and a steel plate to shoot through.' },
+    st: { name: 'Scharfschützen', weapon: 'Gewehr 98 with Zielfernrohr', text: 'The German snipers, the first to be organised: a scoped Mauser and a steel plate to shoot through.' },
+  },
+});
+
+const scouts = derive(T.scouts, {
+  models: men({ scout: true }),
+  variants: {
+    nato: { name: 'Trench Raiders', weapon: 'revolvers, clubs, Mills bombs', text: 'Out by night across no man\'s land: they see what the enemy holds and slip back before dawn.' },
+    fr: { name: 'Corps francs', weapon: 'pistols, knives, grenades', text: 'The French raiding parties: volunteers who go out ahead of the line to find the enemy.' },
+    pact: { name: 'Patrouille', weapon: 'Pistole 08, Stielhandgranaten', text: 'The night patrol: two men who crawl to the enemy wire and come back with what they saw.' },
+    st: { name: 'Stoßtrupp-Späher', weapon: 'MP 18, binoculars', text: 'The storm troops\' scouts: they find the gaps in the enemy line for the assault to pour through.' },
+  },
+});
+
+// engineers: dig, wire and clear as ever — and the German pioneers' Flammenwerfer, the weapon of 1918's trench fight
+const FLAME = { range: 30, aggroRange: 38, preferredRange: 18, damage: 75, splash: 2.2, fireCooldown: 0.07, burst: 1, burstInterval: 0, boltSpeed: 30, boltSize: 1.4, tracer: 1, spread: 0.05, magSize: 40, reloadTime: 8, vsStructure: 3, suppressPower: 3, ignite: 0.6, vsArmor: 0.15, aimTime: 0.3, playerFireInterval: 0.07, weaponSound: 'flame' };
+const engineers = derive(T.engineers, {
+  models: men(),
+  specialist: { count: 1, stats: FLAME, armyStats: { nato: { ...rifles.stats, ...rifles.factionStats.nato, ignite: undefined, weaponSound: undefined }, fr: { ...rifles.stats, ...rifles.factionStats.fr, ignite: undefined, weaponSound: undefined } } },
+  specialistModels: { nato: () => buildWw1Soldier({ army: 'uk' }), fr: () => buildWw1Soldier({ army: 'fr' }), pact: () => buildWw1Soldier({ army: 'de', weapon: 'flame' }), st: () => buildWw1Soldier({ army: 'st', weapon: 'flame' }) },
+  variants: {
+    nato: { name: 'Royal Engineers', weapon: 'SMLE, picks, wire', text: 'Sappers: they dig, put up wire and clear it three times as fast as the infantry.' },
+    fr: { name: 'Sapeurs', weapon: 'Lebel, picks, wire', text: 'The French engineers: trenches, wire, demolitions — and clearing the enemy\'s wire before an attack.' },
+    pact: { name: 'Pioniere', weapon: 'Gewehr 98, Kleif flamethrower', text: 'German pioneers with the small flamethrower: a jet of burning oil into the dugout ends the fight for a trench.' },
+    st: { name: 'Flammenwerfer-Trupp', weapon: 'Wechselapparat flamethrower, grenades', text: 'The Guard Reserve Pioneers\' flamethrower troop, the spearhead of the storm battalions: they burn out the strongpoint the others go round.' },
+  },
+});
+
+/** Wire cutters (the mine-clearing slot): an engineer team with Bangalore torpedoes — a tube of explosive pushed under the wire blows a lane through it (the line charge: X). */
+const mineClear = derive(T.engineers, {
+  id: 'mineClear', name: 'Wire Cutters', shortName: 'Wire cutters', category: 'support', cost: 160,
+  formation: { count: 4, columns: 4, spacing: 2.4 },
+  stats: { lineCharge: { count: 3, range: 45 } },
+  models: men(),
+  specialist: undefined,
+  variants: {
+    nato: { name: 'Bangalore Team', weapon: 'Bangalore torpedoes, wire cutters', text: 'Sappers with lengths of pipe packed with explosive: pushed under the enemy wire and fired, they blow a lane for the assault (X). Three charges.' },
+    fr: { name: 'Équipe de pétards', weapon: 'Bangalore torpedoes, cisailles', text: 'Engineers with Bangalore torpedoes: a lane through the wire where the attack will go (X). Three charges.' },
+    pact: { name: 'Drahtschneider', weapon: 'gestreckte Ladungen, Drahtscheren', text: 'Pioneers with long charges and wire cutters: a lane through the enemy\'s wire before the storm (X). Three charges.' },
+    st: { name: 'Drahtschneider', weapon: 'gestreckte Ladungen, Drahtscheren', text: 'Pioneers with long charges and wire cutters: a lane through the enemy\'s wire before the storm (X). Three charges.' },
+  },
+});
+
+// air defence: guns pointed up — no radar, by eye
+const aa = derive(T.aa, {
+  name: 'AA Lorry', shortName: 'AA gun', weaponSound: 'arty',
+  stats: { nightSight: undefined, armor: 0.05, hp: 380, speed: 5.5, antiAir: { range: 300, optical: 1, rate: 1.2, burst: 1, pause: 1.5, hitNear: 0.16, hitFar: 0.03 }, range: 0, damage: 0 },
+  models: { nato: buildAALorryUK, fr: buildAALorryFR, pact: buildAALorryDE, st: buildAALorryDE },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: '13-pounder AA', weapon: '13-pdr 9 cwt on a lorry', text: 'A field gun on a high mount on a Thornycroft lorry, laid at the sky: shrapnel bursts round the enemy aircraft.' },
+    fr: { name: 'Autocanon de 75', weapon: '75 mm on a De Dion lorry', text: 'The 75 on an anti-aircraft mount on its lorry: the first real AA gun.' },
+    pact: { name: 'K-Flak', weapon: '7.7 cm K-Flak on a lorry', text: 'The Kraftwagen-Flak: a 7.7 cm on a lorry, quick to wherever the enemy\'s aircraft are.' },
+    st: { name: 'K-Flak', weapon: '7.7 cm K-Flak on a lorry', text: 'The Kraftwagen-Flak: a 7.7 cm on a lorry, quick to wherever the enemy\'s aircraft are.' },
+  },
+});
+const manpads = derive(T.manpads, {
+  name: 'AA Machine-Gun Team', shortName: 'AA MG', weaponSound: 'mg',
+  specialist: { count: 1, stats: { antiAir: { range: 200, optical: 1, rate: 8, burst: 1.5, pause: 1, hitNear: 0.05, hitFar: 0.01 } } },
+  models: men(),
+  specialistModels: men({ weapon: 'mg' }),
+  variants: {
+    nato: { name: 'Lewis AA Team', weapon: 'Lewis gun on a post mount', text: 'A Lewis gun on a post, pointed at the sky: the infantry\'s answer to the low-flying Junkers.' },
+    fr: { name: 'Hotchkiss AA Team', weapon: 'Hotchkiss on an AA tripod', text: 'The Hotchkiss on its high tripod: a stream of bullets across a strafing run.' },
+    pact: { name: 'Fla-MG Trupp', weapon: 'MG 08 on an AA mount', text: 'The MG 08 on its anti-aircraft mount: keeps the British contact patrols off the trench.' },
+    st: { name: 'Fla-MG Trupp', weapon: 'MG 08 on an AA mount', text: 'The MG 08 on its anti-aircraft mount: keeps the British contact patrols off the trench.' },
+  },
+});
+
+const LORRY_18 = { nightSight: undefined, armor: 0.05, hp: 360, speed: 5.5 };
+const ambulance = derive(T.ambulance, {
+  stats: LORRY_18,
+  models: { nato: buildAmbulanceUK, fr: buildAmbulanceFR, pact: buildAmbulanceDE, st: buildAmbulanceDE },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'Motor Ambulance', weapon: 'unarmed', text: 'A Ford Model T ambulance of the RAMC: wounded men near it are patched up and go back to the line.' },
+    fr: { name: 'Ambulance automobile', weapon: 'unarmed', text: 'The French motor ambulance, many of them driven by American volunteers: wounded men near it go back to the line.' },
+    pact: { name: 'Sanitätskraftwagen', weapon: 'unarmed', text: 'The German motor ambulance: the wounded patched up near it go back to the line.' },
+    st: { name: 'Sanitätskraftwagen', weapon: 'unarmed', text: 'The German motor ambulance: the wounded patched up near it go back to the line.' },
+  },
+});
+/** The supply tank (Britain) and the ammunition lorries: they mend tanks near them, and a broken-down or ditched tank close by gets going three times sooner (systems/Breakdowns.js). */
+const recovery = derive(T.recovery, {
+  stats: { ...LORRY_18 },
+  factionStats: { nato: { armor: 0.4, hp: 850, speed: 1.9, breakdown: 1 / 300, ditch: 0.02 } },
+  models: { nato: buildSupplyTank, fr: buildSupplyLorryFR, pact: buildSupplyLorryDE, st: buildSupplyLorryDE },
+  engine: 'engine.diesel',
+  variants: {
+    nato: { name: 'Supply Tank', weapon: 'unarmed — stores, petrol, a workshop', text: 'An old Mark IV with its guns out and its sponsons full of stores: it follows the fighting tanks across the crater field, mends them and gets the broken-down ones going.' },
+    fr: { name: 'Camion de munitions', weapon: 'unarmed', text: 'The ammunition and workshop lorry: tanks near it are mended, and a broken-down FT gets going sooner.' },
+    pact: { name: 'Munitionskraftwagen', weapon: 'unarmed', text: 'The ammunition and workshop lorry: tanks near it are mended and got going again.' },
+    st: { name: 'Munitionskraftwagen', weapon: 'unarmed', text: 'The ammunition and workshop lorry: tanks near it are mended and got going again.' },
+  },
+});
+const commandPost = derive(T.commandPost, {
+  stats: { ...LORRY_18, hp: 260, speed: 7 },
+  models: { nato: buildStaffCarUK, fr: buildStaffCarFR, pact: buildStaffCarDE, st: buildStaffCarDE },
+  engine: 'engine.dieselSmall',
+  variants: {
+    nato: { name: 'Brigade Headquarters', weapon: 'staff car, field telephones', text: 'The brigadier\'s staff car and his signallers: where it stops, the telephone lines run out and the reinforcements report there.' },
+    fr: { name: 'Poste de commandement', weapon: 'staff car, telephones', text: 'The colonel\'s command post: once set up, the reinforcements come forward to it.' },
+    pact: { name: 'Gefechtsstand', weapon: 'Stabswagen, Fernsprecher', text: 'The regiment\'s battle headquarters: the reinforcements come forward to it.' },
+    st: { name: 'Gefechtsstand', weapon: 'Stabswagen, Fernsprecher', text: 'The storm battalion\'s headquarters, close behind the assault: the reinforcements come forward to it.' },
+  },
+});
+
+mineClear.specialist = undefined;      // (the wire cutters: no flamethrower among them)
+mineClear.specialistModels = undefined;
+
 export const TYPES_1918 = {
   rifles, mgTeam, tank, heavyTank, reconVehicle, crew,
   artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar,
+  ifv, looseHorse, dismounted, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
 };
 

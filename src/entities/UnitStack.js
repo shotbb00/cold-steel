@@ -163,6 +163,10 @@ export class UnitStack {
     if (cav) this.stats = { ...this.stats, sight: (this.stats.sight ?? 100) * cav.sight };
     const walze = ARTILLERY.has(type.id) && armyDoctrine(this.army, 'walze'); // the NVA's Feuerwalze reloads faster
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
+    const lewis = type.id === 'rifles' && armyDoctrine(this.army, 'lewis'); // Britain's Lewis guns (1918): the section's fire pins harder
+    if (lewis) this.stats = { ...this.stats, suppressPower: (this.stats.suppressPower ?? 1) * lewis.suppress };
+    const inf = type.kind === 'infantry' && armyDoctrine(this.army, 'infiltrate'); // the Sturmtruppen's infiltration (1918): quicker, harder to see
+    if (inf) this.stats = { ...this.stats, speed: this.stats.speed * inf.speed, stealth: (this.stats.stealth ?? 1) / inf.stealth };
     const s75 = type.id === 'artillery' && armyDoctrine(this.army, 'soixanteQuinze'); // France's 75 (1918): quicker field guns
     if (s75) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown / s75.fire, reloadTime: this.stats.reloadTime / s75.fire };
     const quick = this.stats.gun && this.stats.towed && armyDoctrine(this.army, 'quickGuns'); // Bavaria's reformed artillery unlimbers sooner
@@ -1932,7 +1936,7 @@ export class UnitStack {
   grenadeAt(u, d) {
     const s = u.stats;
     const t = u.target;
-    if (!s.grenades || s.indirect || s.marksman || d > GRENADE.range || d < GRENADE.min) return false;
+    if (!s.grenades || s.indirect || s.marksman || d > GRENADE.range * (armyDoctrine(this.army, 'grenades')?.reach ?? 1) || d < GRENADE.min) return false; // (the Sturmtruppen throw further: 1918)
     if (!t.stack.usesCover && !t.stack.stats.structure) return false; // not against armour
     u.grenades ??= s.grenades;
     if (u.grenades <= 0 || this.world.time < (u.nextGrenade ?? 0)) return false;

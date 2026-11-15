@@ -80,12 +80,12 @@ export const EPOCHS = {
         { id: 'swarm', name: 'Tank swarm', text: 'Renault FTs cost 25 % less: thousands of light tanks.', cost: 0.75 },
       ],
       de: [
-        { id: 'depth', name: 'Defence in depth', text: 'Squads in a trench break only at 60 % of the losses others do, and the counter-attack groups come on harder.', morale: 0.6 },
+        { id: 'depth', name: 'Defence in depth', text: 'Infantry in cover — a trench, a shell hole, a ruin — breaks only at 60 % of the losses others do.', morale: 0.6 },
         { id: 'bruchmueller', name: 'Hurricane bombardment', text: 'The barrage is short and sharp: it costs 25 % less and lands sooner.', cost: 0.75 },
       ],
       st: [
         { id: 'infiltrate', name: 'Infiltration', text: 'Storm troops move 20 % faster and are harder to spot: they slip past the strongpoints and leave them to the next wave.', speed: 1.2, stealth: 1.3 },
-        { id: 'grenades', name: 'Grenade fighting', text: 'Grenades are thrown further and burst harder.', reach: 1.3 },
+        { id: 'grenades', name: 'Grenade fighting', text: 'Grenades are thrown 30 % further: the storm troops clear a trench bay from the next one.', reach: 1.3 },
       ],
     },
   },

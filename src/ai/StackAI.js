@@ -165,7 +165,7 @@ export class StackAI {
     if (s.stats.structure) { this.state = AIState.DEFEND; return; } // concrete doesn't go anywhere
 
     // A squad you are leading in person holds its nerve.
-    const hold = s.usesCover && armyDoctrine(s.army, 'hold'); // the Fallschirmjäger in cover break late
+    const hold = s.usesCover && (armyDoctrine(s.army, 'hold') ?? armyDoctrine(s.army, 'depth')); // the Fallschirmjäger in cover break late (1918: the German Army's defence in depth)
     const nerve = hold && s.units.filter((u) => u.alive && u.atCover).length * 2 >= s.aliveCount ? hold.morale : 1;
     if (this.state !== AIState.RETREAT && this.state !== AIState.FOLLOW && s.morale < s.stats.breakMorale * nerve) {
       this.retreat();

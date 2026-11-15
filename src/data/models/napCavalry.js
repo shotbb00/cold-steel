@@ -13,6 +13,7 @@ import { P, merge, loft, limb, pair } from '../units/geometry.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, finish } from './soldierBody.js';
 import { buildHorse } from './horse.js';
 import { bicorne, shako, raupenhelm, stovepipe } from './napSoldier.js';
+import { ww1Helmet } from './ww1Soldier.js';
 
 const BLACK = 0x161616;
 const STEEL = 0xb8bab6;
@@ -59,6 +60,15 @@ CAV.gb = { // the light dragoons in the Tarleton helmet (blue jackets), the drag
   medium: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: () => stovepipe(0xe6e2d6), cloth: 0x1d2a5c, trim: 0xe6e2d6 },
   heavy: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: (c) => bicorne(c, 0xe6e2d6), cloth: 0xb0261e, trim: 0xd8b54a },
 };
+// 1918 (data/units1918, kind 'medium'): khaki, horizon blue, field grey, the steel helmets, a plain brown saddle; lances for the lancers and the Ulanen
+const SADDLE_18 = 0x4a3a28;
+Object.assign(CAV, {
+  uk18: { medium: { coat: 0x6e6444, facing: 0x5a5236, breeches: 0x7a6e4c, hat: () => ww1Helmet('uk'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3e2a1c, lance: true } },
+  fr18: { medium: { coat: 0x8a9aa6, facing: 0x6e7e8a, breeches: 0x84949f, hat: () => ww1Helmet('fr'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3a2a1e } },
+  de18: { medium: { coat: 0x6c6e5c, facing: 0x56584a, breeches: 0x5e604f, hat: () => ww1Helmet('de'), cloth: SADDLE_18, trim: SADDLE_18, lance: true } },
+  st18: { medium: { coat: 0x686a58, facing: 0x525446, breeches: 0x5a5c4c, hat: () => ww1Helmet('st'), cloth: SADDLE_18, trim: SADDLE_18 } },
+});
+
 const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a] };
 
 /** The trooper's parts in standing coordinates (feet at 0, hips at 0.96): torso, arms, a thigh, a shin. */
@@ -77,7 +87,11 @@ function trooper(army, kind) {
   // the arms forward to the reins; the sabre held at the slope against the right shoulder
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.facing })];
   // the sabre on its own, about the hand (SABRE_HAND): up at the slope, forward at the charge, swung in the mêlée (rider())
-  const sabre = [
+  const sabre = c.lance ? [ // (1918: the lancers' and Ulanen's lance — steel-tubed, the pennant below the point)
+    P.cyl(0.018, 0.018, 3.2, { x: 0, y: 1.2, z: -0.42, rx: -0.35, color: 0x6a5a40 }, 6),
+    P.cone(0.03, 0.22, { x: 0, y: 2.86, z: -1.0, rx: -0.35, color: STEEL }),
+    P.box(0.012, 0.16, 0.3, { x: 0, y: 2.6, z: -1.05, rx: -0.35, color: 0xb02424 }),
+  ] : [
     P.box(0.024, 0.8, 0.014, { x: 0, y: 0.37, z: -0.13, rx: -0.35, color: STEEL }),                            // the blade
     P.box(0.08, 0.025, 0.045, { x: 0, y: 0, z: 0, color: BRASS }),                                              // the hilt
   ];
@@ -85,7 +99,7 @@ function trooper(army, kind) {
     P.box(0.024, 0.8, 0.014, { x: 0.2, y: 1.64, z: 0.12, rx: -0.35, color: STEEL }),
     P.box(0.08, 0.025, 0.045, { x: 0.2, y: 1.27, z: 0.25, color: BRASS }),
   ];
-  return { torso, arms, sabre, sabreAbs, thigh: [thighPart({ color: c.breeches })], shin: shinPart({ color: c.breeches, boot: BLACK, bootTop: 0.48, blouse: false }), cfg };
+  return { torso, arms, sabre, sabreAbs, thigh: [thighPart({ color: c.breeches })], shin: shinPart({ color: c.breeches, boot: c.boot ?? BLACK, bootTop: 0.48, blouse: false }), cfg };
 }
 
 const SEAT = { y: 1.66, z: 0.05 };
