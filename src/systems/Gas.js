@@ -32,7 +32,7 @@ export class Gas {
   }
 
   /** Has `faction` gas to call? (1918) */
-  has() { return epoch() === '1918'; }
+  has() { return epoch() === '1918' && this.game.map?.theatre !== 'sea'; } // (not at sea: the sea's own powers)
   ready(f) { return this.game.time >= (this.readyAt[f] ?? 0); }
   cooldownLeft(f) { return Math.max(0, (this.readyAt[f] ?? 0) - this.game.time); }
 

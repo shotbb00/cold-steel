@@ -22,6 +22,9 @@ import trafalgar from './trafalgar.ts';
 import aboukir from './aboukir.ts';
 import brest from './brest.ts';
 import caribbean from './caribbean.ts';
+import heligolandBight from './heligolandBight.ts';
+import doggerBank from './doggerBank.ts';
+import doverStrait from './doverStrait.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import hohwacht from './hohwacht.ts';
@@ -58,6 +61,9 @@ export const MAPS = {
   [aboukir.id]: aboukir,
   [brest.id]: brest,
   [caribbean.id]: caribbean,
+  [heligolandBight.id]: heligolandBight,
+  [doggerBank.id]: doggerBank,
+  [doverStrait.id]: doverStrait,
   [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
 };
