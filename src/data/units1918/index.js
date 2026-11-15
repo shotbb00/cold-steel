@@ -6,6 +6,7 @@
 // typeOf) until its step (see the 1918 design notes): tanks 3, guns and gas 4, cavalry and the rest 5.
 import { TYPES_1985 } from '../units/index.js';
 import { SHIPS_1918 } from './ships.js';
+import { COAST_1918 } from './coast.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
@@ -428,6 +429,7 @@ export const TYPES_1918 = {
   ifv, looseHorse, dismounted, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
   ...SHIPS_1918,   // the North Sea maps' warships (./ships.js)
+  ...COAST_1918,   // Zeebrugge's fixed guns (./coast.js)
 };
 
 /** What stands in for the types not built yet: the riflemen (ponytail: each gets its own in its step). */

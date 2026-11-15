@@ -105,6 +105,17 @@ function onRoad(x: number, z: number) {
 }
 
 const W = (x: number, z: number) => ({ x, z });
+/** A barrier across the Mole at `t` along its segment `i` (MOLE_LINE): wire right across the deck, an MG nest behind it. */
+function barrier(i: number, t: number) {
+  const [ax, az] = MOLE_LINE[i], [bx, bz] = MOLE_LINE[i + 1], len = Math.hypot(bx - ax, bz - az);
+  const tx = (bx - ax) / len, tz = (bz - az) / len, nx = tz, nz = -tx;            // along it (toward the head), and out to sea
+  const cx = ax + (bx - ax) * t, cz = az + (bz - az) * t;
+  const wireYaw = Math.atan2(-nz, nx);                                            // (a wire's length along its local x: across the Mole)
+  return [
+    ...[-20, -10, 0, 10, 20].map((o) => ({ kind: 'wire', x: cx + nx * o, z: cz + nz * o, yaw: wireYaw })),
+    ...[-10, 8].map((o) => ({ kind: 'mgNest', x: cx + nx * o - tx * 10, z: cz + nz * o - tz * 10, yaw: Math.atan2(tx, tz) })), // (behind the wire toward the shore end, facing along the Mole to the head)
+  ];
+}
 /** Where the Mole's sectors are (the storming ships come alongside there, step 2) and what each opens ashore. */
 export const SECTORS = [
   { x: -170, name: 'Mole-head battery', at: W(-170, 461), inland: W(-5, -40) },   // (the canal entrance: on the east quay by the piers)
@@ -197,7 +208,16 @@ export default {
       { t: 150, say: 'The motor launches are coming in with more of the storming parties', units: [{ unit: 'sailors', sector: 2, craft: 'ml' }, { unit: 'marines', sector: 0, craft: 'ml' }, { unit: 'mortar', sector: 1, craft: 'ml' }] },
     ],
     ai: { order: ['marines', 'sailors', 'mgTeam', 'marines', 'sailors', 'mortar', 'marines', 'sniper', 'sailors', 'mgTeam'], gunship: 'destroyer', gunships: 1, heavy: null, inshore: 400 },
-    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'artillery', 'rifles', 'mgTeam'],
+    // the Marinekorps Flandern: the Mole's garrison behind its wire, the town's and the canal's
+    defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mortar', 'rifles', 'artillery', 'rifles', 'mgTeam'],
+    names: { rifles: 'Matrosen-Infanterie', mgTeam: 'Marine-MG-Trupp' },
+    // the guns: the battery on the Mole's head over the harbour mouth, the heavy coastal batteries behind the dunes; the torpedo boats lying in the harbour
+    forts: [
+      { unit: 'moleBattery', x: -205, z: 457, facing: 0 },
+      { unit: 'coastBattery', x: -440, z: -100, facing: 0 }, { unit: 'coastBattery', x: 715, z: -230, facing: 0 },
+      { unit: 'destroyer', x: 150, z: 330, facing: Math.PI / 2 }, { unit: 'destroyer', x: -10, z: 300, facing: -Math.PI / 2 },
+    ],
+    works: [...barrier(3, 0.75), ...barrier(2, 0.45), ...barrier(0, 0.6)],
     hold: [...SECTORS.map((s) => s.at), ...SECTORS.map((s) => s.inland)],
     economy: { reserves: 2000, perSector: 600, beachIncome: 0.7, defenceCp: 800, defenceIncome: 1.4 },
   },
@@ -261,8 +281,6 @@ export default {
     }
     props.church({ x: 330, z: -230, yaw: 0 });
     for (const [x, z] of [[75, -70], [-190, -60], [25, -120]] as [number, number][]) props.hall({ x, z, yaw: 0, width: 26, depth: 14, height: 8, color: 0x7a5e4a, roof: ROOF, door: 6, name: 'harbour office' });
-    // the coastal batteries behind the dunes (their guns come with step 3): concrete emplacements
-    for (const [x, z] of [[-480, -90], [-430, -95], [-380, -100], [700, -220], [740, -230]] as [number, number][]) props.box('stone', x, terrain.heightAt(x, z) + 1, z, 14, 2.4, 12, 0, 0x8a887e);
     commandPost(props, this.bases.pact, 1, 0x6a6e52);
     props.finish();
 
