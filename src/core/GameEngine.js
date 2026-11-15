@@ -309,6 +309,9 @@ export class GameEngine {
         const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && (u.models?.[army] ?? u.models?.[f])); // (an army with no vehicle of its own, the British of 1801: its side's boats, in its own paint)
         try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
       }
+      // horses and riders (render/paint.js fabric 'coat' and 'cloth'): one shared shader each — compiled now, or the first squadron rides in invisible for seconds
+      const cav = Object.values(UNIT_TYPES).find((u) => u.kind === 'cavalry' && u.models);
+      try { if (cav) warmRig(this.babylon, cav, this.armyOf('nato'), new THREE.Color(FACTIONS.nato.marking)); } catch { /* (as above) */ }
       this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)
       this.babylon.render(0);
       this.babylon.scene.whenReadyAsync().then(begin, begin);

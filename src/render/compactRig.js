@@ -98,6 +98,7 @@ export function addImpostor(rig) {
     else { geo = merged; shared.set(k, geo); }
     const mesh = new THREE.Mesh(geo, list[0].material);
     mesh.castShadow = true;
+    mesh.receiveShadow = true; // (as the parts do: the same shader variant, already compiled at loading — GameEngine warm)
     impostor.add(mesh);
   }
   const detail = new THREE.Group();

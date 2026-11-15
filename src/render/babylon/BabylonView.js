@@ -37,6 +37,8 @@ import { SSAO2RenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipe
 import { ReflectionProbe } from '@babylonjs/core/Probes/reflectionProbe.js';
 import { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture.js';
 import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration.js';
+import { ColorCurves } from '@babylonjs/core/Materials/colorCurves.js';
+import { epoch } from '../../data/epoch.js';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
 import { Vector3, Matrix, Quaternion } from '@babylonjs/core/Maths/math.vector.js';
 // side-effect registrations: thin instances, shadows, the rendering pipeline manager
@@ -93,6 +95,15 @@ export class BabylonView {
     ip.toneMappingEnabled = true;
     ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
     ip.exposure = exposure * EXPOSURE;
+    // each war its own film: a colour grade in the tone mapping pass (a few instructions, no extra pass)
+    const grade = GRADES[epoch()];
+    if (grade) {
+      const cc = new ColorCurves();
+      Object.assign(cc, grade.curves);
+      ip.colorCurves = cc;
+      ip.colorCurvesEnabled = true;
+      ip.contrast = grade.contrast ?? 1;
+    }
 
     this.camera = new FreeCamera('camera', new Vector3(0, 10, 0), scene);
     this.camera.rotationQuaternion = new Quaternion();
@@ -715,6 +726,19 @@ export class BabylonView {
 function scene_render(scene) {
   scene.render();
 }
+
+/**
+ * Colour grades per epoch (Babylon ColorCurves: hue in degrees, density -100…100 how strongly it tints,
+ * saturation -100…100). Kept subtle: the battlefield must still read.
+ *   1806: warm, a little rich, like the battle paintings      1918: drained and cold, sepia in the light
+ *   1945: olive-warm film, softened colour                    1985: plain, a cool cast in the shadows
+ */
+const GRADES = {
+  1806: { curves: { globalSaturation: 6, highlightsHue: 38, highlightsDensity: 22, shadowsHue: 25, shadowsDensity: 12 }, contrast: 1.04 },
+  1918: { curves: { globalSaturation: -24, highlightsHue: 42, highlightsDensity: 18, shadowsHue: 205, shadowsDensity: 14 }, contrast: 1.08 },
+  1945: { curves: { globalSaturation: -12, highlightsHue: 45, highlightsDensity: 16, shadowsHue: 200, shadowsDensity: 10 }, contrast: 1.05 },
+  1985: { curves: { globalSaturation: -4, shadowsHue: 215, shadowsDensity: 14 }, contrast: 1.03 },
+};
 
 /** 0, 1, 2, … n-1 as a view of one shared array (grown as needed): the index list of every unindexed geometry. */
 let SEQ = new Uint32Array(0);

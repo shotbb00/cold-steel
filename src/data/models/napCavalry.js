@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { P, merge, loft, limb, pair } from '../units/geometry.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, finish } from './soldierBody.js';
 import { buildHorse } from './horse.js';
+import { paintMaterial } from '../../render/paint.js';
 import { bicorne, shako, raupenhelm, stovepipe } from './napSoldier.js';
 import { ww1Helmet } from './ww1Soldier.js';
 
@@ -104,7 +105,8 @@ function trooper(army, kind) {
 
 const SEAT = { y: 1.66, z: 0.05 };
 const SABRE_HAND = { x: 0.2, y: 1.27, z: 0.25 }; // (torso space: the right hand at the reins)          // the saddle seat (horse space)
-const material = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
+const RIDER_MAT = paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 }), { scale: 15, wear: 0.16, surfaces: true, smock: true, fabric: 'cloth' });
+const material = () => RIDER_MAT;
 
 /** The rider seated, as a group to sit on the horse's body (or to lie on the ground when he falls). */
 function rider(army, kind) {

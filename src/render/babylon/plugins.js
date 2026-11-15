@@ -91,7 +91,7 @@ export class FowPlugin extends GlslPlugin {
 export class PaintPlugin extends GlslPlugin {
   /** @param {object} paint  { colors: 4 × Three Color (linear), scale, mud (Three Color), wear } */
   constructor(material, paint) {
-    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false });
+    super(material, 'Paint', 190, { PAINT: false, PAINT_SURF: false, PAINT_WEATHER: false, PAINT_AIR: false, PAINT_CLOTH: false, PAINT_COAT: false });
     this.paint = paint;
     this._enable(true);
   }
@@ -103,6 +103,8 @@ export class PaintPlugin extends GlslPlugin {
     defines.PAINT_SURF = defines.PAINT && !!this.paint.surfaces;
     defines.PAINT_WEATHER = defines.PAINT && !!this.paint.weather;
     defines.PAINT_AIR = defines.PAINT && this.paint.weather === 'air';
+    defines.PAINT_CLOTH = defines.PAINT && this.paint.fabric === 'cloth';
+    defines.PAINT_COAT = defines.PAINT && this.paint.fabric === 'coat';
   }
 
   getAttributes(attributes, scene, mesh) {
@@ -179,6 +181,11 @@ export class PaintPlugin extends GlslPlugin {
           #ifdef PAINT_WEATHER
             surfaceAlbedo = pWeather(surfaceAlbedo, pSurf(vPaint.x), vPaintPos);
           #endif
+          #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+            float fab = pFab(vPaint.x);
+            float fold = pFold(vPaintPos);
+            surfaceAlbedo *= mix(1.0, 0.76 + 0.42 * fold, fab);
+          #endif
           if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
             float sf = pSurf(vPaint.x);
             float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
@@ -186,7 +193,10 @@ export class PaintPlugin extends GlslPlugin {
             float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
             surfaceAlbedo = mix(surfaceAlbedo, uClimateColor * vTint, uClimate * paintable * k);
           }
-          #ifdef PAINT_SURF
+          #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+            normalW = pBumpNormal(vPositionW, normalW, fab > 0.5 ? pFoldH(vPaintPos, fold) : pBump(pSurf(vPaint.x), vPaintPos));
+            surfaceAlbedo *= 1.0 + pSheen(normalW, viewDirectionW) * fab;
+          #elif defined(PAINT_SURF)
             normalW = pBumpNormal(vPositionW, normalW, pBump(pSurf(vPaint.x), vPaintPos));
           #endif
         }
@@ -197,6 +207,10 @@ export class PaintPlugin extends GlslPlugin {
           float mud = clamp(vPaint.y, 0.0, 1.0);
           #ifdef PAINT_SURF
             vec2 surfRM = pSurfRM(pSurf(vPaint.x), pNoise(vPaintPos * uCamoScale * 3.7));
+            #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
+              surfRM = mix(surfRM, vec2(FAB_ROUGH + (pNoise(vPaintPos * uCamoScale * 3.7) - 0.5) * 0.1, 0.0), pFab(vPaint.x));
+              if (abs(pSurf(vPaint.x) - 2.0) < 0.5) surfRM.x = 0.6; // skin
+            #endif
             metallicRoughness = vec2(surfRM.y * (1.0 - mud), surfRM.x);
           #endif
           metallicRoughness.g = mix(metallicRoughness.g, 1.0, mud * 0.6); // mud is matte

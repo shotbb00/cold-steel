@@ -14,7 +14,7 @@ import { Material } from '@babylonjs/core/Materials/material.js';
 import { Effect } from '@babylonjs/core/Materials/effect.js';
 import { Engine } from '@babylonjs/core/Engines/engine.js';
 import { Color3 } from '@babylonjs/core/Maths/math.color.js';
-import { Matrix, Quaternion } from '@babylonjs/core/Maths/math.vector.js';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector.js';
 
 Effect.ShadersStore.csParticleVertexShader = /* glsl */ `
   precision highp float;
@@ -28,12 +28,14 @@ Effect.ShadersStore.csParticleVertexShader = /* glsl */ `
   varying vec2 vUv;
   varying vec4 vColor;
   varying float vFog;
+  varying vec2 vOff;
   void main() {
     vUv = uv;
     vColor = aColor;
     vec4 mv = view * vec4(aPos, 1.0);
     float c = cos(aSizeRot.y), s = sin(aSizeRot.y);
     vec2 q = vec2(position.x * c - position.y * s, position.x * s + position.y * c);
+    vOff = q * 2.0;   // where on the puff, in view space (the spin taken out: the light stays put)
     mv.xy += q * aSizeRot.x;
     float d = -mv.z;
     vFog = 1.0 - exp(-fogDensity * fogDensity * d * d);
@@ -44,12 +46,17 @@ Effect.ShadersStore.csSmokeFragmentShader = /* glsl */ `
   precision highp float;
   uniform sampler2D map;
   uniform vec3 fogColor;
+  uniform vec3 sunView;   // toward the sun, in view space
   varying vec2 vUv;
   varying vec4 vColor;
   varying float vFog;
+  varying vec2 vOff;
   void main() {
     vec4 t = texture2D(map, vUv);
-    vec3 col = mix(vColor.rgb * t.rgb, fogColor, vFog);
+    // each puff a rough ball lit from the sun's side: brighter there, darker away (about as bright on the whole)
+    vec3 n = normalize(vec3(vOff, 0.6));
+    float lit = 0.8 + 0.32 * (0.5 + 0.5 * dot(n, sunView));
+    vec3 col = mix(vColor.rgb * t.rgb * lit, fogColor, vFog);
     float a = t.a * vColor.a;
     if (a < 0.004) discard;
     gl_FragColor = vec4(col, a);
@@ -99,7 +106,7 @@ export function particleLayer(view, layer) {
   mesh.alphaIndex = additive ? 3 : 2;
   const mat = new ShaderMaterial(mesh.name, scene, { vertex: 'csParticle', fragment: additive ? 'csFire' : 'csSmoke' }, {
     attributes: ['position', 'uv', 'aPos', 'aColor', 'aSizeRot'],
-    uniforms: ['view', 'projection', 'fogDensity', 'fogColor'],
+    uniforms: ['view', 'projection', 'fogDensity', 'fogColor', 'sunView'],
     samplers: ['map'],
     needAlphaBlending: true,
   });
@@ -109,6 +116,7 @@ export function particleLayer(view, layer) {
   const tex = view.texture(layer.material.uniforms.map.value);
   if (tex) mat.setTexture('map', tex);
   mesh.material = mat;
+  const sunView = new Vector3(0, 1, 0), _d = new Vector3();
   return {
     mesh,
     update() {
@@ -121,6 +129,12 @@ export function particleLayer(view, layer) {
       }
       mat.setFloat('fogDensity', scene.fogMode === 2 ? scene.fogDensity : 0); // Scene.FOGMODE_EXP2
       mat.setColor3('fogColor', scene.fogColor.toLinearSpace()); // scene.fogColor is gamma space
+      if (!additive) {
+        const sun = view.shadowGen?.getLight() ?? scene.lights.find((l) => l.getClassName() === 'DirectionalLight');
+        const vm = view.camera?.getViewMatrix(); // (none yet before the first frame)
+        if (sun && vm) { _d.copyFrom(sun.direction).scaleInPlace(-1); Vector3.TransformNormalToRef(_d, vm, sunView); sunView.normalize(); }
+        mat.setVector3('sunView', sunView);
+      }
     },
   };
 }
