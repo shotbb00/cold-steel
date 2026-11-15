@@ -1754,7 +1754,8 @@ export class UnitStack {
    * `at` the gun's bearing from the nose (rad: 0 the bow, ±π/2 the sides, π the rear) — or from the gun (`turret`: a
    * coaxial MG) — and `arc` either side of it. Each picks its own man among the enemy foot (and gun crews, and riders)
    * it can see in its sector and fires bursts at him on its own: the 1918 tanks' sponson and hull guns, a later tank's
-   * bow and coaxial MGs. Fired from a moving hull it sprays.
+   * bow and coaxial MGs. Fired from a moving hull it sprays. `cannon`: a second gun (the rhomboids' other sponson
+   * 6-pounder) — it takes anything in its sector, tanks too, one shell at a time (`pause` its reload).
    */
   updateSideGuns(u, dt) {
     const guns = u.stats.sideGuns;
@@ -1774,7 +1775,7 @@ export class UnitStack {
         g.foe = null;
         let best = Infinity;
         for (const e of this.world.combatants(enemyOf(this.faction))) {
-          if (!e.alive || !e.spotted || !(e.stack.usesCover || e.stack.kind === 'gun' || e.stack.kind === 'cavalry')) continue;
+          if (!e.alive || !e.spotted || !(m.cannon || e.stack.usesCover || e.stack.kind === 'gun' || e.stack.kind === 'cavalry')) continue;
           const d2 = dist2DSq(u.pos, e.pos);
           if (d2 >= best || !sector(m, e)) continue;
           if (!this.world.terrain.lineOfSight(u.pos.x, eyeY, u.pos.z, e.pos.x, e.pos.y + e.aimHeight, e.pos.z)) continue;
@@ -1790,17 +1791,19 @@ export class UnitStack {
       _v.set(e.pos.x, e.pos.y + e.aimHeight, e.pos.z);
       const d = _v.distanceTo(_p);
       _w.subVectors(_v, _p).normalize();
-      const spread = 0.025 * (1 + d / m.range) * (u.moving ? 2.2 : 1) * (1 + u.suppression);
+      if (m.cannon && u.moving && u.stats.noStabilizer) { g.t = 0.5; continue; } // (a gun without a stabiliser: standing still)
+      const spread = (m.cannon ? 0.008 : 0.025) * (1 + d / m.range) * (u.moving ? 2.2 : 1) * (1 + u.suppression);
       _w.x += (Math.random() - 0.5) * spread * 2;
       _w.y += (Math.random() - 0.5) * spread;
       _w.z += (Math.random() - 0.5) * spread * 2;
       _w.normalize();
+      const c = m.cannon;
       this.services.projectiles.spawn({
-        origin: _p, dir: _w, speed: 700, damage: (m.damage ?? 60) * u.damageMult, faction: this.faction, color: this.boltColor, size: 0.5, source: this,
-        life: (m.range * 1.4) / 700 + 0.2, splash: 0, pierce: 0.1, vsArmor: 0.03, suppress: 1.2, tracer: Math.random() < 0.3,
+        origin: _p, dir: _w, speed: c ? 500 : 700, damage: (m.damage ?? 60) * u.damageMult, faction: this.faction, color: this.boltColor, size: c ? 1.3 : 0.5, source: this,
+        life: (m.range * 1.4) / (c ? 500 : 700) + 0.2, splash: c?.splash ?? 0, pierce: c?.pierce ?? 0.1, vsArmor: c ? 1 : 0.03, suppress: c ? 2.5 : 1.2, tracer: c ? true : Math.random() < 0.3,
       });
-      this.services.effects.muzzle(_p, _w, 0.7, 'rifle');
-      this.services.audio?.weapon(this.faction, 'mg', _p, false, this.army);
+      this.services.effects.muzzle(_p, _w, c ? 1.4 : 0.7, c ? 'cannon' : 'rifle');
+      this.services.audio?.weapon(this.faction, c ? 'cannon' : 'mg', _p, false, this.army);
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
       g.left--;
