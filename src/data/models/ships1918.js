@@ -6,6 +6,7 @@
 // and the open bridge, the torpedo tubes; the U-boats, the motor torpedo boats and the steamers their own.
 // Royal Navy dark Home Fleet grey with planked decks; the Kaiserliche Marine a lighter blue-grey.
 import { P, merge, loft } from '../units/geometry.js';
+import { sideProfile } from './vehicleCommon.js';
 import { KIT } from './ships1945.js';
 
 const { box, cyl, every, strut, hull, turret, boat, searchlight, mast, funnel, windows, vent, ship, sub, BLACK, GLASS, CANVAS } = KIT;
@@ -15,14 +16,12 @@ const KM = { hull: 0x7e868e, deck: 0x887c64, upper: 0x8c949a, gun: 0x848c94, bla
 // ---------------------------------------------------------------- guns (geometry at 0, facing +z)
 
 /** A single gun behind its shield on a pedestal (the light cruisers', destroyers', sloops' guns). */
-const shielded = (c, { len = 5, cal = 0.1, w = 2.4, h = 2 } = {}) => merge([
-  P.cyl(0.45, 0.6, 0.9, { y: 0.45, color: c.gun }, 10),
-  box(w, h, 0.12, { y: 1.2 + h / 2 - 0.4, z: 0.9, color: c.gun }),                                      // the shield's face
-  ...[-1, 1].map((s) => box(0.1, h * 0.8, 1.4, { x: s * w / 2, y: 1.2 + h * 0.4 - 0.4, z: 0.25, color: c.gun })),
-  box(w, 0.1, 1.5, { y: 0.8 + h, z: 0.25, color: c.gun }),                                                // its roof
-  box(0.7, 0.7, 1.8, { y: 1.3, z: 0.2, color: c.gun }),                                                   // the cradle and breech
-  P.cyl(cal, cal * 1.3, len, { y: 1.3, z: 0.9 + len / 2, rx: Math.PI / 2, color: BLACK, surf: 'metal' }, 8),
-]);
+const shielded = (c, { len = 5, cal = 0.1, w = 2, h = 1.5, d = 2.2 } = {}) => merge([
+  P.cyl(0.4, 0.55, 0.6, { y: 0.3, color: c.gun }, 10),                                                   // the pedestal
+  sideProfile([[-d * 0.45, 0], [d * 0.5, 0], [d * 0.5, h * 0.5], [d * 0.18, h], [-d * 0.45, h]], w, { y: 0.55, color: c.gun, surf: 'plate' }, 0.06), // the shield
+  P.box(w * 0.86, h * 0.8, 0.1, { y: 0.55 + h * 0.4, z: -d * 0.46, color: 0x1c1e20 }),                    // its open back, dark
+  P.cyl(cal, cal * 1.3, len, { y: 0.55 + h * 0.4, z: d * 0.5 + len / 2 - 0.2, rx: Math.PI / 2, color: BLACK, surf: 'metal' }, 8),
+])
 /** A torpedo tube mount: a turntable, `n` tubes side by side. */
 const tubes = (c, n, len = 6.5) => merge([
   P.cyl(1, 1.1, 0.4, { y: 0.2, color: c.gun }, 12),
@@ -50,7 +49,7 @@ function warship(c, o) {
   const deckAt = (z) => (o.fc && z > o.fc[0] ? H.top(z) + o.fc[1] : H.top(z));
   if (o.fc) { // the raised forecastle: the hull's breadth carried up a deck from its break to the stem
     const [z0, h] = o.fc;
-    const secs = every(z0, len / 2 - 0.5, 2).map((z) => [0, H.top(z) + h / 2, z, Math.max(0.1, H.side(z, H.top(z)) - 0.05), h / 2, 4]);
+    const secs = every(z0, len / 2 - 0.5, 2).map((z) => [0, H.top(z) + h / 2, z, Math.max(0.1, H.side(z, (H.top(z) - draft) / 2) * 0.98), h / 2, 4]);
     parts.push(loft(secs, { color: c.hull, surf: 'plate' }, 12), loft(secs.map(([x, y, z, w]) => [x, y + h / 2 + 0.05, z, Math.max(0.05, w * 0.97), 0.07, 6]), { color: c.deck, surf: 'deck' }, 10));
   }
   // the casemate guns: ports along both sides under the deck edge, a barrel out of each
@@ -262,13 +261,19 @@ export const buildUB3 = sub(() => uboat({ ...KM, hull: 0x6a7076, deck: 0x50555a 
 
 /** A coastal motor boat: a stepped planing hull, the cockpit, the torpedo in its trough aft (CMB) or a tube forward (LM). */
 function motorBoat(c, { len, beam, trough }) {
-  const fb = 1.2;
-  const secs = every(0, 12, 1).map((k) => { const t = k / 12; const w = (beam / 2) * (t > 0.7 ? Math.max(0.06, 1 - ((t - 0.7) / 0.3) ** 1.5) : 1); return [0, (fb - 0.6 + (t > 0.7 ? (t - 0.7) * 1.4 : 0)) / 2, -len / 2 + t * len, w, (fb + 0.6 + (t > 0.7 ? (t - 0.7) * 1.4 : 0)) / 2, 3]; });
+  const fb = 1.1;
+  const H = hull(len, beam, fb, 0.7, c, 0.5, { rails: false, fittings: false });
+  const y = (z) => H.top(z);
   return merge([
-    loft(secs, { color: c.hull, surf: 'plate' }, 10),
-    box(beam * 0.55, 0.9, len * 0.18, { y: fb + 0.4, z: len * 0.05, color: c.upper }), P.box(beam * 0.5, 0.35, 0.1, { y: fb + 0.75, z: len * 0.14, color: GLASS }),
-    trough ? box(0.9, 0.5, len * 0.4, { y: fb + 0.2, z: -len * 0.28, color: c.gun }) : P.cyl(0.3, 0.3, len * 0.45, { y: fb + 0.3, z: len * 0.2, rx: Math.PI / 2, color: c.gun }, 8),
-    P.cyl(0.04, 0.05, 1.4, { y: fb + 1.3, z: -len * 0.05, color: BLACK, surf: 'metal' }, 5),                            // a Lewis gun on its post
+    ...H.parts,
+    box(beam * 0.5, 0.8, len * 0.18, { y: y(-len * 0.04) + 0.4, z: -len * 0.04, color: c.upper }),                                  // the cockpit's coaming
+    P.box(beam * 0.45, 0.4, 0.08, { y: y(len * 0.05) + 0.75, z: len * 0.05, rx: -0.4, color: GLASS }),                         // its screen
+    box(beam * 0.38, 0.25, len * 0.18, { y: y(len * 0.17) + 0.12, z: len * 0.17, color: c.upper }),                               // the engine hatch forward
+    ...(trough
+      ? [P.box(0.75, 0.3, len * 0.36, { y: y(-len * 0.28) + 0.05, z: -len * 0.28, color: BLACK }), P.cyl(0.27, 0.27, len * 0.32, { y: y(-len * 0.28) + 0.2, z: -len * 0.28, rx: Math.PI / 2, color: c.gun, surf: 'metal' }, 8)] // the torpedo in its stern trough
+      : [P.cyl(0.3, 0.3, len * 0.36, { y: y(len * 0.2) + 0.3, z: len * 0.2, rx: Math.PI / 2, color: c.gun }, 8)]),              // the tube on the foredeck
+    P.cyl(0.04, 0.05, 1.2, { y: y(-len * 0.05) + 0.6, z: -len * 0.05, color: BLACK, surf: 'metal' }, 5),                        // a Lewis gun on its post
+    P.cyl(0.05, 0.06, 1.2, { y: y(-len * 0.05) + 1.1, z: -len * 0.05 + 0.5, rx: Math.PI / 2, color: BLACK, surf: 'metal' }, 5),
   ]);
 }
 export const buildCMB = ship(() => ({ fixed: motorBoat({ ...RN, hull: 0x5a6066 }, { len: 16.8, beam: 3.4, trough: true }), mounts: [{ geo: merge([P.box(0.1, 0.1, 0.1, { color: BLACK })]), at: [0, 1.4, 0], arc: 6 }] }));
@@ -286,7 +291,7 @@ function steamer(c, { len, beam, fb, band }) {
       box(beam * 0.6, 3, len * 0.22, { y: y + 1.5, z: 0, color: 0xc8c4b4 }), box(beam * 0.5, 2.4, len * 0.12, { y: y + 4.2, z: 2, color: 0xc8c4b4 }), ...windows(0, y + 4.6, 2, beam * 0.5, len * 0.12),
       ...funnel({ ...c, upper: c.funnel ?? c.upper }, 0, y + 3, -6, 2.4, 11, 0.06),
       P.cyl(2.75, 2.75, 1.2, { y: y + 11, z: -6.6, color: band }, 14),
-      ...[len * 0.3, -len * 0.3].flatMap((z) => [...mast(c, 0, y, z, 20, { yard: 5 }), strut([0, y + 2, z], [0, y + 11, z + Math.sign(z) * 12], 0.15, c.upper), box(8, 2, 10, { y: y + 0.5, z: z + Math.sign(z) * 8, color: c.gun })]), // the masts, derricks, hatches
+      ...[len * 0.3, -len * 0.3].flatMap((z) => [...mast(c, 0, y, z, 20, { yard: 5 }), strut([0, y + 2, z], [0, y + 11, z + Math.sign(z) * 12], 0.15, c.upper), box(beam * 0.45, 1.4, 9, { y: H.top(z - Math.sign(z) * 8) + 0.5, z: z - Math.sign(z) * 8, color: c.gun })]), // the masts, derricks, hatches (between mast and house)
       ...[-1, 1].map((s) => boat(c, s * beam * 0.36, y + 3, -2, 7, s)),
     ]),
     mounts: [{ geo: shielded(c, { len: 3.5, cal: 0.08 }), at: [0, H.top(-len * 0.44) + 0.1, -len * 0.44], aft: true, arc: 4 }],
