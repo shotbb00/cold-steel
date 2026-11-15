@@ -30,10 +30,18 @@ const ARMY_CAMO_1945 = {
   fj: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
 };
 
+// 1918: the British brown-green plain; the French and the German tanks in their painted patches
+const ARMY_CAMO_1918 = {
+  uk: [0x5c5638, 0x585234, 0x5f5a3b, 0x555032],
+  fr: [0x8a7a4e, 0x55603a, 0x6a4a30, 0x8a7a4e],
+  de: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
+  st: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
+};
+
 function materialsFor(army, glowColor) {
   const key = `${epoch()}:${army}`; // (the 1985 and the 1945 US Army don't share a paint)
   if (!materialCache.has(key)) {
-    const camo = epoch() === '1945' ? ARMY_CAMO_1945[army] : ARMY_CAMO[army];
+    const camo = { 1945: ARMY_CAMO_1945, 1918: ARMY_CAMO_1918 }[epoch()]?.[army] ?? ARMY_CAMO[army];
     materialCache.set(key, {
       body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true, weather: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
@@ -46,7 +54,7 @@ function materialsFor(army, glowColor) {
  *  ship shares it, and on a battle that opens without one (Hohwacht: the landing craft come later) the
  *  first to appear was invisible for half a minute while it compiled. */
 export function warmRig(babylon, type, army, glowColor) {
-  babylon.warm(type.models[army](materialsFor(army, glowColor)).root);
+  babylon.warm((type.models[army] ?? Object.values(type.models)[0])(materialsFor(army, glowColor)).root);
 }
 
 const _p = new THREE.Vector3();

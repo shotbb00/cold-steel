@@ -111,13 +111,13 @@ export class CoverMap {
   // ---------------------------------------------------------------- building
 
   /** Wall-like cover. yaw rotates local +x (the wall's length) like Object3D.rotation.y. */
-  addBox({ x, z, yaw = 0, length, thickness, height, spots = true }) {
+  addBox({ x, z, yaw = 0, length, thickness, height, spots = true, drive = false }) { // drive: earth a tank drives over (a trench's parapet and spoil)
     const cos = Math.cos(yaw);
     const sin = Math.sin(yaw);
     const hx = length / 2;
     const hz = thickness / 2;
     const ground = this.terrain.heightAt(x, z);
-    const c = { type: 'box', x, z, y: ground - 0.6, top: ground + height, cos, sin, hx, hz, r: Math.hypot(hx, hz), spots: 0 };
+    const c = { type: 'box', x, z, y: ground - 0.6, top: ground + height, cos, sin, hx, hz, r: Math.hypot(hx, hz), spots: 0, drive };
     this.colliders.push(c);
     this._insert(this.colGrid, c, x, z, c.r);
     this.onAdd?.(c); // (the nav grid, once there is one)
@@ -125,7 +125,7 @@ export class CoverMap {
       const n = Math.max(1, Math.floor(length / SPOT_SPACING));
       for (let i = 0; i < n; i++) {
         const lx = -hx + (i + 0.5) * (length / n);
-        for (const side of [-1, 1]) {
+        for (const side of spots === true ? [-1, 1] : [spots]) { // (spots: one side only, -1 or 1 — a sea wall's inner face)
           const lz = side * (hz + SPOT_OFFSET);
           // protect direction points from the spot through the wall
           this._addSpot(x + lx * cos + lz * sin, z - lx * sin + lz * cos, -side * sin, -side * cos, c);
@@ -290,6 +290,7 @@ export class CoverMap {
   resolveCircle(pos, radius, climb = 0) {
     for (const c of this._query(this.colGrid, pos.x, pos.z, radius, this._colList)) {
       if (climb && this._height(c) < climb) continue;
+      if (c.drive && !climb) continue; // (a vehicle over a trench's parapet)
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       if (c.type === 'cyl') {

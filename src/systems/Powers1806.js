@@ -9,6 +9,10 @@
 //   fireship a fireship comes down the wind from upwind of the spot onto it (entities/sailDamage.js fireship)
 //   squadron once a battle: two 74s come in from your edge to the spot
 // call(faction, kind, x, z) spends command points and starts the cooldown; false if it can't.
+// Zeebrugge (1918, a coastal map with `landing.blockships`: `ownPowers`) has its own three instead of the 1918 air and gas:
+//   monitors     the landing's: the monitors offshore put their 12-inch shells on the spot (systems/Barrage.js)
+//   smokeScreen  the landing's: the motor launches lay a line of smoke across the way in at the spot
+//   starShell    the defence's: star shells over the spot — every ship under them lit for the guns ashore
 // The AI side uses them too (update: think()). Host only — what they do reaches a guest as usual.
 import { enemyOf } from '../data/factions.js';
 import { RANKS } from '../entities/UnitStack.js';
@@ -24,9 +28,21 @@ export const POWERS_1806 = {
   signal: { sea: true, label: 'Close action', icon: 'flare', key: 'barrage', cost: 120, cooldown: 180, tip: '"Engage the enemy more closely": for a minute every ship of yours reloads faster and holds out longer before she strikes' },
   fireship: { sea: true, label: 'Fireship', icon: 'charge', key: 'jet', cost: 180, cooldown: 150, tip: 'A fireship comes down the wind from upwind onto the spot: what she touches catches fire' },
   squadron: { sea: true, label: 'Reserve squadron', icon: 'reinforce', key: 'lift', cost: 900, once: true, tip: 'Once a battle: two ships of the line come in from your edge to the spot' },
+  monitors: { zee: 'lander', label: 'Monitors', icon: 'flare', key: 'barrage', cost: 220, cooldown: 150, tip: 'The monitors offshore: half a minute of 12-inch shells on the spot — the batteries, the Mole, the town' },
+  smokeScreen: { zee: 'lander', label: 'Smoke screen', icon: 'smoke', key: 'jet', cost: 100, cooldown: 90, tip: 'The motor launches lay a line of smoke across the way in at the spot: it drifts with the wind — and when the wind turns, it blows away' },
+  starShell: { zee: 'defence', label: 'Star shells', icon: 'flare', key: 'barrage', cost: 110, cooldown: 80, tip: 'Star shells and searchlights over the spot: every ship under them is lit for the guns ashore' },
 };
-/** Whether a power belongs to this battle: the sea's three on a sea map, the land's three ashore. */
-export const powerHere = (k, game) => !!POWERS_1806[k]?.sea === !!game.world.river?.sea;
+/** Zeebrugge: its own three powers, nothing else (a coastal map with blockships). */
+export const ownPowers = (game) => !!game.map?.landing?.blockships;
+/** Whether a power belongs to this battle (and to faction f): Zeebrugge's own, by side; 1806's — the sea's three on a sea map, the land's three ashore. */
+export const powerHere = (k, game, f = game.playerFaction) => {
+  const P = POWERS_1806[k];
+  if (!P) return false;
+  if (P.zee) return ownPowers(game) && (P.zee === 'lander') === !!game.landing?.lands(f);
+  return year() < 1900 && !!P.sea === !!game.world.river?.sea;
+};
+/** The power on key `key` for faction f in this battle, if any. */
+export const powerOnKey = (game, f, key) => Object.keys(POWERS_1806).find((k) => POWERS_1806[k].key === key && powerHere(k, game, f)) ?? null;
 
 export class Powers1806 {
   constructor(game) {
@@ -43,7 +59,7 @@ export class Powers1806 {
 
   call(f, k, x, z) {
     const g = this.game, P = POWERS_1806[k];
-    if (!P || !powerHere(k, g)) return false;
+    if (!P || !powerHere(k, g, f)) return false;
     if (!this.ready(f, k)) return g.tell(f, `${P.label} not ready`) ?? false;
     if (k === 'battery' && !this.gunsFor(f, x, z).length) return g.tell(f, 'Grand battery: no guns in reach') ?? false;
     if (!g.spendFrom('support', f, P.cost)) return g.tell(f, `Not enough ${g.poolName('support')} (${P.cost})`) ?? false;
@@ -137,7 +153,9 @@ export class Powers1806 {
 
   update(dt) {
     const g = this.game;
-    if (g.net?.isClient || year() >= 1900) return;
+    if (g.net?.isClient || (year() >= 1900 && !ownPowers(g))) return;
+    const shift = g.map.wind?.shift; // (Zeebrugge: the wind turns offshore — said once, when it does: world/Wind.js turns it by the clock)
+    if (shift && !this.shiftSaid && g.time >= shift.t) { this.shiftSaid = true; for (const f of ['nato', 'pact']) g.tell(f, shift.say ?? 'The wind has changed — the smoke is blowing out to sea!'); }
     // the reserves: up to the spot, the charge, then back off the field
     for (const r of [...this.reserves]) {
       const s = r.stack;
@@ -179,9 +197,49 @@ export class Powers1806 {
     if (mine.length < foes.length * 0.7 && this.ready(f, 'squadron') && cp >= POWERS_1806.squadron.cost) this.call(f, 'squadron', big.centroid.x, big.centroid.z);
   }
 
+  /** The AI at Zeebrugge: the landing smokes the way in and shells the batteries; the defence lights up its ships. */
+  thinkZee(f) {
+    const g = this.game, cp = g.modeState?.cp?.[f] ?? 0, foe = enemyOf(f);
+    if (g.landing?.lands(f)) {
+      const way = g.blockships?.ships.find((b) => b.s.alive) ?? null; // (the blockships on their way: smoke ahead of them)
+      if (way && this.ready(f, 'smokeScreen') && cp >= POWERS_1806.smokeScreen.cost) { this.call(f, 'smokeScreen', way.x + (g.map.landing.blockships.route?.[1]?.x - way.x) * 0.3, way.z + (g.map.landing.blockships.route?.[1]?.z - way.z) * 0.3); return; }
+      const gun = g.world.stacksOf(foe).find((s) => s.alive && s.stats.structure && (s.units[0]?.spotted || s.lastShotAt));
+      if (gun && this.ready(f, 'monitors') && cp >= POWERS_1806.monitors.cost) this.call(f, 'monitors', gun.centroid.x, gun.centroid.z);
+      return;
+    }
+    if (!g.flares?.enabled) return; // (by day: nothing to light)
+    const ship = g.world.stacksOf(foe).filter((s) => s.alive && s.stats.naval && !s.stats.landingCraft).sort((a, b) => (b.type.cost ?? 0) - (a.type.cost ?? 0))[0]
+      ?? g.world.stacksOf(foe).find((s) => s.alive && s.stats.naval);
+    if (ship && this.ready(f, 'starShell') && cp >= POWERS_1806.starShell.cost) this.call(f, 'starShell', ship.centroid.x, ship.centroid.z);
+  }
+
+  /** The landing's monitors: the barrage's heavy shells on the spot (systems/Barrage.js `shell`/`rate`). */
+  monitors(f, x, z) {
+    const g = this.game, FLIGHT = 14;
+    g.barrage.active.push({ faction: f, x, z, r: 55, start: g.time + FLIGHT, end: g.time + FLIGHT + 30, acc: 0, rate: 0.5, shell: { damage: 900, splash: 13, crater: 1.4, height: 260, speed: 210 } });
+    g.tell(f, `The monitors are opening fire — the first shells in ${FLIGHT} s`);
+    g.tell(enemyOf(f), 'Heavy shells from the sea!');
+  }
+
+  /** The motor launches' smoke: a line across the way in, at right angles to it (from the landing's ships to the spot). */
+  smokeScreen(f, x, z) {
+    const g = this.game, b = g.map.bases[f], d = Math.hypot(x - b.x, z - b.z) || 1, px = -(z - b.z) / d, pz = (x - b.x) / d;
+    for (let i = -3; i <= 3; i++) g.smoke?.add(x + px * i * 24, z + pz * i * 24, { radius: 20, duration: 100 });
+    g.tell(f, 'The motor launches are laying smoke — mind the wind');
+  }
+
+  /** Star shells over the spot (and the searchlights on it): every enemy ship near it lit, for the guns ashore. */
+  starShell(f, x, z) {
+    const g = this.game;
+    for (let i = 0; i < 4; i++) g.flares?.later(i * 3, x + (Math.random() - 0.5) * 160, 140, z + (Math.random() - 0.5) * 160, { radius: 260 });
+    g.tell(f, 'Star shells over the harbour — the guns have their targets');
+    g.tell(enemyOf(f), 'Star shells! We are lit up!');
+  }
+
   /** The AI's use of the powers: guns on massed enemies, the reserve on foot caught out of square, the Guard when it's going badly. */
   think(f) {
     const g = this.game;
+    if (ownPowers(g)) return this.thinkZee(f);
     if (g.world.river?.sea) return this.thinkSea(f);
     const foes = g.world.stacksOf(enemyOf(f)).filter((e) => e.alive && !e.stats.loose && !e.stats.structure && !e.autonomous && e.units.some((u) => u.alive && u.spotted));
     if (!foes.length) return;

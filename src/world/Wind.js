@@ -12,12 +12,14 @@ let base = null; // a map's own: { to (radians from +x, the way it blows), speed
 
 /** A map's own wind (or null: the land's light airs). `from`: the compass bearing it blows from, in degrees (0 = from the north, −z). */
 export function setWind(w) {
-  base = w ? { to: Math.atan2(Math.cos((w.from * Math.PI) / 180), -Math.sin((w.from * Math.PI) / 180)), speed: w.speed ?? 7, veer: w.veer ?? 0.35, lulls: !!w.lulls } : null;
+  const to = (from) => Math.atan2(Math.cos((from * Math.PI) / 180), -Math.sin((from * Math.PI) / 180));
+  base = w ? { to: to(w.from), speed: w.speed ?? 7, veer: w.veer ?? 0.35, lulls: !!w.lulls, shift: w.shift ? { t: w.shift.t, to: to(w.shift.from), over: w.shift.over ?? 60 } : null } : null; // (shift: at t it swings round to blow from `shift.from`, over `over` s — Zeebrugge's)
 }
 
 export function updateWind(t, weather) {
   if (base) { // the sea's wind: steady, a slow veer and gusts
-    const a = base.to + base.veer * Math.sin(t / 260) + base.veer * 0.3 * Math.sin(t / 61);
+    const sk = base.shift ? Math.min(1, Math.max(0, (t - base.shift.t) / base.shift.over)) : 0;
+    const a = base.to + Math.atan2(Math.sin((base.shift?.to ?? base.to) - base.to), Math.cos((base.shift?.to ?? base.to) - base.to)) * sk + base.veer * Math.sin(t / 260) + base.veer * 0.3 * Math.sin(t / 61);
     const k = weather === 'rain' ? 1.6 : weather === 'fog' ? 0.45 : weather === 'overcast' ? 1.15 : 1;
     const lull = base.lulls ? 0.12 + 0.88 * Math.min(1, Math.max(0, (Math.sin(t / 150 + 1) + 0.5 * Math.sin(t / 47)) * 0.9 + 0.55)) : 1; // (the trades fall away to a calm now and then: sail drifts, oars row)
     wind.speed = base.speed * k * lull * (0.88 + 0.12 * Math.sin(t / 37) + 0.05 * Math.sin(t / 9));

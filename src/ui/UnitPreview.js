@@ -164,7 +164,7 @@ export class UnitPreview {
     this.orbit.target.set(0, vehicle ? 1.2 : 0.9, 0);
     this.orbit.zoom = 1;
     this.fit = vehicle ? { w: 4.4, h: 2.1 } : { w: 0.55 + n * 0.5, h: 1.1 };
-    if (type.stats?.naval) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships: framed by their size)
+    if (type.stats?.naval || type.stats?.structure) this.fitTo(this.view.rigs?.map((r) => r.root) ?? []); // (ships and fortifications: framed by their size)
     this.atSea(!!type.stats?.naval);
     this.setPose('idle');
     this.compile();
@@ -178,7 +178,15 @@ export class UnitPreview {
   compile() {
     const n = (this.compiling = (this.compiling ?? 0) + 1);
     this.hold = true;
-    this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => { if (this.compiling === n) this.hold = false; });
+    // three's compileAsync, by hand: its poll threw from a timer when the preview was disposed mid-compile (a campaign
+    // battle started from the menu: "reading 'isReady'"); this one stops when it's gone or a newer compile began
+    const mats = this.renderer.compile(this.scene, this.camera);
+    const poll = () => {
+      if (this.disposed || this.compiling !== n) return;
+      for (const m of mats) { const prog = this.renderer.properties.get(m)?.currentProgram; if (prog && !prog.isReady()) { setTimeout(poll, 10); return; } }
+      this.hold = false;
+    };
+    poll();
   }
 
   /**
@@ -221,6 +229,12 @@ export class UnitPreview {
     this.orbit.target.set(0, jet ? 3.2 : 3, 0);
     this.orbit.zoom = 1;
     this.fit = jet ? { w: kind === 'jet' ? 9.5 : 12.5, h: 3.4 } : { w: (rig.rotorRadius ?? 7) + 1.2, h: 3.4 };
+    // a big one (the flying boats, a Zeppelin): framed by its own size
+    const box = new THREE.Box3().setFromObject(rig.root), size = box.getSize(new THREE.Vector3());
+    const half = Math.max(size.x, size.z) / 2 + 1;
+    if (half > this.fit.w) { this.fit = { w: half, h: Math.max(this.fit.h, size.y / 2 + 1) }; this.orbit.target.set(0, (box.min.y + box.max.y) / 2, 0); }
+    this.camera.far = Math.max(200, half * 10); // (the camera stands well back for a Zeppelin: still inside its reach)
+    this.camera.updateProjectionMatrix();
     this.setPose('hover');
     this.compile();
   }
@@ -299,6 +313,7 @@ export class UnitPreview {
   }
 
   dispose() {
+    this.disposed = true; // (a compile still polling: it stops)
     this.clear();
     this.ro.disconnect();
     this.renderer.setAnimationLoop(null);

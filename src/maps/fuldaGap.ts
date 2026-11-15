@@ -87,15 +87,15 @@ const pactName = {
 // Point-mirrored villages: A/K home, B–D and H–J each side's forward villages, E–G on the border.
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Hünfeld', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Rasdorf', x: -SECTOR_X, z: ROW_Z, owner: null, sector: 'west' },
-  { id: 'C', name: 'Mackenzell', x: 0, z: ROW_Z, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Grüsselbach', x: SECTOR_X, z: ROW_Z, owner: null, sector: 'east' },
-  { id: 'E', name: 'Setzelbach', x: -SECTOR_X, z: 20, owner: null, sector: 'west', radius: 22 },
+  { id: 'B', name: 'Rasdorf', x: -330, z: 355, owner: null, sector: 'west' },
+  { id: 'C', name: 'Mackenzell', x: 0, z: 215, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Grüsselbach', x: 330, z: 270, owner: null, sector: 'east' },
+  { id: 'E', name: 'Setzelbach', x: -330, z: 75, owner: null, sector: 'west', radius: 22 },
   { id: 'F', name: 'Point Alpha', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
-  { id: 'G', name: 'Wenigentaft', x: SECTOR_X, z: -20, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Geisa', x: -SECTOR_X, z: -ROW_Z, owner: null, sector: 'west' },
-  { id: 'I', name: 'Borsch', x: 0, z: -ROW_Z, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Buttlar', x: SECTOR_X, z: -ROW_Z, owner: null, sector: 'east' },
+  { id: 'G', name: 'Wenigentaft', x: 330, z: -75, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Geisa', x: -330, z: -270, owner: null, sector: 'west' },
+  { id: 'I', name: 'Borsch', x: 0, z: -215, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Buttlar', x: 330, z: -355, owner: null, sector: 'east' },
   { id: 'K', name: 'Vacha', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 

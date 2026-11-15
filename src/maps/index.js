@@ -22,13 +22,25 @@ import trafalgar from './trafalgar.ts';
 import aboukir from './aboukir.ts';
 import brest from './brest.ts';
 import caribbean from './caribbean.ts';
+import heligolandBight from './heligolandBight.ts';
+import doggerBank from './doggerBank.ts';
+import doverStrait from './doverStrait.ts';
+import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import hohwacht from './hohwacht.ts';
+import aboukirLanding from './aboukirLanding.ts';
+import villersBretonneux from './villersBretonneux.ts';
+import leHamel from './leHamel.ts';
+import stQuentin from './stQuentin.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
   [hohwacht.id]: hohwacht,
+  [aboukirLanding.id]: aboukirLanding,
+  [villersBretonneux.id]: villersBretonneux,
+  [leHamel.id]: leHamel,
+  [stQuentin.id]: stQuentin,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
@@ -50,6 +62,10 @@ export const MAPS = {
   [aboukir.id]: aboukir,
   [brest.id]: brest,
   [caribbean.id]: caribbean,
+  [heligolandBight.id]: heligolandBight,
+  [doggerBank.id]: doggerBank,
+  [doverStrait.id]: doverStrait,
+  [zeebrugge.id]: zeebrugge,
   [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
 };
@@ -83,12 +99,14 @@ let theatreNow = 'land';
 export const theatre = () => theatreNow;
 export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id && !t.soon) ? id : 'land'; }
 /** Does year `ep` have any map in theatre `th`? (the picker greys out the empty ones) */
-export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && (m.theatre ?? 'land') === th && (!m.epochs || m.epochs.includes(ep)));
+export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && (m.theatre ?? 'land') === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep)));
+/** Years that fight only on maps made for them (1918: the Western Front, nothing in Hesse). */
+const OWN_MAPS = new Set(['1918']);
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {
   if (!hasTheatre(ep, th)) th = 'land'; // (a year with no sea yet: its land)
-  const all = Object.values(MAPS).filter((m) => !m.wip && (m.theatre ?? 'land') === th && (!m.epochs || m.epochs.includes(ep))); // (wip: not offered yet)
+  const all = Object.values(MAPS).filter((m) => !m.wip && (m.theatre ?? 'land') === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))); // (wip: not offered yet)
   return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
 }
 

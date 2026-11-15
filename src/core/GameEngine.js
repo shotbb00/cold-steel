@@ -20,10 +20,14 @@ import { Torpedoes } from '../systems/Torpedoes.js';
 import { SeaFoam } from '../world/SeaFoam.js';
 import { Squalls } from '../systems/Squalls.js';
 import { Landing } from '../systems/Landing.js';
+import { Minefields } from '../systems/Minefields.js';
+import { Blockships } from '../systems/Blockships.js';
 import { Searchlights } from '../systems/Searchlights.js';
 import { Missiles } from '../systems/Missiles.js';
 import { Sensors } from '../systems/Sensors.js';
 import { AutoFlares } from '../systems/AutoFlares.js';
+import { Breakdowns } from '../systems/Breakdowns.js';
+import { Gas } from '../systems/Gas.js';
 import { SEA_STATE } from '../world/Sea.js';
 import { unitCost, armyDoctrine } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
@@ -188,6 +192,8 @@ export class GameEngine {
     if (map.river?.foam) this.systems.push(new SeaFoam(this, map.river)); // wakes, boils, torpedo tracks (world/SeaFoam.js)
     if (map.river?.sea) { this.squalls = new Squalls(this); this.missiles = new Missiles(this); this.sensors = new Sensors(this); this.searchlights = new Searchlights(this); this.systems.push(this.squalls, this.searchlights, this.missiles, this.sensors); } // (1985: anti-ship missiles and their defence, radar and ESM bearings) // rain squalls and the sea state; searchlight beams at night
     if (this.world.coastal) { this.landing = new Landing(this); this.systems.push(this.landing); } // the side that lands comes ashore in landing craft
+    if (map.landing?.blockships) { this.blockships = new Blockships(this); this.systems.push(this.blockships); } // (Zeebrugge: the blockships for the canal mouth)
+    if (map.theatre === 'sea') { this.mines = new Minefields(this); this.systems.push(this.mines); } // moored mines: the map's fields, the minelayers', the sweepers (1918)
     this.beams = new BeamSystem(this.scene, this.world, this.effects);
     this.audio = new AudioSystem(this);
     this.projectiles.audio = this.audio;
@@ -214,7 +220,7 @@ export class GameEngine {
     this.air = new AirStrike(this);
     this.support = new Support(this);
     this.powers = new Powers1806(this);   // 1806's grand battery, cavalry reserve, the Guard
-    this.systems.push(this.powers, new AutoFlares(this)); // (and flares of their own at night for the player's mortars and ships)
+    this.systems.push(this.powers, new AutoFlares(this), new Breakdowns(this), (this.gas = new Gas(this))); // (the first tanks' breakdowns and ditchings, gas: 1918) (and flares of their own at night for the player's mortars and ships)
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
@@ -240,6 +246,16 @@ export class GameEngine {
 
     this.bindControls();
     if (campaign) { this.blasts = []; if (campaign.scars) this.replayScars(campaign.scars); } // the sector as the last battle left it
+    // a fought-over field (1918: maps/common.js trenchLine, shellField), the same on every machine (seeded alike): the craters,
+    // the ruins, the trenches and the wire — built quietly by each, first, so their site ids match (a stretch of wire cut later is cleared by id)
+    const field = map.battlefield?.(this);
+    if (field) {
+      field.paint?.(this.terrain); // (the churned ground first: the craters dig into it)
+      this.replayScars({ blasts: field.blasts, ruins: field.ruins });
+      const n0 = this.construction.structures.length;
+      this.quietly(() => this.replayScars({ works: field.works.map((w) => [w.kind, w.x, w.z, w.yaw, w.faction]) }));
+      for (const st of this.construction.structures.slice(n0)) st.fromMap = true; // (the map's own: not a scar the campaign keeps — the map lays them again)
+    }
     mode.setup(this);
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
@@ -290,7 +306,7 @@ export class GameEngine {
       // Babylon compiles its shaders in the background: keep the loading screen up until the
       // opening view is ready, so the battle doesn't start on a half-drawn field
       for (const f of ['nato', 'pact']) { // (and the vehicles' paint, though none is on the field yet)
-        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && u.models?.[army]);
+        const army = this.armyOf(f), t = Object.values(UNIT_TYPES).find((u) => u.kind && u.kind !== 'infantry' && !['cavalry', 'gun', 'wagon'].includes(u.kind) && (u.models?.[army] ?? u.models?.[f])); // (an army with no vehicle of its own, the British of 1801: its side's boats, in its own paint)
         try { if (t) warmRig(this.babylon, t, army, new THREE.Color(FACTIONS[f].marking)); } catch { /* (a model that needs a battle around it) */ }
       }
       this.air?.warm(); // (and every aircraft this battle can call: AirStrike.warm)
@@ -407,7 +423,7 @@ export class GameEngine {
     const river = this.world.river;
     return {
       blasts: this.blasts ?? [],
-      works: this.construction.structures.filter((s) => !s.def.action).map((s) => [s.kind, Math.round(s.x * 10) / 10, Math.round(s.z * 10) / 10, Math.round(s.yaw * 100) / 100, s.faction]),
+      works: this.construction.structures.filter((s) => !s.def.action && !s.fromMap).map((s) => [s.kind, Math.round(s.x * 10) / 10, Math.round(s.z * 10) / 10, Math.round(s.yaw * 100) / 100, s.faction]),
       ruins: this.buildings.list.filter((b) => b.collapsed).map((b) => b.index),
       blown: river ? river.crossings.filter((c) => c.blown && !c.laid).map((c) => c.id) : [],
       laid: river ? river.crossings.filter((c) => c.laid && !c.blown).map((c) => [Math.round(c.x * 10) / 10, Math.round(c.z * 10) / 10]) : [],
@@ -426,18 +442,21 @@ export class GameEngine {
         for (const f of this.cover.forests ?? []) f.fell(x, z, r * 0.9, (d) => Math.random() < 0.65 * (1 - d / (r * 0.9)));
         if (crater >= CRATER_COVER) this.cover.addCraterSpots(x, z, cr + 1, t.heightAt(x, z) + crater);
       }
-      for (const i of ruins) { const b = this.buildings.list[i]; if (b) this.buildings.collapseVisual(b); }
+      for (const i of ruins) { const b = this.buildings.list[i]; if (b) this.buildings.collapseVisual(b, true); }
       if (river) {
         for (const id of blown) { const c = river.crossings.find((k) => k.id === id); if (c) river.blow(c, t, this.scene); }
         for (const [x, z] of laid) river.lay(x, t, this.scene, z);
       }
     });
+    const C = this.construction;
+    if (works.length) C.startBatch(); // (built in one go: no work in progress, the ground changed once, one mesh for the trenches and one for the wire)
     for (const [kind, x, z, yaw, faction] of works) {
-      const site = this.construction.place(kind, x, z, yaw, faction, null, { force: true });
+      const site = C.place(kind, x, z, yaw, faction, null, { force: true });
       if (!site) continue;
       site.quiet = true;
-      this.construction.finish(site);
+      C.finish(site);
     }
+    C.endBatch();
     this.blasts = [...blasts]; // this battle adds to them
     if (blown.length || laid.length) this.bus.emit('terrain:changed');
   }

@@ -138,7 +138,8 @@ function shipName(type, faction, world) {
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
   if (n.startsWith('SS ')) return n; // (a merchantman is SS already)
-  const pre = year() < 1900 ? { pact: 'HMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; later the US Navy's USS)
+  if (/^[A-Z]{1,3} \d/.test(n)) return n; // (a numbered boat — S 53, UB 88, CMB 4 — goes by her number)
+  const pre = year() < 1900 ? { pact: 'HMS' }[faction] : year() < 1930 ? { nato: 'HMS', pact: 'SMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; 1918 HMS and SMS; later the US Navy's USS)
   return pre ? `${pre} ${n}` : n;
 }
 
@@ -163,6 +164,12 @@ export class UnitStack {
     if (cav) this.stats = { ...this.stats, sight: (this.stats.sight ?? 100) * cav.sight };
     const walze = ARTILLERY.has(type.id) && armyDoctrine(this.army, 'walze'); // the NVA's Feuerwalze reloads faster
     if (walze) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown * walze.cooldown };
+    const lewis = type.id === 'rifles' && armyDoctrine(this.army, 'lewis'); // Britain's Lewis guns (1918): the section's fire pins harder
+    if (lewis) this.stats = { ...this.stats, suppressPower: (this.stats.suppressPower ?? 1) * lewis.suppress };
+    const inf = type.kind === 'infantry' && armyDoctrine(this.army, 'infiltrate'); // the Sturmtruppen's infiltration (1918): quicker, harder to see
+    if (inf) this.stats = { ...this.stats, speed: this.stats.speed * inf.speed, stealth: (this.stats.stealth ?? 1) / inf.stealth };
+    const s75 = type.id === 'artillery' && armyDoctrine(this.army, 'soixanteQuinze'); // France's 75 (1918): quicker field guns
+    if (s75) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown / s75.fire, reloadTime: this.stats.reloadTime / s75.fire };
     const quick = this.stats.gun && this.stats.towed && armyDoctrine(this.army, 'quickGuns'); // Bavaria's reformed artillery unlimbers sooner
     if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
     this.faction = faction;
@@ -667,7 +674,7 @@ export class UnitStack {
 
     // --- locomotion: seek destination, keep personal space, slide around cover
     const mud = this.world.conditions?.mud;
-    let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
+    let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.masked ? 0.8 : 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
       * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
     if (u.crouch > 0.5) maxSpeed *= 0.45;
     if (u.steepK) maxSpeed *= u.steepK;
@@ -1089,6 +1096,17 @@ export class UnitStack {
       const keep = u.radius + 17, now = L.mineGap(u.pos.x, u.pos.z, keep + 30);
       if (now < keep && now < L.mineGap(px, pz, keep + 30)) { u.pos.x = px; u.pos.z = pz; u.vel.multiplyScalar(0.2); }
     }
+    // a found enemy mine (systems/Minefields.js): her captain won't close on it — she slides along it instead, skirting the field (a sweeper goes where she's sent)
+    const MF = this.stats.sweeper ? null : this.services.game?.mines;
+    if (MF?.mines.length) {
+      const a = MF.nearestKnown(u.pos.x, u.pos.z, this.faction, u.radius + 24);
+      const b = a && Math.hypot(px - a.x, pz - a.z);
+      if (a && b > 0.01 && a.d < b) {
+        const nx = (px - a.x) / b, nz = (pz - a.z) / b, inward = (u.pos.x - px) * nx + (u.pos.z - pz) * nz;
+        u.pos.x -= nx * inward;
+        u.pos.z -= nz * inward;
+      }
+    }
     // two hulls never overlap: each ship backs off half of it, and loses the way it had toward the other
     // (after the shallows: a ship stopped by them still gets out of another's way — turning on the spot
     // beside a shoal she would otherwise swing her hull into her neighbour's) — but never shoved onto them:
@@ -1202,6 +1220,7 @@ export class UnitStack {
     if (u.target) u.aimYaw = Math.atan2(u.target.pos.x - u.pos.x, u.target.pos.z - u.pos.z);
 
     if (!this.usesCover) {
+      if (this.stats.sideGuns) this.updateSideGuns(u, dt); // the hull and sponson machine guns, on their own (whatever the main gun is doing)
       if (u.gunOut) { u.target = null; u.airTarget = null; return; }
       if (s.antiAir && (s.antiAir.missile ? this.engageAirMissile(u, dt) : this.engageAir(u, dt))) return; // aircraft first
       this.updateHeavyWeapon(u);
@@ -1742,6 +1761,68 @@ export class UnitStack {
     if (u.mag <= 0) this.startReload(u);
   }
 
+  /**
+   * A vehicle's machine guns besides its main armament (stats.sideGuns: [{ at, arc, range, damage, rate, burst, turret }]):
+   * `at` the gun's bearing from the nose (rad: 0 the bow, ±π/2 the sides, π the rear) — or from the gun (`turret`: a
+   * coaxial MG) — and `arc` either side of it. Each picks its own man among the enemy foot (and gun crews, and riders)
+   * it can see in its sector and fires bursts at him on its own: the 1918 tanks' sponson and hull guns, a later tank's
+   * bow and coaxial MGs. Fired from a moving hull it sprays. `cannon`: a second gun (the rhomboids' other sponson
+   * 6-pounder) — it takes anything in its sector, tanks too, one shell at a time (`pause` its reload).
+   */
+  updateSideGuns(u, dt) {
+    const guns = u.stats.sideGuns;
+    const st = (u.side ??= guns.map(() => ({ t: Math.random(), foe: null, left: 0 })));
+    if (this.holdFire) return;
+    const sector = (m, e) => {
+      const d2 = dist2DSq(u.pos, e.pos);
+      if (d2 > m.range * m.range) return false;
+      return Math.abs(angleDelta((m.turret ? u.turretYaw : u.yaw) + (m.at ?? 0), Math.atan2(e.pos.x - u.pos.x, e.pos.z - u.pos.z))) <= m.arc;
+    };
+    const eyeY = u.pos.y + 2;
+    for (let i = 0; i < guns.length; i++) {
+      const m = guns[i], g = st[i];
+      if ((g.t -= dt) > 0) continue;
+      const e0 = g.foe;
+      if (!e0?.alive || !e0.spotted || !sector(m, e0) || g.left <= 0) { // a new burst: the nearest man it can see in its sector
+        g.foe = null;
+        let best = Infinity;
+        for (const e of this.world.combatants(enemyOf(this.faction))) {
+          if (!e.alive || !e.spotted || !(m.cannon || e.stack.usesCover || e.stack.kind === 'gun' || e.stack.kind === 'cavalry')) continue;
+          const d2 = dist2DSq(u.pos, e.pos);
+          if (d2 >= best || !sector(m, e)) continue;
+          if (!this.world.terrain.lineOfSight(u.pos.x, eyeY, u.pos.z, e.pos.x, e.pos.y + e.aimHeight, e.pos.z)) continue;
+          best = d2;
+          g.foe = e;
+        }
+        if (!g.foe) { g.t = 0.7 + Math.random() * 0.4; continue; }
+        g.left = m.burst ?? 10;
+      }
+      const e = g.foe;
+      const yaw = (m.turret ? u.turretYaw : u.yaw) + (m.at ?? 0);
+      _p.set(u.pos.x + Math.sin(yaw) * (m.out ?? 1.4), u.pos.y + (m.y ?? 1.5), u.pos.z + Math.cos(yaw) * (m.out ?? 1.4));
+      _v.set(e.pos.x, e.pos.y + e.aimHeight, e.pos.z);
+      const d = _v.distanceTo(_p);
+      _w.subVectors(_v, _p).normalize();
+      if (m.cannon && u.moving && u.stats.noStabilizer) { g.t = 0.5; continue; } // (a gun without a stabiliser: standing still)
+      const spread = (m.cannon ? 0.008 : 0.025) * (1 + d / m.range) * (u.moving ? 2.2 : 1) * (1 + u.suppression);
+      _w.x += (Math.random() - 0.5) * spread * 2;
+      _w.y += (Math.random() - 0.5) * spread;
+      _w.z += (Math.random() - 0.5) * spread * 2;
+      _w.normalize();
+      const c = m.cannon;
+      this.services.projectiles.spawn({
+        origin: _p, dir: _w, speed: c ? 500 : 700, damage: (m.damage ?? 60) * u.damageMult, faction: this.faction, color: this.boltColor, size: c ? 1.3 : 0.5, source: this,
+        life: (m.range * 1.4) / (c ? 500 : 700) + 0.2, splash: c?.splash ?? 0, pierce: c?.pierce ?? 0.1, vsArmor: c ? 1 : 0.03, suppress: c ? 2.5 : 1.2, tracer: c ? true : Math.random() < 0.3,
+      });
+      this.services.effects.muzzle(_p, _w, c ? 1.4 : 0.7, c ? 'cannon' : 'rifle');
+      this.services.audio?.weapon(this.faction, c ? 'cannon' : 'mg', _p, false, this.army);
+      this.firedAt = this.world.time;
+      VisibilitySystem.revealShooter(u);
+      g.left--;
+      g.t = g.left > 0 ? 1 / (m.rate ?? 8) : (m.pause ?? 1.4) * (0.8 + Math.random() * 0.4);
+    }
+  }
+
   startReload(u) {
     u.reloadT = u.stats.reloadTime * (0.9 + Math.random() * 0.2);
     this.services.audio?.play(`${this.faction}.reload`, u.pos, { volume: this.usesCover ? 0.4 : 0.7, throttle: 0.08 });
@@ -1784,6 +1865,7 @@ export class UnitStack {
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
       else if (s.weapon === 'rocket' && this.usesCover && !e.coverSpot?.interior && !e.coverSpot?.omni && d2 > 30 * 30) continue; // an infantry rocket: vehicles, houses, trenches — men in the open only close by
       if (e.stack.stats.medical) score += 60; // the red cross: anyone else first
+      if (s.seaward && e.stack.stats.naval) score -= 400; // (a shore battery: laid on the sea — the boats and the ships before anyone on the sand)
       if (e.stack.stats.airRadar) score -= 25;     // the radar first: it is the enemy's air defence's eyes
       if (s.demolition && (e.stack.stats.structure || e.coverSpot?.interior || e.stack.dugIn)) score -= 80; // bunkers, held houses, trenches
       if (s.marksman) {
@@ -1869,7 +1951,7 @@ export class UnitStack {
   grenadeAt(u, d) {
     const s = u.stats;
     const t = u.target;
-    if (!s.grenades || s.indirect || s.marksman || d > GRENADE.range || d < GRENADE.min) return false;
+    if (!s.grenades || s.indirect || s.marksman || d > GRENADE.range * (armyDoctrine(this.army, 'grenades')?.reach ?? 1) || d < GRENADE.min) return false; // (the Sturmtruppen throw further: 1918)
     if (!t.stack.usesCover && !t.stack.stats.structure) return false; // not against armour
     u.grenades ??= s.grenades;
     if (u.grenades <= 0 || this.world.time < (u.nextGrenade ?? 0)) return false;
@@ -2388,6 +2470,7 @@ export class UnitStack {
       * (u.moving ? 2 : 1)
       * (1 + u.suppression * 1.4)
       * (u.wounded ? 1.3 : 1)
+      * (u.masked ? 1.6 : 1)                  // a gas mask's fogged eyepieces (1918: systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3)            // an MG fired from the hip sprays
       / (this.doc?.aim ?? 1);                 // the army's doctrine (systems/Doctrine.js)
@@ -2456,6 +2539,8 @@ export class UnitStack {
    */
   damageUnit(u, amount, source, pierce = 0, dir = null, vsArmor = 1) {
     if (!u.alive) return;
+    const hot = (source?.stats ?? source?.stack?.stats)?.hotShot; // (1801: a shore battery's red-hot shot in a ship's timbers)
+    if (hot && this.stats.sail && Math.random() < hot) { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.3); if (!u.hotTold) { u.hotTold = true; this.services.tell?.(this.faction, `${this.name}: red-hot shot in her timbers — fire aboard!`); } }
     if (this.markedUntil > this.world.time) amount *= this.markDamage; // spotted by the US Army's Cavalry screen
     if (u.invulnerable) {
       // a fortification that can't be attacked yet (modes/lanes.js): the round just spalls off
@@ -2627,7 +2712,7 @@ export class UnitStack {
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
     const sea1806 = this.stats.naval && year() < 1900;
-    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : 'frn') : this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
+    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : 'frn') : this.stats.raid ? 'raid18' : this.stats.naval && year() > 1900 && year() < 1930 ? (this.faction === 'pact' ? 'km' : 'rn18') : this.stats.naval && this.faction === 'pact' && year() > 1930 && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

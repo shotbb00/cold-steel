@@ -11,8 +11,10 @@ import { DOCTRINE } from './doctrine.js';
 import { UNIT_TYPES, TYPES_1985, ALIAS } from './units/index.js';
 import { TYPES_1945, ALIAS_1945 } from './units45/index.js';
 import { TYPES_1806, ALIAS_1806 } from './units1806/index.js';
+import { TYPES_1918, ALIAS_1918 } from './units1918/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
+import { AIR_1918 } from './air18.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
 
@@ -26,6 +28,7 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
+      gb: { id: 'gb', faction: 'pact', name: 'British Army', coastal: true }, // (only where a map names it: the Aboukir landing)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -46,6 +49,43 @@ export const EPOCHS = {
       sx: [
         { id: 'squares', name: 'Steady squares', text: 'Squares never break against cavalry and lose less nerve under artillery (the Saxon grenadiers left Jena in square).' },
         { id: 'gardeDuCorps', name: 'Garde du Corps', text: 'Heavy cavalry starts as Veterans.' },
+      ],
+      // (the British reuse Prussia's and France's mechanics under their own names: line fire, skirmishers)
+      gb: [
+        { id: 'peloton', name: 'Two-deep line', text: 'Line infantry in line aims 25 % better: every musket of the thin two-rank line can fire.', reload: 1, spread: 0.75 },
+        { id: 'tirailleurs', name: 'Rifles and light bobs', text: 'Light infantry and riflemen in skirmish order are harder to spot, and their fire pins 30 % more.', stealth: 1.3, suppress: 1.3 },
+      ],
+    },
+  },
+  1918: {
+    id: '1918', name: '1918', title: 'The Western Front, 1918', beta: true,
+    blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
+    sides: { nato: 'Allies', pact: 'Germany' },
+    armies: {
+      uk: { id: 'uk', faction: 'nato', name: 'British Army' },
+      fr: { id: 'fr', faction: 'nato', name: 'French Army' },
+      de: { id: 'de', faction: 'pact', name: 'German Army' },
+      st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
+    },
+    defaults: { nato: 'uk', pact: 'de' },
+    types: TYPES_1918, alias: ALIAS_1918, air: AIR_1918,
+    // each army's two signatures (ponytail: their effects are wired as the units they need arrive — tanks, guns)
+    doctrine: {
+      uk: [
+        { id: 'allArms', name: 'All arms', text: 'Tanks with infantry close by break down half as often (Hamel and Amiens: tanks, infantry, guns and aircraft as one plan).' },
+        { id: 'lewis', name: 'Lewis guns', text: 'Every infantry section carries a Lewis gun: its fire pins 25 % more.', suppress: 1.25 },
+      ],
+      fr: [
+        { id: 'soixanteQuinze', name: 'The 75', text: 'Field guns fire 30 % faster: the quick-firing Canon de 75.', fire: 1.3 },
+        { id: 'swarm', name: 'Tank swarm', text: 'Renault FTs cost 25 % less: thousands of light tanks.', cost: 0.75 },
+      ],
+      de: [
+        { id: 'depth', name: 'Defence in depth', text: 'Infantry in cover — a trench, a shell hole, a ruin — breaks only at 60 % of the losses others do.', morale: 0.6 },
+        { id: 'bruchmueller', name: 'Hurricane bombardment', text: 'The barrage is short and sharp: it costs 25 % less and lands sooner.', cost: 0.75 },
+      ],
+      st: [
+        { id: 'infiltrate', name: 'Infiltration', text: 'Storm troops move 20 % faster and are harder to spot: they slip past the strongpoints and leave them to the next wave.', speed: 1.2, stealth: 1.3 },
+        { id: 'grenades', name: 'Grenade fighting', text: 'Grenades are thrown 30 % further: the storm troops clear a trench bay from the next one.', reach: 1.3 },
       ],
     },
   },
@@ -99,7 +139,7 @@ export const EPOCHS = {
 };
 
 let current = '1985';
-/** The epoch now in force: '1985', '1945' or '1806'. */
+/** The epoch now in force: '1985', '1945', '1918' or '1806'. */
 export const epoch = () => current;
 /** The epoch's year as a number, for 'before …' tests (props, sounds). */
 export const year = () => Number(current);
@@ -125,7 +165,9 @@ export function setEpoch(id) {
     const aircraft = e.air[kind];
     k.off = !aircraft;           // no helicopters in 1945 (nor a recon flight yet)
     k.label0 ??= k.label;
-    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || k.label0;
+    k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || (e.id === '1918' && { jet: 'Ground attack', recon: 'Spotter flight', navScout: 'Air scouting', torpBomb: 'Torpedo seaplanes' }[kind]) || k.label0;
+    if (!('deck0' in k)) k.deck0 = k.deck;
+    k.deck = e.id === '1918' && k.sea && k.deck0 !== 'ship' ? 'optional' : k.deck0; // (1918: the seaplanes from their shore stations — off HMS Furious if she has them aboard)
     if (aircraft) k.aircraft = aircraft;
   }
   return e;

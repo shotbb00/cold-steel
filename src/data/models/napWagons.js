@@ -8,10 +8,10 @@ import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { ARMIES_1806 } from './napSoldier.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a };
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670 };
 const IRON = 0x2a2a28;
 const CANVAS = 0xd8d0b8;
-const FLAG = { fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0, 0x3a6ac0], pr: [0x161616, 0xf0f0f0, 0x161616], sx: [0x2a7a3a, 0xf0f0f0, 0x2a7a3a] };
+const FLAG = { fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0, 0x3a6ac0], pr: [0x161616, 0xf0f0f0, 0x161616], sx: [0x2a7a3a, 0xf0f0f0, 0x2a7a3a], gb: [0x1d2a8c, 0xf0f0f0, 0xc02020] };
 
 const material = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
 const mesh = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; return m; };

@@ -310,6 +310,8 @@ export interface MapDef {
   points: ControlPointDef[];
   spawns: PerFaction<Spawn[]>;
   decorate?: (ctx: any) => any;
+  /** a fought-over field, laid down before the battle (core/GameEngine.js): `{ blasts, ruins, works }` as replayScars takes them, `paint(terrain)` for its mud */
+  battlefield?: (game: any) => any;
   /** world/River.js, maps with crossings */
   river?: any;
   bridgeAt?: (x: number, z: number) => any;

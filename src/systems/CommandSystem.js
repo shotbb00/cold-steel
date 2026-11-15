@@ -8,10 +8,12 @@
 // Orders themselves are plain commands handed to game.orders (core/Orders.js), which runs them
 // here or — for a multiplayer client — on the host; selection, markers and sounds stay local.
 import { SHIP_SPEEDS } from '../entities/UnitStack.js';
-import { POWERS_1806 } from './Powers1806.js';
+import { POWERS_1806, ownPowers, powerOnKey } from './Powers1806.js';
 import { FORMS, FORM_ORDER } from '../data/formations.js';
 import { epoch, year } from '../data/epoch.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
+import { barrageOf } from './Barrage.js';
+import { GAS } from './Gas.js';
 import * as THREE from 'three';
 import { STRUCTURES, structureCost } from './Construction.js';
 import { KINDS, airType } from './AirStrike.js';
@@ -189,9 +191,11 @@ export class CommandSystem {
     else if (keys.is(code, 'trench')) this.runCommand('build:trench');
     else if (keys.is(code, 'wire')) this.runCommand('build:wire');
     else if (keys.is(code, 'mines')) this.runCommand('build:mines');
+    else if (ownPowers(this.game) && ['barrage', 'jet', 'lift'].some((k) => keys.is(code, k))) { const p = powerOnKey(this.game, this.faction, ['barrage', 'jet', 'lift'].find((k) => keys.is(code, k))); if (p) this.runCommand(`power:${p}`); } // (Zeebrugge's own, by side)
     else if (year() < 1900 && (keys.is(code, 'barrage') || keys.is(code, 'jet') || keys.is(code, 'lift'))) this.runCommand(`power:${keys.is(code, 'barrage') ? 'battery' : keys.is(code, 'jet') ? 'reserve' : 'guard'}`); // (1806's support powers)
     else if (keys.is(code, 'heli')) this.runCommand('air');
     else if (keys.is(code, 'jet')) this.runCommand('air:jet');
+    else if (year() === 1918 && keys.is(code, 'lift')) this.runCommand('gas'); // (1918: gas in the air assault's place)
     else if (keys.is(code, 'lift')) this.runCommand('air:lift');
     else if (keys.is(code, 'cap')) this.runCommand('air:cap');
     else if (keys.is(code, 'recon')) this.runCommand('air:recon');
@@ -312,6 +316,17 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'searchlight', s: ids(surface), on: on ? 1 : 0 });
         for (const s of surface) s.searchlight = on;
         this.game.bus.emit('toast', on ? 'Searchlights on: she lights her target — and shows herself' : 'Searchlights off');
+      } else if (k === 'scuttle') {
+        const old = ships.filter((s) => s.stats.blockship);
+        if (!old.length) return this.game.bus.emit('toast', 'Select a blockship');
+        this.game.orders.issue({ t: 'scuttle', s: ids(old) });
+      } else if (k === 'mines') {
+        const layers = ships.filter((s) => s.stats.minelayer);
+        if (!layers.length) return this.game.bus.emit('toast', 'Select a minelayer');
+        const on = !layers.every((s) => s.laying);
+        this.game.orders.issue({ t: 'layMines', s: ids(layers), on: on ? 1 : 0 });
+        for (const s of layers) s.laying = on && (s.minesLeft ?? s.stats.minelayer.count) > 0;
+        this.game.bus.emit('toast', on ? 'Laying mines while under way — steer her across their path' : 'Stopped laying');
       } else if (k === 'smoke') {
         const gens = ships.filter((s) => s.stats.smokeGen);
         if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');
@@ -378,7 +393,7 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
       let air = cmd.slice(4) || 'heli';
-      if (this.game.world.openSea && !KINDS[air]?.sea) air = { heli: 'torpBomb', jet: 'diveBomb', cap: 'navCap', recon: 'navScout' }[air] ?? air; // (at sea the keys call the carrier's missions)
+      if (this.game.world.openSea && !KINDS[air]?.sea) air = { heli: 'torpBomb', jet: epoch() === '1918' ? 'asw' : 'diveBomb', cap: 'navCap', recon: 'navScout' }[air] ?? air; // (at sea the keys call the carrier's missions)
       if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
@@ -394,9 +409,15 @@ export class CommandSystem {
       const guns = [...this.selected].filter((s) => s.alive && s.stats.indirect);
       if (!guns.length) return this.game.bus.emit('toast', 'Select artillery, rocket launchers or mortars');
       this.startTargeting({ kind: 'smoke', fire: cmd === 'salvo' ? 'salvo' : 'area', stacks: guns });
+    } else if (cmd === 'gas') {
+      const g = this.game;
+      if (!g.gas?.has()) return;
+      if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
+      if (!g.gas.ready(this.faction)) return g.bus.emit('toast', `Gas not ready (${Math.ceil(g.gas.cooldownLeft(this.faction))} s)`);
+      return this.startTargeting({ kind: 'smoke', gas: true });
     } else if (cmd === 'barrage') {
       const g = this.game;
-      if (doctrine(g, this.faction, 'mass') || doctrine(g, this.faction, 'tot')) { // (the Soviets' barrage, the US Army's Time on Target: systems/Barrage.js)
+      if (barrageOf(g, this.faction)) { // (the Soviets' barrage, the US Army's Time on Target, 1918's creeping barrage: systems/Barrage.js)
         if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
         if (!g.barrage.ready(this.faction)) return g.bus.emit('toast', `Barrage not ready (${Math.ceil(g.barrage.cooldownLeft(this.faction))} s)`);
         return this.startTargeting({ kind: 'smoke', barrage: true });
@@ -460,8 +481,9 @@ export class CommandSystem {
       t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.surface, 0.3);
       t.ghost = t.decal.mesh;
       if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
-      const bar = doctrine(this.game, this.faction, 'mass') ?? doctrine(this.game, this.faction, 'tot');
-      t.hint = t.barrage ? (bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
+      if (t.gas) t.decal.mesh.material.color.set(0xc8c46a);
+      const bar = barrageOf(this.game, this.faction);
+      t.hint = t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
@@ -621,6 +643,9 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.barrage) {
       if (this.game.orders.issue({ t: 'barrage', x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
+    } else if (t.kind === 'smoke' && t.gas) {
+      if (this.game.orders.issue({ t: 'gas', x: p.x, z: p.z }) === false) return;
+      this.addMarker(p, 'attack');
     } else if (t.kind === 'smoke' && t.fire === 'helo') {
       this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
@@ -686,7 +711,7 @@ export class CommandSystem {
       t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
-      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.barrage ? doctrine(this.game, this.faction, 'mass').radius : 10);
+      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.gas ? 32 : t.barrage ? barrageOf(this.game, this.faction)?.radius ?? 10 : 10);
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;

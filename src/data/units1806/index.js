@@ -10,7 +10,7 @@
 import { TYPES_1985 } from '../units/index.js';
 import { buildNapSoldier } from '../models/napSoldier.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
-import { buildFieldGun } from '../models/napGuns.js';
+import { buildFieldGun, buildShoreGun } from '../models/napGuns.js';
 import { buildWagon } from '../models/napWagons.js';
 import { SHIPS_1806 } from './ships.js';
 
@@ -18,6 +18,7 @@ const T = TYPES_1985;
 const men = (o = {}) => ({
   nato: () => buildNapSoldier({ army: 'fr', ...o }), by: () => buildNapSoldier({ army: 'by', ...o }),
   pact: () => buildNapSoldier({ army: 'pr', ...o }), sx: () => buildNapSoldier({ army: 'sx', ...o }),
+  gb: () => buildNapSoldier({ army: 'gb', ...o }),
 });
 
 /** Smoothbore musket and drill, shared by the foot. */
@@ -54,7 +55,7 @@ const rifles = {
 // weapon is the charge (UnitStack.startCharge): at the gallop into the enemy, the shock to its nerve,
 // then the sabres; a square stops them. Pistols and carbines for close range. A trooper's death may
 // leave a loose horse or a man on foot (UnitStack.unhorse).
-const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx' };
+const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx', gb: 'gb' };
 const mounts = (kind, mounted = true) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildCavalry({ army, kind, mounted })]));
 const HORSE = {
   armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
@@ -310,10 +311,74 @@ const bridgeLayer = wagon('bridgeLayer', 'pontoon', {
   },
 });
 
+// ------------------------------------------------------------------ the British (Egypt 1801)
+// Abercromby's army at Aboukir (data/epoch.js 'gb', the coastal battle only): each type's British name
+// and look. The Highlanders take the grenadiers' place, the Foot Guards the Guard's.
+const GB = {
+  rifles: { name: 'Regiment of Foot', weapon: 'India Pattern musket, bayonet', text: 'The British line infantry in red: two ranks, not three, so every musket fires. Steady volleys, then the bayonet.' },
+  mgTeam: { name: 'Light Infantry', weapon: 'Light musket, bayonet', text: 'The light companies, the "light bobs": out in front in open order, shooting the enemy\'s skirmishers and gunners.' },
+  atTeam: { name: 'Highlanders', weapon: 'Musket, bayonet', text: 'The 42nd Black Watch and the Gordon Highlanders in kilt and feather bonnet: first up the sand hills, last to give way.' },
+  sniper: { name: 'Riflemen', weapon: 'Baker rifle', text: 'The new Rifle Corps in green: rifles that reach twice as far as a musket, slow to load, aimed at officers and gunners.' },
+  engineers: { name: 'Royal Military Artificers', weapon: 'Musket, pick, axe', text: 'The engineers\' working men: breastworks on the sand, a way through the abatis, gun platforms on the beach.' },
+  observers: { name: 'Royal Artillery officers', weapon: 'Telescope, sword', text: 'Gunner officers with their telescopes: every gun of yours lands tight on what they can see.' },
+  guard: { name: 'Foot Guards', weapon: 'Musket, bayonet', text: 'The Brigade of Guards, the Coldstream and the Third: picked men who do not break.' },
+  reconVehicle: { name: 'Light Dragoons', weapon: 'Sabre, carbine', text: 'The 12th and 26th Light Dragoons in their Tarleton helmets: few horses, and every one of them shipped from Malta.' },
+  ifv: { name: 'Dragoons', weapon: 'Sabre, carbine', text: 'British dragoons in red: line cavalry, heavy enough to charge.' },
+  tank: { name: 'Dragoon Guards', weapon: 'Heavy sword, pistols', text: 'The heavy cavalry of the line on big English horses: the charge that decides the day.' },
+  artillery: { name: 'Royal Artillery', weapon: '6-pounder guns', text: 'The field guns, hauled through the sand by sailors as often as by horses.' },
+  spMortar: { name: 'Royal Artillery, 12-pounders', weapon: '12-pounder guns', text: 'The heavy guns: far-reaching and slow, and harder still to land.' },
+  rockets: { name: 'Royal Horse Artillery', weapon: 'Light 6-pounders', text: 'Guns that keep up with the cavalry: in action in moments.' },
+  mortar: { name: 'Howitzers', weapon: '5½-inch howitzers', text: 'Shells over the sand hills onto troops behind them.' },
+  jammer: { name: 'Ammunition cart', weapon: 'Cartridges, men', text: 'Companies within 60 m take in new men and refill their pouches.' },
+  ambulance: { name: 'Hospital wagon', weapon: 'Surgeons', text: 'Wounded men near it are patched up and go back to the line.' },
+  commandPost: { name: 'Headquarters', weapon: 'Aides, couriers', text: 'Abercromby\'s staff: reinforcements come forward to it; troops near it hold their nerve.' },
+  bridgeLayer: { name: 'Pontoon train', weapon: 'Pontoon bridge', text: 'A bridge of boats over the water.' },
+};
+const BRITISH = { rifles, mgTeam, atTeam, sniper, engineers, observers, guard, reconVehicle, ifv, tank, artillery, spMortar, rockets, mortar, jammer, ambulance, commandPost, bridgeLayer };
+for (const [id, v] of Object.entries(GB)) BRITISH[id].variants = { ...BRITISH[id].variants, gb: v };
+atTeam.models = { ...atTeam.models, gb: () => buildNapSoldier({ army: 'gb', kind: 'highland' }) };
+
+// the fleet's men ashore (the coastal battle: coastal + armies — only the British buy them)
+const navyMen = (kind) => ({ gb: () => buildNapSoldier({ army: 'gb', kind }), pact: () => buildNapSoldier({ army: 'gb', kind }) });
+const marines = {
+  ...rifles, id: 'marines', name: 'Marines', shortName: 'Marines', cost: 170, coastal: true, armies: ['gb'],
+  formation: { count: 20, columns: 10, spacing: 0.95 },
+  stats: { ...rifles.stats, hp: 105, breakMorale: 0.18, spread: 0.027 },
+  models: navyMen('marine'),
+  variants: { pact: { name: 'Marines', weapon: 'Sea Service musket, bayonet', text: 'The fleet\'s soldiers in red with white facings and round hats: drilled like the line, used to landing under fire. First out of the boats.' } },
+};
+const sailors = {
+  ...engineers, id: 'sailors', name: 'Seamen', shortName: 'Seamen', cost: 120, coastal: true, armies: ['gb'],
+  formation: { count: 16, columns: 8, spacing: 1.2 },
+  stats: { ...engineers.stats, hp: 95, speed: 1.8, range: 60, spread: 0.05, reloadTime: 22, bayonet: 140, breakMorale: 0.3 }, // (poor shots, savage at close quarters: cutlasses, boarding pikes)
+  models: navyMen('sailor'),
+  variants: { pact: { name: 'Seamen', weapon: 'Cutlass, pike, musket', text: 'A naval brigade off the ships: they haul the guns through the sand, throw up breastworks and clear the abatis (they work as pioneers) — and with cutlass and pike they are terrible at close quarters.' } },
+};
+
+// the coast's guns (the coastal battle: placed by the map's `landing.forts`, never bought): a battery of two 24-pounders
+// behind a sand parapet, or on the castle's walls. Laid on the sea (`seaward`: the boats and the ships first), and their
+// shot comes red-hot from the furnace (`hotShot`: a hit may set a ship's timbers alight — sailDamage/UnitStack blaze).
+const shoreBattery = {
+  id: 'shoreBattery', name: 'Shore Battery', shortName: 'Shore guns', kind: 'vehicle', category: 'fire', hidden: true, cost: 600,
+  formation: { count: 2, columns: 2, spacing: 12 },
+  weaponSound: 'arty',
+  stats: {
+    structure: true, concealed: true, stealth: 0.7, speed: 0, turnRate: 0, fov: 6.3, eyeHeight: 2.4, aggroRange: 0, preferredRange: 0, leash: 0, breakMorale: 0, stance: 'stand',
+    hp: 1600, armor: 0.5, radius: 3, height: 2, aimHeight: 1, sight: 900, seaward: true, hotShot: 0.35,
+    range: 400, weapon: 'cannon', turretRate: 0.3, fireCooldown: 1, magSize: 1, reloadTime: 26, damage: 320, splash: 2.5, pierce: 0.5,
+    boltSpeed: 260, boltSize: 1.3, tracer: 1, spread: 0.03, antiArmor: true, vsArmor: 1, gun: { through: 3, bounce: 2 },
+  },
+  models: { nato: buildShoreGun(), pact: buildShoreGun() },
+  variants: {
+    nato: { name: 'Batterie de côte', weapon: '2 × 24-pounders, heated shot', text: 'Two heavy guns behind a sand parapet, laid on the sea, the furnace beside them: red-hot shot into the boats as they come in, and into any frigate that stands in to cover them — her timbers catch.' },
+    pact: { name: 'Shore battery', weapon: '2 × 24-pounders', text: 'Heavy guns behind a parapet, laid on the sea.' },
+  },
+};
+
 export const TYPES_1806 = {
   ...SHIPS_1806,   // the sea maps' sailing ships (./ships.js)
   rifles, reconVehicle, ifv, tank, looseHorse, dismounted, artillery, spMortar, rockets, mortar, guard,
-  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer,
+  mgTeam, atTeam, sniper, engineers, observers, jammer, ambulance, commandPost, bridgeLayer, marines, sailors, shoreBattery,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // (the fortifications: earthworks for now)
 };
 

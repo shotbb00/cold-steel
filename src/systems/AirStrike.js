@@ -275,10 +275,10 @@ class Sortie {
     this.id = id;
     this.kind = kind;
     this.owner = owner;       // co-op: whose squad an air assault brings
-    this.p = KINDS[kind];
     this.faction = faction;
     this.army = game.armyOf(faction);
     this.type = airType(kind, faction, this.army);
+    this.p = this.type?.flight ? { ...KINDS[kind], ...this.type.flight } : KINDS[kind]; // (1918's biplanes: their own speeds and heights, data/air18.ts)
     this.target = new THREE.Vector3(x, game.terrain.heightAt(x, z), z);
     this.yaw = yaw;
     this.dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
@@ -1276,6 +1276,7 @@ export class AirStrike {
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
     if (!!p.sea !== !!game.world.openSea) return false; // (the carrier missions at sea, the land's air support on land)
+    if (game.map.landing?.blockships) return false; // (Zeebrugge: its own three powers — systems/Powers1806.js — no air support)
     if (p.coast && (!game.world.coastal || game.landing?.lands(faction))) return false; // (the coast's defence only: no ships to strike otherwise)
     let deck = null;
     if (p.sea) { // off a carrier with a flight of this kind aboard and her deck free (1985: else from the shore)

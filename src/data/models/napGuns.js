@@ -11,7 +11,7 @@ import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { buildNapSoldier, ARMIES_1806 } from './napSoldier.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a };   // carriages: French olive green, the Germans' blue-grey
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670 };   // carriages: French olive green, the Germans' blue-grey
 const BRONZE = 0x9a7a3a;
 const IRON = 0x2a2a28;
 const SIZES = {
@@ -22,7 +22,7 @@ const SIZES = {
 };
 
 /** A spoked wheel standing on the ground, facing x (as a geometry list). */
-function wheel(x, r, color) {
+export function wheel(x, r, color) {
   const parts = [P.torus(r - 0.03, 0.035, { x, y: r, ry: Math.PI / 2, color: IRON }, 20), P.cyl(0.09, 0.09, 0.16, { x, y: r, rz: Math.PI / 2, color })];
   for (let k = 0; k < 12; k++) {
     const a = (k / 12) * Math.PI * 2;
@@ -63,9 +63,8 @@ function piece(army, size) {
   return { group: g, barrel, muzzle, trail: S.cheek };
 }
 
-/** The limber: an ammunition chest on two wheels, its pole forward. */
-function limber(army) {
-  const wood = WOOD[army] ?? WOOD.fr;
+/** The limber: an ammunition chest on two wheels, its pole forward (`wood`: its paint, else the 1806 army's). */
+export function limber(army, wood = WOOD[army] ?? WOOD.fr) {
   return mesh(merge([
     ...wheel(0.62, 0.6, wood), ...wheel(-0.62, 0.6, wood),
     P.cyl(0.05, 0.05, 1.3, { y: 0.6, rz: Math.PI / 2, color: IRON }),
@@ -81,9 +80,13 @@ function gunner(army, mat) {
   return mesh(merge([m.torso, m.arms, m.thigh.clone().translate(0.12, 0.96, 0), m.thigh.clone().translate(-0.12, 0.96, 0), m.shin.clone().translate(0.12, 0.48, 0), m.shin.clone().translate(-0.12, 0.48, 0)]), mat);
 }
 
-export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
+/**
+ * `make(army, size)` and `man(army, mat)` build another era's piece and gunners on the same team and limber
+ * (1918: models/ww1Guns.js), `paint` the limber's colour.
+ */
+export function buildFieldGun({ army = 'fr', size = 'field', make = piece, man = gunner, paint } = {}) {
   const root = new THREE.Group();
-  const gun = piece(army, size);
+  const gun = make(army, size);
   root.add(gun.group);
   // the team: four horses in pairs, a driver on each near horse; then the limber
   const team = new THREE.Group();
@@ -94,7 +97,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
     team.add(h.root);
     horses.push(h);
   }
-  const lim = limber(army);
+  const lim = limber(army, paint);
   lim.position.z = 1.6;
   team.add(lim);
   root.add(team);
@@ -102,7 +105,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
   const crewMat = material();
   const crew = [];
   for (const [x, z, yaw] of [[1.0, 0.4, 0], [-1.0, 0.4, 0], [0.9, -1.0, 0.3], [-0.9, -1.0, -0.3], [1.6, -0.4, 0.4], [0.0, -2.2, 0]]) {
-    const c = gunner(army, crewMat);
+    const c = man(army, crewMat);
     c.userData.set = { x, z, yaw };
     root.add(c);
     crew.push(c);
@@ -123,6 +126,7 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
       gait = v > 3.5 ? 'trot' : v > 0.4 ? 'walk' : 'halt';
       for (const h of horses) h.update(dt, towing ? gait : 'halt');
       gun.barrel.rotation.y = towing ? 0 : Math.max(-0.4, Math.min(0.4, Math.atan2(Math.sin(u.turretYaw - u.yaw), Math.cos(u.turretYaw - u.yaw))));
+      if (gun.elevate) gun.barrel.rotation.x = towing ? 0 : -gun.elevate; // (1918: laid high for indirect fire)
       gun.barrel.position.z = 0.1 - (u.recoil ?? 0) * 0.35;                                // the recoil
       gun.group.position.z += towing ? 0 : -(u.recoil ?? 0) * 0.5;                         // the whole carriage runs back
       crew.forEach((c, i) => {
@@ -139,5 +143,56 @@ export function buildFieldGun({ army = 'fr', size = 'field' } = {}) {
       for (const h of horses) { h.body.rotation.z = 1.3 * k; h.body.position.y = 1.2 - 0.6 * k; }
       crew.forEach((c, i) => { c.rotation.x = -1.45 * k * (i % 2 ? 1 : 0.9); });
     },
+  };
+}
+
+/**
+ * A shore gun (the coastal battle, Aboukir 1801: data/units1806 shoreBattery): a 24-pounder on its garrison carriage
+ * behind a sand parapet with an embrasure, laid on the sea; beside it the furnace where the shot is heated red
+ * (the glow at its mouth) and a pile of cold shot. Fixed: the barrel traverses within the embrasure.
+ */
+export function buildShoreGun() {
+  const SAND = 0xc8ab78, BRICK = 0x8a4a32;
+  const base = merge([
+    // the parapet: a long bank of sand in front, cut by the embrasure, the cheeks of the cut faced with fascines
+    ...[-1, 1].map((s) => loft([[s * 3.2, 0, 2.8, 2.4, 0.05, 2], [s * 3.2, 1.2, 2.6, 2.2, 1.4, 2.2], [s * 3.2, 1.6, 2.4, 1.9, 0.9, 2]], { color: SAND }, 10)),
+    loft([[0, 0, 3.4, 1.2, 0.05, 2], [0, 0.6, 3.2, 1.1, 1.0, 2.2]], { color: SAND }, 8),                // the sole of the embrasure, lower
+    ...[-1, 1].map((s) => P.box(0.25, 1.5, 2.4, { x: s * 1.0, y: 0.8, z: 2.6, color: 0x6a5a3a })),       // the fascines
+    P.box(4.6, 0.12, 4.4, { y: 0.06, color: 0x8a7458, surf: 'deck' }),                                    // the platform
+    // the furnace for the heated shot: a squat brick oven, its mouth glowing
+    P.box(1.6, 1.3, 1.6, { x: 4.4, y: 0.65, z: -1.6, color: BRICK }),
+    P.cyl(0.2, 0.25, 1.2, { x: 4.4, y: 1.8, z: -1.9, color: 0x5a3a2a }, 8),
+    P.box(0.6, 0.5, 0.05, { x: 4.4, y: 0.5, z: -0.79, color: 0xff7a2a }),
+    // the shot, piled
+    ...[[0, 0], [0.32, 0], [0.16, 0.28], [0.16, 0.1]].map(([x, z], i) => P.sphere(0.15, { x: -3.6 + x, y: 0.15 + (i === 3 ? 0.24 : 0), z: -1.2 + z, color: IRON }, 8, 6)),
+  ]);
+  const gunGeo = merge([
+    P.box(0.9, 0.5, 1.8, { y: 0.4, z: -0.1, color: 0x5a4a34 }),                                              // the garrison carriage (trucks, not wheels)
+    ...[-1, 1].flatMap((s) => [-0.6, 0.5].map((z) => P.cyl(0.22, 0.22, 0.12, { x: s * 0.5, y: 0.22, z, rz: Math.PI / 2, color: 0x4a3a2a }, 10))),
+    P.cyl(0.17, 0.27, 3.0, { y: 0.85, z: 0.6, rx: Math.PI / 2, color: IRON }, 12),                          // the long iron 24-pounder
+    P.cyl(0.2, 0.2, 0.15, { y: 0.85, z: 2.1, rx: Math.PI / 2, color: IRON }, 12),
+    P.sphere(0.16, { y: 0.85, z: -0.95, color: IRON }, 8, 6),                                                // the cascabel
+  ]);
+  return (mats) => {
+    const mat = mats?.body ?? material();
+    const root = new THREE.Group();
+    root.add(mesh(base, mat));
+    const gun = new THREE.Group();
+    gun.position.set(0, 0.12, 0.6);
+    gun.add(mesh(gunGeo, mat));
+    root.add(gun);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0.85, 2.2);
+    gun.add(muzzle);
+    return {
+      root,
+      muzzle,
+      animate(u) {
+        const rel = Math.atan2(Math.sin((u.turretYaw ?? u.yaw) - u.yaw), Math.cos((u.turretYaw ?? u.yaw) - u.yaw));
+        gun.rotation.y = Math.max(-0.7, Math.min(0.7, rel));
+        gun.position.z = 0.6 - (u.recoil ?? 0) * 0.8;
+      },
+      die(time) { gun.rotation.z = Math.min(0.35, time * 0.5); gun.rotation.x = Math.min(0.25, time * 0.4); },
+    };
   };
 }

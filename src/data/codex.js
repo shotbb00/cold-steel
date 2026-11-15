@@ -304,6 +304,37 @@ export const CODEX = {
 // own (the Fallschirmjäger's supply lorry in the smoke generators' slot). Other ids fall back to CODEX.
 // 1806 (data/epoch.js): the same, for the Napoleonic war; grows with its roster.
 export const CODEX1806 = {
+  // ---------------------------------------------------------------- the landing at Aboukir, 1801 (the coastal battle)
+  flatboat: {
+    use: 'Never bought: every foot company the British buy comes ashore in one, off the beach you send it to. The first boats wait in line for the signal gun, then all pull in together. Over the bar the surf can turn a boat over — worse in bad weather.',
+    strong: 'Getting fifty men onto the sand at once', weak: 'Shore guns, canister from the sand hills, the surf',
+    counter: 'Heated shot and canister as they cross the last few hundred metres; the cavalry on the beach before they form.',
+    gb: 'Flat-bottomed boats built for landings, each rowed by sailors from the fleet and carrying about fifty soldiers sitting packed on the floor. On 8 March 1801 some 5,500 men landed at Aboukir in the first wave, the boats in a line a mile long, under fire from the sand hills and the castle.',
+  },
+  horseBoat: {
+    use: 'Never bought: the guns and the cavalry come ashore in the ships\' launches, in the later waves. Slower and bigger than the flatboats, and an easier mark.',
+    strong: 'Bringing guns and horses ashore', weak: 'Everything the shore guns throw at it',
+    counter: 'Sink it before it grounds: a battery lost with its guns is worth a whole company.',
+    gb: 'The horses of the 12th and 26th Light Dragoons had been bought in Asia Minor and were poor; many were swum ashore behind the boats. The field guns were dragged up the sand by seamen.',
+  },
+  marines: {
+    use: 'Steady infantry from the fleet, used to landing under fire: put them in the first boats. Fight them like line infantry.',
+    strong: 'Holding a beachhead, first out of the boats', weak: 'Cavalry caught in the open, like any foot',
+    counter: 'Charge them on the beach before they form.',
+    gb: 'The Marines, the fleet\'s own soldiers, landed with the army at Aboukir. In 1802 the King made them the Royal Marines for their service in the war.',
+  },
+  sailors: {
+    use: 'Seamen off the ships: they work like pioneers (breastworks, clearing the abatis, hauling the guns up the sand) and fight hard at close quarters with cutlass and pike. Their musketry is poor: close in, don\'t trade volleys.',
+    strong: 'Hand to hand, clearing obstacles, building', weak: 'A volley duel with line infantry, cavalry',
+    counter: 'Keep them at musket range and shoot them down.',
+    gb: 'Seamen from Keith\'s fleet rowed the boats and then served ashore, dragging the guns through the sand toward Alexandria.',
+  },
+  shoreBattery: {
+    use: 'Placed by the map, never bought: two heavy guns behind a parapet, laid on the sea. They fire on the boats and ships before anything else, and their heated shot can set a ship on fire.',
+    strong: 'Boats in the last 400 m, frigates that come in close', weak: 'Infantry that gets ashore and up to it',
+    counter: 'Land away from it and take it from the side; keep the frigates out of its reach.',
+    nato: 'The French in Egypt held Aboukir castle and earthwork batteries on the coast. Furnaces for heating shot were part of every coastal battery of the time: a red-hot ball lodged in a ship\'s timbers was the thing sailors feared most.',
+  },
   // ---------------------------------------------------------------- at sea (the sailing ships: data/units1806/ships.js)
   battleship: {
     use: 'The flagship: three gun decks, the heaviest broadside afloat. Put her in the middle of your line — every ship within about 700 m of her holds out longer before striking. Slow and clumsy: let the wind bring the enemy to her.',

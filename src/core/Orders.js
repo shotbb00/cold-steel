@@ -12,6 +12,7 @@
 //   { t: 'flare', s: [ids], x, z }             { t: 'buy', u: unitTypeId, e?: road (base entry index), k?: squad kit (data/kits.js) }
 //   { t: 'leave', s: [ids] }                     (come out of a building)
 //   { t: 'barrage', x, z }                       (the Soviet Army's preparatory barrage, systems/Barrage.js)
+//   { t: 'gas', x, z }                           (1918's gas bombardment, systems/Gas.js)
 //   { t: 'walze', s: [ids], x, z }               (the NVA's creeping barrage: its artillery, UnitStack.startBarrage)
 //   { t: 'cancelBuild', s: [ids] }               (call off their unfinished build orders)
 //   { t: 'lineCharge', s: id, x, z }             (a mine-clearing line charge, Construction.fireLineCharge)
@@ -20,6 +21,8 @@
 //   { t: 'shipSpeed', s: [ids], v }              (ships' engine orders: slow / half / full / flank, UnitStack SHIP_SPEEDS)
 //   { t: 'zigzag', s: [ids], on }                (ships weave either side of their course)
 //   { t: 'formation', s: [ids], f }              (ships: 'ahead' line ahead, 'abreast' line abreast, 'screen' round the biggest, 'free')
+//   { t: 'scuttle', s: [ids] }                   (blockships: sunk where they lie)
+//   { t: 'layMines', s: [ids], on }              (minelayers: mines off the stern while under way)
 //   { t: 'shipSmoke', s: [ids] }                 (destroyers and escorts lay a smoke screen for a minute)
 //   { t: 'searchlight', s: [ids], on }           (ships at night: light the target up — and show yourself)
 //   { t: 'radar', s: [ids], on }                 (1985 ships: radar on — see, and be heard — or silent: systems/Sensors.js)
@@ -184,6 +187,16 @@ export class Orders {
         return null;
       case 'searchlight': // ships at night: the beam on the target — she lights it up for everyone, and shows herself
         for (const s of mine(cmd.s)) if (s.stats.naval && !s.stats.submarine) s.searchlight = !!cmd.on;
+        return null;
+      case 'scuttle': // a blockship: the sea cocks open, the charges fired — she settles where she lies (systems/Blockships.js)
+        for (const s of mine(cmd.s)) if (s.stats.blockship) g.blockships?.scuttle(s);
+        return null;
+      case 'layMines': // a minelayer: mines off the stern while she's under way, until she's laid them all (systems/Minefields.js)
+        for (const s of mine(cmd.s)) {
+          if (!s.stats.minelayer) continue;
+          if ((s.minesLeft ?? s.stats.minelayer.count) <= 0) { g.tell(faction, `${s.name}: no mines left`); continue; }
+          s.laying = !!cmd.on;
+        }
         return null;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {
@@ -383,6 +396,8 @@ export class Orders {
       }
       case 'barrage':
         return g.barrage.call(faction, cmd.x, cmd.z);
+      case 'gas':
+        return g.gas.call(faction, cmd.x, cmd.z);
       case 'walze':
         for (const s of mine(cmd.s)) s.startBarrage?.(cmd.x, cmd.z);
         return null;

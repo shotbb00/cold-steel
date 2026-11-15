@@ -53,6 +53,7 @@ export default {
     antiArmor: true,
     playerFireInterval: 6,
     smoke: { charges: 2 },  // grenade-launcher salvos per platoon (popped when hit, or K)
+    sideGuns: [{ turret: true, at: 0, arc: 0.18, range: 180, damage: 60, rate: 11, burst: 14, y: 2.1, out: 2.4 }], // the coaxial machine gun beside the main gun (UnitStack.updateSideGuns)
     crew: 3,              // up to this many may bail out when it's knocked out
     bailChance: 0.6,
   },

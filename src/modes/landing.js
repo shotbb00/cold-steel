@@ -31,6 +31,9 @@ const economy = (map) => ({ reserves: RESERVES, perSector: RESERVES_PER_SECTOR, 
 
 const DEFENCE_FORCE = ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'mortar', 'atTeam', 'rifles', 'atTeam', 'mortar', 'scouts'];
 
+/** "Britain is beaten.", "The Warsaw Pact is beaten.", "The Allies are beaten." (a side's name: a country, or an alliance) */
+const beaten = (n) => `${/Pact|Allies/.test(n) ? 'The ' : ''}${n} ${n === 'Allies' ? 'are' : 'is'} beaten.`;
+
 export default {
   id: 'landing',
   name: 'Landing',
@@ -132,6 +135,7 @@ export default {
       game.tellBoth(att, `${p.name} is ours — the way up to ${to.name} is open. More boats are coming in.`, `${p.name} is lost — they are coming up the draw to ${to.name}!`);
     }
     this.counter(game, state, def, att);
+    if (game.blockships?.won()) return this.finish(game, def, 'The blockships lie sunk in the canal mouth: the U-boats are shut in.');
     if ([...this.inland].every(held)) return this.finish(game, def, `Every village is taken: the beachhead holds.`);
     if (game.time >= state.deadline) return this.finish(game, att, 'The landing has run out of time.');
     const spent = (f) => game.world.stacksOf(f).filter((s) => !s.stats.naval || s.cargo).length === 0 && Math.max(state.cp[f], state.cp[`${f}:guest`] ?? 0) < 150;
@@ -163,7 +167,7 @@ export default {
   finish(game, loser, why) {
     const result = (f) => (f === loser
       ? { victory: false, title: 'Defeat', subtitle: why }
-      : { victory: true, title: 'Victory', subtitle: `${why} The ${FACTIONS[loser].name} is beaten.` });
+      : { victory: true, title: 'Victory', subtitle: `${why} ${beaten(FACTIONS[loser].name)}` });
     game.net?.sendEnd(result(game.net.remoteFaction));
     game.end(result(game.playerFaction));
   },

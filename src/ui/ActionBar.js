@@ -5,13 +5,15 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
-import { POWERS_1806, powerHere } from '../systems/Powers1806.js';
+import { POWERS_1806, powerHere, ownPowers } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
 import { promoteCost } from '../modes/pitched.js';
 import { HOUSE_UPGRADES } from '../systems/Buildings.js';
 import { RANKS, SHIP_SPEEDS } from '../entities/UnitStack.js';
 import { doctrine, armyDoctrine } from '../data/doctrine.js';
+import { barrageOf } from '../systems/Barrage.js';
+import { GAS } from '../systems/Gas.js';
 import { STRUCTURES, structureCost } from '../systems/Construction.js';
 import { KINDS } from '../systems/AirStrike.js';
 import { keyOf } from '../core/Keys.js';
@@ -35,6 +37,8 @@ const ACTIONS = [
   { cmd: 'ship:form:screen', label: 'Screen', icon: 'formSquare', key: 'none', tip: 'The smaller ships ring the biggest — escorts round a carrier or a battleship, between her and the submarines', when: (sel) => sel.filter((s) => s.stats.naval && !s.stats.submarine).length >= 2 },
   { cmd: 'ship:form:free', label: 'Break formation', icon: 'cancel', key: 'none', tip: 'Every ship on her own again', when: (sel) => sel.some((s) => s.station) },
   { cmd: 'ship:searchlight', label: 'Searchlight', icon: 'recon', key: 'none', tip: 'At night: the beam on her target — everyone sees it as by day. And everyone sees where the beam comes from', when: (sel, g) => g.conditions?.night && sel.some((s) => s.stats.naval && !s.stats.submarine), on: (sel) => sel.some((s) => s.searchlight) },
+  { cmd: 'ship:scuttle', label: 'Scuttle', icon: 'mines', key: 'none', tip: 'Fire the charges and open the sea cocks: she sinks where she lies. Between the canal piers she blocks the canal — anywhere else she is wasted', when: (sel) => sel.some((s) => s.stats.blockship) },
+  { cmd: 'ship:mines', label: 'Lay mines', icon: 'mines', key: 'none', tip: 'Mines off the stern while she is under way, until she has laid them all: your ships know where they are, the enemy only when one goes off under him', when: (sel) => sel.some((s) => s.stats.minelayer), on: (sel) => sel.some((s) => s.laying) },
   { cmd: 'ship:smoke', label: 'Lay smoke', icon: 'smoke', key: 'none', tip: 'A minute of smoke off the stern while under way: nobody sees through it — go in behind it, or get out. Two minutes to make more', when: (sel) => sel.some((s) => s.stats.smokeGen), on: (sel) => sel.some((s) => s.smokeUntil > s.world.time) },
   { cmd: 'holdFire', label: (g) => ([...g.commands.selected].some((s) => s.holdFire) ? 'Holding fire' : 'Hold fire'), icon: 'stop', key: 'holdFire', tip: 'Hold fire: they shoot only at what you order them to attack (or at an enemy right on top of them). Again: fire at will', when: (sel) => sel.some((s) => s.stats.damage > 0 && !s.stats.structure), on: (sel) => sel.some((s) => s.holdFire) },
   { cmd: 'sprint', label: 'Sprint', icon: 'charge', key: 'sprintOrder', tip: 'Infantry on the move runs for 10 s, then is winded (slower) for 20 s. With a mouse: give the move order twice', when: (sel) => sel.some((s) => s.usesCover && s.moveTarget && !s.stats.structure), on: (sel) => sel.some((s) => s.sprinting) },
@@ -85,6 +89,7 @@ const SUPPORT = [
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
+  ['gas', 'flare', 'lift', 'Gas', 'Gas bombardment: shells that leave clouds drifting with the wind — men without masks fall, masked men move and shoot worse (1918)'],
   ['air:diveBomb', 'diveBomb', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],
   ['air:torpBomb', 'torpBomb', 'heli', 'Torpedo bombers', 'From the carrier: low over the water, a torpedo into the ship nearest the spot'],
   ['air:navCap', 'fighter', 'cap', 'Fighter cover', 'From the carrier: fighters circle the spot and go for enemy aircraft'],
@@ -120,6 +125,8 @@ export class ActionBar {
     this.support = SUPPORT.map(([cmd, ic, key, label, tip]) => {
       if (cmd === 'air:jet' && epoch() === '1945') [label, tip] = ['Strike', 'Fighter-bomber: rockets or a bomb, then the guns along a line']; // (data/epoch.js)
       if (cmd === 'air:lift' && epoch() === '1945') [label, tip] = ['Paradrop', 'A transport flies over the spot and drops a stick of paratroopers']
+      if (epoch() === '1918') [label, tip] = { 'air:jet': ['Ground attack', 'Biplanes low over the line: machine guns and small bombs'], 'air:cap': ['Fighters', 'A flight of fighters circles the spot and dives on enemy aircraft'], 'air:recon': ['Spotter', 'A two-seater flies along the line: every enemy it sees shows on your map'], 'air:navCap': ['Fighter cover', 'Fighters (off HMS Furious, or from the shore stations) circle the spot and go for enemy aircraft and Zeppelins'], 'air:torpBomb': ['Torpedo seaplanes', 'Low over the water: a torpedo into the ship nearest the spot, dropped close in'], 'air:navScout': ['Air scouting', 'A Zeppelin or a flying boat on a long slow leg: every ship it sees shows on your map'], 'air:asw': ['Sub hunt', 'A flying boat searches along a line: submarines it finds show on your map, and it bombs one'] }[cmd] ?? [label, tip];
+      if (epoch() === '1918' && cmd === 'air:asw') key = 'jet'; // (no dive bombers in 1918: the sub hunt on their key)
       const b = document.createElement('button');
       b.type = 'button';
       b.tabIndex = -1;
@@ -151,9 +158,9 @@ export class ActionBar {
     const me = g.playerFaction;
     const off = g.air.limit[me] === 0; // no support in this battle
     for (const { b, cmd, small } of this.support) {
-      if (cmd.startsWith('power:') || year() < 1900) { // 1806: its own three powers, nothing else
+      if (cmd.startsWith('power:') || year() < 1900 || ownPowers(g)) { // 1806: its own three powers, nothing else (Zeebrugge too)
         const k = cmd.startsWith('power:') ? cmd.slice(6) : null;
-        b.hidden = off || !k || year() >= 1900 || !powerHere(k, g); // (at sea the sea's three, ashore the land's)
+        b.hidden = off || !k || !powerHere(k, g, me); // (at sea the sea's three, ashore the land's; Zeebrugge's by side)
         if (b.hidden) continue;
         const P = POWERS_1806[k], left = g.powers.cooldownLeft(me, k);
         const text = left === Infinity ? 'used' : left > 0 ? `${Math.ceil(left)} s` : String(P.cost);
@@ -162,7 +169,16 @@ export class ActionBar {
         b.style.setProperty('--cd', left === Infinity ? '0' : left > 0 ? String(1 - left / P.cooldown) : '1');
         continue;
       }
-      const mass = cmd === 'barrage' ? doctrine(g, me, 'mass') ?? doctrine(g, me, 'tot') ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target
+      if (cmd === 'gas') { // (1918: systems/Gas.js)
+        b.hidden = off || !g.gas?.has();
+        if (b.hidden) continue;
+        const left = Math.ceil(g.gas.cooldownLeft(me)), text = left > 0 ? `${left} s` : String(GAS.cost);
+        if (small.textContent !== text) small.textContent = text;
+        b.classList.toggle('cooling', left > 0);
+        b.style.setProperty('--cd', left > 0 ? String(1 - left / GAS.cooldown) : '1');
+        continue;
+      }
+      const mass = cmd === 'barrage' ? barrageOf(g, me) ?? false : null; // the Soviet Army's barrage, the 1945 US Army's Time on Target, 1918's creeping barrage
       const kind = mass !== null ? null : cmd.slice(4) || 'heli';
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
@@ -176,6 +192,7 @@ export class ActionBar {
       b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
         || (mass !== null ? !!g.world.openSea : !!KINDS[kind]?.sea !== !!g.world.openSea) // (at sea: the carrier missions only)
         || !!(KINDS[kind]?.coast && (!g.world.coastal || g.landing?.lands(me))); // (the coast's strike: the defence of a coastal map only)
+      if (mass?.id === 'creep' && b.querySelector('.sup-name').textContent !== 'Creeping barrage') { b.querySelector('.sup-name').textContent = 'Creeping barrage'; b.title = 'Creeping barrage — a belt of shells that walks forward toward the enemy; follow it with your infantry'; }
       if (mass?.id === 'tot' && b.querySelector('.sup-name').textContent !== 'Time on Target') { b.querySelector('.sup-name').textContent = 'Time on Target'; b.title = 'Time on Target — every gun in range fires one salvo; all the shells land at the same moment'; }
     }
   }

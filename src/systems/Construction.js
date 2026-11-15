@@ -36,10 +36,12 @@
 // Orientation: `yaw` turns the structure like Object3D.rotation.y; its "front" (parapet side)
 // faces local +z, i.e. world (sin yaw, cos yaw).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { P, merge } from '../data/units/geometry.js';
 import { smoothstep } from '../core/math.js';
 import { enemyOf } from '../data/factions.js';
 import { doctrine } from '../data/doctrine.js';
+import { epoch } from '../data/epoch.js';
 
 export const STRUCTURES = {
   sandbags: { id: 'sandbags', name: 'Sandbags', cost: 15, work: 60, length: 4.5, width: 0.8 },
@@ -213,7 +215,7 @@ export class Construction {
 
   /** The parts of a job that show while it is being worked (and what is dug). */
   startWork(site) {
-    if (site.def.layer || site.kind === 'clear') return;
+    if (site.def.layer || site.kind === 'clear' || this.batch) return; // (a batch of works built at once: game.replayScars)
     const parts = site.kind === 'demolish' ? this.chargeParts(site) : this.partsFor(site);
     site.work = { dug: 0, dig: site.kind === 'trench' || site.kind === 'revetment', mesh: null, dust: 0 };
     if (!parts.length) return;
@@ -250,7 +252,15 @@ export class Construction {
     const parts = [];
     const terrain = this.game.terrain;
     if (site.kind === 'sandbags') this.bagRows(site, 0, site.def.length, 3, parts);
-    else if (site.kind === 'trench') {
+    else if (site.kind === 'trench' && this.batch) { // a map's trench system (hundreds of bays): an earth parapet with a line of bags along its crest, the spoil behind
+      const L = site.def.length;
+      for (const [lz, sy, sz] of [[1.75, 0.55, 0.8], [-1.8, 0.4, 0.7]]) {
+        const [x, z] = this.local(site, 0, lz);
+        parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: L / 2 + 0.3, sy, sz, color: EARTH }, 10, 4));
+      }
+      const [x, z] = this.local(site, 0, 1.45);
+      parts.push(P.box(L, 0.22, 0.45, { x, y: terrain.heightAt(x, z) + 0.45, z, ry: site.yaw, color: 0x8a7a58 }));
+    } else if (site.kind === 'trench') {
       const L = site.def.length;
       this.bagRows(site, 1.6, L, 2, parts, -0.05);    // parapet in front, just outside the cut
       for (let i = 0; i < 4; i++) {                   // spoil mound behind
@@ -267,19 +277,31 @@ export class Construction {
         const [x, z] = this.local(site, sx * (halfX + 1.1), 0.8);
         parts.push(P.sphere(1, { x, y: terrain.heightAt(x, z), z, ry: site.yaw, sx: 0.6, sy: REVETMENT.berm * 0.7, sz: 2.6, color: EARTH }, 10, 6));
       }
+    } else if (site.kind === 'wire' && epoch() === '1806') { // (no wire before 1870: an abatis — felled trees laid with their sharpened branches toward the enemy)
+      const L = site.def.length, r = mulberry(site.id * 977 + 13);
+      for (let i = 0; i < 4; i++) {
+        const [x, z] = this.local(site, -L / 2 + (i + 0.5) * (L / 4), (r() - 0.5) * 0.4);
+        const y = terrain.heightAt(x, z), yaw = site.yaw + (r() - 0.5) * 0.5;
+        parts.push(P.cyl(0.14, 0.2, 3, { x, y: y + 0.25, z, ry: yaw, rx: Math.PI / 2, color: LOG }, 6)); // the trunk, its crown toward the front
+        for (let k = 0; k < 5; k++) {
+          const a = (k - 2) * 0.5 + (r() - 0.5) * 0.3;
+          parts.push(P.cyl(0.03, 0.06, 1.6, { x: x + Math.sin(yaw + a) * 1.2, y: y + 0.4 + r() * 0.3, z: z + Math.cos(yaw + a) * 1.2, ry: yaw + a, rx: Math.PI / 2 - 0.25, color: 0x5a4a32 }, 4)); // the branches, sharpened
+        }
+      }
     } else if (site.kind === 'wire') {
       const L = site.def.length;
       for (let i = 0; i <= 4; i++) {                  // the pickets first, then coil after coil
         const [x, z] = this.local(site, -L / 2 + (i * L) / 4, 0);
         parts.push(P.box(0.05, 1.1, 0.05, { x, y: terrain.heightAt(x, z) + 0.5, z, color: RUST }));
       }
-      const coils = Math.round(L / 0.55);
+      const lite = !!this.batch; // (a map's wire belts, hundreds of stretches: fewer, plainer coils)
+      const coils = Math.round(L / (lite ? 0.8 : 0.55));
       const r = mulberry(site.id * 977 + 13);
       for (let i = 0; i < coils; i++) {
         const lx = -L / 2 + (i + 0.5) * (L / coils);
         const [x, z] = this.local(site, lx, (r() - 0.5) * 0.08);
         const y = terrain.heightAt(x, z) + 0.45;
-        parts.push(P.torus(0.45, 0.012, { x, y, z, ry: site.yaw + Math.PI / 2 + 0.15, rz: (r() - 0.5) * 0.2, color: STEEL }, 14));
+        parts.push(P.torus(0.45, 0.012, { x, y, z, ry: site.yaw + Math.PI / 2 + 0.15, rz: (r() - 0.5) * 0.2, color: STEEL }, lite ? 8 : 14));
       }
     } else if (site.kind === 'mgNest') {
       this.bagRows(site, 1.2, site.def.length, 4, parts);          // the front
@@ -353,7 +375,7 @@ export class Construction {
         return smoothstep(halfX + 0.5, halfX - 0.2, Math.abs(lx)) * smoothstep(3.4, 2.8, lz) * ramp;
       });
     }
-    this.game.bus.emit('terrain:changed');
+    if (!this.batch) this.game.bus.emit('terrain:changed'); // (a batch says so once, at its end)
   }
 
   /**
@@ -661,8 +683,46 @@ export class Construction {
 
   /** Concertina wire: a row of coils on pickets. */
   buildWire(site) {
-    site.mesh = this.addMesh(this.partsFor(site));
+    if (this.batch) this.batch.wire.push({ site, geo: merge(this.partsFor(site)) }); // (a batch's wire: one mesh, each stretch its range of it)
+    else site.mesh = this.addMesh(this.partsFor(site));
     this.addObstacle(site);
+  }
+
+  /** Start building works in one go (game.replayScars): no work in progress, one mesh for the trenches, one for the wire. */
+  startBatch() { this.batch = { trench: [], wire: [] }; }
+
+  endBatch() {
+    const b = this.batch;
+    this.batch = null;
+    if (!b) return;
+    for (const list of Map.groupBy(b.trench, (w) => `${Math.round(w.site.x / 120)},${Math.round(w.site.z / 120)}`).values()) {
+      const mesh = new THREE.Mesh(mergeGeometries(list.map((w) => w.geo), false), bodyMat);
+      mesh.castShadow = mesh.receiveShadow = true;
+      this.game.scene.add(mesh);
+      for (const w of list) w.geo.dispose();
+    }
+    // the wire in chunks 120 m wide (what's off screen isn't drawn), casting no shadow (too thin to show)
+    const chunks = Map.groupBy(b.wire, (w) => `${Math.round(w.site.x / 120)},${Math.round(w.site.z / 120)}`);
+    for (const list of chunks.values()) {
+      const mesh = new THREE.Mesh(mergeGeometries(list.map((w) => w.geo), false), bodyMat);
+      mesh.receiveShadow = true;
+      this.game.scene.add(mesh);
+      let start = 0;
+      for (const w of list) {
+        const count = w.geo.attributes.position.count;
+        w.site.flat = { mesh, start, count };
+        start += count;
+        w.geo.dispose();
+      }
+    }
+    this.game.bus.emit('terrain:changed');
+  }
+
+  /** A stretch of a batch's wire cut or flattened: its coils pressed into the mud. */
+  flatten({ mesh, start, count }) {
+    const p = mesh.geometry.attributes.position, t = this.game.terrain;
+    for (let i = start; i < start + count; i++) p.setY(i, t.heightAt(p.getX(i), p.getZ(i)) + 0.04);
+    p.needsUpdate = true;
   }
 
   /** Minefield: churned soil patches, and warning signs only its owner (or anyone, once revealed) sees. */
@@ -709,6 +769,7 @@ export class Construction {
     this.game.netEvent('cleared', ob.site.id);
     this.obstacles.splice(i, 1);
     ob.site.mesh?.removeFromParent();
+    if (ob.site.flat) this.flatten(ob.site.flat);
     ob.site.signs?.removeFromParent();
     if (ob.site.collider) this.game.cover.remove(ob.site.collider); // (tank traps: the gap is open)
   }
@@ -768,6 +829,7 @@ export class Construction {
 
   /** Wire slows enemy infantry (every frame); mines get a chance to go off a few times a second. */
   updateObstacles(dt) {
+    for (const s of this.game.world.stacks) for (const u of s.units) if (u.slow) u.slow = undefined; // (out of the wire: full pace again — set anew below while still in it)
     if (!this.obstacles.length) return;
     this.obstacleT -= dt;
     const roll = this.obstacleT <= 0;
@@ -842,11 +904,12 @@ export class Construction {
     const c = Math.cos(site.yaw);
     const s = Math.sin(site.yaw);
     this.digShare(site, 1 - (site.work?.dug ?? 0)); // what the work hasn't dug yet
-    site.mesh = this.addMesh(this.partsFor(site));
+    if (this.batch) this.batch.trench.push({ site, geo: merge(this.partsFor(site)) }); // (a batch's trenches: merged by chunk, never taken away)
+    else site.mesh = this.addMesh(this.partsFor(site));
     const [fx, fz] = this.local(site, 0, 1.6);
-    const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: L, thickness: 0.6, height: 0.55, spots: false });
+    const front = cover.addBox({ x: fx, z: fz, yaw: site.yaw, length: L, thickness: 0.6, height: 0.55, spots: false, drive: true }); // (tanks drive over the earthworks)
     const [bx, bz] = this.local(site, 0, -1.75);
-    cover.addBox({ x: bx, z: bz, yaw: site.yaw, length: L, thickness: 0.9, height: 0.35, spots: false });
+    cover.addBox({ x: bx, z: bz, yaw: site.yaw, length: L, thickness: 0.9, height: 0.35, spots: false, drive: true });
     cover.addTrenchSpots({ x: site.x, z: site.z, yaw: site.yaw, length: L - 1.6, collider: front, spacing: 1.1 });
   }
 }
