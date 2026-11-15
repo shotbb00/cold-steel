@@ -114,6 +114,23 @@ LINES.gb = {
 };
 LINES.fr.boats = ['Les chaloupes!', 'Feu sur les barques!', 'Ils débarquent!', 'Aux armes — les Anglais!', 'Mitraille sur la plage!']; // (Aboukir: the boats coming in)
 
+// the British infantry of 1918: the Tommies' own words (the 1918 Germans shout the German lines, the French the French)
+LINES.uk18 = {
+  contact: ['Jerry! Over there!', 'Enemy front!', 'Huns in the wood!', 'Here they come!', 'Movement by the wire!'],
+  cover: ['Get down!', 'Into the shell hole!', 'Keep your heads down!', 'Down in the trench!'],
+  reload: ['Reloading!', 'Charger in!', 'Load!', 'Five rounds!'],
+  hit: ["I'm hit!", 'Ah — bloody hell!', "It's a Blighty one!", "I'm all right, I'm all right!"],
+  wounded: ['Stretcher bearer!', "I'm hit bad!", 'Stretcher bearers!', 'Me leg!'],
+  down: ['Man down!', "He's gone west!", 'Stretcher bearer!', 'Poor sod!'],
+  pinned: ["We can't get on!", 'Too hot, sarge!', 'Keep your heads down!', "Machine gun — we're pinned!"],
+  retreat: ['Fall back!', 'Back to the trench!', 'Get back, lads!'],
+  flank: ['Bombers, round the left!', 'Lewis gun, cover us!', 'Work round them!'],
+  rally: ['On me!', 'Rally on me, lads!', 'Form on me!'],
+  bail: ["Get out, she's burning!", 'Out, out!', 'Bale out!'],
+  officer: ["The officer's down!", "Mister Thompson's hit!", "Who's in charge?", "Sarge, you're in command!"],
+  landing: ['Over the top!', 'Come on, lads!', 'Follow me!', 'Keep up with the barrage!'],
+};
+
 // the German of 1806: Prussian, Saxon and Bavarian line infantry, horse and gunners (the drill words of the day)
 LINES.de1806 = {
   contact: ['Der Feind!', 'Feind voraus!', 'Da kommen sie!', 'Achtung, Franzosen!'],
@@ -128,11 +145,11 @@ LINES.de1806 = {
   rally: ['Zu mir!', 'Sammeln!', 'Zur Fahne!'],
   officer: ['Der Hauptmann ist gefallen!', 'Der Offizier ist getroffen!', 'Wer führt?'],
 };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb' };
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

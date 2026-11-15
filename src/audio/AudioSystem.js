@@ -110,10 +110,10 @@ export class AudioSystem {
     });
     bus.on('player:down', () => this.play('hurt', null, { volume: 1 }));
     bus.on('player:reloaded', () => this.play('ready', null, { volume: 0.3 }));
-    const radio = () => epoch() !== '1806'; // (1806: no radios — ponytail: drum signals once there is a recording)
+    const radio = () => epoch() !== '1806' && epoch() !== '1918'; // (1806, 1918: no radios — ponytail: drum signals once there is a recording)
     bus.on('point:captured', ({ owner }) => radio() && this.play(`${owner}.horn`, null, { volume: 0.5, throttle: 1 }));
     bus.on('selection', () => this.play('click', null, { volume: 0.4, throttle: 0.05 }));
-    bus.on('order', () => radio() && this.play('order', null, { volume: 0.5 }));
+    bus.on('order', () => (epoch() === '1918' ? this.play('whistle', null, { volume: 0.35, throttle: 0.8 }) : radio() && this.play('order', null, { volume: 0.5 }))); // (1918: the officer's whistle)
     bus.on('view', () => this.play('whoosh', null, { volume: 0.35 }));
     bus.on('wave', ({ faction, bought }) => { if (radio() && (!bought || faction === game.playerFaction)) this.play(`${faction}.horn`, null, { volume: 0.6 }); }); // the enemy's purchases are none of our business
     bus.on('built', () => { if (radio() && !game.net?.isClient) this.play('order', null, { volume: 0.3 }); }); // a client gets the host's

@@ -551,6 +551,20 @@ function oars(ctx) {
   });
 }
 
+/** The officer's whistle (1918: an order — over the top): a pea whistle, its trill, two blasts. */
+function trenchWhistle(ctx) {
+  return makeBuffer(ctx, 1.1, (d, sr, n) => {
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const blast = t < 0.42 ? Math.min(1, t / 0.02) * Math.min(1, (0.42 - t) / 0.04) : t > 0.55 ? Math.min(1, (t - 0.55) / 0.02) * Math.min(1, (1.1 - t) / 0.08) : 0;
+      ph += (TAU * (2850 + Math.sin(TAU * 34 * t) * 120)) / sr;
+      const trill = 0.65 + 0.35 * Math.sin(TAU * 34 * t);   // the pea rattling in the barrel
+      d[i] = (Math.sin(ph) * 0.7 + (Math.random() * 2 - 1) * 0.08) * trill * blast;
+    }
+  });
+}
+
 /** The bosun's pipe (the dawn signal): a breathy whistle climbing, trilled, falling away. */
 function bosunPipe(ctx) {
   return makeBuffer(ctx, 1.7, (d, sr, n) => {
@@ -952,6 +966,7 @@ export function soundDefinitions(ctx) {
     'engine.hover': () => hoverEngine(ctx),
     'engine.oars': () => oars(ctx),
     'bosun.pipe': () => bosunPipe(ctx),
+    'whistle': () => trenchWhistle(ctx),
     wash: () => wash(ctx),
     sea: () => sea(ctx),
     'ship.sink': () => sinking(ctx),
