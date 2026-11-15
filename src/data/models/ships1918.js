@@ -346,6 +346,16 @@ export const buildVindictive = ship(() => {
   for (const z of [16, -20]) parts.push(box(2.6, 2.4, 2.6, { x: beam / 2 - 2.5, y: deckY + 1.2, z, color: RN.upper }));          // the flamethrower huts
   return { fixed: merge(parts), mounts: w.mounts, torps: [] };
 });
+/** The blockships (Thetis, Intrepid, Iphigenia): old Apollo-class cruisers, their masts down to stumps, filled with concrete — two funnels, a gun forward. */
+export const buildBlockship = ship(() => warship({ ...RN, hull: 0x4a4e52 }, {
+  len: 96, beam: 13, fb: 4.6, draft: 5.5, sheer: 1.4, fc: [22, 2],
+  guns: [{ z: 34, len: 5, cal: 0.12 }],
+  bridge: { z: 24, w: 7, d: 5, h: 3 },
+  house: [[-20, 16, 6, 2.2]],
+  funnels: [[6, 2, 9], [-8, 2, 9]],
+  fore: { z: 20, h: 9, y: 2 },
+  main: { z: -30, h: 7 },
+}));
 /** A Mersey ferry (Iris, Daffodil): broad and high-sided for the crowds on the Liverpool crossing, a tall funnel, the upper deck packed with men. */
 const ferry = (c) => warship(c, {
   len: 46, beam: 12, fb: 3.4, draft: 2.8, sheer: 0.8,

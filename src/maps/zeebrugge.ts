@@ -79,7 +79,11 @@ function height(x: number, z: number) {
   for (const px of PIERS.x) if (Math.abs(x - px) < PIERS.half && z > -5 && z < PIERS.to) return PIERS.deck; // the canal's wooden piers
   const sz = shoreZ(x);
   const d = z - sz; // + out to sea
-  if (d > 0) return Math.max(-1.2 - d * 0.07, -13) + fbm(noise, x * 0.01, z * 0.01, 2) * 0.6; // the bottom shelving away (the harbour dredged as deep)
+  if (d > 0) {
+    const bottom = Math.max(-1.2 - d * 0.07, -13) + fbm(noise, x * 0.01, z * 0.01, 2) * 0.6; // the bottom shelving away
+    const channel = x > PIERS.x[0] + 4 && x < PIERS.x[1] - 4 && z < PIERS.to + 90 ? -9.5 : 0; // (the dredged channel between the piers into the canal: deep enough for a destroyer — or a blockship)
+    return Math.min(bottom, channel);
+  }
   const back = -d;
   // the canal: dug through the dunes and the polder, quayed; the lock gates and the road bridge cross it
   if (x > CANAL[0] && x < CANAL[1]) {
@@ -215,9 +219,18 @@ export default {
     forts: [
       { unit: 'moleBattery', x: -205, z: 457, facing: 0 },
       { unit: 'coastBattery', x: -440, z: -100, facing: 0 }, { unit: 'coastBattery', x: 715, z: -230, facing: 0 },
-      { unit: 'destroyer', x: 150, z: 330, facing: Math.PI / 2 }, { unit: 'destroyer', x: -10, z: 300, facing: -Math.PI / 2 },
+      { unit: 'destroyer', x: 324, z: 391, facing: -1.33 }, { unit: 'destroyer', x: 68, z: 430, facing: -1.51 }, // (moored alongside the Mole's inner quay, as S 53 and V 69 lay that night)
     ],
     works: [...barrier(3, 0.75), ...barrier(2, 0.45), ...barrier(0, 0.6)],
+    // the blockships (systems/Blockships.js): in from the west after the Mole is stormed, round its head under the battery,
+    // across the harbour into the canal mouth between the piers; two sunk there shut the canal (the landing's victory)
+    blockships: {
+      t: 150, need: 2,
+      ships: [{ x: -620, z: 900, name: 'Thetis' }, { x: -680, z: 950, name: 'Intrepid' }, { x: -740, z: 900, name: 'Iphigenia' }],
+      zone: { x0: PIERS.x[0], x1: PIERS.x[1], z0: -40, z1: PIERS.to },
+      scuttleZ: 120, // (the computer's: well between the piers before she goes down)
+      route: [{ x: -520, z: 560 }, { x: -420, z: 360 }, { x: -70, z: 340 }, { x: -70, z: 240 }, { x: -70, z: 150 }, { x: -70, z: 90 }], // (lined up over the channel, then straight in between the piers)
+    },
     hold: [...SECTORS.map((s) => s.at), ...SECTORS.map((s) => s.inland)],
     economy: { reserves: 2000, perSector: 600, beachIncome: 0.7, defenceCp: 800, defenceIncome: 1.4 },
   },

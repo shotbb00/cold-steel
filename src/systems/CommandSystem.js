@@ -315,6 +315,10 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'searchlight', s: ids(surface), on: on ? 1 : 0 });
         for (const s of surface) s.searchlight = on;
         this.game.bus.emit('toast', on ? 'Searchlights on: she lights her target — and shows herself' : 'Searchlights off');
+      } else if (k === 'scuttle') {
+        const old = ships.filter((s) => s.stats.blockship);
+        if (!old.length) return this.game.bus.emit('toast', 'Select a blockship');
+        this.game.orders.issue({ t: 'scuttle', s: ids(old) });
       } else if (k === 'mines') {
         const layers = ships.filter((s) => s.stats.minelayer);
         if (!layers.length) return this.game.bus.emit('toast', 'Select a minelayer');

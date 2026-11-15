@@ -5,7 +5,7 @@
 // searchlight drill, Jutland's night action) — no ASDIC, only hydrophones that hear a boat close by;
 // slower torpedoes that run shorter; little anti-aircraft fire; coal smoke. German rangefinders and
 // shells: the tighter salvoes; British guns: the heavier ones. Battlecruisers: big guns on thin armour.
-import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious, buildVindictive, buildMerseyFerry, buildML } from '../models/ships1918.js';
+import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious, buildVindictive, buildMerseyFerry, buildML, buildBlockship } from '../models/ships1918.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.4, pact: 0.48 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -325,4 +325,21 @@ export const ml = craft({
   },
 });
 
-export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier, vindictive, ferry, ml };
+/** A blockship (Zeebrugge: systems/Blockships.js — never bought, she comes in on her time): steer her into the canal mouth and scuttle her. */
+export const blockship = ship({
+  fleet: 'line', hidden: true, uncapped: true,
+  id: 'blockship', name: 'Blockship', shortName: 'Blockship', cost: 0,
+  names: { nato: ['Thetis', 'Intrepid', 'Iphigenia'], pact: ['Thetis', 'Intrepid', 'Iphigenia'] },
+  hull: { length: 96, beam: 13 },
+  stats: { blockship: true, hp: 14000, armor: 0.42, /* (her holds full of concrete: hard to sink before she gets there) */ speed: 7, accel: 0.08, turnRate: 0.08, turretRate: 0.5, radius: 8, height: 12, sight: 1400, smokeGen: SMOKE_GEN, ...AA(300, 0.04, 0.01),
+    range: 1400, aggroRange: 1400, preferredRange: 1000, leash: 60, damage: 200, fireCooldown: 6, spread: 0.016, boltSpeed: 750, boltSize: 1.8, splash: 4, pierce: 0.3 },
+  mounts: { nato: [gun([0, 8, 34], FWD, { range: 1400, reload: 6, damage: 200 })], pact: [gun([0, 8, 34], FWD, { range: 1400, reload: 6, damage: 200 })] },
+  camera: { distance: 95, height: 30, shoulder: 0 },
+  models: { nato: buildBlockship, pact: buildBlockship },
+  variants: {
+    nato: { name: 'Apollo-class blockship', weapon: 'one 6-inch · a hold of concrete', text: 'An old cruiser filled with concrete, a skeleton crew aboard: round the Mole-head under the battery\'s guns, into the canal mouth between the piers — and scuttled there, across the channel, so no U-boat can get out. Two of the three are enough.' },
+    pact: { name: 'Blockship', weapon: '—', text: 'A blockship.' },
+  },
+});
+
+export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier, vindictive, ferry, ml, blockship };
