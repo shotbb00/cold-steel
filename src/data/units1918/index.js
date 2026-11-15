@@ -54,6 +54,28 @@ const mgTeam = derive(T.mgTeam, {
   },
 });
 
+// ------------------------------------------------------------------ Zeebrugge's storming parties (the coastal map: landed over the Mole's wall)
+const BLUE = { nato: () => buildWw1Soldier({ army: 'uk', blue: true }), pact: () => buildWw1Soldier({ army: 'uk', blue: true }) };
+const marines = derive(rifles, {
+  id: 'marines', name: 'Royal Marines', shortName: 'Marines', coastal: true, armies: ['uk'], cost: (rifles.cost ?? 100) + 30,
+  stats: { hp: 110, breakMorale: 0.15 },
+  factionStats: { nato: { ...rifles.factionStats.nato } },
+  variants: {
+    nato: { name: '4th Battalion, Royal Marines', weapon: 'SMLE, Lewis guns, Mills bombs, Stokes mortars', text: 'The Royal Marine Light Infantry battalion raised for the raid: they go over Vindictive\'s brows onto the Mole and fight along it to the guns. Steadier than any other infantry under fire.' },
+    pact: { name: 'Marines', weapon: '—', text: 'Marines.' },
+  },
+});
+const sailors = derive(rifles, {
+  id: 'sailors', name: 'Naval Storming Party', shortName: 'Bluejackets', coastal: true, armies: ['uk'], cost: (rifles.cost ?? 100) + 10,
+  stats: { hp: 100, speed: (rifles.stats.speed ?? 2) * 1.1, range: 120, breakMorale: 0.22, grenades: 4 },
+  factionStats: { nato: { ...rifles.factionStats.nato, fireCooldown: 2.2 } },
+  models: BLUE,
+  variants: {
+    nato: { name: 'Naval storming party', weapon: 'SMLE, Lewis guns, cutlasses, bombs', text: 'Seamen from the Grand Fleet in their blue jumpers under the Army\'s tin hats: volunteers for the raid, their job to silence the Mole-head battery before the blockships come round it. Fast and fierce, not the best shots.' },
+    pact: { name: 'Seamen', weapon: '—', text: 'Seamen.' },
+  },
+});
+
 // ------------------------------------------------------------------ armour (step 3)
 // The first tanks: slow, blind, proof against rifle bullets and not much more. Every one of them
 //   breakdown: the chance a second, while it drives, that something gives (systems/Breakdowns.js):
@@ -401,7 +423,7 @@ mineClear.specialist = undefined;      // (the wire cutters: no flamethrower amo
 mineClear.specialistModels = undefined;
 
 export const TYPES_1918 = {
-  rifles, mgTeam, tank, heavyTank, reconVehicle, crew,
+  rifles, mgTeam, marines, sailors, tank, heavyTank, reconVehicle, crew,
   artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar,
   ifv, looseHorse, dismounted, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war

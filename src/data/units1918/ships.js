@@ -5,7 +5,7 @@
 // searchlight drill, Jutland's night action) — no ASDIC, only hydrophones that hear a boat close by;
 // slower torpedoes that run shorter; little anti-aircraft fire; coal smoke. German rangefinders and
 // shells: the tighter salvoes; British guns: the heavier ones. Battlecruisers: big guns on thin armour.
-import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious } from '../models/ships1918.js';
+import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious, buildVindictive, buildMerseyFerry, buildML } from '../models/ships1918.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.4, pact: 0.48 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -284,4 +284,45 @@ export const carrier = ship({
   },
 });
 
-export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier };
+// ---------------------------------------------------------------- Zeebrugge's storming ships (systems/Landing.js `alongside`: never bought — the landing's craft)
+const STORMING = { landingCraft: true, alongside: true, draft: 4, accel: 0.25, turretRate: 0.8, leash: 30, range: 600, aggroRange: 600, preferredRange: 300, spread: 0.02, boltSpeed: 700, boltSize: 0.8, splash: 1, pierce: 0.1 };
+const craft = (o) => ship({ ...o, cost: 0, hidden: true, uncapped: true, mounts: { nato: o.guns, pact: o.guns } });
+const LEWIS = (at, facing) => gun(at, facing, { range: 500, reload: 1.5, damage: 30, splash: 0.6, shell: 700, size: 0.5, arc: 4 });
+export const vindictive = craft({
+  id: 'vindictive', name: 'Storming Ship', shortName: 'Vindictive',
+  hull: { length: 100, beam: 17 },
+  stats: { ...STORMING, hp: 7000, armor: 0.2, speed: 8, turnRate: 0.08, radius: 9, height: 14, eyeHeight: 16, sight: 1400, damage: 120, fireCooldown: 4 },
+  guns: [gun([0, 9, 40], FWD, { range: 1000, reload: 5, damage: 150, splash: 3 }), LEWIS([5, 22, 22], FWD), LEWIS([-5, 22, 22], AFT)],
+  camera: { distance: 95, height: 30, shoulder: 0 },
+  models: { nato: buildVindictive, pact: buildVindictive },
+  variants: {
+    nato: { name: 'HMS Vindictive', weapon: '6-inch, howitzers, flamethrowers, Lewis guns', text: 'The old cruiser fitted out to storm the Mole: she comes alongside its wall, her port side to it, and her eighteen brows drop onto the parapet — the Royal Marines and the storming parties go over them under fire.' },
+    pact: { name: 'Storming ship', weapon: '—', text: 'A storming ship.' },
+  },
+});
+export const ferry = craft({
+  id: 'ferry', name: 'Mersey Ferry', shortName: 'Ferry',
+  hull: { length: 46, beam: 12 },
+  stats: { ...STORMING, hp: 2600, armor: 0.06, speed: 7, turnRate: 0.14, radius: 5, height: 9, eyeHeight: 9, sight: 1000, damage: 30, fireCooldown: 1.5 },
+  guns: [LEWIS([0, 6, 14], FWD)],
+  camera: { distance: 55, height: 18, shoulder: 0 },
+  models: { nato: buildMerseyFerry, pact: buildMerseyFerry },
+  variants: {
+    nato: { name: 'Mersey ferry (Iris, Daffodil)', weapon: 'Lewis guns', text: 'The Liverpool ferries, chosen for their shallow draught and double hulls that would take a lot of punishment: Daffodil pushed Vindictive against the Mole and held her there, Iris landed her parties with grappling hooks.' },
+    pact: { name: 'Ferry', weapon: '—', text: 'A ferry.' },
+  },
+});
+export const ml = craft({
+  id: 'ml', name: 'Motor Launch', shortName: 'ML',
+  hull: { length: 24, beam: 4.5 },
+  stats: { ...STORMING, smallCraft: true, hp: 500, armor: 0, speed: 11, turnRate: 0.3, radius: 3, height: 3, eyeHeight: 4, sight: 900, stealth: 0.5, damage: 30, fireCooldown: 1.5, smokeGen: SMOKE_GEN },
+  guns: [LEWIS([0, 2.4, -8], AFT)],
+  camera: { distance: 36, height: 11, shoulder: 0 },
+  models: { nato: buildML, pact: buildML },
+  variants: {
+    nato: { name: 'Motor launch', weapon: '3-pounder, Lewis gun', text: 'An American-built wooden launch of the Dover Patrol: she lays the smoke the raid hides behind, brings a section in alongside the Mole and takes off the wounded.' },
+    pact: { name: 'Motor launch', weapon: '—', text: 'A motor launch.' },
+  },
+});
+
+export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier, vindictive, ferry, ml };

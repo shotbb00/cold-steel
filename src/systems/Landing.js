@@ -47,6 +47,7 @@ export const CRAFT = 12;       // craft on a run at once, per side (the H-hour w
 const RAMP = 1.6;              // s for the ramp to come down (and as long to go back up)
 const UNLOAD = 3;              // s with the ramp down before she backs off
 const BACK = 40;               // m she backs off before she turns for the sea
+const BERTH = 8;               // s an `alongside` craft takes to swing in and lie against the wall (Zeebrugge: the Mole)
 const MINE_REACH = 7;          // m from a sea mine to a hull (plus her radius) that sets it off
 const MINE_DAMAGE = 1700;      // a destroyer badly holed (flooding: she may still go down), a craft gone
 const OBSTACLE_MINE = 500;     // a Teller mine on a stake: a Higgins boat gone, an LCT holed
@@ -366,7 +367,7 @@ export class Landing {
     // the craft: the map's own (`landing.craft`: { infantry, vehicle, dd } — a type id or a list to pick from), else 1944's
     const pick = (k, fb) => { const l = g.map.landing?.craft?.[k]; const id = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l; return id && UNIT_TYPES[id] ? id : fb; };
     const swim = g.map.landing?.swim?.[cargo.typeId]; // (an amphibious vehicle: it swims in itself — `landing.swim`: { cargo type: swimmer })
-    const kind = swim && UNIT_TYPES[swim] ? swim : type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
+    const kind = cargo.craft && UNIT_TYPES[cargo.craft] ? cargo.craft : swim && UNIT_TYPES[swim] ? swim : type?.dd ? pick('dd', 'ddCraft') : type?.kind === 'infantry' ? pick('infantry', 'lcvp') : pick('vehicle', 'lct'); // (a DD tank swims in on its own screen)
     if (kind === 'ddCraft' && z0 == null) { const band = g.map.landing?.seaMines?.z; z0 = Math.sign(g.map.bases[f].z) * ((band ? band[1] : 400) + DD_START); }
     const edge = g.world.bounds.z, sign = Math.sign(g.map.bases[f].z) || 1;
     x = this.inLane(x, 15);
@@ -405,7 +406,7 @@ export class Landing {
           count[o.unit] = (count[o.unit] ?? 0) + 1;
           const name = o.name ?? `${forArmy(type.variants, g.armyOf(f), f)?.name ?? type.shortName} ${ROMAN[count[o.unit] - 1] ?? count[o.unit]}`; // (as a bought one is named)
           const x = (roads[o.sector ?? 0] ?? 0) + (o.dx ?? (Math.random() - 0.5) * 40);
-          this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null, owner: g.coop && f === g.playerFaction ? (i % 2 ? 'guest' : 'host') : null } /* (co-op: the wave shared out) */, x, Math.sign(g.map.bases[f].z) * (this.launchZ() - (i % 3) * 30));
+          this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null, craft: o.craft ?? null, owner: g.coop && f === g.playerFaction ? (i % 2 ? 'guest' : 'host') : null } /* (co-op: the wave shared out) */, x, Math.sign(g.map.bases[f].z) * (this.launchZ() - (i % 3) * 30));
         });
         if (w.say) g.tell(f, w.say);
       }
@@ -448,7 +449,7 @@ export class Landing {
     for (const s of g.world.stacks) {
       if (!s.alive || s.stats.naval || s.stats.structure) continue;
       const sign = this.lands(s.faction) ? Math.sign(g.map.bases[s.faction].z) || 1 : -(Math.sign(g.map.bases[s.faction].z) || 1);
-      for (const u of s.units) if (u.alive && level - g.terrain.heightAt(u.pos.x, u.pos.z) > 0.85) u.pos.z -= sign * 0.8;
+      for (const u of s.units) if (u.alive && level - g.terrain.heightAt(u.pos.x, u.pos.z) > 0.85 && g.terrain.heightAt(u.pos.x, u.pos.z - sign * 0.8) > g.terrain.heightAt(u.pos.x, u.pos.z)) u.pos.z -= sign * 0.8; // (only where that's shallower: beside a Mole the land isn't simply landward)
     }
   }
 
@@ -512,9 +513,25 @@ export class Landing {
         r.phase = 'ramp'; r.t = 0; u.beached = true; r.way = { x: u.pos.x, z: u.pos.z };
       }
     } else if (r.phase === 'ramp') {
+      const wall = s.stats.alongside && g.map.landing?.wall;
+      if (wall && !r.landed) { // alongside the Mole: she swings parallel to it, her port side to the wall, and lies there — then the brows go down
+        if (!r.berth) {
+          const w = wall(u.pos.x, u.pos.z), off = (s.type.hull?.beam ?? 10) / 2 + 1.5;
+          r.berth = { ...w, x0: u.pos.x, z0: u.pos.z, yaw0: u.yaw, bx: w.x + w.nx * off, bz: w.z + w.nz * off, yaw: Math.atan2(w.nz, -w.nx) };
+        }
+        const b = r.berth, k = Math.min(1, r.t / BERTH), e = k * k * (3 - 2 * k);
+        u.pos.x = b.x0 + (b.bx - b.x0) * e;
+        u.pos.z = b.z0 + (b.bz - b.z0) * e;
+        u.yaw = b.yaw0 + Math.atan2(Math.sin(b.yaw - b.yaw0), Math.cos(b.yaw - b.yaw0)) * e;
+        u.vel.set(0, 0, 0);
+        r.way = { x: u.pos.x, z: u.pos.z };
+        u.rampK = Math.max(0, (r.t - BERTH) / RAMP);
+        if (u.rampK >= 1) { r.landed = true; r.t = RAMP; g.audio?.play('impact.armor', { x: u.pos.x, y: u.pos.y + 4, z: u.pos.z }, { volume: 0.9 }); this.unload(r, u); }
+        return;
+      }
       u.rampK = Math.min(1, r.t / RAMP);
       if (u.rampK >= 1 && !r.landed) { r.landed = true; g.audio?.play('impact.armor', { x: u.pos.x, y: u.pos.y + 1, z: u.pos.z }, { volume: 0.9 }); this.unload(r, u); } // (the ramp down on the sand: a clang)
-      if (r.landed && r.t > RAMP + UNLOAD) { r.phase = 'back'; r.t = 0; u.beached = false; r.way = { x: u.pos.x, z: u.pos.z + r.sign * BACK }; }
+      if (r.landed && r.t > RAMP + UNLOAD * (r.berth ? 4 : 1)) { r.phase = 'back'; r.t = 0; u.beached = false; r.way = r.berth ? { x: u.pos.x + r.berth.nx * BACK, z: u.pos.z + r.berth.nz * BACK } : { x: u.pos.x, z: u.pos.z + r.sign * BACK }; } // (off the wall: straight out from it)
     } else if (r.phase === 'back') {
       u.rampK = Math.max(0, 1 - r.t / RAMP);
       if (d < 6 || r.t > 25) { r.phase = 'out'; r.way = { x: this.inLane(r.x + (Math.random() - 0.5) * 40, 20), z: r.sign * (g.world.bounds.z + 40) }; }
@@ -559,6 +576,21 @@ export class Landing {
   /** Down the ramp and up the beach: the cargo becomes its own stack ahead of her bow, in water shallow enough to wade. */
   unload(r, u) {
     const g = this.game, s = r.craft, level = g.world.river.level;
+    if (r.berth) { // over the brows onto the Mole: in behind the parapet, then on along the deck
+      const b = r.berth, inset = Math.min(8, (b.half ?? 8) * 0.9), at = { x: b.x - b.nx * inset, z: b.z - b.nz * inset };
+      const stack = this.spawnCargo(r, at);
+      // in a file along the wall, every man on the deck (a formation spread round one spot would hang off a narrow Mole into the water)
+      const n = stack.units.length;
+      stack.units.forEach((m, k) => { const t = (k - (n - 1) / 2) * 1.6; m.pos.set(at.x - b.nz * t, g.terrain.heightAt(at.x - b.nz * t, at.z + b.nx * t), at.z + b.nx * t); });
+      if (r.cargo.kit) stack.setKit?.(r.cargo.kit);
+      s.cargo = null;
+      this.drop(s);
+      stack.ai.moveTo({ x: b.x - b.nx * Math.min(16, (b.half ?? 16) * 0.9), z: b.z - b.nz * Math.min(16, (b.half ?? 16) * 0.9) }, { ordered: false });
+      g.bus.emit('landed', { stack, craft: s });
+      const man = stack.units.find((m) => m.alive);
+      if (man) stack.bark?.(man, 'landing', 0.8, true);
+      return;
+    }
     const fx = 0, fz = -r.sign, half = (s.type.hull?.length ?? 10) / 2; // (always out on the landward side, whichever way she swung)
     let x = u.pos.x + fx * (half + 3), z = u.pos.z + fz * (half + 3);
     for (let i = 0; i < 120 && level - g.terrain.heightAt(x, z) > 0.5; i++) { x += fx; z += fz; } // (out where it's shallow enough to wade: never in over their heads)

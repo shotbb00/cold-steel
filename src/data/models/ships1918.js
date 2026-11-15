@@ -319,6 +319,47 @@ export const buildFurious = ship(() => {
   return { fixed, mounts: w.mounts, torps: [] };
 });
 
+// ---------------------------------------------------------------- Zeebrugge: the storming ships (the coastal map's landing craft)
+
+/**
+ * HMS Vindictive as fitted for the raid: an old cruiser, a false deck built up along her port side with eighteen
+ * brows (gangways) to drop onto the Mole's parapet, mattresses hung as fenders, a fighting top full of Lewis guns,
+ * flamethrower huts and howitzers fore and aft. Her port side (+x) goes against the wall.
+ */
+export const buildVindictive = ship(() => {
+  const len = 100, beam = 17, fb = 5.5;
+  const w = warship(RN, {
+    len, beam, fb, draft: 6, sheer: 1.6, fc: [20, 2.2], rake: 0.05,
+    guns: [{ z: 40, len: 5, cal: 0.12 }, { z: -38, aft: true, len: 3, cal: 0.16 }],
+    bridge: { z: 26, w: 9, d: 7, h: 4 },
+    funnels: [[10, 2.2, 10], [-2, 2.2, 10], [-14, 2.2, 10]],
+    fore: { z: 22, h: 22, topR: 2.6, y: 2.2 },
+    main: { z: -26, h: 16 },
+  });
+  const deckY = fb + 2.6, parts = [w.fixed];
+  parts.push(box(3, 0.4, 62, { x: beam / 2 - 1, y: deckY, z: 2, color: 0x6a5a44 }));                                // the false deck along the port side
+  for (const z of every(-26, 30, 3.3)) {                                                                             // the brows: raised, hinged at the false deck
+    parts.push(P.box(1.1, 0.12, 6.5, { x: beam / 2 + 1.6, y: deckY + 2.6, z, rz: -0.75, ry: Math.PI / 2, color: 0x7a6a50 }));
+    parts.push(strut([beam / 2 - 0.5, deckY, z], [beam / 2 - 0.5, deckY + 5.5, z], 0.08, BLACK));
+  }
+  for (const z of every(-30, 32, 2.6)) parts.push(P.box(0.6, 1.6, 2.2, { x: beam / 2 + 0.1, y: fb - 1, z, color: 0x8a7a5a, surf: 'cloth' })); // the mattress fenders
+  for (const z of [16, -20]) parts.push(box(2.6, 2.4, 2.6, { x: beam / 2 - 2.5, y: deckY + 1.2, z, color: RN.upper }));          // the flamethrower huts
+  return { fixed: merge(parts), mounts: w.mounts, torps: [] };
+});
+/** A Mersey ferry (Iris, Daffodil): broad and high-sided for the crowds on the Liverpool crossing, a tall funnel, the upper deck packed with men. */
+const ferry = (c) => warship(c, {
+  len: 46, beam: 12, fb: 3.4, draft: 2.8, sheer: 0.8,
+  guns: [{ z: 14, len: 2.2, cal: 0.05 }],
+  house: [[-14, 12, 10, 2.6]],
+  bridge: { z: 8, w: 9, d: 3, h: 2.6 },
+  funnels: [[-2, 1.6, 9]],
+  fore: { z: 12, h: 9, y: 2.6 },
+  boats: [[5, -10, 5, 1], [-5, -10, 5, -1]],
+});
+export const buildMerseyFerry = ship(() => ferry({ ...RN, hull: 0x2a2c2e, upper: 0x8a8476 }));
+/** A motor launch: a small wooden boat (she lays the smoke, takes off the wounded, brings in a section). */
+export const buildML = ship(() => ({ fixed: motorBoat({ ...RN, hull: 0x5c6268 }, { len: 24, beam: 4.5, trough: false }), mounts: [{ geo: shielded(RN, { len: 2, cal: 0.05, w: 1.2, h: 0.9, d: 1.2 }), at: [0, 1.4, -8], aft: true, arc: 5 }] }));
+
 // ---------------------------------------------------------------- submarines
 
 /** A First War submarine: the casing over the hull, a small conning tower, the deck gun forward, the jumping wires from bow to stern over the tower. */

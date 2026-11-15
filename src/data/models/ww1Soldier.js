@@ -132,8 +132,8 @@ function headgear(army, c, crew) {
 
 // ------------------------------------------------------------------ the man
 
-export function buildWw1Soldier({ army = 'uk', weapon: kind = 'rifle', crew = false, scout = false, radio = false } = {}) {
-  const c = ARMY[army] ?? ARMY.uk;
+export function buildWw1Soldier({ army = 'uk', weapon: kind = 'rifle', crew = false, scout = false, radio = false, blue = false } = {}) {
+  const c = blue ? { ...ARMY.uk, coat: 0x232a3c, coatDk: 0x1a2030, trousers: 0x232a3c, puttee: 0xa8a28a } : ARMY[army] ?? ARMY.uk; // (blue: the Royal Navy's landing parties — jumpers and bell-bottoms under the Army's webbing and tin hat, canvas gaiters)
   const w = weapon(crew ? 'smg' : kind, army);
   const gear = !crew;
   const coatLong = army === 'fr' && !crew;   // the poilu's greatcoat, to the knee

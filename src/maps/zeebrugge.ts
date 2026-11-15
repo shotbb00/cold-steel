@@ -39,6 +39,8 @@ const SEGS: Seg[] = [
   { a: [-60, 470], b: [-265, 452], half: 6, deck: 6, kind: 'head' },
 ];
 const LIGHT = { x: -270, z: 452 };
+/** m the deck runs flat past `half` (the terrain grid's last cell slopes from it to the bottom: outside the parapet, not under the men on it). */
+const LEDGE = 2.7;
 
 /** Distance from (x, z) to a segment, the point along it (0..1), and which side (+1: seaward, the left of a→b). */
 function segD(s: Seg, x: number, z: number) {
@@ -52,9 +54,22 @@ function moleAt(x: number, z: number) {
   let best: { s: Seg; d: number; side: number } | null = null;
   for (const s of SEGS) {
     const r = segD(s, x, z);
-    if (r.d <= s.half && (!best || r.d < best.d)) best = { s, d: r.d, side: r.side };
+    if (r.d <= s.half + (s.kind === 'viaduct' ? 0 : LEDGE) && (!best || r.d < best.d)) best = { s, d: r.d, side: r.side };
   }
   return best;
+}
+
+/** The Mole's seaward face nearest (x, z) (systems/Landing.js `alongside`): the point on it and the normal out to sea. */
+function wall(x: number, z: number) {
+  let best = null as null | { x: number; z: number; nx: number; nz: number; d: number; half: number };
+  for (const s of SEGS) {
+    if (s.kind === 'viaduct') continue;
+    const r = segD(s, x, z), [ax, az] = s.a, [bx, bz] = s.b, len = Math.hypot(bx - ax, bz - az);
+    const nx = (bz - az) / len, nz = -(bx - ax) / len, px = ax + (bx - ax) * r.t, pz = az + (bz - az) * r.t;
+    const face = s.half + LEDGE + 1.3; // (the wall's face: half-way down the grid's last cell)
+    if (!best || r.d < best.d) best = { x: px + nx * face, z: pz + nz * face, nx, nz, d: r.d, half: face };
+  }
+  return best!;
 }
 
 /** Ground height (sea toward +z). */
@@ -116,7 +131,6 @@ export default {
   description: 'St George\'s Day, 1918, at night: the Royal Navy comes alongside the Mole to storm its batteries while blockships steam into the canal mouth to shut the U-boats in. The Mole, its viaduct, the harbour, the canal and the town behind the dunes.',
   epochs: ['1918'],
   theatre: 'coastal',
-  wip: true, // (not offered until its landing craft come with step 2: the 1918 roster has none yet)
   modes: ['landing'],
   sides: { nato: 'Britain', pact: 'Germany' },
   armies: { nato: ['uk'], pact: ['de'] },
@@ -165,10 +179,24 @@ export default {
   points,
   spawns: { nato: [], pact: [] },
 
-  // the landing (systems/Landing.js) — its craft, waves and the defence come with the next steps
+  // the landing (systems/Landing.js): the storming ships come alongside the Mole's seaward wall (`alongside`) and
+  // their parties go over the brows onto it — Vindictive with the Marines, the ferries Iris and Daffodil, then the
+  // motor launches with what's bought
   landing: {
     launchZ: 850,
-    waves: [],
+    wall,
+    craft: { infantry: ['ml', 'ml', 'ferry'], vehicle: 'ferry' },
+    signal: { t: 20, say: 'Vindictive is going in — the storming parties stand by the brows', sayOther: 'Ships out of the smoke — they are making for the Mole!' },
+    waves: [
+      { t: 0, units: [
+        { unit: 'marines', sector: 1, craft: 'vindictive', dx: 0 }, { unit: 'marines', sector: 1, craft: 'ml' },
+        { unit: 'sailors', sector: 0, craft: 'ferry', dx: 0 },        // (Iris)
+        { unit: 'marines', sector: 2, craft: 'ferry', dx: 0 },        // (Daffodil)
+        { unit: 'sailors', sector: 0, craft: 'ml' }, { unit: 'mgTeam', sector: 1, craft: 'ml' },
+      ] },
+      { t: 150, say: 'The motor launches are coming in with more of the storming parties', units: [{ unit: 'sailors', sector: 2, craft: 'ml' }, { unit: 'marines', sector: 0, craft: 'ml' }, { unit: 'mortar', sector: 1, craft: 'ml' }] },
+    ],
+    ai: { order: ['marines', 'sailors', 'mgTeam', 'marines', 'sailors', 'mortar', 'marines', 'sniper', 'sailors', 'mgTeam'], gunship: 'destroyer', gunships: 1, heavy: null, inshore: 400 },
     defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'artillery', 'rifles', 'mgTeam'],
     hold: [...SECTORS.map((s) => s.at), ...SECTORS.map((s) => s.inland)],
     economy: { reserves: 2000, perSector: 600, beachIncome: 0.7, defenceCp: 800, defenceIncome: 1.4 },
@@ -183,7 +211,7 @@ export default {
     // ---- the Mole: the parapet along its seaward edge (cover for the storming parties), the sheds and the station inside
     for (const s of SEGS) {
       const [ax, az] = s.a, [bx, bz] = s.b, len = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(bx - ax, bz - az);
-      const nx = -(bz - az) / len, nz = (bx - ax) / len; // (the left of a→b: seaward)
+      const nx = (bz - az) / len, nz = -(bx - ax) / len; // (seaward: the right of a→b — the Mole runs west, the harbour on its left)
       if (s.kind === 'viaduct') { // the open steel viaduct: lattice girders either side, the piles down into the water
         for (const side of [-1, 1]) {
           props.box('plain', (ax + bx) / 2 + nx * side * 3.6, s.deck + 1.1, (az + bz) / 2 + nz * side * 3.6, 0.4, 2.2, len, yaw, DARK);
@@ -195,13 +223,13 @@ export default {
         }
         continue;
       }
-      const wallOff = s.half - 1.6, high = s.kind === 'mole' ? 5 : 3.2;
+      const wallOff = s.half + LEDGE - 1.6, high = s.kind === 'mole' ? 5 : 3.2; // (along the deck's edge)
       for (let t = 0; t < len; t += 20) {
         const k = (t + Math.min(10, (len - t) / 2)) / len, seg = Math.min(20, len - t);
         const x = ax + (bx - ax) * k + nx * wallOff, z = az + (bz - az) * k + nz * wallOff;
         props.box('stone', x, s.deck + high / 2, z, 3, high, seg + 0.4, yaw, STONE);                             // the parapet
         props.box('stone', x - nx * 2.2, s.deck + high - 1.6, z - nz * 2.2, 1.6, 0.3, seg + 0.4, yaw, 0x7e7a72); // the walkway along its inner face
-        props.cover.addBox({ x, z, yaw: yaw + Math.PI / 2, length: seg, thickness: 3, height: high }); // (its length along the wall)
+        props.cover.addBox({ x, z, yaw: yaw + Math.PI / 2, length: seg, thickness: 3, height: high, spots: -1 }); // (its length along the wall; cover on its inner face only — outside is the sea)
       }
       if (s.kind !== 'mole') continue;
       // the railway along the Mole, the sheds on its inner half

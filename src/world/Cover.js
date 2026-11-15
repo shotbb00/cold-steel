@@ -125,7 +125,7 @@ export class CoverMap {
       const n = Math.max(1, Math.floor(length / SPOT_SPACING));
       for (let i = 0; i < n; i++) {
         const lx = -hx + (i + 0.5) * (length / n);
-        for (const side of [-1, 1]) {
+        for (const side of spots === true ? [-1, 1] : [spots]) { // (spots: one side only, -1 or 1 — a sea wall's inner face)
           const lz = side * (hz + SPOT_OFFSET);
           // protect direction points from the spot through the wall
           this._addSpot(x + lx * cos + lz * sin, z - lx * sin + lz * cos, -side * sin, -side * cos, c);

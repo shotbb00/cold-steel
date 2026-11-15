@@ -49,6 +49,16 @@ export class StackAI {
   /** `face` (yaw): hold on arrival looking that way (the player's right-drag order). */
   moveTo(point, { hold = false, ordered = true, face = null } = {}) {
     const s = this.stack;
+    // a spot out in deep water (a lookout or a refill at a landing's base at sea, round a narrow Mole): brought back toward
+    // the stack to the first solid ground — off the sea, never onto a tide-washed ledge; none on the way: they stay put
+    const w = this.world.river?.water, T = this.world.terrain;
+    if (w && !s.stats.naval && point && w.level - T.heightAt(point.x, point.z) > w.deep) {
+      const dx = s.centroid.x - point.x, dz = s.centroid.z - point.z, L = Math.hypot(dx, dz) || 1;
+      let dry = null;
+      for (let k = 0; k <= L; k += 3) { const x = point.x + (dx / L) * k, z = point.z + (dz / L) * k; if (T.heightAt(x, z) > w.level + 1.5) { dry = { x, z }; break; } }
+      if (!dry) return;
+      point = dry;
+    }
     this.state = AIState.MOVE;
     this.targetGroup = null;
     this.ordered = ordered;
@@ -154,6 +164,8 @@ export class StackAI {
     s.moveTarget = d > 1
       ? this.world.clampToBounds(s.anchor.clone().addScaledVector(v, Math.min(40, d - 6) / d))
       : null;
+    const w = this.world.river?.water; // (a landing's base is out at sea: never back into the water — they go to ground where they are)
+    if (w && s.moveTarget && !s.stats.naval && w.level - this.world.terrain.heightAt(s.moveTarget.x, s.moveTarget.z) > w.deep) s.moveTarget = null;
     s.barkAny('retreat');
   }
 
