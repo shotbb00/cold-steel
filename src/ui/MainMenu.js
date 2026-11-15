@@ -196,7 +196,7 @@ const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone'
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane', diveBomb: 'Dive bomber', torpBomb: 'Torpedo bomber', navCap: 'Carrier fighter', navScout: 'Scout plane' }; // (no jets yet: data/epoch.js)
 /** The sea's two navies (one army per side there): 1945 the US Navy and the Imperial Navy, 1985 the US Navy and the Soviet Navy. */
-const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
+const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1918: { nato: 'Royal Navy', pact: 'Kaiserliche Marine' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
 const COMING_EPOCHS = [{ id: '2025', name: '2025', title: 'Near future, 2025' }];
@@ -463,7 +463,9 @@ export class MainMenu {
     const atSea = theatre() === 'sea' && hasTheatre(epoch(), 'sea'); // (the navies, not the armies)
     const sideText = {
       1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
-      sea: epoch() === '1985'
+      sea: epoch() === '1918'
+        ? { nato: 'The Royal Navy: the Grand Fleet\'s heavy guns and the Harwich Force\'s destroyers — bring their fleet to battle and keep the U-boats down.', pact: 'The Kaiserliche Marine: pick off their squadrons one by one, torpedoes by night, the U-boats and the mines where they must pass.' }
+        : epoch() === '1985'
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
         : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
       1918: { nato: 'Break the line: infantry behind the barrage, the tanks to flatten the wire, then the cavalry through the gap.', pact: 'Hold the trenches in depth, and storm theirs: the storm troops slip past the strongpoints, the machine guns hold what they take.' },

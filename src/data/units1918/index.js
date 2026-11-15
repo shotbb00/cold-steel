@@ -5,6 +5,7 @@
 // Step 1: the riflemen and the machine guns; step 3 the tanks and armoured cars. Everything else stands in through ALIAS_1918 (units/index.js
 // typeOf) until its step (see the 1918 design notes): tanks 3, guns and gas 4, cavalry and the rest 5.
 import { TYPES_1985 } from '../units/index.js';
+import { SHIPS_1918 } from './ships.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
@@ -404,6 +405,7 @@ export const TYPES_1918 = {
   artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar,
   ifv, looseHorse, dismounted, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost,
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
+  ...SHIPS_1918,   // the North Sea maps' warships (./ships.js)
 };
 
 /** What stands in for the types not built yet: the riflemen (ponytail: each gets its own in its step). */

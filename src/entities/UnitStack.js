@@ -138,7 +138,8 @@ function shipName(type, faction, world) {
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
   if (n.startsWith('SS ')) return n; // (a merchantman is SS already)
-  const pre = year() < 1900 ? { pact: 'HMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; later the US Navy's USS)
+  if (/^[A-Z]{1,3} \d/.test(n)) return n; // (a numbered boat — S 53, UB 88, CMB 4 — goes by her number)
+  const pre = year() < 1900 ? { pact: 'HMS' }[faction] : year() < 1930 ? { nato: 'HMS', pact: 'SMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; 1918 HMS and SMS; later the US Navy's USS)
   return pre ? `${pre} ${n}` : n;
 }
 
@@ -2700,7 +2701,7 @@ export class UnitStack {
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
     const sea1806 = this.stats.naval && year() < 1900;
-    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : 'frn') : this.stats.naval && this.faction === 'pact' && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
+    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : 'frn') : this.stats.naval && this.faction === 'pact' && year() > 1930 && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });
