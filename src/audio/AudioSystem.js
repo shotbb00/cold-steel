@@ -151,6 +151,7 @@ export class AudioSystem {
     this.roomIn.connect(this.room).connect(this.master);
     this.indoors = false;
     this.intensity = 0; // how hard the battle is going: weighted shots, fading over ~20 s
+    this.front = { x: 0, z: 0, w: 0 }; // the same shots' positions, weighted and fading alike: where the fighting is
 
     this.buildBank(soundDefinitions(ctx));
     // recorded sounds, matched to the synthesised ones (so they load once those are built)
@@ -258,6 +259,8 @@ export class AudioSystem {
       now = last + throttle;
       if (now - ctx.currentTime > DEFER) return;
     }
+    const hid = pos ? this.hidden(pos, dist) : 0; // behind a hill: duller and a little quieter (its echo still carries over)
+    volume *= 1 - 0.35 * hid;
     // how loud this will be here — used to decide what to cut when too much is playing
     const level = volume * ref / (ref + this.rolloff * Math.max(0, dist - ref));
     if (!this.makeRoom(key, level, now)) return;
@@ -269,7 +272,7 @@ export class AudioSystem {
     src.connect(gain);
     const nodes = [src, gain];
     if (pos) {
-      const air = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: airCutoff(dist), Q: 0.5 });
+      const air = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: airCutoff(dist) * (1 - 0.82 * hid), Q: 0.5 });
       const panner = new PannerNode(ctx, {
         panningModel: 'equalpower', distanceModel: 'inverse', refDistance: ref, maxDistance: 3000, rolloffFactor: this.rolloff,
         positionX: pos.x, positionY: pos.y + 1.2, positionZ: pos.z,
@@ -347,7 +350,9 @@ export class AudioSystem {
    */
   weapon(faction, kind, pos, indoors = false, army = null, last = false) {
     this.lastLoud = this.game.world.time;
-    this.intensity += SHOT_WEIGHT[kind] ?? 1;
+    const w = SHOT_WEIGHT[kind] ?? 1;
+    this.intensity += w;
+    if (pos) { this.front.x += pos.x * w; this.front.z += pos.z * w; this.front.w += w; } // (where the guns are: the bed comes from there)
     const volume = { naval: 0.9, navalHeavy: 1, musket: 0.6, flame: 0.8, cannon: 0.85, arty: 0.85, mlrs: 0.85, katyusha: 0.9, nebelwerfer: 0.75, sam: 0.7, rocket: 0.75, mg: 0.55, rifle: 0.55, aa: 0.6, mortar: 0.7, autocannon: 0.65 }[kind] ?? 0.55;
     // the further the gun, the more its shots run together: fast-firing distant guns don't flood the mix
     const near = pos ? 1 + this.distanceTo(pos) / 60 : 1;
@@ -601,16 +606,54 @@ export class AudioSystem {
     this.updateAmbience(this.game.world.time);
   }
 
-  /** The rest of the front: a far rumble of guns that swells as the fighting here grows. */
+  /**
+   * The rest of the front: a far rumble of guns that swells as the fighting grows — and comes from where it
+   * is, to the left or the right of the view, duller the further off it is (turn toward it and it's ahead).
+   */
   updateBed(dt) {
-    this.intensity *= Math.exp(-dt / 20);
+    const fade = Math.exp(-dt / 20);
+    this.intensity *= fade;
+    const F = this.front;
+    F.x *= fade; F.z *= fade; F.w *= fade;
+    const ctx = this.ctx;
     if (!this.bed && this.bank['battle.bed']) {
-      const src = new AudioBufferSourceNode(this.ctx, { buffer: this.bank['battle.bed'], loop: true });
-      this.bed = new GainNode(this.ctx, { gain: 0 });
-      src.connect(this.bed).connect(this.outdoor);
+      const src = new AudioBufferSourceNode(ctx, { buffer: this.bank['battle.bed'], loop: true });
+      this.bed = new GainNode(ctx, { gain: 0 });
+      this.bedTone = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 4000, Q: 0.5 });
+      this.bedPan = new StereoPannerNode(ctx, { pan: 0 });
+      src.connect(this.bed).connect(this.bedTone).connect(this.bedPan).connect(this.outdoor);
       src.start();
     }
-    if (this.bed) set(this.bed.gain, BED * (1 - Math.exp(-this.intensity / BED_FILL)), this.ctx.currentTime, 2);
+    if (!this.bed) return;
+    const t = ctx.currentTime;
+    set(this.bed.gain, BED * (1 - Math.exp(-this.intensity / BED_FILL)), t, 2);
+    if (F.w > 0.5) {
+      const L = this.listenerPos;
+      const dx = F.x / F.w - L.x, dz = F.z / F.w - L.z;
+      const d = Math.hypot(dx, dz);
+      const fwd = this.game.camera.getWorldDirection(this._bedFwd ??= this.game.camera.position.clone());
+      const fl = Math.hypot(fwd.x, fwd.z) || 1; // (the command view looks down: its heading only)
+      const side = d > 1 ? (dx * -fwd.z + dz * fwd.x) / (d * fl) : 0; // (the view's right is (-fwd.z, fwd.x))
+      set(this.bedPan.pan, side * 0.75, t, 0.6);
+      set(this.bedTone.frequency, 450 + 3600 * Math.exp(-d / 350), t, 1);
+    }
+  }
+
+  /** 0…1: how far the ground hides a sound at `pos` from the ears (a hill or ridge between). */
+  hidden(pos, dist) {
+    if (dist < 25) return 0;
+    const T = this.game.world.terrain;
+    const L = this.listenerPos;
+    const n = Math.min(12, Math.ceil(dist / 25));
+    const top = pos.y + 1.2;
+    let deep = 0;
+    for (let i = 1; i < n; i++) {
+      const k = i / n;
+      const x = L.x + (pos.x - L.x) * k;
+      const z = L.z + (pos.z - L.z) * k;
+      deep = Math.max(deep, T.heightAt(x, z) - (L.y + (top - L.y) * k));
+    }
+    return Math.min(1, Math.max(0, (deep - 0.5) / 5));
   }
 
   /** Inside a building (the soldier you control): the battle outside is muffled by the walls. */
