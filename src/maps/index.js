@@ -33,6 +33,7 @@ import aboukirLanding from './aboukirLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
+import suwalkiTest from './suwalkiTest.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
@@ -41,6 +42,7 @@ export const MAPS = {
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
+  [suwalkiTest.id]: suwalkiTest,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
@@ -80,7 +82,7 @@ export function forEpoch(year) {
   for (const m of Object.values(MAPS)) {
     if (!m.ww2) continue;
     m.base ??= { description: m.description, points: Object.fromEntries((m.points ?? []).map((p) => [p.id, p.name])) };
-    const w = year !== '1985' ? m.ww2 : null; // (no inner-German border before 1945 either)
+    const w = Number(year) < 1985 ? m.ww2 : null; // (no inner-German border before 1945 either)
     m.description = w?.description ?? m.base.description;
     for (const p of m.points ?? []) p.name = w?.points?.[p.id] ?? m.base.points[p.id];
   }
@@ -101,7 +103,7 @@ export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id &
 /** Does year `ep` have any map in theatre `th`? (the picker greys out the empty ones) */
 export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && (m.theatre ?? 'land') === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep)));
 /** Years that fight only on maps made for them (1918: the Western Front, nothing in Hesse). */
-const OWN_MAPS = new Set(['1918']);
+const OWN_MAPS = new Set(['1918', '2027']);
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {

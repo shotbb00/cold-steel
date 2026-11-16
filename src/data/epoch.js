@@ -12,6 +12,7 @@ import { UNIT_TYPES, TYPES_1985, ALIAS } from './units/index.js';
 import { TYPES_1945, ALIAS_1945 } from './units45/index.js';
 import { TYPES_1806, ALIAS_1806 } from './units1806/index.js';
 import { TYPES_1918, ALIAS_1918 } from './units1918/index.js';
+import { TYPES_2027, ALIAS_2027 } from './units2027/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
 import { AIR_1918 } from './air18.ts';
@@ -101,6 +102,26 @@ export const EPOCHS = {
     defaults: { nato: 'us', pact: 'sov' },
     types: TYPES_1985, alias: {}, air: AIR_1985, doctrine: DOCTRINE_1985,
   },
+  2027: {
+    id: '2027', name: '2027', title: 'The Suwałki Gap, 2027', beta: true,
+    blurb: '2027, a war that has not happened: Russia strikes for the Suwałki Gap, the narrow land bridge between Poland and Lithuania. Drones overhead, jammers in every wood, and rockets that hit what they can find.',
+    sides: { nato: 'NATO', pact: 'Russia' },
+    armies: {
+      us: { id: 'us', faction: 'nato', name: 'US Army' },
+      pl: { id: 'pl', faction: 'nato', name: 'Polish Army' },
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army' },
+      by: { id: 'by', faction: 'pact', name: 'Belarus' },
+    },
+    defaults: { nato: 'us', pact: 'ru' },
+    types: TYPES_2027, alias: ALIAS_2027, air: AIR_1985,
+    // each army's two signatures — for now 1985's mechanics under modern names (their own come with step 6)
+    doctrine: {
+      us: [{ ...DOCTRINE_1985.us[0], name: 'Multi-domain strike' }, { ...DOCTRINE_1985.us[1], name: 'Recon screen' }],
+      pl: [{ ...DOCTRINE_1985.bw[0], name: 'Eastern Shield', text: 'Engineers build twice as fast and fortifications cost 40 % less. A line of trenches and obstacles waits in front of your base at the start.' }, { ...DOCTRINE_1985.bw[1], name: 'Mechanised infantry', text: 'Infantry within 40 m of a friendly infantry fighting vehicle aims 20 % better and takes a third less suppression.' }],
+      ru: [{ ...DOCTRINE_1985.sov[0], name: 'Fire superiority' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
+      by: [{ ...DOCTRINE_1985.nva[1], name: 'Massed guns', text: 'Guns, rocket launchers and mortars cost 25 % less and reload 35 % faster. Their creeping barrage order walks the shells forward ahead of your advance.' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
+    },
+  },
   1945: {
     id: '1945', name: '1945', title: 'Western Front, spring 1945',
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
@@ -139,7 +160,7 @@ export const EPOCHS = {
 };
 
 let current = '1985';
-/** The epoch now in force: '1985', '1945', '1918' or '1806'. */
+/** The epoch now in force: '2027', '1985', '1945', '1918' or '1806'. */
 export const epoch = () => current;
 /** The epoch's year as a number, for 'before …' tests (props, sounds). */
 export const year = () => Number(current);
