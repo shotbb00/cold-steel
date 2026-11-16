@@ -9,19 +9,21 @@ import { RANKS } from '../entities/UnitStack.js';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+// [label, key, optional]: an optional row is only shown when it happened to either side — no air strikes
+// or helicopters in 1806, no villages at sea, no mines where none were laid
 const ROWS = [
   ['Men lost', 'menLost'],
-  ['Vehicles lost', 'vehiclesLost'],
+  ['Vehicles lost', 'vehiclesLost', true],
   ['Stacks destroyed', 'stacksLost'],
   ['Enemy killed', 'kills'],
-  ['Villages taken', 'captures'],
-  ['Reinforcements', 'reinforcements'],
+  ['Villages taken', 'captures', true],
+  ['Reinforcements', 'reinforcements', true],
   ['Command points spent', 'cpSpent'],
   ['Rounds fired', 'shots'],
-  ['Air strikes', 'airStrikes'],
-  ['Helicopters lost', 'helisLost'],
-  ['Fortifications built', 'built'],
-  ['Mines set off by them', 'minesSetOff'],
+  ['Air strikes', 'airStrikes', true],
+  ['Helicopters lost', 'helisLost', true],
+  ['Fortifications built', 'built', true],
+  ['Mines set off by them', 'minesSetOff', true],
 ];
 
 export function renderReport(report, me) {
@@ -30,9 +32,10 @@ export function renderReport(report, me) {
   const b = report.sides[foe];
   const wrap = document.createElement('div');
   wrap.className = 'aar';
-  const table = ROWS.map(([label, key]) => {
+  const table = ROWS.map(([label, key, optional]) => {
     const va = Math.round(a[key] ?? 0);
     const vb = Math.round(b[key] ?? 0);
+    if (optional && !va && !vb) return '';
     return `<tr><td>${va}</td><th>${label}</th><td>${vb}</td></tr>`;
   }).join('');
   const best = (f) => report.stacks.filter((s) => s.faction === f).slice(0, 4).map((s) => `
