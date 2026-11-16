@@ -138,7 +138,7 @@ export class BattleStats {
       timeline: this.timeline,
       events: this.events.slice(-40),
       maxStrength: this.game.modeState?.maxStrength ?? null,
-      losses: this.losses,
+      losses: this.losses.length > 1500 ? this.losses.filter((_, i) => i % Math.ceil(this.losses.length / 1500) === 0) : this.losses, // (a thinned map for a huge battle: one message to the guest)
       bounds: this.game.map.bounds ?? null,
       baseZ: Object.fromEntries(Object.entries(this.game.map.bases ?? {}).map(([f, b]) => [f, Math.round(b.z)])),
       points: (this.game.modeState?.points?.points ?? []).map((p) => ({ x: Math.round(p.x), z: Math.round(p.z), name: p.name, owner: p.owner ?? null })),

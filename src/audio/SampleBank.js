@@ -43,14 +43,25 @@ export class SampleBank {
       const match = Array.isArray(entry) ? key : entry.match ?? key; // (a key with no synthesised twin: match this one's level)
       for (const file of files) jobs.push({ key, file, trim, match });
     }
+    // a file listed under several keys (both sides' MGs, the far rifles …) is fetched and decoded once
+    // and its buffer shared — decoded audio is float PCM, the biggest part of the sounds' memory
+    const decoded = new Map();
+    const decode = (file, loop) => {
+      const id = `${file}|${loop}`;
+      if (!decoded.has(id)) {
+        decoded.set(id, fetch(this.base + file).then(async (res) => {
+          if (!res.ok) throw new Error(res.status);
+          const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
+          return loop ? loopable(this.ctx, buffer) : buffer;
+        }));
+      }
+      return decoded.get(id);
+    };
     const next = async () => {
       while (jobs.length) {
         const job = jobs.shift();
         try {
-          const res = await fetch(this.base + job.file);
-          if (!res.ok) throw new Error(res.status);
-          let buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
-          if (LOOPS.test(job.key)) buffer = loopable(this.ctx, buffer);
+          const buffer = await decode(job.file, LOOPS.test(job.key));
           const ref = await synth(job.match);
           const gain = (ref ? clamp(peak(ref) / Math.max(1e-4, peak(buffer)), 0.01, 20) : 1) * job.trim;
           (this.samples[job.key] ??= []).push({ buffer, gain });

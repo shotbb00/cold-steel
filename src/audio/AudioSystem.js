@@ -216,6 +216,11 @@ export class AudioSystem {
     return this.muted ? 0 : 0.85 * settings.get('volume');
   }
 
+  /** The battle is over and frozen behind its report: the guns and engines die away. */
+  fadeOut() {
+    if (this.master) set(this.master.gain, 0, this.ctx.currentTime, 0.6);
+  }
+
   get running() {
     return !!this.ctx && !this.muted && this.ctx.state === 'running';
   }
