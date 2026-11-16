@@ -47,6 +47,7 @@ import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
+import { VehicleDust } from '../render/VehicleDust.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -237,6 +238,7 @@ export class GameEngine {
     if (this.net?.isHost) this.setWaiting(true); // until the other player has loaded
     if (this.net) this.showNetStatus();
     this.quality = new Quality(this); // after the map is decorated: it thins detail meshes
+    this.dust = new VehicleDust(this); // what moving vehicles throw up (render/VehicleDust.js)
     this.blobs = new BlobShadows(this); // contact shadows where the preset has no sun shadows (Very low)
     this.hud = new HUD(this);
     this.labels = new StackLabels(this);
@@ -826,6 +828,7 @@ export class GameEngine {
     this.touchControls?.update();
     this.fow.update(dt);
     this.blobs.update();
+    this.dust.update(dt);
     this.ranges.update();
     this.ambience.update(dt);
     this.rain?.update(dt);
