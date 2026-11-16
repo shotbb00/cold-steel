@@ -204,7 +204,10 @@ export class NetClient {
         u.vel.x += (dx / span - u.vel.x) * Math.min(1, span * 12);
         u.vel.z += (dz / span - u.vel.z) * Math.min(1, span * 12);
       }
-      u.pos.set(x, terrain.heightAt(x, z), z);
+      const ground = terrain.heightAt(x, z);
+      const sea = g.world.river?.water?.level ?? 0;
+      // a ship floats at the water's level (as the host has her, UnitStack.steerShip), not on the seabed under it
+      u.pos.set(x, st.naval ? (st.hover ? Math.max(sea, ground) + 0.3 : sea) : ground, z);
       const speed = Math.hypot(u.vel.x, u.vel.z);
       u.moving = speed > 0.5;
       u.gait += (Math.min(1, speed / (st.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
