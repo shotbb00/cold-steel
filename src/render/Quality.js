@@ -54,6 +54,10 @@ export const QUALITY = {
 };
 const ORDER = ['verylow', 'low', 'medium', 'high'];
 const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+// iPhones and iPads: Safari kills the tab without warning when it runs short of memory (an iPhone 11 has
+// 4 GB for everything), and every render target grows with the square of the resolution — so no more
+// than one pixel per screen point there and no multisampled buffers (FXAA smooths the edges instead)
+const IOS = typeof navigator !== 'undefined' && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 /** A preset as this device runs it: phones trade effects for pixels. */
 function preset(level) {
   const q = { ...QUALITY[level] };
@@ -61,6 +65,7 @@ function preset(level) {
     Object.assign(q, { ao: false, babylonAO: false, shadowFilter: 'low', shadowSize: Math.min(q.shadowSize, 1024), maxRes: q.maxRes + 0.5 });
     q.detail = { ...q.detail, grass: q.detail.grass * 0.6, clutter: q.detail.clutter * 0.7 };
   }
+  if (IOS) Object.assign(q, { maxRes: Math.min(q.maxRes, 1), resolution: Math.min(q.resolution, 1), msaa: 0, bloom: false });
   q.maxRes = Math.min(q.maxRes, devicePixelRatio);
   return q;
 }

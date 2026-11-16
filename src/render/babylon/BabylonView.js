@@ -470,7 +470,7 @@ export class BabylonView {
     }
     const mesh = new Mesh(o.name || `m${o.id}`, this.scene);
     mesh.rotationQuaternion = new Quaternion();
-    this.applyGeometry(mesh, geo);
+    this.attachGeometry(mesh, geo, !o.isInstancedMesh);
     const material = this.hold(this.material(tm));
     mesh.material = material;
     mesh.useVertexColors = !!tm.vertexColors;
@@ -494,6 +494,20 @@ export class BabylonView {
     this.meshes.delete(o);
   }
 
+  /**
+   * Give a mesh the Babylon geometry of a Three one: shared by every mesh made from the same Three geometry
+   * (Zeebrugge's ships and cranes: 20 MB of buffers once instead of many times). Not an instanced mesh's:
+   * Babylon keeps the thin-instance buffers on the geometry, so a shared one would hand them to the others.
+   */
+  attachGeometry(mesh, geo, share) {
+    if (!share) { this.applyGeometry(mesh, geo); return; } // (rewritten in place, its instance buffers kept)
+    const shared = this.geometries.get(geo);
+    if (shared && !shared.isDisposed()) { shared.applyToMesh(mesh); return; }
+    mesh.geometry?.releaseForMesh(mesh, true); // (its old one, dropped when no one else draws it — never rewritten under another mesh)
+    this.applyGeometry(mesh, geo);
+    this.geometries.set(geo, mesh.geometry);
+  }
+
   /** Copy a Three geometry's attributes into a Babylon mesh. */
   applyGeometry(mesh, geo) {
     const pos = geo.attributes.position;
@@ -509,7 +523,9 @@ export class BabylonView {
     }
     vd.applyToMesh(mesh, true);
     const col = geo.attributes.color;
-    if (col) mesh.setVerticesData(VertexBuffer.ColorKind, col.array, true, col.itemSize); // (Three's own array: no RGBA copy — 35–45 MB a battle)
+    if (col?.array instanceof Uint8Array) { // packed to bytes (render/packColors.js): read as 0…1
+      mesh.setVerticesBuffer(new VertexBuffer(this.engine, col.array, VertexBuffer.ColorKind, { updatable: true, size: col.itemSize, type: VertexBuffer.UNSIGNED_BYTE, normalized: col.normalized }));
+    } else if (col) mesh.setVerticesData(VertexBuffer.ColorKind, col.array, true, col.itemSize); // (Three's own array: no RGBA copy — 35–45 MB a battle)
     // the game's own attributes (paint, aFurrow…) keep their names: the plugins read them
     for (const [name, a] of Object.entries(geo.attributes)) {
       if (!STANDARD.has(name) && !a.isInstancedBufferAttribute) mesh.setVerticesData(name, a.array, true, a.itemSize);
@@ -525,7 +541,7 @@ export class BabylonView {
     const geo = o.geometry;
     const mesh = rec.mesh;
     if (geo !== rec.geometry) {
-      if (rec.geometry) this.applyGeometry(mesh, geo);
+      if (rec.geometry) this.attachGeometry(mesh, geo, !o.isInstancedMesh);
       rec.geometry = geo;
       this.snapshotVersions(geo, rec);
       return;

@@ -47,6 +47,7 @@ import { EPOCHS, epoch } from '../data/epoch.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
+import { VehicleDust } from '../render/VehicleDust.js';
 import { buildEnvironment } from '../world/Environment.js';
 import { Terrain } from '../world/Terrain.js';
 import { CoverMap } from '../world/Cover.js';
@@ -237,6 +238,7 @@ export class GameEngine {
     if (this.net?.isHost) this.setWaiting(true); // until the other player has loaded
     if (this.net) this.showNetStatus();
     this.quality = new Quality(this); // after the map is decorated: it thins detail meshes
+    this.dust = new VehicleDust(this); // what moving vehicles throw up (render/VehicleDust.js)
     this.blobs = new BlobShadows(this); // contact shadows where the preset has no sun shadows (Very low)
     this.hud = new HUD(this);
     this.labels = new StackLabels(this);
@@ -677,6 +679,12 @@ export class GameEngine {
 
   tick() {
     const raw = this.clock.getDelta();
+    // the report is up: a moment later the battle behind it stops — no simulation, no drawing (a faster
+    // frame would only raise the resolution, and a phone near its memory limit dies on the bigger buffers)
+    if (this.ended && (this.endedFor = (this.endedFor ?? 0) + raw) > 2) {
+      if (!this.frozen) { this.frozen = true; this.audio.fadeOut?.(); }
+      return;
+    }
     const dt = Math.min(raw, 1 / 20); // clamp so a hitch can't teleport units
     this.quality.update(raw);
     // An exception here would stop the render loop for good (a frozen picture while the
@@ -820,6 +828,7 @@ export class GameEngine {
     this.touchControls?.update();
     this.fow.update(dt);
     this.blobs.update();
+    this.dust.update(dt);
     this.ranges.update();
     this.ambience.update(dt);
     this.rain?.update(dt);

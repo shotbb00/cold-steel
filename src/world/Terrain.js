@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { makeDetailTextures } from './textures.js';
 import { createNoise2D } from './Noise.js';
+import { packColors } from '../render/packColors.js';
 import { smoothstep } from '../core/math.js';
 import { FIELD } from './Fields.js';
 
@@ -259,6 +260,7 @@ export class Terrain {
       colors[i * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    packColors(geo); // (bytes: dig() and scorch() write through setXYZ)
     geo.setAttribute('aFurrow', new THREE.BufferAttribute(furrows, 3));
 
     const { map, normalMap } = makeDetailTextures({ seed: 5, scale: 8, base: 0.82, contrast: 0.32, bump: 3 });

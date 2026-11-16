@@ -37,6 +37,7 @@
 // faces local +z, i.e. world (sin yaw, cos yaw).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { packColors } from '../render/packColors.js';
 import { P, merge } from '../data/units/geometry.js';
 import { smoothstep } from '../core/math.js';
 import { enemyOf } from '../data/factions.js';
@@ -696,7 +697,7 @@ export class Construction {
     this.batch = null;
     if (!b) return;
     for (const list of Map.groupBy(b.trench, (w) => `${Math.round(w.site.x / 120)},${Math.round(w.site.z / 120)}`).values()) {
-      const mesh = new THREE.Mesh(mergeGeometries(list.map((w) => w.geo), false), bodyMat);
+      const mesh = new THREE.Mesh(packColors(mergeGeometries(list.map((w) => w.geo), false)), bodyMat);
       mesh.castShadow = mesh.receiveShadow = true;
       this.game.scene.add(mesh);
       for (const w of list) w.geo.dispose();
@@ -704,7 +705,7 @@ export class Construction {
     // the wire in chunks 120 m wide (what's off screen isn't drawn), casting no shadow (too thin to show)
     const chunks = Map.groupBy(b.wire, (w) => `${Math.round(w.site.x / 120)},${Math.round(w.site.z / 120)}`);
     for (const list of chunks.values()) {
-      const mesh = new THREE.Mesh(mergeGeometries(list.map((w) => w.geo), false), bodyMat);
+      const mesh = new THREE.Mesh(packColors(mergeGeometries(list.map((w) => w.geo), false)), bodyMat);
       mesh.receiveShadow = true;
       this.game.scene.add(mesh);
       let start = 0;

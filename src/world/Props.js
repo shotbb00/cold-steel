@@ -8,6 +8,7 @@
 // material and merged in finish(), so a whole map of props is a handful of draw calls.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { packColors } from '../render/packColors.js';
 import { makeDetailTextures } from './textures.js';
 import { createNoise2D } from './Noise.js';
 import { mulberry32 } from '../core/math.js';
@@ -1020,7 +1021,7 @@ export class PropBuilder {
   /** Merge every batch into one mesh per material and add them to the scene. */
   finish() {
     const add = (geo, key) => {
-      const mesh = new THREE.Mesh(geo, this.material(key));
+      const mesh = new THREE.Mesh(packColors(geo), this.material(key));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.scene.add(mesh);

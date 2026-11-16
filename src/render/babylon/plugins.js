@@ -346,7 +346,18 @@ export class TerrainPlugin extends GlslPlugin {
       };
     }
     return {
-      CUSTOM_FRAGMENT_DEFINITIONS: '#ifdef TERRAIN\nvarying vec3 vFurrow;\n#endif\n',
+      CUSTOM_FRAGMENT_DEFINITIONS: /* glsl */ `
+        #ifdef TERRAIN
+        varying vec3 vFurrow;
+        // value noise on the ground plane, for the detail up close
+        float tHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float tNoise(vec2 p) {
+          vec2 i = floor(p), f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(tHash(i), tHash(i + vec2(1.0, 0.0)), f.x), mix(tHash(i + vec2(0.0, 1.0)), tHash(i + vec2(1.0, 1.0)), f.x), f.y);
+        }
+        #endif
+      `,
       CUSTOM_FRAGMENT_UPDATE_ALPHA: /* glsl */ `
         #if defined(TERRAIN) && defined(ALBEDO)
         {
@@ -358,6 +369,27 @@ export class TerrainPlugin extends GlslPlugin {
           float fu = dot(vPositionW.xz, fdir) / max(0.3, vFurrow.z) * 6.2831853;
           float fk = clamp(vFurrow.x, 0.0, 1.0);
           surfaceAlbedo *= 1.0 + fk * (sin(fu) * 0.16 - 0.04);
+          // the ground near the camera, in two tiers that each fade before they could shimmer: clumps of
+          // grass with dry straw among them and clods of earth while a pixel covers under ~30 cm (the command
+          // view close in), blades and pebbles while it covers a few cm (direct control) — read from the
+          // ground's own colour, so meadows, fields, roads, sand and mud each get theirs
+          vec2 fw = fwidth(vPositionW.xz);
+          float px = max(fw.x, fw.y);
+          float mid = 1.0 - smoothstep(0.08, 0.32, px);
+          if (mid > 0.0) {
+            float fine = 1.0 - smoothstep(0.02, 0.07, px);
+            vec2 xz = vPositionW.xz;
+            vec3 a = surfaceAlbedo;
+            float green = clamp((a.g - max(a.r, a.b)) / max(a.g, 0.02) * 4.0, 0.0, 1.0);
+            float clump = tNoise(xz * 1.3) * 0.55 + tNoise(xz * 4.1 + 3.1) * 0.45;
+            float dry = smoothstep(0.62, 0.85, tNoise(xz * 0.9 + 11.7)) * green * mid;
+            surfaceAlbedo = mix(surfaceAlbedo, surfaceAlbedo * vec3(1.35, 1.2, 0.72), dry * 0.55); // (straw among the green)
+            float blade = fine > 0.0 ? tNoise(vec2(xz.x * 37.0, xz.y * 11.0) + tNoise(xz * 3.0) * 4.0) : 0.5;
+            float pebble = fine > 0.0 ? smoothstep(0.8, 0.88, tNoise(xz * 19.0 + 7.3)) : 0.0;
+            float grass = mix(1.0, 0.7 + clump * 0.55, mid) * mix(1.0, 0.75 + blade * 0.5, fine);
+            float earth = mix(1.0, 0.78 + tNoise(xz * 3.3) * 0.4, mid) * (1.0 + pebble * 0.55 * fine * (1.0 - fk));
+            surfaceAlbedo *= mix(earth, grass, green);
+          }
         }
         #endif`,
     };

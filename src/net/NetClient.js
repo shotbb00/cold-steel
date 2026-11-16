@@ -204,7 +204,12 @@ export class NetClient {
         u.vel.x += (dx / span - u.vel.x) * Math.min(1, span * 12);
         u.vel.z += (dz / span - u.vel.z) * Math.min(1, span * 12);
       }
-      u.pos.set(x, terrain.heightAt(x, z), z);
+      const ground = terrain.heightAt(x, z);
+      const sea = g.world.river?.water?.level ?? 0;
+      // a ship floats at the water's level (as the host has her, UnitStack.steerShip), not on the seabed under it
+      // (a submarine: as deep as the host has her, eased between the state messages)
+      if (u.netDepth != null) u.depth = (u.depth ?? 0) + (u.netDepth - (u.depth ?? 0)) * Math.min(1, dt * 2);
+      u.pos.set(x, st.naval ? (st.hover ? Math.max(sea, ground) + 0.3 : sea - (u.depth ?? 0)) : ground, z);
       const speed = Math.hypot(u.vel.x, u.vel.z);
       u.moving = speed > 0.5;
       u.gait += (Math.min(1, speed / (st.speed * 1.5)) - u.gait) * Math.min(1, dt * 8);
@@ -402,7 +407,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp, dive] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -420,6 +425,7 @@ export class NetClient {
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
       if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
       if (s.stats.landingCraft && ramp != null) { const u = s.units[0]; u.rampK = (ramp % 1000) / 100; u.beached = ramp >= 1000; }
+      if (s.stats.submarine && dive != null) for (const u of s.units) u.netDepth = dive; // (eased toward in applyStack)
       if (s.stats.sail && rig != null) { const u = s.units[0]; u.masts = [0, 1, 2].map((i) => !!(rig & (1 << i))); u.struck = !!(rig & 8); } // (1806: the model's masts and colours)
     }
     const ms = g.modeState;

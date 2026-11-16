@@ -10,11 +10,12 @@
 // Runs where the simulation runs (single player, multiplayer host); report() is plain data, so
 // the host sends it to the client with the battle's end.
 import { enemyOf } from '../data/factions.js';
+import { epoch } from '../data/epoch.js';
 
 const SAMPLE = 10;
 
 const blank = () => ({
-  menLost: 0, vehiclesLost: 0, lostByType: {}, stacksLost: 0, kills: 0, shots: 0, cpSpent: 0,
+  menLost: 0, gunsLost: 0, vehiclesLost: 0, shipsLost: 0, lostByType: {}, stacksLost: 0, kills: 0, shots: 0, cpSpent: 0,
   reinforcements: 0, captures: 0, airStrikes: 0, helisLost: 0, built: 0, minesSetOff: 0,
 });
 
@@ -43,7 +44,7 @@ export class BattleStats {
       this.sides[faction].helisLost++;
       this.event(faction, 'heli', `${name} shot down`);
     });
-    bus.on('built', (site) => { this.sides[site.faction].built++; });
+    bus.on('built', (site) => { if (!site.quiet) this.sides[site.faction].built++; }); // (not the map's own works, there before the battle)
     bus.on('mine', ({ unit }) => { this.sides[unit.faction].minesSetOff++; });
     bus.on('wave', ({ faction, units }) => { this.sides[faction].reinforcements += units.length; });
     bus.on('building:collapsed', (b) => this.event(null, 'collapse', `${b.name} collapsed`));
@@ -79,12 +80,13 @@ export class BattleStats {
   onDeath({ stack, unit, killer }) {
     const side = this.sides[stack.faction];
     const at = unit?.pos ?? stack.centroid;
-    if (at && this.losses.length < 1500) this.losses.push({ x: Math.round(at.x), z: Math.round(at.z), f: stack.faction, v: stack.usesCover ? 0 : 1 });
-    if (stack.usesCover) side.menLost++;
-    else {
-      side.vehiclesLost++;
-      this.event(stack.faction, 'vehicle', `${stack.type.shortName} knocked out`);
-    }
+    // what was lost: a man (a rider too — 1806), a gun, a vehicle, a ship; aircraft only as kills (helicopters: heli:down)
+    const what = stack.usesCover || stack.kind === 'cavalry' ? 'man' : stack.stats.naval ? 'ship' : stack.stats.air ? 'air' : stack.kind === 'gun' ? 'gun' : 'vehicle';
+    if (at && this.losses.length < 1500 && what !== 'air') this.losses.push({ x: Math.round(at.x), z: Math.round(at.z), f: stack.faction, v: what === 'man' ? 0 : what === 'ship' ? 2 : 1 });
+    if (what === 'man') side.menLost++;
+    else if (what === 'ship') { side.shipsLost++; this.event(stack.faction, 'ship', `${stack.name} sunk`); }
+    else if (what === 'gun') { side.gunsLost++; this.event(stack.faction, 'gun', `${stack.type.shortName} gun lost`); }
+    else if (what === 'vehicle') { side.vehiclesLost++; this.event(stack.faction, 'vehicle', `${stack.type.shortName} knocked out`); }
     const type = stack.type.shortName;
     side.lostByType[type] = (side.lostByType[type] ?? 0) + 1;
     const foe = enemyOf(stack.faction);
@@ -131,7 +133,10 @@ export class BattleStats {
       const s = typeof id === 'number' ? this.game.world.stackById(id) : null;
       if (s) { e.rank = s.rank ?? e.rank; e.alive = s.alive; }
     }
+    const g = this.game;
     return {
+      // the battle: the report's wording follows its era and whether it was fought at sea
+      epoch: epoch(), map: g.map.name ?? '', mode: g.mode?.name ?? '', sea: !!g.world.openSea,
       duration: Math.round(this.game.time),
       sides: this.sides,
       stacks: [...this.stacks.values()].filter((e) => e.kills > 0).sort((a, b) => b.kills - a.kills),
