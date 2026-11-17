@@ -12,7 +12,7 @@
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
-import { buildLCVP, buildLCT, buildYMS, buildDD } from '../models/landingCraft45.js';
+import { buildLCVP, buildLCT, buildYMS, buildDD, buildLSMR } from '../models/landingCraft45.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -326,6 +326,32 @@ export const minesweeper = ship({
   },
 });
 
+/**
+ * LSM(R) rocket ship (the coastal maps: Iwo Jima): her racks fire `rockets.count` 5-inch rockets in a ripple, `every` s
+ * apart, onto targets ashore only (`shore`) — a long arc, a wide pattern — then a long reload. Her own 5-inch aft.
+ */
+export const lsmr = ship({
+  fleet: 'escort', coastal: true,
+  id: 'lsmr', name: 'Rocket Ship', shortName: 'LSM(R)', cost: 380, limit: 2,
+  names: { nato: ['LSM(R)-188', 'LSM(R)-189', 'LSM(R)-190', 'LSM(R)-191', 'LSM(R)-192', 'LSM(R)-193', 'LSM(R)-194', 'LSM(R)-195'], pact: ['—'] },
+  hull: { length: 62, beam: 10.5 },
+  stats: { hp: 1800, armor: 0.06, speed: 6.5, accel: 0.2, turnRate: 0.11, turretRate: 0.7, radius: 6, height: 9, eyeHeight: 10, sight: 1400, ...AA(500, 0.1, 0.02),
+    range: 1900, aggroRange: 1900, preferredRange: 1200, leash: 40, damage: 220, fireCooldown: 4, spread: 0.012, boltSpeed: 800, boltSize: 1.6, splash: 4, pierce: 0.3 },
+  mounts: {
+    nato: [
+      { at: [0, 4, 0], facing: 0, arc: 6.3, shore: true, range: 1900, reload: 75, damage: 150, splash: 6, scatter: 45, rockets: { count: 48, every: 0.06, speed: 190 } },
+      gun([0, 4, -26], AFT, { ...FIVE_INCH, range: 1500, arc: 4 }),
+    ],
+    pact: [gun([0, 4, -26], AFT, { ...FIVE_INCH, range: 1500, arc: 4 })],
+  },
+  camera: { distance: 90, height: 26, shoulder: 0 },
+  models: { nato: buildLSMR, pact: buildLSMR },
+  variants: {
+    nato: { name: 'LSM(R) rocket ship', weapon: '5-inch rockets in ripples, one 5-inch gun', text: 'A landing ship full of rocket launchers: she runs in close, and a ripple of fifty rockets falls on the beach and the first terraces at once — then a long reload. Shore targets only; soft, keep her away from the coast guns.' },
+    pact: { name: 'Rocket ship', weapon: 'rockets', text: 'A rocket ship.' },
+  },
+});
+
 /** The old battleship offshore (the coastal maps only): ten 14-inch guns on the batteries and the strongpoints inland. */
 const FOURTEEN_INCH = { range: 3000, reload: 26, damage: 1400, splash: 10, pierce: 0.6, shell: 760, size: 3, spread: 0.008 };
 export const oldBattleship = ship({
@@ -347,4 +373,4 @@ export const oldBattleship = ship({
   },
 });
 
-export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft };
+export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft, lsmr };

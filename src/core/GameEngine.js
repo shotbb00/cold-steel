@@ -272,6 +272,7 @@ export class GameEngine {
     this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
+    for (const [f, n] of Object.entries(map.airLimit ?? {})) this.air.limit[f] = n; // (a map's own: no Japanese aircraft over Iwo Jima)
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
     // the AI side starts with and earns twice as much to make up for it
     const cp = this.modeState?.cp;

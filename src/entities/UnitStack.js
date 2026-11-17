@@ -680,7 +680,8 @@ export class UnitStack {
     // --- locomotion: seek destination, keep personal space, slide around cover
     const mud = this.world.conditions?.mud;
     let maxSpeed = s.speed * u.speedMul * (this.doc?.speed ?? 1) * (u.slow ?? 1) * (u.masked ? 0.8 : 1) * (u.run ? 1.65 : 1.12) * (u.wounded && this.usesCover ? 0.6 : 1) * this.wading(u)
-      * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1);
+      * (mud ? mud[this.usesCover ? 'infantry' : 'vehicle'] : 1)
+      * (this.services.game?.map?.soft?.(u.pos.x, u.pos.z, this.usesCover) ?? 1); // (a map's soft ground: Iwo Jima's volcanic ash)
     if (u.crouch > 0.5) maxSpeed *= 0.45;
     if (u.steepK) maxSpeed *= u.steepK;
     if (this.winded) maxSpeed *= 0.8;
@@ -2179,7 +2180,10 @@ export class UnitStack {
     const t = u.target;
     u.turretYaw = t ? Math.atan2(t.pos.x - u.pos.x, t.pos.z - u.pos.z) : u.yaw;
     this.shine(u, t);
-    for (const m of this.shipMounts(u)) if (m.cd > 0) m.cd -= dt; // (the guns reload whether or not there's a target)
+    for (const m of this.shipMounts(u)) {
+      if (m.cd > 0) m.cd -= dt; // (the guns reload whether or not there's a target)
+      if (m.ripple > 0) for (m.rippleT -= dt; m.rippleT <= 0 && m.ripple > 0; m.rippleT += m.rockets.every) { m.ripple--; this.shipRocket(u, m); } // a rocket ship's ripple, once begun, goes on
+    }
     if (!t) { this.fireAtFix(u); return; }
     const d = Math.sqrt(dist2DSq(u.pos, t.pos));
     const depth = u.depth ?? 0;
@@ -2207,6 +2211,15 @@ export class UnitStack {
         continue;
       }
       if (m.torpedo && !t.stack?.stats.naval) continue; // (a torpedo is for a ship: never at men or tanks ashore)
+      if (m.rockets) { // the rocket racks: ashore only — the whole ripple on where the target is now
+        if (m.shore && t.stack?.stats.naval) continue;
+        m.cd = m.reload * slow;
+        m.ripple = m.rockets.count;
+        m.rippleT = 0;
+        m.aim = { x: t.pos.x, z: t.pos.z };
+        this.services.tell?.(this.faction, `${this.name}: rockets away`);
+        continue;
+      }
       const beam = m.torpedo && m.facing == null; // (a ship's torpedo mount trains to either beam; a boat's tubes point with the boat)
       if (beam ? Math.abs(Math.abs(rel) - Math.PI / 2) > m.arc / 2 : Math.abs(angleDelta(m.facing, rel)) > m.arc / 2) continue;
       m.cd = m.reload * slow * (0.85 + Math.random() * 0.3);
@@ -2251,6 +2264,23 @@ export class UnitStack {
       this.firedAt = this.world.time;
       VisibilitySystem.revealShooter(u);
     }
+  }
+
+  /** One rocket of a rocket ship's ripple (m.rockets): a high arc onto the aim point, anywhere in m.scatter of it. */
+  shipRocket(u, m) {
+    const g = this.services.game, a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * m.scatter;
+    const x = m.aim.x + Math.cos(a) * r, z = m.aim.z + Math.sin(a) * r;
+    this.mountWorld(u, m.at, _p);
+    _p.x += (Math.random() - 0.5) * 6; _p.z += (Math.random() - 0.5) * 12; // (from all along the racks)
+    const dx = x - _p.x, dz = z - _p.z, d = Math.hypot(dx, dz) || 1, v = m.rockets.speed, G = 25;
+    const th = 0.5 * Math.asin(Math.min(1, (G * d) / (v * v))); // (the low arc that reaches it)
+    _w.set((dx / d) * Math.cos(th), Math.sin(th), (dz / d) * Math.cos(th));
+    this.services.projectiles.spawn({
+      origin: _p, dir: _w, speed: v, damage: m.damage * u.damageMult, faction: this.faction, color: this.boltColor, size: 1.2, source: this,
+      life: (2 * v * Math.sin(th)) / G + 2, splash: m.splash, pierce: 0.2, vsArmor: 0.5, suppress: 3, gravity: G, target: { x, y: g?.terrain?.heightAt(x, z) ?? 0, z }, whistleAt: Math.max(0.2, (2 * v * Math.sin(th)) / G - 1.2), tracer: false, trail: true, crater: 0.5,
+    });
+    if (m.ripple % 6 === 0) { this.services.effects.muzzle(_p, _w, 1.2, 'artillery'); this.services.audio?.weapon(this.faction, 'mlrs', _p); }
+    this.firedAt = this.world.time;
   }
 
   /**

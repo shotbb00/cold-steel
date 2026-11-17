@@ -28,6 +28,7 @@ import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
+import iwoJima from './iwoJima.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
@@ -43,6 +44,7 @@ import orzyszBase from './orzyszBase.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
+  [iwoJima.id]: iwoJima,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [villersBretonneux.id]: villersBretonneux,

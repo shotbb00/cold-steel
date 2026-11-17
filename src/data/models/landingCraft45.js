@@ -70,6 +70,34 @@ export const buildYMS = craft(() => {
   return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, L / 2 - 4] };
 });
 
+/**
+ * LSM(R)-188: a medium landing ship turned rocket ship (Iwo Jima, Okinawa) — the long low hull, the round
+ * conning tower to starboard aft, the 5-inch gun on the stern, and the well deck forward full of rocket
+ * launchers in rows: a ripple of hundreds of 5-inch rockets onto the beach before the first wave lands.
+ */
+export const buildLSMR = craft(() => {
+  const L = 62, B = 10.5, fb = 2.8;
+  const fixed = merge([
+    box(B, 3.4, L - 6, { y: fb - 1.7, z: -2, color: GREY }),
+    P.box(B * 0.55, 3.0, 6, { y: fb - 1.4, z: L / 2 - 5, color: GREY, surf: 'plate' }),            // the bow, narrowing
+    box(B - 0.6, 0.12, L - 8, { y: fb + 0.05, z: -2, color: STEEL, surf: 'deck' }),
+    ...[-1, 1].map((s) => box(0.3, 1.0, L - 10, { x: s * (B / 2 - 0.15), y: fb + 0.5, z: -1, color: GREY })), // the bulwarks
+    P.cyl(2.1, 2.3, 5.5, { x: B / 2 - 2.6, y: fb + 2.75, z: -L / 2 + 14, color: GREY }, 16),      // the round conning tower, to starboard
+    box(3.6, 0.5, 0.1, { x: B / 2 - 2.6, y: fb + 4.6, z: -L / 2 + 16.1, color: 0x2a3a44 }),
+    P.cyl(0.08, 0.1, 9, { x: B / 2 - 2.6, y: fb + 9.5, z: -L / 2 + 14, color: DARK }, 6),           // the mast
+    P.cyl(0.9, 1.0, 1.0, { y: fb + 0.5, z: -L / 2 + 4.5, color: STEEL }, 12),                       // the 5-inch mount aft
+    P.box(1.6, 1.3, 2.0, { y: fb + 1.5, z: -L / 2 + 4.5, color: GREY }),
+    P.cyl(0.08, 0.1, 4, { y: fb + 1.6, z: -L / 2 + 1.7, rx: Math.PI / 2, color: STEEL }, 8),
+    // the rocket launchers: rows of racks over the forward deck, each a frame of rails angled up
+    ...Array.from({ length: 6 }, (_, i) => i).flatMap((i) => [-2.6, 0, 2.6].flatMap((x) => [
+      box(2.0, 0.12, 2.2, { x, y: fb + 0.9, z: -4 + i * 4.2, rx: -0.6, color: DARK }),
+      ...[-0.7, 0, 0.7].map((dx) => box(0.12, 0.12, 2.4, { x: x + dx, y: fb + 1.05, z: -4 + i * 4.2, rx: -0.6, color: STEEL })),
+      box(1.8, 0.7, 0.14, { x, y: fb + 0.4, z: -4 + i * 4.2 - 0.6, color: DARK }),
+    ])),
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 2, 4] };
+});
+
 /** A DD Sherman afloat: the canvas screen raised all round on its struts, the hull below the water, the turret top inside it, the twin propellers astern. */
 export const buildDD = craft(() => {
   const L = 6.2, B = 3, CANVAS = 0x8c8a6c, OLIVE = 0x4c5434;
