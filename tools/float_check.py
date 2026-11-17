@@ -43,12 +43,15 @@ JS = r'''async ({ only, tol }) => {
   };
   // every vehicle model per key, and (as 'air:<kind>') every aircraft per side and army (data/air.ts)
   globalThis.__all = only.includes('all');
+  globalThis.__men = only.includes('men');
   const builds = [];
   // both wars (data/epoch.js): the 1945 types and aircraft as '45:<id>'
   const { TYPES_1945 } = await import('/src/data/units45/index.js');
-  for (const [pre, types] of [['', UNIT_TYPES], ['45:', TYPES_1945]]) {
+  const { TYPES_2027 } = await import('/src/data/units2027/index.js'); // (2027: its own, as '27:<id>' — only those not 1985's)
+  const own27 = Object.fromEntries(Object.entries(TYPES_2027).filter(([id, t]) => t !== UNIT_TYPES[id]));
+  for (const [pre, types] of [['', UNIT_TYPES], ['45:', TYPES_1945], ['27:', own27]]) {
     for (const type of Object.values(types)) {
-      if (type.kind === 'infantry' || !type.models || type.stats?.structure) continue;
+      if ((type.kind === 'infantry' && !(pre === '27:' && globalThis.__men)) || !type.models || type.stats?.structure) continue; // (soldiers: 'men', 2027's)
       for (const key of Object.keys(type.models)) builds.push([pre + type.id, key, type.models[key]]);
     }
   }
@@ -56,11 +59,13 @@ JS = r'''async ({ only, tol }) => {
   const air45 = await import('/src/data/air45.ts');
   for (const [kind, table] of [['heli', air.AIRCRAFT], ['jet', air.JETS], ['lift', air.LIFT], ['cap', air.FIGHTERS], ['recon', air.RECON]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
   for (const [kind, table] of Object.entries(air45.AIR_1945)) for (const [key, a] of Object.entries(table)) builds.push([`45:air:${kind}`, key, a.model]);
+  const air27 = await import('/src/data/air27.js');
+  for (const [kind, table] of Object.entries(air27.AIR_2027)) for (const [key, a] of Object.entries(table)) builds.push([`27:air:${kind}`, key, a.model]);
   const sea85 = await import('/src/data/air85sea.js'); // (1985 at sea: the carrier and shore aircraft, the ships' helicopters)
   for (const [kind, table] of [['seaStrike', sea85.SEA_STRIKE], ['seaCap', sea85.SEA_CAP], ['asw', sea85.ASW], ['aew', sea85.AEW], ['helo', sea85.HELO]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
   for (const [id, key, build] of builds) {
     {
-      if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:')) && !(only.includes('45') && id.startsWith('45:'))) continue;
+      if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:')) && !(only.includes('45') && id.startsWith('45:')) && !(only.includes('27') && id.startsWith('27:'))) continue;
       const type = { id };
       let rig;
       try { rig = build(mats); } catch (e) { out.push({ unit: type.id, key, error: String(e).slice(0, 120) }); continue; }

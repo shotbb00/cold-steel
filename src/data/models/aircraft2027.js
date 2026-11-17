@@ -88,6 +88,7 @@ export const buildApache = (mats) => heli('apache', mats, () => {
       // stub wings: a rocket pod inboard, four Hellfires outboard each side
       ...pair((s) => surface([[s * 0.6, 1.65, -0.2, 0.55, 0.07], [s * 2.5, 1.6, -0.25, 0.42, 0.05]], c)),
       ...pair((s) => rocketPod(s * 1.25, 1.18, -0.9, 0.6, 0.24, DARK)).flat(),
+      ...pair((s) => P.box(0.12, 0.4, 0.8, { x: s * 1.25, y: 1.5, z: -0.15, color: DARK })),            // the pods' pylons
       ...pair((s) => [-0.12, 0.12].flatMap((dx) => [-0.12, 0.12].map((dy) => missile(s * 2.15 + dx, 1.25 + dy, -0.7, 0.75, 0.085, 0x3c4230)))).flat(),
       ...pair((s) => P.box(0.4, 0.06, 1.2, { x: s * 2.15, y: 1.44, z: 0.0, color: DARK })),
       // the M230 under the chin, the main gear on its struts
@@ -97,9 +98,9 @@ export const buildApache = (mats) => heli('apache', mats, () => {
     ]),
     marks: M([P.box(0.02, 0.3, 0.6, { x: 0.3, y: 2.1, z: -5.0 })]),
     rotor: M([...blades(4, 7.3, 0.55, BLADE), P.cyl(0.32, 0.32, 0.22, { color: STEEL }, 12)]),
-    tailRotor: M([P.box(0.04, 2.8, 0.25, { color: BLADE, surf: 'paint' }), P.box(0.04, 2.8, 0.25, { rx: 1.0, color: BLADE, surf: 'paint' }), P.cyl(0.1, 0.1, 0.12, { rz: Math.PI / 2, color: STEEL }, 8)]),
+    tailRotor: M([P.box(0.04, 2.8, 0.25, { color: BLADE, surf: 'paint' }), P.box(0.04, 2.8, 0.25, { rx: 1.0, color: BLADE, surf: 'paint' }), P.cyl(0.1, 0.1, 0.26, { x: -0.1, rz: Math.PI / 2, color: STEEL }, 8)]),
   };
-}, { rotorAt: [0, 3.95, -0.2], tailAt: [0.2, 3.45, -9.0], gun: [0, 0.9, 5.1], pods: [[-1.25, 1.18, 0.6], [1.25, 1.18, 0.6]], radius: 7.3, blades: 4 });
+}, { rotorAt: [0, 3.95, -0.2], tailAt: [0.12, 3.45, -9.0], gun: [0, 0.9, 5.1], pods: [[-1.25, 1.18, 0.6], [1.25, 1.18, 0.6]], radius: 7.3, blades: 4 });
 
 // ---------------------------------------------------------------- Mi-28NM Havoc
 
@@ -126,7 +127,9 @@ export const buildMi28 = (mats) => heli('mi28', mats, () => {
       // stub wings: B-8 pods inboard, Ataka tubes outboard, wingtip pods
       ...pair((s) => surface([[s * 0.75, 1.75, -0.6, 0.6, 0.08], [s * 2.8, 1.6, -0.65, 0.45, 0.05]], c)),
       ...pair((s) => rocketPod(s * 1.4, 1.22, -1.3, 0.4, 0.27, DARK)).flat(),
-      ...pair((s) => [-0.13, 0.13].flatMap((dx) => [-0.13, 0.13].map((dy) => P.cyl(0.1, 0.1, 1.9, { x: s * 2.35 + dx, y: 1.3 + dy, z: -0.4, rx: Math.PI / 2, color: 0x4c5a3a }, 10)))).flat(),
+      ...pair((s) => P.box(0.12, 0.45, 0.9, { x: s * 1.4, y: 1.58, z: -0.45, color: DARK })),           // the pods' pylons
+      ...pair((s) => P.box(0.12, 0.3, 1.0, { x: s * 2.35, y: 1.55, z: -0.45, color: DARK })),           // the Atakas' launcher rails
+      ...pair((s) => [-0.1, 0.1].flatMap((dx) => [-0.1, 0.1].map((dy) => P.cyl(0.1, 0.1, 1.9, { x: s * 2.35 + dx, y: 1.32 + dy, z: -0.4, rx: Math.PI / 2, color: 0x4c5a3a }, 10)))).flat(),
       ...pair((s) => P.box(0.15, 0.2, 1.0, { x: s * 2.85, y: 1.6, z: -0.6, color: DARK })),
       // the 2A42 in its turret under the nose, the main gear
       P.sphere(0.35, { y: 1.0, z: 4.0, sy: 0.8, color: DARK }, 12, 8),
@@ -135,9 +138,9 @@ export const buildMi28 = (mats) => heli('mi28', mats, () => {
     ]),
     marks: M([...pair((s) => P.box(0.02, 0.45, 0.45, { x: s * 0.24, y: 2.45, z: -6.0 }))]),
     rotor: M([...blades(5, 8.6, 0.65, BLADE), P.cyl(0.38, 0.38, 0.25, { color: STEEL }, 12)]),
-    tailRotor: M([P.box(0.04, 3.6, 0.28, { color: BLADE, surf: 'paint' }), P.box(0.04, 3.6, 0.28, { rx: 0.95, color: BLADE, surf: 'paint' }), P.cyl(0.12, 0.12, 0.14, { rz: Math.PI / 2, color: STEEL }, 8)]),
+    tailRotor: M([P.box(0.04, 3.6, 0.28, { color: BLADE, surf: 'paint' }), P.box(0.04, 3.6, 0.28, { rx: 0.95, color: BLADE, surf: 'paint' }), P.cyl(0.12, 0.12, 0.28, { x: -0.1, rz: Math.PI / 2, color: STEEL }, 8)]),
   };
-}, { rotorAt: [0, 4.45, -0.4], tailAt: [0.25, 3.9, -10.2], gun: [0, 0.95, 6.0], pods: [[-1.4, 1.22, 0.4], [1.4, 1.22, 0.4]], radius: 8.6, blades: 5 });
+}, { rotorAt: [0, 4.45, -0.4], tailAt: [0.13, 3.9, -10.2], gun: [0, 0.95, 6.0], pods: [[-1.4, 1.22, 0.4], [1.4, 1.22, 0.4]], radius: 8.6, blades: 5 });
 
 // ---------------------------------------------------------------- F-16C and FA-50
 
@@ -192,12 +195,15 @@ export const buildSu35 = (mats) => jet('su35', mats, () => {
       body([[7.6, 2.55, 0.05, 0.05], [6.9, 2.88, 0.4, 0.34], [5.8, 2.98, 0.42, 0.36], [4.9, 2.82, 0.3, 0.22], [4.4, 2.6, 0.15, 0.1]], { color: GLASS }),
       // the big wing, the tailplanes, the twin fins on the nacelles
       ...pair((sx) => surface([[sx * 1.6, 2.05, -1.2, 4.0, 0.16], [sx * 4.5, 2.0, -3.6, 1.8, 0.1], [sx * 7.4, 1.95, -5.6, 0.8, 0.05]], c)),
-      ...pair((sx) => surface([[sx * 2.0, 1.95, -8.4, 1.4, 0.07], [sx * 4.6, 1.9, -9.4, 0.7, 0.04]], c)),
-      ...pair((sx) => fin([[2.4, -6.4, 1.6, 0.09, sx * 1.4], [3.8, -7.4, 1.1, 0.07, sx * 1.45], [5.2, -8.4, 0.6, 0.05, sx * 1.5]], c)),
+      ...pair((sx) => surface([[sx * 1.6, 1.8, -8.4, 1.4, 0.08], [sx * 4.6, 1.75, -9.4, 0.7, 0.04]], c)),
+      ...pair((sx) => fin([[1.95, -6.2, 1.7, 0.09, sx * 1.35], [3.8, -7.4, 1.1, 0.07, sx * 1.45], [5.2, -8.4, 0.6, 0.05, sx * 1.5]], c)),
       // missiles under the wings and between the engines
-      ...pair((sx) => missile(sx * 4.2, 1.6, -4.2, -1.8, 0.1, WHITE)),
-      ...pair((sx) => missile(sx * 6.2, 1.7, -5.6, -3.6, 0.07, WHITE)),
-      missile(0, 1.4, -3.5, 0.0, 0.12, WHITE),
+      ...pair((sx) => missile(sx * 4.2, 1.72, -4.2, -1.8, 0.1, WHITE)),
+      ...pair((sx) => P.box(0.08, 0.3, 1.4, { x: sx * 4.2, y: 1.92, z: -3.0, color: DARK })),            // pylons
+      ...pair((sx) => missile(sx * 6.2, 1.8, -5.6, -3.6, 0.07, WHITE)),
+      ...pair((sx) => P.box(0.06, 0.2, 1.0, { x: sx * 6.2, y: 1.92, z: -4.6, color: DARK })),
+      missile(0, 1.48, -3.5, 0.0, 0.12, WHITE),
+      P.box(0.1, 0.3, 1.8, { y: 1.7, z: -1.8, color: DARK }),                                           // the belly pylon
     ]),
     marks: M([...pair((sx) => roundel(sx * 1.55, 4.2, -7.3, 0.36)), ...pair((sx) => roundel(sx * 5.6, 2.08, -4.4, 0.36, true))]),
   };

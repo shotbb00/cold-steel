@@ -138,7 +138,7 @@ export function buildModernSoldier({ army = 'us', weapon: kind = 'rifle', crew =
     ] : []),
     ...(radio ? [
       loft([[0, 1.2, -0.27, 0.13, 0.07, 5], [0, 1.46, -0.28, 0.13, 0.07, 5]], { color: 0x3a3d30 }, 10),
-      P.cyl(0.006, 0.006, 1.1, { x: 0.09, y: 2.05, z: -0.3, rx: -0.1, color: BLACK }, 4),
+      P.cyl(0.006, 0.006, 1.1, { x: 0.09, y: 1.97, z: -0.29, rx: -0.1, color: BLACK }, 4),               // the whip, its foot in the set
     ] : []),
     ...(airAssault ? [P.box(0.22, 0.05, 0.05, { y: 1.81, z: 0.12, color: BLACK })] : []),                       // goggles on the helmet
     ...head(),

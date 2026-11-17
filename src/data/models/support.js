@@ -983,6 +983,7 @@ export const buildNatoFAAR = vehicle(() => ({
     ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.7, y: 1.05, z: 2.37, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
     P.box(0.14, 0.14, 0.18, { y: 0.7, z: 2.38, color: STEEL }),
     ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.08, y: 1.75, z: 1.8, color: STEEL })),
+    ...pair((s) => P.box(0.18, 0.03, 0.03, { x: s * 0.99, y: 1.75, z: 1.8, color: STEEL })),        // (the mirrors' arms)
     ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 0.5, y: 0.95, z: -2.48, color: 0x4a4e36 })),
     P.cyl(0.36, 0.36, 0.22, { x: 0.6, y: 1.55, z: -2.45, rx: Math.PI / 2, color: 0x1f201c, surf: 'rubber' }, 14),
     ...[0, 1, 2].map((k) => P.box(0.4, 0.04, 0.05, { x: -0.5, y: 0.9 + k * 0.25, z: -2.3, color: STEEL })),

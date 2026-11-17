@@ -216,7 +216,7 @@ const eightByEight = (extra = []) => {
       P.box(0.55, 0.06, 0.5, { x: -0.65, y: 2.03, z: 2.2, rx: -0.36, color: DK }),                        // the driver's hatch
       ...extra,
     ]), 1.15, 0.3),
-    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.5, { x: s * 1.57, y: 1.65, z: 0.4 }))]),
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.5, { x: s * 1.49, y: 1.65, z: 0.4 }))]),
   };
 };
 
@@ -281,11 +281,11 @@ export const buildMShorad = vehicle(() => ({
   turret: {
     geo: grime(merge([
       planProfile([[-0.6, 0.8], [0.6, 0.8], [0.9, 0.35], [0.9, -0.8], [-0.9, -0.8], [-0.9, 0.35]], 0.55, { color: OD, ...C }),
-      P.box(0.5, 0.4, 0.75, { x: 1.2, y: 0.5, z: 0.0, color: OD, ...C }),                                     // the Stinger pod
+      P.box(0.5, 0.4, 0.75, { x: 1.12, y: 0.5, z: 0.0, color: OD, ...C }),                                    // the Stinger pod
       ...[0.38, 0.62].flatMap((y) => [0.0, 0.0].map((_, k) => P.cyl(0.07, 0.07, 0.05, { x: 1.1 + k * 0.2, y, z: 0.39, rx: Math.PI / 2, color: DK }, 8))),
-      P.box(0.3, 0.3, 1.1, { x: -1.15, y: 0.45, z: 0.1, color: OD, ...C }),                                   // the Hellfire rail
-      P.box(0.38, 0.32, 0.4, { x: 0.35, y: 0.75, z: -0.2, color: OD }),                                      // sights
-      P.box(0.26, 0.16, 0.04, { x: 0.35, y: 0.78, z: 0.0, color: GLASS }),
+      P.box(0.3, 0.3, 1.1, { x: -1.03, y: 0.45, z: 0.1, color: OD, ...C }),                                   // the Hellfire rail
+      P.box(0.38, 0.32, 0.4, { x: 0.35, y: 0.7, z: -0.2, color: OD }),                                       // sights
+      P.box(0.26, 0.16, 0.04, { x: 0.35, y: 0.73, z: 0.0, color: GLASS }),
     ]), 0.6, 0, 0.3),
     at: [0, 2.2, 0.0],
   },
@@ -325,7 +325,7 @@ function launcherTruck({ length, axles, pack, bonnet = 'cabover', cabLen = 2.0, 
         ...pair((s) => P.box(0.3, 0.7, 0.3, { x: s * 1.1, y: L.deck - 0.25, z: L.rear + 0.4, color: STEEL })), // the rear jacks
       ]), 1.0, 0.4),
       turret: { geo: merge([P.cyl(0.85, 0.9, 0.3, { y: 0.15, color: DK }, 16)]), at: [0, L.deck + 0.3, tz] },
-      gun: { geo: merge(pack), at: [0, 0.75, -0.6], pitch: null },
+      gun: { geo: merge(pack), at: [0, 0.3, -0.6], pitch: null },
       muzzle: [0, 0.6, 3.6],
       recoil: 0.02,
       marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
@@ -350,14 +350,14 @@ export const buildTornadoS = launcherTruck({ length: 11.5, axles: [10.0, 8.6, 4.
 export const buildPolonez = launcherTruck({ length: 12.0, axles: [10.6, 9.1, 4.6, 3.1], pack: [...pod(-0.62, 0.55, 1.15, 1.15, 7.2, 2, 2, 0.22), ...pod(0.62, 0.55, 1.15, 1.15, 7.2, 2, 2, 0.22), P.box(1.8, 0.3, 6.5, { y: -0.2, z: 3.2, color: DK })].map((g) => g.translate(0, 0, -1.5)) });
 
 /** A self-propelled howitzer: its hull, the big turret set back, the long barrel with its brake. */
-function howitzer({ hull, wheels, turret, barrel, mount, muzzleZ }) {
+function howitzer({ hull, wheels, turret, barrel, mount, muzzleZ, gunZ = 1.6 }) {
   return vehicle(() => {
     const g = tracked(wheels);
     return {
       wheels: g.wheels,
       hull: grime(merge([...g.parts, ...hull]), 1.1, 0.3),
       turret: { geo: grime(merge(turret), 0.9, 0, 0.3), at: mount },
-      gun: { geo: merge(barrel), at: [0, 0.75, 1.6], pitch: null },
+      gun: { geo: merge(barrel), at: [0, 0.75, gunZ], pitch: null },
       muzzle: [0, 0, muzzleZ],
       recoil: 0.5,
     };
@@ -369,8 +369,8 @@ export const buildKrab = howitzer({
   wheels: { halfWidth: 1.5, length: 5.6, wheels: 6, wheelR: 0.36, sprocket: 1, rollers: 3, trackWidth: 0.55, wheelColor: DK },
   hull: [trackedHull([[-3.6, 1.55, 0.5], [-3.4, 1.62, 0.45], [2.4, 1.62, 0.45], [3.6, 1.15, 0.6]], { belly: 1.2, fender: 1.8, fenderY: 1.05, chamfer: 0.08 }, { color: OD, ...C }), ...pair((s) => P.box(0.06, 0.55, 5.8, { x: s * 1.85, y: 0.9, color: OD, ...C }))],
   turret: [planProfile([[-1.2, 1.4], [1.2, 1.4], [1.55, 0.9], [1.55, -2.7], [-1.55, -2.7], [-1.55, 0.9]], 1.45, { color: OD, ...C }), P.box(0.5, 0.4, 0.5, { x: 0.8, y: 1.65, z: -0.4, color: OD }), ...rws(-0.7, 1.45, -0.8)],
-  barrel: [P.cyl(0.13, 0.17, 8.0, { z: 4.0, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(0.24, 0.24, 0.8, { z: 0.6, rx: Math.PI / 2, color: DK }, 12), ...brake(8.0, 0.13)],
-  mount: [0, 1.62, -0.6], muzzleZ: 8.3,
+  barrel: [P.cyl(0.13, 0.17, 8.0, { z: 4.0, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(0.24, 0.24, 0.8, { z: 0.2, rx: Math.PI / 2, color: DK }, 12), ...brake(8.0, 0.13)],
+  mount: [0, 1.62, -0.6], muzzleZ: 8.3, gunZ: 1.25,
 });
 // 2S19M2 Msta-SM2: the T-72-type hull, the tall box turret, the 152 mm with its fume extractor
 export const buildMsta = howitzer({
@@ -400,7 +400,7 @@ export const buildNarew = vehicle(() => {
     wheels: wheeled(L.axles, t.track, 0.6),
     hull: grime(merge([...t.parts, P.box(2.2, 0.4, 3.6, { y: L.deck + 0.2, z: L.rear + 2.0, color: DK })]), 1.0, 0.4),
     turret: { geo: merge([P.box(0.6, 0.3, 0.6, { y: 0.15, color: DK })]), at: [0, L.deck + 0.4, L.rear + 2.0] },
-    gun: { geo: merge(Array.from({ length: 8 }, (_, k) => [P.cyl(0.2, 0.2, 3.4, { x: (k % 4 - 1.5) * 0.48, y: 1.7, z: (Math.floor(k / 4) - 0.5) * 0.5, color: OD, ...C }, 12), P.cyl(0.17, 0.17, 0.02, { x: (k % 4 - 1.5) * 0.48, y: 3.41, z: (Math.floor(k / 4) - 0.5) * 0.5, color: 0x141414 }, 10)]).flat()), at: [0, 0.3, 0], pitch: 0 },
+    gun: { geo: merge([P.box(2.2, 0.25, 1.3, { y: -0.05, color: DK }), ...Array.from({ length: 8 }, (_, k) => [P.cyl(0.2, 0.2, 3.4, { x: (k % 4 - 1.5) * 0.48, y: 1.7, z: (Math.floor(k / 4) - 0.5) * 0.5, color: OD, ...C }, 12), P.cyl(0.17, 0.17, 0.02, { x: (k % 4 - 1.5) * 0.48, y: 3.41, z: (Math.floor(k / 4) - 0.5) * 0.5, color: 0x141414 }, 10)]).flat()]), at: [0, 0.3, 0], pitch: 0 },
     muzzle: [0, 3.5, 0],
     recoil: 0,
     marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
@@ -411,13 +411,13 @@ export const buildNarew = vehicle(() => {
 const masts = (at, n = 2) => ({
   geo: merge(Array.from({ length: n }, (_, k) => {
     const x = (k - (n - 1) / 2) * 1.0;
-    return [P.cyl(0.08, 0.12, 4.5, { x, y: 2.25, color: STEEL }, 8), P.box(1.2, 0.08, 0.08, { x, y: 4.4, color: STEEL }), P.box(0.9, 0.06, 0.06, { x, y: 4.1, color: STEEL }), P.box(0.6, 0.05, 0.05, { x, y: 3.8, color: STEEL }), P.cyl(0.25, 0.25, 0.1, { x, y: 4.6, color: DK }, 10)];
+    return [P.cyl(0.08, 0.12, 4.5, { x, y: 2.25, color: STEEL }, 8), P.box(1.2, 0.08, 0.08, { x, y: 4.4, color: STEEL }), P.box(0.9, 0.06, 0.06, { x, y: 4.1, color: STEEL }), P.box(0.6, 0.05, 0.05, { x, y: 3.8, color: STEEL }), P.cyl(0.25, 0.25, 0.1, { x, y: 4.52, color: DK }, 10)];
   }).flat()),
   at,
 });
 // Terrestrial Layer System on the Stryker: the 8×8 with its equipment boxes and two masts
 export const buildTLS = vehicle(() => ({
-  ...eightByEight([P.box(2.2, 0.6, 2.4, { y: 2.5, z: -1.4, color: OD, ...C }), P.box(0.5, 0.35, 0.5, { x: 0.8, y: 2.95, z: 0.6, color: OD }), ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.2, y: 3.4, z: -2.8, color: STEEL }, 4))]),
+  ...eightByEight([P.box(2.2, 0.6, 2.4, { y: 2.5, z: -1.4, color: OD, ...C }), P.box(0.5, 0.35, 0.5, { x: 0.8, y: 2.36, z: 0.6, color: OD }), ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.2, y: 3.4, z: -2.8, color: STEEL }, 4))]),
   deploy: masts([0, 2.8, -1.4]),
 }));
 // Przebiśnieg: the jamming van on a Jelcz, its masts
