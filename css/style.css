@@ -932,3 +932,18 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 .sup .sup-sil { background: #efd59a; width: 34px; height: 26px; } /* an air power: the army's own aircraft (ui/ActionBar.js) */
 /* 1806: the company's present formation, lit in the order menu */
 .cmd-buttons button.act.on { color: var(--text, #ece6d4); background: rgba(224, 180, 90, 0.16); box-shadow: inset 0 -2px 0 var(--gold); }
+
+/* support tiles (ui/SupportIcons.js): the effect in the tile's colour, its ground marker's shape below in the marker's own */
+.sup .ico.sup-ico { width: 34px; height: 34px; color: #efd59a; }
+.act .ico.sup-ico { width: 26px; height: 26px; color: #efd59a; fill: #efd59a; }
+@media (max-height: 520px), (max-width: 700px) { .sup .ico.sup-ico { width: 38px; height: 38px; } }
+#target-hint .sup-ico { width: 22px; height: 22px; vertical-align: middle; margin-right: 6px; fill: #efd59a; color: #efd59a; }
+/* a finger held on a support tile: what it is (ui/HUD.js supportCard) */
+#support-card { position: fixed; z-index: 60; width: min(280px, calc(100vw - 16px)); padding: 10px 12px; background: rgba(20, 22, 20, 0.96); border: 1px solid rgba(224, 180, 90, 0.5); border-radius: 6px; color: var(--ink); font: 13px/1.35 var(--font-ui); pointer-events: none; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); }
+#support-card[hidden] { display: none; }
+#support-card .sc-head { display: flex; align-items: center; gap: 10px; }
+#support-card .sc-head .ico { width: 52px; height: 52px; fill: #efd59a; color: #efd59a; flex: none; }
+#support-card b { display: block; font-size: 15px; color: var(--gold); }
+#support-card small { color: var(--muted); font-size: 12px; }
+#support-card p { margin: 8px 0 0; }
+#support-card .sc-sil { display: block; width: 100%; height: 40px; margin-top: 6px; background: rgba(239, 213, 154, 0.75); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }

@@ -1,6 +1,9 @@
 // DOM HUD: view badge (and the ? that opens the key card, also F1), stack counts, FPS, toasts,
 // the targeting hint, the tactical selection panel, the end banner and — while you control a unit — its health, weapon state (ammo / reload / beam
 // charge) and leadership bonus. Markup lives in index.html; modes may add their own HUD.
+import { supportIcon } from './SupportIcons.js';
+import { epoch } from '../data/epoch.js';
+import { barrageOf } from '../systems/Barrage.js';
 import { requestReplay, toMenu } from '../core/replay.js';
 import { rejoinAfterBattle } from './Lobby.js';
 import { renderReport } from './AfterAction.js';
@@ -35,13 +38,29 @@ export class HUD {
     this.el.keyCard.addEventListener('click', (e) => { if (e.target === this.el.keyCard || e.target.closest('.kc-close')) this.toggleKeys(false); });
 
     // command buttons, including the ones the action bar adds and removes
-    document.getElementById('command-panel').addEventListener('click', (e) => {
+    const panel = document.getElementById('command-panel');
+    // a finger held on a support tile: its card (what it does, what it costs, the army's own aircraft) — no click when let go
+    let press = null;
+    const endPress = () => { clearTimeout(press?.timer); if (press?.shown) { this.supportCard(null); press.swallow = true; setTimeout(() => (press = null), 50); } else press = null; };
+    panel.addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest('button.sup, button[data-cmd*="@"]');
+      if (!btn || e.pointerType === 'mouse') return;
+      press = { btn, timer: setTimeout(() => { press.shown = true; this.supportCard(btn); }, 420) };
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) panel.addEventListener(ev, endPress);
+    panel.addEventListener('contextmenu', (e) => { if (e.target.closest('button.sup')) e.preventDefault(); }); // (no browser menu on the held tile)
+    panel.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-cmd]');
       if (!btn) return;
+      if (press?.swallow) { press = null; return; } // (the card was up: letting go doesn't call it)
       btn.blur(); // keep Space from re-clicking it
       game.bus.emit('ui:command', btn.dataset.cmd);
     });
     this.actions = new ActionBar(game);
+    this.card = document.createElement('div');
+    this.card.id = 'support-card';
+    this.card.hidden = true;
+    document.body.appendChild(this.card);
     this.el.banner.querySelector('[data-act="again"]').addEventListener('click', () => requestReplay());
     this.el.banner.querySelector('[data-act="menu"]').addEventListener('click', () => {
       if (game.net) rejoinAfterBattle(); // both players back in the lobby, connected again
@@ -79,7 +98,16 @@ export class HUD {
     document.body.classList.toggle('tactical', tactical);
     el.modeBadge.textContent = tactical ? 'Command' : 'Control';
     const hint = (tactical && g.commands.targeting?.hint) || '';
-    if (hint !== this.hint) { this.hint = hint; el.targetHint.textContent = hint; el.targetHint.hidden = !hint; }
+    if (hint !== this.hint) { // the hint, with the power's icon in front (ui/SupportIcons.js)
+      this.hint = hint;
+      const t = g.commands.targeting, era = epoch();
+      const bar = t?.barrage ? barrageOf(g, g.playerFaction) : null;
+      const ic = !t ? '' : t.kind === 'air' ? supportIcon(`air:${t.air}`, era) : t.power ? supportIcon(`power:${t.power}`, era) : t.gas ? supportIcon('gas', era)
+        : t.barrage ? supportIcon('barrage', era, bar?.id === 'tot' ? 'tot' : bar?.id === 'creep' ? 'creep' : 'barrage') : t.walze ? supportIcon('barrage', era, 'walze') : '';
+      el.targetHint.innerHTML = ic;
+      const span = document.createElement('span'); span.textContent = hint; el.targetHint.appendChild(span);
+      el.targetHint.hidden = !hint;
+    }
 
     const u = g.player.unit;
     if (u) {
@@ -169,6 +197,25 @@ export class HUD {
   }
 
   /** The key card (F1, the ? in the top bar): built fresh each time, so it shows rebindings. */
+  /** The held support tile's card (phones: the tiles have no names): its icon large, name, price or recharge, what it does, the army's own aircraft. `btn` null: away. */
+  supportCard(btn) {
+    const c = this.card;
+    if (!btn) { c.hidden = true; return; }
+    const title = btn.title ?? '';
+    const [name, ...rest] = title.split(' — ');
+    const [kind, army] = (btn.dataset.sil ?? '').split('|');
+    const svg = btn.querySelector('svg.sup-ico, svg.ico')?.outerHTML ?? '';
+    const state = btn.querySelector('small')?.textContent ?? '';
+    c.innerHTML = `<div class="sc-head">${svg}<div><b></b><small></small></div></div><p></p>${kind ? silhouette(kind, army, 'sc-sil') : ''}`;
+    c.querySelector('b').textContent = btn.dataset.name ?? name;
+    c.querySelector('small').textContent = state;
+    c.querySelector('p').textContent = btn.dataset.tip ?? rest.join(' — ');
+    c.hidden = false;
+    const r = btn.getBoundingClientRect();
+    c.style.left = `${Math.max(8, Math.min(innerWidth - c.offsetWidth - 8, r.left + r.width / 2 - c.offsetWidth / 2))}px`;
+    c.style.top = `${Math.max(8, r.top - c.offsetHeight - 10)}px`;
+  }
+
   toggleKeys(on = this.el.keyCard.hidden) {
     const card = this.el.keyCard;
     card.hidden = !on;

@@ -5,6 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
+import { supportIcon } from './SupportIcons.js';
 import { POWERS_1806, powerHere, ownPowers } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
@@ -140,7 +141,13 @@ export class ActionBar {
       const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
       const me = this.game.playerFaction;
       const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
-      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind && (KINDS[kind]?.sea || KINDS[kind]?.coast) ? icon(ic) : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
+      // what it does, where it lands, where it comes from (ui/SupportIcons.js); the army's own aircraft on the long-press card
+      const bar = cmd === 'barrage' ? barrageOf(this.game, me) : null;
+      const variant = cmd !== 'barrage' ? null : bar?.id === 'tot' ? 'tot' : bar?.id === 'creep' ? 'creep' : bar ? 'barrage' : 'walze';
+      const art = supportIcon(cmd, epoch(), variant) || icon(ic);
+      b.dataset.sil = kind && !(KINDS[kind]?.sea || KINDS[kind]?.coast) ? `air-${kind}|${own}` : '';
+      b.dataset.name = label;
+      b.dataset.tip = tip;
       b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small>${keyOf(key) === "—" ? "" : `<kbd data-key="${key}">${keyOf(key)}</kbd>`}`;
       return { b, cmd, small: b.querySelector('small') };
     });
@@ -213,7 +220,7 @@ export class ActionBar {
       for (const kind of Object.keys(hangar)) {
         if (KINDS[kind]?.off) continue;
         const sup = SUPPORT.find((x) => x[0] === `air:${kind}`);
-        shown.push({ cmd: `air:${kind}@${base.id}`, label: () => `${KINDS[kind].label}${hangar[kind] ? '' : ' — none in'}`, icon: sup?.[1] ?? 'jet', key: 'none',
+        shown.push({ art: supportIcon(`air:${kind}`, epoch()), cmd: `air:${kind}@${base.id}`, label: () => `${KINDS[kind].label}${hangar[kind] ? '' : ' — none in'}`, icon: sup?.[1] ?? 'jet', key: 'none',
           tip: `Launch from ${base.name}: ${sup?.[4] ?? KINDS[kind].label}. Back here, a flight is rearmed in a minute`, count: () => hangar[kind] });
       }
     }
@@ -231,7 +238,7 @@ export class ActionBar {
       const cost = value(a.cost, g);
       b.title = `${label}${cost ? ` (${cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
+      b.innerHTML = `${a.art || icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
       return b;
     }));
     this.el.hidden = !shown.length;
