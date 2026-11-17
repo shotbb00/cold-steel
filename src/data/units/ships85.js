@@ -49,6 +49,7 @@ const OSA = { range: 800, channels: 1, load: 20, reload: 2.5, speed: 240, pk: 0.
 const PHALANX = { range: 280, pk: 0.2 };
 const AK630 = { range: 260, pk: 0.18 };
 const CHAFF = { count: 8, cooldown: 8 };
+const ECM = { nato: 0.25, pact: 0.2 }; // the jammers' chance to throw a seeker off: SLQ-32 (US), the Soviet sets (systems/Missiles.js jammedBy)
 
 /** One class: the shared parts and the class's own. */
 const ship = (o) => ({
@@ -65,8 +66,8 @@ export const frigate = ship({
   names: { nato: ['Oliver Hazard Perry', 'McInerney', 'Clark', 'George Philip', 'Samuel Eliot Morison', 'Jack Williams', 'Stark', 'Taylor'], pact: ['Bditelny', 'Razumny', 'Druzhny', 'Svirepy', 'Silny', 'Storozhevoy', 'Doblestny', 'Bezukoriznenny'] },
   hull: { length: 136, beam: 14 },
   stats: { helo: 6, hp: 3000, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(3000, 25), sonar: 600, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
-    defence: { sam: SM1, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 80 },
-  factionStats: { pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
+    defence: { sam: SM1, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 80 },
+  factionStats: { pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF, ecm: ECM.pact }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
   mounts: {
     nato: [MSL({ ...HARPOON, at: [0, 9, 30], load: 4 }), gun([0, 12, -10], AFT, G76)],
     pact: [gun([0, 9, -45], AFT, G76), gun([0, 9, -52], AFT, G76)],
@@ -85,8 +86,8 @@ export const destroyer = ship({
   names: { nato: ['Spruance', 'Paul F. Foster', 'Kinkaid', 'Hewitt', 'Elliot', 'Arthur W. Radford', 'Peterson', 'Caron'], pact: ['Sovremenny', 'Otchayanny', 'Otlichny', 'Osmotritelny', 'Bezuprechny', 'Boyevoy', 'Stoyky', 'Okrylenny'] },
   hull: { length: 172, beam: 17 },
   stats: { helo: 6.5, hp: 4600, armor: 0.05, speed: 15.5, accel: 0.12, turnRate: 0.09, turretRate: 0.6, radius: 8, height: 16, radar: RADAR(3000, 30), sonar: 900, depthCharges: DC(), asTorp: ASROC, ...AA(600, 0.2, 0.05),
-    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 180 },
-  factionStats: { pact: { helo: 7, hp: 4800, sonar: 450, defence: { sam: SHTIL, ciws: AK630, chaff: CHAFF }, range: 4000, aggroRange: 4000, preferredRange: 2400 } },
+    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 180 },
+  factionStats: { pact: { helo: 7, hp: 4800, sonar: 450, defence: { sam: SHTIL, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 4000, aggroRange: 4000, preferredRange: 2400 } },
   mounts: {
     nato: [MSL({ ...HARPOON, at: [0, 10, -40], load: 8 }), gun([0, 9, 55], FWD, G5IN), gun([0, 9, -60], AFT, G5IN)],
     pact: [MSL({ ...MOSKIT, at: [0, 9, 35], load: 8 }), gun([0, 9, 60], FWD, G130), gun([0, 9, -55], AFT, G130)],
@@ -105,8 +106,8 @@ export const lightCruiser = ship({
   names: { nato: ['Virginia', 'Texas', 'Mississippi', 'Arkansas', 'California', 'South Carolina'], pact: ['Nikolayev', 'Ochakov', 'Kerch', 'Azov', 'Petropavlovsk', 'Tashkent', 'Tallinn'] },
   hull: { length: 178, beam: 19 },
   stats: { hp: 6500, armor: 0.1, speed: 15, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 18, radar: RADAR(3000, 32), sonar: 700, depthCharges: DC(), asTorp: ASROC, ...AA(700, 0.22, 0.05),
-    defence: { sam: { ...SM2, channels: 2 }, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
-  factionStats: { pact: { helo: 7, sonar: 950, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF }, range: 1200, aggroRange: 1800, preferredRange: 1400 } }, // (Kara: the fleet's anti-submarine cruiser — her missiles are for aircraft and submarines)
+    defence: { sam: { ...SM2, channels: 2 }, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
+  factionStats: { pact: { helo: 7, sonar: 950, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 1200, aggroRange: 1800, preferredRange: 1400 } }, // (Kara: the fleet's anti-submarine cruiser — her missiles are for aircraft and submarines)
   mounts: {
     nato: [MSL({ ...HARPOON, at: [0, 10, -30], load: 8 }), gun([0, 9, 60], FWD, G5IN), gun([0, 9, -60], AFT, G5IN)],
     pact: [gun([0, 10, -55], AFT, G76), gun([0, 10, -62], AFT, G76)],
@@ -125,8 +126,8 @@ export const cruiser = ship({
   names: { nato: ['Ticonderoga', 'Yorktown', 'Vincennes', 'Valley Forge', 'Thomas S. Gates'], pact: ['Slava', 'Marshal Ustinov', 'Chervona Ukraina'] },
   hull: { length: 173, beam: 17 },
   stats: { helo: 6.5, hp: 7500, armor: 0.1, speed: 15.5, accel: 0.1, turnRate: 0.08, turretRate: 0.5, radius: 9, height: 20, radar: RADAR(3400, 35), sonar: 800, depthCharges: DC(), asTorp: ASROC, ...AA(700, 0.22, 0.05),
-    defence: { sam: AEGIS, ciws: PHALANX, chaff: CHAFF }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
-  factionStats: { pact: { helo: 7.5, hp: 8000, sonar: 500, defence: { sam: S300F, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3200 } },
+    defence: { sam: AEGIS, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2800, damage: 180 },
+  factionStats: { pact: { helo: 7.5, hp: 8000, sonar: 500, defence: { sam: S300F, point: OSA, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 5500, aggroRange: 5500, preferredRange: 3200 } },
   mounts: {
     nato: [MSL({ ...HARPOON, at: [0, 10, -45], load: 8 }), gun([0, 9, 60], FWD, G5IN), gun([0, 9, -62], AFT, G5IN)],
     pact: [MSL({ ...BAZALT, at: [0, 10, 30], load: 12, count: 4, reload: 12 }), gun([0, 10, 66], FWD, G130)],
@@ -145,8 +146,8 @@ export const battleship = ship({
   names: { nato: ['Iowa', 'New Jersey', 'Missouri', 'Wisconsin'], pact: ['Kirov', 'Frunze', 'Kalinin'] },
   hull: { length: 262, beam: 33 },
   stats: { hp: 14000, armor: 0.7, speed: 15.5, accel: 0.06, turnRate: 0.05, turretRate: 0.2, radius: 14, height: 30, radar: RADAR(3400, 40), ...AA(800, 0.22, 0.05),
-    defence: { ciws: PHALANX, chaff: CHAFF }, range: 5800, aggroRange: 5800, preferredRange: 2200, damage: 2400, splash: 12, pierce: 0.8 },
-  factionStats: { pact: { helo: 9, hp: 14000, armor: 0.5, sonar: 800, depthCharges: DC(), asTorp: ASROC, defence: { sam: { ...S300F, channels: 6, load: 96 }, point: { ...OSA, channels: 2 }, ciws: AK630, chaff: CHAFF }, range: 6000, aggroRange: 6000, preferredRange: 3500, damage: 260 } },
+    defence: { ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 5800, aggroRange: 5800, preferredRange: 2200, damage: 2400, splash: 12, pierce: 0.8 },
+  factionStats: { pact: { helo: 9, hp: 14000, armor: 0.5, sonar: 800, depthCharges: DC(), asTorp: ASROC, defence: { sam: { ...S300F, channels: 6, load: 96 }, point: { ...OSA, channels: 2 }, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 6000, aggroRange: 6000, preferredRange: 3500, damage: 260 } },
   mounts: {
     nato: [MSL({ ...TASM, at: [0, 14, -40], load: 8 }), MSL({ ...HARPOON, at: [0, 14, -60], load: 16 }), gun([0, 13, 96], FWD, G16IN), gun([0, 17, 78], FWD, G16IN), gun([0, 13, -78], AFT, G16IN), gun([11, 12, 10], Math.PI / 2, G5IN), gun([-11, 12, 10], -Math.PI / 2, G5IN)],
     pact: [MSL({ ...GRANIT, at: [0, 12, 70], load: 20, count: 8, reload: 15 }), gun([0, 12, -90], AFT, G130)],
@@ -166,8 +167,8 @@ export const carrier = ship({
   hull: { length: 330, beam: 40 },
   stats: { carrier: { deck: 19.4, deckLen: 300, airGroup: { seaCap: 3, seaStrike: 3, aew: 1 } }, // her air wing (systems/AirStrike.js: off her deck, rearmed aboard)
     hp: 22000, armor: 0.3, speed: 16, accel: 0.06, turnRate: 0.045, turretRate: 0.4, radius: 16, height: 34, eyeHeight: 32, radar: RADAR(3200, 45), ...AA(700, 0.2, 0.05),
-    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 300, aggroRange: 2000, preferredRange: 3500, damage: 0 },
-  factionStats: { pact: { helo: 16.4, carrier: { deck: 16.4, deckLen: 180, deckZ: -50, airGroup: { seaCap: 2, seaStrike: 2 } }, hp: 15000, armor: 0.2, sonar: 700, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF }, range: 5500, aggroRange: 5500, preferredRange: 3500 } }, // (the Kiev: her Yak-38s)
+    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 300, aggroRange: 2000, preferredRange: 3500, damage: 0 },
+  factionStats: { pact: { helo: 16.4, carrier: { deck: 16.4, deckLen: 180, deckZ: -50, airGroup: { seaCap: 2, seaStrike: 2 } }, hp: 15000, armor: 0.2, sonar: 700, defence: { sam: SHTORM, point: OSA, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 5500, aggroRange: 5500, preferredRange: 3500 } }, // (the Kiev: her Yak-38s)
   mounts: {
     nato: [],
     pact: [MSL({ ...BAZALT, at: [0, 12, 100], load: 8, count: 4, reload: 12 })],
@@ -186,8 +187,8 @@ export const escortCarrier = ship({
   names: { nato: ['Tarawa', 'Saipan', 'Belleau Wood', 'Nassau', 'Peleliu'], pact: ['Moskva', 'Leningrad'] },
   hull: { length: 250, beam: 32 },
   stats: { helo: 20.4, hp: 13000, armor: 0.1, speed: 12, accel: 0.06, turnRate: 0.05, turretRate: 0.4, radius: 13, height: 30, eyeHeight: 28, radar: RADAR(3000, 40), sonar: 600, ...AA(600, 0.2, 0.05),
-    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF }, range: 1500, aggroRange: 1500, preferredRange: 3200, damage: 180 },
-  factionStats: { pact: { helo: 12.4, hp: 10000, sonar: 900, depthCharges: DC(), asTorp: ASROC, defence: { sam: SHTORM, ciws: AK630, chaff: CHAFF } } },
+    defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 1500, aggroRange: 1500, preferredRange: 3200, damage: 180 },
+  factionStats: { pact: { helo: 12.4, hp: 10000, sonar: 900, depthCharges: DC(), asTorp: ASROC, defence: { sam: SHTORM, ciws: AK630, chaff: CHAFF, ecm: ECM.pact } } },
   mounts: {
     nato: [gun([10, 18, 90], FWD, G5IN), gun([-10, 18, -90], AFT, G5IN)],
     pact: [gun([8, 14, -30], AFT, G76)],
@@ -270,8 +271,8 @@ export const transport = ship({
   names: { nato: ['Newport', 'Manitowoc', 'Sumter', 'Fresno', 'Peoria', 'Frederick'], pact: ['BDK-91', 'BDK-98', 'BDK-101', 'BDK-181', 'BDK-200', 'BDK-232'] },
   hull: { length: 160, beam: 21 },
   stats: { landing: true, hp: 5000, armor: 0.05, speed: 10, accel: 0.06, turnRate: 0.06, turretRate: 0.6, radius: 9, height: 16, radar: RADAR(2600, 22), ...AA(500, 0.15, 0.03),
-    defence: { ciws: PHALANX, chaff: CHAFF }, range: 1200, aggroRange: 1200, preferredRange: 1000, damage: 80 },
-  factionStats: { pact: { hp: 4500, defence: { chaff: CHAFF } } },
+    defence: { ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 1200, aggroRange: 1200, preferredRange: 1000, damage: 80 },
+  factionStats: { pact: { hp: 4500, defence: { chaff: CHAFF, ecm: ECM.pact } } },
   mounts: {
     nato: [gun([0, 12, 40], FWD, G76)],
     pact: [gun([0, 10, 50], FWD, G76)],

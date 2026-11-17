@@ -88,6 +88,7 @@ export const GRENADE = { range: 25, min: 6, every: 10, damage: 220, splash: 4, r
 // Panzerfaust 44, RPG-18): one man fires one at an enemy vehicle in reach, the squad's stock
 // refills after a lull like the grenades
 const REFILL = { base: 150, post: 80 }; // m: how near the base or a set-up command post a squad must be to take in new men
+const FLAK_DAMAGE = 0.75; // the AA guns' hit chance against aircraft, on land and at sea (missiles unchanged)
 export const LAW = { range: 110, min: 12, every: 4, damage: 380, splash: 2, pierce: 0.6, vsArmor: 1, speed: 130, size: 1.1, spread: 0.02 };
 const CLIMB_SPEED = 0.45;   // share of the speed while climbing over a wall
 // stuck: trying to move but less than `moved` m in `every` s — plan again; `ghost` times in a
@@ -1643,7 +1644,7 @@ export class UnitStack {
       // (no minimap pulse for flak: the fighting it shows is on the ground and the water)
       this.services.audio?.weapon(this.faction, this.stats.naval ? 'aa' : this.weaponSound, _p); // (a ship's AA: the AA guns' bark, not her main battery)
       const k = Math.min(1, dist / reach);
-      if (Math.random() < aa.hitNear + (aa.hitFar - aa.hitNear) * k) h.hit();
+      if (Math.random() < (aa.hitNear + (aa.hitFar - aa.hitNear) * k) * FLAK_DAMAGE) h.hit(); // (flak a little weaker against aircraft: tester feedback 2026-11-17)
       u.recoil = 1;
     }
     VisibilitySystem.revealShooter(u);

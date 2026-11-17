@@ -21,6 +21,11 @@ const CLIMB = 2.5;          // s from the launcher to cruise height
 const TERMINAL = 700;       // m: a high-flyer comes down for the last run in
 const CHAFF_LIFE = 12;      // s a chaff cloud fools a seeker
 const CHAFF_FOOLS = 0.35;   // the chance a seeker switching on near a cloud takes it (once per missile and cloud)
+// more for the defence (tester feedback 2026-11-17): a ship's jammer (defence.ecm: the chance a seeker it
+// covers loses her when it switches on — it flies on, blind, past), chaff on command (Missiles.fireChaff,
+// the Chaff order: a cloud before the seeker has her), and her magazines filled again near the fleet's home
+const ECM_REACH = 2200;     // m: how far a ship's jammer covers the ships round her (a missile's seeker inside it)
+const REARM = { radius: 900, every: 20 }; // near her side's home point: a SAM / point missile / chaff round back every 20 s
 const _p = new THREE.Vector3();
 const _d = new THREE.Vector3();
 
@@ -142,6 +147,9 @@ export class Missiles {
   /** The seeker looks ahead: the nearest enemy ship or chaff cloud in its cone and reach (a cloud shows big on its screen). */
   seek(s) {
     const g = this.game;
+    if (!s.ecmRolled && this.jammedBy(s)) { s.ecmRolled = true; s.target = null; s.decoy = null; s.blind = true; return; } // (jammed: it flies on blind)
+    s.ecmRolled = true;
+    if (s.blind) { s.target = null; s.decoy = null; return; }
     let best = null, bestD = Infinity, cloud = null;
     const reach = s.seeker * 1.3;
     const fx = s.dir.x, fz = s.dir.z, fl = Math.hypot(fx, fz) || 1;
@@ -163,6 +171,49 @@ export class Missiles {
     }
     s.target = best;
     s.decoy = cloud;
+  }
+
+  /** Is missile `s`'s seeker jammed — one roll, by the strongest jammer of the ships it is flying at? */
+  jammedBy(s) {
+    let p = 0;
+    for (const st of this.game.world.stacksOf(enemyOf(s.faction))) {
+      const e = st.alive && st.stats.defence?.ecm;
+      if (!e || st.radarOn === false) continue; // (silent: her jammer is off too)
+      for (const u of st.units) if (u.alive && Math.hypot(u.pos.x - s.pos.x, u.pos.z - s.pos.z) < ECM_REACH) p = Math.max(p, e);
+    }
+    return p > 0 && Math.random() < p;
+  }
+
+  /** The Chaff order: a cloud off her beam now, before a seeker has her (one of her rounds). */
+  fireChaff(st) {
+    const D = st.stats.defence, now = this.game.time;
+    for (const u of st.units) {
+      if (!u.alive || !D?.chaff || (u.chaffLeft ?? D.chaff.count) <= 0 || u.chaffAt > now - 3) continue;
+      this.dropChaff(st, u, D, now);
+      for (const s of this.list) if (s.faction !== st.faction && Math.hypot(s.pos.x - u.pos.x, s.pos.z - u.pos.z) < 2500) s.fooled?.clear(); // (a new cloud: every seeker near rolls again)
+    }
+  }
+
+  dropChaff(st, u, D, now) {
+    const g = this.game;
+    u.chaffLeft = (u.chaffLeft ?? D.chaff.count) - 1;
+    u.chaffAt = now;
+    const side = Math.random() < 0.5 ? -1 : 1, bx = Math.cos(u.yaw) * side, bz = -Math.sin(u.yaw) * side;
+    const c = { x: u.pos.x + bx * 90, z: u.pos.z + bz * 90, y: u.pos.y + 25, faction: st.faction, until: now + CHAFF_LIFE };
+    this.chaff.push(c);
+    this.chaffPuff(c);
+    g.netEvent('chaff', Math.round(c.x), Math.round(c.y), Math.round(c.z), c.faction);
+    g.audio?.play(`${st.faction}.mortar`, u.pos, { volume: 0.5, throttle: 0.5 }); // (the chaff rockets' pop)
+    return c;
+  }
+
+  /** Near her side's home point her magazines fill again, slowly: a SAM, a point missile and a chaff round. */
+  rearm(st, u, D, now) {
+    const home = this.game.map.points?.find((p) => p.owner === st.faction && p.id !== undefined && (p.id === 'A' || p.id === 'K'));
+    if (!home || Math.hypot(home.x - u.pos.x, home.z - u.pos.z) > REARM.radius || u.rearmAt > now - REARM.every) return;
+    u.rearmAt = now;
+    for (const key of ['sam', 'point']) if (D[key] && (u[`${key}Left`] ?? D[key].load) < D[key].load) u[`${key}Left`] = (u[`${key}Left`] ?? D[key].load) + 1;
+    if (D.chaff && (u.chaffLeft ?? D.chaff.count) < D.chaff.count) u.chaffLeft = (u.chaffLeft ?? D.chaff.count) + 1;
   }
 
   hits(s, u) {
@@ -228,16 +279,10 @@ export class Missiles {
         }
         // chaff: a seeker on her, close — a cloud off her beam, and every seeker near it may take it instead
         if (D.chaff && nearest?.target === u && nearestD < 1600 && (u.chaffLeft ?? D.chaff.count) > 0 && !(u.chaffAt > now - D.chaff.cooldown)) {
-          u.chaffLeft = (u.chaffLeft ?? D.chaff.count) - 1;
-          u.chaffAt = now;
-          const side = Math.random() < 0.5 ? -1 : 1, bx = Math.cos(u.yaw) * side, bz = -Math.sin(u.yaw) * side;
-          const c = { x: u.pos.x + bx * 90, z: u.pos.z + bz * 90, y: u.pos.y + 25, faction: st.faction, until: now + CHAFF_LIFE };
-          this.chaff.push(c);
-          this.chaffPuff(c);
-          g.netEvent('chaff', Math.round(c.x), Math.round(c.y), Math.round(c.z), c.faction);
-          g.audio?.play(`${st.faction}.mortar`, u.pos, { volume: 0.5, throttle: 0.5 }); // (the chaff rockets' pop)
+          this.dropChaff(st, u, D, now);
           for (const s of this.list) if (s.target === u) this.seek(s); // (seduced — or not: CHAFF_FOOLS, rolled per missile and cloud)
         }
+        this.rearm(st, u, D, now);
       }
     }
   }

@@ -327,6 +327,11 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'layMines', s: ids(layers), on: on ? 1 : 0 });
         for (const s of layers) s.laying = on && (s.minesLeft ?? s.stats.minelayer.count) > 0;
         this.game.bus.emit('toast', on ? 'Laying mines while under way — steer her across their path' : 'Stopped laying');
+      } else if (k === 'chaff') {
+        const decoys = ships.filter((s) => s.stats.defence?.chaff);
+        if (!decoys.length) return this.game.bus.emit('toast', 'Select ships with chaff launchers');
+        this.game.orders.issue({ t: 'chaff', s: ids(decoys) });
+        this.game.bus.emit('toast', 'Chaff away: a decoy cloud off the beam');
       } else if (k === 'smoke') {
         const gens = ships.filter((s) => s.stats.smokeGen);
         if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');

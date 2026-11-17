@@ -270,6 +270,8 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
     if (!ground.length && sp && s.range > 1) ground.push(`the rest of the team's rifles, out to ${s.range} m`);
     rows.push(['Ground targets', ground.length ? `yes — ${ground.join('; ')}` : 'none: keep it behind the line']);
   }
+  const D = s.defence;
+  if (D) rows.push(['Missile defence', [D.sam && `area SAMs ${D.sam.range} m`, D.point && `point missiles ${D.point.range} m`, D.ciws && `gun ${D.ciws.range} m`, D.chaff && `${D.chaff.count} chaff salvos (Chaff order)`, D.ecm && `jammer: ${Math.round(D.ecm * 100)} % of seekers lose her`].filter(Boolean).join(' · ') + ' — magazines refill near the fleet’s home point']);
   if (s.airRadar) rows.push(['Radar', `warns of aircraft within ${s.airRadar.detect} m; air defence within ${s.airRadar.cover} m reaches further (set up ${s.airRadar.deploy} s)`]);
   if (s.cbRadar) rows.push(['Radar', `locates guns firing within ${s.cbRadar.range} m in a ${Math.round(s.cbRadar.arc * 57.3)}° sector ahead (set up ${s.cbRadar.deploy} s)`]);
   if (s.jammer) rows.push(['Jamming', `enemy support calls, observers and radars within ${s.jammer.radius} m (set up ${s.jammer.deploy} s); seen while it jams`]);

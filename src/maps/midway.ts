@@ -17,9 +17,9 @@ const noise = createNoise2D(1942);
 const sea = createSea({ level: 0, size: SIZE, color: 0x1e5a78 });
 
 // sandbanks and shoals: [x, z, radius] (point-mirrored pairs)
-const SHOALS = [[-1500, 600, 160], [1500, -600, 160], [900, 1400, 120], [-900, -1400, 120]];
+const SHOALS = [[-2300, 900, 160], [2300, -900, 160], [1150, 1950, 120], [-1150, -1950, 120]]; // (out of the way: a wide passage everywhere round the atoll — tester feedback 2026-11-17)
 // two rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius]
-const PINNACLES = [[-1950, -350, 230], [1950, 350, 230]];
+const PINNACLES = [[-2700, -450, 230], [2700, 450, 230]];
 
 function height(x, z) {
   let h = -38 + fbm(noise, x * 0.0008, z * 0.0008, 4) * 10;                 // the open ocean floor (deep enough everywhere)
@@ -115,7 +115,7 @@ export default {
     props.controlTower({ x: 420, z: -200, yaw: 0.3 });
     props.timberHangar({ x: 470, z: -150, yaw: 0.3 });
     props.finish();
-    const trees = jungle({ scene, terrain, cover, rand, half: HALF, count: 2000 });
+    const trees = jungle({ scene, terrain, cover, rand, half: 3000, count: 2000 }); // (out to the pinnacles)
     cover.finalize({ x: HALF, z: HALF });
     return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },

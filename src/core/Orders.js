@@ -198,6 +198,9 @@ export class Orders {
           s.laying = !!cmd.on;
         }
         return null;
+      case 'chaff': // chaff on command (1985): a cloud off her beam now (systems/Missiles.js fireChaff)
+        for (const s of mine(cmd.s)) g.missiles?.fireChaff(s);
+        break;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {
           const sg = s.stats.smokeGen;

@@ -84,6 +84,37 @@ export const MAPS = {
   [philippineSea.id]: philippineSea,
 };
 
+/**
+ * The sea maps twice as wide (tester feedback 2026-11-17: room to manoeuvre — in 1985 the missiles' reach
+ * brought the fleets together at once): the area each way doubled, the islands, coasts and objectives where
+ * they were, and each side's home — its base, its fleet, its camera, its home point — moved outward with the
+ * open sea in between. The terrain's grid and the ship routing grid grow less than the area (memory).
+ */
+function widenSea(m, k = 2) {
+  if (m.widened || m.theatre !== 'sea') return;
+  m.widened = true;
+  m.size *= k;
+  m.segments = Math.round((m.segments ?? 400) * 1.6);
+  m.bounds = { x: m.bounds.x * k, z: m.bounds.z * k };
+  if (m.navCell) m.navCell = Math.round(m.navCell * 1.5);
+  if (m.river?.sea) m.river.size = m.size;
+  m.camera = { ...m.camera, maxHeight: (m.camera?.maxHeight ?? 2600) * 1.6, far: (m.camera?.far ?? 9000) * 1.8 };
+  const shift = {};
+  for (const f of ['nato', 'pact']) {
+    const b = m.bases?.[f];
+    if (!b) continue;
+    shift[f] = { x: b.x * (k - 1), z: b.z * (k - 1) };
+    m.bases[f] = { ...b, x: b.x * k, z: b.z * k };
+  }
+  const move = (p, f) => (shift[f] ? { ...p, x: p.x + shift[f].x, z: p.z + shift[f].z } : p);
+  for (const f of ['nato', 'pact']) {
+    if (m.spawns?.[f]) m.spawns[f] = m.spawns[f].map((s) => move(s, f));
+    if (m.cameraStart?.[f]) m.cameraStart[f] = move(m.cameraStart[f], f);
+  }
+  if (m.points) m.points = m.points.map((p) => (p.owner ? move(p, p.owner) : p));
+}
+for (const m of Object.values(MAPS)) widenSea(m);
+
 export const DEFAULT_MAP = fuldaGap.id;
 
 /**
