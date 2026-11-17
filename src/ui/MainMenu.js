@@ -282,6 +282,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.observer) rows.push(['Observes', `indirect fire on what they see: ${Math.round(s.observer.scatter * 100)} % of the scatter`]);
   if (s.atgm) rows.push(['Missile', `${s.atgm.count} per vehicle, out to ${s.atgm.range} m`]);
   if (s.aps) rows.push(['Active protection', `${s.aps.name}: shoots down ${s.aps.charges} incoming missiles or rockets, reloaded in a lull`]);
+  if (s.drone) rows.push(['Drones', { recon: `a recon drone over the enemy out to ${s.drone.range} m: what it sees is located for your guns`, fpv: `${s.drone.count} FPV strike drones, one every ${s.drone.every} s, at spotted enemies out to ${s.drone.range} m — into the roof`, lancet: `${s.drone.count} loitering munitions, out to ${s.drone.range} m, at spotted vehicles and guns` }[s.drone.kind]]);
   if (s.cage) rows.push(['Cage', 'bars over the turret against drones diving on the roof']);
   if (s.stealth) rows.push(['Stealth', `spotted at ${Math.round(s.stealth * 100)} % of the usual range; holds fire while hidden`]);
   if (s.binoculars) rows.push(['Binoculars', `sight ×1.25 when standing still`]);

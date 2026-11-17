@@ -44,6 +44,7 @@ import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { EPOCHS, epoch } from '../data/epoch.js';
+import { Drones } from '../systems/Drones.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
@@ -226,6 +227,7 @@ export class GameEngine {
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
+    this.drones = epoch() === '2027' ? new Drones(this) : null; // recon quads, FPVs, loitering munitions
     this.fire = new Fire(this);           // grass and forest fires
     this.projectiles.fire = this.fire;
     // multiplayer: the connection is set up before the interface, which adapts to it
@@ -751,6 +753,7 @@ export class GameEngine {
     this.fire.update(dt);
     this.counterBattery.update(dt);
     this.jamming.update(dt);
+    this.drones?.update(dt);
 
     net?.mute(); // the client flies its own rounds and runs its own renderers and effects
     this.projectiles.update(dt);
@@ -800,6 +803,7 @@ export class GameEngine {
     this.barrage.update(dt);
     this.fire.update(dt);
     this.air.updateChutes(dt); // a paradrop's men on the way down (the host's 'chute')
+    this.drones?.update(dt);   // the host's drones, drawn where it says (Drones.apply)
     for (const sys of [this.squalls, this.searchlights, this.missiles, this.sensors]) sys?.update(dt, t); // at sea: squalls, beams, the host's missiles in flight, your own ESM bearings
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);

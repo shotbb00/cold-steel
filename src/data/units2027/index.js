@@ -190,10 +190,44 @@ const tankDestroyer = derive(T.tankDestroyer, {
   },
 });
 
+// ---------------------------------------------------------------- step 4: drones (systems/Drones.js)
+const RECON_DRONE = { kind: 'recon', range: 380, every: 40 };
+scouts.stats = { ...scouts.stats, drone: RECON_DRONE };
+observers.stats = { ...observers.stats, drone: { ...RECON_DRONE, range: 450 } };
+
+const droneTeam = (o) => derive(T.scouts, {
+  category: o.category, role: 'support', cost: o.cost,
+  formation: { count: 3, columns: 3, spacing: 3 },
+  models: men({ radio: true }),
+  stats: { drone: o.drone, sight: 120, binoculars: false },
+  variants: o.variants,
+});
+const fpvTeam = { ...droneTeam({
+  category: 'infantry', cost: 180,
+  drone: { kind: 'fpv', count: 8, every: 12, range: 520 },
+  variants: {
+    nato: { name: 'FPV Drone Team', weapon: 'FPV strike drones, M4A1', text: 'Three soldiers with goggles and a crate of racing drones with warheads strapped on. Anything the side has spotted within half a kilometre, they fly into — through the roof of a tank, into a trench.' },
+    pl: { name: 'Zespół FPV', weapon: 'FPV drones, Grot', text: 'Polish drone operators, trained on what Ukraine learned: cheap, fast, and deadly to anything that stops in the open.' },
+    pact: { name: 'FPV Drone Team', weapon: 'FPV strike drones, AK-12', text: 'Russian FPV crews: they hunt along the front for vehicles and dug-in men the scouts have found. A cage or a jammer is the best answer.' },
+    by: { name: 'FPV Drone Team', weapon: 'FPV drones, AK-74M', text: 'Belarus’s first drone crews, flying Russian-made FPVs.' },
+  },
+}), id: 'fpvTeam', name: 'FPV Drone Team', shortName: 'FPV' };
+const loiterTeam = { ...droneTeam({
+  category: 'fire', cost: 300,
+  drone: { kind: 'lancet', count: 4, every: 35, range: 1200 },
+  variants: {
+    nato: { name: 'Switchblade 600 Team', weapon: 'Switchblade 600 loitering munitions', text: 'A tube-launched loitering munition: it flies out a kilometre and more, circles until it finds a vehicle or a gun, and dives onto it with a tank-killing warhead.' },
+    pl: { name: 'Warmate Team', weapon: 'Warmate loitering munitions', text: 'Poland’s own loitering munition: it hunts over the enemy’s rear for guns and vehicles and dives onto them.' },
+    pact: { name: 'Lancet Team', weapon: 'ZALA Lancet-3', text: 'The Lancet: launched from a rail, it flies far behind the line, finds an artillery piece or an armoured vehicle and dives onto it. The terror of guns that stay in one place.' },
+    by: { name: 'Lancet Team', weapon: 'ZALA Lancet', text: 'Lancets bought from Russia: few, and saved for the best targets.' },
+  },
+}), id: 'loiterTeam', name: 'Loitering Munition Team', shortName: 'Loiter' };
+
 export const TYPES_2027 = {
   ...TYPES_1985,
   rifles, atTeam, mgTeam, crew, scouts, sniper, engineers, mortar, observers, manpads, airAssault,
   tank, heavyTank, ifv, reconVehicle, tankDestroyer,
+  fpvTeam, loiterTeam,
 };
 /** No stand-ins: every 1985 type serves until its own step replaces it. */
 export const ALIAS_2027 = {};

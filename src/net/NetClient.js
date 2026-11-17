@@ -441,6 +441,7 @@ export class NetClient {
       if (m.status !== undefined) ms.statusText = m.status ?? '';
     }
     if (m.air) Object.assign(g.air.readyAt, m.air);
+    if (m.dr) g.drones?.apply(m.dr);
     for (const [id, progress] of m.sites ?? []) {
       const site = g.construction.sites.find((s) => s.id === id);
       if (site) { site.progress = progress; g.construction.showProgress(site); }

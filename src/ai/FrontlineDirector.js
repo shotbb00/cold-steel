@@ -51,13 +51,13 @@ import { STRUCTURES, structureCost } from '../systems/Construction.js';
 
 const THINK = 4;
 const BUILD_ORDER = [
-  'mgTeam', 'tank', 'atTeam', 'scouts', 'mortar', 'ifv', 'engineers', 'observers', 'artillery', 'sniper', 'cbRadar', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
+  'mgTeam', 'tank', 'atTeam', 'scouts', 'fpvTeam', 'mortar', 'ifv', 'engineers', 'observers', 'artillery', 'loiterTeam', 'sniper', 'cbRadar', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
   'reconVehicle', 'aa', 'mgTeam', 'tankDestroyer', 'ifv', 'spMortar', 'ambulance', 'atTeam', 'heavyTank', 'rifles', 'recovery',
   'rockets', 'sam', 'tank',
 ];
 const CAPS = {
   tank: 4, mgTeam: 3, atTeam: 3, artillery: 1, aa: 1, mortar: 2, ifv: 3, scouts: 2, engineers: 1, observers: 1, manpads: 2,
-  reconVehicle: 2, tankDestroyer: 2, spMortar: 1, ambulance: 1, heavyTank: 2, recovery: 1, rockets: 1, sam: 1, cev: 1,
+  reconVehicle: 2, tankDestroyer: 2, fpvTeam: 2, loiterTeam: 1, spMortar: 1, ambulance: 1, heavyTank: 2, recovery: 1, rockets: 1, sam: 1, cev: 1,
 };
 // armour: the share of its fighting stacks the AI keeps in vehicles, and what it buys to get there
 // (in turn, saving up for each — the rifle squads don't get to spend that money first)
