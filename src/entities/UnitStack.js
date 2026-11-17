@@ -97,6 +97,7 @@ const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3
 // single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
 // m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
 const COLUMN = { gap: 1.3, trail: 120, narrow: 2.5, wide: 4, after: 10, afterVehicle: 40 }; // narrow: only a real choke point (a gate, a bridge, a gap in a wall) — not a hedge beside the way // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
+const LAY_SAME = 40;       // m: a rocket launcher's next target this near the last needs no new laying (UnitStack.layOn)
 const SCREENED = 2.4;      // spread × at a man close behind cover from the shooter (UnitStack.screened)
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
@@ -1731,6 +1732,25 @@ export class UnitStack {
     u.turretYaw = u.yaw + clamp(angleDelta(u.yaw, u.turretYaw), -s.traverse, s.traverse);
   }
 
+  /**
+   * Rocket launchers (stats.layTime): a new target area — more than LAY_SAME m from the last they fired on, or
+   * after they have moved — takes `layTime` s of laying before the ripple starts. True: laid, fire.
+   */
+  layOn(u) {
+    const t = u.target, now = this.world.time;
+    const tp = t.pos ?? t;
+    const moved = !u.laidFrom || Math.hypot(u.pos.x - u.laidFrom.x, u.pos.z - u.laidFrom.z) > 3;
+    if (moved || !u.laidOn || Math.hypot(tp.x - u.laidOn.x, tp.z - u.laidOn.z) > LAY_SAME) {
+      u.laidOn = { x: tp.x, z: tp.z };
+      u.laidFrom = { x: u.pos.x, z: u.pos.z };
+      u.laidAt = now + u.stats.layTime;
+      if (this.services.game?.mine?.(this)) this.job = 'laying on target';
+    }
+    if (now < u.laidAt) return false;
+    if (this.job === 'laying on target') this.job = null;
+    return true;
+  }
+
   /** Tanks and guns: fire once the turret is on target. */
   updateHeavyWeapon(u) {
     const s = u.stats;
@@ -1746,6 +1766,8 @@ export class UnitStack {
     if (u.reloadT > 0 || u.cooldown > 0) return;
     if (s.gunRange && dist > s.gunRange) return; // only the missile reaches that far
     if (s.weapon === 'artillery') {
+      if (s.halted && (u.moving || u.wantsMove)) return; // rocket launchers: stand to fire
+      if (s.layTime && !this.layOn(u)) return;            // …and lay the tubes on a new target area first
       this.fire(u); // a shell — or a smoke / illumination round on a mission (SP mortars)
       u.mag--;
       u.cooldown = s.fireCooldown * (0.85 + Math.random() * 0.3);
@@ -1896,8 +1918,10 @@ export class UnitStack {
     const foe = enemyOf(this.faction);
     let best = null;
     let bestScore = Infinity;
+    const now = this.world.time, ruled = year() >= 1900 && this.services.game?.visibility?.enabled !== false;
     for (const e of this.world.combatants(foe)) {
       if (!e.alive || !e.spotted) continue;
+      if (ruled && !(e.calledUntil > now || e.locatedUntil > now)) continue; // only what an observer, armour, a lieutenant or a sensor called in (systems/VisibilitySystem.js callersOf)
       const d = Math.sqrt(dist2DSq(u.pos, e.pos));
       if (d < s.minRange || d > s.range) continue;
       // not on its own side's heads: no shells where friends are near the target (orders and fire missions decide for themselves)

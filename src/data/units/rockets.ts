@@ -59,6 +59,8 @@ export default {
     crew: 3,
     bailChance: 0.7,
     playerFireInterval: 0.45,
+    halted: true,         // fires only standing still (tester feedback 2026-11-17: the Calliope fired on the move)
+    layTime: 5,           // s to lay the tubes onto a new target area before the first rocket (UnitStack.updateHeavyWeapon)
   },
   // per-side differences on top of `stats`
   factionStats: {
