@@ -61,11 +61,13 @@ JS = r'''async ({ only, tol }) => {
   for (const [kind, table] of Object.entries(air45.AIR_1945)) for (const [key, a] of Object.entries(table)) builds.push([`45:air:${kind}`, key, a.model]);
   const air27 = await import('/src/data/air27.js');
   for (const [kind, table] of Object.entries(air27.AIR_2027)) for (const [key, a] of Object.entries(table)) builds.push([`27:air:${kind}`, key, a.model]);
+  const bmb = await import('/src/data/bombers.js'); // (the bombers of every war)
+  for (const [era, set] of Object.entries(bmb.BOMBERS)) for (const [kind, table] of Object.entries(set)) for (const [key, a] of Object.entries(table)) builds.push([`bomb:${era}:${kind}`, key, a.model]);
   const sea85 = await import('/src/data/air85sea.js'); // (1985 at sea: the carrier and shore aircraft, the ships' helicopters)
   for (const [kind, table] of [['seaStrike', sea85.SEA_STRIKE], ['seaCap', sea85.SEA_CAP], ['asw', sea85.ASW], ['aew', sea85.AEW], ['helo', sea85.HELO]]) for (const [key, a] of Object.entries(table)) builds.push([`air:${kind}`, key, a.model]);
   for (const [id, key, build] of builds) {
     {
-      if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:')) && !(only.includes('45') && id.startsWith('45:')) && !(only.includes('27') && id.startsWith('27:'))) continue;
+      if (only.length && !only.includes(id) && !(only.includes('air') && id.startsWith('air:')) && !(only.includes('45') && id.startsWith('45:')) && !(only.includes('27') && id.startsWith('27:')) && !(only.includes('bomb') && id.startsWith('bomb:'))) continue;
       const type = { id };
       let rig;
       try { rig = build(mats); } catch (e) { out.push({ unit: type.id, key, error: String(e).slice(0, 120) }); continue; }

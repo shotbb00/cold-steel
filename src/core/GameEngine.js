@@ -264,7 +264,7 @@ export class GameEngine {
       for (const st of this.construction.structures.slice(n0)) st.fromMap = true; // (the map's own: not a scar the campaign keeps — the map lays them again)
     }
     this.airfields = new Airfields(this); // each side's airfield, its runway laid on every machine alike (tester feedback 2026-11-17)
-    if (mode.id !== 'bootcamp') this.airfields.plan();
+    this.airfields.plan(mode.id === 'bootcamp'); // (boot camp: only the player's, for its airfield lesson)
     mode.setup(this);
     if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)

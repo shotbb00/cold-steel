@@ -28,6 +28,7 @@ import { makeBuyer } from './shared.js';
 import { AIState } from '../ai/StackAI.js';
 import { rememberBattle, requestReplay } from '../core/replay.js';
 import { epoch } from '../data/epoch.js';
+import { runwayOpen } from '../systems/Airfields.js';
 
 const ww2 = () => epoch() === '1945';
 const doneKey = () => (epoch() === '1985' ? 'coldsteel.bootcamp' : `coldsteel.bootcamp.${epoch()}`);
@@ -216,6 +217,36 @@ const RECON = {
   tasks: [
     ['Send a recon flight over the machine gun', (g) => (g.air.readyAt[g.air.key(g.playerFaction, 'recon')] ?? 0) > 0],
     ['See what it photographed', (g) => g.world.stacksOf(enemyOf(g.playerFaction)).some((s) => s.units.some((u) => u.locatedUntil > g.time))],
+  ],
+};
+
+const AIRFIELD = {
+  title: 'Airfields and bombers',
+  touch: 'In battle your regular squadrons — helicopters, ground-attack aircraft, light and heavy bombers — fly from your <b>airfield</b> behind the lines, and are launched from its own buttons, not from Orders; only the special ones (fighters, recon) still come in from the map edge. Here it holds bombers. Tap the airfield: its own buttons show what is in its hangar. Tap <b>Light bombers</b> there, then tap the machine gun: the flight taxis out, takes off, lines up and lays a stick of bombs along the line (heavy bombers lay a longer carpet from higher up). While it is away the enemy bombs your runway — a shut runway launches nothing until <b>engineers</b> repair it: walk them to the airfield.',
+  text: 'In battle your regular squadrons — helicopters, ground-attack aircraft, light and heavy bombers — fly from your <b>airfield</b> behind the lines, and are launched from its own buttons, not from the support bar; only the special ones (fighters, recon) still come in from the map edge. Here it holds bombers. Select the airfield: its own buttons show what is in its hangar. Click <b>Light bombers</b> there, then click the machine gun: the flight taxis out, takes off, lines up and lays a stick of bombs along the line (heavy bombers lay a longer carpet from higher up). While it is away the enemy bombs your runway — a shut runway launches nothing until <b>engineers</b> repair it: walk them to the airfield.',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    game.air.limit[me] = undefined;
+    game.modeState.cp[me] += 800;
+    ctx.af = game.world.basesOf(me).find((s) => s.stats.airfield);
+    ctx.mg = game.world.stacksOf(enemyOf(me)).find((s) => s.alive) ?? target(game, 'mgTeam', spot(game, 250, -15), 'MG nest');
+    if (ctx.af) game.tutorial.highlight(ctx.af);
+  },
+  update(game, ctx) {
+    const me = game.playerFaction;
+    if (!ctx.af || ctx.shut || !game.air.sorties.some((s) => s.faction === me && s.p.bombs && s.state === 'ingress')) return;
+    ctx.shut = true; // the enemy's raid: the runway cratered, the engineers sent up from the rear
+    const u = ctx.af.units[0];
+    u.hp = u.maxHp * 0.3;
+    game.effects.explosion(u.pos, 1.5, { ground: true, fire: 2 });
+    game.tell(me, `${ctx.af.name}: enemy bombers over the runway — it is shut until it is repaired`);
+    ctx.eng = game.spawnStack('engineers', me, { x: u.pos.x + (u.pos.x > 0 ? -100 : 100), z: u.pos.z }, facing(game), 'Engineer section');
+    game.tutorial.highlight(ctx.eng);
+  },
+  tasks: [
+    ['Select your airfield', (g, c) => !c.af || g.commands.selected.has(c.af)],
+    ['Send its bombers onto the machine gun', (g, c) => !c.af || g.air.sorties.some((s) => s.faction === g.playerFaction && s.p.bombs)],
+    ['Repair the runway with the engineers', (g, c) => !c.af || (c.shut && runwayOpen(c.af))],
   ],
 };
 
@@ -695,7 +726,7 @@ const CONTROL_1806 = as1945(CONTROL, {
 export const CHAPTERS = [
   { id: 'basics', title: 'Basics', blurb: 'The camera, selecting and moving, facing and cover, a first firefight, taking ground.', steps: [CAMERA, SELECT, MOVE, FACE, CONTACT, POINT],
     outro: 'That is the core of command. Next: <b>Fire support</b> — what to do about a machine gun you can\'t walk up to.' },
-  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, recon flights.', steps: [SMOKE, SPOTTING, AIR, RECON],
+  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, recon flights, the airfield and its bombers.', steps: [SMOKE, SPOTTING, AIR, RECON, AIRFIELD],
     outro: 'Fire support wins fights before your men walk into them. Next: <b>Digging in</b> — making ground hard to take.' },
   { id: 'fortify', title: 'Digging in', blurb: 'Trenches, wire and mines, calling off a job, fighting from houses, engineers clearing a minefield.', steps: [TRENCH, OBSTACLES, CANCEL, HOUSE, ENGINEERS],
     outro: 'A dug-in squad behind wire costs the enemy dearly. Next: <b>Armour and transport</b>.' },
@@ -708,7 +739,7 @@ export const CHAPTERS = [
 /** 1945's boot camp: the same chapters told with its own aircraft and vehicles, and one of its own. */
 const swap = { [AIR.title]: AIR_1945, [RECON.title]: RECON_1945, [VEHICLE_SMOKE.title]: VEHICLE_SMOKE_1945, [IFV.title]: IFV_1945 };
 const BLURB_1945 = {
-  fire: 'Mortar smoke, artillery and forward observers, fighter-bombers, recon flights.',
+  fire: 'Mortar smoke, artillery and forward observers, fighter-bombers, recon flights, the airfield and its bombers.',
   armour: 'Reinforcements, smoke dischargers, carrying infantry in half-tracks, repairs.',
 };
 const CHAPTERS_1945 = [
@@ -838,7 +869,7 @@ const CHAPTERS_1918 = [
   { ...CHAPTERS[0], outro: 'That is the core of command. Next: <b>The trenches</b>.' },
   { id: 'trenches', title: 'The trenches', blurb: 'Digging in, wire, blowing a lane through the enemy\'s wire.', steps: [TRENCH, OBSTACLES, WIRE_1918],
     outro: 'A trench behind wire holds against anything but guns and tanks. Next: <b>Guns, gas and aircraft</b>.' },
-  { id: 'fire', title: 'Guns, gas and aircraft', blurb: 'Mortar smoke, observers, the creeping barrage, gas, ground attack, the spotter.', steps: [SMOKE, SPOTTING, BARRAGE_1918, GAS_1918, AIR_1918, RECON_1918],
+  { id: 'fire', title: 'Guns, gas and aircraft', blurb: 'Mortar smoke, observers, the creeping barrage, gas, ground attack, the spotter, the aerodrome and its bombers.', steps: [SMOKE, SPOTTING, BARRAGE_1918, GAS_1918, AIR_1918, RECON_1918, AIRFIELD],
     outro: 'The guns win the battles of 1918 — if someone can see for them. Next: <b>Tanks and horses</b>.' },
   { id: 'armour', title: 'Tanks and horses', blurb: 'Reinforcements, tanks that break down and the supply tank, the cavalry charge.', steps: [REINFORCE, TANKS_1918, CAVALRY_1918],
     outro: 'Tanks, infantry, guns and aircraft as one plan: that is how 1918 was won. Last: <b>Fighting in person</b>.' },

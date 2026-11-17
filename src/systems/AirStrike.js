@@ -30,6 +30,7 @@ import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT, FIGHTERS, RECON } from '../data/air.ts';
 import { SEA_STRIKE, SEA_CAP, ASW, AEW, HELO, COAST_STRIKE } from '../data/air85sea.js';
+import { LIGHT_BOMBERS, HEAVY_BOMBERS } from '../data/bombers.js';
 import { FACTIONS, enemyOf, forArmy } from '../data/factions.js';
 import { paintMaterial } from '../render/paint.js';
 import { dist2DSq, angleDelta, clamp } from '../core/math.js';
@@ -134,6 +135,20 @@ export const KINDS = {
     swath: 170,        // m either side of the track the cameras take in
     hold: 30,          // s what they found stays located
   },
+  // bombers (data/bombers.js), from the airfields: level over the spot, each plane of the flight lets go a stick of
+  // free-falling bombs (Sortie.bomb), released `lead` m short so they fall along `runLength` m of the line through it
+  lightBomber: {
+    aircraft: LIGHT_BOMBERS, flight: 3, label: 'Light bombers', key: 'none', cost: 260, cooldown: 150, delay: 8,
+    approach: 2400, cruiseAlt: 220, attackAlt: 170, cruiseSpeed: 180, attackSpeed: 170,
+    rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 160, turn: 0, pitchDown: 0,
+    bombs: { count: 6, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
+  },
+  heavyBomber: { // carpet bombing: a high, slow cell lays a long strip
+    aircraft: HEAVY_BOMBERS, flight: 3, spread: 2.6, label: 'Heavy bombers', key: 'none', cost: 420, cooldown: 240, delay: 12,
+    approach: 3200, cruiseAlt: 360, attackAlt: 340, cruiseSpeed: 160, attackSpeed: 155,
+    rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 420, turn: 0, pitchDown: 0,
+    bombs: { count: 14, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
+  },
   // the Pacific (the open-sea maps): launched from the side's carrier (AirStrike.call: no carrier, no
   // missions), the strikes going for the enemy ship nearest the spot and following it (Sortie.trackShip).
   // The deck cycle: each carrier has her hangar (stats.carrier.airGroup: flights of each kind); a launch
@@ -206,6 +221,7 @@ export const AIR = KINDS.heli;
 const DECK = { strike: 22, light: 8 }; // s spotting the deck before a launch: a bomber strike, fighters or a scout
 const REARM = 60;                        // s to refuel and rearm a flight back aboard
 const GROUND_FIRE_RANGE = 150;
+const BOMB_G = 25; // m/s² a bomb falls with (the game's scale, as the artillery's shells)
 const round2 = (n) => Math.round(n * 100) / 100; // (two decimals: the multiplayer messages, as net/NetHost.js)
 
 const _p = new THREE.Vector3();
@@ -303,6 +319,13 @@ class Sortie {
     this.speed = this.p.cruiseSpeed;
     this.homeT = 0;
     this.landT = 0;
+    if (this.p.bombs) { // the run's points from where the stick has to go: released `lead` short of the line
+      const run = this.p.runLength;
+      this.lead = this.p.attackSpeed * Math.sqrt((2 * this.p.attackAlt) / BOMB_G);
+      this.p = { ...this.p, bombs: { ...this.p.bombs, ...this.type.bombs }, rocketsFrom: this.lead + run / 2 + 150, gunTo: this.lead - run / 2 - 30 };
+      this.bombsLeft = this.p.bombs.count;
+      this.bombT = 0;
+    }
     if ((this.p.sea && !this.p.deck) || this.p.coast) this.fromCarrier(); // (1985's: AirStrike.call, once it knows whether a carrier launches it; a ship's helicopter from her)
   }
 
@@ -450,6 +473,7 @@ class Sortie {
     if ((this.p.sea || this.cvUnit) && !this.orphan && this.cvUnit?.alive && (this.state === 'home' || this.state === 'landing' || this.state === 'rollout')) return this.type.rotorSound ? this.padHome(dt) : this.recover(dt); // (an airfield's helicopters: straight down onto the apron)
     if (this.kind === 'cap' || this.kind === 'navCap' || this.kind === 'seaCap' || this.kind === 'aew' || this.kind === 'helo') return this.patrol(dt);
     this.trackShip();
+    if (this.p.bombs && this.state === 'ingress') this.lineUp(dt);
     const p = this.p;
     const terrain = game.terrain;
     const d = this.toGo;
@@ -462,7 +486,7 @@ class Sortie {
       if (this.state === 'ingress' && d < 140) this.state = 'attack';     // the approach: slowing, guns on the LZ
       if (this.state === 'attack' && d < 4) this.state = 'land';
     } else {
-      if (this.state === 'ingress' && d < p.rocketsFrom + 40) {
+      if (this.state === 'ingress' && d < p.rocketsFrom + 40 && (!p.bombs || this.aligned)) {
         this.state = 'attack';
         if (this.type.siren) this.siren = game.audio.loop(this.type.siren, this.pos, 1.2, 40); // the Stuka's Jericho trumpet, all down the dive
       }
@@ -532,7 +556,7 @@ class Sortie {
       this.state = 'break';
     }
     if (this.state === 'attack' || this.state === 'land') {
-      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon' || this.kind === 'navScout') this.photograph(dt); else if (this.kind === 'asw') { this.photograph(dt); this.huntSubs(dt); } else if (this.kind !== 'torpBomb' && !this.p.asmStrike) this.fireWeapons(dt, d);
+      if (this.type.paradrop) { /* no door guns on a transport */ } else if (this.kind === 'lift') this.coverLZ(dt, d); else if (this.kind === 'recon' || this.kind === 'navScout') this.photograph(dt); else if (this.kind === 'asw') { this.photograph(dt); this.huntSubs(dt); } else if (this.p.bombs) this.bomb(dt); else if (this.kind !== 'torpBomb' && !this.p.asmStrike) this.fireWeapons(dt, d);
     }
     this.fireT -= dt;
     const exposed = this.state === 'attack' || this.state === 'land' || (this.state === 'ingress' && d < p.rocketsFrom + 120);
@@ -796,11 +820,51 @@ class Sortie {
     }
     const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
     this.wing.forEach((w, i) => {
-      const [sx, bk, dn] = line ? [0, TRAIL * (i + 1), 0] : WING[i] ?? [0, 24 + i * 12, 3];
+      const [sx, bk, dn] = (line ? [0, TRAIL * (i + 1), 0] : WING[i] ?? [0, 24 + i * 12, 3]).map((v) => v * (this.p.spread ?? 1)); // (the big bombers: wider apart)
       w.root.position.set(this.pos.x + this.side.x * sx - this.dir.x * bk, this.pos.y - dn, this.pos.z + this.side.z * sx - this.dir.z * bk);
       w.root.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
       spin(w, this.type, dt);
     });
+  }
+
+  /** A bomber too close to its spot (off a near airfield): out and round again until it can make a straight run in. */
+  lineUp(dt) {
+    const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z, dist = Math.hypot(dx, dz), need = this.p.rocketsFrom + 300;
+    if (!this.aligned) { // (out far enough that the turn back in still leaves a straight run)
+      if (dist < need) this.out = true;
+      else if (dist > need + (2.4 * this.speed) / 0.6) this.out = false;
+    }
+    const off = angleDelta(this.yaw, this.out ? Math.atan2(-dx, -dz) : Math.atan2(dx, dz));
+    this.yaw += clamp(off, -0.6 * dt, 0.6 * dt);
+    if (!this.out && Math.abs(off) < 0.1) this.aligned = true; // on the line in: the run begins at rocketsFrom
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    this.side.set(this.dir.z, 0, -this.dir.x);
+  }
+
+  /**
+   * The stick: once the bombs would come down on the run line, each plane of the flight lets one go every
+   * `runLength / count` m — they fall on with the plane's speed (ProjectileSystem gravity) and burst where they land.
+   */
+  bomb(dt) {
+    const g = this.game, b = this.p.bombs;
+    if (this.bombsLeft <= 0) return;
+    const fall = Math.sqrt((2 * Math.max(10, this.pos.y - this.target.y)) / BOMB_G);
+    if (this.speed * fall - this.toGo < -this.p.runLength / 2) return; // (the impact point not yet at the line's near end)
+    if ((this.bombT -= dt) > 0) return;
+    this.bombT = this.p.runLength / (this.speed * b.count);
+    this.bombsLeft--;
+    for (const r of [this.rig, ...(this.wing ?? [])]) {
+      _p.copy(r.root.position);
+      _p.y -= 1.2;
+      _a.copy(_p).addScaledVector(this.dir, this.speed * fall);
+      _a.y = g.terrain.heightAt(_a.x, _a.z);
+      g.projectiles.spawn({
+        origin: _p, dir: this.dir, speed: this.speed, damage: b.damage, faction: this.faction,
+        color: new THREE.Color(0x1a1a18), size: 0.9, source: this, life: fall + 4,
+        splash: b.splash, pierce: b.pierce, vsArmor: b.vsArmor, suppress: 4, gravity: BOMB_G, target: _a,
+        whistleAt: Math.max(0.2, fall - 1.2), crater: b.crater, tracer: false,
+      });
+    }
   }
 
   fireWeapons(dt, d) {
@@ -1351,7 +1415,7 @@ export class AirStrike {
     if (jam) sortie.appearAt += JAM.delay;
     if (deck) { // off her deck: spotted first (a strike longer), the flight out of her hangar
       const cu = deck.units[0];
-      const spot = kind === 'diveBomb' || kind === 'torpBomb' || kind === 'seaStrike' ? DECK.strike : DECK.light;
+      const spot = kind === 'diveBomb' || kind === 'torpBomb' || kind === 'seaStrike' || p.bombs ? DECK.strike : DECK.light;
       const dk = `${faction}Deck`;
       if (p.aircraft?.[dk]) { sortie.army = dk; sortie.type = airType(kind, faction, dk); sortie.hp = sortie.type.hp; } // (the Kiev's Yak-38s, not the shore's MiG-23s)
       this.hangar(cu)[kind]--;

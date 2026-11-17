@@ -16,6 +16,7 @@ import { TYPES_2027, ALIAS_2027 } from './units2027/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
 import { AIR_2027 } from './air27.js';
+import { BOMBERS } from './bombers.js';
 import { AIRFIELD } from './units/airfield.js';
 import { AIR_1918 } from './air18.ts';
 
@@ -71,7 +72,7 @@ export const EPOCHS = {
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
     },
     defaults: { nato: 'uk', pact: 'de' },
-    types: TYPES_1918, alias: ALIAS_1918, air: AIR_1918,
+    types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
     // each army's two signatures (ponytail: their effects are wired as the units they need arrive — tanks, guns)
     doctrine: {
       uk: [
@@ -115,7 +116,7 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'pact', name: 'Belarus' },
     },
     defaults: { nato: 'us', pact: 'ru' },
-    types: TYPES_2027, alias: ALIAS_2027, air: AIR_2027,
+    types: TYPES_2027, alias: ALIAS_2027, air: { ...AIR_2027, ...BOMBERS[2027] },
     // each army's two signatures: 1985's mechanics where they still fit, three of their own (systems/Drones.js, CounterBattery.js, data/doctrine.js unitCost)
     doctrine: {
       us: [{ ...DOCTRINE_1985.us[0], name: 'Joint fires', text: 'Air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
@@ -136,7 +137,7 @@ export const EPOCHS = {
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
     },
     defaults: { nato: 'us', pact: 'wh' },
-    types: TYPES_1945, alias: ALIAS_1945, air: AIR_1945,
+    types: TYPES_1945, alias: ALIAS_1945, air: { ...AIR_1945, ...BOMBERS[1945] },
     // each army's two signatures (1945's own ids: tot, airsup, riders, counter, cats, hold, paradrop;
     // the Soviets' mass barrage is 1985's)
     doctrine: {

@@ -89,6 +89,8 @@ const SUPPORT = [
   ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
+  ['air:lightBomber', 'jet', 'none', 'Light bombers', 'A flight of bombers from the airfield: level over the spot, a stick of bombs along the line'],
+  ['air:heavyBomber', 'jet', 'none', 'Heavy bombers', 'Heavy bombers from the airfield, high and slow: a long carpet of bombs along the line'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
   ['gas', 'flare', 'lift', 'Gas', 'Gas bombardment: shells that leave clouds drifting with the wind — men without masks fall, masked men move and shoot worse (1918)'],
   ['air:diveBomb', 'diveBomb', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],
@@ -191,6 +193,7 @@ export class ActionBar {
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
       b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
+        || aboard != null // (flown from a carrier or an airfield: launched from that base's own buttons, not from here)
         || (mass !== null ? !!g.world.openSea : !!KINDS[kind]?.sea !== !!g.world.openSea) // (at sea: the carrier missions only)
         || !!(KINDS[kind]?.coast && (!g.world.coastal || g.landing?.lands(me))); // (the coast's strike: the defence of a coastal map only)
       if (mass?.id === 'creep' && b.querySelector('.sup-name').textContent !== 'Creeping barrage') { b.querySelector('.sup-name').textContent = 'Creeping barrage'; b.title = 'Creeping barrage — a belt of shells that walks forward toward the enemy; follow it with your infantry'; }

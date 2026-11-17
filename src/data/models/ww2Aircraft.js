@@ -27,7 +27,7 @@ const point = (root, x, y, z) => {
 };
 
 /** National markings: the US star (blue disc, white star), the red star, the Balkenkreuz. `up`: on a wing. */
-function mark(kind, x, y, z, r, up = false) {
+export function mark(kind, x, y, z, r, up = false) {
   const disc = (rr, color, dy = 0) => P.cyl(rr, rr, 0.02, up ? { x, y: y + dy, z, color } : { x: x + Math.sign(x) * dy, y, z, rz: Math.PI / 2, color }, 16);
   const bar = (w, h, color, dy) => (up ? P.box(w, 0.02, h, { x, y: y + dy, z, color }) : P.box(0.02, h, w, { x: x + Math.sign(x) * dy, y, z, color }));
   if (kind === 'us') return [disc(r, 0x22325c), disc(r * 0.6, WHITE, 0.012), bar(r * 2.6, r * 0.35, WHITE, 0.006)];
@@ -37,7 +37,7 @@ function mark(kind, x, y, z, r, up = false) {
 }
 
 /** The spinner and `n` blades of radius r, in the propeller's own frame (it turns about z). */
-function propeller(n, r, color = 0x1e1e1c) {
+export function propeller(n, r, color = 0x1e1e1c) {
   return M([
     P.cyl(0.02, 0.24, 0.7, { z: 0.05, rx: Math.PI / 2, color: 0x3a3c36 }, 12), // (the spinner reaches back into the cowl)
     // each blade: a round shank out of the hub, widest a third of the way out, tapering to a rounded tip,
@@ -170,7 +170,7 @@ export const buildFjBf109 = (mats) => mount('bf109', mats, () => M([
 // ---------------------------------------------------------------- the paradrop's transports
 
 /** Mount a multi-engined aircraft: `props` [[x, y, z], …] each with its own propeller. */
-function mountMulti(key, mats, make, { props, blades = 3, r = 1.5, door }) {
+export function mountMulti(key, mats, make, { props, blades = 3, r = 1.5, door }) {
   const m = (cache[key] ??= { body: make(), prop: propeller(blades, r) });
   const root = new THREE.Group();
   meshAdder(root)(m.body, mats.body);
