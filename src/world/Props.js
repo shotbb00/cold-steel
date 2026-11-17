@@ -1018,6 +1018,105 @@ export class PropBuilder {
     this.box('plain', x, g + 5.6, z, 2.2, 0.15, 2.2, yaw, 0x3e3426);
   }
 
+  // ---------------------------------------------------------------- the 2020s countryside
+
+  /** A thin box from world point a to b ({x, y, z}): struts, wires, rails. */
+  beam(key, a, b, t, color) {
+    const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, len = Math.hypot(dx, dy, dz);
+    _q.setFromUnitVectors(_p.set(0, 1, 0), _s.set(dx / len, dy / len, dz / len));
+    _m.compose(_p.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2), _q, _s.set(t, len, t));
+    this.push(key, UNIT_BOX, _m, color);
+  }
+
+  /**
+   * A wind turbine: white tapered tower and nacelle (static), and the three-bladed rotor as its own
+   * group, returned — the map turns `rotor.userData.spin` (a landmark across the whole field).
+   */
+  windTurbine({ x, z, yaw, hub = 62, blade = 27 }) {
+    const g = this.terrain.heightAt(x, z);
+    _m.compose(_p.set(x, g + hub / 2, z), _q.identity(), _s.set(1, 1, 1));
+    this.push('metal', new THREE.CylinderGeometry(1.1, 2.1, hub, 12), _m, 0xe4e6e4);
+    this.box('stone', x, g + 0.4, z, 6, 0.8, 6, yaw, 0x9a9890);                        // foundation
+    const [nx, nz] = PropBuilder.local(x, z, yaw, 0, -1.2);
+    this.box('metal', nx, g + hub + 1.3, nz, 3, 3, 9, yaw, 0xe8eae8);                     // nacelle
+    this.cover.addCylinder({ x, z, radius: 2.1, height: 6, spots: false });
+    const white = new THREE.MeshStandardMaterial({ color: 0xeceeed, roughness: 0.55 });
+    const rotor = new THREE.Group();
+    const [hx, hz] = PropBuilder.local(x, z, yaw, 0, 3.6);
+    rotor.position.set(hx, g + hub + 1.3, hz);
+    rotor.rotation.y = yaw;
+    const spin = new THREE.Group();
+    rotor.add(spin);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(1.3, 2.6, 10), white);
+    nose.rotation.x = Math.PI / 2;
+    spin.add(nose);
+    for (let k = 0; k < 3; k++) {
+      const arm = new THREE.Group();
+      arm.rotation.z = (k / 3) * Math.PI * 2;
+      const geo = new THREE.CylinderGeometry(0.15, 1, blade, 6); // tapering to the tip, flattened
+      geo.scale(1, 1, 0.3);
+      geo.translate(0, blade / 2 + 0.6, 0);
+      const b = new THREE.Mesh(geo, white);
+      b.rotation.y = 0.18; // the blade's pitch
+      arm.add(b);
+      spin.add(arm);
+    }
+    for (const m of [nose, ...spin.children.flatMap((c) => c.children)]) m.castShadow = true;
+    rotor.userData.spin = spin;
+    this.scene.add(rotor);
+    return rotor;
+  }
+
+  /** A row of solar panels on a steel frame, along x, tilted to the south (low cover: crouch behind it). */
+  solarRow({ x, z, length = 24 }) {
+    const yaw = 0; // (the tilt is about world x)
+    const n = Math.round(length / 2.1);
+    for (let i = 0; i < n; i++) {
+      const [px, pz] = PropBuilder.local(x, z, yaw, -length / 2 + (i + 0.5) * (length / n), 0);
+      const g = this.terrain.heightAt(px, pz);
+      this.box('metal', px, g + 1.25, pz, length / n - 0.08, 0.06, 2.4, yaw, 0x1c2638, 0.5);  // the panel, tilted
+      this.box('metal', px, g + 0.6, pz, 0.08, 1.2, 0.08, yaw, 0x8a8c8a);                      // its post
+    }
+    this.cover.addBox({ x, z, yaw, length, thickness: 2.2, height: 1.4 });
+  }
+
+  /** A lattice power pylon; returns its two arm tips per side ([{x, y, z}] × 3) for the wires. */
+  pylon({ x, z, yaw, height = 30 }) {
+    const g = this.terrain.heightAt(x, z);
+    const grey = 0x8a8e8c;
+    const W = (lx, y, lz) => { const [wx, wz] = PropBuilder.local(x, z, yaw, lx, lz); return { x: wx, y: g + y, z: wz }; };
+    const base = 3.2, top = 0.8;
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) this.beam('metal', W(sx * base, 0, sz * base), W(sx * top, height, sz * top), 0.22, grey);
+    for (let y = 4; y < height - 2; y += 5) { // cross bracing
+      const w = base + (top - base) * (y / height), w2 = base + (top - base) * ((y + 5) / height);
+      for (const s of [-1, 1]) {
+        this.beam('metal', W(-w, y, s * w), W(w2, y + 5, s * w2), 0.1, grey);
+        this.beam('metal', W(s * w, y, -w), W(s * w2, y + 5, w2), 0.1, grey);
+      }
+    }
+    const tips = [];
+    for (const [y, span] of [[height * 0.7, 7], [height * 0.86, 5.5]]) {
+      this.beam('metal', W(-span, y, 0), W(span, y, 0), 0.3, grey);
+      for (const s of [-1, 1]) { tips.push(W(s * span, y - 1.6, 0)); this.beam('metal', W(s * span, y, 0), W(s * span, y - 1.6, 0), 0.12, 0x6a5a48); }
+    }
+    tips.push(W(0, height + 0.5, 0)); // the earth wire on top
+    this.cover.addCylinder({ x, z, radius: 2.4, height: 6, spots: false });
+    return tips;
+  }
+
+  /** Wires sagging between two pylons' tips. */
+  wires(a, b) {
+    for (let i = 0; i < a.length; i++) {
+      const p = a[i], q = b[i], sag = Math.hypot(q.x - p.x, q.z - p.z) * 0.035;
+      let prev = p;
+      for (let k = 1; k <= 4; k++) {
+        const t = k / 4, n = { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t - sag * 4 * t * (1 - t), z: p.z + (q.z - p.z) * t };
+        this.beam('metal', prev, n, 0.06, 0x2a2c2c);
+        prev = n;
+      }
+    }
+  }
+
   /** Merge every batch into one mesh per material and add them to the scene. */
   finish() {
     const add = (geo, key) => {

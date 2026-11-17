@@ -33,7 +33,7 @@ import aboukirLanding from './aboukirLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
-import suwalkiTest from './suwalkiTest.ts';
+import suwalkiGap from './suwalkiGap.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
@@ -42,7 +42,7 @@ export const MAPS = {
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
-  [suwalkiTest.id]: suwalkiTest,
+  [suwalkiGap.id]: suwalkiGap,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,

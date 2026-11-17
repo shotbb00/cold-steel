@@ -140,6 +140,7 @@ export class MapSheet {
         img.data[p + 1] = lit > 0 ? 196 : 0;
         img.data[p + 2] = lit > 0 ? 160 : 0;
         img.data[p + 3] = Math.abs(lit) * 70;
+        if (map.river?.lake && h[j * N + i] < map.river.level) img.data.set([63, 111, 143, 255], p); // a lake (WATER)
       }
     }
     sg.putImageData(img, 0, 0);
