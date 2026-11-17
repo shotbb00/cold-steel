@@ -141,13 +141,13 @@ export const KINDS = {
     aircraft: LIGHT_BOMBERS, flight: 3, label: 'Light bombers', key: 'none', cost: 260, cooldown: 150, delay: 8,
     approach: 2400, cruiseAlt: 220, attackAlt: 170, cruiseSpeed: 180, attackSpeed: 170,
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 160, turn: 0, pitchDown: 0,
-    bombs: { count: 6, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
+    bombs: { count: 8, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
   },
   heavyBomber: { // carpet bombing: a high, slow cell lays a long strip (no airfield holds them — Airfields.defaultGroup)
     aircraft: HEAVY_BOMBERS, flight: 3, spread: 2.6, label: 'Heavy bombers', key: 'none', cost: 420, cooldown: 240, delay: 12,
     approach: 3200, cruiseAlt: 360, attackAlt: 340, cruiseSpeed: 160, attackSpeed: 155,
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 420, turn: 0, pitchDown: 0,
-    bombs: { count: 14, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
+    bombs: { count: 40, damage: 900, splash: 16, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
   },
   // the Pacific (the open-sea maps): launched from the side's carrier (AirStrike.call: no carrier, no
   // missions), the strikes going for the enemy ship nearest the spot and following it (Sortie.trackShip).
@@ -863,9 +863,11 @@ class Sortie {
       _p.copy(r.root.position);
       _p.y -= 1.2;
       _a.copy(_p).addScaledVector(this.dir, this.speed * fall);
+      const across = (Math.random() - 0.5) * 14 * (this.p.spread ?? 1); _a.x += this.dir.z * across; _a.z -= this.dir.x * across; // (scattered across: the rows of the flight's carpet run together, no gaps between them)
       _a.y = g.terrain.heightAt(_a.x, _a.z);
+      const vx = (_a.x - _p.x) / fall, vz = (_a.z - _p.z) / fall, vh = Math.hypot(vx, vz) || 1; // (the drift that carries it to its own spot: the projectile flies its velocity, not to `target`)
       g.projectiles.spawn({
-        origin: _p, dir: this.dir, speed: this.speed, damage: b.damage, faction: this.faction,
+        origin: _p, dir: new THREE.Vector3(vx / vh, 0, vz / vh), speed: vh, damage: b.damage, faction: this.faction,
         color: new THREE.Color(0x1a1a18), size: 0.9, source: this, life: fall + 4,
         splash: b.splash, pierce: b.pierce, vsArmor: b.vsArmor, suppress: 4, gravity: BOMB_G, target: _a,
         whistleAt: Math.max(0.2, fall - 1.2), crater: b.crater, tracer: false,

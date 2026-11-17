@@ -29,12 +29,12 @@ const B52 = paint([0x5a6058, 0x4a5048, 0x646a60, 0x52584e], 1.2);
 
 const prop = { engineSound: 'prop', gun: NOGUN };
 const jet = { engineSound: 'jet', gun: NOGUN };
-const B18 = { count: 4, damage: 320, splash: 5, crater: 0.4 };
-const H18 = { count: 8, damage: 450, splash: 7, crater: 0.6 };
+const B18 = { count: 6, damage: 320, splash: 5, crater: 0.4 };
+const H18 = { count: 16, damage: 450, splash: 9, crater: 0.6 };
 const SLOW18 = { cruiseSpeed: 48, attackSpeed: 45, cruiseAlt: 120, attackAlt: 100, approach: 1200 };
 const HEAVY18 = { cruiseSpeed: 40, attackSpeed: 38, cruiseAlt: 160, attackAlt: 150, approach: 1200 };
-const B45 = { count: 6, damage: 700, splash: 10, crater: 0.9 };
-const H45 = { count: 10, damage: 800, splash: 11, crater: 1.0 };
+const B45 = { count: 8, damage: 700, splash: 10, crater: 0.9 };
+const H45 = { count: 26, damage: 800, splash: 14, crater: 1.0 };
 const MED45 = { cruiseSpeed: 95, attackSpeed: 90, cruiseAlt: 200, attackAlt: 160, approach: 2000 };
 const HEAVY45 = { cruiseSpeed: 85, attackSpeed: 80, cruiseAlt: 320, attackAlt: 300, approach: 2600, flight: 4 };
 
