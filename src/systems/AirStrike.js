@@ -135,7 +135,7 @@ export const KINDS = {
     swath: 170,        // m either side of the track the cameras take in
     hold: 30,          // s what they found stays located
   },
-  // bombers (data/bombers.js), from the airfields: level over the spot, each plane of the flight lets go a stick of
+  // bombers (data/bombers.js) — the light ones from the airfields, the heavy ones (too big for a field strip) in from the map edge; never off a carrier: level over the spot, each plane of the flight lets go a stick of
   // free-falling bombs (Sortie.bomb), released `lead` m short so they fall along `runLength` m of the line through it
   lightBomber: {
     aircraft: LIGHT_BOMBERS, flight: 3, label: 'Light bombers', key: 'none', cost: 260, cooldown: 150, delay: 8,
@@ -143,7 +143,7 @@ export const KINDS = {
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 160, turn: 0, pitchDown: 0,
     bombs: { count: 6, damage: 900, splash: 12, vsArmor: 0.8, pierce: 0.5, crater: 1.1 },
   },
-  heavyBomber: { // carpet bombing: a high, slow cell lays a long strip
+  heavyBomber: { // carpet bombing: a high, slow cell lays a long strip (no airfield holds them — Airfields.defaultGroup)
     aircraft: HEAVY_BOMBERS, flight: 3, spread: 2.6, label: 'Heavy bombers', key: 'none', cost: 420, cooldown: 240, delay: 12,
     approach: 3200, cruiseAlt: 360, attackAlt: 340, cruiseSpeed: 160, attackSpeed: 155,
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 420, turn: 0, pitchDown: 0,
@@ -1370,7 +1370,7 @@ export class AirStrike {
       const optional = p.deck === 'optional';
       const now = game.world.time;
       const slots = (s) => (s.units[0].deckBusy ?? []).filter((t) => t > now).length < (s.stats.carrier.slots ?? 1); // (a large air base: two at once)
-      const has = bases.filter((s) => (this.hangar(s.units[0])[kind] ?? 0) > 0);
+      const has = bases.filter((s) => (this.hangar(s.units[0])[kind] ?? 0) > 0 && (!p.bombs || s.stats.airfield)); // (bombers: never off a ship)
       const open = has.filter(runwayOpen);
       const free = open.filter(slots).sort((a, b) => (b.id === from) - (a.id === from) || this.hangar(b.units[0])[kind] - this.hangar(a.units[0])[kind]);
       if (!optional) {

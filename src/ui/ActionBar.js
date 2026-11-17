@@ -90,7 +90,7 @@ const SUPPORT = [
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
   ['air:lightBomber', 'jet', 'none', 'Light bombers', 'A flight of bombers from the airfield: level over the spot, a stick of bombs along the line'],
-  ['air:heavyBomber', 'jet', 'none', 'Heavy bombers', 'Heavy bombers from the airfield, high and slow: a long carpet of bombs along the line'],
+  ['air:heavyBomber', 'jet', 'none', 'Heavy bombers', 'Heavy bombers from bases far behind the lines, too big for a field strip: high and slow, a long carpet of bombs along the line'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
   ['gas', 'flare', 'lift', 'Gas', 'Gas bombardment: shells that leave clouds drifting with the wind — men without masks fall, masked men move and shoot worse (1918)'],
   ['air:diveBomb', 'diveBomb', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],

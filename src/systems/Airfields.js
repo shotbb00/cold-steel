@@ -16,7 +16,7 @@ const REPAIRERS = new Set(['engineers', 'cev', 'recovery', 'mineClear']);
 
 /** The squadrons an airfield holds: the land's (or at sea the island's) regular kinds this war flies. */
 function defaultGroup(sea, game) {
-  const g = sea ? (epoch() === '1985' ? { seaCap: 2, seaStrike: 3, aew: 1 } : { navCap: 3, diveBomb: 3, torpBomb: 2, navScout: 1 }) : { jet: 3, heli: 3, lift: 2, lightBomber: 2, heavyBomber: 1 };
+  const g = sea ? (epoch() === '1985' ? { seaCap: 2, seaStrike: 3, aew: 1 } : { navCap: 3, diveBomb: 3, torpBomb: 2, navScout: 1 }) : { jet: 3, heli: 3, lift: 2, lightBomber: 2 };
   const n = game.rules?.airGroups; // the battle rule: this many groups of each kind in reserve
   for (const k of Object.keys(g)) { if (KINDS[k]?.off) delete g[k]; else if (n) g[k] = n; }
   return g;
@@ -44,7 +44,7 @@ export class Airfields {
       this.list = [a, { ...a, faction: 'pact', x: -a.x, z: -a.z, yaw: a.yaw + Math.PI }];
       for (const f of this.list) f.group = defaultGroup(false, g);
     }
-    if (mineOnly) this.list = this.list.filter((a) => a.faction === g.playerFaction).map((a) => ({ ...a, group: { lightBomber: 2, heavyBomber: 1 } })); // (boot camp: the bombers only — its earlier lessons call the rest from the map edge)
+    if (mineOnly) this.list = this.list.filter((a) => a.faction === g.playerFaction).map((a) => ({ ...a, group: { lightBomber: 2 } })); // (boot camp: the light bombers only — its earlier lessons call the rest from the map edge)
     const props = new PropBuilder({ scene: g.scene, terrain: g.terrain, cover: g.cover, seed: 77 });
     for (const a of this.list) this.lay(props, a);
     props.finish();
