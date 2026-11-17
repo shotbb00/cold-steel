@@ -21,6 +21,7 @@ import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX, CODEX45, CODEX1806 } from '../data/codex.js';
+import { CODEX2027 } from '../data/codex2027.js';
 import { CODEX1918 } from '../data/codex1918.js';
 import { keyOf, touchScreen, keyHint } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
@@ -718,7 +719,7 @@ export class MainMenu {
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
     const ww2 = epoch() !== '1985'; // (another war: its own entry, never 1985's history)
-    const own = { 1945: CODEX45, 1918: CODEX1918, 1806: CODEX1806 }[epoch()]?.[id];
+    const own = { 1945: CODEX45, 1918: CODEX1918, 1806: CODEX1806, 2027: CODEX2027 }[epoch()]?.[id];
     const c = own ? { ...own, ...own.armies?.[army] } : epoch() === '1918' ? null : CODEX[id]; // (1918: its own entries only — 1985's would describe another unit in the same slot: the balloon is no radar) // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyHint(a, 'its order'));

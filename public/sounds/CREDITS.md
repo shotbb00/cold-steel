@@ -104,3 +104,5 @@ The same goes for these, cut from YouTube uploads whose source and licence are u
 | `ambience/birds.mp3` | [birds chirping in a forest](https://freesound.org/people/fleurescence/sounds/578857/) | fleurescence | [CC0](http://creativecommons.org/publicdomain/zero/1.0/) |
 
 Some qubodup recordings are extracted from U.S. military public-domain footage (DVIDS); see each sound's page.
+
+The drones' loops (`vehicles/drone-quad.wav`, `vehicles/drone-lancet.wav`) are synthesised by `tools/gen_drone_sounds.py` — no recording.

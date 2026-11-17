@@ -18,9 +18,9 @@ import * as THREE from 'three';
 import { doctrine } from '../data/doctrine.js';
 
 export const DRONE = {
-  recon: { speed: 16, alt: 70, radius: 140, station: 80, hold: 4, mesh: 'quad', scale: 1.6, sound: ['rotor.uh60', 3.4, 0.16] },
-  fpv: { speed: 30, alt: 12, damage: 950, pierce: 0.92, splash: 3, life: 40, search: 70, mesh: 'quad', scale: 1.2, sound: ['rotor.uh60', 4.2, 0.22] },
-  lancet: { speed: 44, alt: 75, damage: 1500, pierce: 0.95, splash: 3.5, life: 100, search: 240, mesh: 'wing', scale: 1, sound: ['engine.dieselSmall', 2.6, 0.18] },
+  recon: { speed: 16, alt: 70, radius: 140, station: 80, hold: 4, mesh: 'quad', scale: 1.6, sound: ['drone.quad', 0.85, 0.2] },
+  fpv: { speed: 30, alt: 12, damage: 950, pierce: 0.92, splash: 3, life: 40, search: 70, mesh: 'quad', scale: 1.2, sound: ['drone.quad', 1.15, 0.26] },
+  lancet: { speed: 44, alt: 75, damage: 1500, pierce: 0.95, splash: 3.5, life: 100, search: 240, mesh: 'wing', scale: 1, sound: ['drone.lancet', 1, 0.24] },
 };
 const TICK = 0.25;
 const MAX = 96;
@@ -215,6 +215,7 @@ export class Drones {
         const dive = d.kind === 'lancet' ? P.alt * 1.1 : 35;
         aim = _p.set(t.pos.x, hd > dive ? Math.max(T.heightAt(d.pos.x, d.pos.z), T.heightAt(t.pos.x, t.pos.z)) + P.alt : ty, t.pos.z);
         if (Math.hypot(hd, d.pos.y - ty) < 2.5) return this.strike(d, t);
+        if (hd < 70 && !d.heard) { d.heard = true; t.stack.bark?.(t, 'drone', 1, true); } // ("Drone! Drone overhead!")
       }
     }
     // steer: toward the aim at its speed (a Lancet diving: faster), never into the ground

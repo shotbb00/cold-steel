@@ -2,6 +2,8 @@
 // NVA, Wehrmacht and Fallschirmjäger shout German, the Soviets Russian — on whichever side they
 // fight), else by side. UnitStack.bark(unit, kind) picks a random line.
 // Shown as floating text above the soldier (ui/Barks.js); Russian in transliteration. There is no speech.
+import { epoch } from './epoch.js';
+
 const LINES = {
   nato: {
     contact: ['Contact front!', 'Enemy infantry!', 'Got movement, eleven o\'clock!', 'Contact! Contact!', 'Eyes on, hostiles!'],
@@ -166,11 +168,41 @@ LINES.raid18 = {
   flank: ['Along the parapet!', 'Lewis gun, cover the wire!', 'Round by the sheds!', 'Bomb them out!'],
   retreat: ['Back to the ship!', 'Fall back on Vindictive!', 'Back to the brows!'],
 };
+// 2027 (data/epoch.js): today's US soldiers, the Poles in Polish, Russians and Belarusians in Russian —
+// and the new cry of every front, the drone overhead (`drone`: systems/Drones.js)
+LINES.us27 = {
+  ...LINES.nato,
+  contact: ['Contact front!', 'Enemy dismounts!', 'Movement, treeline, eleven o\'clock!', 'Contact! Contact!', 'Got thermals on them!'],
+  drone: ['Drone! Drone overhead!', 'FPV inbound!', 'Drone, get in cover!', 'Shoot it down!', 'Lancet! Scatter!'],
+  wounded: ['I\'m hit bad!', 'Medic!', 'Doc! Doc!', 'Can\'t feel my leg!'],
+};
+LINES.pl = {
+  contact: ['Kontakt!', 'Wróg z przodu!', 'Ruch, godzina jedenasta!', 'Kontakt! Kontakt!'],
+  cover: ['Kryj się!', 'Do ukrycia!', 'Padnij!', 'Za mur!'],
+  reload: ['Przeładowuję!', 'Osłaniaj!', 'Pusty magazynek!'],
+  hit: ['Dostałem!', 'Cholera!', 'Nic mi nie jest!'],
+  wounded: ['Sanitariusz!', 'Jestem ranny!', 'Pomocy!', 'Moja noga!'],
+  down: ['Ranny! Ranny!', 'Mamy rannego!', 'Sanitariusz!', 'Nie żyje!'],
+  pinned: ['Przygwoździli nas!', 'Głowy w dół!', 'Za duży ogień!'],
+  retreat: ['Odwrót!', 'Wycofać się!', 'Do tyłu!'],
+  flank: ['Obchodzimy z lewej!', 'Oskrzydlić ich!', 'Druga drużyna, w prawo!'],
+  rally: ['Do mnie!', 'Zbiórka!', 'Za mną!'],
+  bail: ['Opuścić wóz!', 'Trafieni, wychodzić!', 'Wychodzić, wychodzić!'],
+  officer: ['Porucznik ranny!', 'Dowódca nie żyje!', 'Kto dowodzi?!'],
+  drone: ['Dron! Dron nad nami!', 'FPV leci!', 'Dron, kryć się!', 'Zestrzelić go!'],
+  landing: ['Rampa w dół!', 'Naprzód, naprzód!', 'Z łodzi, ruszać się!', 'Za mną!'],
+};
+LINES.ru27 = {
+  ...LINES.pact,
+  contact: ['Protivnik!', 'Vizhu vraga!', 'Kontakt!', 'Dvizheniye v posadke!', 'Teplak vidit ikh!'],
+  drone: ['Dron! Dron nad nami!', 'FPV-shka letit!', 'Vozdukh! Vozdukh!', 'Ptichka! V ukrytiye!', 'Sbey yego!'],
+};
+const LANG27 = { us: 'us27', pl: 'pl', ru: 'ru27', by: 'ru27' };
 const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
-  const lang = LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const lang = (epoch() === '2027' ? LANG27[army] : null) ?? LANG[army] ?? faction;
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

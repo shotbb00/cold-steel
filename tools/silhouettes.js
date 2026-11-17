@@ -49,6 +49,7 @@ const ARMIES = {
   1985: [['nato', 'us', null], ['pact', 'sov', null], ['nato', 'bw', 'bw'], ['pact', 'nva', 'nva']],
   1945: [['nato', 'us', null], ['pact', 'wh', null], ['nato', 'sov', 'sov'], ['pact', 'fj', 'fj']],
   1918: [['nato', 'uk', null], ['pact', 'de', null], ['nato', 'fr', 'fr'], ['pact', 'st', 'st']],
+  2027: [['nato', 'us', null], ['pact', 'ru', null], ['nato', 'pl', 'pl'], ['pact', 'by', 'by']],
   1806: [['nato', 'fr', null], ['pact', 'pr', null], ['nato', 'by', 'by'], ['pact', 'sx', 'sx'], ['pact', 'gb', 'gb']],
 };
 

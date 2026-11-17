@@ -55,7 +55,6 @@ export function icon(name, cls = '') {
 /** A unit's side-view silhouette (public/silhouettes, made by tools/render_silhouettes.py), as a
  *  mask so CSS gives it its colour; nothing shows if the type has none. */
 export function silhouette(typeId, faction, cls = '') {
-  typeId = { fpvTeam: 'observers', loiterTeam: 'mortar' }[typeId] ?? typeId; // (2027's drone teams: until their own art, step 7)
-  const url = `url(silhouettes/${typeId}-${epoch() === '1985' || epoch() === '2027' ? '' : `${epoch()}-`}${faction}.png)`; // each war its own (tools/render_silhouettes.py)
+  const url = `url(silhouettes/${typeId}-${epoch() === '1985' ? '' : `${epoch()}-`}${faction}.png)`; // each war its own (tools/render_silhouettes.py)
   return `<i class="sil${cls ? ` ${cls}` : ''}" style="-webkit-mask-image:${url};mask-image:${url}" aria-hidden="true"></i>`;
 }

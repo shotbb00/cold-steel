@@ -78,6 +78,12 @@
     "weapons/bushmaster-2.wav",
     "weapons/bushmaster-3.wav"
   ],
+  "drone.quad": [
+    "vehicles/drone-quad.wav"
+  ],
+  "drone.lancet": [
+    "vehicles/drone-lancet.wav"
+  ],
   "rotor.uh60": [
     "aircraft/uh60-hover.mp3"
   ],
