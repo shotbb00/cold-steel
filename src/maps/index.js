@@ -34,6 +34,12 @@ import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
 import suwalkiGap from './suwalkiGap.ts';
+import suwalkiTown from './suwalkiTown.ts';
+import nemanCrossing from './nemanCrossing.ts';
+import augustowCanal from './augustowCanal.ts';
+import eastShield from './eastShield.ts';
+import biebrzaMarshes from './biebrzaMarshes.ts';
+import orzyszBase from './orzyszBase.ts';
 
 export const MAPS = {
   [omaha.id]: omaha,
@@ -43,6 +49,12 @@ export const MAPS = {
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
   [suwalkiGap.id]: suwalkiGap,
+  [suwalkiTown.id]: suwalkiTown,
+  [nemanCrossing.id]: nemanCrossing,
+  [augustowCanal.id]: augustowCanal,
+  [eastShield.id]: eastShield,
+  [biebrzaMarshes.id]: biebrzaMarshes,
+  [orzyszBase.id]: orzyszBase,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
