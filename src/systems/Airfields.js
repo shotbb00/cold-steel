@@ -5,6 +5,7 @@
 // enemy), the trees on the runway cleared and the runway, its markings and a hangar laid as props; the
 // host spawns the airfield units (data/units/airfield.js). Shut when badly hit (CLOSED) until sappers, an
 // engineer vehicle or a recovery vehicle within REPAIR.range repair it.
+import * as THREE from 'three';
 import { PropBuilder } from '../world/Props.js';
 import { KINDS } from './AirStrike.js';
 import { CLOSED } from '../data/units/airfield.js';
@@ -48,6 +49,24 @@ export class Airfields {
     const props = new PropBuilder({ scene: g.scene, terrain: g.terrain, cover: g.cover, seed: 77 });
     for (const a of this.list) this.lay(props, a);
     props.finish();
+    this.clearDetail();
+  }
+
+  /** The grass, bushes, pebbles and hedges (world/Vegetation.js: meshes tagged userData.detail) off the runways. */
+  clearDetail() {
+    const strips = this.list.map((a) => this.strip(a)), M = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0), v = new THREE.Vector3();
+    const on = (x, z) => strips.some((s) => Math.abs((x - s.cx) * s.fx + (z - s.cz) * s.fz) < s.len / 2 + 6 && Math.abs((x - s.cx) * s.fz - (z - s.cz) * s.fx) < s.width / 2 + 4);
+    this.game.scene.traverse((o) => {
+      if (!o.isInstancedMesh || !o.userData.detail) return;
+      o.updateMatrixWorld();
+      let hit = false;
+      for (let i = 0, n = Math.max(o.count, o.userData.baseCount ?? 0); i < n; i++) { // (all of them: a lower quality draws fewer now, a higher one more later)
+        o.getMatrixAt(i, M);
+        v.setFromMatrixPosition(M).applyMatrix4(o.matrixWorld);
+        if (on(v.x, v.z)) { o.setMatrixAt(i, Z); hit = true; }
+      }
+      if (hit) o.instanceMatrix.needsUpdate = true;
+    });
   }
 
   /** The best flat open strip near `faction`'s base: the runway along x, the tower on the side toward the battle. */
@@ -86,20 +105,36 @@ export class Airfields {
     return { cx: a.x - fz * RUNWAY.side, cz: a.z + fx * RUNWAY.side, fx, fz, len: RUNWAY.len, width: RUNWAY.width * (a.large ? 1.4 : 1) };
   }
 
+  /** Is (x, z) on airfield stack `st`'s ground: its runway, or by its tower and hangar? */
+  onField(st, x, z) {
+    const u = st.units[0];
+    if (!u) return false;
+    const s = this.strip({ x: u.pos.x, z: u.pos.z, yaw: u.yaw ?? st.yaw ?? 0, large: (st.stats.carrier?.slots ?? 1) > 1 });
+    const along = (x - s.cx) * s.fx + (z - s.cz) * s.fz, across = (x - s.cx) * s.fz - (z - s.cz) * s.fx;
+    return Math.abs(along) < s.len / 2 && across > -s.width / 2 && across < RUNWAY.side + 20;
+  }
+
   /** Clear the trees off it, and lay the asphalt, its markings and the hangars. */
   lay(props, a) {
     const g = this.game, T = g.terrain, s = this.strip(a);
     const along = (x, z) => (x - s.cx) * s.fx + (z - s.cz) * s.fz, across = (x, z) => (x - s.cx) * s.fz - (z - s.cz) * s.fx;
     for (const f of g.cover.forests ?? []) f.clear?.((x, z) => Math.abs(along(x, z)) < s.len / 2 + 30 && Math.abs(across(x, z)) < s.width / 2 + 45);
     const yaw = Math.atan2(s.fx, s.fz);
-    for (let t = -s.len / 2; t < s.len / 2; t += 10) {
-      const x = s.cx + s.fx * (t + 5), z = s.cz + s.fz * (t + 5), y = T.heightAt(x, z);
-      props.box('stone', x, y + 0.05, z, s.width, 0.2, 10.2, yaw, 0x55555a);              // the asphalt
-      if (Math.round(t / 10) % 2 === 0) props.box('plain', x, y + 0.17, z, 0.5, 0.04, 6, yaw, 0xd8d8d0); // the centre line
+    // the asphalt: a sheet draped over the ground every 4 m (a flat slab would sink into a slope)
+    const sheet = new THREE.PlaneGeometry(s.width, s.len, Math.ceil(s.width / 4), Math.ceil(s.len / 4)).rotateX(-Math.PI / 2), pos = sheet.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const w = pos.getX(i), t = pos.getZ(i), x = s.cx + s.fx * t + s.fz * w, z = s.cz + s.fz * t - s.fx * w;
+      pos.setXYZ(i, x, T.heightAt(x, z) + 0.2, z);
+    }
+    sheet.computeVertexNormals();
+    props.push('stone', sheet, new THREE.Matrix4(), 0x55555a);
+    for (let t = -s.len / 2; t < s.len / 2; t += 20) { // the centre line
+      const x = s.cx + s.fx * (t + 5), z = s.cz + s.fz * (t + 5);
+      props.box('plain', x, T.heightAt(x, z) + 0.27, z, 0.5, 0.04, 6, yaw, 0xd8d8d0);
     }
     for (const end of [-1, 1]) for (let k = -3; k <= 3; k++) { // threshold bars
       const x = s.cx + s.fx * end * (s.len / 2 - 6) + s.fz * k * 3.4, z = s.cz + s.fz * end * (s.len / 2 - 6) - s.fx * k * 3.4;
-      props.box('plain', x, T.heightAt(x, z) + 0.17, z, 1.6, 0.04, 8, yaw, 0xd8d8d0);
+      props.box('plain', x, T.heightAt(x, z) + 0.27, z, 1.6, 0.04, 8, yaw, 0xd8d8d0);
     }
     for (const k of a.large ? [-50, 50] : [40]) { // the hangars beside the tower
       const x = a.x + s.fx * k, z = a.z + s.fz * k;

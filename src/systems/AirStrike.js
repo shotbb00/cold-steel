@@ -262,8 +262,11 @@ function deckOf(u) {
   const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), z0 = c.deckZ ?? 0; // (deckZ: the flight deck's middle, fore or aft of hers — the Kiev's is all aft)
   const dx = c.deckX ?? 0; // (an airfield: the runway beside the tower, on the ground there)
   const cx = u.pos.x + fx * z0 + fz * dx, cz = u.pos.z + fz * z0 - fx * dx;
-  const floor = c.land ? u.stack.world.terrain.heightAt(cx, cz) : u.pos.y;
-  return { top: floor + (c.deck ?? 16), len: c.deckLen ?? 240, fx, fz, cx, cz, v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
+  const T = u.stack.world.terrain, h = c.deck ?? 16;
+  const floor = c.land ? T.heightAt(cx, cz) : u.pos.y;
+  // at(s): the deck's height `s` m along it — an airfield's runway follows the ground under it
+  const at = (s) => (c.land ? T.heightAt(cx + fx * s, cz + fz * s) + h : floor + h);
+  return { top: floor + h, at, land: !!c.land, len: c.deckLen ?? 240, fx, fz, cx, cz, v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
 }
 
 // a flight's wingmen off the leader: [side, back, down] in metres — a vee, the fourth in the slot
@@ -406,7 +409,7 @@ class Sortie {
     this.build();
     const d = deckOf(cv);
     this.deckS = -d.len * 0.12;
-    this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
+    this.pos.set(d.cx + d.fx * this.deckS, d.at(this.deckS), d.cz + d.fz * this.deckS);
     this.yaw = cv.yaw;
     this.pitch = 0;
     this.roll = 0;
@@ -435,7 +438,8 @@ class Sortie {
   placeDeck() {
     this.rig.root.position.copy(this.pos);
     this.rig.root.rotation.set(0, this.yaw, 0, 'YXZ');
-    this.wing.forEach((w, i) => { w.root.position.set(this.pos.x - this.dir.x * TRAIL * (i + 1), this.pos.y, this.pos.z - this.dir.z * TRAIL * (i + 1)); w.root.rotation.set(0, this.yaw, 0, 'YXZ'); });
+    const d = this.cvUnit?.alive ? deckOf(this.cvUnit) : { land: false };
+    this.wing.forEach((w, i) => { const wx = this.pos.x - this.dir.x * TRAIL * (i + 1), wz = this.pos.z - this.dir.z * TRAIL * (i + 1); w.root.position.set(wx, d.land ? d.at(this.deckS - TRAIL * (i + 1)) : this.pos.y, wz); w.root.rotation.set(0, this.yaw, 0, 'YXZ'); });
   }
 
   spawn() {
@@ -725,7 +729,7 @@ class Sortie {
     this.speed = this.rollV;
     if (this.deckS < d.len * 0.48) { // on the deck, carried along with her
       this.deckS += this.rollV * dt;
-      this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
+      this.pos.set(d.cx + d.fx * this.deckS, d.at(this.deckS), d.cz + d.fz * this.deckS);
       this.yaw = cv.yaw;
       this.pitch = 0;
       this.roll = 0;
@@ -734,7 +738,7 @@ class Sortie {
       this.pos.z += (d.fz * this.rollV) * dt;
       this.pos.y += 7 * dt;
       this.pitch += (-0.2 - this.pitch) * Math.min(1, dt * 3);
-      if (this.pos.y > d.top + 18) {
+      if (this.pos.y > d.at(this.deckS) + 18) {
         this.state = 'ingress';
         this.yaw = Math.atan2(this.target.x - this.pos.x, this.target.z - this.pos.z);
       }
@@ -762,7 +766,7 @@ class Sortie {
     if (this.state === 'rollout') { // on the deck: the arrester wire takes the way off
       this.rollV = Math.max(0, this.rollV - 22 * dt);
       this.deckS += this.rollV * dt;
-      this.pos.set(d.cx + d.fx * this.deckS, d.top, d.cz + d.fz * this.deckS);
+      this.pos.set(d.cx + d.fx * this.deckS, d.at(this.deckS), d.cz + d.fz * this.deckS);
       this.yaw = cv.yaw;
       this.pitch = 0;
       this.roll = 0;
@@ -782,7 +786,7 @@ class Sortie {
       const dist = Math.hypot(tx - this.pos.x, tz - this.pos.z);
       turn(Math.atan2(tx - this.pos.x, tz - this.pos.z), 1.1);
       this.speed += (d.v + Math.max(14, Math.min(this.p.cruiseSpeed, dist * 0.09)) - this.speed) * Math.min(1, dt * 1.5);
-      this.pos.y += (d.top + 1 + dist * 0.07 - this.pos.y) * Math.min(1, dt * 2);
+      this.pos.y += (d.at(-d.len * 0.36) + 1 + dist * 0.07 - this.pos.y) * Math.min(1, dt * 2);
       this.pitch += (-0.06 - this.pitch) * Math.min(1, dt * 2);
       if (dist < 9) { this.state = 'rollout'; this.deckS = -d.len * 0.36; this.rollV = Math.max(8, this.speed - d.v); }
     }
@@ -819,9 +823,11 @@ class Sortie {
       if (this.hp > 0 && this.faction === this.game.playerFaction) this.game.tell(this.faction, `${this.type.name}: one of the flight shot down`); // (the whole flight down: shotDown says it)
     }
     const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
+    const c = this.cvUnit?.stack.stats.carrier, land = !!c?.land, T = this.game.terrain, deck = c?.deck ?? 0;
     this.wing.forEach((w, i) => {
       const [sx, bk, dn] = (line ? [0, TRAIL * (i + 1), 0] : WING[i] ?? [0, 24 + i * 12, 3]).map((v) => v * (this.p.spread ?? 1)); // (the big bombers: wider apart)
-      w.root.position.set(this.pos.x + this.side.x * sx - this.dir.x * bk, this.pos.y - dn, this.pos.z + this.side.z * sx - this.dir.z * bk);
+      const wx = this.pos.x + this.side.x * sx - this.dir.x * bk, wz = this.pos.z + this.side.z * sx - this.dir.z * bk;
+      w.root.position.set(wx, line && land ? Math.max(this.pos.y - dn, T.heightAt(wx, wz) + deck) : this.pos.y - dn, wz); // (behind on a runway: on its ground, not in it)
       w.root.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
       spin(w, this.type, dt);
     });

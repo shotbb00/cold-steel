@@ -757,7 +757,8 @@ export class CommandSystem {
     const reach = this.game.input.touch ? 34 : 20;
     let best = null;
     let bestD = reach * reach;
-    for (const s of this.game.world.stacksOf(faction)) {
+    const own = faction === this.faction ? this.game.world.basesOf(faction).filter((s) => s.stats.airfield) : []; // (your airfields: not in stacksOf)
+    for (const s of [...this.game.world.stacksOf(faction), ...own]) {
       if (s.visible === false || !ok(s)) continue;
       for (const u of s.units) {
         if (!u.alive || u.visible === false) continue;
@@ -769,19 +770,21 @@ export class CommandSystem {
     }
     if (best) return best;
     const p = this.pickGround(x, y, this._p);
+    const field = p && own.find((s) => this.game.airfields?.onField(s, p.x, p.z) && ok(s)); // (a click on its runway or its tower)
+    if (field) return field;
     const near = p ? this.stackNear(p, faction) : null;
     return near && ok(near) ? near : null;
   }
 
   clickSelect(x, y, shift) {
-    const stack = this.stackAt(x, y, this.faction, (s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
+    const stack = this.stackAt(x, y, this.faction, (s) => this.game.mine(s) && (!s.stats.structure || s.stats.airfield) && !s.autonomous); // (an airfield: selected to launch its squadrons)
     if (!shift) this.selected.clear();
     if (stack) {
       if (shift && this.selected.has(stack)) this.selected.delete(stack);
       else this.selected.add(stack);
       // double-click: take control
       const now = performance.now();
-      if (this.lastClick?.stack === stack && now - this.lastClick.time < 350) {
+      if (this.lastClick?.stack === stack && now - this.lastClick.time < 350 && !stack.stats.airfield) {
         this.lastClick = null;
         this.game.bus.emit('ui:possess', stack);
         return;
