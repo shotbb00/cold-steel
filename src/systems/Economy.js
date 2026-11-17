@@ -1,11 +1,12 @@
 // Two budgets beside the command points (Frontline and its variants), each side the same base income:
 //   build    – every structure (sandbags to bunkers, house upgrades) is paid from it (core/Orders.js 'build')
 //   support  – air strikes, barrages and the 1806 powers (systems/AirStrike.js, Barrage.js, Powers1806.js)
-// Side objectives raise them: an airfield, a refinery and a factory on the map's middle line, taken
-// and held like control points (a second systems/ControlPoints.js, so they don't count toward the
+// Side objectives raise them: a signals post (support), a supply depot (both) and an engineer depot (build) on the
+// map's middle line — named for the war (SIDE_OBJECTIVES names) — taken and held like control points (a second systems/ControlPoints.js, so they don't count toward the
 // front's bleed or the CP income). Modes without these pools pay everything in CP (GameEngine.spendFrom).
 import { ControlPoints } from './ControlPoints.js';
 import { enemyOf } from '../data/factions.js';
+import { epoch } from '../data/epoch.js';
 
 /** Per minute; `start` at the beginning of the battle. */
 export const BUDGETS = { build: { start: 150, base: 5 }, support: { start: 200, base: 40 } };
@@ -13,10 +14,12 @@ export const BUDGETS = { build: { start: 150, base: 5 }, support: { start: 200, 
 // ration the air group: the support budget comes in three times as fast there
 const SEA_SUPPORT = 3;
 export const SIDE_OBJECTIVES = [
-  { id: '✈', name: 'Airfield', from: [-0.88, -0.4], support: 30, build: 0 },
-  { id: '⛽', name: 'Refinery', from: [0.4, 0.88], support: 15, build: 3 },
-  { id: '⚙', name: 'Factory', from: [-0.4, 0.4], support: 0, build: 5 },
+  { key: 'signals', id: '✦', names: { 1806: 'Semaphore station', 1918: 'Signal exchange', any: 'Radio relay' }, from: [-0.88, -0.4], support: 30, build: 0 },
+  { key: 'depot', id: '⬢', names: { 1806: 'Powder magazine', 1918: 'Ammunition dump', any: 'Supply depot' }, from: [0.4, 0.88], support: 15, build: 3 },
+  { key: 'works', id: '⚒', names: { 1806: 'Timber yard', 1918: 'Engineer park', any: 'Engineer depot' }, from: [-0.4, 0.4], support: 0, build: 5 },
 ];
+/** What holding side objective `o` brings, in words ('+30 support/min'). */
+export const sideGain = (o) => [o.support && `+${o.support} support`, o.build && `+${o.build} build`].filter(Boolean).join(', ') + ' a minute';
 
 /**
  * Where the side objectives go: on or near the middle line (fair to both sides), in their stretch
@@ -43,7 +46,7 @@ export function sideObjectiveDefs(game, points) {
     }
     if (!best) continue;
     taken.push(best);
-    defs.push({ ...o, ...best, owner: null, radius: 20 });
+    defs.push({ ...o, name: o.names[epoch()] ?? o.names.any, ...best, owner: null, radius: 20 });
   }
   return defs;
 }

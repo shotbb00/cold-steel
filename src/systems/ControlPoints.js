@@ -60,6 +60,7 @@ export class ControlPoints {
     const owner = d.owner ?? null;
     const p = {
       id: d.id, name: d.name ?? d.id, x: d.x, z: d.z, y, radius, sector: d.sector ?? null,
+      key: d.key, support: d.support, build: d.build, // (a side objective: what it is, what it brings — systems/Economy.js)
       owner, progress: owner ? this.sign(owner) : 0, contested: false, counts: {},
       flag, flagPivot, flagMat, ringMat,
     };
