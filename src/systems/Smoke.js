@@ -7,7 +7,17 @@
 //   mortar smoke rounds             – K with a mortar team selected, then click the spot
 //   (the enemy director screens its assaults with its mortars)
 // Clouds drift with the wind (world/Wind.js) and a strong wind thins them sooner.
+// 2027: a thermal sight (nightSight 0.85 or better) looks through ordinary smoke — shells, grenades,
+// burning houses — but not the vehicles' multispectral screens (`ms`: their grenade launchers).
 import { wind, updateWind } from '../world/Wind.js';
+import { epoch } from '../data/epoch.js';
+
+/** Does a spotter with `stats` of `faction` see heat through ordinary smoke? (2027 thermals) */
+export function thermalSees(stats, faction) {
+  if (epoch() !== '2027') return false;
+  const ns = stats?.nightSight;
+  return (typeof ns === 'object' ? ns?.[faction] : ns) >= 0.85;
+}
 
 export const SMOKE = {
   radius: 10,       // metres, fully grown
@@ -23,9 +33,9 @@ export class SmokeSystem {
   }
 
   /** Lay a cloud at (x, z). */
-  add(x, z, { radius = SMOKE.radius, duration = SMOKE.duration, powder = false } = {}) { // (powder: a volley's smoke, no canister pop)
+  add(x, z, { radius = SMOKE.radius, duration = SMOKE.duration, powder = false, ms = false } = {}) { // (powder: a volley's smoke, no canister pop)
     duration /= 1 + 0.12 * wind.speed; // a gale tears a screen apart sooner
-    const cloud = { x, z, maxR: radius, r: 0, t: 0, duration };
+    const cloud = { x, z, maxR: radius, r: 0, t: 0, duration, ms };
     this.clouds.push(cloud);
     const river = this.game.world.river, ground = this.game.terrain.heightAt(x, z);
     const y = river && ground < river.level ? river.level + 1.5 : ground; // (on the water, never on the sea floor under it)
@@ -55,10 +65,10 @@ export class SmokeSystem {
     }
   }
 
-  /** True if the ground line a→b passes through any cloud. */
-  blocks(ax, az, bx, bz) {
+  /** True if the ground line a→b passes through any cloud (`thermal`: only a multispectral one). */
+  blocks(ax, az, bx, bz, thermal = false) {
     for (const c of this.clouds) {
-      if (c.r < 1.5) continue;
+      if (c.r < 1.5 || (thermal && !c.ms)) continue;
       const dx = bx - ax;
       const dz = bz - az;
       const len2 = dx * dx + dz * dz || 1e-6;

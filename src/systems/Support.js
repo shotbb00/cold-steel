@@ -45,6 +45,18 @@ export class Support {
           if (onBridge || world.neighbors(u.pos, gol.trigger, _near).some((o) => o.alive && o.faction !== s.faction)) this.detonate(s, u, gol);
         }
       }
+      // 2027 shoot and scoot (stats.scoot): a battery the enemy has found (a radar, a drone) drives off to a new spot
+      const sc = s.alive && s.stats.scoot;
+      if (sc && world.time - (s.firedAt ?? -99) < 25 && world.time > (s.scootAt ?? 0) && !s.moveTarget && s.units.some((u) => u.alive && u.locatedUntil > world.time)) {
+        s.scootAt = world.time + sc.every;
+        const away = world.bases?.[s.faction] ?? s.centroid;
+        const bx = away.x - s.centroid.x, bz = away.z - s.centroid.z, L = Math.hypot(bx, bz) || 1;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const x = s.centroid.x + (bx / L) * sc.dist * 0.5 + (bz / L) * side * sc.dist, z = s.centroid.z + (bz / L) * sc.dist * 0.5 - (bx / L) * side * sc.dist;
+        s.ai.moveTo(world.river?.dry ? world.river.dry({ x, z }) : { x, z }, {});
+        s.job = 'relocating';
+        this.game.tell?.(s.faction, `${s.name}: located — relocating`);
+      }
       const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
       s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
     }

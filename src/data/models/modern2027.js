@@ -17,7 +17,9 @@
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { meshAdder, trackedHull, planProfile } from './vehicleCommon.js';
-import { vehicle, wheeled, buildNatoM3, buildPactBRDM, buildPactKonkurs } from './support.js';
+import { vehicle, wheeled, buildNatoM3, buildPactBRDM, buildPactKonkurs, buildNatoMLRS, buildPactGrad, buildNatoTACJAM, buildPactR330, buildNatoFirefinder, buildPactARK1 } from './support.js';
+import { buildNatoM109 } from './natoM109.js';
+import { buildPact2S1 } from './pact2S1.js';
 import { buildNatoAbrams } from './natoAbrams.js';
 import { buildPactT72 } from './pactT72.js';
 import { buildPactBMP2 } from './pactBMP2.js';
@@ -254,3 +256,13 @@ const launcher8 = (tubes) => vehicle(() => ({
 }));
 export const buildStrykerATGM = launcher8([[-0.3, 0.12], [-0.3, -0.14]]);    // TOW: two tubes
 export const buildRosomakSpike = launcher8([[-0.3, 0.12], [-0.3, -0.14], [0.25, -0.14]]);
+
+// ---------------------------------------------------------------- step 5: fires and EW (the 1985 vehicles in 2027 paint until step 6)
+export const buildPaladin = kit(buildNatoM109, () => ({}));
+export const buildMsta = kit(buildPact2S1, () => ({}));
+export const buildM270A2 = kit(buildNatoMLRS, () => ({}));
+export const buildTruckMRL = kit(buildPactGrad, () => ({}));
+export const buildTLS = kit(buildNatoTACJAM, () => ({}));
+export const buildZhitel = kit(buildPactR330, () => ({}));
+export const buildTPQ53 = kit(buildNatoFirefinder, () => ({}));
+export const buildAistyonok = kit(buildPactARK1, () => ({}));

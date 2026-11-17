@@ -17,6 +17,7 @@
 // spotted ones standing in the fog of war; their gunfire can still be heard.
 
 import * as THREE from 'three';
+import { thermalSees } from './Smoke.js';
 const INTERVAL = 0.25;
 const REVEAL_TIME = 3;     // seconds a shot keeps the shooter revealed
 const AWARE = 12;          // metres: noticed this close in any direction, line of sight or not
@@ -201,7 +202,7 @@ export class VisibilitySystem {
       const dz = o.pos.z - u.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 < AWARE * AWARE) return true;
-      if (smoke.blocks(o.pos.x, o.pos.z, u.pos.x, u.pos.z)) continue; // nobody sees through a screen
+      if (smoke.blocks(o.pos.x, o.pos.z, u.pos.x, u.pos.z, thermalSees(os, o.faction))) continue; // nobody sees through a screen (2027: a thermal sight through all but the multispectral)
       if (u.revealT > 0 && d2 < (Math.max(r, base * 0.8) * 1.5) ** 2) return true; // heard / saw the shot (a flash shows in the dark)
       if (d2 > r * r) continue;
       if (this.woods) {

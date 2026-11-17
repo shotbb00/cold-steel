@@ -250,7 +250,7 @@ export class Drones {
     for (const d of [...this.list]) {
       if (d.state !== 'fly') continue;
       // a jammer: the link is cut
-      const jammed = g.jamming?.jammed(d.faction, d.pos.x, d.pos.z);
+      const jammed = g.jamming?.jammed(d.faction, d.pos.x, d.pos.z) || this.trenchJam(d);
       d.dark = d.kind === 'recon' && jammed;
       if (jammed && d.kind !== 'recon' && Math.random() < step * (d.kind === 'fpv' ? 0.45 : 0.2)) { this.fall(d); continue; }
       // ground fire
@@ -270,6 +270,16 @@ export class Drones {
         break;
       }
     }
+  }
+
+  /** A trench jammer (stats.droneJam, the sappers carry one) near a drone low enough to hear it. */
+  trenchJam(d) {
+    if (d.pos.y - this.game.world.terrain.heightAt(d.pos.x, d.pos.z) > 40) return false;
+    for (const s of this.game.world.stacks) {
+      const J = s.alive && s.faction !== d.faction && s.stats.droneJam;
+      if (J && (s.centroid.x - d.pos.x) ** 2 + (s.centroid.z - d.pos.z) ** 2 < J.radius * J.radius) return true;
+    }
+    return false;
   }
 
   tracer(u, d, burst) {

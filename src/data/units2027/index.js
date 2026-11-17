@@ -223,11 +223,76 @@ const loiterTeam = { ...droneTeam({
   },
 }), id: 'loiterTeam', name: 'Loitering Munition Team', shortName: 'Loiter' };
 
+// ---------------------------------------------------------------- step 5: precision fires and EW
+// `guided` { k, share, gps | laser }: that share of the shells or rockets steer in — scatter × k — a
+// GPS round not where an enemy jammer covers the target, a laser round only where an observer sees it
+// (UnitStack.lob) · `scoot`: located by a radar or a drone, the battery drives off to a new spot
+// (systems/Support.js) · `droneJam`: a trench jammer — drones close by lose their link (systems/Drones.js).
+const SCOOT = { dist: 80, every: 30 };
+const artillery = derive(T.artillery, {
+  cost: 420,
+  stats: { range: 340, guided: { k: 0.12, share: 0.35, gps: true }, scoot: SCOOT },
+  factionStats: {
+    pact: { damage: 190, splash: 7.5, guided: { k: 0.15, share: 0.25, laser: true } },
+    pl: { range: 360, fireCooldown: 6 },
+    by: { damage: 175, guided: null },
+  },
+  models: { nato: M.buildPaladin, pl: M.buildPaladin, pact: M.buildMsta, by: M.buildMsta },
+  variants: {
+    nato: { name: 'M109A7 Paladin', weapon: '155 mm · Excalibur', text: 'The newest Paladin: fires within a minute of stopping and drives off before the answer lands. A third of its shells are Excalibur — GPS-guided, landing within a few metres, unless a jammer covers the target.' },
+    pl: { name: 'AHS Krab', weapon: '155 mm L52', text: 'Poland’s own howitzer, long-barrelled and quick: proven in Ukraine. Shoots far, shoots fast, and moves off when found.' },
+    pact: { name: '2S19M2 Msta-SM2', weapon: '152 mm · Krasnopol', text: 'Russia’s main self-propelled gun. Some of its shells are laser-guided Krasnopols — deadly accurate where an observer or a drone marks the target.' },
+    by: { name: '2S3M Akatsiya', weapon: '152 mm', text: 'The Belarusian army’s older 152 mm: plenty of shells, no guided ones.' },
+  },
+});
+
+const rockets = derive(T.rockets, {
+  cost: 520,
+  stats: { range: 520, magSize: 6, damage: 210, splash: 7, scatter: 8, reloadTime: 70, fireCooldown: 0.8, guided: { k: 0.1, share: 1, gps: true }, scoot: SCOOT },
+  factionStats: {
+    pact: { magSize: 12, damage: 170, splash: 7, fireCooldown: 0.5, scatter: 10, armor: 0.1, hp: 420, speed: 6, reloadTime: 80, guided: { k: 0.12, share: 0.6, gps: true } },
+    pl: { magSize: 12, damage: 160, fireCooldown: 0.5, guided: { k: 0.15, share: 0.5, gps: true } },
+    by: { magSize: 8, damage: 220, splash: 7.5, fireCooldown: 0.9, armor: 0.1, hp: 420, speed: 6, guided: { k: 0.12, share: 1, gps: true } },
+  },
+  models: { nato: M.buildM270A2, pl: M.buildTruckMRL, pact: M.buildTruckMRL, by: M.buildTruckMRL },
+  variants: {
+    nato: { name: 'M270A2 MLRS', weapon: '6 × GMLRS guided rockets', text: 'Six GPS-guided rockets, each landing within metres of its aim from far beyond the front. A command post, a battery, a bridge — gone. A jammer over the target throws them off.' },
+    pl: { name: 'Homar-K', weapon: '12 × 239 mm rockets, half guided', text: 'Poland’s new Korean launcher on a Jelcz truck: a dozen heavy rockets, half of them guided.' },
+    pact: { name: '9K515 Tornado-S', weapon: '12 × 300 mm rockets, part guided', text: 'Russia’s heavy launcher: a dozen 300 mm rockets, many of them steered by satellite — a carpet with a sharp edge.' },
+    by: { name: 'Polonez', weapon: '8 × 301 mm guided rockets', text: 'Belarus’s own long-range launcher, built with Chinese help: eight big guided rockets.' },
+  },
+});
+
+const jammer = derive(T.jammer, {
+  stats: { jammer: { radius: 230, deploy: 8 } },
+  models: { nato: M.buildTLS, pl: M.buildTLS, pact: M.buildZhitel, by: M.buildZhitel },
+  variants: {
+    nato: { name: 'Terrestrial Layer System', weapon: 'unarmed', text: 'Electronic warfare on a Stryker. Parked with its masts up it fills a wide circle with noise: enemy drones in it drop out of the sky or go blind, GPS-guided shells and rockets aimed into it go wide, observers’ and radars’ links fail. And every direction-finder knows where it is.' },
+    pl: { name: 'Przebiśnieg', weapon: 'unarmed', text: 'Poland’s jamming system on Jelcz trucks: drones, radios and satellite navigation all go quiet around it.' },
+    pact: { name: 'R-330Zh Zhitel', weapon: 'unarmed', text: 'The Russian jammer that blinds satellite navigation and radio links: drones lose their way, guided rockets stray, observers go deaf.' },
+    by: { name: 'R-934B', weapon: 'unarmed', text: 'A Belarusian jamming station: older, but it still drowns out drones and radios around it.' },
+  },
+});
+
+const cbRadar = derive(T.cbRadar, {
+  stats: { cbRadar: { range: 650, arc: 2.4, deploy: 8 } },
+  models: { nato: M.buildTPQ53, pl: M.buildTPQ53, pact: M.buildAistyonok, by: M.buildAistyonok },
+  variants: {
+    nato: { name: 'AN/TPQ-53', weapon: 'unarmed', text: 'A counter-fire radar that sees shells, rockets and drones in flight and plots the guns that fired them, wider and further than the old Firefinder. Paired with guided shells, a battery that fires twice from the same spot dies there.' },
+    pl: { name: 'Liwiec', weapon: 'unarmed', text: 'Poland’s counter-battery radar: it tracks incoming shells back to their guns.' },
+    pact: { name: '1L271 Aistyonok', weapon: 'unarmed', text: 'A light Russian counter-battery radar: it finds mortars and guns as they fire.' },
+    by: { name: '1L219 Zoopark', weapon: 'unarmed', text: 'The Zoopark radar: it plots enemy batteries for the Belarusian guns.' },
+  },
+});
+
+engineers.stats = { ...engineers.stats, droneJam: { radius: 55 } };
+
 export const TYPES_2027 = {
   ...TYPES_1985,
   rifles, atTeam, mgTeam, crew, scouts, sniper, engineers, mortar, observers, manpads, airAssault,
   tank, heavyTank, ifv, reconVehicle, tankDestroyer,
   fpvTeam, loiterTeam,
+  artillery, rockets, jammer, cbRadar,
 };
 /** No stand-ins: every 1985 type serves until its own step replaces it. */
 export const ALIAS_2027 = {};

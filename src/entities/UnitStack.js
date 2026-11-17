@@ -22,6 +22,7 @@
 // crouch or go prone; rifles aim before every shot (longer at range and under fire), so
 // long-range contact is a slow exchange of single shots rather than a firestorm.
 import { year } from '../data/epoch.js';
+import { thermalSees } from '../systems/Smoke.js';
 import * as THREE from 'three';
 import { FACTIONS, enemyOf, DEFAULT_ARMY, forArmy } from '../data/factions.js';
 import { FORMS, FORM_TIME, formOffsets } from '../data/formations.js';
@@ -1876,7 +1877,7 @@ export class UnitStack {
       if (score >= bestScore) continue;
       if (s.holdFire && !u.spotted && d2 > 30 * 30) continue; // recon: don't give yourself away
       if (!terrain.lineOfSight(u.pos.x, eyeY, u.pos.z, e.pos.x, e.pos.y + e.aimHeight, e.pos.z)) continue;
-      if (this.services.smoke?.blocks(u.pos.x, u.pos.z, e.pos.x, e.pos.z)) continue;
+      if (this.services.smoke?.blocks(u.pos.x, u.pos.z, e.pos.x, e.pos.z, thermalSees(s, this.faction))) continue;
       best = e;
       bestScore = score;
     }
@@ -1999,7 +2000,11 @@ export class UnitStack {
     this.muzzleWorld(u, _p);
     let dx = point.x - _p.x;
     let dz = point.z - _p.z;
-    const scatter = ((s.scatter ?? 3) + (s.scatterPerM ?? 0.03) * Math.hypot(dx, dz)) * this.observed(point);
+    const seen = this.observed(point);
+    // 2027 guided rounds (stats.guided): a share steer in — GPS ones not into an enemy jammer's circle, laser ones only where an observer marks the spot
+    const gd = !smoke && !flare && s.guided && Math.random() < (s.guided.share ?? 1) ? s.guided : null;
+    const steered = gd && !(gd.gps && this.services.game?.jamming?.jammed(this.faction, point.x, point.z)) && !(gd.laser && seen === 1);
+    const scatter = ((s.scatter ?? 3) + (s.scatterPerM ?? 0.03) * Math.hypot(dx, dz)) * (steered ? gd.k : seen);
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * scatter;
     const tx = point.x + Math.cos(a) * r;
@@ -2047,7 +2052,7 @@ export class UnitStack {
         if (this.services.game?.jamming?.jammed(this.faction, u.pos.x, u.pos.z)) continue; // his radio is jammed: no corrections get through
         const sight = o.stats.sight * (o.stats.binoculars && !u.moving ? 1.25 : 1);
         if (dist2DSq(u.pos, point) > sight * sight) continue;
-        if (smoke?.blocks(u.pos.x, u.pos.z, point.x, point.z)) continue;
+        if (smoke?.blocks(u.pos.x, u.pos.z, point.x, point.z, thermalSees(o.stats, this.faction))) continue;
         if (terrain.lineOfSight(u.pos.x, u.pos.y + (o.stats.eyeHeight ?? 1.5), u.pos.z, point.x, gy + 1, point.z)) return ob.scatter; // eye height as for spotting (VisibilitySystem)
       }
     }
@@ -2432,7 +2437,7 @@ export class UnitStack {
     let yaw = this.usesCover ? u.yaw : u.turretYaw;
     if (dir) yaw = Math.atan2(-dir.x, -dir.z); // toward where the shot came from
     const d = 12;
-    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, this.usesCover ? { radius: 7, duration: 30 } : { radius: 9, duration: 40 });
+    this.services.smoke?.add(u.pos.x + Math.sin(yaw) * d, u.pos.z + Math.cos(yaw) * d, this.usesCover ? { radius: 7, duration: 30 } : { radius: 9, duration: 40, ms: year() >= 2000 }); // (a vehicle's: multispectral, from 2027 — thermals don't see through)
     this.services.tell?.(this.faction, `${this.name}: smoke!`);
     return true;
   }
