@@ -5,6 +5,7 @@
 // `located`), its side's radio is told where it is, and the radar's own artillery takes it as a
 // target before anything else (UnitStack.pickIndirectTarget).
 import { angleDelta } from '../core/math.js';
+import { doctrine } from '../data/doctrine.js';
 
 const HOLD = 25;          // seconds a located gun stays on the map
 const TELL_EVERY = 15;    // seconds between radio calls about the same enemy battery
@@ -42,6 +43,8 @@ export class CounterBattery {
         if (dx * dx + dz * dz > R.range * R.range) continue;
         if (Math.abs(angleDelta(r.yaw, Math.atan2(dx, dz))) > R.arc / 2) continue;
         for (const m of stack.units) m.locatedUntil = g.time + HOLD;
+        const mark = doctrine(g, s.faction, 'sensor'); // (2027, the US Army: what the radar finds is marked)
+        if (mark) { stack.markedUntil = g.time + mark.mark; stack.markDamage = mark.damage; }
         if (g.time - (stack.locatedTold?.[s.faction] ?? -99) > TELL_EVERY) {
           (stack.locatedTold ??= {})[s.faction] = g.time;
           g.tell(s.faction, `Counter-battery: enemy ${stack.type.shortName.toLowerCase()} located to the ${bearing(r.pos, u.pos)}, ${Math.round(Math.hypot(dx, dz) / 10) * 10} m — guns, engage`);

@@ -15,6 +15,7 @@ import { TYPES_1918, ALIAS_1918 } from './units1918/index.js';
 import { TYPES_2027, ALIAS_2027 } from './units2027/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
+import { AIR_2027 } from './air27.js';
 import { AIR_1918 } from './air18.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
@@ -113,12 +114,13 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'pact', name: 'Belarus' },
     },
     defaults: { nato: 'us', pact: 'ru' },
-    types: TYPES_2027, alias: ALIAS_2027, air: AIR_1985,
-    // each army's two signatures — for now 1985's mechanics under modern names (their own come with step 6)
+    types: TYPES_2027, alias: ALIAS_2027, air: AIR_2027,
+    // each army's two signatures: 1985's mechanics where they still fit, three of their own (systems/Drones.js, CounterBattery.js, data/doctrine.js unitCost)
     doctrine: {
-      us: [{ ...DOCTRINE_1985.us[0], name: 'Multi-domain strike' }, { ...DOCTRINE_1985.us[1], name: 'Recon screen' }],
-      pl: [{ ...DOCTRINE_1985.bw[0], name: 'Eastern Shield', text: 'Engineers build twice as fast and fortifications cost 40 % less. A line of trenches and obstacles waits in front of your base at the start.' }, { ...DOCTRINE_1985.bw[1], name: 'Mechanised infantry', text: 'Infantry within 40 m of a friendly infantry fighting vehicle aims 20 % better and takes a third less suppression.' }],
-      ru: [{ ...DOCTRINE_1985.sov[0], name: 'Fire superiority' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
+      us: [{ ...DOCTRINE_1985.us[0], name: 'Joint fires', text: 'Air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
+        { id: 'sensor', name: 'Sensor-to-shooter', text: 'Whatever your drones and counter-battery radars find is marked: marked enemies take 15 % more damage from everyone for 10 s.', mark: 10, damage: 1.15 }],
+      pl: [{ ...DOCTRINE_1985.bw[0], name: 'Eastern Shield', text: 'Engineers build twice as fast and fortifications cost 40 % less. A line of trenches and obstacles waits in front of your base at the start.' }, { ...DOCTRINE_1985.nva[0], name: 'Territorial Defence', text: 'Obrona Terytorialna: cheap local volunteers with modern rifles and missiles that don’t count against your unit cap.' }],
+      ru: [{ ...DOCTRINE_1985.sov[0], name: 'Fire superiority' }, { id: 'dronewar', name: 'Drone war', text: 'FPV and loitering munition teams cost 30 % less and launch their drones 30 % faster.', cost: 0.7, every: 0.7 }],
       by: [{ ...DOCTRINE_1985.nva[1], name: 'Massed guns', text: 'Guns, rocket launchers and mortars cost 25 % less and reload 35 % faster. Their creeping barrage order walks the shells forward ahead of your advance.' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
     },
   },

@@ -287,12 +287,112 @@ const cbRadar = derive(T.cbRadar, {
 
 engineers.stats = { ...engineers.stats, droneJam: { radius: 55 } };
 
+// ---------------------------------------------------------------- step 6: the rest of the roster
+// The 1985 machines that serve on (or their nearest lookalikes) in 2027 paint, under today's names.
+const R = M.repaint;
+const m85 = (id) => T[id].models;
+const restyle = (id, models, variants, o = {}) => derive(T[id], { ...o, models, variants });
+
+const aa = restyle('aa', { nato: M.buildMShorad, pl: R(m85('aa').pact), pact: R(m85('aa').pact), by: R(m85('aa').pact) }, {
+  nato: { name: 'M-LIDS', weapon: '30 mm XM914, drone jammer', text: 'The counter-drone Stryker: a radar that finds small drones, a jammer that cuts their link within a hundred metres, and a 30 mm cannon with proximity rounds for the rest.' },
+  pl: { name: 'ZSU-23-4MP Biała', weapon: '4 × 23 mm, Grom', text: 'Poland’s modernised Shilka: a new radar and thermal sight, Grom missiles beside the guns. A wall of 23 mm against helicopters and drones.' },
+  pact: { name: 'ZSU-23-4M4 Shilka-M4', weapon: '4 × 23 mm, Igla', text: 'The old Shilka rebuilt: a digital fire control and a missile pair. Its four barrels still tear up anything low and slow — drones above all.' },
+  by: { name: 'ZSU-23-4 Shilka', weapon: '4 × 23 mm', text: 'Belarus’s Shilkas, as they were: radar-laid quad 23 mm.' },
+}, { factionStats: { nato: { droneJam: { radius: 110 } } } });
+
+const gunMissile = restyle('gunMissile', { nato: M.buildMShorad, pl: R(m85('gunMissile').nva), pact: R(m85('gunMissile').pact), by: R(m85('gunMissile').nva) }, {
+  nato: { name: 'M-SHORAD', weapon: '30 mm, Stinger, Hellfire', text: 'The Stryker air-defence turret: Stingers for helicopters and jets, Hellfires for tanks, a 30 mm cannon for the rest.' },
+  pl: { name: 'Osa-AKM-P1 Żądło', weapon: '9M33 missiles', text: 'Poland’s modernised Osa: a radar and six missiles on an amphibious six-wheeler.' },
+  pact: { name: '2S6M1 Tunguska-M1', weapon: '2 × 30 mm, 9M311 missiles', text: 'Guns and missiles on one tracked chassis: it guards the tank regiments against helicopters, jets and drones alike.' },
+  by: { name: 'Osa-AKM', weapon: '9M33 missiles', text: 'The Belarusian Osa: an older wheeled missile system.' },
+});
+
+const sam = restyle('sam', { nato: R(m85('sam').bw), pl: R(m85('sam').bw), pact: R(m85('sam').pact), by: R(m85('sam').pact) }, {
+  nato: { name: 'NASAMS', weapon: 'AMRAAM launchers', text: 'A trailer launcher of radar-guided missiles: it reaches helicopters, jets and the bigger drones far beyond any shoulder-fired missile.' },
+  pl: { name: 'Narew (CAMM)', weapon: 'CAMM missiles', text: 'Poland’s new short-range shield: British CAMM missiles that cover the brigade against jets, helicopters and cruise missiles.' },
+  pact: { name: '9K35M3 Strela-10M3', weapon: '9M333 missiles', text: 'The tracked short-range missile system of the motor rifle regiments, with a better seeker than its old self.' },
+  by: { name: 'Strela-10M2', weapon: '9M37 missiles', text: 'Belarus’s Strela-10: an older seeker on the same tracked carrier.' },
+});
+
+const towedAA = restyle('towedAA', { nato: R(m85('towedAA').pact), pl: R(m85('towedAA').pact), pact: R(m85('towedAA').pact), by: R(m85('towedAA').pact) }, {
+  nato: { name: 'ZUR-23-2KG Jodek-G', weapon: '2 × 23 mm, Grom', text: 'Polish twin 23 mm guns with Grom missiles, lent to the US brigade’s air defence: cheap, quick to set up, deadly to drones.' },
+  pl: { name: 'ZUR-23-2KG Jodek-G', weapon: '2 × 23 mm, Grom', text: 'The modernised twin 23 mm with a thermal sight and Grom missiles on the mount — the backbone of Polish short-range air defence.' },
+  pact: { name: 'ZU-23-2', weapon: '2 × 23 mm', text: 'The towed twin 23 mm, often mounted on an MT-LB or a truck: still the commonest gun against drones.' },
+  by: { name: 'ZU-23-2', weapon: '2 × 23 mm', text: 'The towed twin 23 mm of the Belarusian army.' },
+});
+
+const airRadar = restyle('airRadar', { nato: R(m85('airRadar').nato), pl: R(m85('airRadar').pact), pact: R(m85('airRadar').pact), by: R(m85('airRadar').pact) }, {
+  nato: { name: 'AN/MPQ-64 Sentinel', weapon: 'unarmed', text: 'The air-defence radar: it sees helicopters, jets and drones far out and hands them to every launcher and gun around it.' },
+  pl: { name: 'Soła', weapon: 'unarmed', text: 'Poland’s mobile 3D radar: the eyes of the brigade’s air defence.' },
+  pact: { name: 'Podlet-K1', weapon: 'unarmed', text: 'A low-altitude search radar: it picks out drones and helicopters hugging the ground.' },
+  by: { name: 'P-19', weapon: 'unarmed', text: 'The old P-19 on its truck, still watching the sky.' },
+});
+
+const spMortar = restyle('spMortar', { nato: R(m85('spMortar').nato), pl: M.buildRak, pact: R(m85('spMortar').pact), by: R(m85('spMortar').pact) }, {
+  nato: { name: 'M1064A3 Mortar Carrier', weapon: '120 mm M121 mortar', text: 'The heavy mortar on its M113: fires the moment it stops, smoke and illumination on call, and drives off before the answer lands.' },
+  pl: { name: 'M120K Rak', weapon: '120 mm turret mortar, APR-120', text: 'A 120 mm mortar in a turret on the Rosomak: it fires on the move-stop, some of its bombs laser-guided onto what an observer marks.' },
+  pact: { name: '2S34 Hosta', weapon: '120 mm 2A80 gun-mortar', text: 'The modernised Nona: heavy bombs on anything spotted, smoke and illumination too.' },
+  by: { name: '2S9 Nona-S', weapon: '120 mm 2A51 gun-mortar', text: 'The airborne gun-mortar of the Belarusian mobile brigades.' },
+}, { factionStats: { pl: { guided: { k: 0.15, share: 0.25, laser: true }, magSize: 12 } } });
+
+const ambulance = restyle('ambulance', { nato: R(m85('ambulance').nato), pl: R(m85('ambulance').bw), pact: R(m85('ambulance').pact), by: R(m85('ambulance').pact) }, {
+  nato: { name: 'AMPV Medical', weapon: 'unarmed', text: 'The armoured ambulance that replaced the M113: it patches up the wounded close behind the line.' },
+  pl: { name: 'Sanitarka', weapon: 'unarmed', text: 'A Polish field ambulance: wounded infantry nearby are treated and back in the fight sooner.' },
+  pact: { name: 'MT-LB Medical', weapon: 'unarmed', text: 'The tracked ambulance of the motor rifle battalion.' },
+  by: { name: 'MT-LB Medical', weapon: 'unarmed', text: 'The Belarusian tracked ambulance.' },
+});
+
+const recovery = restyle('recovery', { nato: R(m85('recovery').nato), pl: R(m85('recovery').pact), pact: R(m85('recovery').pact), by: R(m85('recovery').pact) }, {
+  nato: { name: 'M88A2 Hercules', weapon: 'unarmed', text: 'The heavy recovery vehicle: tows wrecked Abrams back and repairs damaged vehicles nearby.' },
+  pl: { name: 'WZT-3M', weapon: 'unarmed', text: 'The Polish T-72-based recovery tank: repairs the PT-91s and drags the wrecks away.' },
+  pact: { name: 'BREM-1M', weapon: 'unarmed', text: 'The recovery vehicle on the T-72 hull: mends tracks and engines close behind the tanks.' },
+  by: { name: 'BREM-1', weapon: 'unarmed', text: 'The Belarusian T-72 recovery vehicle.' },
+});
+
+const bridgeLayer = restyle('bridgeLayer', { nato: R(m85('bridgeLayer').nato), pl: R(m85('bridgeLayer').nva), pact: R(m85('bridgeLayer').pact), by: R(m85('bridgeLayer').pact) }, {
+  nato: { name: 'M1074 Joint Assault Bridge', weapon: 'scissors bridge', text: 'A scissors bridge laid from an armoured hull in minutes across a river or a gap — the way over for the tanks.' },
+  pl: { name: 'BLG-67M2', weapon: 'scissors bridge', text: 'The Polish tank bridge: unfolds across a river in a few minutes.' },
+  pact: { name: 'MTU-72', weapon: 'bridge', text: 'The bridge layer on the T-72 hull: one span across a river for the tanks.' },
+  by: { name: 'MTU-72', weapon: 'bridge', text: 'The Belarusian bridge layer on the T-72 hull.' },
+});
+
+const cev = restyle('cev', { nato: R(m85('cev').nato), pl: R(m85('cev').pact), pact: R(m85('cev').pact), by: R(m85('cev').pact) }, {
+  nato: { name: 'M1150 Assault Breacher', weapon: 'line charges, plough', text: 'The engineers’ tank: it ploughs through minefields and fires line charges to clear a lane through wire and obstacles.' },
+  pl: { name: 'MID-M', weapon: 'dozer blade, crane', text: 'The Polish engineer tank: it clears obstacles and digs positions under fire.' },
+  pact: { name: 'IMR-3M', weapon: 'dozer, crane', text: 'The armoured engineer vehicle on the T-90 hull: it clears rubble, obstacles and mines.' },
+  by: { name: 'IMR-2', weapon: 'dozer, crane', text: 'The older armoured engineer vehicle of the Belarusian army.' },
+});
+
+const mineClear = restyle('mineClear', { nato: R(m85('mineClear').nato), pl: R(m85('mineClear').nva), pact: R(m85('mineClear').pact), by: R(m85('mineClear').pact) }, {
+  nato: { name: 'M1A1 with mine plough', weapon: 'mine plough', text: 'An Abrams with a plough on its nose: it turns the mines out of a lane for the tanks behind it.' },
+  pl: { name: 'PT-91 with KMT-7', weapon: 'mine roller', text: 'A Polish tank pushing mine rollers: a lane through the minefield for the rest.' },
+  pact: { name: 'UR-77 Meteorit', weapon: 'line charges', text: 'Rockets drag explosive hoses across a minefield and blow a lane through it — and through anything else in the way.' },
+  by: { name: 'UR-77 Meteorit', weapon: 'line charges', text: 'The Belarusian mine-clearing vehicle with its line charges.' },
+});
+
+const commandPost = restyle('commandPost', { nato: R(m85('commandPost').nato), pl: R(m85('commandPost').bw), pact: R(m85('commandPost').pact), by: R(m85('commandPost').pact) }, {
+  nato: { name: 'M1068A3 command post', weapon: 'unarmed', text: 'The battalion command post: radios, maps and the digital net that ties drones, guns and units together.' },
+  pl: { name: 'Stanowisko dowodzenia', weapon: 'unarmed', text: 'A Polish wheeled command post, the brigade’s battle management on board.' },
+  pact: { name: 'R-149MA1 command post', weapon: 'unarmed', text: 'The command and staff vehicle of a Russian battalion: its radios carry the orders — and give it away.' },
+  by: { name: 'BTR-80 KShM', weapon: 'unarmed', text: 'The Belarusian command post on the BTR-80.' },
+});
+
+// Poland's Territorial Defence (doctrine 'kampf'): local volunteers that don't count against the cap
+const kampfgruppe = derive(T.kampfgruppe, {
+  armies: ['pl'], cost: 70,
+  models: men({ army: 'pl' }),
+  variants: {
+    pl: { name: 'Obrona Terytorialna', weapon: 'Grot rifles, Piorun, Javelin', text: 'The Territorial Defence Force: weekend soldiers who live where they fight. Lighter than the regulars and quicker to give ground, but cheap — and they don’t count against your unit cap.' },
+  },
+});
+
 export const TYPES_2027 = {
   ...TYPES_1985,
   rifles, atTeam, mgTeam, crew, scouts, sniper, engineers, mortar, observers, manpads, airAssault,
   tank, heavyTank, ifv, reconVehicle, tankDestroyer,
   fpvTeam, loiterTeam,
   artillery, rockets, jammer, cbRadar,
+  aa, gunMissile, sam, towedAA, airRadar, spMortar, ambulance, recovery, bridgeLayer, cev, mineClear, commandPost, kampfgruppe,
 };
 /** No stand-ins: every 1985 type serves until its own step replaces it. */
 export const ALIAS_2027 = {};

@@ -266,3 +266,46 @@ export const buildTLS = kit(buildNatoTACJAM, () => ({}));
 export const buildZhitel = kit(buildPactR330, () => ({}));
 export const buildTPQ53 = kit(buildNatoFirefinder, () => ({}));
 export const buildAistyonok = kit(buildPactARK1, () => ({}));
+
+// ---------------------------------------------------------------- step 6: the rest of the roster
+/** A 1985 vehicle in 2027 paint, nothing added (one wrapper per model). */
+const painted = new Map();
+export const repaint = (build) => {
+  if (!build) return build;
+  if (!painted.has(build)) painted.set(build, kit(build, () => ({})));
+  return painted.get(build);
+};
+
+/** M-SHORAD: the Stryker with the RIwP turret — 30 mm cannon, a Stinger pod and a Hellfire rail. */
+export const buildMShorad = vehicle(() => ({
+  ...eightByEight(),
+  turret: {
+    geo: grime(merge([
+      planProfile([[-0.6, 0.8], [0.6, 0.8], [0.9, 0.35], [0.9, -0.8], [-0.9, -0.8], [-0.9, 0.35]], 0.55, { color: OD, ...C }),
+      P.box(0.5, 0.4, 0.75, { x: 1.2, y: 0.5, z: 0.0, color: OD, ...C }),                                     // the Stinger pod
+      ...[0.38, 0.62].flatMap((y) => [0.0, 0.0].map((_, k) => P.cyl(0.07, 0.07, 0.05, { x: 1.1 + k * 0.2, y, z: 0.39, rx: Math.PI / 2, color: DK }, 8))),
+      P.box(0.3, 0.3, 1.1, { x: -1.15, y: 0.45, z: 0.1, color: OD, ...C }),                                   // the Hellfire rail
+      P.box(0.38, 0.32, 0.4, { x: 0.35, y: 0.75, z: -0.2, color: OD }),                                      // sights
+      P.box(0.26, 0.16, 0.04, { x: 0.35, y: 0.78, z: 0.0, color: GLASS }),
+    ]), 0.6, 0, 0.3),
+    at: [0, 2.2, 0.0],
+  },
+  gun: { geo: merge([P.cyl(0.05, 0.06, 2.2, { z: 1.1, rx: Math.PI / 2, color: STEEL }, 10), P.box(0.28, 0.28, 0.4, { z: 0.1, color: DK })]), at: [0, 0.3, 0.75], pitch: null },
+  muzzle: [0, 0, 2.2],
+  recoil: 0.06,
+}));
+
+/** Rak: the Rosomak with the 120 mm mortar turret, its long barrel up out of the roof. */
+export const buildRak = vehicle(() => ({
+  ...eightByEight(),
+  turret: {
+    geo: grime(merge([
+      planProfile([[-0.85, 1.05], [0.85, 1.05], [1.15, 0.5], [1.15, -1.1], [-1.15, -1.1], [-1.15, 0.5]], 0.85, { color: OD, ...C }),
+      P.box(0.4, 0.35, 0.4, { x: 0.65, y: 1.0, z: -0.4, color: OD }),
+    ]), 0.8, 0, 0.3),
+    at: [0, 2.2, -0.6],
+  },
+  gun: { geo: merge([P.cyl(0.1, 0.12, 3.0, { z: 1.4, rx: Math.PI / 2, color: OD }, 12), P.box(0.6, 0.5, 0.6, { color: DK })]), at: [0, 0.55, 0.9], pitch: 0.75 },
+  muzzle: [0, 0, 2.9],
+  recoil: 0.25,
+}));

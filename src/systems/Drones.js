@@ -15,6 +15,7 @@
 // picture goes dark.
 // Host-side simulation; a multiplayer guest draws what the host sends (net: `snap` / `apply`).
 import * as THREE from 'three';
+import { doctrine } from '../data/doctrine.js';
 
 export const DRONE = {
   recon: { speed: 16, alt: 70, radius: 140, station: 80, hold: 4, mesh: 'quad', scale: 1.6, sound: ['rotor.uh60', 3.4, 0.16] },
@@ -125,7 +126,7 @@ export class Drones {
       if (!target) continue;
       this.launch(s, op, D.kind, target, null);
       s.dronesLeft--;
-      s.droneAt = now + D.every;
+      s.droneAt = now + D.every * (doctrine(g, s.faction, 'dronewar')?.every ?? 1); // (Russia's drone war: faster)
     }
   }
 
@@ -235,10 +236,13 @@ export class Drones {
     if ((d.watchT = (d.watchT ?? 0) - TICK / 2) > 0) return;
     d.watchT = 0.5;
     const g = this.game, r2 = d.P.radius ** 2;
+    const mark = doctrine(g, d.faction, 'sensor'); // (the US Army's sensor-to-shooter)
     for (const s of g.world.stacks) {
       if (s.faction === d.faction || !s.alive || s.stats.naval) continue;
       for (const u of s.units) {
-        if (u.alive && (u.pos.x - d.pos.x) ** 2 + (u.pos.z - d.pos.z) ** 2 < r2) u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + d.P.hold);
+        if (!u.alive || (u.pos.x - d.pos.x) ** 2 + (u.pos.z - d.pos.z) ** 2 >= r2) continue;
+        u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + d.P.hold);
+        if (mark) { s.markedUntil = g.time + mark.mark; s.markDamage = mark.damage; }
       }
     }
   }
