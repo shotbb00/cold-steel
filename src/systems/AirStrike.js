@@ -168,7 +168,7 @@ export const KINDS = {
   torpBomb: {
     sea: true, flight: 3, label: 'Torpedo bombers', key: 'Y', cost: 190, cooldown: 90, delay: 6,
     approach: 0, cruiseAlt: 120, attackAlt: 22, cruiseSpeed: 85, attackSpeed: 75,
-    rocketsFrom: 900, gunFrom: 0, gunTo: -60,   // (no rockets: the run begins 900 m out) runLength: 0, turn: 0.7, pitchDown: 0.02,
+    rocketsFrom: 900, gunFrom: 0, gunTo: -60, runLength: 0, turn: 0.7, pitchDown: 0.02, // (no rockets: the run begins 900 m out)
     drop: 650,   // m: the torpedo goes in this far from the ship
   },
   navScout: {
