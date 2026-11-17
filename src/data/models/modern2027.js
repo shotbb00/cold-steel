@@ -17,7 +17,8 @@
 import * as THREE from 'three';
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { meshAdder, trackedHull, planProfile } from './vehicleCommon.js';
-import { vehicle, wheeled, buildNatoM3, buildPactBRDM, buildPactKonkurs, buildNatoMLRS, buildPactGrad, buildNatoTACJAM, buildPactR330, buildNatoFirefinder, buildPactARK1 } from './support.js';
+import { truckUnit } from './truck.js';
+import { vehicle, wheeled, tracked, buildNatoM3, buildPactBRDM, buildPactKonkurs, buildNatoMLRS, buildPactGrad, buildNatoTACJAM, buildPactR330, buildNatoFirefinder, buildPactARK1 } from './support.js';
 import { buildNatoM109 } from './natoM109.js';
 import { buildPact2S1 } from './pact2S1.js';
 import { buildNatoAbrams } from './natoAbrams.js';
@@ -259,10 +260,8 @@ export const buildRosomakSpike = launcher8([[-0.3, 0.12], [-0.3, -0.14], [0.25, 
 
 // ---------------------------------------------------------------- step 5: fires and EW (the 1985 vehicles in 2027 paint until step 6)
 export const buildPaladin = kit(buildNatoM109, () => ({}));
-export const buildMsta = kit(buildPact2S1, () => ({}));
 export const buildM270A2 = kit(buildNatoMLRS, () => ({}));
 export const buildTruckMRL = kit(buildPactGrad, () => ({}));
-export const buildTLS = kit(buildNatoTACJAM, () => ({}));
 export const buildZhitel = kit(buildPactR330, () => ({}));
 export const buildTPQ53 = kit(buildNatoFirefinder, () => ({}));
 export const buildAistyonok = kit(buildPactARK1, () => ({}));
@@ -309,3 +308,126 @@ export const buildRak = vehicle(() => ({
   muzzle: [0, 0, 2.9],
   recoil: 0.25,
 }));
+
+// ---------------------------------------------------------------- proper models: launchers, guns, air defence, EW
+// (their own shapes now, not 1985 stand-ins)
+
+/** A heavy launcher truck: the cab, the axles, the launcher on a turntable at the back. */
+function launcherTruck({ length, axles, pack, bonnet = 'cabover', cabLen = 2.0, r = 0.6, width = 2.55 }) {
+  return vehicle(() => {
+    const t = truckUnit({ length, width, color: OD, dark: DK, camo: 1, bonnet, body: 'flat', r, axles, cabLen, cabH: 1.5 });
+    const L = t.layout, tz = L.rear + 2.0;
+    return {
+      wheels: wheeled(L.axles, t.track, r),
+      hull: grime(merge([
+        ...t.parts,
+        P.box(1.9, 0.3, 2.4, { y: L.deck + 0.15, z: tz, color: DK }),                                          // the turntable's base
+        ...pair((s) => P.box(0.3, 0.7, 0.3, { x: s * 1.1, y: L.deck - 0.25, z: L.rear + 0.4, color: STEEL })), // the rear jacks
+      ]), 1.0, 0.4),
+      turret: { geo: merge([P.cyl(0.85, 0.9, 0.3, { y: 0.15, color: DK }, 16)]), at: [0, L.deck + 0.3, tz] },
+      gun: { geo: merge(pack), at: [0, 0.75, -0.6], pitch: null },
+      muzzle: [0, 0.6, 3.6],
+      recoil: 0.02,
+      marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
+    };
+  });
+}
+/** A launcher pod: a box with its tubes' or canisters' ends showing at the front (z = len). */
+const pod = (x, y, w, h, len, rows, cols, r, color = OD) => [
+  P.box(w, h, len, { x, y, z: len / 2, color, ...C }),
+  ...Array.from({ length: rows * cols }, (_, k) => P.cyl(r, r, 0.03, { x: x - w / 2 + (w / cols) * ((k % cols) + 0.5), y: y - h / 2 + (h / rows) * (Math.floor(k / cols) + 0.5), z: len + 0.01, rx: Math.PI / 2, color: 0x141414 }, 10)),
+];
+const tubes = (rows, cols, r, len) => Array.from({ length: rows * cols }, (_, k) => {
+  const x = (k % cols - (cols - 1) / 2) * r * 2.3, y = Math.floor(k / cols) * r * 2.3;
+  return [P.cyl(r, r, len, { x, y, z: len / 2, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(r * 0.8, r * 0.8, 0.02, { x, y, z: len + 0.01, rx: Math.PI / 2, color: 0x141414 }, 10)];
+}).flat();
+
+// Homar-K: the Korean launcher (Chunmoo) on a Jelcz 8×8 — two pods of six 239 mm rockets side by side
+export const buildHomarK = launcherTruck({ length: 10.5, axles: [9.2, 7.75, 3.2, 1.75], pack: [...pod(-0.6, 0.45, 1.05, 0.9, 4.6, 2, 3, 0.13), ...pod(0.6, 0.45, 1.05, 0.9, 4.6, 2, 3, 0.13), P.box(1.6, 0.25, 4.0, { y: -0.1, z: 2.0, color: DK })] });
+// Tornado-S on the MAZ-543 8×8: twelve 300 mm tubes in three rows of four
+export const buildTornadoS = launcherTruck({ length: 11.5, axles: [10.0, 8.6, 4.4, 3.0], bonnet: 'square', pack: [...tubes(3, 4, 0.2, 7.0).map((g) => g.translate(0, 0, -1.2)), P.box(1.9, 0.25, 6.0, { y: -0.3, z: 2.2, color: DK }), ...[0.2, 2.4, 4.6].map((z) => P.box(2.1, 1.5, 0.12, { y: 0.45, z, color: DK }))] });
+// Polonez on the MZKT-7930 8×8: two packs of four big canisters
+export const buildPolonez = launcherTruck({ length: 12.0, axles: [10.6, 9.1, 4.6, 3.1], pack: [...pod(-0.62, 0.55, 1.15, 1.15, 7.2, 2, 2, 0.22), ...pod(0.62, 0.55, 1.15, 1.15, 7.2, 2, 2, 0.22), P.box(1.8, 0.3, 6.5, { y: -0.2, z: 3.2, color: DK })].map((g) => g.translate(0, 0, -1.5)) });
+
+/** A self-propelled howitzer: its hull, the big turret set back, the long barrel with its brake. */
+function howitzer({ hull, wheels, turret, barrel, mount, muzzleZ }) {
+  return vehicle(() => {
+    const g = tracked(wheels);
+    return {
+      wheels: g.wheels,
+      hull: grime(merge([...g.parts, ...hull]), 1.1, 0.3),
+      turret: { geo: grime(merge(turret), 0.9, 0, 0.3), at: mount },
+      gun: { geo: merge(barrel), at: [0, 0.75, 1.6], pitch: null },
+      muzzle: [0, 0, muzzleZ],
+      recoil: 0.5,
+    };
+  });
+}
+const brake = (z, r) => [P.cyl(r * 1.6, r * 1.6, 0.6, { z, rx: Math.PI / 2, color: DK }, 12), ...pair((s) => P.box(0.06, r * 2.4, 0.3, { x: s * r * 1.6, z: z - 0.05, color: 0x141414 }))];
+// AHS Krab: the K9 hull, the long AS-90 style turret, the 52-calibre barrel
+export const buildKrab = howitzer({
+  wheels: { halfWidth: 1.5, length: 5.6, wheels: 6, wheelR: 0.36, sprocket: 1, rollers: 3, trackWidth: 0.55, wheelColor: DK },
+  hull: [trackedHull([[-3.6, 1.55, 0.5], [-3.4, 1.62, 0.45], [2.4, 1.62, 0.45], [3.6, 1.15, 0.6]], { belly: 1.2, fender: 1.8, fenderY: 1.05, chamfer: 0.08 }, { color: OD, ...C }), ...pair((s) => P.box(0.06, 0.55, 5.8, { x: s * 1.85, y: 0.9, color: OD, ...C }))],
+  turret: [planProfile([[-1.2, 1.4], [1.2, 1.4], [1.55, 0.9], [1.55, -2.7], [-1.55, -2.7], [-1.55, 0.9]], 1.45, { color: OD, ...C }), P.box(0.5, 0.4, 0.5, { x: 0.8, y: 1.65, z: -0.4, color: OD }), ...rws(-0.7, 1.45, -0.8)],
+  barrel: [P.cyl(0.13, 0.17, 8.0, { z: 4.0, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(0.24, 0.24, 0.8, { z: 0.6, rx: Math.PI / 2, color: DK }, 12), ...brake(8.0, 0.13)],
+  mount: [0, 1.62, -0.6], muzzleZ: 8.3,
+});
+// 2S19M2 Msta-SM2: the T-72-type hull, the tall box turret, the 152 mm with its fume extractor
+export const buildMsta = howitzer({
+  wheels: { halfWidth: 1.45, length: 5.4, wheels: 6, wheelR: 0.38, sprocket: -1, rollers: 3, trackWidth: 0.58, wheelColor: DK },
+  hull: [trackedHull([[-3.5, 1.45, 0.5], [-3.3, 1.5, 0.45], [2.2, 1.5, 0.45], [3.5, 1.0, 0.65]], { belly: 1.15, fender: 1.75, fenderY: 1.0, chamfer: 0.08 }, { color: OD, ...C }), ...pair((s) => P.box(0.04, 0.45, 5.6, { x: s * 1.78, y: 0.9, color: 0x1f201c, surf: 'rubber' }))],
+  turret: [planProfile([[-1.25, 1.6], [1.25, 1.6], [1.6, 1.0], [1.6, -2.9], [-1.6, -2.9], [-1.6, 1.0]], 1.6, { color: OD, ...C }), P.cyl(0.32, 0.34, 0.3, { x: 0.8, y: 1.75, z: 0.1, color: OD }, 12), P.box(0.4, 0.3, 0.4, { x: -0.8, y: 1.75, z: 0.6, color: OD })],
+  barrel: [P.cyl(0.14, 0.18, 7.2, { z: 3.6, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(0.24, 0.24, 1.0, { z: 3.4, rx: Math.PI / 2, color: OD }, 12), ...brake(7.2, 0.14)],
+  mount: [0, 1.5, -0.7], muzzleZ: 7.5,
+});
+// 2S3M Akatsiya: the long hull, the big rounded turret far back, the 152 mm with its double brake
+export const buildAkatsiya = howitzer({
+  wheels: { halfWidth: 1.45, length: 5.6, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 4, trackWidth: 0.5, wheelColor: DK },
+  hull: [trackedHull([[-3.6, 1.5, 0.5], [-3.4, 1.55, 0.45], [2.6, 1.55, 0.45], [3.6, 1.05, 0.6]], { belly: 1.15, fender: 1.75, fenderY: 1.0, chamfer: 0.08 }, { color: OD, ...C })],
+  turret: [P.sphere(1.75, { y: 0.15, z: -0.6, sx: 1.0, sy: 0.75, sz: 1.35, color: OD, ...C }, 16, 10), P.cyl(0.3, 0.32, 0.3, { x: 0.75, y: 1.4, z: -0.2, color: OD }, 12)],
+  barrel: [P.cyl(0.13, 0.17, 5.8, { z: 2.9, rx: Math.PI / 2, color: OD, ...C }, 12), P.cyl(0.22, 0.22, 0.8, { z: 3.0, rx: Math.PI / 2, color: OD }, 12), ...brake(5.8, 0.13), ...brake(5.3, 0.12)],
+  mount: [0, 1.55, -0.6], muzzleZ: 6.1,
+});
+
+// NASAMS: the launcher of six AMRAAM canisters (two rows of three) on a 6×6 truck
+export const buildNASAMS = launcherTruck({ length: 8.0, axles: [6.8, 2.6, 1.3], bonnet: 'square', cabLen: 1.8, r: 0.55,
+  pack: [...pod(0, 0.55, 1.5, 0.9, 4.0, 2, 3, 0.16), P.box(1.2, 0.2, 3.5, { y: 0.0, z: 1.8, color: DK })] });
+// Narew: the iLauncher on a Jelcz — CAMM canisters stood up on end at the back
+export const buildNarew = vehicle(() => {
+  const t = truckUnit({ length: 9.5, width: 2.55, color: OD, dark: DK, camo: 1, bonnet: 'cabover', body: 'flat', r: 0.6, axles: [8.2, 6.8, 2.6, 1.3], cabLen: 2.0, cabH: 1.5 });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.6),
+    hull: grime(merge([...t.parts, P.box(2.2, 0.4, 3.6, { y: L.deck + 0.2, z: L.rear + 2.0, color: DK })]), 1.0, 0.4),
+    turret: { geo: merge([P.box(0.6, 0.3, 0.6, { y: 0.15, color: DK })]), at: [0, L.deck + 0.4, L.rear + 2.0] },
+    gun: { geo: merge(Array.from({ length: 8 }, (_, k) => [P.cyl(0.2, 0.2, 3.4, { x: (k % 4 - 1.5) * 0.48, y: 1.7, z: (Math.floor(k / 4) - 0.5) * 0.5, color: OD, ...C }, 12), P.cyl(0.17, 0.17, 0.02, { x: (k % 4 - 1.5) * 0.48, y: 3.41, z: (Math.floor(k / 4) - 0.5) * 0.5, color: 0x141414 }, 10)]).flat()), at: [0, 0.3, 0], pitch: 0 },
+    muzzle: [0, 3.5, 0],
+    recoil: 0,
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
+  };
+});
+
+/** A jammer's telescopic masts with their antennas (up once set up). */
+const masts = (at, n = 2) => ({
+  geo: merge(Array.from({ length: n }, (_, k) => {
+    const x = (k - (n - 1) / 2) * 1.0;
+    return [P.cyl(0.08, 0.12, 4.5, { x, y: 2.25, color: STEEL }, 8), P.box(1.2, 0.08, 0.08, { x, y: 4.4, color: STEEL }), P.box(0.9, 0.06, 0.06, { x, y: 4.1, color: STEEL }), P.box(0.6, 0.05, 0.05, { x, y: 3.8, color: STEEL }), P.cyl(0.25, 0.25, 0.1, { x, y: 4.6, color: DK }, 10)];
+  }).flat()),
+  at,
+});
+// Terrestrial Layer System on the Stryker: the 8×8 with its equipment boxes and two masts
+export const buildTLS = vehicle(() => ({
+  ...eightByEight([P.box(2.2, 0.6, 2.4, { y: 2.5, z: -1.4, color: OD, ...C }), P.box(0.5, 0.35, 0.5, { x: 0.8, y: 2.95, z: 0.6, color: OD }), ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.2, y: 3.4, z: -2.8, color: STEEL }, 4))]),
+  deploy: masts([0, 2.8, -1.4]),
+}));
+// Przebiśnieg: the jamming van on a Jelcz, its masts
+export const buildPrzebisnieg = vehicle(() => {
+  const t = truckUnit({ length: 8.5, width: 2.5, color: OD, dark: DK, camo: 1, bonnet: 'cabover', body: 'box', r: 0.55, axles: [7.3, 2.6, 1.3], cabLen: 1.9, cabH: 1.45, bodyH: 2.2 });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([...t.parts, P.box(0.8, 0.45, 0.6, { y: L.deck + 2.45, z: L.rear + 3.6, color: DK })]), 1.0, 0.4),
+    deploy: masts([0, L.deck + 2.2, L.rear + 1.2]),
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
+  };
+});

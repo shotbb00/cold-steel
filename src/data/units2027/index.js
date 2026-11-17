@@ -237,7 +237,7 @@ const artillery = derive(T.artillery, {
     pl: { range: 360, fireCooldown: 6 },
     by: { damage: 175, guided: null },
   },
-  models: { nato: M.buildPaladin, pl: M.buildPaladin, pact: M.buildMsta, by: M.buildMsta },
+  models: { nato: M.buildPaladin, pl: M.buildKrab, pact: M.buildMsta, by: M.buildAkatsiya },
   variants: {
     nato: { name: 'M109A7 Paladin', weapon: '155 mm · Excalibur', text: 'The newest Paladin: fires within a minute of stopping and drives off before the answer lands. A third of its shells are Excalibur — GPS-guided, landing within a few metres, unless a jammer covers the target.' },
     pl: { name: 'AHS Krab', weapon: '155 mm L52', text: 'Poland’s own howitzer, long-barrelled and quick: proven in Ukraine. Shoots far, shoots fast, and moves off when found.' },
@@ -254,7 +254,7 @@ const rockets = derive(T.rockets, {
     pl: { magSize: 12, damage: 160, fireCooldown: 0.5, guided: { k: 0.15, share: 0.5, gps: true } },
     by: { magSize: 8, damage: 220, splash: 7.5, fireCooldown: 0.9, armor: 0.1, hp: 420, speed: 6, guided: { k: 0.12, share: 1, gps: true } },
   },
-  models: { nato: M.buildM270A2, pl: M.buildTruckMRL, pact: M.buildTruckMRL, by: M.buildTruckMRL },
+  models: { nato: M.buildM270A2, pl: M.buildHomarK, pact: M.buildTornadoS, by: M.buildPolonez },
   variants: {
     nato: { name: 'M270A2 MLRS', weapon: '6 × GMLRS guided rockets', text: 'Six GPS-guided rockets, each landing within metres of its aim from far beyond the front. A command post, a battery, a bridge — gone. A jammer over the target throws them off.' },
     pl: { name: 'Homar-K', weapon: '12 × 239 mm rockets, half guided', text: 'Poland’s new Korean launcher on a Jelcz truck: a dozen heavy rockets, half of them guided.' },
@@ -265,7 +265,7 @@ const rockets = derive(T.rockets, {
 
 const jammer = derive(T.jammer, {
   stats: { jammer: { radius: 230, deploy: 8 } },
-  models: { nato: M.buildTLS, pl: M.buildTLS, pact: M.buildZhitel, by: M.buildZhitel },
+  models: { nato: M.buildTLS, pl: M.buildPrzebisnieg, pact: M.buildZhitel, by: M.buildZhitel },
   variants: {
     nato: { name: 'Terrestrial Layer System', weapon: 'unarmed', text: 'Electronic warfare on a Stryker. Parked with its masts up it fills a wide circle with noise: enemy drones in it drop out of the sky or go blind, GPS-guided shells and rockets aimed into it go wide, observers’ and radars’ links fail. And every direction-finder knows where it is.' },
     pl: { name: 'Przebiśnieg', weapon: 'unarmed', text: 'Poland’s jamming system on Jelcz trucks: drones, radios and satellite navigation all go quiet around it.' },
@@ -307,7 +307,7 @@ const gunMissile = restyle('gunMissile', { nato: M.buildMShorad, pl: R(m85('gunM
   by: { name: 'Osa-AKM', weapon: '9M33 missiles', text: 'The Belarusian Osa: an older wheeled missile system.' },
 });
 
-const sam = restyle('sam', { nato: R(m85('sam').bw), pl: R(m85('sam').bw), pact: R(m85('sam').pact), by: R(m85('sam').pact) }, {
+const sam = restyle('sam', { nato: M.buildNASAMS, pl: M.buildNarew, pact: R(m85('sam').pact), by: R(m85('sam').pact) }, {
   nato: { name: 'NASAMS', weapon: 'AMRAAM launchers', text: 'A trailer launcher of radar-guided missiles: it reaches helicopters, jets and the bigger drones far beyond any shoulder-fired missile.' },
   pl: { name: 'Narew (CAMM)', weapon: 'CAMM missiles', text: 'Poland’s new short-range shield: British CAMM missiles that cover the brigade against jets, helicopters and cruise missiles.' },
   pact: { name: '9K35M3 Strela-10M3', weapon: '9M333 missiles', text: 'The tracked short-range missile system of the motor rifle regiments, with a better seeker than its old self.' },
