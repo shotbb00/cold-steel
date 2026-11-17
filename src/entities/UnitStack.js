@@ -97,6 +97,7 @@ const STUCK = { every: 2.5, everyVehicle: 4, moved: 1, ghost: 2, ghostVehicle: 3
 // single file: m between men (× spacing), m of trail kept; where there's less room than `narrow`
 // m round the anchor (a bridge, a gate), until `after` m of more than `wide` m
 const COLUMN = { gap: 1.3, trail: 120, narrow: 2.5, wide: 4, after: 10, afterVehicle: 40 }; // narrow: only a real choke point (a gate, a bridge, a gap in a wall) — not a hedge beside the way // (vehicles: every switch swung the wing hulls 13 m across — tanks snaking)
+const SCREENED = 2.4;      // spread × at a man close behind cover from the shooter (UnitStack.screened)
 const LOOSENESS = 1.3;     // formation slots are spread this much wider than the nominal spacing
 const PERSONAL_SPACE = 0.4; // metres kept between two bodies (on top of their radii)
 const BARK_COOLDOWN = 2.2; // seconds between callouts from one stack
@@ -2479,8 +2480,22 @@ export class UnitStack {
       * (u.masked ? 1.6 : 1)                  // a gas mask's fogged eyepieces (1918: systems/Gas.js)
       * (u.prone > 0.8 ? 0.65 : 1)            // a steady prone rest
       * (this.deployed(u) ? 1 : 3)            // an MG fired from the hip sprays
+      * (t.stack?.usesCover && this.screened(t, _p) ? SCREENED : 1) // a man close behind a wall, a house or a tree: only a shoulder shows
       / (this.doc?.aim ?? 1);                 // the army's doctrine (systems/Doctrine.js)
     this.shoot(u, _v, spread);
+  }
+
+  /** Is man `t` close behind something solid as seen from `from` — a wall, a house, a tree trunk within a few metres of him on that side? */
+  screened(t, from) {
+    const dx = from.x - t.pos.x, dz = from.z - t.pos.z, L = Math.hypot(dx, dz) || 1;
+    const cover = this.world.cover;
+    if (!cover) return false;
+    for (const k of [1.2, 2.5, 4]) {
+      const x = t.pos.x + (dx / L) * k, z = t.pos.z + (dz / L) * k;
+      if ((cover.topAt?.(x, z, 0.6) ?? -Infinity) > t.pos.y + 0.7) return true;
+      for (const f of cover.forests ?? []) if ((f.topAt?.(x, z, 0.4, false) ?? -Infinity) > t.pos.y + 2) return true;
+    }
+    return false;
   }
 
   /** Player shot toward a world point (much steadier hands). */

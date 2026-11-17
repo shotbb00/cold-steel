@@ -313,6 +313,16 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
      * crown on the ground, the trunk a log that men take cover behind and climb over.
      * `roll(tree)` decides each one (the host's dice, the same on a multiplayer guest).
      */
+    /** The highest treetop within `r` m of (x, z) (its crown's reach included), or -Infinity. */
+    topAt(x, z, r = 0, crown = true) { // (crown false: the trunks alone)
+      let top = -Infinity;
+      for (const t of register) {
+        if (t.down) continue;
+        const reach = r + (crown ? t.H * 0.35 : 0.25 * t.w);
+        if (Math.abs(t.x - x) < reach && Math.abs(t.z - z) < reach && t.y + t.H > top) top = t.y + t.H;
+      }
+      return top;
+    },
     /** Gone altogether where `test(x, z)` (an airfield's runway: systems/Airfields.js) — no stump, no log. */
     clear(test) {
       _m.makeScale(0, 0, 0);

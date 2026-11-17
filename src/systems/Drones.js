@@ -19,10 +19,11 @@ import { doctrine } from '../data/doctrine.js';
 
 export const DRONE = {
   recon: { speed: 16, alt: 70, radius: 140, station: 80, hold: 4, mesh: 'quad', scale: 1.6, sound: ['drone.quad', 0.85, 0.2] },
-  fpv: { speed: 30, alt: 12, damage: 950, pierce: 0.92, splash: 3, life: 40, search: 70, mesh: 'quad', scale: 1.2, sound: ['drone.quad', 1.15, 0.26] },
+  fpv: { speed: 30, alt: 12, damage: 950, pierce: 0.92, splash: 3, life: 40, search: 70, mesh: 'quad', scale: 1.2, sound: ['drone.quad', 2.1, 0.3] }, // (a racing quad's whine: high)
   lancet: { speed: 44, alt: 75, damage: 1500, pierce: 0.95, splash: 3.5, life: 100, search: 240, mesh: 'wing', scale: 1, sound: ['drone.lancet', 1, 0.24] },
 };
 const TICK = 0.25;
+const RESTOCK = { field: 5, base: 4, radius: 200 }; // a drone back every 5 × `every` s in the field (FPV: a minute), four times as fast near the base
 const MAX = 96;
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -96,7 +97,7 @@ export class Drones {
 
   update(dt) {
     if (!this.client) {
-      if ((this.t += dt) >= TICK) { const step = this.t; this.t = 0; this.launches(step); this.defences(step); }
+      if ((this.t += dt) >= TICK) { const step = this.t; this.t = 0; this.launches(step); this.defences(step); for (const d of this.list) this.lookAhead(d); }
       for (const d of [...this.list]) this.fly(d, dt);
     } else {
       for (const d of this.list) { d.pos.addScaledVector(d.vel, dt); if (d.to) d.pos.lerp(d.to, Math.min(1, dt * 4)); }
@@ -112,8 +113,10 @@ export class Drones {
       const D = s.alive && s.stats.drone;
       if (!D || s.ai?.state === 'routed') continue;
       const op = s.units.find((u) => u.alive);
-      if (!op || now < (s.droneAt ?? 0)) continue;
+      if (!op) continue;
       s.dronesLeft ??= D.count ?? Infinity;
+      this.restock(s, D, step);
+      if (now < (s.droneAt ?? 0)) continue;
       if (s.dronesLeft <= 0) continue;
       if (D.kind === 'recon') {
         if (this.list.some((d) => d.owner === s)) continue;
@@ -128,6 +131,18 @@ export class Drones {
       s.dronesLeft--;
       s.droneAt = now + D.every * (doctrine(g, s.faction, 'dronewar')?.every ?? 1); // (Russia's drone war: faster)
     }
+  }
+
+  /**
+   * Fresh drones come up with the supplies: one every RESTOCK.field × `every` s wherever the team is,
+   * RESTOCK.base × as fast within RESTOCK.radius of the side's base (its label shows how many are left).
+   */
+  restock(s, D, step) {
+    if (!Number.isFinite(D.count) || s.dronesLeft >= D.count) { s.restockT = 0; return; }
+    const base = this.game.world.bases?.[s.faction], c = s.centroid;
+    const home = base && Math.hypot(base.x - c.x, base.z - c.z) < RESTOCK.radius;
+    s.restockT = (s.restockT ?? 0) + step * (home ? RESTOCK.base : 1);
+    if (s.restockT >= D.every * RESTOCK.field) { s.restockT = 0; s.dronesLeft++; }
   }
 
   /** Over the enemy nearest the team that we know of, or straight out toward the enemy's base. */
@@ -152,13 +167,13 @@ export class Drones {
     for (const e of g.world.stacks) {
       if (e.faction === s.faction || !e.alive || e.stats.structure || e.stats.air || e.stats.naval) continue;
       const vehicle = !e.usesCover;
-      if (heavy && !vehicle && !e.stats.gun) continue;
+      const big = vehicle || e.stats.gun; // (a Lancet: vehicles and guns first — men only when there is nothing better in reach)
       for (const u of e.units) {
         if (!u.alive || !(u.spotted || u.locatedUntil > g.time)) continue;
         const d2 = (u.pos.x - from.x) ** 2 + (u.pos.z - from.z) ** 2;
         if (d2 > range * range) continue;
         if (avoid && this.list.some((d) => d.target === u)) continue;
-        const score = (vehicle ? 1000 + (e.stats.hp ?? 0) * 0.2 : 0) - Math.sqrt(d2);
+        const score = (vehicle ? 1000 + (e.stats.hp ?? 0) * 0.2 : 0) + (heavy && big ? 2000 : 0) - Math.sqrt(d2);
         if (score > bs) { bs = score; best = u; }
       }
     }
@@ -225,11 +240,26 @@ export class Drones {
     _w.multiplyScalar(Math.min(sp, L / dt) / L);
     d.vel.lerp(_w, Math.min(1, dt * (d.kind === 'lancet' ? 2 : 4)));
     d.pos.addScaledVector(d.vel, dt);
-    const floor = T.heightAt(d.pos.x, d.pos.z) + 1;
-    if (d.pos.y < floor && !(d.target && Math.hypot(d.target.pos.x - d.pos.x, d.target.pos.z - d.pos.z) < 6)) d.pos.y = floor;
+    const close = d.target && Math.hypot(d.target.pos.x - d.pos.x, d.target.pos.z - d.pos.z) < 6; // (the last metres: down onto it)
+    const ground1 = T.heightAt(d.pos.x, d.pos.z) + 1, over = close ? -Infinity : (d.over ?? -Infinity) + 2.5; // over the roofs and treetops ahead (lookAhead), never through them
+    if (d.pos.y < ground1) d.pos.y = ground1;
+    if (d.pos.y < over) { d.pos.y = Math.min(over, d.pos.y + 14 * dt); if (d.vel.y < 0) d.vel.y = 0; }
     if (Math.hypot(d.vel.x, d.vel.z) > 0.5) d.yaw = Math.atan2(d.vel.x, d.vel.z);
     d.sound?.setPos?.(d.pos);
     if (d.kind === 'recon' && !d.dark && d.age < P.station) this.watch(d);
+  }
+
+  /** What stands in its way: the highest roof, wall or treetop under it and up to 1.5 s ahead (4 times a second). */
+  lookAhead(d) {
+    if (d.state !== 'fly') return;
+    const c = this.game.cover;
+    let top = -Infinity;
+    for (const k of [0, 0.5, 1, 1.5]) {
+      const x = d.pos.x + d.vel.x * k, z = d.pos.z + d.vel.z * k;
+      top = Math.max(top, c.topAt?.(x, z, 3) ?? -Infinity);
+      for (const f of c.forests ?? []) top = Math.max(top, f.topAt?.(x, z, 1.5) ?? -Infinity);
+    }
+    d.over = top;
   }
 
   /** A recon drone's camera: every enemy under it located for a few seconds. */

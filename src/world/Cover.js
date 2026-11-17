@@ -267,6 +267,13 @@ export class CoverMap {
     return c.top - c.y - 0.6;
   }
 
+  /** The highest top of any cover (a house, a wall, a trunk) within `r` m of (x, z), or -Infinity (systems/Drones.js flies over it). */
+  topAt(x, z, r = 0) {
+    let top = -Infinity;
+    for (const c of this._query(this.colGrid, x, z, r, this._colList)) if (c.top > top && this._distTo(c, x, z) < r) top = c.top;
+    return top;
+  }
+
   /** `climb`: cover lower than this doesn't count (infantry vaults it). */
   pointBlocked(x, z, margin = 0, climb = 0) {
     for (const c of this._query(this.colGrid, x, z, margin, this._colList)) {

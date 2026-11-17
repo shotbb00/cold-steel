@@ -111,6 +111,8 @@ function chipsOf(stack, word, pinned, mine) {
   if (word === 'Shaken') out.push(['Shaken', 'warn']);
   if (word === 'Gun out' || word === 'Tracks hit' || word === 'Engine hit') out.push([word, 'bad']);
   if (mine && stack.job) out.push([stack.job, 'job']);
+  const D = mine && stack.stats.drone; // a drone team: how many it has left (systems/Drones.js restocks them)
+  if (D && Number.isFinite(D.count)) out.push([`${D.kind === 'lancet' ? 'Munitions' : 'Drones'} ${stack.dronesLeft ?? D.count}/${D.count}`, (stack.dronesLeft ?? D.count) > 0 ? 'job' : 'warn']);
   return out;
 }
 
