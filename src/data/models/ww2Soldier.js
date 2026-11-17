@@ -27,6 +27,10 @@ const ARMY = {
   sov: { coat: 0x7b7451, coatDk: 0x645e40, trousers: 0x6a6448, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: BLACK, helmet: 0x4a5236, wood: WOOD_RED },
   wh: { coat: 0x5b5f4c, coatDk: 0x494c3c, trousers: 0x55584a, web: LEATHER_BLACK, belt: LEATHER_BLACK, boot: BLACK, helmet: 0x4a4d44, wood: WOOD },
   fj: { coat: 0x6c6850, coatDk: 0x55513c, trousers: 0x5a5d4c, web: LEATHER_BLACK, belt: LEATHER_BLACK, boot: 0x2a2420, helmet: 0x575a4c, wood: WOOD },
+  // the Pacific (Iwo Jima): the Marines in their sage-green herringbone twill, the helmet in its camouflage cover;
+  // the Imperial Army in khaki, the Type 90 helmet, wrapped puttees, brown leather
+  usmc: { coat: 0x5c6648, coatDk: 0x4a533a, trousers: 0x58614a, web: 0x8a7f5a, belt: 0x8a7f5a, boot: 0x4a3322, legging: 0x8f8460, helmet: 0x5a6340, wood: WOOD },
+  jp: { coat: 0x7a6e44, coatDk: 0x645a36, trousers: 0x766a42, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x4a3322, legging: 0x8a7c52, helmet: 0x5e5a3a, wood: 0x7a5232 },
 };
 
 // ------------------------------------------------------------------ weapons (in the arms' frame)
@@ -45,6 +49,7 @@ function rifle({ wood, to = 0.98, wood2 = 0.78, bolt = true, mag = false }) {
 }
 
 function weapon(kind, army, c) {
+  if (army === 'usmc') army = 'us'; // (the Marines carry the Army's weapons)
   const w = c.wood;
   switch (kind) {
     case 'smg':
@@ -76,6 +81,15 @@ function weapon(kind, army, c) {
           ...pair((s) => P.box(0.014, 0.014, 0.3, { x: 0.2 + s * 0.05, y: 1.21, z: 0.97, rx: 0.9, color: STEEL })),
         ],
         muzzle: { x: 0.2, y: 1.31, z: 1.08 } };
+      if (army === 'jp') return { // Type 96 / 99 light machine gun: the curved magazine on top, the finned barrel, bipod, wooden butt
+        parts: [
+          ...rifle({ wood: w, to: 0.62, wood2: 0.45, bolt: false }),
+          P.cyl(0.024, 0.024, 0.5, { x: 0.2, y: 1.33, z: 0.75, rx: Math.PI / 2, color: STEEL }, 8),
+          ...[0.6, 0.66, 0.72].map((z) => P.cyl(0.032, 0.032, 0.012, { x: 0.2, y: 1.33, z, rx: Math.PI / 2, color: STEEL }, 8)),
+          P.box(0.03, 0.12, 0.06, { x: 0.2, y: 1.42, z: 0.32, rx: -0.35, color: STEEL }),
+          ...pair((s) => P.box(0.012, 0.012, 0.3, { x: 0.2 + s * 0.05, y: 1.22, z: 0.92, rx: 0.9, color: STEEL })),
+        ],
+        muzzle: { x: 0.2, y: 1.33, z: 1.0 } };
       if (army === 'sov') return { // DP-28: the flat pan magazine on top, the slim barrel jacket, bipod
         parts: [
           ...rifle({ wood: w, to: 1.02, wood2: 0.45, bolt: false }),
@@ -97,6 +111,12 @@ function weapon(kind, army, c) {
         muzzle: { x: 0.2, y: 1.31, z: 1.08 } };
     }
     case 'at':
+      if (army === 'jp') return { // the lunge mine: a shaped charge on a long bamboo pole, rammed against the tank
+        parts: [
+          P.cyl(0.016, 0.016, 1.5, { x: 0.18, y: 1.36, z: 0.42, rx: Math.PI / 2 - 0.12, color: 0x9a8a50 }, 6),
+          P.cyl(0.11, 0.05, 0.22, { x: 0.18, y: 1.45, z: 1.22, rx: Math.PI / 2 - 0.12, color: 0x3c3f30 }, 12),
+        ],
+        muzzle: { x: 0.18, y: 1.47, z: 1.42 } };
       if (army === 'sov') return { // PTRS-41 anti-tank rifle: very long, the muzzle brake, bipod, box magazine
         parts: [
           ...rifle({ wood: w, to: 1.75, wood2: 0.55, bolt: false, mag: true }),
@@ -161,7 +181,8 @@ function weapon(kind, army, c) {
           ...pair((s) => P.box(0.012, 0.012, 0.22, { x: 0.2 + s * 0.04, y: 1.25, z: 0.8, rx: 0.9, color: STEEL })),
         ],
         muzzle: { x: 0.2, y: 1.335, z: 0.95 } };
-      return { parts: rifle({ wood: w, to: army === 'sov' ? 1.08 : army === 'us' ? 0.94 : 1.0, bolt: army !== 'us' }), muzzle: { x: 0.2, y: 1.335, z: army === 'sov' ? 1.08 : army === 'us' ? 0.94 : 1.0 } };
+      { const to = army === 'sov' || army === 'jp' ? 1.08 : army === 'us' || army === 'usmc' ? 0.94 : 1.0; // (the Arisaka: as long as the Mosin)
+        return { parts: rifle({ wood: w, to, bolt: army !== 'us' && army !== 'usmc' }), muzzle: { x: 0.2, y: 1.335, z: to } }; }
   }
 }
 
@@ -169,6 +190,7 @@ function weapon(kind, army, c) {
 
 function headgear(army, c, crew) {
   if (crew) {
+    if (army === 'usmc') army = 'us';
     if (army === 'us') return [ // the tanker's helmet: the padded leather crown, the earflaps
       loft([[0, 1.77, -0.01, 0.105, 0.115, 2.2], [0, 1.83, -0.012, 0.105, 0.115, 2.2], [0, 1.87, -0.012, 0.07, 0.08, 2]], { color: 0x3a2c1e }, 12),
       ...pair((s) => P.box(0.02, 0.08, 0.07, { x: s * 0.1, y: 1.73, color: 0x3a2c1e })),
@@ -185,6 +207,16 @@ function headgear(army, c, crew) {
     helmet([[1.745, 0.16, 1.06], [1.752, 0.153], [1.79, 0.145], [1.83, 0.126], [1.86, 0.088], [1.876, 0.03]], { color: c.helmet }),
     ...[1.78, 1.82].map((y) => loft([[0, y, -0.008, 0.149, 0.158, 2], [0, y + 0.008, -0.008, 0.146, 0.155, 2]], { color: 0x3e4028 }, 14)),
     ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.13, y: 1.68, z: 0.0, color: c.web })),
+  ];
+  if (army === 'usmc') return [ // the M1 in the Marines' camouflage cover: green with brown blotches
+    helmet([[1.745, 0.162, 1.06], [1.752, 0.155], [1.79, 0.147], [1.83, 0.128], [1.86, 0.09], [1.878, 0.032]], { color: c.helmet }),
+    ...[[0.07, 1.82, 0.11], [-0.09, 1.84, 0.06], [0.02, 1.86, -0.1], [-0.05, 1.8, -0.13]].map(([x, y, z]) => P.box(0.06, 0.03, 0.05, { x, y, z, color: 0x6a5a3a })),
+    ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.13, y: 1.68, z: 0.0, color: c.web })),
+  ];
+  if (army === 'jp') return [ // Type 90: a low rounded dome, a small flared rim, the star on the front, the cloth neck flap
+    helmet([[1.75, 0.152, 1.04], [1.762, 0.146], [1.8, 0.139], [1.835, 0.118], [1.858, 0.08], [1.87, 0.03]], { color: c.helmet }),
+    P.box(0.028, 0.028, 0.006, { y: 1.81, z: 0.142, color: 0xc9a43a }),                                        // the star
+    loft([[0, 1.64, -0.09, 0.12, 0.05, 2], [0, 1.74, -0.11, 0.135, 0.06, 2]], { color: c.coatDk }, 10),        // neck flap
   ];
   if (army === 'sov') return [ // SSh-40: the deep dome with its narrow flared rim
     helmet([[1.742, 0.162, 1.05], [1.75, 0.152], [1.79, 0.146], [1.832, 0.127], [1.862, 0.09], [1.879, 0.032]], { color: c.helmet }),
@@ -216,14 +248,17 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
       ...pair((s) => loft([[0.11, 1.09, 0.142], [0.115, 1.25, 0.15], [0.11, 1.4, 0.14], [0.1, 1.52, 0.1], [0.08, 1.55, 0.02]]
         .map(([x, y, z]) => [s * x, y, z, 0.02, 0.006, 2]), { color: c.web }, 6)),
       // ammunition: US cartridge belt pockets / German three-cell pouches / Soviet pouches
-      ...pair((s) => [0.06, 0.13].map((dx) => P.box(0.055, 0.075, 0.04, { x: s * (0.04 + dx), y: 1.1, z: 0.15, color: army === 'us' ? c.web : army === 'sov' ? LEATHER_BROWN : LEATHER_BLACK }))).flat(),
-      P.cyl(0.044, 0.047, 0.15, { x: 0.19, y: 1.0, z: -0.1, color: army === 'us' ? 0x4d4932 : 0x3a3a2c }, 10),      // canteen
+      ...pair((s) => [0.06, 0.13].map((dx) => P.box(0.055, 0.075, 0.04, { x: s * (0.04 + dx), y: 1.1, z: 0.15, color: army === 'us' || army === 'usmc' ? c.web : army === 'sov' || army === 'jp' ? LEATHER_BROWN : LEATHER_BLACK }))).flat(),
+      P.cyl(0.044, 0.047, 0.15, { x: 0.19, y: 1.0, z: -0.1, color: army === 'us' || army === 'usmc' ? 0x4d4932 : 0x3a3a2c }, 10),      // canteen
       ...(army === 'wh' || army === 'fj' ? [
         P.cyl(0.058, 0.058, 0.27, { x: -0.1, y: 0.98, z: -0.19, color: 0x4f5240 }, 12),                              // the gas-mask canister, hanging at the back
         ...[-0.08, 0, 0.08].map((d) => P.cyl(0.062, 0.062, 0.012, { x: -0.1, y: 0.98 + d, z: -0.19, color: 0x44473a }, 12)),
         P.box(0.16, 0.14, 0.07, { x: 0.12, y: 0.98, z: -0.14, color: 0x6a6650 }),                                     // bread bag
-      ] : army === 'us' ? [
-        P.box(0.12, 0.2, 0.03, { x: 0.05, y: 1.08, z: -0.18, color: 0x3b3b2c }),                                     // entrenching tool
+      ] : army === 'jp' ? [
+        P.box(0.22, 0.2, 0.08, { x: 0, y: 1.32, z: -0.19, color: 0x6e6440 }),                                       // the small pack
+        loft([[0, 1.43, -0.18, 0.15, 0.04, 3], [0, 1.47, -0.18, 0.15, 0.04, 3]], { color: 0x5e5838 }, 10),            // the blanket roll on top
+      ] : army === 'us' || army === 'usmc' ? [
+        P.box(0.12, 0.2, 0.06, { x: 0.05, y: 1.08, z: -0.165, color: 0x3b3b2c }),                                     // entrenching tool
         loft([[0, 1.28, -0.19, 0.12, 0.05, 4], [0, 1.42, -0.2, 0.125, 0.055, 4], [0, 1.5, -0.19, 0.11, 0.05, 4]], { color: c.coatDk }, 12), // pack
       ] : [
         // the rolled greatcoat, slung from the left shoulder to the right hip (front and back)
@@ -243,14 +278,15 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
     ] : []),
     ...(radio ? [ // the radio on the back (SCR-300 / RBM / Feldfu), its whip antenna
       loft([[0, 1.18, -0.24, 0.13, 0.08, 5], [0, 1.48, -0.25, 0.13, 0.08, 5]], { color: 0x3e4030 }, 10),
-      P.cyl(0.006, 0.006, 1.3, { x: 0.09, y: 2.15, z: -0.27, rx: -0.1, color: BLACK }, 4),
+      P.cyl(0.006, 0.006, 1.4, { x: 0.09, y: 2.1, z: -0.27, rx: -0.1, color: BLACK }, 4),
     ] : []),
   ];
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.coatDk }), ...w.parts];
   const thigh = merge([thighPart({ color: c.trousers })]);
   const shin = grime(merge([
-    ...shinPart({ color: c.trousers, boot: c.boot, bootTop: army === 'wh' && !crew ? 0.34 : army === 'sov' ? 0.32 : 0.2, blouse: army !== 'us' }),
-    ...(army === 'us' && !crew ? [loft([[0, -0.3, 0.0, 0.058, 0.062, 2], [0, -0.13, 0.0, 0.06, 0.064, 2]], { color: c.legging }, 10)] : []), // canvas leggings
+    ...shinPart({ color: c.trousers, boot: c.boot, bootTop: army === 'wh' && !crew ? 0.34 : army === 'sov' ? 0.32 : 0.2, blouse: army !== 'us' && army !== 'usmc' }),
+    ...(army === 'jp' && !crew ? [loft([[0, -0.36, 0.0, 0.056, 0.06, 2], [0, -0.06, 0.0, 0.062, 0.066, 2]], { color: c.legging }, 10)] : []), // the wrapped puttees, ankle to knee
+    ...((army === 'us' || army === 'usmc') && !crew ? [loft([[0, -0.3, 0.0, 0.058, 0.062, 2], [0, -0.13, 0.0, 0.06, 0.064, 2]], { color: c.legging }, 10)] : []), // canvas leggings
   ]), -0.3, -0.5);
   return {
     torso: finish(merge(torso)),

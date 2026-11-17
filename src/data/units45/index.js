@@ -14,12 +14,14 @@ import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, 
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 import { SHIPS_1945 } from './ships.js';
+import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
   nato: () => buildWw2Soldier({ army: 'us', ...o }), sov: () => buildWw2Soldier({ army: 'sov', ...o }),
   pact: () => buildWw2Soldier({ army: 'wh', ...o }), fj: () => buildWw2Soldier({ army: 'fj', ...o }),
+  usmc: () => buildWw2Soldier({ army: 'usmc', ...o }), jp: () => buildWw2Soldier({ army: 'jp', ...o }), // (the Pacific: see the end of this file)
 });
 const derive = (base, o) => ({ ...base, ...o, stats: { ...base.stats, ...o.stats }, specialist: o.specialist ?? base.specialist });
 
@@ -35,7 +37,7 @@ const rifles = derive(T.rifles, {
   models: men(),
   // the kits (data/kits.js): bazookas for the GIs, Panzerfausts for the Germans — and for the Red Army, which used captured ones by the thousand in 1945; Thompson, PPSh, MP 40 for the assault
   kitModels: {
-    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }) },
+    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }), usmc: () => buildWw2Soldier({ army: 'usmc', weapon: 'at' }), jp: () => buildWw2Soldier({ army: 'jp', weapon: 'at' }) },
     smg: men({ weapon: 'smg' }),
   },
   variants: {
@@ -541,6 +543,52 @@ const airAssault = derive(T.airAssault, {
     fj: { name: 'Fallschirmjäger', weapon: 'FG 42, MG 42', text: 'The Luftwaffe’s paratroopers in their own role: out of the Ju 52 over the target.' },
   },
 });
+
+// ---------------------------------------------------------------- the Pacific (Iwo Jima, February 1945)
+// Two more armies (data/epoch.js): the US Marine Corps on the Allied side — the US Army's types wherever the
+// Marines have nothing of their own — and the Imperial Japanese Army on the other, which fields only the types
+// written for it here (`own` in data/epoch.js: no Panthers for Japan). Each: its model, its stats over its side's
+// (factionStats layer the side, then the army), its name and text, its own price (armyCost: the Japanese tanks
+// were light and cheap).
+const pacific = (t, army, { model, stats, variant, cost }) => {
+  if (model) t.models = { ...t.models, [army]: model };
+  if (stats) t.factionStats = { ...t.factionStats, [army]: { ...t.factionStats?.[army === 'jp' ? 'pact' : 'nato'], ...stats } };
+  if (cost) t.armyCost = { ...t.armyCost, [army]: Math.round(t.cost * cost) };
+  t.variants = { ...t.variants, [army]: variant };
+};
+// the Imperial Japanese Army
+pacific(rifles, 'jp', { stats: { fireCooldown: 2.6, magSize: 5, reloadTime: 3.5, playerFireInterval: 1.4, lightAT: 0, grenades: 3 }, cost: 0.9,
+  variant: { name: 'Rifle Squad', weapon: 'Arisaka Type 99, Type 96 LMG, knee mortar', text: 'The Imperial Army’s rifle squad: the long Arisaka, the light machine gun, and grenades by the dozen. They fight from holes and caves to the last man.' } });
+pacific(atTeam, 'jp', { stats: { range: 14, damage: Math.round(T.atTeam.stats.damage * 1.6), magSize: 1, reloadTime: 22, fireCooldown: 2, boltSpeed: 18, trail: false, splash: 2.5 }, cost: 0.75,
+  variant: { name: 'Lunge-Mine Team', weapon: 'Type 99 lunge mine, satchel charges', text: 'No bazooka: men who rush the tank with a shaped charge on a pole, or a satchel under its tracks. They must get within a few metres — and they will try.' } });
+pacific(mgTeam, 'jp', { stats: { burst: 8, burstInterval: 0.13, fireCooldown: 2.4 }, cost: 0.9,
+  variant: { name: 'Type 92 HMG Team', weapon: 'Type 92 heavy machine gun, 7.7 mm', text: 'The “woodpecker”: slow, steady, strip-fed bursts from a dug-in nest that covers every way up the beach.' } });
+pacific(mortar, 'jp', { variant: { name: 'Mortar Team', weapon: 'Type 97 81 mm mortar', text: 'Mortars registered on every terrace of the beach long before the landing: they know the range to the metre.' } });
+pacific(scouts, 'jp', { variant: { name: 'Scouts', weapon: 'Arisaka Type 99, binoculars', text: 'Lookouts in the rocks: they see the enemy coming and stay hidden.' } });
+pacific(sniper, 'jp', { variant: { name: 'Sniper', weapon: 'Arisaka Type 97 with scope', text: 'A marksman in a spider hole: one shot, then the lid closes.' } });
+pacific(engineers, 'jp', { variant: { name: 'Engineers', weapon: 'Arisaka, Type 93 flamethrower, demolition charges', text: 'They dug the island’s tunnels and caves; in battle they wire, mine and burn.' } });
+pacific(observers, 'jp', { variant: { name: 'Artillery Observers', weapon: 'Arisaka, field telephone', text: 'In a cave on the heights with a view of the whole beach: wherever they look, the guns land.' } });
+pacific(crew, 'jp', { variant: { name: 'Tank Crew', weapon: 'Type 14 pistol', text: CREW_TEXT } });
+pacific(tank, 'jp', { model: buildJpChiHa, stats: { armor: 0.35, hp: 850, damage: 230, range: 160, fireCooldown: 4, speed: 5.0 }, cost: 0.62,
+  variant: { name: 'Type 97 Shinhōtō Chi-Ha', weapon: '47 mm Type 1', text: 'The Imperial Army’s medium tank with the new turret and the long 47 mm: deadly to amtracs, outclassed by any Sherman. On Iwo Jima they were dug in to their turrets.' } });
+pacific(reconVehicle, 'jp', { model: buildJpHaGo, stats: { weapon: 'cannon', damage: 120, vsArmor: 0.6, pierce: 0.35, splash: 1, fireCooldown: 2.5, armor: 0.15, hp: 520 }, cost: 0.75,
+  variant: { name: 'Type 95 Ha-Go', weapon: '37 mm Type 94', text: 'The light tank: quick, thinly armoured, its little 37 mm for infantry and amtracs.' } });
+pacific(tankDestroyer, 'jp', { model: buildJpHoNi, stats: { armor: 0.3, hp: 800, speed: 4.8, damage: 380, fireCooldown: 6.5, traverse: 0.18 }, cost: 0.8,
+  variant: { name: 'Type 1 Ho-Ni I', weapon: '75 mm Type 90 field gun', text: 'A field gun behind a shield on the Chi-Ha’s chassis: an ambusher that kills a Sherman from the side. Stops to fire.' } });
+pacific(artillery, 'jp', { model: buildJpType91, stats: { towed: { deploy: 18 }, traverse: 0.45 }, cost: 0.9,
+  variant: { name: 'Type 91 10 cm Howitzer', weapon: '105 mm Type 91', text: 'The divisional howitzer, towed into a cave mouth: it fires, and is pulled back in before the counter-fire comes.' } });
+pacific(rockets, 'jp', { model: buildJpRocket, stats: { magSize: 4, damage: 240, splash: 9, fireCooldown: 3, scatter: 22, armor: 0.05, hp: 380 }, cost: 0.8,
+  variant: { name: 'Type 4 20 cm Rocket Launcher', weapon: '4 × 20 cm rockets', text: 'Huge, inaccurate rockets that fell on Iwo Jima’s beaches like crashing freight cars.' } });
+pacific(towedAA, 'jp', { model: buildJpType98, stats: { antiAir: { range: 240, optical: 0.65, rate: 6, burst: 1.5, pause: 1, hitNear: 0.06, hitFar: 0.012 } },
+  variant: { name: 'Type 98 20 mm AA', weapon: '20 mm Type 98', text: 'The light AA gun: against low aircraft — and, lowered, against men on the beach.' } });
+pacific(ambulance, 'jp', { model: buildJpIsuzuAmb, variant: { name: 'Medical Lorry', weapon: 'unarmed', text: 'An Isuzu lorry with a red cross: patches up the wounded nearby.' } });
+pacific(commandPost, 'jp', { model: buildJpIsuzu, variant: { name: 'Command Post', weapon: 'field telephones', text: 'The battalion’s headquarters in a lorry: nearby squads hold longer and react faster.' } });
+// the Marines: their own names; the LVT amtrac in the half-track's place
+pacific(rifles, 'usmc', { variant: { name: 'Marine Rifle Squad', weapon: 'M1 Garand, BAR, Thompson', text: 'A Marine rifle squad of three fire teams, each round its BAR: built for the assault from the sea.' } });
+pacific(mgTeam, 'usmc', { variant: { name: 'Marine MG Team', weapon: 'Browning M1919, .30 cal', text: 'The air-cooled Browning, carried up the terraces to hold what the riflemen took.' } });
+pacific(engineers, 'usmc', { variant: { name: 'Assault Engineers', weapon: 'M2-2 flamethrower, satchel charges', text: 'Iwo Jima’s cave-busters: the flamethrower into the opening, the satchel charge after it.' } });
+pacific(tank, 'usmc', { variant: { name: 'M4A3 Sherman (Marines)', weapon: '75 mm M3', text: 'The Marines’ Shermans, wooden planks on their sides against magnetic mines: they blast pillboxes point-blank for the riflemen.' } });
+pacific(ifv, 'usmc', { model: buildUsLvt4, stats: { armor: 0.2, hp: 700, speed: 4.6 }, variant: { name: 'LVT-4 Water Buffalo', weapon: '.30 and .50 cal', text: 'The amphibian tractor: swims in from the ships and climbs the beach with a squad in its open hold. U unloads them over the stern ramp.' } });
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,

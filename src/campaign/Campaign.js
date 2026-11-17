@@ -36,7 +36,7 @@
 // Saved in localStorage ('coldsteel.campaign.2', other wars: 'coldsteel.campaign.<year>'); the old column campaign's saves are left alone.
 import { UNIT_TYPES } from '../data/units/index.js';
 import { writeLetter } from './Letters.js';
-import { enemyOf, forArmy, armiesFrom } from '../data/factions.js';
+import { enemyOf, forArmy, armiesFrom, armyHas } from '../data/factions.js';
 import { unitCost } from '../data/doctrine.js';
 import { epoch } from '../data/epoch.js';
 
@@ -762,7 +762,7 @@ export function refill(c, bid, cid) {
 }
 
 /** Types this army can recruit into a battalion. */
-export const recruitable = (c) => Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && !t.needsRiver && (!t.armies || t.armies.includes(c.armies[c.side])));
+export const recruitable = (c) => Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && !t.needsRiver && armyHas(t, c.armies[c.side]));
 
 export function recruit(c, bid, type) {
   const x = c.battalions.find((b) => b.id === bid);

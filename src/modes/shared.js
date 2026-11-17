@@ -7,7 +7,7 @@
 //                            HUD only — the numbers come from the host
 //   clock(s)                 m:ss
 import { unitCost } from '../data/doctrine.js';
-import { forArmy } from '../data/factions.js';
+import { forArmy, armyHas } from '../data/factions.js';
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf } from '../data/factions.js';
@@ -28,7 +28,7 @@ export function makeBuyer(game, state) {
   return (faction, typeId, entry = null, kit = null) => {
     const map = game.map;
     const type = UNIT_TYPES[typeId];
-    if (!type || type.hidden || type.airOnly || (type.coastal && !game.world.coastal) || (type.armies && !type.armies.includes(game.armyOf(faction))) || (state.allow && !state.allow(type, faction))) return null;
+    if (!type || type.hidden || type.airOnly || (type.coastal && !game.world.coastal) || !armyHas(type, game.armyOf(faction)) || (state.allow && !state.allow(type, faction))) return null;
     const cost = unitCost(type, game.armyOf(faction));
     if (state.cp[game.wallet(faction)] < cost) {
       game.tell(faction, `Not enough command points for ${type.shortName} (${cost})`);

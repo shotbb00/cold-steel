@@ -135,6 +135,9 @@ export const EPOCHS = {
       sov: { id: 'sov', faction: 'nato', name: 'Red Army' },
       wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht' },
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
+      // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
+      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
     types: TYPES_1945, alias: ALIAS_1945, air: { ...AIR_1945, ...BOMBERS[1945] },
@@ -158,6 +161,14 @@ export const EPOCHS = {
       fj: [
         { id: 'hold', name: 'Hold to the last', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
         { id: 'paradrop', name: 'Paradrop', text: 'Their paradrop costs 30 % less and is ready again 30 % sooner. (The paradrop arrives with the next units.)', cost: 0.7, cooldown: 0.7 },
+      ],
+      usmc: [
+        { ...DOCTRINE_1985.us[0], name: 'Marine air', text: 'The Marines’ own aviation over their own riflemen: air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
+        { id: 'hold', name: 'Semper Fidelis', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
+      ],
+      jp: [
+        { id: 'tempo', name: 'Banzai', text: 'Infantry and tanks closing on the enemy move 30 % faster and fire 15 % faster. Units stalled in contact for 20 s take 30 % more suppression.', speed: 1.3, fire: 1.15, stall: 20, suppression: 1.3 },
+        { ...DOCTRINE_1985.bw[0], name: 'Cave fortresses', text: 'Engineers build twice as fast and fortifications cost 40 % less. A dug-in line of trenches and wire waits in front of your base at the start.' },
       ],
     },
   },

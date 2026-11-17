@@ -9,7 +9,7 @@ import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
+import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
@@ -631,7 +631,7 @@ export class MainMenu {
     const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name
     for (const t of types) {
       const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
-      const off = (a, f) => (!!t.armies && !t.armies.includes(a)) || (coastal(t) && !coast[f].has(t.id)); // an army's own unit (the NVA's Kampfgruppe); on the coast the other side's craft or forts
+      const off = (a, f) => !armyHas(t, a) || (coastal(t) && !coast[f].has(t.id)); // an army's own unit (the NVA's Kampfgruppe); on the coast the other side's craft or forts
       labels.push([b, t, off]);
       b.hidden = off(this.unit.army, this.unit.faction);
       b.type = 'button';
