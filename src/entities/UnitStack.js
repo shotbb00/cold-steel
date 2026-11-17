@@ -222,6 +222,7 @@ export class UnitStack {
     this.smokeLeft = type.stats.smoke?.charges ?? 0;             // vehicle smoke grenade salvos
     this.smokeRounds = type.specialist?.stats.smokeRounds ?? this.stats.smokeRounds ?? 0;  // mortar smoke bombs (SP mortars: in stats)
     this.flareRounds = type.specialist?.stats.flareRounds ?? this.stats.flareRounds ?? 0;  // …and illumination rounds
+    this.smokeFull = this.smokeRounds; this.flareFull = this.flareRounds; // (what comes back with the supplies: systems/Stocks.js)
     this.smokeOrder = null;
     this.xp = 0;
     this.rank = 0;

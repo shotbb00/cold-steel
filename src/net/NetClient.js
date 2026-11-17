@@ -407,7 +407,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp, dive] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp, dive, stocks] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -425,6 +425,7 @@ export class NetClient {
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
       if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
       if (s.stats.landingCraft && ramp != null) { const u = s.units[0]; u.rampK = (ramp % 1000) / 100; u.beached = ramp >= 1000; }
+      s.netStocks = stocks ?? null; // (its tag: systems/Stocks.js)
       if (s.stats.submarine && dive != null) for (const u of s.units) u.netDepth = dive; // (eased toward in applyStack)
       if (s.stats.sail && rig != null) { const u = s.units[0]; u.masts = [0, 1, 2].map((i) => !!(rig & (1 << i))); u.struck = !!(rig & 8); } // (1806: the model's masts and colours)
     }

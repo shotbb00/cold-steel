@@ -8,6 +8,7 @@
 // T-72 2 · tracks 60 %", "Treating 4 wounded"), the stacks it works on carry a badge
 // (stack.tended until a moment after the last care), and there is something to see at each
 // patient — welding sparks on a vehicle, a medic's glow over a wounded man (EffectsSystem).
+import { restockAll } from './Stocks.js';
 import { dist2DSq } from '../core/math.js';
 import { AIState } from '../ai/StackAI.js';
 
@@ -61,6 +62,7 @@ export class Support {
       s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
     }
     this.game.airfields?.repair(step); // sappers at work on a cratered runway
+    restockAll(this.game, step); // missiles, mortar rounds, depth charges, mines back with the supplies (systems/Stocks.js)
     for (const s of world.stacks) {
       if (!s.alive) continue;
       const kit = s.stats.repair ?? s.stats.heal;
