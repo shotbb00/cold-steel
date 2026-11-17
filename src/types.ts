@@ -314,6 +314,8 @@ export interface MapDef {
   battlefield?: (game: any) => any;
   /** world/River.js, maps with crossings */
   river?: any;
+  /** each side's airfields (systems/Airfields.js): [{ faction, x, z, yaw, large?, name?, group? }] — else placed near the bases */
+  airfields?: any[];
   bridgeAt?: (x: number, z: number) => any;
   /** forest density 0..1: shortens sight through the trees (systems/VisibilitySystem.js) */
   woods?: (x: number, z: number) => number;

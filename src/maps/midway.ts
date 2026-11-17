@@ -95,12 +95,18 @@ export default {
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-900, 0, 900] }, pact: { x: 0, z: -BASE_Z, entries: [-900, 0, 900] } },
   maxStacks: 12,
+  // each side's island airfield inside the reef (tester feedback 2026-11-17): Sand Island American, Eastern Island Japanese —
+  // squadrons ashore as well as on the carriers (systems/Airfields.js: the runway beside the tower, along x)
+  airfields: [
+    { faction: 'nato', x: -380, z: 205, yaw: Math.PI / 2, name: 'Sand Island airfield' },
+    { faction: 'pact', x: 420, z: -160, yaw: -Math.PI / 2, name: 'Eastern Island airfield' },
+  ],
   cameraStart: { nato: { x: 0, z: 2000 }, pact: { x: 0, z: -2000 } }, // (on the fleet as the battle opens)
   points,
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -300, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2100, facing: Math.PI }, { unit: 'frigate', x: 0, z: 2150, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 2300, facing: Math.PI }],
-    pact: [{ unit: 'destroyer', x: 300, z: -2100, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }, { unit: 'frigate', x: 0, z: -2150, facing: 0 }, { unit: 'cruiser', x: 0, z: -2300, facing: 0 }],
+    nato: [{ unit: 'destroyer', x: -300, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2100, facing: Math.PI }, { unit: 'frigate', x: 0, z: 2150, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 2300, facing: Math.PI }, { unit: 'carrier', x: 250, z: 2450, facing: Math.PI }],
+    pact: [{ unit: 'destroyer', x: 300, z: -2100, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }, { unit: 'frigate', x: 0, z: -2150, facing: 0 }, { unit: 'cruiser', x: 0, z: -2300, facing: 0 }, { unit: 'carrier', x: -250, z: -2450, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {
@@ -110,10 +116,9 @@ export default {
     for (let i = 0; i < 160; i++) {
       const x = (rand() * 2 - 1) * 650;
       const z = (rand() * 2 - 1) * 450;
-      if (height(x, z) > 1.8) props.palm({ x, z, height: 7 + rand() * 5 });
+      const runway = (Math.abs(z - 260) < 30 && Math.abs(x + 380) < 140) || (Math.abs(z + 215) < 30 && Math.abs(x - 420) < 140); // (the island airfields' strips: systems/Airfields.js)
+      if (height(x, z) > 1.8 && !runway) props.palm({ x, z, height: 7 + rand() * 5 });
     }
-    props.controlTower({ x: 420, z: -200, yaw: 0.3 });
-    props.timberHangar({ x: 470, z: -150, yaw: 0.3 });
     props.finish();
     const trees = jungle({ scene, terrain, cover, rand, half: 3000, count: 2000 }); // (out to the pinnacles)
     cover.finalize({ x: HALF, z: HALF });

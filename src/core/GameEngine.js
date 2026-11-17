@@ -45,6 +45,7 @@ import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { Drones } from '../systems/Drones.js';
+import { Airfields } from '../systems/Airfields.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
@@ -262,7 +263,10 @@ export class GameEngine {
       this.quietly(() => this.replayScars({ works: field.works.map((w) => [w.kind, w.x, w.z, w.yaw, w.faction]) }));
       for (const st of this.construction.structures.slice(n0)) st.fromMap = true; // (the map's own: not a scar the campaign keeps — the map lays them again)
     }
+    this.airfields = new Airfields(this); // each side's airfield, its runway laid on every machine alike (tester feedback 2026-11-17)
+    if (mode.id !== 'bootcamp') this.airfields.plan();
     mode.setup(this);
+    if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
     this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)

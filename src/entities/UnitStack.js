@@ -2581,6 +2581,7 @@ export class UnitStack {
       const rake = this.stats.sail ? rakeFactor(u, dir) : 1; // (1806: a ball along her length, in at the bow or the stern — entities/sailDamage.js)
       const dealt = amount * rake * vsArmor * (1 - armor * (1 - pierce)) * (u.possessed ? 0.6 : 1);
       u.hp -= dealt;
+      if (this.stats.indestructible) u.hp = Math.max(1, u.hp); // (an airfield: shut, never gone — systems/Airfields.js)
       if (this.stats.naval) { if (u.hp > 0) { this.shipHit(u, dealt); if (this.stats.sail) sailHit(this, u, dealt, source, rake); } } // (flooding, fires, parts; under sail the men and the masts)
       else if (u.hp > 0 && vsArmor >= 0.5 && dealt > u.maxHp * 0.08 && !this.stats.structure && !this.stats.cavalry) this.hitPart(u, facing);
       if (u.hp <= 0) u.recoverable = !this.stats.cavalry && Math.random() < PARTS.recoverable; // knocked out, not brewed up: a recovery vehicle can bring it back

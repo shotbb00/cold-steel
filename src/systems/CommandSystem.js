@@ -397,13 +397,14 @@ export class CommandSystem {
       if (!vehicles.length) return this.game.bus.emit('toast', 'Select infantry or vehicles with smoke, or a mortar team');
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
-      let air = cmd.slice(4) || 'heli';
+      let [air, fromId] = (cmd.slice(4) || 'heli').split('@'); // ('air:jet@12': from that carrier or airfield)
+      air ||= 'heli';
       if (this.game.world.openSea && !KINDS[air]?.sea) air = { heli: 'torpBomb', jet: epoch() === '1918' ? 'asw' : 'diveBomb', cap: 'navCap', recon: 'navScout' }[air] ?? air; // (at sea the keys call the carrier's missions)
       if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
-      this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
+      this.startTargeting({ kind: 'air', air, yaw: null, from: fromId ? Number(fromId) : null }); // null: run in from our base until Q/E turn it
     } else if (cmd.startsWith('power:')) { // 1806: click the spot (systems/Powers1806.js)
       const k = cmd.slice(6), g = this.game;
       if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
@@ -672,7 +673,7 @@ export class CommandSystem {
     } else if (t.kind === 'smoke') {
       this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
-    } else if (this.game.orders.issue({ t: 'air', x: p.x, z: p.z, yaw: t.yaw ?? this.game.air.defaultYaw(this.faction, p.x, p.z), k: t.air }) === false) {
+    } else if (this.game.orders.issue({ t: 'air', x: p.x, z: p.z, yaw: t.yaw ?? this.game.air.defaultYaw(this.faction, p.x, p.z), k: t.air, b: t.from ?? null }) === false) {
       return;
     } else {
       this.addMarker(p, 'attack');

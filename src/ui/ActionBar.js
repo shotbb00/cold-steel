@@ -184,7 +184,7 @@ export class ActionBar {
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const aboard = kind && KINDS[kind]?.sea && KINDS[kind].deck !== 'optional' ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers; 1985's come from the shore too)
+      const aboard = kind && ((KINDS[kind]?.sea && KINDS[kind].deck !== 'optional') || (!KINDS[kind]?.sea && g.air.based(me, kind))) ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers — 1985's come from the shore too; on land: on the airfields)
       const text = left > 0 ? `${left} s` : aboard === 0 ? 'none aboard' : `${mass !== null ? mass.cost ?? '' : terms.cost}${aboard != null ? ` · ${aboard}` : ''}`;
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
@@ -203,6 +203,17 @@ export class ActionBar {
     const sel = [...g.commands.selected].filter((s) => s.alive);
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
     const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && ['build:wire', 'build:mines', 'build:mgNest', 'build:tankTraps', 'build:camoNet'].includes(a.cmd))); // (1806: none of the modern works)
+    // a carrier or an airfield on its own: its squadrons, each kind with how many are in (launch them from here)
+    const base = sel.length === 1 && sel[0].stats.carrier && sel[0].faction === g.playerFaction ? sel[0] : null;
+    if (base) {
+      const hangar = g.air.hangar(base.units[0]);
+      for (const kind of Object.keys(hangar)) {
+        if (KINDS[kind]?.off) continue;
+        const sup = SUPPORT.find((x) => x[0] === `air:${kind}`);
+        shown.push({ cmd: `air:${kind}@${base.id}`, label: () => `${KINDS[kind].label}${hangar[kind] ? '' : ' — none in'}`, icon: sup?.[1] ?? 'jet', key: 'none',
+          tip: `Launch from ${base.name}: ${sup?.[4] ?? KINDS[kind].label}. Back here, a flight is rearmed in a minute`, count: () => hangar[kind] });
+      }
+    }
     // only touch the DOM when what's shown changed
     const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}:${typeof a.label === 'function' ? a.label(g) : ''}`).join('|'); // (a label that changes: the engine order, hold fire)
     if (!force && key === this.key) return;

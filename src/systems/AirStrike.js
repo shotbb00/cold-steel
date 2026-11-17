@@ -25,6 +25,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildWw2Soldier } from '../data/models/ww2Soldier.js';
 import { typeOf } from '../data/units/index.js';
 import { JAM } from './Jamming.js';
+import { runwayOpen } from './Airfields.js';
 import { doctrine } from '../data/doctrine.js';
 import * as THREE from 'three';
 import { AIRCRAFT, JETS, LIFT, FIGHTERS, RECON } from '../data/air.ts';
@@ -243,7 +244,10 @@ export const buildHelicopter = (faction) => buildAircraft('heli', faction);
 function deckOf(u) {
   const c = u.stack.stats.carrier ?? {};
   const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), z0 = c.deckZ ?? 0; // (deckZ: the flight deck's middle, fore or aft of hers — the Kiev's is all aft)
-  return { top: u.pos.y + (c.deck ?? 16), len: c.deckLen ?? 240, fx, fz, cx: u.pos.x + fx * z0, cz: u.pos.z + fz * z0, v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
+  const dx = c.deckX ?? 0; // (an airfield: the runway beside the tower, on the ground there)
+  const cx = u.pos.x + fx * z0 + fz * dx, cz = u.pos.z + fz * z0 - fx * dx;
+  const floor = c.land ? u.stack.world.terrain.heightAt(cx, cz) : u.pos.y;
+  return { top: floor + (c.deck ?? 16), len: c.deckLen ?? 240, fx, fz, cx, cz, v: Math.hypot(u.vel?.x ?? 0, u.vel?.z ?? 0) };
 }
 
 // a flight's wingmen off the leader: [side, back, down] in metres — a vee, the fourth in the slot
@@ -305,7 +309,7 @@ class Sortie {
   /** A carrier mission: off the deck of its carrier, straight for the spot — and onto the enemy ship nearest it. */
   fromCarrier() {
     const g = this.game;
-    const cv = this.cvUnit?.alive ? this.cvUnit : this.p.deck === 'optional' ? null : g.world.stacksOf(this.faction).find((s) => s.stats.carrier && s.units[0]?.alive)?.units[0];
+    const cv = this.cvUnit?.alive ? this.cvUnit : this.p.deck === 'optional' ? null : g.world.basesOf(this.faction)[0]?.units[0];
     if (cv) {
       this.pos.set(cv.pos.x, (g.world.river?.level ?? 0) + 25, cv.pos.z);
       this.yaw = Math.atan2(this.target.x - cv.pos.x, this.target.z - cv.pos.z);
@@ -389,6 +393,21 @@ class Sortie {
     this.placeDeck();
   }
 
+  /** An airfield's helicopter coming home: to the apron beside the tower, slowing, straight down — then it is in. */
+  padHome(dt) {
+    const cv = this.cvUnit, tx = cv.pos.x, tz = cv.pos.z + 0.01;
+    const dx = tx - this.pos.x, dz = tz - this.pos.z, d = Math.hypot(dx, dz);
+    this.yaw += Math.atan2(Math.sin(Math.atan2(dx, dz) - this.yaw), Math.cos(Math.atan2(dx, dz) - this.yaw)) * Math.min(1, dt * 1.5);
+    this.speed += (Math.min(this.p.cruiseSpeed, d * 0.3) - this.speed) * Math.min(1, dt);
+    this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    this.side.set(this.dir.z, 0, -this.dir.x);
+    this.pos.addScaledVector(this.dir, this.speed * dt);
+    const ground = this.game.terrain.heightAt(this.pos.x, this.pos.z);
+    this.pos.y += (ground + (d < 25 ? 0.5 : this.p.cruiseAlt) - this.pos.y) * Math.min(1, dt * (d < 25 ? 1 : 0.8));
+    this.place(dt);
+    if (d < 25 && this.pos.y - ground < 1.5) this.finish();
+  }
+
   /** The flight on her deck, in line astern of the leader (the leader's rig where the sortie is). */
   placeDeck() {
     this.rig.root.position.copy(this.pos);
@@ -401,7 +420,7 @@ class Sortie {
     const rig = this.rig;
     this.loop = this.game.audio.loop(loopSound(this.type), this.pos, this.kind === 'jet' ? 1.3 : 0.9);
     this.state = 'ingress';
-    if (this.p.sea && this.cvUnit?.alive) { // off her deck: from the after end, rolling forward along it, up over the bow
+    if (this.cvUnit?.alive && !this.type.rotorSound) { // off her deck (or an airfield's runway): from the after end, rolling forward along it, up over the bow
       const d = deckOf(this.cvUnit);
       this.state = 'takeoff';
       this.deckS = -d.len * 0.12; // (from where she spotted it: the after deck, the wingmen behind)
@@ -415,20 +434,20 @@ class Sortie {
 
   update(dt) {
     const game = this.game;
-    if (this.p.sea && (this.cvUnit || !this.p.deck) && !this.orphan && !game.world.stacksOf(this.faction).some((s) => s.stats.carrier && s.units[0]?.alive)) { // the carrier is gone
+    if (this.p.sea && (this.cvUnit || !this.p.deck) && !this.orphan && !game.world.basesOf(this.faction).length) { // the carrier is gone
       this.orphan = true;
       if (this.state === 'inbound') { this.state = 'done'; this.rig?.root.removeFromParent(); for (const w of this.wing ?? []) w.root.removeFromParent(); return; }  // (still on her deck: lost with her)
       game.tell(this.faction, `${this.type.name}: our carrier is gone — finishing the run, then ditching`);
     }
     if (this.state === 'inbound') {
-      if (this.p.sea && this.cvUnit?.alive && game.time < this.appearAt) this.spotOnDeck(); // (on her deck, spotted for launch)
+      if (this.cvUnit?.alive && !this.type.rotorSound && game.time < this.appearAt) this.spotOnDeck(); // (on her deck or the runway, spotted for launch)
       if (game.time >= this.appearAt) this.spawn();
       return;
     }
     if (this.state === 'done') return;
     if (this.state === 'down') return this.updateCrash(dt);
     if (this.state === 'takeoff') return this.takeoff(dt);
-    if (this.p.sea && !this.orphan && this.cvUnit?.alive && (this.state === 'home' || this.state === 'landing' || this.state === 'rollout')) return this.recover(dt);
+    if ((this.p.sea || this.cvUnit) && !this.orphan && this.cvUnit?.alive && (this.state === 'home' || this.state === 'landing' || this.state === 'rollout')) return this.type.rotorSound ? this.padHome(dt) : this.recover(dt); // (an airfield's helicopters: straight down onto the apron)
     if (this.kind === 'cap' || this.kind === 'navCap' || this.kind === 'seaCap' || this.kind === 'aew' || this.kind === 'helo') return this.patrol(dt);
     this.trackShip();
     const p = this.p;
@@ -1271,7 +1290,7 @@ export class AirStrike {
   }
 
   /** Call air support of `kind` on (x, z), flown along `yaw` (default: from our base). True if accepted. */
-  call(faction, x, z, yaw = null, kind = 'heli') {
+  call(faction, x, z, yaw = null, kind = 'heli', from = null) {
     const game = this.game;
     const p = KINDS[kind] ?? KINDS.heli;
     if (p.off) return false; // not in this war (data/epoch.js): no helicopters in 1945
@@ -1279,16 +1298,22 @@ export class AirStrike {
     if (game.map.landing?.blockships) return false; // (Zeebrugge: its own three powers — systems/Powers1806.js — no air support)
     if (p.coast && (!game.world.coastal || game.landing?.lands(faction))) return false; // (the coast's defence only: no ships to strike otherwise)
     let deck = null;
-    if (p.sea) { // off a carrier with a flight of this kind aboard and her deck free (1985: else from the shore)
+    // off a carrier (or an airfield) with a flight of this kind aboard and her deck free — at sea always (1985: else from the shore);
+    // on land when the side has airfields: its regular squadrons are based there, the special ones (fighters, recon) come in from the edge
+    const bases = game.world.basesOf(faction);
+    const based = p.sea || bases.some((s) => s.stats.airfield && (s.stats.carrier.airGroup?.[kind] ?? 0) > 0);
+    if (based) {
       const optional = p.deck === 'optional';
-      const carriers = game.world.stacksOf(faction).filter((s) => s.stats.carrier && s.units[0]?.alive);
       const now = game.world.time;
-      const has = carriers.filter((s) => (this.hangar(s.units[0])[kind] ?? 0) > 0);
-      const free = has.filter((s) => !(s.units[0].deckBusy > now)).sort((a, b) => this.hangar(b.units[0])[kind] - this.hangar(a.units[0])[kind]);
+      const slots = (s) => (s.units[0].deckBusy ?? []).filter((t) => t > now).length < (s.stats.carrier.slots ?? 1); // (a large air base: two at once)
+      const has = bases.filter((s) => (this.hangar(s.units[0])[kind] ?? 0) > 0);
+      const open = has.filter(runwayOpen);
+      const free = open.filter(slots).sort((a, b) => (b.id === from) - (a.id === from) || this.hangar(b.units[0])[kind] - this.hangar(a.units[0])[kind]);
       if (!optional) {
-        if (!carriers.length) { game.tell(faction, 'No carrier: no aircraft to launch'); return false; }
-        if (!has.length) { game.tell(faction, `No ${p.label.toLowerCase()} left aboard — they're up, rearming or lost`); return false; }
-        if (!free.length) { game.tell(faction, `${has[0].name}: her deck is busy — ${Math.ceil(has[0].units[0].deckBusy - now)} s`); return false; }
+        if (!bases.length) { game.tell(faction, p.sea ? 'No carrier: no aircraft to launch' : 'No airfield: no aircraft to launch'); return false; }
+        if (!has.length) { game.tell(faction, `No ${p.label.toLowerCase()} left ${p.sea ? 'aboard' : 'on the airfields'} — they're up, rearming or lost`); return false; }
+        if (!open.length) { game.tell(faction, `${has[0].name}: the runway is shut — sappers must repair it first`); return false; }
+        if (!free.length) { game.tell(faction, `${open[0].name}: ${open[0].stats.airfield ? 'the runway' : 'her deck'} is busy — ${Math.ceil(Math.min(...open[0].units[0].deckBusy) - now)} s`); return false; }
       }
       deck = free[0] ?? null;
     }
@@ -1330,12 +1355,12 @@ export class AirStrike {
       const dk = `${faction}Deck`;
       if (p.aircraft?.[dk]) { sortie.army = dk; sortie.type = airType(kind, faction, dk); sortie.hp = sortie.type.hp; } // (the Kiev's Yak-38s, not the shore's MiG-23s)
       this.hangar(cu)[kind]--;
-      cu.deckBusy = game.world.time + spot;
+      cu.deckBusy = [...(cu.deckBusy ?? []).filter((t) => t > game.world.time), game.world.time + spot];
       if (spot === DECK.strike) cu.deckSpot = game.world.time + spot; // (bombs, torpedoes and fuel on deck: a hit now sets her ablaze — UnitStack.shipHit)
       sortie.cvUnit = cu;
       if (p.deck === 'optional') sortie.fromCarrier();
       sortie.appearAt += Math.max(0, spot - p.delay);
-      game.tell(faction, `${deck.name}: ${sortie.type.name} spotting on deck — airborne in ${spot} s (${this.hangar(cu)[kind]} more aboard)`);
+      game.tell(faction, deck.stats.airfield ? `${deck.name}: ${sortie.type.name} taxiing out — airborne in ${spot} s (${this.hangar(cu)[kind]} more there)` : `${deck.name}: ${sortie.type.name} spotting on deck — airborne in ${spot} s (${this.hangar(cu)[kind]} more aboard)`);
       game.bus.emit('airstrike', { faction, x, z, kind });
       this.sorties.push(sortie);
       game.netEvent('air', sortie.id, faction, x, z, heading, kind);
@@ -1417,7 +1442,11 @@ export class AirStrike {
 
   /** A carrier unit's hangar: flights of each kind aboard (from her stats.carrier.airGroup the first time). */
   hangar(u) {
-    return (u.hangar ??= { ...(u.stack?.stats.carrier?.airGroup ?? u.stats?.carrier?.airGroup ?? { navCap: 3, diveBomb: 2, torpBomb: 2, navScout: 1 }) });
+    if (u.hangar) return u.hangar;
+    const g = { ...(u.stack?.stats.carrier?.airGroup ?? u.stats?.carrier?.airGroup ?? { navCap: 3, diveBomb: 2, torpBomb: 2, navScout: 1 }) };
+    const n = this.game.rules?.airGroups; // the battle rule: this many groups of each kind she carries (tester feedback 2026-11-17)
+    if (n) for (const k of Object.keys(g)) if (g[k] > 0) g[k] = n;
+    return (u.hangar = g);
   }
 
   /** A ship's own helicopter (stats.helo): out from her to (x, z), hovering there, back (one in the air at a time, then 90 s). */
@@ -1437,8 +1466,13 @@ export class AirStrike {
   /** Flights of `kind` aboard `faction`'s carriers (the support buttons show it). */
   aboard(faction, kind) {
     let n = 0;
-    for (const s of this.game.world.stacksOf(faction)) if (s.stats.carrier && s.units[0]?.alive) n += this.hangar(s.units[0])[kind] ?? 0;
+    for (const s of this.game.world.basesOf(faction)) n += this.hangar(s.units[0])[kind] ?? 0;
     return n;
+  }
+
+  /** Does `faction` fly `kind` from its bases (carriers, airfields) — or in from the edge? */
+  based(faction, kind) {
+    return !!KINDS[kind]?.sea || this.game.world.basesOf(faction).some((s) => s.stats.airfield && (s.stats.carrier.airGroup?.[kind] ?? 0) > 0);
   }
 
   /** Once, at the start: every aircraft this battle can call is compiled for the renderer before it is first seen (render/babylon/BabylonView.js warm). */

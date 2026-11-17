@@ -83,7 +83,12 @@ export class BattleWorld {
   }
 
   stacksOf(faction) {
-    return this.stacks.filter((s) => s.faction === faction && s.alive);
+    return this.stacks.filter((s) => s.faction === faction && s.alive && !s.stats.airfield); // (an airfield is not a fighting stack: it neither wins nor loses a battle, the AI doesn't aim at it — systems/Airfields.js)
+  }
+
+  /** `faction`'s carriers and airfields with a hangar (systems/AirStrike.js). */
+  basesOf(faction) {
+    return this.stacks.filter((s) => s.faction === faction && s.alive && s.stats.carrier && s.units[0]?.alive);
   }
 
   groups(faction) {

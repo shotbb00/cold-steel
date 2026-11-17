@@ -371,7 +371,7 @@ export class Orders {
         }
         return null;
       case 'air':
-        return g.air.call(faction, cmd.x, cmd.z, cmd.yaw ?? null, cmd.k ?? 'heli');
+        return g.air.call(faction, cmd.x, cmd.z, cmd.yaw ?? null, cmd.k ?? 'heli', cmd.b ?? null); // (b: from this carrier or airfield)
       case 'cancelBuild': {
         const ids = new Set(mine(cmd.s).map((s) => s.id));
         const jobs = g.construction.sites.filter((site) => site.faction === faction && ids.has(site.stackId));

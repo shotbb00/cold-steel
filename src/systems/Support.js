@@ -60,6 +60,7 @@ export class Support {
       const lorry = world.stacksOf(s.faction).find((o) => o.stats.supply && o.setUpFully() && Math.hypot(o.centroid.x - s.centroid.x, o.centroid.z - s.centroid.z) < o.stats.supply.radius);
       s.nearSupply = lorry ? lorry.stats.supply.restock : undefined; // (grenades and rockets come back this much sooner: UnitStack)
     }
+    this.game.airfields?.repair(step); // sappers at work on a cratered runway
     for (const s of world.stacks) {
       if (!s.alive) continue;
       const kit = s.stats.repair ?? s.stats.heal;

@@ -16,6 +16,7 @@ import { TYPES_2027, ALIAS_2027 } from './units2027/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
 import { AIR_2027 } from './air27.js';
+import { AIRFIELD } from './units/airfield.js';
 import { AIR_1918 } from './air18.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
@@ -182,6 +183,7 @@ export function setEpoch(id) {
   swap(ARMIES, e.armies);
   Object.assign(DEFAULT_ARMY, e.defaults);
   swap(UNIT_TYPES, e.types);
+  UNIT_TYPES.airfield ??= AIRFIELD; // (every war's airfields: systems/Airfields.js)
   swap(ALIAS, e.alias);
   swap(DOCTRINE, e.doctrine);
   for (const [kind, k] of Object.entries(KINDS)) {

@@ -313,6 +313,18 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
      * crown on the ground, the trunk a log that men take cover behind and climb over.
      * `roll(tree)` decides each one (the host's dice, the same on a multiplayer guest).
      */
+    /** Gone altogether where `test(x, z)` (an airfield's runway: systems/Airfields.js) — no stump, no log. */
+    clear(test) {
+      _m.makeScale(0, 0, 0);
+      for (const t of register) {
+        if (!test(t.x, t.z)) continue;
+        t.down = true;
+        trunks.setMatrixAt(t.k, _m);
+        if (t.leafy) { leaves.setMatrixAt(t.crown, _m); cards.setMatrixAt(t.crown, _m); } else { spruces.setMatrixAt(t.crown, _m); spruceCards.setMatrixAt(t.crown, _m); }
+        if (t.collider) { cover.remove(t.collider); t.collider = null; }
+      }
+      for (const m of [trunks, leaves, cards, spruces, spruceCards]) if (m) m.instanceMatrix.needsUpdate = true;
+    },
     fell(x, z, r, roll = (d) => Math.random() < 0.65 * (1 - d / r)) {
       let n = 0;
       for (const t of register) {
