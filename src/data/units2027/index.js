@@ -3,11 +3,13 @@
 // `nato` (US Army), `pl` (Polish Army), `pact` (Russia), `by` (Belarus) — an army without an entry
 // takes its side's (data/factions.js forArmy). Like the other eras, every type keeps its 1985 id so the
 // modes, maps and the AI work, and derives from its 1985 counterpart.
-// Step 1: the infantry — riflemen and every team on foot, in modern kit. The vehicles, guns, aircraft
-// and support stand in with their 1985 selves until their steps (see the 2027 design notes): armour 3,
+// Step 1: the infantry — riflemen and every team on foot, in modern kit. Step 3: the armour (tanks,
+// IFVs, recon, tank destroyers). The guns, aircraft and support stand in with their 1985 selves
+// until their steps (see the 2027 design notes):
 // drones 4, EW and precision fires 5, the rest of the roster 6.
 import { TYPES_1985 } from '../units/index.js';
 import { buildModernSoldier } from '../models/modernSoldier.js';
+import * as M from '../models/modern2027.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -101,9 +103,97 @@ const airAssault = onFoot('airAssault', { models: { airAssault: true } }, {
   by: { name: 'Special Operations Forces', weapon: 'AK-74M, RPG', text: 'Belarus\'s mobile brigades, carried forward by Mi-8.' },
 });
 
+// ---------------------------------------------------------------- step 3: the armour
+// Per army: the side's stats are the type's (US / Russia), Poland's and Belarus's in factionStats.
+// `aps`: active protection (combat/ProjectileSystem.js aps) · `cage`: a cope cage over the turret (drones, step 4).
+const TROPHY = { name: 'Trophy', charges: 3, chance: 0.9 };
+const ARENA = { name: 'Arena-M', charges: 2, chance: 0.8 };
+
+const tank = derive(T.tank, {
+  cost: 480,
+  stats: { nightSight: { nato: 1, pact: 0.85 }, hp: 1600, armor: 0.8, damage: 460, range: 230, aggroRange: 170, preferredRange: 130, sight: 90, speed: 5.2, fireCooldown: 5.5 },
+  factionStats: {
+    pact: { hp: 1450, armor: 0.72, damage: 430, cage: true },
+    pl: { hp: 1350, armor: 0.66, damage: 400, nightSight: 0.85, fireCooldown: 6, range: 210 },
+    by: { hp: 1400, armor: 0.68, damage: 420, nightSight: 0.8, range: 210, cage: false },
+  },
+  models: { nato: M.buildAbramsSEPv3, pl: M.buildPT91, pact: M.buildT72B3M, by: M.buildT72B3 },
+  engine: { nato: 'engine.turbine', pact: 'engine.diesel' },
+  variants: {
+    nato: { name: 'M1A2 SEPv3', weapon: '120 mm, CROWS .50 cal', text: 'The newest Abrams: thermal sights that see as far by night as by day, a remote machine gun the commander fires from under armour. Fast, accurate and tough from the front, thin at the back.' },
+    pl: { name: 'PT-91 Twardy', weapon: '125 mm, ERAWA armour', text: 'Poland\'s own upgrade of the T-72: its ERAWA reactive armour and a modern sight. Older than the Abrams beside it, and much cheaper to lose.' },
+    pact: { name: 'T-72B3M', weapon: '125 mm, Relikt armour', text: 'The modernised T-72: Relikt reactive armour, the Sosna-U thermal sight, and a cage of bars over the turret against drones dropping on the roof. Its ammunition still sits under the turret.' },
+    by: { name: 'T-72B3', weapon: '125 mm, Kontakt-5', text: 'Belarus\'s T-72s, brought up to the Russian standard: a thermal sight and reactive armour on the turret, but no cage.' },
+  },
+});
+
+const heavyTank = derive(T.heavyTank, {
+  cost: 620,
+  stats: { nightSight: { nato: 1, pact: 0.95 }, hp: 1800, armor: 0.85, damage: 480, range: 240, aggroRange: 175, preferredRange: 135, sight: 95, aps: TROPHY },
+  factionStats: {
+    pact: { hp: 1750, armor: 0.82, damage: 470, aps: ARENA, cage: true },
+    pl: { hp: 1750, armor: 0.86, damage: 490, fireCooldown: 4.6, speed: 6.2, aps: null },
+    by: { hp: 1500, armor: 0.74, damage: 440, nightSight: 0.85, aps: null, range: 215, cage: false },
+  },
+  models: { nato: M.buildAbramsTrophy, pl: M.buildK2, pact: M.buildT90M, by: M.buildT72B3Mby },
+  engine: { nato: 'engine.turbine', pact: 'engine.diesel' },
+  variants: {
+    nato: { name: 'M1A2 SEPv3 Trophy', weapon: '120 mm, Trophy active protection', text: 'The Abrams with Trophy: radar panels on the turret watch for missiles and rockets, and a launcher each side shoots them down before they hit — three times, until the crew reloads it in a lull.' },
+    pl: { name: 'K2 Black Panther', weapon: '120 mm L55, autoloader', text: 'Poland\'s new Korean tank: an autoloader that fires faster than any loader, a long gun, and suspension that keeps it steady on the move. No active protection yet.' },
+    pact: { name: 'T-90M Proryv', weapon: '125 mm, Arena-M, Relikt', text: 'Russia\'s best tank: a new welded turret, Relikt armour, and Arena-M — radar masts and launchers that shoot down two incoming missiles. A cage over it all against drones.' },
+    by: { name: 'T-72B3M', weapon: '125 mm, Relikt', text: 'The newest T-72s Belarus has: Relikt armour and a better gun, the pick of its tank battalions.' },
+  },
+});
+
+const ifv = derive(T.ifv, {
+  cost: 440,
+  stats: { nightSight: { nato: 1, pact: 0.85 }, hp: 900, armor: 0.46, atgm: { range: 320, damage: 700, pierce: 0.88, splash: 1.5, speed: 160, reload: 20, count: 3 } },
+  factionStats: {
+    pact: { atgm: { range: 350, damage: 760, pierce: 0.9, splash: 1.5, speed: 170, reload: 14, count: 4 }, cage: true },
+    pl: { hp: 760, armor: 0.38, speed: 7.5, damage: 130, nightSight: 0.95, atgm: { range: 340, damage: 720, pierce: 0.9, splash: 1.5, speed: 150, reload: 18, count: 2 } },
+    by: { hp: 820, armor: 0.42, nightSight: 0.6, cage: false, atgm: { range: 300, damage: 650, pierce: 0.85, splash: 1.5, speed: 150, reload: 22, count: 3 } },
+  },
+  models: { nato: M.buildBradleyA4, pl: M.buildRosomak, pact: M.buildBMP2M, by: M.buildBMP2 },
+  variants: {
+    nato: { name: 'M2A4 Bradley', weapon: '25 mm Bushmaster · TOW-2B', text: 'The Bradley today: reactive tiles on its sides, a stronger engine, thermal sights. The TOW-2B flies over a tank and fires down into its roof. U unloads the squad.' },
+    pl: { name: 'KTO Rosomak', weapon: '30 mm ZSSW-30 · Spike-LR', text: 'The Polish 8×8 with an unmanned turret: fast on roads, quiet, and the Spikes kill tanks. Its armour is thinner than a tracked vehicle\'s. U unloads the squad.' },
+    pact: { name: 'BMP-2M Berezhok', weapon: '30 mm 2A42 · Kornet, AGS-30', text: 'The old BMP-2 with a new turret kit: four Kornet missiles on the turret sides, a thermal sight, a cage over the top. U unloads the squad.' },
+    by: { name: 'BMP-2', weapon: '30 mm 2A42 · 9M113 Konkurs', text: 'The BMP-2 as it was: low and fast, a hard-hitting cannon, thin armour, and no thermal sight. U unloads the squad.' },
+  },
+});
+
+const reconVehicle = derive(T.reconVehicle, {
+  stats: { nightSight: { nato: 1, pact: 0.75 }, sight: 140 },
+  factionStats: { pl: { nightSight: 0.85 }, by: { nightSight: 0.6 } },
+  models: { nato: M.buildBradleyM3A3, pl: M.buildBRDM2M, pact: M.buildBRDM2M, by: M.buildBRDM2M },
+  variants: {
+    nato: { name: 'M3A3 Bradley CFV', weapon: '25 mm Bushmaster · TOW-2B', text: 'The cavalry\'s Bradley: scouts and extra radios in place of the squad. It sees by its targets\' heat and calls fire down on them.' },
+    pl: { name: 'BRDM-2M-98 ZT', weapon: '14.5 mm KPVT, thermal sight', text: 'The old scout car, rebuilt in Poland with a thermal sight and new radios: quick, small and easy to hide.' },
+    pact: { name: 'BRDM-2M', weapon: '14.5 mm KPVT', text: 'The four-wheeled scout car the Russian recon companies still drive: fast, amphibious and thin-skinned.' },
+    by: { name: 'BRDM-2', weapon: '14.5 mm KPVT', text: 'Belarus\'s scout car: as it was in 1985.' },
+  },
+});
+
+const tankDestroyer = derive(T.tankDestroyer, {
+  stats: { nightSight: { nato: 1, pact: 0.7 }, hp: 600, speed: 7, atgm: { range: 360, damage: 720, pierce: 0.9, splash: 1.5, speed: 160, reload: 9, count: 10 } },
+  factionStats: {
+    pl: { nightSight: 0.95, atgm: { range: 380, damage: 740, pierce: 0.9, splash: 1.5, speed: 150, reload: 8, count: 8 } },
+    pact: { hp: 520, speed: 6.5, atgm: { range: 330, damage: 700, pierce: 0.9, splash: 1.5, speed: 160, reload: 10, count: 10 } },
+    by: { hp: 520, speed: 6.5, nightSight: 0.6, atgm: { range: 320, damage: 680, pierce: 0.88, splash: 1.5, speed: 150, reload: 11, count: 10 } },
+  },
+  models: { nato: M.buildStrykerATGM, pl: M.buildRosomakSpike, pact: M.buildKonkursM, by: M.buildKonkursM },
+  variants: {
+    nato: { name: 'M1134 Stryker ATGM', weapon: 'TOW-2B', text: 'The 8×8 Stryker with the TOW launcher on its roof: it waits hull-down and kills tanks from far off. Its armour is for bullets, not tank rounds.' },
+    pl: { name: 'Rosomak Spike', weapon: 'Spike-LR', text: 'The Rosomak with a Spike launcher: the gunner watches the missile\'s camera and picks where it strikes.' },
+    pact: { name: '9P148 Konkurs-M', weapon: '9M113M Konkurs-M', text: 'The old tank hunter on the BRDM-2, its missiles upgraded with a second warhead for reactive armour.' },
+    by: { name: '9P148 Konkurs', weapon: '9M113 Konkurs', text: 'Belarus\'s tank hunters on the BRDM-2: wire-guided missiles from the 1980s.' },
+  },
+});
+
 export const TYPES_2027 = {
   ...TYPES_1985,
   rifles, atTeam, mgTeam, crew, scouts, sniper, engineers, mortar, observers, manpads, airAssault,
+  tank, heavyTank, ifv, reconVehicle, tankDestroyer,
 };
 /** No stand-ins: every 1985 type serves until its own step replaces it. */
 export const ALIAS_2027 = {};

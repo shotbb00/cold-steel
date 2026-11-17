@@ -38,10 +38,19 @@ const ARMY_CAMO_1918 = {
   st: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
 };
 
+// 2027: the US Army's NATO three-tone, the Polish three-colour, Russian green, the Belarusian
+// green-sand-brown (data/models/modern2027.js paints every plain green part in it)
+const ARMY_CAMO_2027 = {
+  us: [0x3e4a2e, 0x4c3e2c, 0x1e1f1b, 0x3e4a2e],
+  pl: [0x4c5634, 0x2c3122, 0x5e4c36, 0x4c5634],
+  ru: [0x4f5b36, 0x4a5633, 0x56623b, 0x48532f],
+  by: [0x56603a, 0x8a7d58, 0x4e3e2c, 0x56603a],
+};
+
 function materialsFor(army, glowColor) {
   const key = `${epoch()}:${army}`; // (the 1985 and the 1945 US Army don't share a paint)
   if (!materialCache.has(key)) {
-    const camo = { 1945: ARMY_CAMO_1945, 1918: ARMY_CAMO_1918 }[epoch()]?.[army] ?? ARMY_CAMO[army];
+    const camo = { 1945: ARMY_CAMO_1945, 1918: ARMY_CAMO_1918, 2027: ARMY_CAMO_2027 }[epoch()]?.[army] ?? ARMY_CAMO[army];
     materialCache.set(key, {
       body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true, weather: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings

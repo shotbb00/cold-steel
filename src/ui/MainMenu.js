@@ -281,6 +281,8 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.heal) rows.push(['Heals', `wounded infantry within ${s.heal.range} m`]);
   if (s.observer) rows.push(['Observes', `indirect fire on what they see: ${Math.round(s.observer.scatter * 100)} % of the scatter`]);
   if (s.atgm) rows.push(['Missile', `${s.atgm.count} per vehicle, out to ${s.atgm.range} m`]);
+  if (s.aps) rows.push(['Active protection', `${s.aps.name}: shoots down ${s.aps.charges} incoming missiles or rockets, reloaded in a lull`]);
+  if (s.cage) rows.push(['Cage', 'bars over the turret against drones diving on the roof']);
   if (s.stealth) rows.push(['Stealth', `spotted at ${Math.round(s.stealth * 100)} % of the usual range; holds fire while hidden`]);
   if (s.binoculars) rows.push(['Binoculars', `sight ×1.25 when standing still`]);
   if (s.carries) rows.push(['Carries', `${s.carries.count}-man rifle squad (${keyHint('unload', 'Unload')} unloads)`]);
