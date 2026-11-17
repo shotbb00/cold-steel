@@ -257,7 +257,7 @@ export class Drones {
       // a jammer: the link is cut
       const jammed = g.jamming?.jammed(d.faction, d.pos.x, d.pos.z) || this.trenchJam(d);
       d.dark = d.kind === 'recon' && jammed;
-      if (jammed && d.kind !== 'recon' && Math.random() < step * (d.kind === 'fpv' ? 0.45 : 0.2)) { this.fall(d); continue; }
+      if (jammed && d.kind !== 'recon' && Math.random() < step * (d.kind === 'fpv' ? 0.45 : 0.2)) { this.fall(d, true); continue; }
       // ground fire
       const agl = d.pos.y - g.world.terrain.heightAt(d.pos.x, d.pos.z);
       for (const s of g.world.stacks) {
@@ -303,7 +303,9 @@ export class Drones {
     this.fall(d);
   }
 
-  fall(d) {
+  fall(d, jammed = false) {
+    if (d.state === 'fall') return;
+    this.game.bus.emit('drone:down', { faction: d.faction, kind: d.kind, jammed }); // (boot camp counts the jammed ones)
     d.state = 'fall';
     d.vel.multiplyScalar(0.4);
     d.sound?.stop?.();
@@ -326,6 +328,7 @@ export class Drones {
       }
       if (s.stats.cage && Math.random() < 0.5) dmg *= 0.25; // caught on the bars: the jet spends itself short of the roof
     }
+    dmg *= d.owner?.units?.find((u) => u.alive)?.damageMult ?? 1; // (boot camp's targets: their drones do no harm)
     t.receiveDamage(dmg, d.owner?.alive ? d.owner : null, P.pierce, null, 1); // (no facing: down through the roof)
     this.burst(d, t, 1, true);
   }
@@ -340,7 +343,7 @@ export class Drones {
       for (const u of g.world.neighbors(d.pos, r + 1, _near)) {
         if (u === direct || !u.alive || u.faction === d.faction || !u.stack.usesCover) continue;
         const dist = Math.hypot(u.pos.x - d.pos.x, u.pos.z - d.pos.z);
-        if (dist < r) u.receiveDamage(120 * size * (1 - dist / r), d.owner?.alive ? d.owner : null, 0, null, 1);
+        if (dist < r) u.receiveDamage(120 * size * (1 - dist / r) * (d.owner?.units?.find((m) => m.alive)?.damageMult ?? 1), d.owner?.alive ? d.owner : null, 0, null, 1);
       }
       for (const u of g.world.neighbors(d.pos, r * 3, _near)) if (u.alive && u.faction !== d.faction) u.suppress?.(0.5);
     }

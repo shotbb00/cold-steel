@@ -345,7 +345,7 @@ export class MainMenu {
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
       const b = el('button', '', label);
       b.type = 'button';
-      if (epoch() === '2027' && (id === 'bootcamp' || id === 'campaign')) { b.disabled = true; b.title = 'Coming with the 2027 boot camp and campaign'; } // (2027 step 8)
+      if (epoch() === '2027' && id === 'campaign') { b.disabled = true; b.title = 'The 2027 campaign is coming'; } // (2027 step 8)
       b.addEventListener('click', () => this.open(id));
       nav.append(b);
       this.tabs[id] = b;
