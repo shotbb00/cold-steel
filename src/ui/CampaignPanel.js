@@ -38,7 +38,9 @@ const btn = (label, cls, fn) => {
 const ww2 = () => epoch() === '1945';
 /** The map the campaign screen shows before a battle is planned: this war's first (1985: the Fulda Gap; 1918: Villers-Bretonneux). */
 const homeMap = () => (epoch() === '1985' || epoch() === '1945' ? 'fulda-gap' : mapsFor(epoch())[0].id); // (1985 and 1945 fight their campaigns over Hesse)
-const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '1918'
+const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '2027'
+  ? 'Russia must take Suwałki and Kalvarija in 16 turns and close the gap; NATO holds them, or takes Gusev in Kaliningrad.'
+  : epoch() === '1918'
   ? 'The Allies must take Péronne and St Quentin in 16 turns; the Germans hold them, or take Amiens and Villers-Bretonneux.'
   : epoch() === '1806'
   ? 'The French must take Weimar and Naumburg in 16 turns; the Prussians hold them, or carry the war back to Coburg and Hof.'
@@ -46,7 +48,9 @@ const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions 
   ? 'The Allies must take Eisenach and Meiningen in 16 turns; the Germans hold them, or win back Fulda and Bad Hersfeld.'
   : 'The Pact must take Fulda and Bad Hersfeld in 16 turns; NATO holds them, or takes Eisenach.'] });
 /** What each side's war is, on the side cards. */
-const SIDE_TEXT = () => (epoch() === '1918'
+const SIDE_TEXT = () => (epoch() === '2027'
+  ? { nato: 'Keep the Suwałki Gap open: hold Suwałki and Kalvarija until help comes, or strike into Kaliningrad.', pact: 'Close the gap from Kaliningrad and Belarus: take Suwałki and Kalvarija.' }
+  : epoch() === '1918'
   ? { nato: 'August 1918, the Hundred Days: out of Amiens with tanks behind the barrage — take Péronne and St Quentin.', pact: 'Hold the old Somme battlefield against the tanks, and take Amiens and Villers-Bretonneux.' }
   : epoch() === '1806'
   ? { nato: 'October 1806: through the Thuringian Forest to the Saale — take Weimar and Naumburg.', pact: 'Stop the French at the passes and on the Saale, and carry the war back to Coburg and Hof.' }
@@ -126,7 +130,7 @@ export class CampaignPanel {
   renderNew() {
     const r = this.root;
     const ch = this.choice;
-    r.append(el('p', 'mp-lead', epoch() === '1918' ? 'August 1918, on the road map of the Somme east of Amiens. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : epoch() === '1806' ? 'October 1806, on the road map from Franconia to the Saale. You command three regiments and brigades: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
+    r.append(el('p', 'mp-lead', epoch() === '2027' ? '2027, a war that has not happened, on the road map of the Suwałki Gap — Poland, Lithuania, Kaliningrad and Belarus. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : epoch() === '1918' ? 'August 1918, on the road map of the Somme east of Amiens. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : epoch() === '1806' ? 'October 1806, on the road map from Franconia to the Saale. You command three regiments and brigades: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.' : 'A war on the road map of East Hesse and West Thuringia. You command a brigade of three battalions: move them sector by sector, and every attack is a battle. Their men, their wounded and their veterans carry over from battle to battle.'));
     r.append(el('h3', 'menu-sub', 'Your side'));
     const sideCards = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {

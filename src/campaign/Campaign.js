@@ -43,6 +43,7 @@ import { epoch } from '../data/epoch.js';
 const ww2 = () => epoch() === '1945';
 const y06 = () => epoch() === '1806';
 const y18 = () => epoch() === '1918';
+const y27 = () => epoch() === '2027';
 const key = () => (epoch() === '1985' ? 'coldsteel.campaign.2' : `coldsteel.campaign.${epoch()}`);
 /** The side that attacks on the timetable: the Pact in 1985, the Allies (the NATO slot) in 1945, the French in 1806. */
 export const attacker = () => (ww2() || y06() || y18() ? 'nato' : 'pact');
@@ -144,6 +145,40 @@ const START_1918 = {
   nato: ['corbie', 'villers', 'boves', 'moreuil', 'amiens', 'villers'],
   pact: ['hamel', 'marcelcave', 'demuin', 'proyart', 'harbonnieres', 'rosieres', 'chaulnes'],
 };
+// 2027: the Suwałki Gap and round it (north is up): Kaliningrad north-west, Lithuania north-east, Belarus
+// south-east, Poland south-west. Russia attacks to close the gap: it must take Suwałki and Kalvarija, the
+// two ends of the land bridge; NATO holds them, or carries the war into Kaliningrad (Gusev).
+const SECTORS_2027 = {
+  chernyakhovsk: { name: 'Chernyakhovsk', x: 85, y: 72, map: 'suwalki-gap', home: 'pact', depot: true },
+  gusev: { name: 'Gusev', x: 180, y: 97, map: 'suwalki-gap', home: 'pact', objective: 'nato' },
+  krasnoznamensk: { name: 'Krasnoznamensk', x: 284, y: 72, map: 'neman-crossing', home: 'pact' },
+  goldap: { name: 'Gołdap', x: 190, y: 181, map: 'suwalki-gap', home: 'nato' },
+  marijampole: { name: 'Marijampolė', x: 408, y: 105, map: 'suwalki-gap', home: 'nato', depot: true },
+  kalvarija: { name: 'Kalvarija', x: 427, y: 181, map: 'suwalki-gap', home: 'nato', objective: 'pact' },
+  alytus: { name: 'Alytus', x: 541, y: 156, map: 'neman-crossing', home: 'nato' },
+  suwalki: { name: 'Suwałki', x: 313, y: 214, map: 'suwalki-town', home: 'nato', objective: 'pact' },
+  sejny: { name: 'Sejny', x: 427, y: 248, map: 'augustow-canal', home: 'nato' },
+  druskininkai: { name: 'Druskininkai', x: 550, y: 265, map: 'neman-crossing', home: 'nato' },
+  orzysz: { name: 'Orzysz', x: 85, y: 273, map: 'orzysz-base', home: 'nato', depot: true },
+  elk: { name: 'Ełk', x: 180, y: 281, map: 'orzysz-base', home: 'nato' },
+  raczki: { name: 'Raczki', x: 266, y: 281, map: 'suwalki-gap', home: 'nato' },
+  augustow: { name: 'Augustów', x: 332, y: 315, map: 'augustow-canal', home: 'nato' },
+  goniadz: { name: 'Goniądz', x: 228, y: 373, map: 'biebrza-marshes', home: 'nato' },
+  sokolka: { name: 'Sokółka', x: 398, y: 382, map: 'east-shield', home: 'nato', depot: true },
+  bruzgi: { name: 'Bruzgi', x: 494, y: 348, map: 'east-shield', home: 'pact' },
+  grodno: { name: 'Grodno', x: 598, y: 357, map: 'east-shield', home: 'pact', depot: true },
+};
+const ROADS_2027 = [
+  ['chernyakhovsk', 'gusev'], ['chernyakhovsk', 'goldap'], ['gusev', 'goldap'], ['gusev', 'krasnoznamensk'], ['krasnoznamensk', 'marijampole'],
+  ['goldap', 'suwalki'], ['goldap', 'elk'], ['orzysz', 'elk'], ['elk', 'raczki'], ['elk', 'goniadz'], ['suwalki', 'raczki'], ['suwalki', 'sejny'],
+  ['suwalki', 'kalvarija'], ['marijampole', 'kalvarija'], ['marijampole', 'alytus'], ['kalvarija', 'alytus'], ['kalvarija', 'sejny'],
+  ['raczki', 'augustow'], ['augustow', 'sejny'], ['augustow', 'goniadz'], ['augustow', 'sokolka'], ['sejny', 'druskininkai'], ['alytus', 'druskininkai'],
+  ['druskininkai', 'grodno'], ['goniadz', 'sokolka'], ['sokolka', 'bruzgi'], ['bruzgi', 'grodno'], ['augustow', 'bruzgi'],
+];
+const START_2027 = {
+  nato: ['suwalki', 'kalvarija', 'sejny', 'raczki', 'augustow', 'goldap'],
+  pact: ['gusev', 'krasnoznamensk', 'bruzgi', 'grodno', 'chernyakhovsk'],
+};
 const BASE = { sectors: Object.fromEntries(Object.entries(SECTORS).map(([k, v]) => [k, { ...v }])), roads: ROADS.map((r) => [...r]) };
 const LINKS = {};
 function link() {
@@ -188,7 +223,12 @@ const KINDS_1918 = {
   mech: ['rifles', 'rifles', 'rifles', 'rifles', 'rifles', 'atTeam', 'mgTeam', 'mgTeam', 'sniper', 'mortar', 'engineers', 'scouts'],
   support: ['rifles', 'rifles', 'rifles', 'mgTeam', 'artillery', 'artillery', 'spMortar', 'rockets', 'observers', 'cbRadar', 'airRadar'],
 };
-const kinds = () => (y06() ? KINDS_1806 : y18() ? KINDS_1918 : KINDS);
+const KINDS_2027 = {
+  armour: ['tank', 'tank', 'tank', 'heavyTank', 'ifv', 'ifv', 'rifles', 'rifles', 'mgTeam', 'atTeam', 'fpvTeam', 'aa', 'scouts'],
+  mech: ['rifles', 'rifles', 'rifles', 'rifles', 'mgTeam', 'atTeam', 'atTeam', 'ifv', 'ifv', 'tank', 'mortar', 'engineers', 'scouts', 'fpvTeam'],
+  support: ['rifles', 'rifles', 'mgTeam', 'artillery', 'artillery', 'rockets', 'loiterTeam', 'observers', 'jammer', 'manpads', 'reconVehicle'],
+};
+const kinds = () => (y06() ? KINDS_1806 : y18() ? KINDS_1918 : y27() ? KINDS_2027 : KINDS);
 const BRIGADE = ['armour', 'mech', 'support'];
 const NAMES = {
   us: { armour: 'Armor Battalion', mech: 'Infantry Battalion', support: 'Field Artillery Battalion' },
@@ -214,10 +254,17 @@ const NAMES_1806 = {
   pr: { armour: 'Kürassier-Regiment', mech: 'Infanterie-Regiment', support: 'Artillerie-Brigade' },
   sx: { armour: 'Kavallerie-Regiment', mech: 'Infanterie-Regiment', support: 'Artillerie-Brigade' },
 };
+const NAMES_2027 = {
+  us: { armour: 'Armored Battalion', mech: 'Infantry Battalion', support: 'Field Artillery Battalion' },
+  pl: { armour: 'Batalion czołgów', mech: 'Batalion zmechanizowany', support: 'Dywizjon artylerii' },
+  ru: { armour: 'Tank Battalion', mech: 'Motor Rifle Battalion', support: 'Artillery Battalion' },
+  by: { armour: 'Tank Battalion', mech: 'Mechanised Battalion', support: 'Artillery Battalion' },
+};
 const ordinal = (n) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
 const GERMAN = new Set(['bw', 'nva', 'wh', 'fj', 'by', 'pr', 'sx', 'de', 'st']);
 const battalionName = (army, kind, n) => {
-  const name = (y06() ? NAMES_1806 : y18() ? NAMES_1918 : ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  const name = (y06() ? NAMES_1806 : y18() ? NAMES_1918 : y27() ? NAMES_2027 : ww2() ? NAMES_1945 : NAMES)[army]?.[kind] ?? kind;
+  if (y27()) return army === 'pl' ? `${n}. ${name}` : `${ordinal(n)} ${name}`;
   if (army === 'fr') return `${n === 1 ? '1er' : `${n}e`} ${name}`;
   return GERMAN.has(army) ? `${name} ${n}` : `${ordinal(n)} ${name}`;
 };
@@ -254,20 +301,22 @@ export function clearCampaign() {
 /** The map as this war has it: 1806 its own; 1945 has no Point Alpha yet, and Meiningen is an Allied objective too. */
 let START = START_BASE;
 function syncEpoch() {
-  const src = y06() ? { sectors: SECTORS_1806, roads: ROADS_1806 } : y18() ? { sectors: SECTORS_1918, roads: ROADS_1918 } : BASE;
+  const src = y06() ? { sectors: SECTORS_1806, roads: ROADS_1806 } : y18() ? { sectors: SECTORS_1918, roads: ROADS_1918 } : y27() ? { sectors: SECTORS_2027, roads: ROADS_2027 } : BASE;
   for (const k of Object.keys(SECTORS)) delete SECTORS[k];
   for (const [k, v] of Object.entries(src.sectors)) SECTORS[k] = { ...v };
   ROADS.splice(0, ROADS.length, ...src.roads.map((r) => [...r]));
   link();
-  START = y06() ? START_1806 : y18() ? START_1918 : START_BASE;
-  if (y06() || y18()) return;
+  START = y06() ? START_1806 : y18() ? START_1918 : y27() ? START_2027 : START_BASE;
+  if (y06() || y18() || y27()) return;
   SECTORS.rasdorf.name = ww2() ? 'Rasdorf' : 'Rasdorf · Point Alpha';
   if (ww2()) SECTORS.meiningen.objective = 'nato';
   else delete SECTORS.meiningen.objective;
 }
 
 /** The first line of the war's log. */
-const opening = (side) => (y18()
+const opening = (side) => (y27()
+  ? (side === 'nato' ? 'Russian forces have crossed from Kaliningrad and Belarus at once: they mean to close the Suwałki Gap.' : 'The order has come: close the gap, from Kaliningrad and from Belarus at once, before NATO can reinforce.')
+  : y18()
   ? (side === 'nato' ? '8 August 1918: the Allied armies attack out of the mist east of Amiens. The black day of the German army.' : 'The enemy has attacked out of the mist with tanks. Hold before the old Somme battlefield.')
   : y06()
   ? (side === 'nato' ? 'The Grande Armée is through the Thuringian Forest: forward to the Saale.' : 'The French are across the passes of the Thuringian Forest. Stop them before the Saale.')
@@ -664,11 +713,15 @@ function checkEnd(c) {
   if (c.over) return;
   const me = c.side;
   const holds = (f, ids) => ids.every((id) => c.owner[id] === f);
-  const pactGoal = y06() ? ['coburg', 'hof'] : y18() ? ['amiens', 'villers'] : ['fulda', 'hersfeld'];
+  const pactGoal = y06() ? ['coburg', 'hof'] : y18() ? ['amiens', 'villers'] : y27() ? ['suwalki', 'kalvarija'] : ['fulda', 'hersfeld'];
   if (!c.battalions.length) c.over = { won: false, text: 'The brigade has been destroyed.' };
   else if (!c.enemy.length) c.over = { won: true, text: 'The enemy has no battalions left in the field. The war on this front is won.' };
   else if (c.length === 'timetable') {
-    if (y18()) { // August 1918: the Allies must reach Péronne and St Quentin in time
+    if (y27()) { // 2027: Russia must close the gap — Suwałki and Kalvarija — in time; NATO holds, or strikes into Kaliningrad
+      if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Suwałki and Kalvarija are taken: the gap is closed, and the Baltic states are cut off by land.' };
+      else if (c.owner.gusev === 'nato') c.over = { won: me === 'nato', text: 'NATO is in Gusev: the Kaliningrad garrison is cut in two, and the offensive collapses.' };
+      else if (c.turn > TIMETABLE) c.over = { won: me === 'nato', text: 'Eight days, and the gap is still open: the reinforcements have come through, and the Baltic states hold.' };
+    } else if (y18()) { // August 1918: the Allies must reach Péronne and St Quentin in time
       if (holds('nato', ['peronne', 'stquentin'])) c.over = { won: me === 'nato', text: 'Péronne and St Quentin are taken: the Hindenburg Line lies open, and the German army will not recover.' };
       else if (holds('pact', pactGoal)) c.over = { won: me === 'pact', text: 'Amiens and Villers-Bretonneux are taken: the railway is cut, and the British and French are split apart.' };
       else if (c.turn > TIMETABLE) c.over = { won: me === 'pact', text: 'Eight days, and Péronne and St Quentin still hold: the Allied offensive has run out of tanks and of men.' };
