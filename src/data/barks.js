@@ -73,6 +73,22 @@ LINES.ja = {
   shipBad: ['Shinsui!', 'Keisha shite iru!', 'Haisui isoge!', 'Ōkyū shūri!'],
   shipContact: ['Teki-kan miyu!', 'Teki kantai hakken!', 'Kokuen miyu!'],
 };
+// the Imperial Japanese Army on Iwo Jima (romanised): the charge's "Banzai!" in rally and flank, 'Totsugeki!' (charge)
+LINES.jpa = {
+  contact: ['Teki da!', 'Teki shūrai!', 'Zenpō ni teki!', 'Beihei da!'],
+  cover: ['Fuse!', 'Kakurero!', 'Ana ni haire!', 'Dōkutsu e!'],
+  reload: ['Sōten!', 'Tama wo kome!', 'Dan-yaku!'],
+  hit: ['Yarareta!', 'Ugh!', 'Daijōbu da!'],
+  wounded: ['Eisei-hei!', 'Ashi ga…!', 'Tasukete kure!'],
+  down: ['Yarareta!', 'Senshi!', 'Ichimei taoreta!'],
+  pinned: ['Ugokenai!', 'Atama wo ageru na!', 'Hōka ga hageshii!'],
+  retreat: ['Sagare!', 'Kōtai!', 'Dōkutsu e modore!'],
+  flank: ['Totsugeki!', 'Banzai!', 'Sokumen e maware!', 'Tenno Heika banzai!'],
+  rally: ['Banzai!', 'Ore ni tsuzuke!', 'Shūgō!', 'Saigo no ichinin made!'],
+  bail: ['Dasshutsu!', 'Sensha kara dero!'],
+  officer: ['Shōtai-chō ga yarareta!', 'Chūi-dono!', 'Dare ga shiki suru?!'],
+  landing: ['Teki jōriku!', 'Kaigan ni teki!'],
+};
 // 1806: the Grande Armée and the French Navy in French; Prussia, Saxony and Bavaria in German; the Royal Navy
 // in the English of its day (only what it has lines for of its own: the rest as the English lines)
 LINES.fr = {
@@ -198,11 +214,11 @@ LINES.ru27 = {
   drone: ['Dron! Dron nad nami!', 'FPV-shka letit!', 'Vozdukh! Vozdukh!', 'Ptichka! V ukrytiye!', 'Sbey yego!'],
 };
 const LANG27 = { us: 'us27', pl: 'pl', ru: 'ru27', by: 'ru27' };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', jp: 'jpa', usmc: 'nato', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = (epoch() === '2027' ? LANG27[army] : null) ?? LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'jpa' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }
