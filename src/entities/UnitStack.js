@@ -1887,7 +1887,7 @@ export class UnitStack {
       let score = Math.sqrt(d2);
       if (e.coverSpot && e.crouch > 0.6) score += 10;
       if (e.prone > 0.8) score += 8;
-      if (focus && e.stack === focus) score -= 6;
+      if (focus && e.stack === focus) score -= this.ai.ordered && this.ai.state === AIState.ATTACK ? 1000 : 6; // (your attack order: that target while it can be hit, not whoever is a step nearer)
       if (e === u.target) score -= 3;
       if (asw && (e.depth ?? 0) > 3) score -= 600; // the escort's job (and a hunter-killer submarine's): the boat it has found
       if (s.antiArmor && e.stack.kind !== 'infantry') score -= 15; // cannons and beams hunt big game
