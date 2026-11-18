@@ -52,6 +52,7 @@ const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1st Company' }];
 
 export default {
   id: 'jena',
+  armies: { nato: ['fr'], pact: ['pr', 'sx'] }, // (Napoleon against Hohenlohe's Prussians and Saxons)
   name: 'Jena',
   description: 'The plateau above Jena, October 1806: open fields round Vierzehnheiligen, a few copses, villages of stone farms. Three times the room of the other maps, and long sight lines — lines, columns and cavalry have space to move.',
   epochs: ['1806'],

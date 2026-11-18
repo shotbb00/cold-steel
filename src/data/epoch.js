@@ -143,6 +143,7 @@ export const EPOCHS = {
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
       // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
       usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
+      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true }, // (North Africa: El Alamein — data/units45 the end)
       jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
@@ -171,6 +172,10 @@ export const EPOCHS = {
       usmc: [
         { ...DOCTRINE_1985.us[0], name: 'Marine air', text: 'The Marines’ own aviation over their own riflemen: air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
         { id: 'hold', name: 'Semper Fidelis', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
+      ],
+      brit: [
+        { ...DOCTRINE_1985.sov[0], name: 'Lightfoot barrage', text: 'The opening barrage of El Alamein: a support power (Z) — a whole sector shelled for a minute, everything inside pinned, the sappers going in behind it.' },
+        { id: 'airsup', name: 'Desert Air Force', text: 'Fighter patrols cost 40 % less and are ready again 30 % sooner: the RAF over the desert.', cost: 0.6, cooldown: 0.7 },
       ],
       jp: [
         { id: 'tempo', name: 'Banzai', text: 'Infantry and tanks closing on the enemy move 30 % faster and fire 15 % faster. Units stalled in contact for 20 s take 30 % more suppression.', speed: 1.3, fire: 1.15, stall: 20, suppression: 1.3 },

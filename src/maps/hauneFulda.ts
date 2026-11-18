@@ -83,6 +83,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'haune-fulda',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Haune and Fulda',
   description: 'Two rivers split the land in three. The middle ground between them is where the battle is won — and every way onto it is a bridge.',
   size: 1600,

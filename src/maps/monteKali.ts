@@ -75,6 +75,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'monte-kali',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Kaliwerk Hattorf',
   description: 'A potash works as a battlefield: processing halls, headframes, conveyor bridges, rail yards and white stockpiles in the middle, the shaft works and miners\' towns around them.',
   size: 1600,

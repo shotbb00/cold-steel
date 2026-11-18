@@ -8,6 +8,7 @@ import { westernFront } from './westernFront.ts';
 
 export default westernFront({
   id: 'villers-bretonneux',
+  armies: { nato: ['uk'], pact: ['de', 'st'] }, // (the British and Australians against the German assault — storm troops and the A7Vs)
   name: 'Villers-Bretonneux',
   description: 'April 1918, the last ridge before Amiens: two trench systems face each other across a crater field, the ruined town between them. Wire in front of every line, woods shot to stumps — and the first tank-against-tank fight in history.',
   seed: 1918,

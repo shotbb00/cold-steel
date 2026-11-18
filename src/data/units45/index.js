@@ -22,6 +22,7 @@ const men = (o = {}) => ({
   nato: () => buildWw2Soldier({ army: 'us', ...o }), sov: () => buildWw2Soldier({ army: 'sov', ...o }),
   pact: () => buildWw2Soldier({ army: 'wh', ...o }), fj: () => buildWw2Soldier({ army: 'fj', ...o }),
   usmc: () => buildWw2Soldier({ army: 'usmc', ...o }), jp: () => buildWw2Soldier({ army: 'jp', ...o }), // (the Pacific: see the end of this file)
+  brit: () => buildWw2Soldier({ army: 'brit', ...o }), // (North Africa: the 8th Army)
 });
 const derive = (base, o) => ({ ...base, ...o, stats: { ...base.stats, ...o.stats }, specialist: o.specialist ?? base.specialist });
 
@@ -37,7 +38,7 @@ const rifles = derive(T.rifles, {
   models: men(),
   // the kits (data/kits.js): bazookas for the GIs, Panzerfausts for the Germans — and for the Red Army, which used captured ones by the thousand in 1945; Thompson, PPSh, MP 40 for the assault
   kitModels: {
-    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }), usmc: () => buildWw2Soldier({ army: 'usmc', weapon: 'at' }), jp: () => buildWw2Soldier({ army: 'jp', weapon: 'at' }) },
+    at: { nato: () => buildWw2Soldier({ army: 'us', weapon: 'at' }), sov: () => buildWw2Soldier({ army: 'sov', weapon: 'pzf' }), pact: () => buildWw2Soldier({ army: 'wh', weapon: 'pzf' }), fj: () => buildWw2Soldier({ army: 'fj', weapon: 'pzf' }), usmc: () => buildWw2Soldier({ army: 'usmc', weapon: 'at' }), jp: () => buildWw2Soldier({ army: 'jp', weapon: 'at' }), brit: () => buildWw2Soldier({ army: 'brit', weapon: 'at' }) },
     smg: men({ weapon: 'smg' }),
   },
   variants: {
@@ -594,6 +595,26 @@ pacific(heavyTank, 'usmc', { model: buildUsSherman, cost: 0.85,
     boltSpeed: 34, boltSize: 1.6, tracer: 1, spread: 0.05, magSize: 60, reloadTime: 12, vsStructure: 3, suppressPower: 3, ignite: 0.7, vsArmor: 0.15, pierce: 0, weaponSound: 'flame', antiArmor: false },
   variant: { name: 'M4A3R3 Zippo', weapon: 'flame gun, .30 cal', text: 'A Sherman with a flame gun in place of its 75: it drives up to the pillbox and burns it out from 60 metres. Useless against tanks — keep it with the riflemen, away from the 47s.' } });
 pacific(ifv, 'usmc', { model: buildUsLvt4, stats: { armor: 0.2, hp: 700, speed: 4.6 }, variant: { name: 'LVT-4 Water Buffalo', weapon: '.30 and .50 cal', text: 'The amphibian tractor: swims in from the ships and climbs the beach with a squad in its open hold. U unloads them over the stern ramp.' } });
+
+// ---------------------------------------------------------------- North Africa: the British 8th Army (El Alamein)
+// Its own roster (data/epoch.js `own`): its infantry in khaki drill, and the American-built vehicles it fought in —
+// the Shermans and Priests that came for Second Alamein, the Bofors — under the US Army's models.
+const brit = (t, o) => pacific(t, 'brit', o);
+brit(rifles, { stats: { fireCooldown: 1.9, magSize: 10, reloadTime: 3, playerFireInterval: 0.9 },
+  variant: { name: 'Rifle Section', weapon: 'Lee-Enfield No. 1, Bren gun', text: 'The 8th Army’s infantry section: ten rifles round the Bren gun — the fastest bolt action of the war, a light machine gun that never jams.' } });
+brit(atTeam, { variant: { name: 'Boys Anti-Tank Rifle Team', weapon: 'Boys .55 in anti-tank rifle', text: 'A long anti-tank rifle that kicks like a mule: it opens armoured cars and half-tracks, and a tank only from the side.' } });
+brit(mgTeam, { stats: { burst: 12, burstInterval: 0.1, fireCooldown: 2.0 }, variant: { name: 'Vickers MG Team', weapon: 'Vickers .303 machine gun', text: 'The water-cooled Vickers on its tripod: it fires all day and covers a whole front of desert.' } });
+brit(mortar, { variant: { name: '3-inch Mortar Team', weapon: 'Ordnance ML 3-inch mortar', text: 'The battalion’s mortars: high explosive and smoke on anything the section can see.' } });
+brit(scouts, { variant: { name: 'Scouts', weapon: 'Lee-Enfield, binoculars', text: 'A patrol out in front at night: they find the minefield gaps and the enemy’s posts.' } });
+brit(sniper, { variant: { name: 'Sniper', weapon: 'Lee-Enfield No. 4 (T)', text: 'A marksman with the scoped Enfield, hidden in the scrub.' } });
+brit(engineers, { variant: { name: 'Royal Engineers', weapon: 'Lee-Enfield, mine detectors, flamethrower', text: 'The sappers who cleared the lanes through the Devil’s Gardens with mine detectors and bayonets — and burn out the strongpoints.' } });
+brit(observers, { variant: { name: 'Forward Observation Officer', weapon: 'Lee-Enfield, wireless set', text: 'The gunners’ officer up with the infantry: where he looks, the 25-pounders and the Priests land.' } });
+brit(crew, { variant: { name: 'Tank Crew', weapon: 'Thompson', text: CREW_TEXT } });
+brit(tank, { variant: { name: 'M4A1 Sherman (8th Army)', weapon: '75 mm M3', text: 'The American tank that reached the 8th Army just before Alamein: at last a gun that answers the Panzer IV, and armour to take a hit.' } });
+brit(artillery, { variant: { name: 'Priest (8th Army)', weapon: '105 mm M2A1 howitzer', text: 'The self-propelled 105 that came with the Shermans: it keeps up with the armour across the desert.' } });
+brit(towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun of every British army: clips of heavy shells against the Stukas.' } });
+brit(ambulance, { variant: { name: 'Field Ambulance', weapon: 'unarmed', text: 'The field ambulance: patches up the wounded nearby.' } });
+brit(commandPost, { variant: { name: 'Command Post', weapon: 'wireless sets', text: 'Brigade headquarters in a half-track: nearby squads hold longer and react faster.' } });
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,

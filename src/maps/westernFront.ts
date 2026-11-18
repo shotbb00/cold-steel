@@ -22,6 +22,7 @@ const MUD = new THREE.Color(0x4f4234);   // churned chalk and clay
 
 interface Line { z: number; wireAt: number; belts: number; gapEvery?: number; seed: number }
 interface Front {
+  armies?: { nato?: string[], pact?: string[] };
   id: string; name: string; description: string; seed: number; points: ControlPointDef[];
   lines?: Line[]; redoubts?: { x: number; z: number; size: number }[];
   front: number; craters: number; ridge: number; woods?: number;
@@ -79,7 +80,7 @@ export function westernFront(o: Front) {
   const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1st Section' }];
 
   return {
-    id: o.id, name: o.name, description: o.description,
+    id: o.id, name: o.name, description: o.description, armies: o.armies, // (the armies that fought there: maps/index.js armiesOn)
     epochs: ['1918'], size: 1600, segments: 640, bounds: BOUNDS, seed: o.seed, height,
     fields: createFields({ seed: o.seed, cell: 84, weights: (o.fields ?? [0.3, 0.3, 0.1, 0.3]) as any }),
     theme: { ...SKY, ...o.theme, terrain: { ...GROUND, ...o.terrain, farmX: [BOUNDS.x - 20, BOUNDS.x + 90], farmZ: [BOUNDS.z - 10, BOUNDS.z + 90], roads: [-300, 0, 300], roadZ: BOUNDS.z - 20 } },

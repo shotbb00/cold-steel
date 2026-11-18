@@ -77,6 +77,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'hersfeld-airbase',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Hersfeld Airbase',
   description: 'A forward airfield on the open plain: the runway, aircraft shelters, hangars and the tower. Long sight lines — tank and missile country, the concrete is the only cover.',
   size: 1600,

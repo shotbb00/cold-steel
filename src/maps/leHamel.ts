@@ -7,6 +7,7 @@ import { westernFront } from './westernFront.ts';
 
 export default westernFront({
   id: 'le-hamel',
+  armies: { nato: ['uk'], pact: ['de'] }, // (Monash's Australians, with the Americans, against the German line)
   name: 'Le Hamel',
   description: 'July 1918, a quiet sector in midsummer: the lines close together across standing wheat, the woods still whole round Le Hamel. Little cover in the open, few shell holes — the battle for tanks and infantry working together.',
   seed: 1907,

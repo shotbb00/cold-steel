@@ -8,6 +8,7 @@ import { westernFront } from './westernFront.ts';
 
 export default westernFront({
   id: 'st-quentin',
+  armies: { nato: ['uk'], pact: ['st', 'de'] }, // (Operation Michael: the storm troops against the British Fifth Army)
   name: 'St Quentin',
   description: 'March 1918 at dawn, in thick fog: no continuous trench line but redoubts — squares of trench in their own wire — on the rises behind a thin outpost line. Hold them, or go round them as the storm troops did.',
   seed: 1921,

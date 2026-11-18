@@ -78,6 +78,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'huenfeld',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Hünfeld',
   description: 'A town fight: cobbled streets, houses you can occupy on every corner, the market square, two churches, the station and the brickworks. Short sight lines; tanks beware.',
   size: 1600,

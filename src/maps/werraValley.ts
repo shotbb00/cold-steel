@@ -78,6 +78,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'werra-valley',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Werra Valley',
   description: 'A river across the border and only three bridges over it. Hold them, blow them, or lay your own.',
   ww2: { description: 'The Werra across the valley and only three bridges over it. Hold them, blow them, or lay your own.' },

@@ -85,6 +85,7 @@ const pactName = { '1st Platoon': '1-ya Rota' };
 
 export default {
   id: 'thuringian-forest',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Thuringian Forest',
   description: 'A spruce ridge down the middle, cut by the forest road and the Rennsteig track, with open upland on both flanks. Inside the woods you see a few dozen metres: armour takes the flanks and the roads, infantry rules the trees.',
   size: 1600,

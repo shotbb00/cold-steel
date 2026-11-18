@@ -7,7 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -67,7 +67,7 @@ const tabInfo = () => epochInfo().regions?.[regionIn(epoch(), hasTheatre(epoch()
 
 export function theatreArmies() {
   const maps = mapsFor(epoch());
-  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
+  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => armiesOn(m)?.[f]) ? [...new Set(maps.flatMap((m) => armiesOn(m)[f]))] : null]));
 }
 
 /** A side's name as the theatre's maps give it (Aboukir: France and Britain, not 1806's Prussia), else the war's. */

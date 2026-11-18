@@ -74,6 +74,8 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'stalingrad',
+  armies: { nato: ['sov'], pact: ['wh'] }, // (the Red Army against the Wehrmacht)
+  sides: { nato: 'Soviet Union', pact: 'Germany' },
   name: 'Stalingrad',
   description: 'A ruined city in the snow: gutted blocks on every street, Mamayev Kurgan in the middle, the grain elevator, the tractor works and Pavlov\'s House. A fight from house to house.',
   epochs: ['1945'],

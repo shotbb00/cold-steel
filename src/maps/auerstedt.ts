@@ -58,6 +58,7 @@ const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1st Company' }];
 
 export default {
   id: 'auerstedt',
+  armies: { nato: ['fr'], pact: ['pr'] }, // (Davout's corps against the Prussian main army)
   name: 'Auerstedt',
   description: 'Hassenhausen, October 1806: a broad ridge across the field, the Lissbach hollow running through it, hedged villages and open fields between, the morning mist still lifting. As wide as Jena; one fold of dead ground to use.',
   epochs: ['1806'],

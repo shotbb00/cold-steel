@@ -30,6 +30,8 @@ const ARMY = {
   // the Pacific (Iwo Jima): the Marines in their sage-green herringbone twill, the helmet in its camouflage cover;
   // the Imperial Army in khaki, the Type 90 helmet, wrapped puttees, brown leather
   usmc: { coat: 0x5c6648, coatDk: 0x4a533a, trousers: 0x58614a, web: 0x8a7f5a, belt: 0x8a7f5a, boot: 0x4a3322, legging: 0x8f8460, helmet: 0x5a6340, wood: WOOD },
+  // the British 8th Army in the desert: khaki drill, pale blancoed webbing, the Brodie helmet, short puttees over ankle boots
+  brit: { coat: 0x9c8c5e, coatDk: 0x83744c, trousers: 0x958658, web: 0xb4a77e, belt: 0xb4a77e, boot: 0x4a3322, legging: 0xa89a70, helmet: 0x6c6a4a, wood: WOOD },
   jp: { coat: 0x7a6e44, coatDk: 0x645a36, trousers: 0x766a42, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x4a3322, legging: 0x8a7c52, helmet: 0x5e5a3a, wood: 0x7a5232 },
 };
 
@@ -50,6 +52,7 @@ function rifle({ wood, to = 0.98, wood2 = 0.78, bolt = true, mag = false }) {
 
 function weapon(kind, army, c) {
   if (army === 'usmc') army = 'us'; // (the Marines carry the Army's weapons)
+  if (army === 'brit') army = kind === 'mg' ? 'jp' : kind === 'at' ? 'sov' : 'wh'; // (the Bren's curved magazine on top like the Type 96, the Boys anti-tank rifle long like the PTRS, the Lee-Enfield a bolt action)
   const w = c.wood;
   switch (kind) {
     case 'smg':
@@ -95,7 +98,7 @@ function weapon(kind, army, c) {
           ...rifle({ wood: w, to: 1.02, wood2: 0.45, bolt: false }),
           P.cyl(0.1, 0.1, 0.03, { x: 0.2, y: 1.4, z: 0.33, color: STEEL }, 14),
           P.cyl(0.022, 0.022, 0.35, { x: 0.2, y: 1.335, z: 0.68, rx: Math.PI / 2, color: STEEL }, 8),
-          ...pair((s) => P.box(0.014, 0.014, 0.28, { x: 0.2 + s * 0.05, y: 1.22, z: 0.9, rx: 0.9, color: STEEL })),
+          ...pair((s) => P.box(0.014, 0.014, 0.28, { x: 0.2 + s * 0.02, y: 1.25, z: 0.93, rx: 0.9, color: STEEL })), // (the bipod, from under the barrel)
         ],
         muzzle: { x: 0.2, y: 1.335, z: 1.03 } };
       return { // MG 42: the square perforated jacket, the bipod, the drum or belt
@@ -122,7 +125,7 @@ function weapon(kind, army, c) {
           ...rifle({ wood: w, to: 1.75, wood2: 0.55, bolt: false, mag: true }),
           P.cyl(0.02, 0.02, 1.2, { x: 0.2, y: 1.34, z: 1.15, rx: Math.PI / 2, color: STEEL }, 8),
           P.box(0.05, 0.04, 0.09, { x: 0.2, y: 1.34, z: 1.78, color: STEEL }),
-          ...pair((s) => P.box(0.014, 0.014, 0.34, { x: 0.2 + s * 0.06, y: 1.2, z: 1.0, rx: 0.9, color: STEEL })),
+          ...pair((s) => P.box(0.014, 0.014, 0.34, { x: 0.2 + s * 0.03, y: 1.24, z: 1.06, rx: 0.9, color: STEEL })), // (the bipod, from under the barrel)
         ],
         muzzle: { x: 0.2, y: 1.34, z: 1.82 } };
       if (army === 'us') return { // M9 bazooka: the long tube on the shoulder, the grip and the shoulder stock
@@ -178,7 +181,7 @@ function weapon(kind, army, c) {
         parts: [
           ...rifle({ wood: w, to: 0.95, wood2: 0.55, bolt: false }),
           P.box(0.12, 0.04, 0.035, { x: 0.12, y: 1.32, z: 0.36, color: STEEL }),                                // the magazine out to the left
-          ...pair((s) => P.box(0.012, 0.012, 0.22, { x: 0.2 + s * 0.04, y: 1.25, z: 0.8, rx: 0.9, color: STEEL })),
+          ...pair((s) => P.box(0.012, 0.012, 0.22, { x: 0.2 + s * 0.015, y: 1.28, z: 0.82, rx: 0.9, color: STEEL })),
         ],
         muzzle: { x: 0.2, y: 1.335, z: 0.95 } };
       { const to = army === 'sov' || army === 'jp' ? 1.08 : army === 'us' || army === 'usmc' ? 0.94 : 1.0; // (the Arisaka: as long as the Mosin)
@@ -207,6 +210,10 @@ function headgear(army, c, crew) {
     helmet([[1.745, 0.16, 1.06], [1.752, 0.153], [1.79, 0.145], [1.83, 0.126], [1.86, 0.088], [1.876, 0.03]], { color: c.helmet }),
     ...[1.78, 1.82].map((y) => loft([[0, y, -0.008, 0.149, 0.158, 2], [0, y + 0.008, -0.008, 0.146, 0.155, 2]], { color: 0x3e4028 }, 14)),
     ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.13, y: 1.68, z: 0.0, color: c.web })),
+  ];
+  if (army === 'brit') return [ // the Brodie helmet: a shallow dome on a wide flat brim
+    helmet([[1.742, 0.205, 1.0], [1.75, 0.2], [1.762, 0.128], [1.8, 0.12], [1.838, 0.09], [1.858, 0.035]], { color: c.helmet }),
+    ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.11, y: 1.68, z: 0.02, color: c.web })),
   ];
   if (army === 'usmc') return [ // the M1 in the Marines' camouflage cover: green with brown blotches
     helmet([[1.745, 0.162, 1.06], [1.752, 0.155], [1.79, 0.147], [1.83, 0.128], [1.86, 0.09], [1.878, 0.032]], { color: c.helmet }),
@@ -257,7 +264,7 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
       ] : army === 'jp' ? [
         P.box(0.22, 0.2, 0.08, { x: 0, y: 1.32, z: -0.19, color: 0x6e6440 }),                                       // the small pack
         loft([[0, 1.43, -0.18, 0.15, 0.04, 3], [0, 1.47, -0.18, 0.15, 0.04, 3]], { color: 0x5e5838 }, 10),            // the blanket roll on top
-      ] : army === 'us' || army === 'usmc' ? [
+      ] : army === 'us' || army === 'usmc' || army === 'brit' ? [
         P.box(0.12, 0.2, 0.06, { x: 0.05, y: 1.08, z: -0.165, color: 0x3b3b2c }),                                     // entrenching tool
         loft([[0, 1.28, -0.19, 0.12, 0.05, 4], [0, 1.42, -0.2, 0.125, 0.055, 4], [0, 1.5, -0.19, 0.11, 0.05, 4]], { color: c.coatDk }, 12), // pack
       ] : [
@@ -284,9 +291,9 @@ export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = fa
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.coatDk }), ...w.parts];
   const thigh = merge([thighPart({ color: c.trousers })]);
   const shin = grime(merge([
-    ...shinPart({ color: c.trousers, boot: c.boot, bootTop: army === 'wh' && !crew ? 0.34 : army === 'sov' ? 0.32 : 0.2, blouse: army !== 'us' && army !== 'usmc' }),
+    ...shinPart({ color: c.trousers, boot: c.boot, bootTop: army === 'wh' && !crew ? 0.34 : army === 'sov' ? 0.32 : 0.2, blouse: army !== 'us' && army !== 'usmc' && army !== 'brit' }),
     ...(army === 'jp' && !crew ? [loft([[0, -0.36, 0.0, 0.056, 0.06, 2], [0, -0.06, 0.0, 0.062, 0.066, 2]], { color: c.legging }, 10)] : []), // the wrapped puttees, ankle to knee
-    ...((army === 'us' || army === 'usmc') && !crew ? [loft([[0, -0.3, 0.0, 0.058, 0.062, 2], [0, -0.13, 0.0, 0.06, 0.064, 2]], { color: c.legging }, 10)] : []), // canvas leggings
+    ...((army === 'us' || army === 'usmc' || army === 'brit') && !crew ? [loft([[0, -0.3, 0.0, 0.058, 0.062, 2], [0, -0.13, 0.0, 0.06, 0.064, 2]], { color: c.legging }, 10)] : []), // canvas leggings
   ]), -0.3, -0.5);
   return {
     torso: finish(merge(torso)),

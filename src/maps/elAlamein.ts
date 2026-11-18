@@ -55,6 +55,8 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'el-alamein',
+  armies: { nato: ['brit'], pact: ['wh', 'fj'] }, // (the British 8th Army against the Afrika Korps — and the Ramcke Brigade's Fallschirmjäger)
+  sides: { nato: 'Britain', pact: 'Germany' },
   name: 'El Alamein',
   description: 'The Western Desert: open ground and long sight lines, two ridges for hull-down tanks, an oasis village, the station and the mosque. A tank battle.',
   epochs: ['1945'],

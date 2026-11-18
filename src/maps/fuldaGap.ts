@@ -101,6 +101,7 @@ const points: ControlPointDef[] = [
 
 export default {
   id: 'fulda-gap',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Fulda Gap',
   description: 'Three sectors of autumn farmland either side of the inner-German border, split by wooded ridges: villages to hold, Point Alpha in the middle.',
   ww2: { description: 'Three sectors of farmland in the hills between Hesse and Thuringia, split by wooded ridges: villages to hold, the Rasdorfer Berg in the middle.', points: { F: 'Rasdorfer Berg' } }, // (no border or Point Alpha yet: maps/index.js forEpoch)

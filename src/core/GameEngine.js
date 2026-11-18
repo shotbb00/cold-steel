@@ -10,6 +10,7 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { armiesOn } from '../maps/index.js';
 import { Caves } from '../systems/Caves.js';
 import { setClimate } from '../render/paint.js';
 import { setWind } from '../world/Wind.js';
@@ -125,7 +126,8 @@ export class GameEngine {
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.armies = armiesFrom(armies, map); // which army each side fields (data/factions.js ARMIES; the Pacific's on its maps only)
-    for (const f of ['nato', 'pact']) if (map.armies?.[f] && !map.armies[f].includes(this.armies[f])) this.armies[f] = map.armies[f][0]; // (a map fought by particular armies only: Omaha)
+    const only = armiesOn(map); // (a map fought by particular armies only, in this war: Omaha, Stalingrad, the Hesse maps in 1945 — maps/index.js)
+    for (const f of ['nato', 'pact']) if (only?.[f] && !only[f].includes(this.armies[f])) this.armies[f] = only[f][0];
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -174,6 +176,7 @@ export class GameEngine {
     this.world.openSea = !!map.river?.sea && !this.world.coastal; // ships only, nothing ashore
     this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
     this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
+    this.world.soft = map.soft ?? null;   // (soft ground: Bobruisk's bog, Iwo Jima's ash — routes go round it: world/Nav.js)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);

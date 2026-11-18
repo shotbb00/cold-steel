@@ -214,7 +214,7 @@ LINES.ru27 = {
   drone: ['Dron! Dron nad nami!', 'FPV-shka letit!', 'Vozdukh! Vozdukh!', 'Ptichka! V ukrytiye!', 'Sbey yego!'],
 };
 const LANG27 = { us: 'us27', pl: 'pl', ru: 'ru27', by: 'ru27' };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', jp: 'jpa', usmc: 'nato', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', jp: 'jpa', usmc: 'nato', brit: 'nato', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
