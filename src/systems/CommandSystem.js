@@ -262,6 +262,10 @@ export class CommandSystem {
       const builders = sel.filter((st) => st.usesCover);
       if (builders.length !== 1) return this.game.bus.emit('toast', 'Select one infantry stack to build with');
       this.startTargeting({ kind: 'build', structure: cmd.slice(6), stack: builders[0] });
+    } else if (cmd === 'tunnel') {
+      const at = [...this.selected].filter((s) => this.game.caves?.canEnter(s));
+      if (!at.length) return this.game.bus.emit('toast', 'Bring the squad to a cave mouth first');
+      this.startTargeting({ kind: 'smoke', tunnel: true, stacks: at });
     } else if (cmd === 'leave') {
       const inside = [...this.selected].filter((s) => s.alive && s.garrison);
       if (!inside.length) return this.game.bus.emit('toast', 'Select a stack inside a building');
@@ -490,7 +494,7 @@ export class CommandSystem {
       t.ghost = t.marker.group;
       const pw = t.power && POWERS_1806[t.power];
       const bar = barrageOf(this.game, this.faction);
-      t.hint = pw ? `${pw.label} (${pw.cost} CP): ${click} ${{ battery: 'the target — every gun in reach fires on it', reserve: 'near the enemy to charge — they ride at the nearest within the dashed circle', guard: 'where the Guard should march', fireship: 'the ships to burn — she comes down the wind', squadron: 'where the squadron should sail', monitors: 'the sector to shell', smokeScreen: 'where the line of smoke goes, across the way in', starShell: 'the water to light up' }[t.power] ?? 'the spot'} — ${cancel}`
+      t.hint = t.tunnel ? `Tunnel: ${click} the cave mouth to come out at — ${cancel}` : pw ? `${pw.label} (${pw.cost} CP): ${click} ${{ battery: 'the target — every gun in reach fires on it', reserve: 'near the enemy to charge — they ride at the nearest within the dashed circle', guard: 'where the Guard should march', fireship: 'the ships to burn — she comes down the wind', squadron: 'where the squadron should sail', monitors: 'the sector to shell', smokeScreen: 'where the line of smoke goes, across the way in', starShell: 'the water to light up' }[t.power] ?? 'the spot'} — ${cancel}`
         : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
@@ -628,6 +632,11 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
       this.addMarker(at, 'attack');
       this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke' && t.tunnel) {
+      const k = this.game.caves.mouthNear(p, 60);
+      if (k < 0) return this.game.bus.emit('toast', 'Click a cave mouth');
+      this.game.orders.issue({ t: 'tunnel', s: ids(t.stacks), k });
+      this.addMarker(this.game.caves.list[k], 'hold');
     } else if (t.kind === 'smoke' && t.power) {
       if (this.game.orders.issue({ t: 'power', k: t.power, x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');

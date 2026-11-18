@@ -150,6 +150,7 @@ export class VisibilitySystem {
       let any = false;
       for (const u of s.units) {
         if (!u.alive) continue; // a body stays where (and as) it was last seen
+        if (s.tunnel) { u.spotted = false; u.visible = false; continue; } // (underground: systems/Caves.js)
         // fortifications are on everyone's maps — a concealed one (the Atlantic Wall) once it has been seen, or has given itself away firing: concrete doesn't move
         const fort = s.stats.structure && (!s.stats.concealed || u.known);
         u.spotted = !this.enabled || fort || this.isSeen(u, spotters, terrain);

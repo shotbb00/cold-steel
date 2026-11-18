@@ -531,6 +531,7 @@ export class UnitStack {
   // ------------------------------------------------------------------ per frame
 
   update(dt, t) {
+    if (this.tunnel) return; // underground (systems/Caves.js): nothing to do until they come out
     if (this.withdrawing && this.alive) this.checkWithdrawn();
     if (this.alive) {
       this.updateAnchor(dt);
@@ -2614,7 +2615,7 @@ export class UnitStack {
    * the sides, 0.35x from behind — flanking pays.
    */
   damageUnit(u, amount, source, pierce = 0, dir = null, vsArmor = 1) {
-    if (!u.alive) return;
+    if (!u.alive || this.tunnel) return; // (in the tunnels: under the rock)
     const hot = (source?.stats ?? source?.stack?.stats)?.hotShot; // (1801: a shore battery's red-hot shot in a ship's timbers)
     if (hot && this.stats.sail && Math.random() < hot) { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.3); if (!u.hotTold) { u.hotTold = true; this.services.tell?.(this.faction, `${this.name}: red-hot shot in her timbers — fire aboard!`); } }
     if (this.markedUntil > this.world.time) amount *= this.markDamage; // spotted by the US Army's Cavalry screen

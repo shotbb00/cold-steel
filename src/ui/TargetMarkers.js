@@ -123,6 +123,13 @@ export function markerSpec(game, faction, t, at) {
     return spec;
   }
   // ---- 'smoke': the powers, the barrages, gas, the units' fire orders
+  if (t.tunnel) { // the cave mouth it would come out at: the nearest to the cursor (systems/Caves.js)
+    const k = g.caves?.mouthNear(at, 60) ?? -1, m = k >= 0 ? g.caves.list[k] : null;
+    if (m) { spec.x = m.x; spec.z = m.z; }
+    spec.key = `tunnel:${!!m}`;
+    spec.parts.push({ shapes: ring(10, 2.5), color: m ? MARK.troops : MARK.smoke, opacity: 0.85 }, { shapes: disc(10), color: MARK.troops, opacity: m ? 0.2 : 0.05 });
+    return spec;
+  }
   if (t.power) {
     const k = t.power;
     spec.key = `power:${k}`;

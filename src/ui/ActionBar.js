@@ -80,6 +80,7 @@ const ACTIONS = [
   { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Foot: bayonets, at the run. Horse: at the gallop, sabres out. At the nearest enemy in sight — horses will not go into a square', when: (sel) => sel.some((s) => s.stats.formations || (s.stats.cavalry && !s.stats.loose)) },
   { cmd: 'house:sandbag', label: 'Sandbag house', icon: 'sandbags', key: 'none', cost: () => HOUSE_UPGRADES.sandbag.cost, tip: 'Sandbags along the walls of the house this squad holds: the men at its windows take much less (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.fortified) },
   { cmd: 'house:aid', label: 'Aid station', icon: 'reinforce', key: 'none', cost: () => HOUSE_UPGRADES.aid.cost, tip: 'Make the house this squad holds an aid station: a medic jeep stays posted there and drives out to wounded squads (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.aid) },
+  { cmd: 'tunnel', label: 'Tunnel', icon: 'leave', key: 'none', tip: 'Into the tunnels at this cave mouth, out at another you pick: unseen and out of reach on the way (the walk through the rock takes a while)', when: (sel, g) => sel.some((s) => g.caves?.canEnter(s)) },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 

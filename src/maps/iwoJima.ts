@@ -82,6 +82,19 @@ function soft(x: number, z: number, foot: boolean) {
   return foot ? 0.78 : 0.42;
 }
 
+/** The cave mouths (systems/Caves.js): the tunnels join them all — Suribachi's galleries, the crest over the beaches, the airfields, the north. */
+const CAVES = [
+  { name: 'Suribachi, south face', x: SURIBACHI.x + 20, z: SURIBACHI.z + 105 },
+  { name: 'Suribachi, east face', x: SURIBACHI.x + 110, z: SURIBACHI.z + 20 },
+  { name: 'Suribachi, north face', x: SURIBACHI.x - 10, z: SURIBACHI.z - 100 },
+  ...BEACHES.map((b) => ({ name: `the crest over ${b.id} Beach`, x: b.x + 35, z: shoreZ(b.x + 35) - 150 })),
+  { name: 'Airfield No. 1, west', x: AIRFIELDS[0].x - 200, z: AIRFIELDS[0].z - 60 },
+  { name: 'Airfield No. 1, north', x: AIRFIELDS[0].x + 40, z: AIRFIELDS[0].z - 110 },
+  { name: 'Airfield No. 2', x: AIRFIELDS[1].x - 30, z: AIRFIELDS[1].z - 90 },
+  { name: 'Hill 382', x: 470, z: -230 },
+  { name: 'the Meat Grinder', x: 560, z: -380 },
+  { name: 'the northern plateau', x: PLATEAU_N.x + 40, z: PLATEAU_N.z - 60 },
+];
 const shore = (x: number) => ({ x, z: shoreZ(x) });
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Transport area', x: -60, z: 760, owner: 'nato', sector: 'centre', radius: 90 },
@@ -168,6 +181,13 @@ export default {
   // the pre-landing bombardment: the island already cratered (GameEngine: replayed quietly before the battle)
   battlefield() { return { blasts: craters(), ruins: [], works: [] }; },
 
+  // the cave mouths (systems/Caves.js): the tunnels join them all — Suribachi's galleries, the crest over the beaches,
+  // the airfields, the northern plateau
+  caves: {
+    owner: 'pact',
+    list: CAVES,
+  },
+
   landing: {
     // the defence (modes/landing.js, data/units45/atlanticWall.js — the Japanese variants): pillbox complexes on the
     // terraces' crest over each beach and round the airfields, the coast guns on Suribachi and the plateau laid on the ships
@@ -188,8 +208,7 @@ export default {
     navy: ['destroyer', 'lsmr', 'oldBattleship'],
     // the defence at H-hour: on the terraces' crest, round the airfields, on Suribachi, in the north
     hold: [
-      ...BEACHES.map((b) => ({ x: b.x, z: shoreZ(b.x) - 140 })),
-      { x: SURIBACHI.x + 20, z: SURIBACHI.z + 40 }, { x: SURIBACHI.x - 30, z: SURIBACHI.z - 20 },
+      ...CAVES.slice(0, 9).map((c) => ({ x: c.x, z: c.z + 12 })), // (at the cave mouths: from there they go back into the rock — systems/Caves.js)
       ...AIRFIELDS.flatMap((a) => [{ x: a.x, z: a.z + 40 }, { x: a.x + 80, z: a.z - 30 }]),
       { x: PLATEAU_N.x - 120, z: PLATEAU_N.z + 80 },
     ],

@@ -10,6 +10,7 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { Caves } from '../systems/Caves.js';
 import { setClimate } from '../render/paint.js';
 import { setWind } from '../world/Wind.js';
 import { Deployment } from '../systems/Deployment.js';
@@ -265,6 +266,8 @@ export class GameEngine {
     }
     this.airfields = new Airfields(this); // each side's airfield, its runway laid on every machine alike (tester feedback 2026-11-17)
     this.airfields.plan(mode.id === 'bootcamp'); // (boot camp: only the player's, for its airfield lesson)
+    this.caves = new Caves(this); // a map's cave mouths and the tunnels between them (Iwo Jima)
+    this.systems.push(this.caves);
     mode.setup(this);
     if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)

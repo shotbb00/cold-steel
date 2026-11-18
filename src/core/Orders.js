@@ -314,6 +314,9 @@ export class Orders {
       case 'leave':
         for (const s of mine(cmd.s)) if (s.garrison) g.buildings.leave(s);
         return null;
+      case 'tunnel': // into the tunnels at the nearest cave mouth, out at mouth cmd.k (systems/Caves.js)
+        for (const s of mine(cmd.s)) if (g.caves?.canEnter(s)) g.caves.enter(s, cmd.k);
+        return null;
       case 'popSmoke':
         for (const s of mine(cmd.s)) {
           const u = s.units.find((v) => v.alive);
