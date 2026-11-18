@@ -92,6 +92,7 @@ export default {
   description: 'Egypt, 8 March 1801: at dawn the British army rows ashore in the fleet\'s flatboats, straight at the French on the sand hills. Aboukir castle on its point, Lake Maadieh behind the dunes, the road to Alexandria inland.',
   epochs: ['1806'],
   theatre: 'coastal',
+  region: 'africa', // (1806: Egypt — data/epoch.js regions)
   modes: ['landing'],
   sides: { nato: 'France', pact: 'Britain' },
   armies: { nato: ['fr'], pact: ['gb'] },

@@ -9,7 +9,7 @@ import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas } from '../data/factions.js';
+import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas, armyIn } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
@@ -93,7 +93,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal && !!a.pacific === (regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific')))) { // (Japan and the Marines: Asia & Pacific only)
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : armyIn(a, regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land'))))) { // (Japan and the Marines: Asia & Pacific only; an army's `regions`)
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -679,8 +679,8 @@ export class MainMenu {
     const firstShown = () => { if (!list.querySelector('.on:not([hidden])')) list.querySelector('button:not([hidden])')?.click(); }; // (the shown unit isn't this side's: the first that is)
     const sideToggle = el('div', 'seg faction-seg');
     const only = theatreArmies(); // (the armies this theatre's maps field, as the battle picker: Aboukir France and Britain, no British on land)
-    const pacificHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific';
-    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : !a.coastal && !!a.pacific === pacificHere)).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
+    const regHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
       .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
     const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
     sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;

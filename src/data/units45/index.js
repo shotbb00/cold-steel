@@ -18,6 +18,8 @@ import { buildJpChiNu, buildJpHoI, buildJpHoHa, buildJpHaTo, buildJpLorryAA, bui
 import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
+import brit21 from './brit21.js';
+import brit14 from './brit14.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -25,6 +27,7 @@ const men = (o = {}) => ({
   pact: () => buildWw2Soldier({ army: 'wh', ...o }), fj: () => buildWw2Soldier({ army: 'fj', ...o }),
   usmc: () => buildWw2Soldier({ army: 'usmc', ...o }), jp: () => buildWw2Soldier({ army: 'jp', ...o }), // (the Pacific: see the end of this file)
   brit: () => buildWw2Soldier({ army: 'brit', ...o }), // (North Africa: the 8th Army)
+  brit21: () => buildWw2Soldier({ army: 'brit21', ...o }), brit14: () => buildWw2Soldier({ army: 'brit14', ...o }), // (NW Europe 1944: ./brit21.js; Burma: ./brit14.js)
 });
 const derive = (base, o) => ({ ...base, ...o, stats: { ...base.stats, ...o.stats }, specialist: o.specialist ?? base.specialist });
 
@@ -665,6 +668,9 @@ export const TYPES_1945 = {
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
+brit21(TYPES_1945); // the 21st Army Group's roster (./brit21.js)
+brit14(TYPES_1945); // the 14th Army's (./brit14.js)
+
 export const ALIAS_1945 = {
   kampfgruppe: 'rifles',
 };

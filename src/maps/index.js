@@ -1,6 +1,6 @@
 // Map registry. Add a map file shaped like fuldaGap.js and register it here;
 // load it with ?map=<id>.
-import { epoch } from '../data/epoch.js';
+import { epoch, EPOCHS } from '../data/epoch.js';
 import fuldaGap from './fuldaGap.ts';
 import werraValley from './werraValley.ts';
 import hauneFulda from './hauneFulda.ts';
@@ -48,7 +48,53 @@ import eastShield from './eastShield.ts';
 import biebrzaMarshes from './biebrzaMarshes.ts';
 import orzyszBase from './orzyszBase.ts';
 
+import eylau from './eylau.ts';
+import friedland from './friedland.ts';
+import vimeiro from './vimeiro.ts';
+import talavera from './talavera.ts';
+import copenhagen from './copenhagen.ts';
+import riga from './riga.ts';
+import caporetto from './caporetto.ts';
+import piave from './piave.ts';
+import megiddo from './megiddo.ts';
+import gallipoli from './gallipoli.ts';
+import otranto from './otranto.ts';
+import ardennes from './ardennes.ts';
+import bocage from './bocage.ts';
+import remagen from './remagen.ts';
+import arnhem from './arnhem.ts';
+import kohima from './kohima.ts';
+import okinawa from './okinawa.ts';
+import goldBeach from './goldBeach.ts';
+import okinawaLanding from './okinawaLanding.ts';
+import finnmark from './finnmark.ts';
+import narvik from './narvik.ts';
+import korea from './korea.ts';
+import andoya from './andoya.ts';
 export const MAPS = {
+  [andoya.id]: andoya,
+  [korea.id]: korea,
+  [narvik.id]: narvik,
+  [finnmark.id]: finnmark,
+  [okinawaLanding.id]: okinawaLanding,
+  [goldBeach.id]: goldBeach,
+  [okinawa.id]: okinawa,
+  [kohima.id]: kohima,
+  [arnhem.id]: arnhem,
+  [remagen.id]: remagen,
+  [bocage.id]: bocage,
+  [ardennes.id]: ardennes,
+  [otranto.id]: otranto,
+  [gallipoli.id]: gallipoli,
+  [megiddo.id]: megiddo,
+  [piave.id]: piave,
+  [caporetto.id]: caporetto,
+  [riga.id]: riga,
+  [copenhagen.id]: copenhagen,
+  [talavera.id]: talavera,
+  [vimeiro.id]: vimeiro,
+  [friedland.id]: friedland,
+  [eylau.id]: eylau,
   [omaha.id]: omaha,
   [iwoJima.id]: iwoJima,
   [elGuettar.id]: elGuettar,
@@ -159,13 +205,17 @@ const tabOf = (m) => m.theatre ?? 'land';
  * than one): Western Europe (unless a map says otherwise), the Eastern Front (Stalingrad), North Africa (El Alamein), Asia & the
  * Pacific (Iwo Jima, Midway — where Japan and the Marines fight: data/factions.js armiesFrom).
  */
-export const REGIONS = [{ id: 'europe', name: 'Western Europe' }, { id: 'east', name: 'Eastern Front' }, { id: 'africa', name: 'North Africa' }, { id: 'pacific', name: 'Asia & Pacific' }];
+export const REGIONS = [
+  { id: 'europe', name: 'Western Europe' }, { id: 'north', name: 'Northern Flank' }, { id: 'east', name: 'Eastern Front' }, { id: 'iberia', name: 'Iberia' },
+  { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' },
+  { id: 'caribbean', name: 'Caribbean' }, { id: 'pacific', name: 'Asia & Pacific' }, { id: 'korea', name: 'Korea' },
+];
 export const regionOf = (m) => m.region ?? 'europe';
 let regionNow = 'europe';
 export const region = () => regionNow;
 export function setRegion(id) { regionNow = REGIONS.some((r) => r.id === id) ? id : 'europe'; }
 /** The regions year `ep` has maps in, in theatre `th` (one: no row to choose from). */
-export const regionsFor = (ep, th) => REGIONS.filter((r) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && regionOf(m) === r.id && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))));
+export const regionsFor = (ep, th) => REGIONS.map((r) => ({ ...r, name: EPOCHS[ep]?.regions?.[r.id]?.name ?? r.name })).filter((r) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && regionOf(m) === r.id && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))));
 /** The region in force for year `ep` in theatre `th`: the one picked, if that theatre has maps there, else its first. */
 export const regionIn = (ep, th) => { const rs = regionsFor(ep, th); return rs.some((r) => r.id === regionNow) ? regionNow : rs[0]?.id ?? 'europe'; };
 let theatreNow = 'land';

@@ -27,6 +27,13 @@ export const EPOCHS = {
     id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
     sides: { nato: 'France', pact: 'Prussia' },
+    regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
+      europe: { name: 'Germany' },
+      east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Winter and spring 1807: the Grande Armée against the Russian army — snow at Eylau, the river at Friedland.' },
+      iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–09: Wellington’s redcoats in their line against the French columns.' },
+      africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
+      caribbean: { title: 'The West Indies', blurb: 'Frigates and ships of the line among the sugar islands.' },
+    },
     armies: {
       fr: { id: 'fr', faction: 'nato', name: 'Grande Armée' },
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
@@ -65,6 +72,13 @@ export const EPOCHS = {
     id: '1918', name: '1918', title: 'The Western Front, 1918',
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
     sides: { nato: 'Allies', pact: 'Germany' },
+    regions: {
+      europe: { name: 'Western Front' },
+      east: { title: 'The Eastern Front, 1917', blurb: 'Riga, September 1917: the German storm troops’ first great attack — a short hurricane bombardment, then infiltration across the Dvina.' },
+      italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy against Austria-Hungary and Germany in the mountains and along the rivers.' },
+      middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },
+      med: { title: 'The Mediterranean', blurb: 'The Otranto Barrage, 1917: Austro-Hungarian cruisers against the drifters and destroyers closing the Adriatic.' },
+    },
     armies: {
       uk: { id: 'uk', faction: 'nato', name: 'British Army' },
       fr: { id: 'fr', faction: 'nato', name: 'French Army' },
@@ -96,6 +110,10 @@ export const EPOCHS = {
   1985: {
     id: '1985', name: '1985', title: 'World War III, 1985',
     sides: { nato: 'NATO', pact: 'Warsaw Pact' },
+    regions: {
+      north: { title: 'The Northern Flank, 1985', blurb: 'Norway: the Soviet army comes over the Finnmark tundra and down the fjords toward Narvik, against the Norwegians and the US Marines.' },
+      korea: { title: 'Korea, 1985', blurb: 'The second Korean War: the North’s army pours through the DMZ against South Korea and the US 2nd Infantry Division.' },
+    },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army' },
       bw: { id: 'bw', faction: 'nato', name: 'Bundeswehr' },
@@ -143,7 +161,9 @@ export const EPOCHS = {
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
       // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
       usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
-      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true }, // (North Africa: El Alamein — data/units45 the end)
+      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true, regions: ['africa'] },
+      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
+      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
       jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
@@ -177,6 +197,8 @@ export const EPOCHS = {
         { ...DOCTRINE_1985.sov[0], name: 'Lightfoot barrage', text: 'The opening barrage of El Alamein: a support power (Z) — a whole sector shelled for a minute, everything inside pinned, the sappers going in behind it.' },
         { id: 'airsup', name: 'Desert Air Force', text: 'Fighter patrols cost 40 % less and are ready again 30 % sooner: the RAF over the desert.', cost: 0.6, cooldown: 0.7 },
       ],
+      brit21: [], // (filled with data/units45/brit21.js)
+      brit14: [], // (filled with data/units45/brit14.js)
       jp: [
         { id: 'tempo', name: 'Banzai', text: 'Infantry and tanks closing on the enemy move 30 % faster and fire 15 % faster. Units stalled in contact for 20 s take 30 % more suppression.', speed: 1.3, fire: 1.15, stall: 20, suppression: 1.3 },
         { ...DOCTRINE_1985.bw[0], name: 'Cave fortresses', text: 'Engineers build twice as fast and fortifications cost 40 % less. A dug-in line of trenches and wire waits in front of your base at the start.' },

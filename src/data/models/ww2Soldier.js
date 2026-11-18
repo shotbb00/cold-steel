@@ -32,6 +32,9 @@ const ARMY = {
   usmc: { coat: 0x5c6648, coatDk: 0x4a533a, trousers: 0x58614a, web: 0x8a7f5a, belt: 0x8a7f5a, boot: 0x4a3322, legging: 0x8f8460, helmet: 0x5a6340, wood: WOOD },
   // the British 8th Army in the desert: khaki drill, pale blancoed webbing, the Brodie helmet, short puttees over ankle boots
   brit: { coat: 0x9c8c5e, coatDk: 0x83744c, trousers: 0x958658, web: 0xb4a77e, belt: 0xb4a77e, boot: 0x4a3322, legging: 0xa89a70, helmet: 0x6c6a4a, wood: WOOD },
+  // the British in NW Europe 1944 (serge battledress, Mk III helmet look kept as the Brodie) and in Burma (jungle green drill)
+  brit21: { coat: 0x6a6040, coatDk: 0x564e34, trousers: 0x655c3e, web: 0x8a8462, belt: 0x8a8462, boot: 0x2a2420, legging: 0x7a7458, helmet: 0x4e5038, wood: WOOD },
+  brit14: { coat: 0x4a5236, coatDk: 0x3c432c, trousers: 0x485034, web: 0x6a6a4a, belt: 0x6a6a4a, boot: 0x2a2420, legging: 0x5a5c42, helmet: 0x464c34, wood: WOOD },
   jp: { coat: 0x7a6e44, coatDk: 0x645a36, trousers: 0x766a42, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x4a3322, legging: 0x8a7c52, helmet: 0x5e5a3a, wood: 0x7a5232 },
 };
 
@@ -242,6 +245,7 @@ function headgear(army, c, crew) {
 
 export function buildWw2Soldier({ army = 'us', weapon: kind = 'rifle', crew = false, scout = false, radio = false, engineer = false } = {}) {
   const c = ARMY[army] ?? ARMY.us;
+  if (army === 'brit21' || army === 'brit14') army = 'brit'; // (the same men in other cloth: everything below by the 8th Army's cut)
   const w = weapon(crew ? 'smg' : kind, army, c);
   const gear = !crew;
   const torso = [

@@ -28,6 +28,8 @@ const ARMY_CAMO_1945 = {
   sov: [0x4a5a34, 0x475631, 0x4e5e37, 0x44532f],
   wh: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
   fj: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
+  brit21: [0x4f4a32, 0x47432d, 0x575236, 0x2e2c22],  // the British 1944: SCC 15 olive drab
+  brit14: [0x46503a, 0x3c452f, 0x505a40, 0x2e3424],  // the 14th Army: jungle green
   usmc: [0x4d4f34, 0x4a4c31, 0x515337, 0x484a30],   // the Marines: olive drab like the Army
   brit: [0xb8a77c, 0x938458, 0xa89868, 0xb8a77c],   // the 8th Army: Light Stone, a darker shade over it
   jp: [0x6f6a44, 0x4f5a36, 0x6a4e30, 0xa89a62],     // the Army's khaki-brown with green and brown patches, a yellow stripe
