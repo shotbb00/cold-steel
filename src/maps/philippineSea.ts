@@ -44,6 +44,7 @@ export default {
   name: 'Philippine Sea',
   description: 'Open ocean and a few coral atolls: a carrier battle. Find the enemy fleet before he finds yours, and get the strike through his fighters.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'day', weather: 'clear' },

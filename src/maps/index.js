@@ -141,9 +141,21 @@ export function getMap(id) {
  * Where the battle is fought (the menu's second picker, under the years): on land, at sea — and,
  * later, on a coast (landings: land and sea together). A map's `theatre` (land unless it says).
  */
-export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal' }, { id: 'pacific', name: 'Pacific' }];
-/** The menu tab a map is listed under: its own `tab` (the Pacific's land and coastal battles), else its theatre. */
-const tabOf = (m) => m.tab ?? m.theatre ?? 'land';
+export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal' }];
+const tabOf = (m) => m.theatre ?? 'land';
+/**
+ * Inside a theatre, the scenario's region (the menu's row under Land / Sea / Coastal, shown when a year has maps in more
+ * than one): Europe — or Asia & the Pacific (Iwo Jima, Midway), where Japan and the Marines fight (data/factions.js armiesFrom).
+ */
+export const REGIONS = [{ id: 'europe', name: 'Europe' }, { id: 'pacific', name: 'Asia & Pacific' }];
+export const regionOf = (m) => m.region ?? 'europe';
+let regionNow = 'europe';
+export const region = () => regionNow;
+export function setRegion(id) { regionNow = REGIONS.some((r) => r.id === id) ? id : 'europe'; }
+/** The regions year `ep` has maps in, in theatre `th` (one: no row to choose from). */
+export const regionsFor = (ep, th) => REGIONS.filter((r) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && regionOf(m) === r.id && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))));
+/** The region in force for year `ep` in theatre `th`: the one picked, if that theatre has maps there, else its first. */
+export const regionIn = (ep, th) => { const rs = regionsFor(ep, th); return rs.some((r) => r.id === regionNow) ? regionNow : rs[0]?.id ?? 'europe'; };
 let theatreNow = 'land';
 export const theatre = () => theatreNow;
 export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id && !t.soon) ? id : 'land'; }
@@ -155,7 +167,8 @@ const OWN_MAPS = new Set(['1918', '2027']);
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {
   if (!hasTheatre(ep, th)) th = 'land'; // (a year with no sea yet: its land)
-  const all = Object.values(MAPS).filter((m) => !m.wip && tabOf(m) === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))); // (wip: not offered yet)
+  const reg = regionIn(ep, th);
+  const all = Object.values(MAPS).filter((m) => !m.wip && tabOf(m) === th && regionOf(m) === reg && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))); // (wip: not offered yet)
   return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
 }
 

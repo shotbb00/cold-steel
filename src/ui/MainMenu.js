@@ -7,7 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -63,7 +63,7 @@ const TIPS = { 1985: [
  * null where any of them takes any army.
  */
 /** The year's title and line — or the Pacific's, on its tab (data/epoch.js `pacific`). */
-const tabInfo = () => (theatre() === 'pacific' && hasTheatre(epoch(), 'pacific') && epochInfo().pacific) || epochInfo();
+const tabInfo = () => (regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific' && epochInfo().pacific) || epochInfo();
 
 export function theatreArmies() {
   const maps = mapsFor(epoch());
@@ -93,7 +93,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal && !!a.pacific === (theatre() === 'pacific')))) { // (Japan and the Marines: the Pacific tab only)
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal && !!a.pacific === (regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific')))) { // (Japan and the Marines: Asia & Pacific only)
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -344,7 +344,23 @@ export class MainMenu {
       else b.addEventListener('click', () => { if (on) return; settings.set('theatre', t.id); location.reload(); });
       where.append(b);
     }
-    side.append(where);
+    const whereBox = el('div', 'menu-where');
+    whereBox.append(where);
+    side.append(whereBox);
+    // the scenario's region inside the theatre (maps/index.js REGIONS): only when this year has more than one there
+    const th = hasTheatre(epoch(), theatre()) ? theatre() : 'land', regs = regionsFor(epoch(), th);
+    if (regs.length > 1) {
+      const sub = el('div', 'seg menu-epoch menu-region');
+      for (const r of regs) {
+        const on = r.id === regionIn(epoch(), th);
+        const b = el('button', on ? 'on' : '', r.name);
+        b.type = 'button';
+        b.title = `${THEATRES.find((t) => t.id === th)?.name} battles in ${r.name}`;
+        b.addEventListener('click', () => { if (on) return; settings.set('region', r.id); location.reload(); });
+        sub.append(b);
+      }
+      whereBox.append(sub); // (with its theatre: one block, on a phone too)
+    }
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {

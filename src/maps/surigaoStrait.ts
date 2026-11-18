@@ -49,6 +49,7 @@ export default {
   name: 'Surigao Strait',
   description: 'A narrow strait at night: the US Navy lies across its mouth into Leyte Gulf, the Imperial Navy comes up it from the south. Torpedo boats and destroyers down the sides, the big guns at the end.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'night', weather: 'clear' },

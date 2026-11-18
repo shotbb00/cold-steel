@@ -46,6 +46,7 @@ export default {
   name: 'Savo Sound',
   description: 'A night action in the narrow water between Guadalcanal, Florida Island and Savo: the Imperial Navy comes down the Slot, the US Navy guards the anchorage off Lunga Point.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'night', weather: 'clear' },

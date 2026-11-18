@@ -51,6 +51,7 @@ export default {
   name: 'Midway',
   description: 'Open Pacific around the atoll: a reef ring no ship can cross, the islands with their airfield in the middle, shoals out on the water.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',          // the menu's Sea battles (maps/index.js THEATRES)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],   // (no landing or recon modes at sea)
   fow: 0.5,
