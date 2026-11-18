@@ -25,7 +25,7 @@ const HELMET = 0x4d5733;
 const STEEL = 0x2b2b2b;
 const TANKER = 0x3d4230;
 
-function weapon(kind) {
+export function weapon(kind) { // (exported: data/models/soldier85.js arms the Northern Flank and Korea with it)
   switch (kind) {
     case 'mg': // M60
       return {

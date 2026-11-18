@@ -11,7 +11,7 @@ import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { buildNapSoldier, ARMIES_1806 } from './napSoldier.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670 };   // carriages: French olive green, the Germans' blue-grey
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c };   // carriages: French olive green, the Germans' blue-grey, the Russians' pea green
 const BRONZE = 0x9a7a3a;
 const IRON = 0x2a2a28;
 const SIZES = {
@@ -19,6 +19,7 @@ const SIZES = {
   heavy: { wheel: 0.72, barrel: 2.4, bore: 0.13, cheek: 2.3 },
   horse: { wheel: 0.62, barrel: 1.6, bore: 0.09, cheek: 1.7 },
   howitzer: { wheel: 0.66, barrel: 1.1, bore: 0.15, cheek: 1.8 },
+  licorne: { wheel: 0.7, barrel: 1.6, bore: 0.14, cheek: 2.0 },   // (the Russian 'unicorn': a long howitzer, shell or canister at gun range)
 };
 
 /** A spoked wheel standing on the ground, facing x (as a geometry list). */

@@ -4,8 +4,11 @@
 // several axes at once and flanking means real distance. Each control point is a village with
 // houses to fight from. The border runs east–west through the middle (z = 0): a ploughed control
 // strip, a fence blown open at each sector's crossing, a US observation post and an East German
-// watchtower. NATO holds the south (+z), the Warsaw Pact attacks from the north. Cover is
-// point-mirrored so neither side gets the better ground.
+// watchtower. NATO holds the south (+z), the Warsaw Pact attacks from the north. Not a mirror:
+// the Hessian side has the broad Rasdorfer Berg over its west sector, the Thuringian side the
+// steeper Rockenstuhl cone by Geisa and a long rise behind Borsch; the ridges wander and their
+// saddles lie at other depths on each side. Fair by value instead: each side has an overwatch
+// hill per sector, a saddle through each ridge, and its villages at the same few hundred metres.
 //
 // A map is plain data plus hooks:
 //   id, name, description, size (terrain edge, m), segments, bounds {x, z} (playable half-extents),
@@ -24,19 +27,36 @@ import type { MapDef, ControlPointDef } from '../types.ts';
 // The big field (2026-11: 1.0 × 1.12 km playable, like Jena): the old layout spread outward, the
 // villages ~300 m apart instead of ~150.
 const BASE_Z = 500;
-const ROW_Z = 290;      // the forward villages' row on each side
 const SECTOR_X = 330;   // west / east sector axes at x = ∓330
-const RIDGE_X = 170;    // wooded ridges between the sectors
 const noise = createNoise2D(1985);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
+// the wooded ridges between the sectors: each wanders on its own line, its saddles at its own depths
+const RIDGES = [
+  { x: (z) => -168 + 22 * Math.sin(z * 0.0055 + 0.9), saddles: [300, 0, -235] },
+  { x: (z) => 176 + 24 * Math.sin(z * 0.0048 - 0.4) + 9 * Math.sin(z * 0.013), saddles: [245, 0, -325] },
+];
+const RIDGE_X = RIDGES.map((r) => r.x(0)); // where they cross the border
+
 /** Ridge strength 0..1 at (x, z): the wooded spines between sectors, with saddles to cross. */
 function ridge(x, z) {
-  const ax = Math.abs(x);
-  const spine = Math.exp(-((ax - RIDGE_X) ** 2) / (20 * 20));
-  const saddle = 1 - 0.8 * (Math.exp(-((z - ROW_Z) ** 2) / 1600) + Math.exp(-((z + ROW_Z) ** 2) / 1600) + Math.exp(-(z * z) / 1200));
-  return spine * Math.max(0, saddle) * smoothstep(520, 460, Math.abs(z));
+  let k = 0;
+  for (const r of RIDGES) {
+    const spine = Math.exp(-((x - r.x(z)) ** 2) / (20 * 20));
+    const saddle = 1 - 0.8 * r.saddles.reduce((a, sz) => a + Math.exp(-((z - sz) ** 2) / (sz === 0 ? 1200 : 1600)), 0);
+    k = Math.max(k, spine * Math.max(0, saddle));
+  }
+  return k * smoothstep(520, 460, Math.abs(z));
 }
+
+// overwatch for each sector on each side, each side its own: the Hessian half has the broad
+// Rasdorfer Berg in the west, a low rise by Mackenzell and the hill over Grüsselbach; the
+// Thuringian half the steep Rockenstuhl cone by Geisa, the long rise behind Borsch and the knoll
+// over Wenigentaft. Paired by value (height × spread), not by shape.
+const HILLS = [
+  [-290, 150, 52, 5.6], [45, 150, 30, 4.6], [360, 95, 40, 5.4], [-225, 395, 32, 4], [265, 365, 26, 4.2],
+  [-372, -100, 28, 7], [-40, -128, 44, 4], [300, -150, 36, 5.6], [-285, -395, 36, 3.8], [205, -380, 26, 4.4],
+];
 
 function height(x, z) {
   const ax = Math.abs(x);
@@ -45,10 +65,7 @@ function height(x, z) {
   h += fbm(noise, x * 0.045 + 100, z * 0.045, 3) * 0.7;        // furrows and bumps
   h += Math.exp(-(z * z) / 1200) * (2.5 + 1.5 * noise(x * 0.02, 9.1)); // the border rise
   h += ridge(x, z) * (11 + 4 * noise(x * 0.03 + 7, z * 0.03));        // sector ridges
-  // point-mirrored hills: overwatch for each sector on each side
-  for (const [cx, cz, r, a] of [[-SECTOR_X, 120, 40, 6], [0, 135, 34, 4.5], [SECTOR_X, 100, 38, 5.5], [-SECTOR_X + 80, 380, 30, 4], [SECTOR_X - 70, 370, 28, 4]]) {
-    h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a);
-  }
+  for (const [cx, cz, r, a] of HILLS) h += hill(x, z, cx, cz, r, a);
   h += smoothstep(500, 620, ax) * (16 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 26); // wooded hills at the edges
   h += smoothstep(560, 680, az) * 20;
   for (const bz of [BASE_Z, -BASE_Z]) {
@@ -84,23 +101,25 @@ const pactName = {
   '4th Platoon': '4-ya Rota', Bradleys: 'BMP Vzvod', 'AT East': 'RPG Group East',
 };
 
-// Point-mirrored villages: A/K home, B–D and H–J each side's forward villages, E–G on the border.
+// Villages: A/K home, B–D and H–J each side's forward villages, E–G on the border. Each where it
+// fits its own ground, at matching distances from the two bases (tools/map_fairness.py).
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Hünfeld', x: 0, z: 470, owner: 'nato', sector: 'centre' },
   { id: 'B', name: 'Rasdorf', x: -330, z: 355, owner: null, sector: 'west' },
-  { id: 'C', name: 'Mackenzell', x: 0, z: 215, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Grüsselbach', x: 330, z: 270, owner: null, sector: 'east' },
-  { id: 'E', name: 'Setzelbach', x: -330, z: 75, owner: null, sector: 'west', radius: 22 },
-  { id: 'F', name: 'Point Alpha', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
-  { id: 'G', name: 'Wenigentaft', x: 330, z: -75, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Geisa', x: -330, z: -270, owner: null, sector: 'west' },
-  { id: 'I', name: 'Borsch', x: 0, z: -215, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Buttlar', x: 330, z: -355, owner: null, sector: 'east' },
+  { id: 'C', name: 'Mackenzell', x: 25, z: 220, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Grüsselbach', x: 345, z: 265, owner: null, sector: 'east' },
+  { id: 'E', name: 'Setzelbach', x: -305, z: 62, owner: null, sector: 'west', radius: 22 },
+  { id: 'F', name: 'Point Alpha', x: -25, z: 0, owner: null, sector: 'centre', radius: 22 },
+  { id: 'G', name: 'Wenigentaft', x: 360, z: -60, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Geisa', x: -325, z: -262, owner: null, sector: 'west' },
+  { id: 'I', name: 'Borsch', x: -45, z: -205, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Buttlar', x: 300, z: -340, owner: null, sector: 'east' },
   { id: 'K', name: 'Vacha', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
   id: 'fulda-gap',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Fulda Gap',
   description: 'Three sectors of autumn farmland either side of the inner-German border, split by wooded ridges: villages to hold, Point Alpha in the middle.',
   ww2: { description: 'Three sectors of farmland in the hills between Hesse and Thuringia, split by wooded ridges: villages to hold, the Rasdorfer Berg in the middle.', points: { F: 'Rasdorfer Berg' } }, // (no border or Point Alpha yet: maps/index.js forEpoch)
@@ -162,44 +181,35 @@ export default {
     const props = new PropBuilder({ scene, terrain, cover });
     const nearPoint = (x, z, r) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
 
-    // Villages at the control points (mirrored pairs share a seed so both sides match).
-    for (const p of points) {
-      if (p.z < 0 || (p.z === 0 && p.x > 0)) continue; // the mirror builds the northern half
-      const seed = 7000 + Math.round(p.x * 3 + p.z);
-      buildVillage(props, p, seed, 1);
-      if (p.x !== 0 || p.z !== 0) buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
-    }
+    // Villages at the control points, each its own layout.
+    for (const p of points) buildVillage(props, p, 7000 + Math.round(p.x * 3 + p.z * 7), 1);
 
-    // Battlefield cover sites on our half, each mirrored through the centre.
+    // Battlefield cover sites: as many on each half, each half laid out on its own.
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'roadblock', 'rocks', 'wrecks', 'hay', 'fieldwall'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 150 && tries < 9000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 14 + rand() * (bounds.z - 60);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 30) || ridge(x, z) > 0.4) continue;
-      if (Math.abs(z) < 20 && [0, -SECTOR_X, SECTOR_X].some((cx) => Math.abs(x - cx) < 14)) continue; // keep the crossings open
-      sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+    for (const side of [1, -1]) {
+      let n = 0;
+      for (let tries = 0; n < 150 && tries < 9000; tries++) {
+        const x = (rand() * 2 - 1) * (bounds.x - 20);
+        const z = side * (14 + rand() * (bounds.z - 60));
+        if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
+        if (Math.hypot(x, z - side * BASE_Z) < 40 || nearPoint(x, z, 30) || ridge(x, z) > 0.4) continue;
+        if (Math.abs(z) < 20 && [-25, -SECTOR_X, SECTOR_X].some((cx) => Math.abs(x - cx) < 14)) continue; // keep the crossings open
+        sites.push({ x, z, kind: kinds[n++ % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+      }
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
 
     // The border: fence breached at each sector's crossing, the US OP and the East German
     // tower at Point Alpha, roadblocks and tank obstacles at the crossings.
     props.rand = mulberry32(303);
-    const gaps = [[-12, 12], [-SECTOR_X - 12, -SECTOR_X + 12], [SECTOR_X - 12, SECTOR_X + 12], [-RIDGE_X - 6, -RIDGE_X + 6], [RIDGE_X - 6, RIDGE_X + 6]];
+    const gaps = [[-37, -13], [-SECTOR_X - 12, -SECTOR_X + 12], [SECTOR_X - 12, SECTOR_X + 12], ...RIDGE_X.map((rx) => [rx - 6, rx + 6])];
     props.fence({ x0: -bounds.x - 30, x1: bounds.x + 30, z: -1.5, breaches: gaps });
-    props.tower({ x: 22, z: 9, concrete: false });
-    props.tower({ x: -22, z: -9, concrete: true });
-    for (const cx of [0, -SECTOR_X, SECTOR_X]) {
-      props.jersey({ x: cx - 14, z: 6, yaw: 0.1, length: 6 });
-      props.jersey({ x: -cx + 14, z: -6, yaw: 0.1 + Math.PI, length: 6 });
-      for (const [hx, hz] of [[-6, -6], [0, -7], [6, -6]]) {
-        props.hedgehog({ x: cx + hx, z: hz });
-        props.hedgehog({ x: -cx - hx, z: -hz });
-      }
+    props.tower({ x: 2, z: 11, concrete: false });   // the US observation post, on the knoll
+    props.tower({ x: -58, z: -12, concrete: true });  // the East German tower, back from the strip
+    for (const cx of [-25, -SECTOR_X, SECTOR_X]) {
+      props.jersey({ x: cx - 14 + props.rand() * 4, z: 6, yaw: 0.1, length: 6 });                // the Western barrier
+      for (const [hx, hz] of [[-7, -6], [0, -8], [7, -6], [-3, -11]]) props.hedgehog({ x: cx + hx + props.rand() * 2, z: hz }); // the Eastern tank obstacles
     }
 
     // Command posts.

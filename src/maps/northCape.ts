@@ -2,7 +2,9 @@
 // the naval base at Severomorsk cut deep into the bare tundra cliffs along the north edge, Kildin Island off
 // it to the east, the North Cape headland to the west. A NATO strike group comes up from the Norwegian Sea
 // to hit the fleet before it sails. Low, flat islands and the cliffed coast; no trees this far north. Night by
-// default (the polar winter). Ships only (data/units/ships85.js).
+// default (the polar winter). Ships only (data/units/ships85.js). Fair: the Northern Fleet sails from the mouth
+// of Kola Bay, the strike group from far out to the south; Kildin (out in the approaches here), North Cape and
+// the open water between them each as near one fleet as the other.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, shore, island } from '../world/Sea.js';
@@ -22,18 +24,18 @@ function height(x: number, z: number) {
   // the North Cape headland: a high bluff out from the west edge
   h = Math.max(h, island(700 - Math.hypot((x + 2400) * 0.7, (z - 300) * 1.1) + fbm(noise, x * 0.005, z * 0.005, 2) * 80, 500, 160, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 6));
   // Kildin Island: long and flat-topped, cliffs all round
-  h = Math.max(h, island(260 - Math.hypot((x - 1300) * 0.55, z + 1200) + fbm(noise, x * 0.008, z * 0.008, 2) * 40, 260, 70, 0.6, 5));
+  h = Math.max(h, island(260 - Math.hypot((x - 1300) * 0.55, z - 200) + fbm(noise, x * 0.008, z * 0.008, 2) * 40, 260, 70, 0.6, 5));
   // a scatter of low rocky islets in the approaches
-  for (const [ix, iz, r] of [[300, -300, 90], [-1100, -600, 70], [1700, 200, 80], [-500, 700, 60]]) h = Math.max(h, island(r - Math.hypot(x - ix, z - iz) + fbm(noise, x * 0.02, z * 0.02, 2) * 25, r, 18, 0.4, 6));
+  for (const [ix, iz, r] of [[300, -300, 90], [-1100, -600, 70], [2100, 1300, 80], [-500, 700, 60]]) h = Math.max(h, island(r - Math.hypot(x - ix, z - iz) + fbm(noise, x * 0.02, z * 0.02, 2) * 25, r, 18, 0.4, 6));
   return h;
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Strike group', x: 0, z: 2150, owner: 'nato', sector: 'centre', radius: 150 },
-  { id: 'B', name: 'North Cape', x: -1050, z: 500, owner: null, sector: 'west', radius: 170 },
-  { id: 'C', name: 'The approaches', x: 0, z: -400, owner: null, sector: 'centre', radius: 180 },
-  { id: 'D', name: 'Kildin Island', x: 1450, z: -800, owner: null, sector: 'east', radius: 160 },
-  { id: 'K', name: 'Kola Bay', x: -300, z: -1850, owner: 'pact', sector: 'centre', radius: 150 },
+  { id: 'A', name: 'Strike group', x: 0, z: 1800, owner: 'nato', sector: 'centre', radius: 150 },
+  { id: 'B', name: 'North Cape', x: -1250, z: 900, owner: null, sector: 'west', radius: 170 },
+  { id: 'C', name: 'The approaches', x: 0, z: 850, owner: null, sector: 'centre', radius: 180 },
+  { id: 'D', name: 'Kildin Island', x: 1450, z: 750, owner: null, sector: 'east', radius: 160 },
+  { id: 'K', name: 'Kola Bay', x: -150, z: -1300, owner: 'pact', sector: 'centre', radius: 150 },
 ];
 
 export default {
@@ -75,14 +77,15 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: 2350, entries: [-800, 0, 800] }, pact: { x: -300, z: -1750, entries: [-500, 0, 500] } },
+  // (half-way in: maps/index.js widenSea doubles them — the Northern Fleet's home in the mouth of Kola Bay, the strike group well out to the south)
+  bases: { nato: { x: 0, z: 2000, entries: [-800, 0, 800] }, pact: { x: -150, z: -1150, entries: [-500, 0, 500] } },
   maxStacks: 12,
-  cameraStart: { nato: { x: 0, z: 2100 }, pact: { x: -300, z: -1600 } },
+  cameraStart: { nato: { x: 0, z: 1750 }, pact: { x: -150, z: -1000 } },
   points,
 
   spawns: {
-    nato: [{ unit: 'cruiser', x: 0, z: 2050, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 2200, facing: Math.PI }, { unit: 'frigate', x: 350, z: 2200, facing: Math.PI }],
-    pact: [{ unit: 'cruiser', x: -300, z: -1650, facing: 0 }, { unit: 'destroyer', x: -450, z: -1500, facing: 0 }, { unit: 'frigate', x: -150, z: -1500, facing: 0 }],
+    nato: [{ unit: 'cruiser', x: 0, z: 1700, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 1850, facing: Math.PI }, { unit: 'frigate', x: 350, z: 1850, facing: Math.PI }],
+    pact: [{ unit: 'cruiser', x: -150, z: -1050, facing: 0 }, { unit: 'destroyer', x: -300, z: -900, facing: 0 }, { unit: 'frigate', x: 0, z: -900, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {
@@ -93,7 +96,7 @@ export default {
     for (const x of [-480, -380, -220, -120]) props.box('stone', x, 1.2, bayZ + 50, 14, 2.4, 120, 0, 0x6c6a64); // (the bay is south of the coast line: the water side)
     for (let i = 0; i < 6; i++) props.hall({ x: -560 + i * 90, z: bayZ - 190 - (i % 2) * 40, yaw: 0, width: 40, depth: 22, height: 10, color: 0x7a7468, roof: 0x5a5e60, name: 'naval base hall' });
     for (const x of [-430, -170]) props.mast({ x, z: bayZ - 130, height: 22 });
-    props.mast({ x: 1300, z: -1250, height: 30 });   // the radar station on Kildin
+    props.mast({ x: 1300, z: 150, height: 30 });   // the radar station on Kildin
     props.tower({ x: -1700, z: 350, concrete: true }); // the North Cape light
     props.finish();
     cover.finalize({ x: HALF, z: HALF });

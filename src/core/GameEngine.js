@@ -10,6 +10,8 @@
 // single player only. Co-op (`coop`): both players on the same side against the AI; every
 // stack of that side belongs to one of them (stack.owner 'host' | 'guest') and only its owner
 // can select and order it.
+import { armiesOn } from '../maps/index.js';
+import { Caves } from '../systems/Caves.js';
 import { setClimate } from '../render/paint.js';
 import { setWind } from '../world/Wind.js';
 import { Deployment } from '../systems/Deployment.js';
@@ -29,7 +31,7 @@ import { AutoFlares } from '../systems/AutoFlares.js';
 import { Breakdowns } from '../systems/Breakdowns.js';
 import { Gas } from '../systems/Gas.js';
 import { SEA_STATE } from '../world/Sea.js';
-import { unitCost, armyDoctrine } from '../data/doctrine.js';
+import { unitCost, armyDoctrine, doctrineCovers } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
@@ -44,6 +46,8 @@ import { BattleWorld } from './BattleWorld.js';
 import { mulberry32 } from './math.js';
 import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.js';
 import { EPOCHS, epoch } from '../data/epoch.js';
+import { Drones } from '../systems/Drones.js';
+import { Airfields } from '../systems/Airfields.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
@@ -121,8 +125,9 @@ export class GameEngine {
     this.coop = !!(net && coop);
     this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
-    this.armies = armiesFrom(armies); // which army each side fields (data/factions.js ARMIES)
-    for (const f of ['nato', 'pact']) if (map.armies?.[f] && !map.armies[f].includes(this.armies[f])) this.armies[f] = map.armies[f][0]; // (a map fought by particular armies only: Omaha)
+    this.armies = armiesFrom(armies, map); // which army each side fields (data/factions.js ARMIES; the Pacific's on its maps only)
+    const only = armiesOn(map); // (a map fought by particular armies only, in this war: Omaha, Stalingrad, the Hesse maps in 1945 — maps/index.js)
+    for (const f of ['nato', 'pact']) if (only?.[f] && !only[f].includes(this.armies[f])) this.armies[f] = only[f][0];
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -171,6 +176,7 @@ export class GameEngine {
     this.world.openSea = !!map.river?.sea && !this.world.coastal; // ships only, nothing ashore
     this.world.navCell = map.navCell; // (a sea map: coarser routing cells)
     this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
+    this.world.soft = map.soft ?? null;   // (soft ground: Bobruisk's bog, Iwo Jima's ash — routes go round it: world/Nav.js)
     this.world.armies = this.armies;
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
@@ -226,6 +232,7 @@ export class GameEngine {
     this.barrage = new Barrage(this);     // the Soviet Army's preparatory barrage (a support power)
     this.counterBattery = new CounterBattery(this); // radars that find the enemy's guns
     this.jamming = new Jamming(this);     // electronic warfare: jammed radio nets
+    this.drones = epoch() === '2027' ? new Drones(this) : null; // recon quads, FPVs, loitering munitions
     this.fire = new Fire(this);           // grass and forest fires
     this.projectiles.fire = this.fire;
     // multiplayer: the connection is set up before the interface, which adapts to it
@@ -260,12 +267,18 @@ export class GameEngine {
       this.quietly(() => this.replayScars({ works: field.works.map((w) => [w.kind, w.x, w.z, w.yaw, w.faction]) }));
       for (const st of this.construction.structures.slice(n0)) st.fromMap = true; // (the map's own: not a scar the campaign keeps — the map lays them again)
     }
+    this.airfields = new Airfields(this); // each side's airfield, its runway laid on every machine alike (tester feedback 2026-11-17)
+    this.airfields.plan(mode.id === 'bootcamp'); // (boot camp: only the player's, for its airfield lesson)
+    this.caves = new Caves(this); // a map's cave mouths and the tunnels between them (Iwo Jima)
+    this.systems.push(this.caves);
     mode.setup(this);
+    if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
     this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
+    for (const [f, n] of Object.entries(map.airLimit ?? {})) this.air.limit[f] = n; // (a map's own: no Japanese aircraft over Iwo Jima)
     // co-op: each player has command points of their own, earned at the full rate (wallet()), and
     // the AI side starts with and earns twice as much to make up for it
     const cp = this.modeState?.cp;
@@ -325,6 +338,7 @@ export class GameEngine {
   /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
     const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    if (doctrineCovers(stack.army, 'veteran', stack.type, stack.stats) && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // (data/doctrine.js veteran: the ROK's conscripts)
     if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
     if (stack.type.id === 'tank' && stack.stats.cavalry && armyDoctrine(stack.army, 'gardeDuCorps') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // Saxony's Garde du Corps: Veteran
     const light = stack.type.id === 'reconVehicle' && stack.stats.cavalry && armyDoctrine(stack.army, 'lightHorse');
@@ -751,6 +765,7 @@ export class GameEngine {
     this.fire.update(dt);
     this.counterBattery.update(dt);
     this.jamming.update(dt);
+    this.drones?.update(dt);
 
     net?.mute(); // the client flies its own rounds and runs its own renderers and effects
     this.projectiles.update(dt);
@@ -800,6 +815,7 @@ export class GameEngine {
     this.barrage.update(dt);
     this.fire.update(dt);
     this.air.updateChutes(dt); // a paradrop's men on the way down (the host's 'chute')
+    this.drones?.update(dt);   // the host's drones, drawn where it says (Drones.apply)
     for (const sys of [this.squalls, this.searchlights, this.missiles, this.sensors]) sys?.update(dt, t); // at sea: squalls, beams, the host's missiles in flight, your own ESM bearings
     this.mode.clientUpdate?.(this, dt);
     this.environment.update(dt, t, this.cameraManager.lookTarget);

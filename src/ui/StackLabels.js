@@ -9,6 +9,7 @@
 // Your damaged ships carry a damage-control strip under the tag (in the fight, by the ship, not in a
 // panel): where her parties go first — the pumps, the fire, the repairs — each showing how bad it is,
 // and counter-flood when she lists. Click the lit one again: all alike.
+import { stockChips } from '../systems/Stocks.js';
 import * as THREE from 'three';
 import { RANKS } from '../entities/UnitStack.js';
 import { forArmy } from '../data/factions.js';
@@ -111,6 +112,7 @@ function chipsOf(stack, word, pinned, mine) {
   if (word === 'Shaken') out.push(['Shaken', 'warn']);
   if (word === 'Gun out' || word === 'Tracks hit' || word === 'Engine hit') out.push([word, 'bad']);
   if (mine && stack.job) out.push([stack.job, 'job']);
+  if (mine) for (const [t, ok] of stockChips(stack)) out.push([t, ok ? 'job' : 'warn']); // what it has left of what it spends (systems/Stocks.js)
   return out;
 }
 

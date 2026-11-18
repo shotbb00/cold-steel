@@ -47,6 +47,7 @@ export default {
   description: 'The Nile, 1798: the French line at anchor across the bay, the shoals behind it; at dusk the British come down with the wind — and round inside the line.',
   epochs: ['1806'],
   theatre: 'sea',
+  region: 'africa', // (1806: Egypt — data/epoch.js regions)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'dusk', weather: 'clear' },
   wind: { from: 335, speed: 6, veer: 0.2 },

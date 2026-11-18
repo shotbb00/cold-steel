@@ -198,6 +198,9 @@ export class Orders {
           s.laying = !!cmd.on;
         }
         return null;
+      case 'chaff': // chaff on command (1985): a cloud off her beam now (systems/Missiles.js fireChaff)
+        for (const s of mine(cmd.s)) g.missiles?.fireChaff(s);
+        break;
       case 'shipSmoke': // a smoke screen: a minute of it, then the generators need a while
         for (const s of mine(cmd.s)) {
           const sg = s.stats.smokeGen;
@@ -311,6 +314,9 @@ export class Orders {
       case 'leave':
         for (const s of mine(cmd.s)) if (s.garrison) g.buildings.leave(s);
         return null;
+      case 'tunnel': // into the tunnels at the nearest cave mouth, out at mouth cmd.k (systems/Caves.js)
+        for (const s of mine(cmd.s)) if (g.caves?.canEnter(s)) g.caves.enter(s, cmd.k);
+        return null;
       case 'popSmoke':
         for (const s of mine(cmd.s)) {
           const u = s.units.find((v) => v.alive);
@@ -368,7 +374,7 @@ export class Orders {
         }
         return null;
       case 'air':
-        return g.air.call(faction, cmd.x, cmd.z, cmd.yaw ?? null, cmd.k ?? 'heli');
+        return g.air.call(faction, cmd.x, cmd.z, cmd.yaw ?? null, cmd.k ?? 'heli', cmd.b ?? null); // (b: from this carrier or airfield)
       case 'cancelBuild': {
         const ids = new Set(mine(cmd.s).map((s) => s.id));
         const jobs = g.construction.sites.filter((site) => site.faction === faction && ids.has(site.stackId));

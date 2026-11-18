@@ -52,6 +52,12 @@ export class Deployment {
     this.edge = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffc35a, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false }), g.commands?.surface ?? g.terrain, 0.25); // (at sea: on the water)
     this.edge.place(base.x + d.x * limit, base.z + d.y * limit, 1, Math.atan2(-d.x, -d.y));
     g.scene.add(this.edge.mesh);
+    // the zone itself, faintly shaded gold: from the line back to the map's edge behind the base
+    const back = Math.max(g.world.bounds.x, g.world.bounds.z) * 2;
+    const zoneGeo = new THREE.PlaneGeometry(span, back, 120, 60).rotateX(-Math.PI / 2);
+    this.shade = new GroundDecal(zoneGeo, new THREE.MeshBasicMaterial({ color: 0xffc35a, transparent: true, opacity: 0.11, depthWrite: false, toneMapped: false }), g.commands?.surface ?? g.terrain, 0.2);
+    this.shade.place(base.x + d.x * (limit - back / 2), base.z + d.y * (limit - back / 2), 1, Math.atan2(-d.x, -d.y));
+    g.scene.add(this.shade.mesh);
     this.on = true;
     this.ready = { host: false, guest: false };
     this.bar.hidden = false;
@@ -82,6 +88,8 @@ export class Deployment {
     this.bar.hidden = true;
     this.edge?.mesh.removeFromParent();
     this.edge?.geometry.dispose();
+    this.shade?.mesh.removeFromParent();
+    this.shade?.geometry.dispose();
     this.game.bus.emit('toast', 'The battle begins');
     this.game.bus.emit('deploy:go'); // (a pitched battle: the buying is over, modes/pitched.js)
   }
@@ -101,7 +109,10 @@ export class Deployment {
   place(s, x, z, face = null) {
     const { base, d, limit, t } = this.zones?.[s.faction] ?? this.zone;
     const over = t({ x, z }) - limit;
-    if (over > 0) { x -= d.x * over; z -= d.y * over; }
+    if (over > 0) {
+      x -= d.x * over; z -= d.y * over;
+      if (s.faction === this.game.playerFaction && this.game.time > (this.pulledSaid ?? -9) + 3) { this.pulledSaid = this.game.time; this.game.bus.emit('toast', `${s.name}: kept on your side of the line`); } // (a click past the gold line: it stops at it)
+    }
     const p = this.game.world.clampToBounds({ x, z });
     const dry = this.game.world.river ? this.game.world.river.dry(p) : p;
     s.placeAt(dry.x, dry.z, face ?? Math.atan2(base.x + d.x * 1e4 - dry.x, base.z + d.y * 1e4 - dry.z));

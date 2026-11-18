@@ -932,3 +932,42 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 .sup .sup-sil { background: #efd59a; width: 34px; height: 26px; } /* an air power: the army's own aircraft (ui/ActionBar.js) */
 /* 1806: the company's present formation, lit in the order menu */
 .cmd-buttons button.act.on { color: var(--text, #ece6d4); background: rgba(224, 180, 90, 0.16); box-shadow: inset 0 -2px 0 var(--gold); }
+
+/* support tiles (ui/SupportIcons.js): the effect in the tile's colour, its ground marker's shape below in the marker's own */
+.sup .ico.sup-ico { width: 34px; height: 34px; color: #efd59a; }
+.act .ico.sup-ico { width: 26px; height: 26px; color: #efd59a; fill: #efd59a; }
+@media (max-height: 520px), (max-width: 700px) { .sup .ico.sup-ico { width: 38px; height: 38px; } }
+#target-hint .sup-ico { width: 22px; height: 22px; vertical-align: middle; margin-right: 6px; fill: #efd59a; color: #efd59a; }
+/* a finger held on a support tile: what it is (ui/HUD.js supportCard) */
+#support-card { position: fixed; z-index: 60; width: min(280px, calc(100vw - 16px)); padding: 10px 12px; background: rgba(20, 22, 20, 0.96); border: 1px solid rgba(224, 180, 90, 0.5); border-radius: 6px; color: var(--ink); font: 13px/1.35 var(--font-ui); pointer-events: none; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); }
+#support-card[hidden] { display: none; }
+#support-card .sc-head { display: flex; align-items: center; gap: 10px; }
+#support-card .sc-head .ico { width: 52px; height: 52px; fill: #efd59a; color: #efd59a; flex: none; }
+#support-card b { display: block; font-size: 15px; color: var(--gold); }
+#support-card small { color: var(--muted); font-size: 12px; }
+#support-card p { margin: 8px 0 0; }
+#support-card .sc-sil { display: block; width: 100%; height: 40px; margin-top: 6px; background: rgba(239, 213, 154, 0.75); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+
+/* the side objectives (systems/Economy.js) in the top strip: round, with what they bring under the glyph; their tag over the flag */
+.fl-gap { width: 6px; border-left: 1px solid rgba(255, 255, 255, 0.2); margin-left: 3px; }
+.fl-point.fl-side-obj { border-radius: 50%; cursor: pointer; flex-direction: column; overflow: visible; }
+.fl-point.fl-side-obj i { border-radius: 50%; }
+.fl-point.fl-side-obj b { font-size: 12px; line-height: 1; }
+.fl-point.fl-side-obj small { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.so-signals small, .so-signals b { color: #efd59a; }
+.so-works small, .so-works b { color: #9fd2a8; }
+.so-depot small, .so-depot b { color: #e9c28a; }
+.side-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; padding: 3px 7px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; font: 600 12px/1.2 var(--font-ui); color: var(--ink); text-align: center; white-space: nowrap; }
+.side-tag[hidden] { display: none; }
+.side-tag b { display: block; }
+.side-tag small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); }
+@media (max-height: 520px) { .side-tag { font-size: 10px; padding: 2px 5px; } .side-tag small { font-size: 9.5px; } }
+
+/* a called power's tag over its marker (ui/TargetMarkers.js PendingMarkers): its icon and the time to the first bomb or shell */
+.pend-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; display: flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 106, 61, 0.6); border-radius: 4px; font: 700 12px/1 var(--font-ui); color: #efd59a; white-space: nowrap; }
+.pend-tag[hidden] { display: none; }
+.pend-tag .sup-ico { width: 26px; height: 26px; fill: #efd59a; color: #efd59a; }
+
+/* the reinforcement window's arrival roads on the map (ui/ReinforceWindow.js showRoads) */
+.road-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; padding: 2px 7px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 195, 90, 0.6); border-radius: 4px; font: 600 12px/1.2 var(--font-ui); color: #ffd27a; white-space: nowrap; }
+.road-tag[hidden] { display: none; }

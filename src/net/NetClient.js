@@ -239,7 +239,7 @@ export class NetClient {
       const ts = sa.ts[i];
       u.target = ts ? g.world.stackById(ts)?.units[sa.ti[i]] ?? null : null;
       if (u.target && !u.target.alive) u.target = null;
-      u.visible = own || u.spotted;
+      u.visible = !s.tunnel && (own || u.spotted); // (underground: hidden from both — systems/Caves.js)
       if (u.visible) anyVisible = true;
       s.decayTimers(u, dt);
     }
@@ -407,7 +407,7 @@ export class NetClient {
 
   applyState(m) {
     const g = this.game;
-    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp, dive] of m.s) {
+    for (const [id, state, defendTime, morale, passengers, smokeLeft, smokeRounds, garrison, ordered, rank, autonomous, job, tended, radar, lit, rig, ramp, dive, stocks, tunnel] of m.s) {
       const s = g.world.stackById(id);
       if (!s) continue;
       s.ai.state = state;
@@ -425,6 +425,8 @@ export class NetClient {
       if (s.stats.radar && radar != null) s.radarOn = radar !== 0;
       if (s.stats.naval) { const u = s.units.find((x) => x.alive); if (u) u.lightOn = lit ? { x: lit[0], y: 0, z: lit[1] } : null; } // (her searchlight's spot: systems/Searchlights.js)
       if (s.stats.landingCraft && ramp != null) { const u = s.units[0]; u.rampK = (ramp % 1000) / 100; u.beached = ramp >= 1000; }
+      s.netStocks = stocks ?? null; // (its tag: systems/Stocks.js)
+      s.tunnel = tunnel ? (s.tunnel ?? {}) : null; // (underground: hidden — systems/Caves.js)
       if (s.stats.submarine && dive != null) for (const u of s.units) u.netDepth = dive; // (eased toward in applyStack)
       if (s.stats.sail && rig != null) { const u = s.units[0]; u.masts = [0, 1, 2].map((i) => !!(rig & (1 << i))); u.struck = !!(rig & 8); } // (1806: the model's masts and colours)
     }
@@ -441,6 +443,7 @@ export class NetClient {
       if (m.status !== undefined) ms.statusText = m.status ?? '';
     }
     if (m.air) Object.assign(g.air.readyAt, m.air);
+    if (m.dr) g.drones?.apply(m.dr);
     for (const [id, progress] of m.sites ?? []) {
       const site = g.construction.sites.find((s) => s.id === id);
       if (site) { site.progress = progress; g.construction.showProgress(site); }

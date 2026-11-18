@@ -14,6 +14,8 @@ import { enemyOf } from '../data/factions.js';
 
 const MAX_BOLTS = 2048;
 const NEAR_MISS = 1.8;     // metres from a soldier's centre that still rattles them
+const APS_REACH = 22;      // m out an active protection system's radar picks up an incoming rocket
+const APS_RELOAD = 90;     // s without a shot at it before the crew has reloaded the launchers
 const FLARE_BURST = 70;    // metres above the aim point an illumination round bursts
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const _m = new THREE.Matrix4();
@@ -123,7 +125,7 @@ export class ProjectileSystem {
         else if (d < 70) this.audio.play(`incoming.${Math.floor(Math.random() * 3)}`, b.target, { volume: 0.4 * (1 - d / 90), throttle: 1.2 });
       }
 
-      let dead = b.life <= 0;
+      let dead = b.life <= 0 || (b.trail && !b.gravity && this.aps(b)); // (a rocket or missile: Trophy / Arena may shoot it down)
       if (!dead && b.flare && b.vel.y < 0 && (b.pos.y < b.target.y + FLARE_BURST || Math.hypot(b.pos.x - b.target.x, b.pos.z - b.target.z) < 25)) {
         // coming down over the target: the time fuse bursts the star shell high above the aim
         // point, not at the top of the arc (that is halfway there) — the host makes the flare
@@ -280,6 +282,40 @@ export class ProjectileSystem {
       }
     }
     return bestT;
+  }
+
+  /**
+   * Active protection (a vehicle's stats.aps: Trophy, Arena-M): a rocket or missile about to pass within
+   * a few metres of it is met by a charge 10 m out and blown apart — not tank rounds, not shells falling
+   * from above. Each launcher a few charges (`charges`), refilled after a lull; `chance` it gets it;
+   * the burst sprays anyone on foot right beside the vehicle, friend or foe.
+   */
+  aps(b) {
+    const now = this.world.time;
+    for (const s of this.world.stacks) {
+      if (s.faction === b.faction || !s.stats.aps || s.usesCover || !s.alive) continue;
+      if (Math.abs(s.centroid.x - b.pos.x) > 90 || Math.abs(s.centroid.z - b.pos.z) > 90) continue;
+      const aps = s.stats.aps;
+      for (const u of s.units) {
+        if (!u.alive) continue;
+        const dx = u.pos.x - b.pos.x, dz = u.pos.z - b.pos.z;
+        const along = dx * b.dir.x + dz * b.dir.z;
+        if (along <= 4 || along > APS_REACH || dx * dx + dz * dz - along * along > 16) continue; // closing, and on a line that hits or skims it
+        if (now - (u.apsUsedAt ?? -1e9) > APS_RELOAD) u.apsLeft = aps.charges;
+        if (!(u.apsLeft > 0) || now < (u.apsReady ?? 0)) continue;
+        u.apsReady = now + 0.6;
+        u.apsUsedAt = now;
+        u.apsLeft--;
+        if (Math.random() > aps.chance) continue; // missed it: the rocket flies on
+        this.effects.explosion(b.pos, 0.45, { ground: false });
+        this.effects.impact?.(b.pos, 'armor');
+        this.audio?.play('explosion', b.pos, { volume: 0.6, throttle: 0.05 });
+        if (!this.cosmetic) for (const m of this.world.neighbors(u.pos, 7, _near)) if (m.alive && m.stack?.usesCover) m.receiveDamage(45, null, 0, null, 1);
+        s.services?.bus?.emit?.('aps', { stack: s, unit: u, left: u.apsLeft });
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Shell burst: falloff damage to enemies around the impact (the direct-hit target excluded). */

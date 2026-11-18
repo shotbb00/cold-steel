@@ -65,6 +65,13 @@ export class CrewBailout {
     this.game.currentOwner = was;
     crew.morale = 0.5;
     crew.barkAny('bail');
+    const aid = stack.aidOf; // an aid station's medic jeep: the driver walks back for a new one (systems/Buildings.js updateAid) — any order of yours and he is yours instead
+    if (aid && !aid.collapsed) {
+      crew.aidHome = aid;
+      crew.ai.moveTo(this.game.buildings.aidDoor(aid), { ordered: false });
+      this.game.tell(stack.faction, `${stack.name}: jeep lost — the driver is walking back to the aid station for a new one`);
+      return;
+    }
     crew.ai.retreat();
     this.game.tell(stack.faction, `${stack.name}: crew bailed out (${count})`);
   }

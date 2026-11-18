@@ -36,6 +36,7 @@ export const wn = {
   weaponSound: 'mg',
   variants: {
     nato: { name: 'Strongpoint', weapon: '88 mm in a casemate, 2 MGs', text: 'A gun casemate and two MG pits.' },
+    jp: { name: 'Pillbox complex', weapon: '47 mm anti-tank gun in a blockhouse, 2 × Type 92 MGs in pillboxes', text: 'Reinforced concrete under volcanic ash, only the embrasures showing: the 47 mm fires along the terraces at tanks and amtracs, the MGs sweep the sand. Flame and demolition charges, or a tank point-blank, are what finishes them.' },
     pact: { name: 'Widerstandsnest', weapon: '8.8 cm PaK 43 in an H677 casemate, 2 × MG 42 in Tobruks', text: 'A resistance nest of the Atlantic Wall: the 88 in its casemate fires along the beach, not out to sea, so the ships can\'t see into it; the MG 42s in their Tobruks sweep the sand. Concrete: tank guns, the destroyers\' 5-inch and the engineers\' charges bring it down.' },
   },
 };
@@ -48,6 +49,7 @@ export const battery = {
   weaponSound: 'navalHeavy',
   variants: {
     nato: { name: 'Coastal battery', weapon: '2 × 155 mm', text: 'Heavy guns in casemates, laid on the sea.' },
+    jp: { name: 'Coast defence guns', weapon: '2 × 12 cm naval guns in casemates', text: 'Naval guns dug into the rock of Suribachi and the plateau, laid on the sea: they fire on the ships and the landing craft. Find them and silence them, or the boats will burn on the way in.' },
     pact: { name: 'Küstenbatterie', weapon: '2 × 15.5 cm K 418(f) in casemates', text: 'The coastal battery inland: two heavy guns that fire on ships only — the destroyers and the landing craft out at sea. Find it and silence it, or the boats will burn on the way in.' },
   },
 };

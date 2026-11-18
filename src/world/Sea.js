@@ -95,6 +95,7 @@ export function jungle({ scene, terrain, cover, rand, half, count = 4000 }) {
 export function createSea({ level = 0, size, color = 0x1f4a5e }) {
   return {
     sea: true,
+    size,
     level,
     water: { level, deep: 0.95 },
     crossings: [],
@@ -111,6 +112,7 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
     /** The sheet over the map (its depth from `terrain`), and the open ocean round it out past the far plane. */
     build(scene, terrain = null) {
       TIDE.value = 0;
+      const size = this.size; // (maps/index.js widenSea may have grown it)
       this.meshes = [];
       const deep = new THREE.Color(color);
       // the foam grid (world/SeaFoam.js writes it), over the map
@@ -140,7 +142,7 @@ export function createSea({ level = 0, size, color = 0x1f4a5e }) {
       mat.userData.water = { glsl, foam: this.foam };   // (render/babylon/BabylonView.js → WaterPlugin)
       const depthOf = (x, z) => (terrain ? Math.max(0, level - terrain.heightAt(x, z)) : 60);
       // the map: a grid fine enough for the reef and the beaches (~25 m)
-      const n = 240;
+      const n = Math.min(400, Math.round(240 * size / 6000)); // (~25 m whatever the size)
       const inner = new THREE.PlaneGeometry(size, size, n, n);
       inner.rotateX(-Math.PI / 2);
       const p = inner.attributes.position;

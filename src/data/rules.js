@@ -13,7 +13,7 @@
 // Multiplayer and campaign battles use the defaults.
 // and, for a pitched battle (mode.budget):
 //   budget      command points each side builds its army with (what is left pays for support)
-export const DEFAULT_RULES = { difficulty: 'normal', air: true, changingWeather: true, timePasses: true, startCp: 350, income: 1, strength: 1000, maxStacks: null, budget: 3000, roadCooldown: true };
+export const DEFAULT_RULES = { difficulty: 'normal', air: true, airfields: true, airGroups: null, changingWeather: true, timePasses: true, startCp: 350, income: 1, strength: 1000, maxStacks: null, budget: 3000, roadCooldown: true };
 
 export const DIFFICULTY = {
   //            enemy aim (spread ×)  enemy income ×  first assault, gaps between operations ×
@@ -27,6 +27,8 @@ export const DIFFICULTY = {
 export const RULE_OPTIONS = {
   difficulty: Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]),
   air: [[true, 'On'], [false, 'Off']],
+  airfields: [[true, 'On'], [false, 'Off']],
+  airGroups: [[null, 'Standard'], [5, '5'], [10, '10']],
   changingWeather: [[true, 'Changes'], [false, 'Stays as chosen']],
   timePasses: [[true, 'Passes'], [false, 'Stays as chosen']],
   startCp: [[150, '150'], [350, '350'], [600, '600'], [1000, '1000']],

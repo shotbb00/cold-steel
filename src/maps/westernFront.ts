@@ -1,7 +1,10 @@
 // The Western Front maps of 1918 (Villers-Bretonneux, Le Hamel, St Quentin): one builder for a
-// fought-over stretch of Picardy. Point-mirrored like every map. What each map sets:
+// fought-over stretch of Picardy. Not mirrored but fair: each half is its own ground — its own noise, woods, hills,
+// villages and trench wander — balanced like for like (the same wooded area on each half, the same depth to each
+// line, a hill for one side answered by a hill or a wooded rise for the other). What each map sets:
 //   lines     the trench lines each side holds (z from the middle, wire belts in front), or
-//   redoubts  closed squares of trench ringed with wire round strongpoints (St Quentin's forward zone)
+//   redoubts  closed squares of trench ringed with wire round strongpoints (St Quentin's forward zone; z > 0 nato's)
+//   hills     [x, z, r, h] rises (h < 0: a ravine) of the real ground, woodsAt [x, z, r] the named woods
 //   front     where no man's land ends on each side (mud, craters, the woods shot to stumps)
 //   craters   shell holes per 1000 m² in no man's land (a quiet sector has fewer)
 //   ridge     the rise across the middle (m), woods (how much of the ground is wooded), town
@@ -22,11 +25,13 @@ const MUD = new THREE.Color(0x4f4234);   // churned chalk and clay
 
 interface Line { z: number; wireAt: number; belts: number; gapEvery?: number; seed: number }
 interface Front {
+  armies?: { nato?: string[], pact?: string[] };
   id: string; name: string; description: string; seed: number; points: ControlPointDef[];
   lines?: Line[]; redoubts?: { x: number; z: number; size: number }[];
   front: number; craters: number; ridge: number; woods?: number;
   town?: { quarters: number[][]; church?: { x: number; z: number } };
   ruins?: [number, number]; fields?: number[]; theme?: Record<string, any>; terrain?: Record<string, any>;
+  hills?: number[][]; woodsAt?: number[][];
 }
 
 const SKY = { // a grey spring morning over Picardy (each map may change it)
@@ -43,7 +48,7 @@ export function westernFront(o: Front) {
   const noise = createNoise2D(o.seed);
   const POINTS = o.points;
   const lines = o.lines ?? [];
-  const deepest = Math.max(o.front, ...lines.map((l) => l.z), ...(o.redoubts ?? []).map((r) => r.z + r.size));
+  const deepest = Math.max(o.front, ...lines.map((l) => l.z), ...(o.redoubts ?? []).map((r) => Math.abs(r.z) + r.size));
   /** How churned the ground is (0..1): no man's land and the lines' edges, a little round each line behind. */
   const churn = (z: number) => {
     const a = Math.abs(z);
@@ -51,26 +56,36 @@ export function westernFront(o: Front) {
     for (const l of lines) if (l.z > o.front + 30) k = Math.max(k, 0.45 * (1 - smoothstep(20, 60, Math.abs(a - l.z))));
     return k;
   };
-  /** Woods (0..1), the same on both halves. */
+  /** Woods (0..1): each half its own, the threshold set per half so both have the same wooded area; the named woods on top. */
+  const wn = (x, z) => fbm(noise, x * 0.006 + 40, z * 0.006 - 12, 3);
+  const t0 = 0.42 + (0.5 - (o.woods ?? 0.5)) * 0.4;
+  const [vN, vP] = [1, -1].map((s) => {
+    const v: number[] = [];
+    for (let x = -480; x <= 480; x += 20) for (let z = 40; z <= 540; z += 20) v.push(wn(x, z * s));
+    return v.sort((a, b) => b - a);
+  });
+  const share = vN.filter((v) => v > t0 + 0.1).length / vN.length;   // (nato's half keeps the wooded share it had; pact's is cut to match)
+  const tHalf = [t0, vP[Math.min(vP.length - 1, Math.floor(vP.length * share))] - 0.1];
   const copse = (x, z) => {
-    const [ax, az] = z < 0 || (z === 0 && x < 0) ? [-x, -z] : [x, z];
-    const t = 0.42 + (0.5 - (o.woods ?? 0.5)) * 0.4;
-    return smoothstep(t, t + 0.2, fbm(noise, ax * 0.006 + 40, az * 0.006 - 12, 3));
+    const t = tHalf[z >= 0 ? 0 : 1];
+    let k = smoothstep(t, t + 0.2, wn(x, z));
+    for (const [wx, wz, r] of o.woodsAt ?? []) k = Math.max(k, smoothstep(r, r * 0.6, Math.hypot(x - wx, z - wz)));
+    return k;
   };
   const height = (x, z) => {
-    const [ax, az] = z < 0 ? [-x, -z] : [x, z];
-    let h = fbm(noise, ax * 0.0022, az * 0.0022, 3) * 3 + fbm(noise, ax * 0.02 + 7, az * 0.02, 3) * 0.35;
-    h += (1 - smoothstep(0, 140, Math.abs(z))) * o.ridge;
-    h += smoothstep(390, 560, Math.abs(z)) * 8;
-    h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 30;
+    let h = fbm(noise, x * 0.0022, z * 0.0022, 3) * 4 + fbm(noise, x * 0.02 + 7, z * 0.02, 3) * 0.35;
+    for (const [hx, hz, r, hh] of o.hills ?? []) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.5;
+    h += (1 - smoothstep(0, 140, Math.abs(z + 30 * Math.sin(x * 0.006 + o.seed)))) * o.ridge;   // (the rise wanders)
+    h += smoothstep(390 + 50 * Math.sin(x * 0.007 + o.seed * 0.3), 560, Math.abs(z)) * 8;                 // (the edges rise unevenly)
+    h += smoothstep(BOUNDS.x - 60 + 60 * Math.sin(z * Math.PI / 280 + (o.seed % 2) * Math.PI), BOUNDS.x + 160, Math.abs(x)) * 30;   // (one whole wave per half: as much high flank on each)
     h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 26;
     for (const p of POINTS) h += (2 + fbm(noise, p.x * 0.01, p.z * 0.01, 2) * 2 - h) * smoothstep(45, 25, Math.hypot(x - p.x, z - p.z)) * 0.6;
     return h;
   };
-  /** A trench line across the map at z, its owner facing the other way: a gentle wander. */
+  /** A trench line across the map at z, its owner facing the other way: its own wander on each side (salients and re-entrants). */
   const line = (z: number, faction: 'nato' | 'pact', seed: number) => {
-    const r = mulberry32(seed), pts: number[][] = [];
-    for (let x = -480; x <= 480; x += 60) pts.push([x, z + (r() - 0.5) * 24]);
+    const r = mulberry32(faction === 'nato' ? seed : seed * 31 + 7), pts: number[][] = [], ph = r() * 6;
+    for (let x = -480; x <= 480; x += 60) pts.push([x, z + (r() - 0.5) * 24 + 14 * Math.sin(x * 0.009 + ph)]);
     return faction === 'nato' ? pts : pts.map(([x, zz]) => [-x, -zz]);
   };
   /** A redoubt: a closed square of trench round (x, z), walked so every side faces out, its wire ring. */
@@ -79,7 +94,7 @@ export function westernFront(o: Front) {
   const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1st Section' }];
 
   return {
-    id: o.id, name: o.name, description: o.description,
+    id: o.id, name: o.name, description: o.description, armies: o.armies, // (the armies that fought there: maps/index.js armiesOn)
     epochs: ['1918'], size: 1600, segments: 640, bounds: BOUNDS, seed: o.seed, height,
     fields: createFields({ seed: o.seed, cell: 84, weights: (o.fields ?? [0.3, 0.3, 0.1, 0.3]) as any }),
     theme: { ...SKY, ...o.theme, terrain: { ...GROUND, ...o.terrain, farmX: [BOUNDS.x - 20, BOUNDS.x + 90], farmZ: [BOUNDS.z - 10, BOUNDS.z + 90], roads: [-300, 0, 300], roadZ: BOUNDS.z - 20 } },
@@ -96,16 +111,14 @@ export function westernFront(o: Front) {
     battlefield(game) {
       const F = o.front;
       const nml = (z: number) => 1 - smoothstep(F - 20, F + 30, z);
-      const blasts = shellField(o.seed, BOUNDS, (x, z) => nml(z) * o.craters + (z > F ? 0.22 * o.craters * (1 - smoothstep(30, 140, z - F - 50)) : 0) + 0.08);
+      const dens = (x, z) => nml(z) * o.craters + (z > F ? 0.22 * o.craters * (1 - smoothstep(30, 140, z - F - 50)) : 0) + 0.08;
+      const blasts = [...shellField(o.seed, BOUNDS, dens).filter((b) => b[1] >= 0), ...shellField(o.seed + 1, BOUNDS, dens).filter((b) => b[1] < 0)]; // (each half its own)
       const [near, far] = o.ruins ?? [0.85, 0.4];
       const ruins = game.buildings.list.filter((b) => Math.abs(b.z) < deepest + 40 && mulberry32(b.index * 7 + o.seed)() < (Math.abs(b.z) < F ? near : far)).map((b) => b.index);
       const works = [];
       for (const f of ['nato', 'pact'] as const) {
         for (const l of lines) works.push(...trenchLine(line(l.z, f, l.seed), f, { wireAt: l.wireAt, belts: l.belts, gapEvery: l.gapEvery ?? 90 }));
-        for (const r of o.redoubts ?? []) {
-          const [x, z] = f === 'nato' ? [r.x, r.z] : [-r.x, -r.z];
-          works.push(...trenchLine(redoubt(x, z, r.size), f, { wireAt: 14, belts: 1, gapEvery: 40 }));
-        }
+        for (const r of o.redoubts ?? []) if ((r.z > 0) === (f === 'nato')) works.push(...trenchLine(redoubt(r.x, r.z, r.size), f, { wireAt: 14, belts: 1, gapEvery: 40 }));
       }
       const paint = (terrain) => {
         for (let z = -BOUNDS.z; z <= BOUNDS.z; z += 16) for (let x = -BOUNDS.x; x <= BOUNDS.x; x += 16) {
@@ -120,31 +133,23 @@ export function westernFront(o: Front) {
       const props = new PropBuilder({ scene, terrain, cover });
       const nearPoint = (x, z, r) => POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < r);
       for (const p of POINTS) {
-        if (p.z < 0 || (p.z === 0 && p.x > 0) || (p as any).village === false) continue;   // the mirror builds the other half (a redoubt: no village)
-        const seed = o.seed * 10 + Math.round(p.x * 3 + p.z);
-        buildVillage(props, p, seed, 1);
-        if (p.x !== 0 || p.z !== 0) buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
+        if ((p as any).village === false) continue;   // (a redoubt: no village)
+        buildVillage(props, p, o.seed * 10 + Math.round(p.x * 3 + p.z * 7), 1);
       }
-      for (const [dx, dz] of o.town?.quarters ?? []) {
-        buildVillage(props, { x: dx, z: dz }, o.seed * 10 + 1 + dx, 1);
-        buildVillage(props, { x: -dx, z: -dz }, o.seed * 10 + 1 + dx, -1);
-      }
+      for (const [dx, dz] of o.town?.quarters ?? []) buildVillage(props, { x: dx, z: dz }, o.seed * 10 + 1 + dx * 3 + dz, 1);
       props.rand = mulberry32(o.seed * 7919);
       if (o.town?.church) props.church({ ...o.town.church, yaw: 0 });
 
       const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks'];
       const sites: any[] = [];
-      for (let tries = 0; sites.length < 30 && tries < 6000; tries++) {
+      for (let tries = 0; sites.length < 60 && tries < 6000; tries++) {
         const x = (rand() * 2 - 1) * (bounds.x - 30);
-        const z = o.front + 40 + rand() * (bounds.z - o.front - 100);
+        const z = (sites.length % 2 ? -1 : 1) * (o.front + 40 + rand() * (bounds.z - o.front - 100));   // (each half its own)
         if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 60 * 60)) continue;
-        if (Math.hypot(x, z - BASE_Z) < 50 || nearPoint(x, z, 50) || copse(x, z) > 0.3 || trenchBand(z)) continue;
+        if (Math.hypot(x, Math.abs(z) - BASE_Z) < 50 || nearPoint(x, z, 50) || copse(x, z) > 0.3 || trenchBand(z)) continue;
         sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
       }
-      for (const s of sites) {
-        buildSite(props, s, s.x, s.z, s.yaw);
-        buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-      }
+      for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
       for (const [base, toward, canvas] of [[this.bases.nato, -1, 0xcfc8b0], [this.bases.pact, 1, 0xb8b4a0]] as const) {
         props.tent({ x: base.x - 6, z: base.z - toward * 4, yaw: 0.2, color: canvas });
         props.tent({ x: base.x + 6, z: base.z - toward * 6, yaw: -0.15, color: canvas });
@@ -154,7 +159,7 @@ export function westernFront(o: Front) {
       props.finish();
 
       const avoid = [{ x: 0, z: BASE_Z, r: 30 }, { x: 0, z: -BASE_Z, r: 30 }, ...POINTS.map((p) => ({ x: p.x, z: p.z, r: 12 }))];
-      const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1100, forest: (x, z) => copse(x, z) * 0.9 * (trenchBand(z) ? 0.2 : 1) });
+      const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1100 + 350 * (o.woodsAt?.length ?? 0), forest: (x, z) => copse(x, z) * 0.9 * (trenchBand(z) ? 0.2 : 1) });
       cover.finalize(bounds);
       const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid, count: 1600, lane: 0 });
       const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid: [...avoid, { test: (x, z) => Math.random() < churn(z) * 0.9 * Math.min(1, o.craters / 3) }], density: 2.6, fields: this.fields }); // (hardly a blade of grass left in no man's land)

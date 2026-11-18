@@ -2,6 +2,7 @@
 // the white cliffs of Dover along the west, the dunes and Cap Gris-Nez along the east, the Varne bank in the
 // middle. The Flanders flotillas come down from Zeebrugge in the dark to break the Dover barrage; the Dover
 // Patrol's destroyers come out of the harbour after them — Broke and Swift ramming and boarding at close range.
+// Fair: Dover is the Patrol's, Gris-Nez as near the flotillas, the Varne between them as near either.
 import { shore } from '../world/Sea.js';
 import { northSea } from './northSea.ts';
 
@@ -39,7 +40,7 @@ export default northSea({
   points: [
     { id: 'A', name: 'Dover Patrol', x: -600, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
     { id: 'B', name: 'Dover', x: -1550, z: -550, owner: null, sector: 'west', radius: 160 },
-    { id: 'C', name: 'The Varne', x: 0, z: 100, owner: null, sector: 'centre', radius: 170 },
+    { id: 'C', name: 'The Varne', x: 0, z: -90, owner: null, sector: 'centre', radius: 170 },
     { id: 'D', name: 'Cap Gris-Nez', x: 1550, z: 650, owner: null, sector: 'east', radius: 160 },
     { id: 'K', name: 'Flanders flotillas', x: 600, z: 2100, owner: 'pact', sector: 'centre', radius: 150 },
   ],

@@ -131,17 +131,33 @@ export class Buildings {
     }
   }
 
+  /** Outside an aid station's door: where its jeep stands and its driver comes back to. */
+  aidDoor(b) {
+    const [x, z] = this.game.construction.local({ x: b.x, z: b.z, yaw: b.yaw }, 0, b.d / 2 + 5);
+    return { x, z };
+  }
+
   /** Aid stations keep their medic jeep (the host only: the jeep is a stack like any other). */
   updateAid() {
     const g = this.game;
     if (g.net?.isClient) return;
     for (const b of this.list) {
       const a = b.aid;
-      if (!a || b.collapsed || a.medic?.alive || g.time < a.next) continue;
+      if (!a || b.collapsed || a.medic?.alive) continue;
+      // the lost jeep's driver walking back (systems/CrewBailout.js): at the door he takes the new one out at once
+      const driver = g.world.stacks.find((s) => s.alive && s.aidHome === b);
+      if (driver && driver.ai.ordered) driver.aidHome = null; // (you gave him an order: he is yours now)
+      else if (driver) {
+        const door = this.aidDoor(b);
+        if (Math.hypot(driver.centroid.x - door.x, driver.centroid.z - door.z) < 10) { g.removeStack(driver); a.next = g.time; a.medic = null; }
+        else { if (!driver.moveTarget) driver.ai.moveTo(door, { ordered: false }); continue; }
+      }
+      if (g.time < a.next) continue;
       if (a.medic) { a.medic = null; a.next = g.time + AID_EVERY; continue; } // lost: the next later
-      const [x, z] = g.construction.local({ x: b.x, z: b.z, yaw: b.yaw }, 0, b.d / 2 + 5);
+      const { x, z } = this.aidDoor(b);
       a.medic = g.spawnStack('ambulance', a.faction, { x, z }, b.yaw, `${b.name} medics`);
       a.medic.autonomous = true; // (the station's: it goes to the wounded by itself)
+      a.medic.aidOf = b;         // (lost with its driver alive: he walks back for another)
       g.tell(a.faction, `Aid station in the ${b.name}: a medic jeep is ready`);
     }
   }

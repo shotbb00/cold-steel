@@ -20,7 +20,11 @@ const rnd = ([a, b]) => a + Math.random() * (b - a);
 
 // camouflage per army (parts with camo 1): MERDC for the US Army, the Bundeswehr's NATO three-tone
 // of 1984 (bronze green, leather brown, tar black); the Pact armies paint plain green
-const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] };
+const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c],
+  no: [0x4a5236, 0xd6d9d4, 0x404830, 0x4a5236],     // Norway: olive green with the winter's whitewash over it
+  usmc: [0x4b5232, 0xd6d9d4, 0x1c1c1a, 0x4b5232],   // the Marines in Norway: MERDC winter — white, forest green, black
+  rok: [0x3e4a2c, 0x5a4630, 0x1c1c1a, 0x8a7d58],    // the ROK Army: four-colour woodland, a sand stripe
+  kpa: [0x4b5634, 0x48532f, 0x4f5a37, 0x46512e] };  // the KPA: plain green
 // 1945 (data/epoch.js): US olive drab and the Red Army's 4BO green, plain; the Germans' dark
 // yellow with olive green and red-brown over it
 const ARMY_CAMO_1945 = {
@@ -28,6 +32,11 @@ const ARMY_CAMO_1945 = {
   sov: [0x4a5a34, 0x475631, 0x4e5e37, 0x44532f],
   wh: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
   fj: [0x9a8a5a, 0x4f5a36, 0x5e3f2a, 0x9a8a5a],
+  brit21: [0x4f4a32, 0x47432d, 0x575236, 0x2e2c22],  // the British 1944: SCC 15 olive drab
+  brit14: [0x46503a, 0x3c452f, 0x505a40, 0x2e3424],  // the 14th Army: jungle green
+  usmc: [0x4d4f34, 0x4a4c31, 0x515337, 0x484a30],   // the Marines: olive drab like the Army
+  brit: [0xb8a77c, 0x938458, 0xa89868, 0xb8a77c],   // the 8th Army: Light Stone, a darker shade over it
+  jp: [0x6f6a44, 0x4f5a36, 0x6a4e30, 0xa89a62],     // the Army's khaki-brown with green and brown patches, a yellow stripe
 };
 
 // 1918: the British brown-green plain; the French and the German tanks in their painted patches
@@ -36,12 +45,26 @@ const ARMY_CAMO_1918 = {
   fr: [0x8a7a4e, 0x55603a, 0x6a4a30, 0x8a7a4e],
   de: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
   st: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
+  ot: [0x7a7458, 0x6e6a50, 0x857c5a, 0x6a6448],   // (German-supplied, dusty grey)
+  anzac: [0x5c5638, 0x585234, 0x5f5a3b, 0x555032],
+  it: [0x6a6e58, 0x646852, 0x70745c, 0x5e624e],   // grigio-verde
+  ah: [0x6e7468, 0x5e6a4c, 0x7a6e50, 0x6e7468],   // the k.u.k. three-colour of 1918
+  ru: [0x5c6444, 0x56603e, 0x606848, 0x525a3a],   // Russian green
+};
+
+// 2027: the US Army's NATO three-tone, the Polish three-colour, Russian green, the Belarusian
+// green-sand-brown (data/models/modern2027.js paints every plain green part in it)
+const ARMY_CAMO_2027 = {
+  us: [0x3e4a2e, 0x4c3e2c, 0x1e1f1b, 0x3e4a2e],
+  pl: [0x4c5634, 0x2c3122, 0x5e4c36, 0x4c5634],
+  ru: [0x4f5b36, 0x4a5633, 0x56623b, 0x48532f],
+  by: [0x56603a, 0x8a7d58, 0x4e3e2c, 0x56603a],
 };
 
 function materialsFor(army, glowColor) {
   const key = `${epoch()}:${army}`; // (the 1985 and the 1945 US Army don't share a paint)
   if (!materialCache.has(key)) {
-    const camo = { 1945: ARMY_CAMO_1945, 1918: ARMY_CAMO_1918 }[epoch()]?.[army] ?? ARMY_CAMO[army];
+    const camo = { 1945: ARMY_CAMO_1945, 1918: ARMY_CAMO_1918, 2027: ARMY_CAMO_2027 }[epoch()]?.[army] ?? ARMY_CAMO[army];
     materialCache.set(key, {
       body: paintMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.25, roughness: 0.7 }), { colors: camo ?? MERDC, scale: 0.9, wear: 0.22, surfaces: true, weather: true }),
       glow: new THREE.MeshStandardMaterial({ color: glowColor, roughness: 0.7 }), // markings
@@ -127,7 +150,7 @@ export class RigRenderer {
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
       const rig = this.rigs[i];
-      rig.root.visible = u.visible !== false || (rig.dead && !this.stack.stats.naval); // (a wreck stays to be found; a ship going down out of sight is never seen — u.visible stays as it was when she was last seen)
+      rig.root.visible = u.visible !== false || (!!rig.dead && !this.stack.stats.naval); // (always a boolean: three.js draws anything not === false) (a wreck stays to be found; a ship going down out of sight is never seen — u.visible stays as it was when she was last seen)
       if (u.alive && rig.dead) { // brought back (1806: a dismounted trooper caught a horse and remounted) — a fresh rig
         rig.root.removeFromParent();
         this.rigs[i] = this.make(this.build, u);

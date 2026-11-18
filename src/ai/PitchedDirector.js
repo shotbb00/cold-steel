@@ -10,7 +10,7 @@
 //            they are. A stack already fighting is left to it.
 // Support with what CP is left: an air strike on what it sees (1945 / 1985); the 1806 powers run
 // by themselves (systems/Powers1806.js), and 1806 foot keeps its drill (FrontlineDirector.drill).
-import { enemyOf } from '../data/factions.js';
+import { enemyOf, armyHas } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { FrontlineDirector } from './FrontlineDirector.js';
@@ -67,7 +67,7 @@ export class PitchedDirector {
       const id = list[i % list.length];
       const t = UNIT_TYPES[id] && getUnitType(id);
       if (!t || !this.state.allow?.(t) && this.state.allow) { misses++; continue; } // (a ship this year hasn't got: the next — it used to stop buying there)
-      if (t.armies && !t.armies.includes(army)) { misses++; continue; }
+      if (!armyHas(t, army)) { misses++; continue; }
       const had = bought.filter((s) => s.type.id === t.id).length;
       if ((t.limit && had >= t.limit) || unitCost(t, army) > this.state.cp[f] - budget * RESERVE) { misses++; continue; }
       const s = this.state.buy(f, t.id);
@@ -97,7 +97,7 @@ export class PitchedDirector {
     const budget = this.state.cp[f];
     const types = Object.values(UNIT_TYPES).filter((t) => !t.hidden && !t.airOnly && !t.needsRiver && !t.stats.structure && STYLES.balanced[t.category] !== undefined
       && (t.stats.damage ?? 0) > 0 && !t.stats.observer && !t.stats.airRadar && !t.stats.cbRadar && t.id !== 'observers' // (fighting troops only: no radars or spotters)
-      && (!t.armies || t.armies.includes(army)) && (g.rules.air !== false || t.category !== 'airdefence'));
+      && armyHas(t, army) && (g.rules.air !== false || t.category !== 'airdefence'));
     const weights = Object.entries(STYLES[this.style]).filter(([c]) => types.some((t) => t.category === c));
     const bought = [];
     for (let tries = 0; tries < 200; tries++) {

@@ -2,7 +2,8 @@
 // Holstein shore — along the south, the GDR's along the north: Wismar Bay where the Warsaw Pact's boats lie,
 // the Darß peninsula pushing out to the east with its chalk-white cliff. A shallow sea (fifteen to twenty-five
 // metres), sandbanks awash, beaches for a landing; red-roofed towns and churches on both shores, beech and
-// pine woods. The missile boats' and the landing ships' battle. Ships only (data/units/ships85.js).
+// pine woods. The missile boats' and the landing ships' battle. Fair: the Fehmarn Belt as near NATO as the
+// water off the Darß the Pact, the Kadet Channel halfway. Ships only (data/units/ships85.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -15,9 +16,9 @@ const noise = createNoise2D(1985_08);
 const sea = createSea({ level: 0, size: SIZE, color: 0x2c5058 });
 
 /** NATO's shore (south, +z) and the GDR's (north, -z): z of the coast at x; Wismar Bay cuts the northern one. */
-const southZ = (x: number) => 2350 + fbm(noise, x * 0.0012, 2.2, 3) * 160 + (x < -900 ? 0 : 260);
-const northZ = (x: number) => -2300 + fbm(noise, x * 0.0012, 5.4, 3) * 160 - (Math.abs(x + 300) < 500 ? (500 - Math.abs(x + 300)) * 0.8 : 0) + (x > 900 ? (x - 900) * 0.45 : 0); // (the Darß out to the east)
-const FEHMARN = [-1500, 1700, 420, 22];
+const southZ = (x: number) => 3350 + fbm(noise, x * 0.0012, 2.2, 3) * 160 + (x < -900 ? 0 : 260);
+const northZ = (x: number) => -3300 + fbm(noise, x * 0.0012, 5.4, 3) * 160 - (Math.abs(x + 300) < 500 ? (500 - Math.abs(x + 300)) * 0.8 : 0) + (x > 900 ? (x - 900) * 0.45 : 0); // (the Darß out to the east)
+const FEHMARN = [-1500, 2700, 420, 22];
 
 function height(x: number, z: number) {
   let h = -22 + fbm(noise, x * 0.0007, z * 0.0007, 4) * 5;
@@ -33,11 +34,11 @@ function height(x: number, z: number) {
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Kiel Bay', x: 300, z: 2000, owner: 'nato', sector: 'centre', radius: 150 },
-  { id: 'B', name: 'Fehmarn Belt', x: -1500, z: 1050, owner: null, sector: 'west', radius: 170 },
-  { id: 'C', name: 'Kadet Channel', x: 200, z: 0, owner: null, sector: 'centre', radius: 180 },
-  { id: 'D', name: 'Off the Darß', x: 1700, z: -900, owner: null, sector: 'east', radius: 160 },
-  { id: 'K', name: 'Wismar Bay', x: -300, z: -1950, owner: 'pact', sector: 'centre', radius: 150 },
+  { id: 'A', name: 'Kiel Bay', x: 150, z: 1400, owner: 'nato', sector: 'centre', radius: 150 },
+  { id: 'B', name: 'Fehmarn Belt', x: -1500, z: 1700, owner: null, sector: 'west', radius: 170 },
+  { id: 'C', name: 'Kadet Channel', x: 200, z: -100, owner: null, sector: 'centre', radius: 180 },
+  { id: 'D', name: 'Off the Darß', x: 1700, z: -1600, owner: null, sector: 'east', radius: 160 },
+  { id: 'K', name: 'Wismar Bay', x: -150, z: -1375, owner: 'pact', sector: 'centre', radius: 150 },
 ];
 
 export default {
@@ -79,14 +80,16 @@ export default {
     },
   },
 
-  bases: { nato: { x: 300, z: 2200, entries: [-700, 0, 700] }, pact: { x: -300, z: -2150, entries: [-600, 0, 600] } },
+  // (half-way in: maps/index.js widenSea doubles them — off the Holstein shore at 300, 3200 and in Wismar Bay at -300, -3150,
+  // the two coasts out far enough that the missile boats don't start within range of each other)
+  bases: { nato: { x: 150, z: 1600, entries: [-700, 0, 700] }, pact: { x: -150, z: -1575, entries: [-600, 0, 600] } },
   maxStacks: 14,
-  cameraStart: { nato: { x: 300, z: 2000 }, pact: { x: -300, z: -1950 } },
+  cameraStart: { nato: { x: 150, z: 1400 }, pact: { x: -150, z: -1375 } },
   points,
 
   spawns: {
-    nato: [{ unit: 'frigate', x: 300, z: 1950, facing: Math.PI }, { unit: 'ptBoat', x: 0, z: 2050, facing: Math.PI }, { unit: 'ptBoat', x: 600, z: 2050, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2150, facing: Math.PI }],
-    pact: [{ unit: 'frigate', x: -300, z: -1950, facing: 0 }, { unit: 'ptBoat', x: -600, z: -2000, facing: 0 }, { unit: 'ptBoat', x: 0, z: -2000, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }],
+    nato: [{ unit: 'frigate', x: 150, z: 1350, facing: Math.PI }, { unit: 'ptBoat', x: -150, z: 1450, facing: Math.PI }, { unit: 'ptBoat', x: 450, z: 1450, facing: Math.PI }, { unit: 'destroyer', x: 150, z: 1550, facing: Math.PI }],
+    pact: [{ unit: 'frigate', x: -150, z: -1375, facing: 0 }, { unit: 'ptBoat', x: -450, z: -1425, facing: 0 }, { unit: 'ptBoat', x: 150, z: -1425, facing: 0 }, { unit: 'destroyer', x: -150, z: -1525, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {

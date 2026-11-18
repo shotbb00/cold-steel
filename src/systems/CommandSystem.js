@@ -21,6 +21,8 @@ import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
+import { TargetMarker, markerSpec, flightOf, turnable, PendingMarkers } from '../ui/TargetMarkers.js';
+import { supportIcon } from '../ui/SupportIcons.js';
 import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -260,6 +262,10 @@ export class CommandSystem {
       const builders = sel.filter((st) => st.usesCover);
       if (builders.length !== 1) return this.game.bus.emit('toast', 'Select one infantry stack to build with');
       this.startTargeting({ kind: 'build', structure: cmd.slice(6), stack: builders[0] });
+    } else if (cmd === 'tunnel') {
+      const at = [...this.selected].filter((s) => this.game.caves?.canEnter(s));
+      if (!at.length) return this.game.bus.emit('toast', 'Bring the squad to a cave mouth first');
+      this.startTargeting({ kind: 'smoke', tunnel: true, stacks: at });
     } else if (cmd === 'leave') {
       const inside = [...this.selected].filter((s) => s.alive && s.garrison);
       if (!inside.length) return this.game.bus.emit('toast', 'Select a stack inside a building');
@@ -327,6 +333,11 @@ export class CommandSystem {
         this.game.orders.issue({ t: 'layMines', s: ids(layers), on: on ? 1 : 0 });
         for (const s of layers) s.laying = on && (s.minesLeft ?? s.stats.minelayer.count) > 0;
         this.game.bus.emit('toast', on ? 'Laying mines while under way — steer her across their path' : 'Stopped laying');
+      } else if (k === 'chaff') {
+        const decoys = ships.filter((s) => s.stats.defence?.chaff);
+        if (!decoys.length) return this.game.bus.emit('toast', 'Select ships with chaff launchers');
+        this.game.orders.issue({ t: 'chaff', s: ids(decoys) });
+        this.game.bus.emit('toast', 'Chaff away: a decoy cloud off the beam');
       } else if (k === 'smoke') {
         const gens = ships.filter((s) => s.stats.smokeGen);
         if (!gens.length) return this.game.bus.emit('toast', 'Destroyers and escorts make smoke');
@@ -392,13 +403,17 @@ export class CommandSystem {
       if (!vehicles.length) return this.game.bus.emit('toast', 'Select infantry or vehicles with smoke, or a mortar team');
       this.game.orders.issue({ t: 'popSmoke', s: ids(vehicles) });
     } else if (cmd === 'air' || cmd.startsWith('air:')) {
-      let air = cmd.slice(4) || 'heli';
-      if (this.game.world.openSea && !KINDS[air]?.sea) air = { heli: 'torpBomb', jet: epoch() === '1918' ? 'asw' : 'diveBomb', cap: 'navCap', recon: 'navScout' }[air] ?? air; // (at sea the keys call the carrier's missions)
+      let [air, fromId] = (cmd.slice(4) || 'heli').split('@'); // ('air:jet@12': from that carrier or airfield)
+      air ||= 'heli';
+      if (this.game.world.openSea && !KINDS[air]?.sea) { // (at sea the keys call the carrier's missions: the one on the same key this war flies — 1985's too)
+        const key = KINDS[air]?.key;
+        air = Object.keys(KINDS).find((k) => KINDS[k].sea && !KINDS[k].off && KINDS[k].key === key && !(epoch() === '1918' && k === 'diveBomb')) ?? ({ jet: epoch() === '1918' ? 'asw' : 'diveBomb' }[air]) ?? air;
+      }
       if (KINDS[air]?.off) return; // not in this war (data/epoch.js)
       if (!this.game.air.ready(this.faction, air)) {
         return this.game.bus.emit('toast', `${airType(air, this.faction, this.game.armyOf(this.faction)).name} not ready (${Math.ceil(this.game.air.cooldownLeft(this.faction, air))} s)`);
       }
-      this.startTargeting({ kind: 'air', air, yaw: null }); // null: run in from our base until Q/E turn it
+      this.startTargeting({ kind: 'air', air, yaw: null, from: fromId ? Number(fromId) : null }); // null: run in from our base until Q/E turn it
     } else if (cmd.startsWith('power:')) { // 1806: click the spot (systems/Powers1806.js)
       const k = cmd.slice(6), g = this.game;
       if (g.air.limit[this.faction] === 0) return g.bus.emit('toast', 'No support in this battle');
@@ -447,7 +462,7 @@ export class CommandSystem {
     const touch = this.game.input.touch;
     const click = touch ? 'tap' : 'click';
     const cancel = touch ? 'Cancel stops' : 'right-click cancels';
-    const turn = (what) => (touch ? `the arrows turn ${what}` : `${keyOf('turnLeft')}/${keyOf('turnRight')} turn ${what}`);
+    let turn = (what) => (touch ? `the arrows turn ${what}` : `${keyOf('turnLeft')}/${keyOf('turnRight')} turn ${what}`);
     if (t.kind === 'build') {
       const def = STRUCTURES[t.structure];
       const ghost = new THREE.Group();
@@ -463,11 +478,10 @@ export class CommandSystem {
       t.yaw = base ? Math.atan2(base.x - t.stack.centroid.x, base.z - t.stack.centroid.z) : 0;
       t.hint = `${def.name} (${structureCost(this.game, this.faction, def)} CP): ${click} to place${touch || def.dozer ? '' : ', or drag a line of them'} — ${turn('it')}, ${cancel}`;
     } else if (t.kind === 'engineer') {
-      const geo = new THREE.RingGeometry(0.9, 1, 48);
-      geo.rotateX(-Math.PI / 2);
-      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }), this.surface, 0.3);
-      t.ghost = t.decal.mesh;
+      t.marker = new TargetMarker(this.surface); // (the lane a line charge blows, the ring round what they clear: ui/TargetMarkers.js)
+      t.ghost = t.marker.group;
       if (t.layer) { // a blueprint of the bridge itself, the way works are placed
+        t.marker = null;
         const river = this.game.world.river;
         t.ghost = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.4, river ? river.spanLength : 30),
           new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0.35, depthWrite: false }));
@@ -476,14 +490,12 @@ export class CommandSystem {
         : t.layer ? `Bridge layer: ${click} the river where the bridge should go — ${cancel}`
         : `Engineers: ${click} mines or wire to clear them${this.game.map.bridgeAt ? ', or a bridge to blow it' : ''} — ${cancel}`;
     } else if (t.kind === 'smoke') {
-      const geo = new THREE.RingGeometry(0.92, 1, 48);
-      geo.rotateX(-Math.PI / 2);
-      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({ color: 0xe8e6e0, transparent: true, opacity: 0.7, depthWrite: false }), this.surface, 0.3);
-      t.ghost = t.decal.mesh;
-      if (t.barrage || t.walze || t.fire) t.decal.mesh.material.color.set(0xe0904a);
-      if (t.gas) t.decal.mesh.material.color.set(0xc8c46a);
+      t.marker = new TargetMarker(this.surface); // its true footprint (ui/TargetMarkers.js)
+      t.ghost = t.marker.group;
+      const pw = t.power && POWERS_1806[t.power];
       const bar = barrageOf(this.game, this.faction);
-      t.hint = t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
+      t.hint = t.tunnel ? `Tunnel: ${click} the cave mouth to come out at — ${cancel}` : pw ? `${pw.label} (${pw.cost} CP): ${click} ${{ battery: 'the target — every gun in reach fires on it', reserve: 'near the enemy to charge — they ride at the nearest within the dashed circle', guard: 'where the Guard should march', fireship: 'the ships to burn — she comes down the wind', squadron: 'where the squadron should sail', monitors: 'the sector to shell', smokeScreen: 'where the line of smoke goes, across the way in', starShell: 'the water to light up' }[t.power] ?? 'the spot'} — ${cancel}`
+        : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
@@ -492,44 +504,26 @@ export class CommandSystem {
         : t.fire === 'area' ? `Sustained fire: ${click} the middle of the area — a minute of shells across it (Stop ends it) — ${cancel}`
         : t.flare ? `Illumination: ${click} where to light up — ${cancel}` : `Smoke: ${click} where to lay the screen — ${cancel}`;
     } else {
-      // the strafe line the gun will walk, with an arrowhead showing the direction of the run;
-      // an air assault: the landing zone, with the arrow it comes in along; a fighter patrol: its circle
-      const p = KINDS[t.air];
-      const shape = new THREE.Shape();
-      const L = (p.runLength || 30) / 2;
-      if (p.orbit) {
-        shape.absarc(0, 0, p.orbit + 2, 0, Math.PI * 2, false);
-        const ring = new THREE.Path();
-        ring.absarc(0, 0, p.orbit - 2, 0, Math.PI * 2, true);
-        shape.holes.push(ring);
-      } else {
-        shape.moveTo(-1.5, -L); shape.lineTo(1.5, -L); shape.lineTo(1.5, L - 6); shape.lineTo(5, L - 6);
-        shape.lineTo(0, L + 3); shape.lineTo(-5, L - 6); shape.lineTo(-1.5, L - 6); shape.closePath();
-        if (t.air === 'lift') {
-          const hole = new THREE.Path();
-          hole.absarc(0, L + 12, 6.5, 0, Math.PI * 2, true);
-          shape.moveTo(0, L + 20);
-          shape.absarc(0, L + 12, 8, 0, Math.PI * 2, false);
-          shape.holes.push(hole);
-        }
-      }
-      const geo = new THREE.ShapeGeometry(shape, p.orbit ? 64 : 12);
-      if (t.air === 'lift') geo.translate(0, -(L + 12), 0); // the ring sits on the clicked spot
-      geo.rotateX(Math.PI / 2);
-      t.decal = new GroundDecal(geo, new THREE.MeshBasicMaterial({
-        color: new THREE.Color(0xff6a3d).multiplyScalar(1.6), transparent: true, opacity: 0.6, depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-      }), this.surface, 0.3);
-      t.ghost = t.decal.mesh;
+      // its footprint: the run, the carpet, the patrol circle, the search band, the landing zone (ui/TargetMarkers.js)
+      const p = flightOf(this.game, this.faction, t.air);
+      t.marker = new TargetMarker(this.surface);
+      t.ghost = t.marker.group;
+      t.fixed = !turnable(this.game, this.faction, t); // (off a runway or a deck: it comes the way it takes off)
+      const from = t.fixed && !p.orbit ? markerSpec(this.game, this.faction, t, this.game.world.bases[this.faction] ?? { x: 0, z: 0 }).from : null;
+      if (from) turn = () => `it comes in from ${from}`;
+      const how = (what) => (t.fixed && !from ? '' : `${turn(what)}, `); // (no heading to set: a circle, or off a carrier that takes the shortest way)
       t.hint = t.air === 'lift'
-        ? `${p.label} (${p.cost} CP): ${click} the ${epoch() === '1945' ? 'drop zone' : 'landing zone'} — ${turn('the approach')}, ${cancel}`
-        : t.air === 'cap' ? `${p.label} (${p.cost} CP): ${click} where the fighters should circle — ${cancel}`
-        : t.air === 'recon' ? `${p.label} (${p.cost} CP): ${click} the middle of the photo run — ${turn('the run')}, ${cancel}`
-        : `${p.label} (${p.cost} CP): ${click} the target — ${turn('the run')}, ${cancel}`;
+        ? `${p.label} (${p.cost} CP): ${click} the ${epoch() === '1945' ? 'drop zone' : 'landing zone'} — ${how('the approach')}${cancel}`
+        : p.orbit ? `${p.label} (${p.cost} CP): ${click} where ${p.picture ? 'the radar plane' : 'the fighters'} should circle — ${cancel}`
+        : p.swath ? `${p.label} (${p.cost} CP): ${click} the middle of the ${t.air === 'asw' ? 'search' : 'photo run'} — the band shows what it covers — ${how('the run')}${cancel}`
+        : p.sea || p.coast ? `${p.label} (${p.cost} CP): ${click} near the ship — they take the nearest within the dashed circle — ${how('the run')}${cancel}`
+        : p.bombs ? `${p.label} (${p.cost} CP): ${click} the target — the carpet falls on the shaded strip — ${how('the run')}${cancel}`
+        : `${p.label} (${p.cost} CP): ${click} the target — ${how('the run')}${cancel}`;
     }
     scene.add(t.ghost);
     if (touch) { // on a touch screen: tap where it goes (it stays there while you pan or turn it), then Place
       t.ghost.visible = false;
-      const turns = t.kind === 'build' || (t.kind === 'air' && !KINDS[t.air]?.orbit); // (a patrol circle has no heading)
+      const turns = t.kind === 'build' || (t.kind === 'air' && !t.fixed); // (a patrol circle, a flight off a runway: no heading to set)
       t.hint = `${t.hint.split(':')[0]}: tap where it goes${turns ? ', the arrows turn it' : ''}, then Place — ${cancel}`;
     }
     this.targeting = t;
@@ -607,6 +601,7 @@ export class CommandSystem {
     if (!t) return;
     t.lineGhosts?.removeFromParent();
     t.ghost.removeFromParent();
+    t.marker?.clear();
     this.targeting = null;
   }
 
@@ -637,6 +632,11 @@ export class CommandSystem {
       this.game.orders.issue({ t: 'build', s: t.stack.id, k: bridge && !bridge.blown ? 'demolish' : 'clear', x: at.x, z: at.z, yaw: 0 });
       this.addMarker(at, 'attack');
       this.game.bus.emit('order', { kind: 'build' });
+    } else if (t.kind === 'smoke' && t.tunnel) {
+      const k = this.game.caves.mouthNear(p, 60);
+      if (k < 0) return this.game.bus.emit('toast', 'Click a cave mouth');
+      this.game.orders.issue({ t: 'tunnel', s: ids(t.stacks), k });
+      this.addMarker(this.game.caves.list[k], 'hold');
     } else if (t.kind === 'smoke' && t.power) {
       if (this.game.orders.issue({ t: 'power', k: t.power, x: p.x, z: p.z }) === false) return;
       this.addMarker(p, 'attack');
@@ -667,12 +667,57 @@ export class CommandSystem {
     } else if (t.kind === 'smoke') {
       this.game.orders.issue({ t: t.flare ? 'flare' : 'smoke', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
-    } else if (this.game.orders.issue({ t: 'air', x: p.x, z: p.z, yaw: t.yaw ?? this.game.air.defaultYaw(this.faction, p.x, p.z), k: t.air }) === false) {
+    } else if (this.game.orders.issue({ t: 'air', x: p.x, z: p.z, yaw: t.yaw ?? this.game.air.defaultYaw(this.faction, p.x, p.z), k: t.air, b: t.from ?? null }) === false) {
       return;
     } else {
       this.addMarker(p, 'attack');
     }
+    if (t.kind === 'air' || (t.kind === 'smoke' && (t.power || t.barrage || t.gas || t.walze || t.fire === 'area' || t.fire === 'salvo'))) this.remember(t, p.clone());
     this.cancelTargeting();
+  }
+
+  /**
+   * Keep what was just called on the map until it is over (ui/TargetMarkers.js PendingMarkers): followed through the
+   * sortie that flies it or the barrage it started (the host's — a co-op guest sees a set time), else for a while.
+   */
+  remember(t, p) {
+    const g = this.game, era = epoch(), t0 = g.time;
+    this.pending ??= new PendingMarkers(g, this.surface);
+    const bar = t.barrage ? barrageOf(g, this.faction) : null;
+    const icon = t.kind === 'air' ? supportIcon(`air:${t.air}`, era) : t.power ? supportIcon(`power:${t.power}`, era) : t.gas ? supportIcon('gas', era)
+      : t.barrage ? supportIcon('barrage', era, bar?.id === 'tot' ? 'tot' : bar?.id === 'creep' ? 'creep' : 'barrage') : t.walze ? supportIcon('barrage', era, 'walze') : supportIcon('barrage', era);
+    const timed = (impact, end) => () => (g.time > t0 + end ? null : { impactAt: t0 + impact });
+    let follow = timed(10, 30);
+    if (t.kind === 'air') {
+      const s = [...(g.air.sorties ?? [])].reverse().find((q) => q.kind === t.air && q.faction === this.faction && !q.remembered);
+      if (s) {
+        s.remembered = true;
+        const OVER = new Set(['break', 'home', 'landing', 'rollout', 'done', 'down']);
+        follow = () => {
+          if (OVER.has(s.state) || g.time > t0 + 600) return null;
+          const d = Math.hypot(s.pos.x - p.x, s.pos.z - p.z);
+          const impactAt = s.state === 'inbound' ? s.appearAt + (s.p.approach ?? d) / s.p.cruiseSpeed : s.state === 'attack' || s.p.orbit ? g.time : g.time + d / Math.max(30, s.speed || s.p.cruiseSpeed);
+          return { impactAt };
+        };
+      } else follow = timed(25, 60);
+    } else if (t.barrage) {
+      const b = g.barrage.active.at(-1);
+      if (b && b.faction === this.faction && Math.hypot(b.x - p.x, b.z - p.z) < 1) {
+        follow = () => {
+          if (g.time > b.end || !g.barrage.active.includes(b)) return null;
+          if (!b.creep) return { impactAt: b.start };
+          const c = b.creep, k = Math.max(0, Math.min(c.steps - 1, Math.floor((g.time - b.start) / c.every)));
+          return { impactAt: b.start, x: b.x + b.dx * k * c.step, z: b.z + b.dz * k * c.step }; // (the belt walking on)
+        };
+      } else follow = timed(9, 20); // (Time on Target: all the shells at once)
+    } else if (t.walze) {
+      const st = t.stacks?.[0];
+      follow = () => (st?.barrage ? { impactAt: t0 + 4, x: st.barrage.target.pos.x, z: st.barrage.target.pos.z } : g.time > t0 + 6 ? null : { impactAt: t0 + 4 });
+    } else if (t.gas) follow = timed(10, 22);
+    else if (t.power) follow = t.power === 'monitors' ? timed(14, 46) : timed(4, 25);
+    else if (t.fire === 'area') follow = timed(6, 66);
+    else if (t.fire === 'salvo') follow = timed(6, 25);
+    this.pending.add(t, p, icon, follow);
   }
 
   updateTargeting() {
@@ -711,7 +756,8 @@ export class CommandSystem {
       t.ghost.position.set(t.lineFrom?.x ?? p.x, (t.lineFrom?.y ?? p.y) + 0.4, t.lineFrom?.z ?? p.z);
       t.ghost.rotation.y = t.yaw;
     } else {
-      if (t.kind === 'smoke') return t.decal.place(p.x, p.z, t.gas ? 32 : t.barrage ? barrageOf(this.game, this.faction)?.radius ?? 10 : 10);
+      if (t.kind === 'air') t.autoYaw = this.game.air.defaultYaw(this.faction, p.x, p.z);
+      if (t.marker) return t.marker.place(markerSpec(this.game, this.faction, t, p));
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;
@@ -722,12 +768,7 @@ export class CommandSystem {
         t.ghost.material.color.set(ok ? 0x8fe9ff : 0xff6a55);
         return;
       }
-      if (t.kind === 'engineer') {
-        const bridge = this.game.map.bridgeAt?.(p.x, p.z);
-        return bridge && !bridge.blown ? t.decal.place(bridge.x, bridge.z, 7) : t.decal.place(p.x, p.z, 9);
-      }
-      t.autoYaw = this.game.air.defaultYaw(this.faction, p.x, p.z);
-      t.decal.place(p.x, p.z, 1, t.yaw ?? t.autoYaw);
+
     }
   }
 
@@ -751,7 +792,8 @@ export class CommandSystem {
     const reach = this.game.input.touch ? 34 : 20;
     let best = null;
     let bestD = reach * reach;
-    for (const s of this.game.world.stacksOf(faction)) {
+    const own = faction === this.faction ? this.game.world.basesOf(faction).filter((s) => s.stats.airfield) : []; // (your airfields: not in stacksOf)
+    for (const s of [...this.game.world.stacksOf(faction), ...own]) {
       if (s.visible === false || !ok(s)) continue;
       for (const u of s.units) {
         if (!u.alive || u.visible === false) continue;
@@ -763,19 +805,21 @@ export class CommandSystem {
     }
     if (best) return best;
     const p = this.pickGround(x, y, this._p);
+    const field = p && own.find((s) => this.game.airfields?.onField(s, p.x, p.z) && ok(s)); // (a click on its runway or its tower)
+    if (field) return field;
     const near = p ? this.stackNear(p, faction) : null;
     return near && ok(near) ? near : null;
   }
 
   clickSelect(x, y, shift) {
-    const stack = this.stackAt(x, y, this.faction, (s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
+    const stack = this.stackAt(x, y, this.faction, (s) => this.game.mine(s) && (!s.stats.structure || s.stats.airfield) && !s.autonomous); // (an airfield: selected to launch its squadrons)
     if (!shift) this.selected.clear();
     if (stack) {
       if (shift && this.selected.has(stack)) this.selected.delete(stack);
       else this.selected.add(stack);
       // double-click: take control
       const now = performance.now();
-      if (this.lastClick?.stack === stack && now - this.lastClick.time < 350) {
+      if (this.lastClick?.stack === stack && now - this.lastClick.time < 350 && !stack.stats.airfield) {
         this.lastClick = null;
         this.game.bus.emit('ui:possess', stack);
         return;
@@ -1065,6 +1109,7 @@ export class CommandSystem {
 
   update(dt) {
     this.updateTargeting();
+    this.pending?.update();
     this.updatePreview();
     this.drawRoutes();
     // right-drag: show which way they'll face

@@ -3,6 +3,9 @@
 // Island inside it with the airfield — and sandbanks and shoals out on the open water. The US Navy
 // comes in from the south (+z), the Imperial Navy from the north. Ships only (data/units45/ships.js).
 // Frontline only for now (`modes`): the five zones are held by warships on the surface (systems/ControlPoints.js).
+// Fair, not mirrored: one big rock off the west flank, two smaller ones off the east, as much cover each way;
+// the shoals scattered, as many in each half; the lagoon mouth (the real one, Brooks Channel, on the south-west
+// of the reef) and the passage on the far side each as near one fleet as the other.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
@@ -16,10 +19,10 @@ const ATOLL = 950;      // the reef ring's radius
 const noise = createNoise2D(1942);
 const sea = createSea({ level: 0, size: SIZE, color: 0x1e5a78 });
 
-// sandbanks and shoals: [x, z, radius] (point-mirrored pairs)
-const SHOALS = [[-1500, 600, 160], [1500, -600, 160], [900, 1400, 120], [-900, -1400, 120]];
-// two rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius]
-const PINNACLES = [[-1950, -350, 230], [1950, 350, 230]];
+// sandbanks and shoals: [x, z, radius]
+const SHOALS = [[-2200, 1100, 190], [1500, 1850, 110], [2450, -800, 130], [-900, -2050, 120], [2000, -1500, 80]]; // (out of the way: a wide passage everywhere round the atoll — tester feedback 2026-11-17)
+// rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius, height]
+const PINNACLES = [[-2650, -250, 260, 120], [2450, 650, 160, 90], [2850, -100, 150, 80]];
 
 function height(x, z) {
   let h = -38 + fbm(noise, x * 0.0008, z * 0.0008, 4) * 10;                 // the open ocean floor (deep enough everywhere)
@@ -33,16 +36,16 @@ function height(x, z) {
     h += (ih + fbm(noise, x * 0.01, z * 0.01, 2) * 1.5 - h) * k;
   }
   for (const [sx, sz, sr] of SHOALS) h += (-3 - h) * smoothstep(sr, sr * 0.4, Math.hypot(x - sx, z - sz)); // just under the surface: too shallow for any keel (world/Nav.js SHIP_DEPTH)
-  for (const [px, pz, pr] of PINNACLES) h = Math.max(h, island(pr - Math.hypot(x - px, z - pz) + fbm(noise, x * 0.006, z * 0.006, 2) * 45, pr, 110, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 10));
+  for (const [px, pz, pr, ph] of PINNACLES) h = Math.max(h, island(pr - Math.hypot(x - px, z - pz) + fbm(noise, x * 0.006, z * 0.006, 2) * 45, pr, ph, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 10));
   return h;
 }
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Task Force 16', x: 0, z: 2050, owner: 'nato', sector: 'centre', radius: 120 },
-  { id: 'B', name: 'West reef', x: -1400, z: 0, owner: null, sector: 'west', radius: 150 },
-  { id: 'C', name: 'Midway lagoon mouth', x: 0, z: 1050, owner: null, sector: 'centre', radius: 150 },
-  { id: 'D', name: 'East shoals', x: 1400, z: 0, owner: null, sector: 'east', radius: 150 },
-  { id: 'E', name: 'Kure passage', x: 0, z: -1050, owner: null, sector: 'centre', radius: 150 },
+  { id: 'B', name: 'West reef', x: -1550, z: 40, owner: null, sector: 'west', radius: 150 },
+  { id: 'C', name: 'Midway lagoon mouth', x: -300, z: 1060, owner: null, sector: 'centre', radius: 150 },
+  { id: 'D', name: 'East shoals', x: 1350, z: -30, owner: null, sector: 'east', radius: 150 },
+  { id: 'E', name: 'Kure passage', x: 250, z: -1070, owner: null, sector: 'centre', radius: 150 },
   { id: 'K', name: 'Kidō Butai', x: 0, z: -2050, owner: 'pact', sector: 'centre', radius: 120 },
 ];
 
@@ -51,6 +54,7 @@ export default {
   name: 'Midway',
   description: 'Open Pacific around the atoll: a reef ring no ship can cross, the islands with their airfield in the middle, shoals out on the water.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',          // the menu's Sea battles (maps/index.js THEATRES)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],   // (no landing or recon modes at sea)
   fow: 0.5,
@@ -95,12 +99,18 @@ export default {
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-900, 0, 900] }, pact: { x: 0, z: -BASE_Z, entries: [-900, 0, 900] } },
   maxStacks: 12,
+  // each side's island airfield inside the reef (tester feedback 2026-11-17): Sand Island American, Eastern Island Japanese —
+  // squadrons ashore as well as on the carriers (systems/Airfields.js: the runway beside the tower, along x)
+  airfields: [
+    { faction: 'nato', x: -380, z: 205, yaw: Math.PI / 2, name: 'Sand Island airfield' },
+    { faction: 'pact', x: 420, z: -160, yaw: -Math.PI / 2, name: 'Eastern Island airfield' },
+  ],
   cameraStart: { nato: { x: 0, z: 2000 }, pact: { x: 0, z: -2000 } }, // (on the fleet as the battle opens)
   points,
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: -300, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2100, facing: Math.PI }, { unit: 'frigate', x: 0, z: 2150, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 2300, facing: Math.PI }],
-    pact: [{ unit: 'destroyer', x: 300, z: -2100, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }, { unit: 'frigate', x: 0, z: -2150, facing: 0 }, { unit: 'cruiser', x: 0, z: -2300, facing: 0 }],
+    nato: [{ unit: 'destroyer', x: -300, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 300, z: 2100, facing: Math.PI }, { unit: 'frigate', x: 0, z: 2150, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 2300, facing: Math.PI }, { unit: 'carrier', x: 250, z: 2450, facing: Math.PI }],
+    pact: [{ unit: 'destroyer', x: 300, z: -2100, facing: 0 }, { unit: 'destroyer', x: -300, z: -2100, facing: 0 }, { unit: 'frigate', x: 0, z: -2150, facing: 0 }, { unit: 'cruiser', x: 0, z: -2300, facing: 0 }, { unit: 'carrier', x: -250, z: -2450, facing: 0 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {
@@ -110,12 +120,11 @@ export default {
     for (let i = 0; i < 160; i++) {
       const x = (rand() * 2 - 1) * 650;
       const z = (rand() * 2 - 1) * 450;
-      if (height(x, z) > 1.8) props.palm({ x, z, height: 7 + rand() * 5 });
+      const runway = (Math.abs(z - 260) < 30 && Math.abs(x + 380) < 140) || (Math.abs(z + 215) < 30 && Math.abs(x - 420) < 140); // (the island airfields' strips: systems/Airfields.js)
+      if (height(x, z) > 1.8 && !runway) props.palm({ x, z, height: 7 + rand() * 5 });
     }
-    props.controlTower({ x: 420, z: -200, yaw: 0.3 });
-    props.timberHangar({ x: 470, z: -150, yaw: 0.3 });
     props.finish();
-    const trees = jungle({ scene, terrain, cover, rand, half: HALF, count: 2000 });
+    const trees = jungle({ scene, terrain, cover, rand, half: 3000, count: 2000 }); // (out to the pinnacles)
     cover.finalize({ x: HALF, z: HALF });
     return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },

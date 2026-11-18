@@ -159,7 +159,7 @@ export const buildBwMarder = vehicle(() => {
       // the ramp's hinges, handle and lights; jerrycans in their racks either side of it
       ...[-0.6, 0.6].map((x) => P.box(0.2, 0.1, 0.1, { x, y: 0.82, z: -3.42, color: STEEL })),
       P.box(0.5, 0.06, 0.06, { y: 1.45, z: -3.43, color: STEEL }),
-      ...pair((s) => P.box(0.12, 0.1, 0.04, { x: s * 1.1, y: 1.65, z: -3.4, color: 0x5a1a14 })),
+      ...pair((s) => P.box(0.12, 0.1, 0.16, { x: s * 1.1, y: 1.65, z: -3.34, color: 0x5a1a14 })), // (the tail lights, set into the plate)
       ...pair((s) => P.box(0.36, 0.48, 0.14, { x: s * 1.18, y: 1.25, z: -3.44, color: 0x4a4e36 })),
       ...pair((s) => P.box(0.4, 0.06, 0.16, { x: s * 1.18, y: 1.0, z: -3.44, color: STEEL })),
     ]), 1.3, 0.3),

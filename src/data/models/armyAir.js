@@ -177,6 +177,7 @@ export const buildBwHawkRadar = vehicle(() => ({
     P.cyl(0.12, 0.12, 0.08, { y: 0.15, z: 2.6, rz: Math.PI / 2, color: RUBBER }, 10),
     P.box(0.06, 0.4, 0.06, { y: 0.35, z: 2.6, color: STEEL }),
     ...pair((s) => P.box(0.36, 0.05, 1.0, { x: s * 0.95, y: 0.92, z: -0.8, color: BW_DK })),
+    ...pair((s) => P.box(0.05, 0.3, 0.05, { x: s * 0.8, y: 0.78, z: -0.8, color: STEEL })),           // (the mudguards' brackets)
     ...[[-1, -1.4], [1, -1.4], [-1, 1.4], [1, 1.4]].map(([x, z]) => P.box(0.12, 0.55, 0.12, { x: x * 0.82, y: 0.3, z, color: STEEL })),
     ...[[-1, -1.4], [1, -1.4], [-1, 1.4], [1, 1.4]].map(([x, z]) => P.box(0.3, 0.05, 0.3, { x: x * 0.82, y: 0.03, z, color: STEEL })),
     // the housing's doors and louvres, the cable reels and the waveguide up to the antenna

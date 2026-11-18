@@ -3,6 +3,7 @@
 // the Fallschirmjäger's. Phase 1: the strike run ('jet') and the fighter patrol ('cap'); no
 // helicopters in this war, the paradrop and the recon flight come later.
 import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52, buildUsF5, buildSovPe2, buildFjAr234, buildUsHellcat, buildUsHelldiver, buildUsAvenger, buildJpZero, buildJpVal, buildJpJill } from './models/ww2Aircraft.js';
+import { buildBrHurricane, buildBrKittyhawk, buildJpKi84, buildJpSaiun, buildBrDakota, buildJpKi57 } from './models/ww2Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const MG50 = { rate: 26, damage: 120, splash: 0.6, vsArmor: 0.3, pierce: 0.25, speed: 880, tracer: 0.3, size: 0.8, sound: 'nato.aa' };   // eight .50 cals
@@ -11,6 +12,8 @@ const OD = { colors: [0x4d4f34, 0x45472e, 0x55573a, 0x4a4c32] as [number, number
 const SOVG = { colors: [0x4f5a34, 0x2a2c22, 0x56603a, 0x3a4428] as [number, number, number, number], scale: 0.6 };
 const RLM = { colors: [0x5a6248, 0x434a36, 0x6a7058, 0x4e5540] as [number, number, number, number], scale: 0.6 };
 const GREY = { colors: [0x7a8078, 0x6a7068, 0x8a9088, 0x5f655c] as [number, number, number, number], scale: 0.7 };
+const DESERT = { colors: [0x9c8a5c, 0x8a7a4e, 0xa89868, 0x6a5e42] as [number, number, number, number], scale: 0.8 };
+const JPARMY = { colors: [0x56603c, 0x4a5434, 0x606a44, 0x8a8058] as [number, number, number, number], scale: 0.7 };
 const SILVER = { colors: [0xb4b7b6, 0xa9acab, 0xbfc2c1, 0xa2a5a4] as [number, number, number, number], scale: 1.2 };
 
 const STRIKE: Record<string, Aircraft> = {
@@ -22,12 +25,18 @@ const STRIKE: Record<string, Aircraft> = {
     model: buildWhFw190F, paint: RLM, engineSound: 'prop', gun: CANNON, rockets: { count: 1, interval: 0.1, damage: 1100, splash: 7, vsArmor: 0.9, pierce: 0.5, speed: 160, sound: 'heli.rocket' }, hp: 7 },
   fj: { name: 'Ju 87 G Stuka', weapon: '2 × 3.7 cm BK 3,7', text: 'The tank-buster Stuka: two 37 mm guns under the wings, slow and deadly to armour — and to itself when fighters are about.',
     model: buildFjJu87, paint: RLM, engineSound: 'prop', siren: 'stuka.siren', gun: { rate: 3, damage: 520, splash: 1.5, vsArmor: 1, pierce: 0.7, speed: 850, tracer: 0.6, size: 1.2, sound: 'pact.cannon' }, hp: 6 },
+  brit: { name: 'Kittyhawk IIA', weapon: '6 × .50 cal · 500 lb bomb', text: 'The Desert Air Force’s fighter-bomber: the “Kittybomber”, a bomb onto the target and the guns after it.',
+    model: buildBrKittyhawk, paint: DESERT, engineSound: 'prop', gun: MG50, rockets: { count: 1, interval: 0.1, damage: 950, splash: 6, vsArmor: 0.9, pierce: 0.5, speed: 160, sound: 'heli.rocket' }, hp: 7 },
+  jp: { name: 'D3A Val', weapon: '250 kg bomb · 7.7 mm', text: 'The Navy’s dive bomber flown from the island’s airfields: one bomb, steep onto the target.',
+    model: buildJpVal, paint: JPARMY, engineSound: 'prop', gun: CANNON, rockets: { count: 1, interval: 0.1, damage: 900, splash: 6, vsArmor: 0.9, pierce: 0.5, speed: 160, sound: 'heli.rocket' }, hp: 5 },
 };
 const FIGHTER: Record<string, Aircraft> = {
   nato: { name: 'P-51D Mustang', weapon: '6 × .50 cal', text: 'Long-range escort fighter: a pair circles over the spot and shoots down what comes near.', model: buildUsP51, paint: SILVER, engineSound: 'prop', gun: MG50, hp: 6, guns: true },
   sov: { name: 'Yak-3', weapon: '20 mm ShVAK · 2 × 12.7 mm', text: 'Small, light and nimble at low level, where the Red Air Force fought.', model: buildSovYak3, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true },
   pact: { name: 'Fw 190 D-9', weapon: '2 × 20 mm · 2 × 13 mm', text: 'The long-nosed Dora: the Luftwaffe’s best piston fighter of the last winter.', model: buildWhFw190D, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 6, guns: true },
   fj: { name: 'Bf 109 G-10', weapon: '30 mm MK 108 · 2 × 13 mm', text: 'The old Messerschmitt, still in the fight in its last versions.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true },
+  brit: { name: 'Hurricane IIC', weapon: '4 × 20 mm Hispano', text: 'The RAF fighter of the desert: four cannon, a pair circling over the spot for what comes near.', model: buildBrHurricane, paint: DESERT, engineSound: 'prop', gun: CANNON, hp: 6, guns: true },
+  jp: { name: 'Ki-84 Hayate', weapon: '2 × 20 mm · 2 × 12.7 mm', text: 'The Army Air Service’s best fighter of 1944–45: fast and well armed, a match for the Mustang.', model: buildJpKi84, paint: JPARMY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true },
 };
 
 // the paradrop (KINDS.lift; systems/AirStrike.js Sortie.paradrop): the transport flies over the
@@ -40,6 +49,10 @@ const DROP: Record<string, Aircraft> = {
     model: buildSovLi2, paint: SOVG, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
   pact: { name: 'Ju 52/3m', weapon: 'a stick of Fallschirmjäger', text: 'Tante Ju: three engines, corrugated metal, and the Fallschirmjäger jumping from the door.',
     model: buildDeJu52, paint: RLM, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
+  brit: { name: 'Dakota (RAF)', weapon: 'a stick of paratroopers', text: 'The RAF’s Dakota with a stick of British airborne troops.',
+    model: buildBrDakota, paint: DESERT, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
+  jp: { name: 'Ki-57 Topsy', weapon: 'a stick of Teishin paratroopers', text: 'The Army transport with a stick of the Teishin raiding paratroopers.',
+    model: buildJpKi57, paint: JPARMY, engineSound: 'prop', gun: NOGUN, squad: 'airAssault', paradrop: true, hp: 7 },
 };
 
 // the recon flight (KINDS.recon): one fast photo run along the line (AirStrike.photograph)
@@ -48,6 +61,8 @@ const RECON: Record<string, Aircraft> = {
   sov: { name: 'Pe-2R', weapon: 'cameras', text: 'The Pe-2 dive bomber with cameras in the bomb bay: fast enough to come home with the pictures.', model: buildSovPe2, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 7 },
   pact: { name: 'Bf 109 G-8', weapon: 'cameras', text: 'The Messerschmitt with a camera behind the cockpit: a quick look over the Allied line.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 5 },
   fj: { name: 'Ar 234 B Blitz', weapon: 'cameras', text: 'The jet reconnaissance bomber: too fast for any Allied fighter to catch on its run.', model: buildFjAr234, paint: GREY, engineSound: 'jet', gun: NOGUN, hp: 6 },
+  brit: { name: 'Hurricane Tac R', weapon: 'cameras', text: 'A Hurricane with cameras: the tactical reconnaissance flight over the enemy’s line.', model: buildBrHurricane, paint: DESERT, engineSound: 'prop', gun: NOGUN, hp: 6 },
+  jp: { name: 'C6N Saiun', weapon: 'cameras', text: 'The fast Navy reconnaissance plane: “nothing can catch me”, its crews signalled.', model: buildJpSaiun, paint: JPARMY, engineSound: 'prop', gun: NOGUN, hp: 5 },
 };
 
 // the Pacific (the open-sea maps): what the carriers launch — `nato` the US Navy's, `pact` the Imperial Navy's

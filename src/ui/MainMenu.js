@@ -7,9 +7,10 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre } from '../maps/index.js';
+import { setClimate } from '../render/paint.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY } from '../data/factions.js';
+import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas, armyIn } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
 import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
@@ -21,6 +22,7 @@ import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RULE_OPTIONS, rulesFrom, DIFFICULTY } from '../data/rules.js';
 import { CODEX, CODEX45, CODEX1806 } from '../data/codex.js';
+import { CODEX2027 } from '../data/codex2027.js';
 import { CODEX1918 } from '../data/codex1918.js';
 import { keyOf, touchScreen, keyHint } from '../core/Keys.js';
 import { MapSheet } from './MapSheet.js';
@@ -55,15 +57,86 @@ const TIPS = { 1985: [
   'A rider can fall and leave his horse running loose. A dismounted trooper climbs back onto a loose horse of his side.',
   'Only foot takes points. Cavalry rides through, but holds nothing.',
   'The Guard comes once a battle. Keep it for the moment that decides the day.',
+], 1918: [
+  'Infantry takes points; tanks cannot. Send the riflemen in close behind the barrage.',
+  'Machine guns in a trench rule the open ground in front of it. Smoke, the guns or a tank get you across.',
+  'Wire stops infantry dead. Engineers cut it; tanks crush it flat.',
+  'The tanks of 1918 are slow and break down. Keep infantry with them, and a recovery crew behind.',
+  'Gas settles in the low ground. Masked men see less and move slower.',
+  'Forward observers make the guns land tight. Without them, the shells plough no man’s land.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
+], 2027: [
+  'Infantry takes points; vehicles cannot. Let the riflemen lead into the villages.',
+  'Drones see what your squads cannot — and the enemy’s see you. Keep under cover, or keep moving.',
+  'A jammer near the front blinds the enemy’s drones and radios around it. Find theirs, and hit it.',
+  'Guns and rockets hit whatever a drone or an observer has found. Do not bunch up.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
+  'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
 ] };
+// at sea (the year's own ships), on a landing, and the modes' own rules — all shown with the year's
+const SEA_TIPS = {
+  1806: [
+    'A ship of the line fires her broadside to the side, not ahead. Bring her across the enemy, not straight at him.',
+    'The wind decides how fast you sail: against it, a square-rigger crawls. Plan your course with it.',
+    'Shore batteries fire red-hot shot. A ship that catches fire is in more danger than one that is holed.',
+  ],
+  1918: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'A torpedo is slow, but it sinks a battleship. Destroyers screen the big ships against them.',
+    'Big guns hit hard at long range; at short range, the destroyers’ torpedoes decide it.',
+  ],
+  1945: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'Carrier aircraft strike far beyond any gun. Keep fighters over your own fleet.',
+    'Submarines are hard to find. Destroyers hunt them; everything else should stay out of their way.',
+  ],
+  1985: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'Anti-ship missiles strike from beyond sight. Spread your ships out.',
+    'Submarines are hard to find. Frigates and helicopters hunt them; the big ships stay out of their way.',
+  ],
+};
+const LANDING_TIPS = {
+  1806: ['Take the beach sectors first: each one opens the way inland.', 'The boats are easy targets on the row in. The ships’ broadsides cover them.', 'Defending the coast: the batteries cover the beach, but the infantry behind them decides the day.'],
+  1918: ['Take the beach sectors first: each one opens the way inland.', 'The boats and lighters are easy targets on the run in. The warships’ guns cover them.', 'Defending the coast: the trenches and machine guns cover the beach, but the reserves behind them decide the day.'],
+  1945: ['Take the beach sectors first: each one opens the way inland.', 'Landing craft are easy targets on the run in. The naval guns and smoke cover them.', 'Defending the coast: the bunkers cover the beach, but the infantry behind them decides the day.'],
+};
+const MODE_TIPS = {
+  breakthrough: ['Breakthrough: only the line being fought over can be taken. Every line taken brings more reserves and more time.'],
+  hill: ['King of the Hill: while you hold the hill, the enemy’s bar runs down. Five minutes on it wins.'],
+  rearguard: ['Rearguard: supplies are cut halfway through. Dig in early and keep reserves for the second half.'],
+  recon: ['Recon raid: stay hidden. A fight your scouts start is a fight they cannot win.'],
+  lanes: ['Lanes: a lane’s two fortifications must fall before its headquarters can be attacked.'],
+  pitched: ['Pitched battle: no points to take. Set up on good ground — the last side with troops on the field wins.'],
+  infantry: ['Infantry only: no vehicles and no air support — the men on foot and the weapons they carry.'],
+  skirmish: ['Skirmish: the enemy’s follow-on echelons keep coming. Fall back to the next good position in time.'],
+};
+/** A loading-screen tip that fits the battle: its year, at sea or on a landing, sometimes its mode's own. */
+function tipFor(ep, map, mode) {
+  const own = MODE_TIPS[mode] ?? [];
+  const pool = map?.theatre === 'sea' ? SEA_TIPS[ep] ?? SEA_TIPS[1945] : [...(map?.theatre === 'coastal' ? LANDING_TIPS[ep] ?? LANDING_TIPS[1945] : []), ...(TIPS[ep] ?? TIPS[1985])];
+  const from = own.length && Math.random() < 0.5 ? own : pool;
+  return from[Math.floor(Math.random() * from.length)];
+}
 
 /**
  * The armies the theatre's maps allow (a map's `armies`: Omaha is the US Army against the Wehrmacht), per side —
  * null where any of them takes any army.
  */
+/** The year's title and line — or the Pacific's, on its tab (data/epoch.js `pacific`). */
+/** A region's own title and line in theatre `th` (data/epoch.js), the war's where it has none (1806's Germany on land: Jena and Auerstedt). */
+const regionInfo = (ep, reg, th = 'land') => {
+  const R = EPOCHS[ep].regions?.[reg] ?? {}, own = (o) => Object.fromEntries(['title', 'blurb'].filter((k) => o?.[k] != null).map((k) => [k, o[k]]));
+  return { title: EPOCHS[ep].title, blurb: EPOCHS[ep].blurb, ...own(R), ...own(R[th]) };
+};
+const tabTheatre = () => (hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+const tabInfo = () => regionInfo(epoch(), regionIn(epoch(), tabTheatre()), tabTheatre());
+
 export function theatreArmies() {
   const maps = mapsFor(epoch());
-  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
+  return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => armiesOn(m)?.[f]) ? [...new Set(maps.flatMap((m) => armiesOn(m)[f]))] : null]));
 }
 
 /** A side's name as the theatre's maps give it (Aboukir: France and Britain, not 1806's Prussia), else the war's. */
@@ -89,7 +162,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal))) {
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : armyIn(a, regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land'))))) { // (Japan and the Marines: Asia & Pacific only; an army's `regions`)
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -140,7 +213,7 @@ export function loadRules() {
 }
 export function rulesPicker(rules, economy, onChange = () => {}, budget = false) {
   const box = el('div', 'conditions rules');
-  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
+  const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['airfields', 'Airfields', 'Each side’s squadrons are based on an airfield near its base: they take off and land there, and a bombed runway is shut until sappers repair it. Off: they fly in from the map edge'], ['airGroups', 'Air reserve', 'Squadrons of each kind on every carrier and airfield: the ship’s own, or up to ten'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
     ['startCp', 'Starting CP', 'Command points each side starts with'],
     ['income', 'CP income', 'How fast both sides earn command points'],
@@ -199,7 +272,7 @@ const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fig
 const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1918: { nato: 'Royal Navy', pact: 'Kaiserliche Marine' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
-const COMING_EPOCHS = [{ id: '2025', name: '2025', title: 'Near future, 2025' }];
+const COMING_EPOCHS = [];
 const airLabel = (kind) => (epoch() === '1918' ? { jet: 'Ground attack', cap: 'Fighters', recon: 'Spotter', navCap: 'Fighter cover', torpBomb: 'Torpedo seaplanes', navScout: 'Air scouting', asw: 'Sub hunt' } : epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind] ?? KINDS[kind]?.label; // (1985 at sea: the powers' own labels — Missile strike, Fighter cover…)
 
 /** Rows for an aircraft's stats card (systems/AirStrike.js KINDS, data/air.ts). */
@@ -269,6 +342,8 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
     if (!ground.length && sp && s.range > 1) ground.push(`the rest of the team's rifles, out to ${s.range} m`);
     rows.push(['Ground targets', ground.length ? `yes — ${ground.join('; ')}` : 'none: keep it behind the line']);
   }
+  const D = s.defence;
+  if (D) rows.push(['Missile defence', [D.sam && `area SAMs ${D.sam.range} m`, D.point && `point missiles ${D.point.range} m`, D.ciws && `gun ${D.ciws.range} m`, D.chaff && `${D.chaff.count} chaff salvos (Chaff order)`, D.ecm && `jammer: ${Math.round(D.ecm * 100)} % of seekers lose her`].filter(Boolean).join(' · ') + ' — magazines refill near the fleet’s home point']);
   if (s.airRadar) rows.push(['Radar', `warns of aircraft within ${s.airRadar.detect} m; air defence within ${s.airRadar.cover} m reaches further (set up ${s.airRadar.deploy} s)`]);
   if (s.cbRadar) rows.push(['Radar', `locates guns firing within ${s.cbRadar.range} m in a ${Math.round(s.cbRadar.arc * 57.3)}° sector ahead (set up ${s.cbRadar.deploy} s)`]);
   if (s.jammer) rows.push(['Jamming', `enemy support calls, observers and radars within ${s.jammer.radius} m (set up ${s.jammer.deploy} s); seen while it jams`]);
@@ -281,6 +356,12 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.heal) rows.push(['Heals', `wounded infantry within ${s.heal.range} m`]);
   if (s.observer) rows.push(['Observes', `indirect fire on what they see: ${Math.round(s.observer.scatter * 100)} % of the scatter`]);
   if (s.atgm) rows.push(['Missile', `${s.atgm.count} per vehicle, out to ${s.atgm.range} m`]);
+  if (s.aps) rows.push(['Active protection', `${s.aps.name}: shoots down ${s.aps.charges} incoming missiles or rockets, reloaded in a lull`]);
+  if (s.drone) rows.push(['Drones', { recon: `a recon drone over the enemy out to ${s.drone.range} m: what it sees is located for your guns`, fpv: `${s.drone.count} FPV strike drones, one every ${s.drone.every} s, at spotted enemies out to ${s.drone.range} m — into the roof`, lancet: `${s.drone.count} loitering munitions, out to ${s.drone.range} m, at spotted vehicles and guns` }[s.drone.kind]]);
+  if (s.guided) rows.push(['Guided', `${Math.round((s.guided.share ?? 1) * 100)} % of rounds ${s.guided.gps ? 'GPS-guided (not into an enemy jammer)' : 'laser-guided where an observer or drone marks the target'}`]);
+  if (s.scoot) rows.push(['Shoot and scoot', 'once the enemy locates it, it drives to a new firing spot']);
+  if (s.droneJam) rows.push(['Drone jammer', `drones within ${s.droneJam.radius} m lose their link`]);
+  if (s.cage) rows.push(['Cage', 'bars over the turret against drones diving on the roof']);
   if (s.stealth) rows.push(['Stealth', `spotted at ${Math.round(s.stealth * 100)} % of the usual range; holds fire while hidden`]);
   if (s.binoculars) rows.push(['Binoculars', `sight ×1.25 when standing still`]);
   if (s.carries) rows.push(['Carries', `${s.carries.count}-man rifle squad (${keyHint('unload', 'Unload')} unloads)`]);
@@ -307,7 +388,15 @@ export class MainMenu {
     r.classList.remove('loading-open', 'boot');
     r.replaceChildren();
     const side = el('aside', 'menu-side');
-    side.append(el('div', 'menu-brand', logo(GAME.title, epochInfo().title)));
+    side.append(el('div', 'menu-brand', logo(GAME.title, tabInfo().title)));
+    try { // (the boot screen's tagline after a reload: index.html reads these before any module has loaded)
+      const T = {};
+      for (const ep of Object.keys(EPOCHS)) for (const th of THEATRES) {
+        const rs = regionsFor(ep, th.id);
+        if (rs.length) (T[ep] ??= {})[th.id] = Object.fromEntries([['_', regionInfo(ep, rs[0].id, th.id).title], ...rs.map((r) => [r.id, regionInfo(ep, r.id, th.id).title])]);
+      }
+      localStorage.setItem('coldsteel.titles', JSON.stringify(T));
+    } catch (e) { /* storage blocked: the boot screen keeps the war's title */ }
     // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
     const year = el('div', 'seg menu-epoch');
     for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
@@ -332,7 +421,23 @@ export class MainMenu {
       else b.addEventListener('click', () => { if (on) return; settings.set('theatre', t.id); location.reload(); });
       where.append(b);
     }
-    side.append(where);
+    const whereBox = el('div', 'menu-where');
+    whereBox.append(where);
+    side.append(whereBox);
+    // the scenario's region inside the theatre (maps/index.js REGIONS): only when this year has more than one there
+    const th = hasTheatre(epoch(), theatre()) ? theatre() : 'land', regs = regionsFor(epoch(), th);
+    if (regs.length > 1) {
+      const sub = el('div', 'seg menu-epoch menu-region');
+      for (const r of regs) {
+        const on = r.id === regionIn(epoch(), th);
+        const b = el('button', on ? 'on' : '', r.name);
+        b.type = 'button';
+        b.title = `${THEATRES.find((t) => t.id === th)?.name} battles in ${r.name}`;
+        b.addEventListener('click', () => { if (on) return; settings.set('region', r.id); location.reload(); });
+        sub.append(b);
+      }
+      whereBox.append(sub); // (with its theatre: one block, on a phone too)
+    }
     const nav = el('nav', 'menu-nav');
     this.tabs = {};
     for (const [id, label] of [['bootcamp', 'Boot camp'], ['battle', 'Single player'], ['campaign', 'Campaign'], ['multi', 'Multiplayer'], ['units', 'Units'], ['settings', 'Settings']]) {
@@ -342,7 +447,7 @@ export class MainMenu {
       nav.append(b);
       this.tabs[id] = b;
     }
-    side.append(nav, el('p', 'menu-blurb', epochInfo().blurb ?? GAME.blurb));
+    side.append(nav, el('p', 'menu-blurb', tabInfo().blurb ?? GAME.blurb));
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
     this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
@@ -432,7 +537,7 @@ export class MainMenu {
     const chips = el('div', 'map-chips');
     chips.setAttribute('role', 'radiogroup');
     c.map = mapIn(c.map, epoch());
-    const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
+    const about = el('p', 'map-about', mapAbout(MAPS[c.map]));
     const mapChips = [];
     for (const m of mapsFor(epoch())) {
       const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
@@ -444,7 +549,7 @@ export class MainMenu {
         c.map = m.id;
         if (m.conditions) { Object.assign(c, m.conditions); this.refreshConditions?.(); }
         for (const o of chips.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
-        about.textContent = m.description ?? '';
+        about.textContent = mapAbout(m);
         this.sheet?.show(m, c.side);
       });
       chips.append(b);
@@ -469,10 +574,11 @@ export class MainMenu {
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
         : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
       1918: { nato: 'Break the line: infantry behind the barrage, the tanks to flatten the wire, then the cavalry through the gap.', pact: 'Hold the trenches in depth, and storm theirs: the storm troops slip past the strongpoints, the machine guns hold what they take.' },
+      2027: { nato: 'Hold the Gap: keep the land bridge to the Baltic open — find them with drones, jam theirs, and strike what you find before it moves.', pact: 'Cut the Gap: break through between Poland and Lithuania before NATO’s reinforcements arrive — mass the guns, swarm the drones, keep moving.' },
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
       coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
       coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
-    }[atSea ? 'sea' : theatre() === 'coastal' && hasTheatre(epoch(), 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
+    }[atSea ? 'sea' : mapsFor(epoch()).some((m) => m.theatre === 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
@@ -582,9 +688,9 @@ export class MainMenu {
     this.root.classList.remove('menu-open');
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
-    const tips = TIPS[epoch()] ?? TIPS[1985]; // (this war's hints)
-    const tip = tips[Math.floor(Math.random() * tips.length)];
-    const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    const map = MAPS[choice.map] ?? MAPS[this.choice.map];
+    const tip = tipFor(epoch(), map, choice.mode); // (this war's, this kind of battle's)
+    const box = el('div', 'loading-card', `${logo(GAME.title, regionInfo(epoch(), map?.region ?? 'europe', map?.theatre ?? 'land').title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page
@@ -603,14 +709,14 @@ export class MainMenu {
     // on the coast also what only a landing brings (the coastal maps' `landing`): the craft, the landing's warships, the shore's fortifications, the swimmers
     // — per side: the side that lands (its base out at sea, as systems/Landing.js lands()) its craft, warships and swimmers; the other its forts
     const coast = { nato: new Set(), pact: new Set() }, landers = new Set();
-    const onCoast = theatre() === 'coastal' && hasTheatre(epoch(), 'coastal');
+    const onCoast = mapsFor(epoch()).some((m) => m.theatre === 'coastal');
     if (onCoast) {
       for (const m of mapsFor(epoch(), 'coastal')) {
         const L = m.landing ?? {};
         for (const f of ['nato', 'pact']) {
           const b = m.bases?.[f], lands = !!(b && m.river && m.height(b.x, b.z) < m.river.level);
           if (lands) landers.add(f);
-          (lands ? [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...Object.values(L.swim ?? {})] : (L.forts ?? []).map((x) => x.unit)).forEach((id) => coast[f].add(id));
+          (lands ? [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...Object.values(L.swim ?? {})] : []).forEach((id) => coast[f].add(id)); // (the shore's forts: placed by the map, never bought — not on this list)
         }
       }
     }
@@ -621,7 +727,7 @@ export class MainMenu {
     const label = (t) => forArmy(t.variants, this.unit.army, this.unit.faction)?.name ?? t.shortName; // each army's own name
     for (const t of types) {
       const b = el('button', t.id === this.unit.id ? 'on' : '', label(t));
-      const off = (a, f) => (!!t.armies && !t.armies.includes(a)) || (coastal(t) && !coast[f].has(t.id)); // an army's own unit (the NVA's Kampfgruppe); on the coast the other side's craft or forts
+      const off = (a, f) => !armyHas(t, a) || (coastal(t) && !coast[f].has(t.id)); // an army's own unit (the NVA's Kampfgruppe); on the coast the other side's craft or forts
       labels.push([b, t, off]);
       b.hidden = off(this.unit.army, this.unit.faction);
       b.type = 'button';
@@ -650,11 +756,18 @@ export class MainMenu {
     const firstShown = () => { if (!list.querySelector('.on:not([hidden])')) list.querySelector('button:not([hidden])')?.click(); }; // (the shown unit isn't this side's: the first that is)
     const sideToggle = el('div', 'seg faction-seg');
     const only = theatreArmies(); // (the armies this theatre's maps field, as the battle picker: Aboukir France and Britain, no British on land)
-    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : !a.coastal)).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i); // (at sea: one navy a side)
+    const regHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+    const climates = new Set(mapsFor(epoch()).map((m) => m.climate)); // (the Northern Flank's men in their snow smocks, as on its maps)
+    setClimate(climates.size === 1 ? [...climates][0] : undefined);
+    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
+      .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
+    const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
+    sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
-      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? navyName()[a.faction] ?? a.name : a.name);
+      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? a.navy ?? navyName()[a.faction] ?? a.name : a.name); // (an army's own navy: the k.u.k. Kriegsmarine)
       b.type = 'button';
+      b.style.gridRow = a.faction === 'nato' ? '1' : '2'; // (the Allies' armies on the top row, their enemies' on the bottom)
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;
@@ -697,7 +810,7 @@ export class MainMenu {
     }
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? navyName()[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? ARMIES[army]?.navy ?? navyName()[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', a.name));
     if (a.weapon) this.info.append(el('p', 'unit-weapon', a.weapon));
     if (a.text) this.info.append(el('p', 'unit-text', a.text));
@@ -710,7 +823,7 @@ export class MainMenu {
   /** The encyclopedia entry under the stats: use, strengths, counters, history (data/codex.js). */
   codex(id, faction, army = DEFAULT_ARMY[faction]) {
     const ww2 = epoch() !== '1985'; // (another war: its own entry, never 1985's history)
-    const own = { 1945: CODEX45, 1918: CODEX1918, 1806: CODEX1806 }[epoch()]?.[id];
+    const own = { 1945: CODEX45, 1918: CODEX1918, 1806: CODEX1806, 2027: CODEX2027 }[epoch()]?.[id];
     const c = own ? { ...own, ...own.armies?.[army] } : epoch() === '1918' ? null : CODEX[id]; // (1918: its own entries only — 1985's would describe another unit in the same slot: the balloon is no radar) // (1945: its own entry, else 1985's use without 1985's history)
     if (!c) return;
     const text = (t) => t.replace(/\{(\w+)\}/g, (m, a) => keyHint(a, 'its order'));

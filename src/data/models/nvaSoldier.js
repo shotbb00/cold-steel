@@ -23,7 +23,7 @@ const HELMET = 0x4b5139;
 const CAP = 0x1c1c1c;
 const RIG = 0x5b5a43;
 
-function weapon(kind) {
+export function weapon(kind) { // (exported: data/models/soldier85.js arms the Northern Flank and Korea with it)
   switch (kind) {
     case 'mg': // PK: long fluted barrel, skeleton stock, the box under it, bipod
       return {

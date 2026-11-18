@@ -17,7 +17,10 @@
 // spotted ones standing in the fog of war; their gunfire can still be heard.
 
 import * as THREE from 'three';
+import { thermalSees } from './Smoke.js';
+import { year } from '../data/epoch.js';
 const INTERVAL = 0.25;
+const CALL_DELAY = 3; // s a lieutenant is on the radio before the guns fire on what his platoon sees
 const REVEAL_TIME = 3;     // seconds a shot keeps the shooter revealed
 const AWARE = 12;          // metres: noticed this close in any direction, line of sight or not
 const WOODS_CUT = 0.7;     // sight lost looking through solid forest
@@ -139,15 +142,19 @@ export class VisibilitySystem {
     this.timer = INTERVAL;
 
     const terrain = this.world.terrain;
+    const callers = {}; // per watching side: who may call the guns onto what they see (callersOf)
     for (const s of this.world.stacks) {
       const watcher = s.faction === this.player ? this.enemyOfPlayer() : this.player;
       const spotters = [...this.world.combatants(watcher), ...airEyes(this.game, watcher)];
+      const call = (callers[watcher] ??= this.callersOf(watcher));
       let any = false;
       for (const u of s.units) {
         if (!u.alive) continue; // a body stays where (and as) it was last seen
+        if (s.tunnel) { u.spotted = false; u.visible = false; continue; } // (underground: systems/Caves.js)
         // fortifications are on everyone's maps — a concealed one (the Atlantic Wall) once it has been seen, or has given itself away firing: concrete doesn't move
         const fort = s.stats.structure && (!s.stats.concealed || u.known);
         u.spotted = !this.enabled || fort || this.isSeen(u, spotters, terrain);
+        if (call) this.called(u, call, terrain);
         if (u.spotted && s.stats.concealed && !u.known) { u.known = true; if (!s.known && s.faction !== this.player) this.game.tell(this.player, `${s.name} spotted`); s.known = true; }
         if (u.wasSpotted && !u.spotted && s.faction !== this.player && (u.depth ?? 0) > 3) this.lostContact(u); // gone under: mark where
         u.wasSpotted = u.spotted;
@@ -160,6 +167,37 @@ export class VisibilitySystem {
       }
       s.visible = s.faction === this.player || any;
     }
+  }
+
+  /**
+   * Who may bring the guns down on what they see (tester feedback 2026-11-17: every squad that spotted something
+   * called the rocket launchers in): forward observers, tanks and other armour, the guns themselves — at once;
+   * a platoon's lieutenant after CALL_DELAY s on the radio. Not snipers, not ordinary squads. From 1900 (1806:
+   * the guns fire on what they see). null: the side has no guns to call.
+   */
+  callersOf(faction) {
+    const all = this.world.combatants(faction);
+    if (year() < 1900 || !all.some((u) => u.stats.indirect)) return null;
+    const now = [], lt = [];
+    for (const u of all) {
+      const st = u.stack.stats;
+      if (u.stats.observer || u.stats.indirect || (!u.stack.usesCover && !st.naval && (st.armor ?? 0) >= 0.5)) now.push(u);
+      else if (u.officer && u.stack.usesCover) lt.push(u);
+    }
+    return { now, lt };
+  }
+
+  /** Mark enemy `u` as called in (u.calledUntil: systems' indirect fire may shoot it — UnitStack.pickIndirectTarget). */
+  called(u, call, terrain) {
+    const t = this.game.time;
+    if (!u.spotted) { u.ltSince = null; return; }
+    if (call.now.length && this.isSeen(u, call.now, terrain)) { u.calledUntil = t + INTERVAL * 2.5; return; }
+    if (call.lt.length && this.isSeen(u, call.lt, terrain)) {
+      u.ltSince ??= t;
+      if (t - u.ltSince >= CALL_DELAY) u.calledUntil = t + INTERVAL * 2.5;
+      return;
+    }
+    u.ltSince = null;
   }
 
   enemyOfPlayer() {
@@ -201,7 +239,7 @@ export class VisibilitySystem {
       const dz = o.pos.z - u.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 < AWARE * AWARE) return true;
-      if (smoke.blocks(o.pos.x, o.pos.z, u.pos.x, u.pos.z)) continue; // nobody sees through a screen
+      if (smoke.blocks(o.pos.x, o.pos.z, u.pos.x, u.pos.z, thermalSees(os, o.faction))) continue; // nobody sees through a screen (2027: a thermal sight through all but the multispectral)
       if (u.revealT > 0 && d2 < (Math.max(r, base * 0.8) * 1.5) ** 2) return true; // heard / saw the shot (a flash shows in the dark)
       if (d2 > r * r) continue;
       if (this.woods) {

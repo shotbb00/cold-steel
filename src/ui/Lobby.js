@@ -13,7 +13,7 @@
 // (host, again on every change) · lobbyReady { ready } (joiner) · chat { from, text } (both) →
 // start { … } (host). A version mismatch gets refuse { reason }.
 import { epoch } from '../data/epoch.js';
-import { MAPS, mapsFor, mapIn } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, mapAbout } from '../maps/index.js';
 import { MODES } from '../modes/index.js';
 import { FACTIONS, enemyOf } from '../data/factions.js';
 import { NET_VERSION } from '../net/protocol.js';
@@ -180,7 +180,7 @@ export class Lobby {
     const box = el('div', 'map-pick');
     const row = el('div', 'map-chips');
     row.setAttribute('role', 'radiogroup');
-    const about = el('p', 'map-about', list.find((m) => m.id === current)?.description ?? '');
+    const about = el('p', 'map-about', mapAbout(list.find((m) => m.id === current)));
     for (const m of list) {
       const b = el('button', `map-chip${m.id === current ? ' on' : ''}`, m.name);
       b.type = 'button';
@@ -188,7 +188,7 @@ export class Lobby {
       b.setAttribute('aria-checked', String(m.id === current));
       b.addEventListener('click', () => {
         for (const o of row.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
-        about.textContent = m.description ?? '';
+        about.textContent = mapAbout(m);
         pick(m);
       });
       row.append(b);

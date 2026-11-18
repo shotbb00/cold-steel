@@ -1,7 +1,9 @@
 // Off Brest (the 1806 sea battles): the French fleet breaks out of its port past the rocks of the Breton coast;
 // the British blockading squadron waits offshore to the west. Granite islets and reefs off the headlands
 // (Ouessant's kind), a narrow passage between them, a hard westerly under a grey sky — a gale when it rains:
-// the lower deck ports shut. The French come from the east, the British from the west.
+// the lower deck ports shut. The French come from the east, the British from the west. Fair: the passage and
+// the sound in the middle as near one fleet as the other; the British have the water off the islets out to
+// the west, the French the water under the Pointe Saint-Mathieu at the mouth of the Iroise — each as close to its own.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -32,6 +34,7 @@ const points: ControlPointDef[] = [
   { id: 'B', name: 'The passage', x: 0, z: -350, owner: null, sector: 'centre', radius: 150 },
   { id: 'C', name: 'Iroise sound', x: 100, z: 650, owner: null, sector: 'centre', radius: 180 },
   { id: 'D', name: 'Off the islets', x: -900, z: 1100, owner: null, sector: 'west', radius: 170 },
+  { id: 'E', name: 'Saint-Mathieu', x: 870, z: -850, owner: null, sector: 'east', radius: 160 },
   { id: 'K', name: 'The inshore squadron', x: -1650, z: 300, owner: 'pact', sector: 'west', radius: 160 },
 ];
 

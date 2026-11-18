@@ -37,6 +37,7 @@ import airAssault from './airAssault.ts';
 import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 import { SHIPS_1985 } from './ships85.js';
+import armies85 from './armies85.js';
 
 export const UNIT_TYPES = {
   [rifles.id]: rifles,
@@ -78,6 +79,8 @@ export const UNIT_TYPES = {
   ...SHIPS_1985,   // the open-sea maps' warships (./ships85.js)
   ...BALTIC_85,    // the coastal maps' Pact ships and landing craft (./baltic85.js)
 };
+
+armies85(UNIT_TYPES); // the Northern Flank's and Korea's armies: Norway, the Marines, the ROK Army, the KPA (./armies85.js)
 
 /** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */
 export const TYPES_1985 = { ...UNIT_TYPES };

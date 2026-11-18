@@ -160,12 +160,13 @@ export const buildBwPionier = vehicle(() => ({
     P.box(0.5, 0.3, 0.5, { x: 0.8, y: 2.45, z: 0.2, color: BW_DK }),
     // the crew compartment: its hatches with their periscopes, the vision blocks round it, a stowage basket, the whips
     ...[[0.7, 0.9], [-0.4, 0.9]].map(([x, z]) => P.cyl(0.28, 0.28, 0.06, { x, y: 2.33, z, color: BW_DK }, 14)),
-    ...pair((s) => [0.0, 0.6, 1.2].map((z) => P.box(0.04, 0.12, 0.2, { x: s * 1.46, y: 2.05, z, color: GLASS }))).flat(),
+    ...pair((s) => [0.0, 0.6, 1.2].map((z) => P.box(0.04, 0.12, 0.2, { x: 0.15 + s * 1.31, y: 2.05, z, color: GLASS }))).flat(), // (on the superstructure's sides: it sits 0.15 to the right)
     ...[-0.6, 0, 0.6].map((x) => P.box(0.12, 0.08, 0.04, { x, y: 2.0, z: 1.72, rx: -0.3, color: GLASS })),
     P.box(2.0, 0.25, 0.6, { y: 2.42, z: -0.8, color: 0x575a40 }),
     ...pair((s) => P.cyl(0.006, 0.006, 2.4, { x: s * 1.1, y: 3.5, z: -0.5, color: STEEL }, 4)),
     // the tow bar carried on the left, the winch's cable fairlead at the back, a spare track link or two
-    P.box(0.1, 0.12, 3.0, { x: -1.72, y: 1.5, z: -0.6, color: STEEL }),
+    P.box(0.16, 0.12, 3.0, { x: -1.66, y: 1.5, z: -0.6, color: STEEL }),
+    ...[-1.7, 0.5].map((z) => P.box(0.06, 0.7, 0.06, { x: -1.66, y: 1.15, z, color: STEEL })), // (its brackets down to the track guard)
     P.box(0.8, 0.4, 0.2, { y: 1.1, z: -3.62, color: STEEL }),
     ...[0.0, 0.5].map((z) => P.box(0.55, 0.06, 0.4, { x: 0.9, y: 1.42, z: 2.4 + z, rx: 0.35, color: STEEL })),
   ]),
@@ -333,8 +334,8 @@ export const buildNvaT55Recovery = vehicle(() => ({
     ...[0, 1, 2, 3].map((k) => P.box(0.1, 0.07, 0.04, { x: -0.5 + Math.sin(k * 0.8 - 1.2) * 0.32, y: 2.34, z: 1.1 + Math.cos(k * 0.8 - 1.2) * 0.32, ry: k * 0.8 - 1.2, color: GLASS })),
     P.box(0.12, 0.1, 0.5, { x: -0.5, y: 2.45, z: 1.3, color: STEEL }),                                    // …and its DShK
     ...pair((s) => [0.0, 0.8].map((z) => P.box(0.04, 0.12, 0.2, { x: s * 1.11, y: 2.0, z, color: GLASS }))).flat(),
-    P.box(1.8, 0.4, 1.0, { y: 1.6, z: -1.6, color: 0x575a40 }),                                         // the spare-parts load on the deck
-    ...[[-0.5, -1.6], [0.5, -1.6]].map(([x, z]) => P.cyl(0.3, 0.3, 0.3, { x, y: 1.95, z, color: NVA_DK }, 12)),
+    P.box(1.8, 0.5, 1.0, { y: 1.5, z: -1.6, color: 0x575a40 }),                                         // the spare-parts load on the deck
+    ...[[-0.5, -1.6], [0.5, -1.6]].map(([x, z]) => P.cyl(0.3, 0.3, 0.3, { x, y: 1.85, z, color: NVA_DK }, 12)),
   ]),
   turret: {
     geo: grime(merge([

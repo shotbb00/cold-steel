@@ -5,6 +5,7 @@
 //   support powers  always there in their own row: helicopter, jet, air assault, fighters, recon — each with
 //                   its price, or while it recharges a ring running round and the seconds left
 // Rebuilt when the selection changes, and twice a second (rounds run out, squads climb in).
+import { supportIcon } from './SupportIcons.js';
 import { POWERS_1806, powerHere, ownPowers } from '../systems/Powers1806.js';
 import { epoch, year } from '../data/epoch.js';
 import { refillCost } from '../core/Orders.js';
@@ -39,6 +40,7 @@ const ACTIONS = [
   { cmd: 'ship:searchlight', label: 'Searchlight', icon: 'recon', key: 'none', tip: 'At night: the beam on her target — everyone sees it as by day. And everyone sees where the beam comes from', when: (sel, g) => g.conditions?.night && sel.some((s) => s.stats.naval && !s.stats.submarine), on: (sel) => sel.some((s) => s.searchlight) },
   { cmd: 'ship:scuttle', label: 'Scuttle', icon: 'mines', key: 'none', tip: 'Fire the charges and open the sea cocks: she sinks where she lies. Between the canal piers she blocks the canal — anywhere else she is wasted', when: (sel) => sel.some((s) => s.stats.blockship) },
   { cmd: 'ship:mines', label: 'Lay mines', icon: 'mines', key: 'none', tip: 'Mines off the stern while she is under way, until she has laid them all: your ships know where they are, the enemy only when one goes off under him', when: (sel) => sel.some((s) => s.stats.minelayer), on: (sel) => sel.some((s) => s.laying) },
+  { cmd: 'ship:chaff', label: 'Chaff', icon: 'smoke', key: 'none', tip: 'Fire chaff now: a cloud of foil off her beam that an incoming missile\'s seeker may take for her. Fire it before the seekers switch on — near the fleet\'s home point her launchers are refilled', when: (sel) => sel.some((s) => s.stats.defence?.chaff) },
   { cmd: 'ship:smoke', label: 'Lay smoke', icon: 'smoke', key: 'none', tip: 'A minute of smoke off the stern while under way: nobody sees through it — go in behind it, or get out. Two minutes to make more', when: (sel) => sel.some((s) => s.stats.smokeGen), on: (sel) => sel.some((s) => s.smokeUntil > s.world.time) },
   { cmd: 'holdFire', label: (g) => ([...g.commands.selected].some((s) => s.holdFire) ? 'Holding fire' : 'Hold fire'), icon: 'stop', key: 'holdFire', tip: 'Hold fire: they shoot only at what you order them to attack (or at an enemy right on top of them). Again: fire at will', when: (sel) => sel.some((s) => s.stats.damage > 0 && !s.stats.structure), on: (sel) => sel.some((s) => s.holdFire) },
   { cmd: 'sprint', label: 'Sprint', icon: 'charge', key: 'sprintOrder', tip: 'Infantry on the move runs for 10 s, then is winded (slower) for 20 s. With a mouse: give the move order twice', when: (sel) => sel.some((s) => s.usesCover && s.moveTarget && !s.stats.structure), on: (sel) => sel.some((s) => s.sprinting) },
@@ -78,6 +80,7 @@ const ACTIONS = [
   { cmd: 'charge', label: 'Charge!', icon: 'charge', key: 'charge', tip: 'Foot: bayonets, at the run. Horse: at the gallop, sabres out. At the nearest enemy in sight — horses will not go into a square', when: (sel) => sel.some((s) => s.stats.formations || (s.stats.cavalry && !s.stats.loose)) },
   { cmd: 'house:sandbag', label: 'Sandbag house', icon: 'sandbags', key: 'none', cost: () => HOUSE_UPGRADES.sandbag.cost, tip: 'Sandbags along the walls of the house this squad holds: the men at its windows take much less (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.fortified) },
   { cmd: 'house:aid', label: 'Aid station', icon: 'reinforce', key: 'none', cost: () => HOUSE_UPGRADES.aid.cost, tip: 'Make the house this squad holds an aid station: a medic jeep stays posted there and drives out to wounded squads (building budget)', when: (sel) => year() >= 1900 && sel.some((s) => s.entered && !s.entered.aid) },
+  { cmd: 'tunnel', label: 'Tunnel', icon: 'leave', key: 'none', tip: 'Into the tunnels at this cave mouth, out at another you pick: unseen and out of reach on the way (the walk through the rock takes a while)', when: (sel, g) => sel.some((s) => g.caves?.canEnter(s)) },
   { cmd: 'leave', label: 'Leave', icon: 'leave', key: 'leave', tip: 'Come out of the building and hold next to it', when: (sel) => sel.some((s) => s.garrison) },
 ];
 
@@ -88,6 +91,8 @@ const SUPPORT = [
   ['air:lift', 'assault', 'lift', 'Air assault', 'A helicopter lands a squad where you click'],
   ['air:cap', 'fighter', 'cap', 'Fighters', 'Fighter patrol: circles over the spot and shoots down enemy aircraft that come near'],
   ['air:recon', 'recon', 'recon', 'Recon', 'Recon flight: a photo run along the line — every enemy near it shows on your map for 30 s'],
+  ['air:lightBomber', 'jet', 'none', 'Light bombers', 'A flight of bombers from the airfield: level over the spot, a stick of bombs along the line'],
+  ['air:heavyBomber', 'jet', 'none', 'Heavy bombers', 'Heavy bombers from bases far behind the lines, too big for a field strip: high and slow, a long carpet of bombs along the line'],
   ['barrage', 'flare', 'barrage', 'Barrage', 'Preparatory barrage: a whole sector shelled for a minute (Soviet Army)'],
   ['gas', 'flare', 'lift', 'Gas', 'Gas bombardment: shells that leave clouds drifting with the wind — men without masks fall, masked men move and shoot worse (1918)'],
   ['air:diveBomb', 'diveBomb', 'jet', 'Dive bombers', 'From the carrier: a bomb onto the enemy ship nearest the spot'],
@@ -137,7 +142,13 @@ export class ActionBar {
       const kind = cmd === 'air' ? 'heli' : cmd.startsWith('air:') ? cmd.slice(4) : null;
       const me = this.game.playerFaction;
       const own = kind && KINDS[kind]?.aircraft?.[this.game.armyOf(me)] ? this.game.armyOf(me) : me;
-      const art = kind === 'lift' && epoch() === '1945' ? icon('parachute') : kind && (KINDS[kind]?.sea || KINDS[kind]?.coast) ? icon(ic) : kind ? silhouette(`air-${kind}`, own, 'ico sup-sil') : icon(ic); // (the paradrop: a parachute)
+      // what it does, where it lands, where it comes from (ui/SupportIcons.js); the army's own aircraft on the long-press card
+      const bar = cmd === 'barrage' ? barrageOf(this.game, me) : null;
+      const variant = cmd !== 'barrage' ? null : bar?.id === 'tot' ? 'tot' : bar?.id === 'creep' ? 'creep' : bar ? 'barrage' : 'walze';
+      const art = supportIcon(cmd, epoch(), variant) || icon(ic);
+      b.dataset.sil = kind && !(KINDS[kind]?.sea || KINDS[kind]?.coast) ? `air-${kind}|${own}` : '';
+      b.dataset.name = label;
+      b.dataset.tip = tip;
       b.innerHTML = `<i class="cd"></i>${art}<span class="sup-name">${label}</span><small></small>${keyOf(key) === "—" ? "" : `<kbd data-key="${key}">${keyOf(key)}</kbd>`}`;
       return { b, cmd, small: b.querySelector('small') };
     });
@@ -183,13 +194,14 @@ export class ActionBar {
       const left = Math.ceil(mass !== null ? g.barrage.cooldownLeft(me) : g.air.cooldownLeft(me, kind));
       const total = mass ? mass.cooldown : mass === false ? 1 : g.air.span[g.air.key(me, kind)] ?? KINDS[kind].cooldown;
       const terms = kind ? g.air.terms(me, kind) : null;
-      const aboard = kind && KINDS[kind]?.sea && KINDS[kind].deck !== 'optional' ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers; 1985's come from the shore too)
+      const aboard = kind && ((KINDS[kind]?.sea && KINDS[kind].deck !== 'optional') || (!KINDS[kind]?.sea && g.air.based(me, kind))) ? g.air.aboard(me, kind) : null; // (at sea: flights aboard the carriers — 1985's come from the shore too; on land: on the airfields)
       const text = left > 0 ? `${left} s` : aboard === 0 ? 'none aboard' : `${mass !== null ? mass.cost ?? '' : terms.cost}${aboard != null ? ` · ${aboard}` : ''}`;
       b.classList.toggle('airland', !!terms?.airland); // the US Army's AirLand Battle: cheaper right now
       if (small.textContent !== text) small.textContent = text;
       b.classList.toggle('cooling', left > 0);
       b.style.setProperty('--cd', left > 0 ? String(1 - left / total) : '1');
       b.hidden = off || mass === false || !!(kind && KINDS[kind]?.off) // (not in this war: data/epoch.js)
+        || aboard != null // (flown from a carrier or an airfield: launched from that base's own buttons, not from here)
         || (mass !== null ? !!g.world.openSea : !!KINDS[kind]?.sea !== !!g.world.openSea) // (at sea: the carrier missions only)
         || !!(KINDS[kind]?.coast && (!g.world.coastal || g.landing?.lands(me))); // (the coast's strike: the defence of a coastal map only)
       if (mass?.id === 'creep' && b.querySelector('.sup-name').textContent !== 'Creeping barrage') { b.querySelector('.sup-name').textContent = 'Creeping barrage'; b.title = 'Creeping barrage — a belt of shells that walks forward toward the enemy; follow it with your infantry'; }
@@ -202,6 +214,17 @@ export class ActionBar {
     const sel = [...g.commands.selected].filter((s) => s.alive);
     const foot = sel.length && sel.every((s) => s.stats.formations); // 1806 companies: they don't dig, wire or mine (the pioneers do)
     const shown = ACTIONS.filter((a) => a.when(sel, g) && !(foot && a.cmd.startsWith('build:')) && !(year() < 1900 && ['build:wire', 'build:mines', 'build:mgNest', 'build:tankTraps', 'build:camoNet'].includes(a.cmd))); // (1806: none of the modern works)
+    // a carrier or an airfield on its own: its squadrons, each kind with how many are in (launch them from here)
+    const base = sel.length === 1 && sel[0].stats.carrier && sel[0].faction === g.playerFaction ? sel[0] : null;
+    if (base) {
+      const hangar = g.air.hangar(base.units[0]);
+      for (const kind of Object.keys(hangar)) {
+        if (KINDS[kind]?.off) continue;
+        const sup = SUPPORT.find((x) => x[0] === `air:${kind}`);
+        shown.push({ art: supportIcon(`air:${kind}`, epoch()), cmd: `air:${kind}@${base.id}`, label: () => `${KINDS[kind].label}${hangar[kind] ? '' : ' — none in'}`, icon: sup?.[1] ?? 'jet', key: 'none',
+          tip: `Launch from ${base.name}: ${sup?.[4] ?? KINDS[kind].label}. Back here, a flight is rearmed in a minute`, count: () => hangar[kind] });
+      }
+    }
     // only touch the DOM when what's shown changed
     const key = shown.map((a) => `${a.cmd}:${a.count?.(sel) ?? ''}:${a.on?.(sel) ? 1 : 0}:${typeof a.label === 'function' ? a.label(g) : ''}`).join('|'); // (a label that changes: the engine order, hold fire)
     if (!force && key === this.key) return;
@@ -216,7 +239,7 @@ export class ActionBar {
       const cost = value(a.cost, g);
       b.title = `${label}${cost ? ` (${cost} CP)` : ''} — ${value(a.tip, g)}`;
       const n = a.count?.(sel);
-      b.innerHTML = `${icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
+      b.innerHTML = `${a.art || icon(a.icon)}<span>${label}</span>${cost ? `<small>${cost}</small>` : ''}${n ? `<small class="n">×${n}</small>` : ''}${keyOf(a.key) === "—" ? "" : `<kbd data-key="${a.key}">${keyOf(a.key)}</kbd>`}`;
       return b;
     }));
     this.el.hidden = !shown.length;

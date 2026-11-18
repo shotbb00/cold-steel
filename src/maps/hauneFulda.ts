@@ -4,9 +4,13 @@
 // has three bridges, one on each road, and nothing else: blow them and only a bridge layer
 // gets you over again. Every way onto the middle ground is a choke point.
 // Bridgehead villages on both outer banks, five villages on the middle ground; the centre village
-// lies between the two centre bridges, not on either. Point-mirrored, like the other maps.
+// lies between the two centre bridges, not on either. Not a mirror: the Fulda swings in its own
+// wider bends, and its bridges stand at other places than the Haune's (Schlitz further in, Wehrda
+// off-centre, Neukirchen further out), so the roads cross the middle ground on the slant. Fair by
+// value: three bridges each, the bridgehead villages ~90 m beyond the water, a high wooded height
+// and a lower one over each outer bank, two knolls on each half of the middle ground.
 // One river object with two channels (world/River.js `paths`). The big field (1.0 × 1.12 km): the
-// rivers ~400 m apart, the roads and bridges at x = ∓300, 0.
+// rivers ~400 m apart.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -17,13 +21,14 @@ import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const ROAD_X = 300;
+const HAUNE_X = [-300, 0, 300];   // the bridges over the Haune (Burghaun, Kirchhasel, Steinbach)
+const FULDA_X = [-255, 45, 335];  // and over the Fulda (Schlitz, Wehrda, Neukirchen)
 const noise = createNoise2D(1909);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
-// the Haune on NATO's side, the Fulda on the Pact's: each the other point-mirrored
+// the Haune on NATO's side, the Fulda on the Pact's, each with its own bends
 const hauneZ = (x) => 200 + 16 * Math.sin(x * 0.006) + 7 * Math.sin(x * 0.017 + 1);
-const fuldaZ = (x) => -hauneZ(-x);
+const fuldaZ = (x) => -205 + 20 * Math.sin(x * 0.0047 + 2.1) + 7 * Math.sin(x * 0.019 - 0.6);
 const away = (x, z) => Math.min(Math.abs(z - hauneZ(x)), Math.abs(z - fuldaZ(x)));
 
 const river = createRiver({
@@ -33,19 +38,23 @@ const river = createRiver({
   depth: 2.4,
   valley: 52,
   crossings: [
-    { name: 'Burghaun bridge', x: -ROAD_X, kind: 'bridge', width: 7, channel: 0 },
-    { name: 'Kirchhasel bridge', x: 0, kind: 'bridge', width: 8, channel: 0 },
-    { name: 'Steinbach bridge', x: ROAD_X, kind: 'bridge', width: 7, channel: 0 },
-    { name: 'Neukirchen bridge', x: ROAD_X, kind: 'bridge', width: 7, channel: 1 },
-    { name: 'Wehrda bridge', x: 0, kind: 'bridge', width: 8, channel: 1 },
-    { name: 'Schlitz bridge', x: -ROAD_X, kind: 'bridge', width: 7, channel: 1 },
+    { name: 'Burghaun bridge', x: HAUNE_X[0], kind: 'bridge', width: 7, channel: 0 },
+    { name: 'Kirchhasel bridge', x: HAUNE_X[1], kind: 'bridge', width: 8, channel: 0 },
+    { name: 'Steinbach bridge', x: HAUNE_X[2], kind: 'bridge', width: 7, channel: 0 },
+    { name: 'Neukirchen bridge', x: FULDA_X[2], kind: 'bridge', width: 7, channel: 1 },
+    { name: 'Wehrda bridge', x: FULDA_X[1], kind: 'bridge', width: 8, channel: 1 },
+    { name: 'Schlitz bridge', x: FULDA_X[0], kind: 'bridge', width: 7, channel: 1 },
   ],
 });
 
-// the low wooded knolls on the middle ground (and their mirrors)
-const KNOLLS = [[-166, 52, 40, 6], [105, 70, 32, 4]];
-// the heights over the outer banks (and their mirrors)
-const HEIGHTS = [[-210, 360, 45, 10], [260, 400, 36, 7]];
+// the low wooded knolls on the middle ground: two on each half of it, none the other's twin
+const KNOLLS = [[-170, 55, 40, 6], [110, 66, 30, 4.4], [190, -62, 34, 5.6], [-62, -78, 44, 4.6]];
+// the heights over the outer banks: a high wooded one and a lower one each side, in their own places
+const HEIGHTS = [[-190, 362, 45, 10.4], [260, 400, 36, 7], [135, -352, 40, 9.2], [-305, -392, 44, 7]];
+
+/** The roads: each runs from its Haune bridge to its Fulda bridge, on the slant over the middle ground. */
+const roadX = (k, z) => HAUNE_X[k] + (FULDA_X[k] - HAUNE_X[k]) * smoothstep(150, -150, z) + Math.sin(z * 0.03 + k) * 3;
+const roadDist = (x, z) => Math.min(...HAUNE_X.map((_, k) => Math.abs(x - roadX(k, z))));
 
 function height(x, z) {
   const ax = Math.abs(x);
@@ -53,8 +62,8 @@ function height(x, z) {
   let h = fbm(noise, x * 0.004, z * 0.004, 5) * 5;                         // rolling ground
   h += fbm(noise, x * 0.05 + 50, z * 0.05, 3) * 0.5;
   h += smoothstep(60, 200, away(x, z)) * (7 + ridged(noise, x * 0.008 + 3, z * 0.008, 4) * 7); // the ground climbs away from the water
-  for (const [cx, cz, r, a] of KNOLLS) h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a);
-  for (const [cx, cz, r, a] of HEIGHTS) h += hill(x, z, cx, cz, r, a) + hill(x, z, -cx, -cz, r, a); // heights over the outer banks
+  h += x * 0.009;                                                          // the whole country falls gently west, toward Hersfeld (alike for both sides)
+  for (const [cx, cz, r, a] of [...KNOLLS, ...HEIGHTS]) h += hill(x, z, cx, cz, r, a);
   h += smoothstep(500, 620, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded edges
   h += smoothstep(560, 680, az) * 18;
   for (const bz of [BASE_Z, -BASE_Z]) {
@@ -69,20 +78,21 @@ const pactName = { '1st Platoon': '1-ya Rota' };
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Eiterfeld', x: 0, z: BASE_Z - 34, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Burghaun', x: -ROAD_X, z: hauneZ(-ROAD_X) + 90, owner: null, sector: 'west' },
-  { id: 'C', name: 'Rothenkirchen', x: -262, z: 38, owner: null, sector: 'west' },
-  { id: 'D', name: 'Steinbach', x: ROAD_X, z: hauneZ(ROAD_X) + 90, owner: null, sector: 'east' },
-  { id: 'E', name: 'Hünhan', x: -96, z: 88, owner: null, sector: 'centre' },
-  { id: 'F', name: 'Kirchhasel', x: 0, z: 0, owner: null, sector: 'centre' },
-  { id: 'G', name: 'Großenmoor', x: 96, z: -88, owner: null, sector: 'centre' },
-  { id: 'H', name: 'Neukirchen', x: ROAD_X, z: fuldaZ(ROAD_X) - 90, owner: null, sector: 'east' },
-  { id: 'I', name: 'Wehrda', x: 262, z: -38, owner: null, sector: 'east' },
-  { id: 'J', name: 'Schlitz', x: -ROAD_X, z: fuldaZ(-ROAD_X) - 90, owner: null, sector: 'west' },
+  { id: 'B', name: 'Burghaun', x: HAUNE_X[0], z: hauneZ(HAUNE_X[0]) + 90, owner: null, sector: 'west' },
+  { id: 'C', name: 'Rothenkirchen', x: -245, z: 50, owner: null, sector: 'west' },
+  { id: 'D', name: 'Steinbach', x: HAUNE_X[2], z: hauneZ(HAUNE_X[2]) + 90, owner: null, sector: 'east' },
+  { id: 'E', name: 'Hünhan', x: -105, z: 85, owner: null, sector: 'centre' },
+  { id: 'F', name: 'Kirchhasel', x: 22, z: 4, owner: null, sector: 'centre' },
+  { id: 'G', name: 'Großenmoor', x: 115, z: -72, owner: null, sector: 'centre' },
+  { id: 'H', name: 'Neukirchen', x: FULDA_X[2], z: fuldaZ(FULDA_X[2]) - 90, owner: null, sector: 'east' },
+  { id: 'I', name: 'Wehrda', x: 275, z: -45, owner: null, sector: 'east' },
+  { id: 'J', name: 'Schlitz', x: FULDA_X[0], z: fuldaZ(FULDA_X[0]) - 90, owner: null, sector: 'west' },
   { id: 'K', name: 'Niederaula', x: 0, z: -(BASE_Z - 34), owner: 'pact', sector: 'centre' },
 ];
 
 export default {
   id: 'haune-fulda',
+  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
   name: 'Haune and Fulda',
   description: 'Two rivers split the land in three. The middle ground between them is where the battle is won — and every way onto it is a bridge.',
   size: 1600,
@@ -126,12 +136,15 @@ export default {
       meadow: '#66753f',
       farmX: [520, 600],
       farmZ: [580, 660],
-      roads: [-ROAD_X, 0, ROAD_X],  // every road meets a crossing on both rivers
-      roadZ: 540,
+      roads: [],                    // (the roads are the map's own: surface below)
+      surface(x, z) {               // every road meets a crossing on both rivers
+        const r = smoothstep(5, 2.5, roadDist(x, z)) * smoothstep(540, 512, Math.abs(z));
+        return r > 0 ? [0x5a4a3a, r * 0.6] : null;
+      },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-ROAD_X, 0, ROAD_X] }, pact: { x: 0, z: -BASE_Z, entries: [-ROAD_X, 0, ROAD_X] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: HAUNE_X }, pact: { x: 0, z: -BASE_Z, entries: FULDA_X } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
@@ -146,28 +159,23 @@ export default {
     const nearPoint = (x, z, r) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
     const nearWater = (x, z, r) => away(x, z) < river.halfWidth + r;
 
-    // villages: the mirrored pairs share a seed; the centre village stands alone
-    for (const p of points) {
-      if (p.z < 0) continue;
-      const seed = 9300 + Math.round(p.x * 3 + p.z);
-      buildVillage(props, p, seed, 1);
-      if (p.z > 0) buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
-    }
-    // cover on our half (outer bank and our side of the middle ground), mirrored
+    // villages, each its own layout
+    for (const p of points) buildVillage(props, p, 9300 + Math.round(p.x * 3 + p.z * 7), 1);
+    // cover: as many sites on each half (outer bank and that side of the middle ground), each half its own
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 140 && tries < 9000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 6 + rand() * (bounds.z - 26);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 34) || nearWater(x, z, 9)) continue;
-      if (river.crossings.some((c) => Math.abs(x - c.x) < 16 && Math.abs(z - c.z) < 40)) continue;
-      sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+    for (const side of [1, -1]) {
+      let n = 0;
+      for (let tries = 0; n < 140 && tries < 9000; tries++) {
+        const x = (rand() * 2 - 1) * (bounds.x - 20);
+        const z = side * (6 + rand() * (bounds.z - 26));
+        if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28)) continue;
+        if (Math.hypot(x, z - side * BASE_Z) < 40 || nearPoint(x, z, 34) || nearWater(x, z, 9) || roadDist(x, z) < 6) continue;
+        if (river.crossings.some((c) => Math.abs(x - c.x) < 16 && Math.abs(z - c.z) < 40)) continue;
+        sites.push({ x, z, kind: kinds[n++ % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+      }
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     commandPost(props, this.bases.nato, -1, 0x4e5236);
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);
     props.finish();
@@ -181,7 +189,7 @@ export default {
       if (d < river.halfWidth + 1) return -1; // not in the water
       const bank = d < river.halfWidth + 12 ? 0.55 : 0;
       let woods = 0;
-      for (const [cx, cz, r] of [...KNOLLS, ...HEIGHTS]) woods = Math.max(woods, hill(x, z, cx, cz, r, 1), hill(x, z, -cx, -cz, r, 1));
+      for (const [cx, cz, r] of [...KNOLLS, ...HEIGHTS]) woods = Math.max(woods, hill(x, z, cx, cz, r, 1));
       return Math.max(bank, woods > 0.45 ? 0.8 : 0);
     };
     const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, forest });

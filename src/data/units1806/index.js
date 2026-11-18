@@ -18,7 +18,7 @@ const T = TYPES_1985;
 const men = (o = {}) => ({
   nato: () => buildNapSoldier({ army: 'fr', ...o }), by: () => buildNapSoldier({ army: 'by', ...o }),
   pact: () => buildNapSoldier({ army: 'pr', ...o }), sx: () => buildNapSoldier({ army: 'sx', ...o }),
-  gb: () => buildNapSoldier({ army: 'gb', ...o }),
+  gb: () => buildNapSoldier({ army: 'gb', ...o }), ru: () => buildNapSoldier({ army: 'ru', ...o }),
 });
 
 /** Smoothbore musket and drill, shared by the foot. */
@@ -55,7 +55,7 @@ const rifles = {
 // weapon is the charge (UnitStack.startCharge): at the gallop into the enemy, the shock to its nerve,
 // then the sabres; a square stops them. Pistols and carbines for close range. A trooper's death may
 // leave a loose horse or a man on foot (UnitStack.unhorse).
-const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx', gb: 'gb' };
+const ARMY_KEY = { nato: 'fr', by: 'by', pact: 'pr', sx: 'sx', gb: 'gb', ru: 'ru' };
 const mounts = (kind, mounted = true) => Object.fromEntries(Object.entries(ARMY_KEY).map(([k, army]) => [k, () => buildCavalry({ army, kind, mounted })]));
 const HORSE = {
   armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
@@ -311,32 +311,60 @@ const bridgeLayer = wagon('bridgeLayer', 'pontoon', {
   },
 });
 
-// ------------------------------------------------------------------ the British (Egypt 1801)
-// Abercromby's army at Aboukir (data/epoch.js 'gb', the coastal battle only): each type's British name
-// and look. The Highlanders take the grenadiers' place, the Foot Guards the Guard's.
+// ------------------------------------------------------------------ the British (Egypt 1801, the Peninsula 1808–09)
+// Abercromby's army at Aboukir and Wellesley's in Portugal and Spain (data/epoch.js 'gb'): each type's
+// British name and look. The Highlanders take the grenadiers' place, the Foot Guards the Guard's, the
+// 95th in green the riflemen's.
 const GB = {
   rifles: { name: 'Regiment of Foot', weapon: 'India Pattern musket, bayonet', text: 'The British line infantry in red: two ranks, not three, so every musket fires. Steady volleys, then the bayonet.' },
   mgTeam: { name: 'Light Infantry', weapon: 'Light musket, bayonet', text: 'The light companies, the "light bobs": out in front in open order, shooting the enemy\'s skirmishers and gunners.' },
-  atTeam: { name: 'Highlanders', weapon: 'Musket, bayonet', text: 'The 42nd Black Watch and the Gordon Highlanders in kilt and feather bonnet: first up the sand hills, last to give way.' },
-  sniper: { name: 'Riflemen', weapon: 'Baker rifle', text: 'The new Rifle Corps in green: rifles that reach twice as far as a musket, slow to load, aimed at officers and gunners.' },
+  atTeam: { name: 'Highlanders', weapon: 'Musket, bayonet', text: 'The Highland regiments in kilt and feather bonnet — the Black Watch at Aboukir, the 71st at Vimeiro: first into the assault, last to give way.' },
+  sniper: { name: '95th Rifles', weapon: 'Baker rifle', text: 'The Rifle Corps in green, the 95th: rifles that reach twice as far as a musket, slow to load, aimed at officers and gunners from any cover they find.' },
   engineers: { name: 'Royal Military Artificers', weapon: 'Musket, pick, axe', text: 'The engineers\' working men: breastworks on the sand, a way through the abatis, gun platforms on the beach.' },
   observers: { name: 'Royal Artillery officers', weapon: 'Telescope, sword', text: 'Gunner officers with their telescopes: every gun of yours lands tight on what they can see.' },
   guard: { name: 'Foot Guards', weapon: 'Musket, bayonet', text: 'The Brigade of Guards, the Coldstream and the Third: picked men who do not break.' },
-  reconVehicle: { name: 'Light Dragoons', weapon: 'Sabre, carbine', text: 'The 12th and 26th Light Dragoons in their Tarleton helmets: few horses, and every one of them shipped from Malta.' },
+  reconVehicle: { name: 'Light Dragoons', weapon: 'Sabre, carbine', text: 'Light dragoons in blue and the crested Tarleton helmet: scouts and pursuers — brave, and hard to call back once they gallop (the 20th at Vimeiro, the 23rd at Talavera).' },
   ifv: { name: 'Dragoons', weapon: 'Sabre, carbine', text: 'British dragoons in red: line cavalry, heavy enough to charge.' },
   tank: { name: 'Dragoon Guards', weapon: 'Heavy sword, pistols', text: 'The heavy cavalry of the line on big English horses: the charge that decides the day.' },
-  artillery: { name: 'Royal Artillery', weapon: '6-pounder guns', text: 'The field guns, hauled through the sand by sailors as often as by horses.' },
+  artillery: { name: 'Royal Artillery', weapon: '6-pounder guns', text: 'The field guns of the Royal Artillery: few, but well served — roundshot at long range, canister close in.' },
   spMortar: { name: 'Royal Artillery, 12-pounders', weapon: '12-pounder guns', text: 'The heavy guns: far-reaching and slow, and harder still to land.' },
   rockets: { name: 'Royal Horse Artillery', weapon: 'Light 6-pounders', text: 'Guns that keep up with the cavalry: in action in moments.' },
-  mortar: { name: 'Howitzers', weapon: '5½-inch howitzers', text: 'Shells over the sand hills onto troops behind them.' },
+  mortar: { name: 'Howitzers', weapon: '5½-inch howitzers', text: 'Shells over the hills onto troops behind them — and the new spherical case, Shrapnel\'s shell, first fired in anger at Vimeiro.' },
   jammer: { name: 'Ammunition cart', weapon: 'Cartridges, men', text: 'Companies within 60 m take in new men and refill their pouches.' },
   ambulance: { name: 'Hospital wagon', weapon: 'Surgeons', text: 'Wounded men near it are patched up and go back to the line.' },
-  commandPost: { name: 'Headquarters', weapon: 'Aides, couriers', text: 'Abercromby\'s staff: reinforcements come forward to it; troops near it hold their nerve.' },
+  commandPost: { name: 'Headquarters', weapon: 'Aides, couriers', text: 'The general\'s staff: reinforcements come forward to it; troops near it hold their nerve.' },
   bridgeLayer: { name: 'Pontoon train', weapon: 'Pontoon bridge', text: 'A bridge of boats over the water.' },
 };
 const BRITISH = { rifles, mgTeam, atTeam, sniper, engineers, observers, guard, reconVehicle, ifv, tank, artillery, spMortar, rockets, mortar, jammer, ambulance, commandPost, bridgeLayer };
 for (const [id, v] of Object.entries(GB)) BRITISH[id].variants = { ...BRITISH[id].variants, gb: v };
 atTeam.models = { ...atTeam.models, gb: () => buildNapSoldier({ army: 'gb', kind: 'highland' }) };
+
+// ------------------------------------------------------------------ the Russians (Poland 1807)
+// Bennigsen's army at Eylau and Friedland (data/epoch.js 'ru'): the dark green coat, the jägers all in
+// green, the Cossacks for light horse, a great many guns — and the licorne, the long Russian howitzer.
+const RU = {
+  rifles: { name: 'Musketeers', weapon: '1798 musket, bayonet', text: 'The Russian line infantry in dark green: slow to manoeuvre, terribly hard to move. At Eylau they stood in the snow under the French guns and did not give way.' },
+  mgTeam: { name: 'Jägers', weapon: 'Musket, bayonet', text: 'The Russian light infantry, green from collar to gaiters: skirmishers in the woods and villages in front of the line.' },
+  atTeam: { name: 'Grenadiers', weapon: 'Musket, bayonet', text: 'The grenadier regiments in their brass-fronted kaskets: the best men of the army, held for the bayonet attack.' },
+  sniper: { name: 'Jäger marksmen', weapon: 'Stutzer rifled carbine', text: 'The best shots of the jäger regiments with the short rifled Stutzer: slow to load, aimed at officers and gunners.' },
+  engineers: { name: 'Pioneers', weapon: 'Musket, axe', text: 'The pioneer regiments: redoubts for the guns, a way through hedges and walls, the bridges kept or burned.' },
+  observers: { name: 'Artillery officers', weapon: 'Telescope, sword', text: 'Gunner officers with telescopes: every gun and licorne of yours lands tight on what they can see.' },
+  guard: { name: 'Imperial Guard', weapon: 'Musket, bayonet', text: 'The Preobrazhensky and Semyonovsky regiments, the Tsar\'s own: they held the line at Friedland while the army crossed the Alle.' },
+  reconVehicle: { name: 'Cossacks', weapon: 'Pike, sabre, pistol', text: 'The Don Cossacks on their small hardy horses: they scout, raid, harry stragglers and ride down anything that breaks — a formed line is not their business.' },
+  ifv: { name: 'Dragoons', weapon: 'Sabre, dragoon musket', text: 'Russian dragoons in green and the crested helmet: the most numerous of the Tsar\'s horse.' },
+  tank: { name: 'Cuirassiers', weapon: 'Pallasch, pistols', text: 'The heavy cavalry in white kollets on big horses (no cuirass until 1812): the charge that decides the day.' },
+  artillery: { name: 'Light Company', weapon: '6-pounder guns', text: 'A Russian light company: 6-pounders on the new Arakcheev carriages, painted green. Roundshot at range, canister close in.' },
+  spMortar: { name: 'Position Company', weapon: '12-pounder guns', text: 'The heavy position guns, massed on a ridge in great batteries — at Eylau some seventy of them ploughed the French columns in the snow.' },
+  rockets: { name: 'Horse Artillery', weapon: 'Light 6-pounders', text: 'The Russian horse companies: guns that keep up with the cavalry.' },
+  mortar: { name: 'Licornes', weapon: '½-pood licornes', text: 'The \'unicorn\', the long Russian howitzer: shells over cover or canister straight ahead, at nearly a gun\'s range.' },
+  jammer: { name: 'Ammunition wagon', weapon: 'Cartridges, men', text: 'Companies within 60 m take in new men and refill their pouches.' },
+  ambulance: { name: 'Field hospital', weapon: 'Surgeons', text: 'Wounded men near it are patched up and go back to the line.' },
+  commandPost: { name: 'Headquarters', weapon: 'Aides, couriers', text: 'Bennigsen\'s staff: reinforcements come forward to it; troops near it hold their nerve.' },
+  bridgeLayer: { name: 'Pontoon train', weapon: 'Pontoon bridge', text: 'A bridge of boats over the river — at Friedland, one of the few ways back over the Alle.' },
+};
+for (const [id, v] of Object.entries(RU)) BRITISH[id].variants = { ...BRITISH[id].variants, ru: v };
+mortar.models = { ...mortar.models, ru: () => buildFieldGun({ army: 'ru', size: 'licorne' }) };
+mortar.factionStats = { ...mortar.factionStats, ru: { range: 320, preferredRange: 240, minRange: 40 } };   // (the licorne's long barrel: further, and canister too)
 
 // the fleet's men ashore (the coastal battle: coastal + armies — only the British buy them)
 const navyMen = (kind) => ({ gb: () => buildNapSoldier({ army: 'gb', kind }), pact: () => buildNapSoldier({ army: 'gb', kind }) });

@@ -24,7 +24,8 @@ const SNAP = 10;           // m searched round a blocked start or goal for open 
 export const SHIP = 'ship';
 export const SHIP_DEPTH = 4;
 const SHIP_MARGIN = 70;    // m a ship's route keeps off the shallows where it can (a narrow channel: as wide as it is) — they grazed the shore
-const SHIP_COST = 0.1;     // extra cost per metre inside that margin (the route bends out round a cape rather than skimming it)
+const SHIP_COST = 0.1;
+const SOFT_STEP = 4;       // m: how finely a map's soft ground is sampled (softSeeds)     // extra cost per metre inside that margin (the route bends out round a cape rather than skimming it)
 
 export class NavGrid {
   constructor(world) {
@@ -52,11 +53,35 @@ export class NavGrid {
     this.version = 0; // bumped on every change: routes planned before may be wrong
     for (const c of world.cover.colliders) this.seed(c);
     if (world.steep) this.steepSeeds(world.steep);
+    if (world.soft) this.softSeeds(world.soft);
     this.water();
     this.dirty = true;
   }
 
   // ---------------------------------------------------------------- building
+
+  /**
+   * Soft ground (the map's `soft(x, z, foot)`: a speed factor, 1 firm): what a step there costs over firm ground — the
+   * time it takes, 1/soft − 1 more — for vehicles (slowV) and men (slowF). Routes keep to the causeways round a bog.
+   * Sampled every SOFT_STEP m (the bog's edges are soft too: no need for every metre).
+   */
+  softSeeds(soft) {
+    const n = this.nx * this.nz, step = Math.max(1, Math.round(SOFT_STEP / this.cell));
+    this.slowV = new Float32Array(n);
+    this.slowF = new Float32Array(n);
+    for (let j = 0; j < this.nz; j += step) for (let i = 0; i < this.nx; i += step) {
+      const x = this.ox + (i + step / 2) * this.cell, z = this.oz + (j + step / 2) * this.cell;
+      const v = 1 / Math.max(0.1, soft(x, z, false)) - 1, f = 1 / Math.max(0.1, soft(x, z, true)) - 1;
+      if (v <= 0 && f <= 0) continue;
+      for (let jj = j; jj < Math.min(this.nz, j + step); jj++) for (let ii = i; ii < Math.min(this.nx, i + step); ii++) { this.slowV[jj * this.nx + ii] = v; this.slowF[jj * this.nx + ii] = f; }
+    }
+  }
+
+  /** How much slower than firm ground cell k is for `foot` (0: firm). */
+  slowAt(k, foot) {
+    const a = foot === SHIP ? null : foot ? this.slowF : this.slowV;
+    return a ? a[k] : 0;
+  }
 
   /** Ground too steep for a vehicle (the map's `steep`: rise over run) is like cover to it — the bluffs at Omaha: the draws or nothing. Men climb it (slowly: UnitStack). */
   steepSeeds(limit) {
@@ -190,7 +215,10 @@ export class NavGrid {
     const step = foot === SHIP ? this.cell : 0.5;
     // a ship: SHIP_MARGIN off the shallows along the way — closer only as near an end as that end already is
     const dA = foot === SHIP ? this.dShore[this.index(a.x, a.z)] : 0, dB = foot === SHIP ? this.dShore[this.index(b.x, b.z)] : 0;
+    // soft ground in the way that is softer than where it starts and ends: not a straight walk (the route goes round by the causeway)
+    const end = this.slowV && foot !== SHIP ? Math.max(this.slowAt(this.index(a.x, a.z), foot), this.slowAt(this.index(b.x, b.z), foot)) + 0.25 : Infinity;
     for (let s = Math.min(step, l); s <= l; s += step) {
+      if (end < Infinity && this.slowAt(this.index(a.x + ((b.x - a.x) * s) / l, a.z + ((b.z - a.z) * s) / l), foot) > end) return false;
       const rr = foot === SHIP ? Math.min(r + SHIP_MARGIN, Math.max(r, Math.min(dA + s, dB + l - s))) : r;
       if (!this.open(this.index(a.x + ((b.x - a.x) * s) / l, a.z + ((b.z - a.z) * s) / l), foot, rr)) return false;
     }
@@ -274,6 +302,7 @@ export class NavGrid {
           if (di && dj && (!this.open(j * nx + ni, foot, r) || !this.open(nj * nx + i, foot, r))) continue; // no cutting corners
           let cost = (di && dj ? Math.SQRT2 : 1) * this.cell * (1 + (foot === SHIP ? Math.max(0, r + SHIP_MARGIN - d[m]) * SHIP_COST : Math.max(0, r + 1.5 - d[m]) * WALL_COST));
           if (foot === true && this.dAll[m] < r) cost *= LOW_COST;
+          if (this.slowV) cost *= 1 + this.slowAt(m, foot); // (soft ground: as long as it takes to cross)
           const ng = g[k] + cost;
           if (mark[m] === S && ng >= g[m]) continue;
           mark[m] = S;

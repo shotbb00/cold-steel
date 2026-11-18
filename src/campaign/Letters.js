@@ -11,6 +11,7 @@ import { epoch } from '../data/epoch.js';
 import { PEOPLE_1945, OPEN_1945, FOOD_1945, ENEMY_1945, HOME_1945, CLOSE_1945 } from './Letters45.js';
 import { PEOPLE_1806, L1806 } from './Letters1806.js';
 import { PEOPLE_1918, L1918 } from './Letters1918.js';
+import { PEOPLE_2027, L2027 } from './Letters2027.js';
 const ww2 = () => epoch() === '1945';
 const LOCAL = new Set(['bw', 'nva', 'wh', 'fj']); // fighting in their own country
 
@@ -52,7 +53,9 @@ const PEOPLE = {
   ...PEOPLE_1945,
   ...PEOPLE_1806,
   ...PEOPLE_1918,
+  ...PEOPLE_2027,
 };
+const ARMY_2027 = { us: 'us27', pl: 'pl27', ru: 'ru27', by: 'by27' }; // 2027's armies' letter voices
 const ARMY_1918 = { uk: 'uk18', fr: 'fr18', de: 'de18', st: 'st18' }; // 1918's armies' letter voices
 const DEFAULT = { nato: 'us', pact: 'sov' };
 const DEFAULT_1945 = { nato: 'us45', pact: 'wh' };
@@ -207,9 +210,9 @@ const kindOf = (type) => {
  */
 export function writeLetter(c, b, { attackerWon, lost, wounded }) {
   const side = c.side;
-  const y06 = epoch() === '1806', y18 = epoch() === '1918';
-  const army = y18 ? ARMY_1918[c.army] ?? (side === 'nato' ? 'uk18' : 'de18') : ww2() ? ARMY_1945[c.army] ?? DEFAULT_1945[side] : y06 ? (PEOPLE_1806[c.army] ? c.army : side === 'nato' ? 'fr' : 'pr') : PEOPLE[c.army] ? c.army : DEFAULT[side];
-  const L = y18 ? L1918 : y06 ? L1806 : { OPEN, CLOSE, WHERE, OUTCOME, SKY, CUT, LOSSES, TOPICS }; // (1806: no tanks, tracers or aircraft in its lines)
+  const y06 = epoch() === '1806', y18 = epoch() === '1918', y27 = epoch() === '2027';
+  const army = y27 ? ARMY_2027[c.army] ?? (side === 'nato' ? 'us27' : 'ru27') : y18 ? ARMY_1918[c.army] ?? (side === 'nato' ? 'uk18' : 'de18') : ww2() ? ARMY_1945[c.army] ?? DEFAULT_1945[side] : y06 ? (PEOPLE_1806[c.army] ? c.army : side === 'nato' ? 'fr' : 'pr') : PEOPLE[c.army] ? c.army : DEFAULT[side];
+  const L = y27 ? L2027 : y18 ? L1918 : y06 ? L1806 : { OPEN, CLOSE, WHERE, OUTCOME, SKY, CUT, LOSSES, TOPICS }; // (1806: no tanks, tracers or aircraft in its lines)
   const P = PEOPLE[army];
   const used = new Set(c.letterUsed ?? []);
   // a line counts as used with its place, names and numbers blanked out: the same sentence about another village is still the same sentence

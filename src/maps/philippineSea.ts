@@ -1,7 +1,10 @@
 // The Philippine Sea, June 1944 (fought here as 1945): open ocean, the fleets out of sight of each other
 // beyond the horizon, a few coral atolls the only things that aren't water. A carrier battle: the scout
 // that finds the enemy first, and the strike that gets through his fighters. Each side opens with an
-// escort carrier and its screen. Ships only (data/units45/ships.js).
+// escort carrier and its screen. Ships only (data/units45/ships.js). Fair, not mirrored: on the west flank
+// one big volcanic island (Guam's kind) on the American half, on the east a smaller cone and a low limestone
+// island (Rota's kind) on the Japanese — as much land to hide behind either side; two atolls by each flank
+// point, one in each half; the three zones each as near one fleet as the other.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
@@ -13,9 +16,9 @@ const noise = createNoise2D(1944_06);
 const sea = createSea({ level: 0, size: SIZE, color: 0x15476a });
 
 // the atolls: [x, z, radius] — a reef ring awash round a shallow lagoon, a few palms on its islets
-const ATOLLS = [[-1300, -700, 230], [1350, 800, 200], [250, -1550, 150], [-250, 1450, 150]];
-// two volcanic islands either side of the open sea, cliffs and jungle up to a cone: [x, z, radius]
-const VOLCANOES = [[-700, 450, 320], [700, -450, 320]];
+const ATOLLS = [[-1500, -600, 250], [-2100, 700, 130], [1250, 850, 190], [2050, -550, 150], [400, -1650, 130], [-300, 1500, 170]];
+// the high islands either side of the open sea, cliffs and jungle up to a cone: [x, z, radius, height]
+const VOLCANOES = [[-800, 550, 340, 180], [650, -400, 260, 150], [1150, -850, 180, 70]];
 
 function height(x: number, z: number) {
   let h = -46 + fbm(noise, x * 0.0006, z * 0.0006, 4) * 8;
@@ -27,15 +30,15 @@ function height(x: number, z: number) {
     const slope = d >= r ? -1.2 - (d - r) * 0.17 : -Infinity;                       // the outer slope down to the deep
     h = Math.max(h, lagoon, slope, ring > 0.03 ? 0.5 * ring - 0.1 + islet : -Infinity); // (the reef only near the ring)
   }
-  for (const [vx, vz, r] of VOLCANOES) h = Math.max(h, island(r - Math.hypot(x - vx, z - vz) + fbm(noise, x * 0.005, z * 0.005, 2) * 60, r, 160, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5));
+  for (const [vx, vz, r, top] of VOLCANOES) h = Math.max(h, island(r - Math.hypot(x - vx, z - vz) + fbm(noise, x * 0.005, z * 0.005, 2) * 60, r, top, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5));
   return h;
 }
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Task Force 58', x: 0, z: 2150, owner: 'nato', sector: 'centre', radius: 140 },
-  { id: 'B', name: 'West atolls', x: -1650, z: 250, owner: null, sector: 'west', radius: 170 },
-  { id: 'C', name: 'Open sea', x: 0, z: 0, owner: null, sector: 'centre', radius: 180 },
-  { id: 'D', name: 'East atolls', x: 1650, z: -250, owner: null, sector: 'east', radius: 170 },
+  { id: 'B', name: 'West atolls', x: -1750, z: 30, owner: null, sector: 'west', radius: 170 },
+  { id: 'C', name: 'Open sea', x: 150, z: 10, owner: null, sector: 'centre', radius: 180 },
+  { id: 'D', name: 'East atolls', x: 1550, z: -40, owner: null, sector: 'east', radius: 170 },
   { id: 'K', name: 'Mobile Fleet', x: 0, z: -2150, owner: 'pact', sector: 'centre', radius: 140 },
 ];
 
@@ -44,6 +47,7 @@ export default {
   name: 'Philippine Sea',
   description: 'Open ocean and a few coral atolls: a carrier battle. Find the enemy fleet before he finds yours, and get the strike through his fighters.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'day', weather: 'clear' },

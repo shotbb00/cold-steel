@@ -61,6 +61,11 @@ CAV.gb = { // the light dragoons in the Tarleton helmet (blue jackets), the drag
   medium: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: () => stovepipe(0xe6e2d6), cloth: 0x1d2a5c, trim: 0xe6e2d6 },
   heavy: { coat: 0xb0261e, facing: 0x1d2a5c, breeches: 0xe2ddcf, hat: (c) => bicorne(c, 0xe6e2d6), cloth: 0xb0261e, trim: 0xd8b54a },
 };
+CAV.ru = { // the Cossacks (dark blue kaftan, the tall fur cap, the pike), the dragoons in green and the cuirassiers in white, both in the crested leather helmet of 1803 (no cuirass until 1812)
+  light: { coat: 0x1d2448, facing: 0xb02a2a, breeches: 0x1d2448, hat: () => busby(0xb02a2a), cloth: 0x3a2a1e, trim: 0x3a2a1e, lance: true, boot: 0x2a1c12 },
+  medium: { coat: 0x1e3524, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => crestHelmet(0x1a1a1a), cloth: 0x1e3524, trim: 0xa82424 },
+  heavy: { coat: 0xe8e2cc, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => crestHelmet(0x1a1a1a), cloth: 0x1e3524, trim: 0xa82424 },
+};
 // 1918 (data/units1918, kind 'medium'): khaki, horizon blue, field grey, the steel helmets, a plain brown saddle; lances for the lancers and the Ulanen
 const SADDLE_18 = 0x4a3a28;
 Object.assign(CAV, {
@@ -68,9 +73,16 @@ Object.assign(CAV, {
   fr18: { medium: { coat: 0x8a9aa6, facing: 0x6e7e8a, breeches: 0x84949f, hat: () => ww1Helmet('fr'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3a2a1e } },
   de18: { medium: { coat: 0x6c6e5c, facing: 0x56584a, breeches: 0x5e604f, hat: () => ww1Helmet('de'), cloth: SADDLE_18, trim: SADDLE_18, lance: true } },
   st18: { medium: { coat: 0x686a58, facing: 0x525446, breeches: 0x5a5c4c, hat: () => ww1Helmet('st'), cloth: SADDLE_18, trim: SADDLE_18 } },
+  // the Ottoman cavalry in the kalpak, the Light Horse's slouch hat and emu plume, the Italian lancers, the k.u.k. dragoons under the
+  // Stahlhelm, the Cossacks in the papakha with their lances, the Don's dark blue breeches
+  ot18: { medium: { coat: 0x8c7c56, facing: 0x74663f, breeches: 0x857550, hat: () => ww1Helmet('ot', 'kalpak'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x4a3220 } },
+  anzac18: { medium: { coat: 0x6f6646, facing: 0x5c5438, breeches: 0x8a7c58, hat: () => ww1Helmet('anzac', 'plume'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x4a3220 } },
+  it18: { medium: { coat: 0x6e705a, facing: 0x5a5c48, breeches: 0x6a6c56, hat: () => ww1Helmet('it'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3a2a1e, lance: true } },
+  ah18: { medium: { coat: 0x7e868a, facing: 0x667074, breeches: 0x7a8286, hat: () => ww1Helmet('ah'), cloth: SADDLE_18, trim: SADDLE_18 } },
+  ru18: { medium: { coat: 0x8e8a64, facing: 0x757150, breeches: 0x2a3048, hat: () => ww1Helmet('ru', 'papakha'), cloth: SADDLE_18, trim: SADDLE_18, lance: true } },
 });
 
-const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a] };
+const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a], ru: [BLACK, 0xe08a20] };
 
 /** The trooper's parts in standing coordinates (feet at 0, hips at 0.96): torso, arms, a thigh, a shin. */
 function trooper(army, kind) {

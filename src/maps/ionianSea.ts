@@ -2,7 +2,8 @@
 // western Greece. A high limestone island to the west, a smaller one in the middle with a narrow channel
 // between them, the Peloponnese coast along the east with a white harbour town; olive and maquis on the
 // slopes. The Eskadra lies at its anchorage behind the island in the north; the carrier group comes up
-// from the south. Bright, clear, the sea deep blue. Ships only (data/units/ships85.js).
+// from the south. Fair: the channel a little nearer the carriers, the water west of the island and the harbour
+// roads a little nearer the Eskadra — in sum as near one as the other. Bright, clear, the sea deep blue. Ships only (data/units/ships85.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -32,9 +33,9 @@ function height(x: number, z: number) {
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Sixth Fleet', x: 300, z: 2150, owner: 'nato', sector: 'centre', radius: 150 },
-  { id: 'B', name: 'West of the island', x: -2150, z: 900, owner: null, sector: 'west', radius: 170 },
+  { id: 'B', name: 'West of the island', x: -2450, z: 250, owner: null, sector: 'west', radius: 170 },
   { id: 'C', name: 'The channel', x: -600, z: 200, owner: null, sector: 'centre', radius: 160 },
-  { id: 'D', name: 'Harbour roads', x: 1450, z: 300, owner: null, sector: 'east', radius: 160 },
+  { id: 'D', name: 'Harbour roads', x: 1300, z: -250, owner: null, sector: 'east', radius: 160 },
   { id: 'K', name: 'Eskadra anchorage', x: -400, z: -2150, owner: 'pact', sector: 'centre', radius: 150 },
 ];
 

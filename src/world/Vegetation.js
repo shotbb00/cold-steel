@@ -297,7 +297,7 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
       spruceCards.setColorAt(ks, _c);
       spruces.setColorAt(ks++, _c);
     }
-    if (inLane) tree.collider = cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 });
+    if (inLane) { tree.collider = cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 }); tree.collider.tree = true; } // (tree: an airfield clears it, systems/Airfields.js)
     k++;
   }
   trunks.count = k;
@@ -313,6 +313,28 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
      * crown on the ground, the trunk a log that men take cover behind and climb over.
      * `roll(tree)` decides each one (the host's dice, the same on a multiplayer guest).
      */
+    /** The highest treetop within `r` m of (x, z) (its crown's reach included), or -Infinity. */
+    topAt(x, z, r = 0, crown = true) { // (crown false: the trunks alone)
+      let top = -Infinity;
+      for (const t of register) {
+        if (t.down) continue;
+        const reach = r + (crown ? t.H * 0.35 : 0.25 * t.w);
+        if (Math.abs(t.x - x) < reach && Math.abs(t.z - z) < reach && t.y + t.H > top) top = t.y + t.H;
+      }
+      return top;
+    },
+    /** Gone altogether where `test(x, z)` (an airfield's runway: systems/Airfields.js) — no stump, no log. */
+    clear(test) {
+      _m.makeScale(0, 0, 0);
+      for (const t of register) {
+        if (!test(t.x, t.z)) continue;
+        t.down = true;
+        trunks.setMatrixAt(t.k, _m);
+        if (t.leafy) { leaves.setMatrixAt(t.crown, _m); cards.setMatrixAt(t.crown, _m); } else { spruces.setMatrixAt(t.crown, _m); spruceCards.setMatrixAt(t.crown, _m); }
+        if (t.collider) { cover.remove(t.collider); t.collider = null; }
+      }
+      for (const m of [trunks, leaves, cards, spruces, spruceCards]) if (m) m.instanceMatrix.needsUpdate = true;
+    },
     fell(x, z, r, roll = (d) => Math.random() < 0.65 * (1 - d / r)) {
       let n = 0;
       for (const t of register) {

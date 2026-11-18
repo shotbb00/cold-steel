@@ -12,8 +12,12 @@ import { UNIT_TYPES, TYPES_1985, ALIAS } from './units/index.js';
 import { TYPES_1945, ALIAS_1945 } from './units45/index.js';
 import { TYPES_1806, ALIAS_1806 } from './units1806/index.js';
 import { TYPES_1918, ALIAS_1918 } from './units1918/index.js';
+import { TYPES_2027, ALIAS_2027 } from './units2027/index.js';
 import { KINDS, AIR_1985 } from '../systems/AirStrike.js';
 import { AIR_1945 } from './air45.ts';
+import { AIR_2027 } from './air27.js';
+import { BOMBERS } from './bombers.js';
+import { AIRFIELD } from './units/airfield.js';
 import { AIR_1918 } from './air18.ts';
 
 const DOCTRINE_1985 = { ...DOCTRINE };
@@ -23,12 +27,21 @@ export const EPOCHS = {
     id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
     sides: { nato: 'France', pact: 'Prussia' },
+    regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
+      europe: { name: 'Germany', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
+        sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
+      east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Winter and spring 1807: the Grande Armée against the Russian army — snow at Eylau, the river at Friedland.' },
+      iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–09: Wellington’s redcoats in their line against the French columns.' },
+      africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
+      caribbean: { title: 'The West Indies', blurb: 'Frigates and ships of the line among the sugar islands.' },
+    },
     armies: {
       fr: { id: 'fr', faction: 'nato', name: 'Grande Armée' },
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
-      gb: { id: 'gb', faction: 'pact', name: 'British Army', coastal: true }, // (only where a map names it: the Aboukir landing)
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
+      gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -50,10 +63,13 @@ export const EPOCHS = {
         { id: 'squares', name: 'Steady squares', text: 'Squares never break against cavalry and lose less nerve under artillery (the Saxon grenadiers left Jena in square).' },
         { id: 'gardeDuCorps', name: 'Garde du Corps', text: 'Heavy cavalry starts as Veterans.' },
       ],
-      // (the British reuse Prussia's and France's mechanics under their own names: line fire, skirmishers)
+      ru: [
+        { id: 'greatBattery', name: 'Great batteries', text: 'Guns with two more of yours within 60 m fire 30 % faster: the Russian army massed more guns than anyone, and at Eylau they stood wheel to wheel on the ridge.', near: 60, count: 2, fire: 1.3 },
+        { id: 'stubborn', name: 'Stubborn defence', text: 'Infantry in line takes 20 % less damage: at Eylau the Russian lines stood in the snow and had to be killed where they stood.', take: 0.8 },
+      ],
       gb: [
-        { id: 'peloton', name: 'Two-deep line', text: 'Line infantry in line aims 25 % better: every musket of the thin two-rank line can fire.', reload: 1, spread: 0.75 },
-        { id: 'tirailleurs', name: 'Rifles and light bobs', text: 'Light infantry and riflemen in skirmish order are harder to spot, and their fire pins 30 % more.', stealth: 1.3, suppress: 1.3 },
+        { id: 'twoDeep', name: 'Two-deep line', text: 'Infantry in line that has stood still for 3 s hits 20 % harder: the thin line waits, then every musket fires at once.', still: 3, dmg: 1.2 },
+        { id: 'baker', name: 'The Baker rifle', text: 'Riflemen reach 30 % further and cost 20 % less: the 95th picked off officers at ranges no musket could answer.', mods: { sniper: { range: 1.3 } }, costs: { sniper: 0.8 } },
       ],
     },
   },
@@ -61,14 +77,28 @@ export const EPOCHS = {
     id: '1918', name: '1918', title: 'The Western Front, 1918',
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
     sides: { nato: 'Allies', pact: 'Germany' },
+    regions: {
+      europe: { name: 'Western Front',
+        sea: { name: 'North Sea', title: 'The North Sea, 1914–18', blurb: 'Dogger Bank, the Heligoland Bight and the Dover Strait: the Grand Fleet against the High Seas Fleet.' } },
+      east: { title: 'The Eastern Front, 1917', blurb: 'Riga, September 1917: the German storm troops’ first great attack — a short hurricane bombardment, then infiltration across the Dvina.' },
+      italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy against Austria-Hungary and Germany in the mountains and along the rivers.' },
+      middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },
+      med: { title: 'The Mediterranean', blurb: 'The Otranto Barrage, 1917: Austro-Hungarian cruisers against the drifters and destroyers closing the Adriatic.' },
+    },
     armies: {
       uk: { id: 'uk', faction: 'nato', name: 'British Army' },
       fr: { id: 'fr', faction: 'nato', name: 'French Army' },
       de: { id: 'de', faction: 'pact', name: 'German Army' },
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
+      // the other fronts (own: only the types data/units1918/fronts.js writes for them)
+      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'] },
+      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'] },
+      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
+      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy'] },
+      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'] },
     },
     defaults: { nato: 'uk', pact: 'de' },
-    types: TYPES_1918, alias: ALIAS_1918, air: AIR_1918,
+    types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
     // each army's two signatures (ponytail: their effects are wired as the units they need arrive — tanks, guns)
     doctrine: {
       uk: [
@@ -87,32 +117,95 @@ export const EPOCHS = {
         { id: 'infiltrate', name: 'Infiltration', text: 'Storm troops move 20 % faster and are harder to spot: they slip past the strongpoints and leave them to the next wave.', speed: 1.2, stealth: 1.3 },
         { id: 'grenades', name: 'Grenade fighting', text: 'Grenades are thrown 30 % further: the storm troops clear a trench bay from the next one.', reach: 1.3 },
       ],
+      // the other fronts: the mechanics above, 1945's and 1985's, under their own names
+      ot: [
+        { id: 'digIn', name: 'Dig in', text: 'Infantry that has stood still for 15 s takes 25 % less damage: at Gallipoli the Ottoman trenches were dug in a night and held for eight months.', still: 15, take: 0.75 },
+        { id: 'ridge', name: 'Hold the ridge', text: 'Infantry at least 4 m above the nearest enemy (within 300 m) aims 25 % better: Kemal’s men on Chunuk Bair looked down on every attack.', rise: 4, within: 300, aim: 1.25 },
+      ],
+      anzac: [
+        { id: 'walers', name: 'The Light Horse', text: 'Horsemen move 20 % faster and are 15 % tougher: the Walers carried the Light Horse across the desert to the wells of Beersheba at the gallop.', mods: { cavalry: { speed: 1.2, hp: 1.15 } } },
+        { id: 'hamel', name: 'Monash’s tanks', text: 'Infantry within 40 m of a friendly tank takes 20 % less damage: at Hamel the Australians walked in behind the tanks and took the village in 93 minutes.', range: 40, take: 0.8 },
+      ],
+      it: [
+        { id: 'bombarde', name: 'The bombarde', text: 'Mortars reach 30 % further and their bombs burst 30 % wider: the Italian trench mortars cut the Austrian wire on the Isonzo.', mods: { mortar: { range: 1.3, splash: 1.3 }, spMortar: { range: 1.3, splash: 1.3 } } },
+        { id: 'arditi', name: 'Arditi', text: 'Infantry with an enemy within 40 m hits 30 % harder: the Arditi went in with dagger and grenade, black flames on their collars.', range: 40, dmg: 1.3 },
+      ],
+      ah: [
+        { id: 'skoda', name: 'Škoda guns', text: 'Field guns reach 15 % further and hit fortifications twice as hard: the Škoda works built the guns that broke the forts of Belgium.', mods: { artillery: { range: 1.15, vsStructure: 2 } } },
+        { id: 'standschuetzen', name: 'Standschützen', text: 'Snipers and scouts see 20 % further and cost 30 % less: the Tyrolean rifle clubs knew every crag of their own mountains.', mods: { sniper: { sight: 1.2 }, scouts: { sight: 1.2 } }, costs: { sniper: 0.7, scouts: 0.7 } },
+      ],
+      ru: [
+        { id: 'committees', name: 'The army of 1917', text: 'Rifle squads cost 20 % less but break sooner: after the Revolution the soldiers’ committees voted on orders, and the will to go on drained away.', costs: { rifles: 0.8 }, mods: { rifles: { breakMorale: 1.3 } } },
+        { id: 'cossacks', name: 'Cossacks', text: 'Horsemen do double damage to guns, mortars, ambulances, observers and staff: the Cossacks rode for the rear, not for the trenches.', soft: 2 },
+      ],
     },
   },
   1985: {
     id: '1985', name: '1985', title: 'World War III, 1985',
     sides: { nato: 'NATO', pact: 'Warsaw Pact' },
+    regions: {
+      north: { title: 'The Northern Flank, 1985', blurb: 'Norway: the Soviet army comes over the Finnmark tundra and down the fjords toward Narvik, against the Norwegians and the US Marines.' },
+      korea: { title: 'Korea, 1985', blurb: 'The second Korean War: the North’s army pours through the DMZ against South Korea and the US 2nd Infantry Division.' },
+    },
     armies: {
-      us: { id: 'us', faction: 'nato', name: 'US Army' },
-      bw: { id: 'bw', faction: 'nato', name: 'Bundeswehr' },
-      sov: { id: 'sov', faction: 'pact', name: 'Soviet Army' },
-      nva: { id: 'nva', faction: 'pact', name: 'NVA' },
+      us: { id: 'us', faction: 'nato', name: 'US Army', regions: ['europe', 'korea'] },
+      bw: { id: 'bw', faction: 'nato', name: 'Bundeswehr', regions: ['europe'] },
+      sov: { id: 'sov', faction: 'pact', name: 'Soviet Army', regions: ['europe', 'north'] },
+      nva: { id: 'nva', faction: 'pact', name: 'NVA', regions: ['europe'] },
+      // the Northern Flank and Korea: each only the types written for it (data/units/armies85.js)
+      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'] },
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'] },
+      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'] },
+      kpa: { id: 'kpa', faction: 'pact', name: 'Korean People’s Army', own: true, regions: ['korea'] },
     },
     defaults: { nato: 'us', pact: 'sov' },
     types: TYPES_1985, alias: {}, air: AIR_1985, doctrine: DOCTRINE_1985,
   },
+  2027: {
+    id: '2027', name: '2027', title: 'The Suwałki Gap, 2027', beta: true,
+    blurb: '2027, a war that has not happened: Russia strikes for the Suwałki Gap, the narrow land bridge between Poland and Lithuania. Drones overhead, jammers in every wood, and rockets that hit what they can find.',
+    sides: { nato: 'NATO', pact: 'Russia' },
+    armies: {
+      us: { id: 'us', faction: 'nato', name: 'US Army' },
+      pl: { id: 'pl', faction: 'nato', name: 'Polish Army' },
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army' },
+      by: { id: 'by', faction: 'pact', name: 'Belarus' },
+    },
+    defaults: { nato: 'us', pact: 'ru' },
+    types: TYPES_2027, alias: ALIAS_2027, air: { ...AIR_2027, ...BOMBERS[2027] },
+    // each army's two signatures: 1985's mechanics where they still fit, three of their own (systems/Drones.js, CounterBattery.js, data/doctrine.js unitCost)
+    doctrine: {
+      us: [{ ...DOCTRINE_1985.us[0], name: 'Joint fires', text: 'Air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
+        { id: 'sensor', name: 'Sensor-to-shooter', text: 'Whatever your drones and counter-battery radars find is marked: marked enemies take 15 % more damage from everyone for 10 s.', mark: 10, damage: 1.15 }],
+      pl: [{ ...DOCTRINE_1985.bw[0], name: 'Eastern Shield', text: 'Engineers build twice as fast and fortifications cost 40 % less. A line of trenches and obstacles waits in front of your base at the start.' }, { ...DOCTRINE_1985.nva[0], name: 'Territorial Defence', text: 'Obrona Terytorialna: cheap local volunteers with modern rifles and missiles that don’t count against your unit cap.' }],
+      ru: [{ ...DOCTRINE_1985.sov[0], name: 'Fire superiority' }, { id: 'dronewar', name: 'Drone war', text: 'FPV and loitering munition teams cost 30 % less and launch their drones 30 % faster.', cost: 0.7, every: 0.7 }],
+      by: [{ ...DOCTRINE_1985.nva[1], name: 'Massed guns', text: 'Guns, rocket launchers and mortars cost 25 % less and reload 35 % faster. Their creeping barrage order walks the shells forward ahead of your advance.' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
+    },
+  },
   1945: {
     id: '1945', name: '1945', title: 'Western Front, spring 1945',
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
+    // the menu's regions (maps/index.js REGIONS): each its own title and line
+    regions: {
+      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad, the ruined city on the Volga, fought house by house and floor by floor.' },
+      africa: { title: 'North Africa', blurb: 'The Western Desert: El Alamein, minefields and open sand between the sea and the Qattara Depression, where armour fights at long range.' },
+      pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
+    },
     sides: { nato: 'Allies', pact: 'Germany' },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army' },
       sov: { id: 'sov', faction: 'nato', name: 'Red Army' },
       wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht' },
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
+      // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
+      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true, regions: ['africa'] },
+      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
+      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
+      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
-    types: TYPES_1945, alias: ALIAS_1945, air: AIR_1945,
+    types: TYPES_1945, alias: ALIAS_1945, air: { ...AIR_1945, ...BOMBERS[1945] },
     // each army's two signatures (1945's own ids: tot, airsup, riders, counter, cats, hold, paradrop;
     // the Soviets' mass barrage is 1985's)
     doctrine: {
@@ -134,12 +227,32 @@ export const EPOCHS = {
         { id: 'hold', name: 'Hold to the last', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
         { id: 'paradrop', name: 'Paradrop', text: 'Their paradrop costs 30 % less and is ready again 30 % sooner. (The paradrop arrives with the next units.)', cost: 0.7, cooldown: 0.7 },
       ],
+      usmc: [
+        { id: 'flame', name: 'Corkscrew and blowtorch', text: 'Engineers hit bunkers and fortifications 50 % harder: on Iwo Jima the Marines burned and blasted the caves one at a time.', mods: { engineers: { vsStructure: 1.5 } } },
+        { id: 'valor', name: 'Uncommon valor', text: 'Squads down to half their men aim 25 % better and don’t break: “uncommon valor was a common virtue.”', aim: 1.25 },
+      ],
+      brit: [
+        { id: 'stonk', name: 'The stonk', text: 'Guns, mortars and rockets fire 25 % faster while you have a Forward Observation Officer: at Alamein the Royal Artillery’s fire plans came down on one map reference.', fire: 1.25 },
+        { id: 'reme', name: 'REME', text: 'Recovery vehicles cost 40 % less and repair twice as fast: the desert war went to whoever got his knocked-out tanks back first.', costs: { recovery: 0.6 }, mods: { recovery: { repair: 2 } } },
+      ],
+      brit21: [
+        { id: 'funnies', name: 'Hobart’s Funnies', text: 'Assault and mine-clearing tanks cost 30 % less and are 30 % tougher: the 79th Armoured Division’s specialised tanks led every landing and every breach.', costs: { cev: 0.7, mineClear: 0.7 }, mods: { cev: { hp: 1.3 }, mineClear: { hp: 1.3 } } },
+        { id: 'cabRank', name: 'Cab rank', text: 'Air support recharges 40 % faster: the Typhoons circled over the front waiting to be called down, like taxis on a rank.', cooldown: 0.6 },
+      ],
+      brit14: [
+        { id: 'adminBox', name: 'The Admin Box', text: 'Units within 80 m of your command post don’t break: in the Arakan the boxes stood and fought surrounded instead of falling back.', range: 80 },
+        { id: 'airSupply', name: 'Air supply', text: 'Every 20 s each infantry squad patches up a wounded man from what the Dakotas dropped: the 14th Army lived off the air.', every: 20, hp: 40 },
+      ],
+      jp: [
+        { id: 'banzai', name: 'Banzai', text: 'Infantry within 60 m of the enemy charges: 30 % faster, 20 % harder hitting, unbreakable — and 15 % easier to kill.', range: 60, speed: 1.3, dmg: 1.2, take: 1.15 },
+        { id: 'caves', name: 'Cave fortresses', text: 'Bunkers and fortifications take 40 % less damage: on Iwo Jima and Okinawa the defences were cut into the rock.', mods: { structures: { take: 0.6 } } },
+      ],
     },
   },
 };
 
 let current = '1985';
-/** The epoch now in force: '1985', '1945', '1918' or '1806'. */
+/** The epoch now in force: '2027', '1985', '1945', '1918' or '1806'. */
 export const epoch = () => current;
 /** The epoch's year as a number, for 'before …' tests (props, sounds). */
 export const year = () => Number(current);
@@ -159,6 +272,7 @@ export function setEpoch(id) {
   swap(ARMIES, e.armies);
   Object.assign(DEFAULT_ARMY, e.defaults);
   swap(UNIT_TYPES, e.types);
+  UNIT_TYPES.airfield ??= AIRFIELD; // (every war's airfields: systems/Airfields.js)
   swap(ALIAS, e.alias);
   swap(DOCTRINE, e.doctrine);
   for (const [kind, k] of Object.entries(KINDS)) {

@@ -1,10 +1,8 @@
 // The map table behind the main menu and the loading screen: a topographic sheet of a battle
 // map drawn from the map's own terrain — contour lines from map.height (every fifth one an index
 // contour), soft hill shading, the river, every village or control point by name, both bases in
-// NATO symbology (a friendly rectangle, a hostile diamond), and grease-pencil front arrows: red
-// thrusts from the Pact's side, a blue line where NATO means to hold. Your side sits at the
-// bottom. Picking another map redraws it; the arrows are drawn in as you watch (not with
-// reduced motion).
+// NATO symbology (a friendly rectangle, a hostile diamond). Your side sits at the bottom.
+// (The grease-pencil thrusts and hold line are gone: one fixed plan fit no map but the first.)
 const INK = '#cfc9ad';
 const CONTOUR = 'rgba(126, 140, 104, 0.38)';
 const INDEX = 'rgba(160, 172, 128, 0.62)';
@@ -64,7 +62,7 @@ export class MapSheet {
     this.canvas.hidden = true;
   }
 
-  /** Show `map` with `side` at the bottom; the arrows are drawn in when it's a new map (`animate`). */
+  /** Show `map` with `side` at the bottom (redrawn when it is a new map). */
   show(map, side = this.side, animate = true, layout = this.layout) {
     const wasHidden = this.canvas.hidden;
     this.canvas.hidden = false;
@@ -140,6 +138,7 @@ export class MapSheet {
         img.data[p + 1] = lit > 0 ? 196 : 0;
         img.data[p + 2] = lit > 0 ? 160 : 0;
         img.data[p + 3] = Math.abs(lit) * 70;
+        if (map.river?.lake && h[j * N + i] < map.river.level) img.data.set([63, 111, 143, 255], p); // a lake (WATER)
       }
     }
     sg.putImageData(img, 0, 0);
@@ -230,77 +229,5 @@ export class MapSheet {
     };
     if (map.bases?.nato) sym(map.bases.nato, 'nato');
     if (map.bases?.pact) sym(map.bases.pact, 'pact');
-
-    // grease pencil: the Pact's thrusts and NATO's line
-    const pact = map.bases?.pact ?? { x: 0, z: -bz };
-    const nato = map.bases?.nato ?? { x: 0, z: bz };
-    const lanes = [-0.55, 0, 0.55].map((k) => k * bx);
-    const thrusts = lanes.map((lx, i) => {
-      const from = { x: lx * 0.6, z: pact.z * 0.78 };
-      const to = { x: lx * (i === 1 ? 0.9 : 1.08), z: pact.z * 0.78 + (nato.z - pact.z) * (i === 1 ? 0.46 : 0.38) };
-      return [from, to];
-    });
-    const holdZ = (pact.z + nato.z) / 2 + (nato.z - pact.z) * 0.14;
-    const strokes = [
-      ...thrusts.map(([a, b]) => ({ kind: 'arrow', color: RED, pts: [a, { x: (a.x + b.x) / 2 + (b.x - a.x) * 0.2, z: (a.z + b.z) / 2 }, b] })),
-      { kind: 'line', color: BLUE, pts: Array.from({ length: 13 }, (_, i) => ({ x: -bx * 0.85 + (i / 12) * bx * 1.7, z: holdZ + Math.sin(i * 1.7) * bz * 0.025 })) },
-    ];
-    const still = g.getImageData(0, 0, cv.width, cv.height);
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const total = animate && !reduce ? 1100 : 0;
-    const start = performance.now();
-    cancelAnimationFrame(this.raf);
-    const frame = () => {
-      const k = total ? Math.min(1, (performance.now() - start) / total) : 1;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.putImageData(still, 0, 0);
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      strokes.forEach((s, n) => {
-        const local = Math.max(0, Math.min(1, k * 1.6 - n * 0.18));
-        if (local > 0) this.pencil(g, s.pts.map((p) => [sx(p.x), sz(p.z)]), s.color, local, s.kind === 'arrow', size, strength); // faint under text
-      });
-      if (k < 1) this.raf = requestAnimationFrame(frame);
-    };
-    frame();
-  }
-
-  /** A grease-pencil stroke along `pts`, `k` of the way drawn; with an arrowhead at the end. */
-  pencil(g, pts, color, k, head, size, strength = 1) {
-    // the path as a smooth curve, then cut to k of its length
-    const curve = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [x0, y0] = pts[i];
-      const [x1, y1] = pts[i + 1];
-      for (let t = 0; t < 1; t += 0.1) curve.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]);
-    }
-    curve.push(pts[pts.length - 1]);
-    const n = Math.max(2, Math.round(curve.length * k));
-    const w = Math.max(3, size / 150);
-    g.save();
-    g.strokeStyle = color;
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
-    // two passes slightly apart: the waxy, uneven edge of a grease pencil
-    for (const [dx, dy, a, lw] of [[0, 0, 0.82, w], [0.8, -0.6, 0.35, w * 0.6]]) {
-      g.globalAlpha = a * strength;
-      g.lineWidth = lw;
-      g.beginPath();
-      curve.slice(0, n).forEach(([x, y], i) => (i ? g.lineTo(x + dx, y + dy) : g.moveTo(x + dx, y + dy)));
-      g.stroke();
-    }
-    if (head && k >= 1) {
-      const [x1, y1] = curve[curve.length - 1];
-      const [x0, y0] = curve[curve.length - 3];
-      const a = Math.atan2(y1 - y0, x1 - x0);
-      const L = w * 4.2;
-      g.globalAlpha = 0.85 * strength;
-      g.lineWidth = w;
-      g.beginPath();
-      g.moveTo(x1 - Math.cos(a - 0.5) * L, y1 - Math.sin(a - 0.5) * L);
-      g.lineTo(x1, y1);
-      g.lineTo(x1 - Math.cos(a + 0.5) * L, y1 - Math.sin(a + 0.5) * L);
-      g.stroke();
-    }
-    g.restore();
   }
 }

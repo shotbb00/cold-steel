@@ -60,7 +60,7 @@ function hull(L, B, fb, draft, c = GREY, blunt = false, raise = 0) { // (`raise`
     ...[-1, 1].flatMap((s) => [cyl(0.35, 0.35, 0.1, { x: s * B * 0.22, y: fb - 0.7, z: L / 2 - bowL * 0.45, rz: Math.PI / 2 - s * 0.4, color: BLACK }, 10), box(0.15, 0.9, 0.5, { x: s * B * 0.24, y: fb - 1.3, z: L / 2 - bowL * 0.42, color: BLACK })]),
     ...[L / 2 - bowL - 3, -L / 2 + 3].flatMap((z) => [-1, 1].map((s) => cyl(0.18, 0.2, 0.5, { x: s * (B / 2 - 0.9), y: fb + 0.3, z, color: STEEL }, 8))),
     // the life-raft canisters in their cradles amidships
-    ...[-1, 1].flatMap((s) => [0, 1, 2].map((k) => cyl(0.32, 0.32, 1.1, { x: s * (B / 2 - 0.55), y: fb + 0.45, z: -L * 0.18 + k * 1.3, rx: Math.PI / 2, color: 0xd8d4c8 }, 10))),
+    ...[-1, 1].flatMap((s) => [0, 1, 2].map((k) => cyl(0.32, 0.32, 1.1, { x: s * (B / 2 - 0.55), y: fb + 0.4, z: -L * 0.18 + k * 1.3, rx: Math.PI / 2, color: 0xd8d4c8 }, 10))),
   ];
 }
 /** A twin gun turret (AK-230 / AK-725 style): a squat round house, two barrels. */
@@ -70,7 +70,7 @@ const twin = (x, y, z, r = 1.1, len = 2.6, aft = false) => [
 ];
 const mast = (x, y, z, h, yard = 4) => [
   cyl(0.12, 0.18, h, { x, y: y + h / 2, z, color: DARK }, 6), box(yard, 0.12, 0.12, { x, y: y + h * 0.75, z, color: DARK }), box(1.4, 0.5, 0.4, { x, y: y + h + 0.2, z, color: DARK }),
-  box(2.6, 0.25, 0.35, { x, y: y + h * 0.55, z: z + 0.4, color: DARK }),                  // the navigation radar's antenna on its platform…
+  box(2.6, 0.25, 0.35, { x, y: y + h * 0.5 + 0.16, z: z + 0.4, color: DARK }),                  // the navigation radar's antenna on its platform…
   box(1.2, 0.08, 1.0, { x, y: y + h * 0.5, z: z + 0.2, color: DARK }),                    // …the platform
   ...[-1, 1].map((s) => box(0.15, 0.15, 0.15, { x: x + s * yard * 0.45, y: y + h * 0.75 - 0.15, z, color: s < 0 ? 0x8a2a20 : 0x2a6a3a })), // the side lights on the yard
   cyl(0.06, 0.06, 1.2, { x, y: y + h + 1.0, z, color: DARK }, 5),                         // the masthead whip
@@ -83,6 +83,7 @@ const bridge = (y, z, w, h, d) => [
     box(0.06, 0.5, d * 0.5, { x: s * (w / 2 + 0.03), y: y + h - 0.6, z: z + d * 0.15, color: GLASS }),  // side windows
   ]),
   box(w * 0.6, 0.05, 0.05, { y: y + h + 0.9, z: z + d / 2 - 0.3, color: STEEL }),                      // the rail round the bridge roof
+  ...[-1, 1].map((s) => box(0.05, 0.9, 0.05, { x: s * w * 0.28, y: y + h + 0.45, z: z + d / 2 - 0.3, color: STEEL })), // …its stanchions
   box(0.6, 0.5, 0.6, { x: w * 0.3, y: y + h + 0.25, z: z + d / 2 - 1.2, color: DARK }),                // a searchlight
 ];
 
@@ -94,7 +95,7 @@ export const buildFrosch = craft(() => {
     ...bridge(fb, -26, 9, 7, 16), ...bridge(fb + 7, -24, 6, 3, 8),
     cyl(1.2, 1.4, 5, { y: fb + 9, z: -32, color: DARK }),                        // the funnel
     ...mast(0, fb + 10, -20, 9),
-    ...twin(0, fb + 3.3, L / 2 - 11, 1.4, 3.6), ...twin(0, fb + 7, -36, 1.1, 2.6, true),
+    ...twin(0, fb + 3.3, L / 2 - 11, 1.4, 3.6), ...twin(0, fb + 7, -33.4, 1.1, 2.6, true),
     box(B - 1.2, 0.3, 40, { y: fb + 0.2, z: 8, color: DARK }),                  // the tank deck's hatch covers
   ]);
   const ramp = merge([box(B * 0.5, 4.5, 0.3, { y: 2.25, color: STEEL, surf: 'metal' })]);
@@ -108,12 +109,12 @@ export const buildPolnocny = craft(() => {
     ...hull(L, B, fb, 2, GREY, true),
     ...bridge(fb, -24, 7, 5, 12), ...bridge(fb + 5, -22, 5, 2.4, 6),
     ...mast(0, fb + 7.4, -20, 7),
-    ...twin(0, fb + 5, -14, 0.9, 2.2), ...twin(0, fb + 5, -30, 0.9, 2.2, true),
+    ...twin(0, fb, -14, 0.9, 2.2), ...twin(0, fb + 5, -30, 0.9, 2.2, true),     // (the forward pair on the deck before the bridge)
     box(B - 2, 0.4, 30, { y: fb + 0.25, z: 8, color: DARK }),                   // the well deck's hatch
     ...[-1, 1].map((s) => box(1.6, 1.4, 2.4, { x: s * 2.4, y: fb + 0.9, z: L / 2 - 14, color: STEEL })), // the rocket launchers
   ]);
   const ramp = merge([box(B * 0.55, 3.4, 0.25, { y: 1.7, color: STEEL, surf: 'metal' })]);
-  return { fixed, ramp, hinge: [0.4, L / 2 - 1.2], gunAt: [fb + 5.6, -14] };
+  return { fixed, ramp, hinge: [0.4, L / 2 - 1.2], gunAt: [fb + 0.6, -14] };
 });
 
 /** Aist: 47 × 17.8 m. */
@@ -122,16 +123,16 @@ export const buildAist = craft(() => {
   const fixed = merge([
     box(B, 1.6, L, { y: 0.5, color: BLACK }),                                    // the skirt (rubber: plain — 'cloth' is for sails)
     box(B - 1, 1.2, L - 2, { y: 1.9, color: GREY }),                            // the hull on it
-    box(B - 6, 3.4, L - 14, { y: h + 2.2, z: -2, color: GREY }),                // the cargo deck's covered hold
-    ...bridge(h + 3.9, 10, 7, 3, 6),
+    box(B - 6, 3.4, L - 14, { y: h + 1.9, z: -2, color: GREY }),                // the cargo deck's covered hold
+    ...bridge(h + 3.6, 10, 7, 3, 6),
     ...[-1, 1].flatMap((s) => [
       box(1.2, 9, 3, { x: s * 5.5, y: h + 6, z: -L / 2 + 6, color: GREY }),     // the pylons
       ...[0, 1].map((k) => cyl(2.4, 2.4, 0.4, { x: s * (5.5 + (k ? 2.8 : -2.8)), y: h + 8.5, z: -L / 2 + 4.5, rx: Math.PI / 2, color: DARK }, 14)), // the propellers' rings
     ]),
-    ...twin(-3, h + 5.6, 4, 0.8, 1.8), ...twin(3, h + 5.6, 4, 0.8, 1.8),
+    ...twin(-3, h + 3.6, 4, 0.8, 1.8), ...twin(3, h + 3.6, 4, 0.8, 1.8),
   ]);
   const ramp = merge([box(B * 0.45, 3, 0.25, { y: 1.5, color: STEEL, surf: 'metal' })]);
-  return { fixed, ramp, hinge: [1.2, L / 2 - 0.5], gunAt: [h + 6, 6] };
+  return { fixed, ramp, hinge: [1.2, L / 2 - 0.5], gunAt: [h + 4.2, 6] };
 });
 
 /** Parchim: 72 × 9.4 m. */
@@ -169,9 +170,9 @@ export const buildNatya = craft(() => {
     ...hull(L, B, fb, 2.4),
     box(B * 0.8, 2.6, 22, { y: fb + 1.3, z: 6, color: GREY }),
     ...bridge(fb + 2.6, 12, 6, 3, 6),
-    ...mast(0, fb + 5.6, 8, 9, 4),
+    ...mast(0, fb + 5.6, 10, 9, 4),                                              // (on the bridge)
     cyl(1, 1.2, 3, { y: fb + 4, z: -1, color: DARK }),                           // the funnel
-    ...twin(0, fb, 22, 0.8, 2), ...twin(0, fb + 2.6, -6, 0.8, 2, true),
+    ...twin(0, fb, 22, 0.8, 2), ...twin(0, fb + 2.6, -4.6, 0.8, 2, true),
     box(3, 1.4, 2.4, { y: fb + 0.7, z: -L / 2 + 8, color: DARK }),                // the sweep winch
     ...[-1, 1].map((s) => cyl(0.4, 0.4, 2.6, { x: s * 2.6, y: fb + 0.5, z: -L / 2 + 3, rx: Math.PI / 2, color: 0xb84a2a }, 8)), // the floats
   ]);

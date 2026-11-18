@@ -486,3 +486,8 @@
 .menu-epoch button.soon { cursor: default; opacity: 0.45; }
 .menu-epoch button.soon:hover { color: var(--muted); }
 .menu-epoch button small { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* the region inside the theatre (Europe · Asia & Pacific): a smaller second row, tucked under Land / Sea / Coastal */
+.menu-where { display: flex; flex-direction: column; gap: 5px; }
+.menu-region { flex-wrap: wrap; }
+.menu-region button { padding: 5px 4px; font-size: 11px; white-space: nowrap; flex: 1 1 auto; }

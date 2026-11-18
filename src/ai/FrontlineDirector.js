@@ -51,13 +51,13 @@ import { STRUCTURES, structureCost } from '../systems/Construction.js';
 
 const THINK = 4;
 const BUILD_ORDER = [
-  'mgTeam', 'tank', 'atTeam', 'scouts', 'mortar', 'ifv', 'engineers', 'observers', 'artillery', 'sniper', 'cbRadar', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
+  'mgTeam', 'tank', 'atTeam', 'scouts', 'fpvTeam', 'mortar', 'ifv', 'engineers', 'observers', 'artillery', 'loiterTeam', 'sniper', 'cbRadar', 'tank', 'cev', 'mineClear', 'jammer', 'commandPost', 'manpads', 'towedAA', 'airRadar', 'gunMissile',
   'reconVehicle', 'aa', 'mgTeam', 'tankDestroyer', 'ifv', 'spMortar', 'ambulance', 'atTeam', 'heavyTank', 'rifles', 'recovery',
   'rockets', 'sam', 'tank',
 ];
 const CAPS = {
   tank: 4, mgTeam: 3, atTeam: 3, artillery: 1, aa: 1, mortar: 2, ifv: 3, scouts: 2, engineers: 1, observers: 1, manpads: 2,
-  reconVehicle: 2, tankDestroyer: 2, spMortar: 1, ambulance: 1, heavyTank: 2, recovery: 1, rockets: 1, sam: 1, cev: 1,
+  reconVehicle: 2, tankDestroyer: 2, fpvTeam: 2, loiterTeam: 1, spMortar: 1, ambulance: 1, heavyTank: 2, recovery: 1, rockets: 1, sam: 1, cev: 1,
 };
 // armour: the share of its fighting stacks the AI keeps in vehicles, and what it buys to get there
 // (in turn, saving up for each — the rifle squads don't get to spend that money first)
@@ -760,6 +760,19 @@ export class FrontlineDirector {
         const t = armour[Math.floor(Math.random() * armour.length)];
         if (air.call(this.faction, t.centroid.x, t.centroid.z, null, 'jet')) return true;
       }
+    }
+    // the bombers (systems/AirStrike.js lightBomber / heavyBomber): a carpet where the enemy is thick — a point it holds with
+    // two or more of its stacks seen round it (heavy), a pair of them seen together within reach of a point of ours (light), along the line they lie on
+    const foes = this.game.world.stacksOf(enemyOf(this.faction)).filter((s) => !s.stats.structure && !s.stats.naval && s.units.some((u) => u.alive && u.spotted));
+    const around = (x, z, r) => foes.filter((s) => Math.hypot(s.centroid.x - x, s.centroid.z - z) < r);
+    if (air.ready(this.faction, 'heavyBomber') && this.supportOver(520)) {
+      const p = this.points.filter((q) => q.owner && q.owner !== this.faction).map((q) => [q, around(q.x, q.z, 160).length]).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (p && air.call(this.faction, p.x, p.z, null, 'heavyBomber')) return true;
+    }
+    if (air.ready(this.faction, 'lightBomber') && this.supportOver(360)) {
+      const ours = this.points.filter((q) => q.owner === this.faction);
+      const c = foes.find((s) => ours.some((q) => Math.hypot(s.centroid.x - q.x, s.centroid.z - q.z) < 400) && around(s.centroid.x, s.centroid.z, 80).length >= 2);
+      if (c && air.call(this.faction, c.centroid.x, c.centroid.z, null, 'lightBomber')) return true;
     }
     // enemy strike aircraft over the field: fighters up over our nearest point
     const raid = air.sorties.find((s) => s.faction !== this.faction && s.airborne && s.kind !== 'cap');

@@ -147,7 +147,7 @@ export class TouchControls {
     const cs = this.game.commands;
     this.point(x, y);
     if (cs.targeting) return cs.pinTargeting(x, y); // put the blueprint there; Place confirms
-    const own = cs.stackAt(x, y, cs.faction, (s) => this.game.mine(s) && !s.stats.structure && !s.autonomous);
+    const own = cs.stackAt(x, y, cs.faction, (s) => this.game.mine(s) && (!s.stats.structure || s.stats.airfield) && !s.autonomous);
     const button = own || !cs.selected.size ? 0 : 2;
     this.mouse('mousedown', button, x, y);
     this.mouse('mouseup', button, x, y);

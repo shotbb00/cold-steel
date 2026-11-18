@@ -1,7 +1,8 @@
 // Surigao Strait, the night of 24–25 October 1944 (fought here as 1945): a strait a kilometre and a half
 // wide, winding north between Leyte and Dinagat into Leyte Gulf, with Hibuson Island in it. The US Navy
 // lies across its northern mouth — battleline, cruisers, destroyers ready to go down the sides, PT boats
-// out ahead; the Imperial Navy comes up from the Mindanao Sea in the south, in line ahead, at night.
+// out ahead; the Imperial Navy comes up from the Mindanao Sea in the south, in line ahead, at night. Fair: the
+// mouth as near the US line as the Hibuson passage the Japanese, mid-strait halfway.
 // Ships only (data/units45/ships.js). Night by default (map.conditions).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -38,8 +39,8 @@ function height(x: number, z: number) {
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Leyte Gulf', x: 0, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
-  { id: 'B', name: 'The mouth', x: -100, z: -1000, owner: null, sector: 'centre', radius: 160 },
-  { id: 'C', name: 'Mid-strait', x: 60, z: -50, owner: null, sector: 'centre', radius: 160 },
+  { id: 'B', name: 'The mouth', x: -100, z: -780, owner: null, sector: 'centre', radius: 160 },
+  { id: 'C', name: 'Mid-strait', x: 60, z: 0, owner: null, sector: 'centre', radius: 160 },
   { id: 'D', name: 'Hibuson passage', x: 200, z: 800, owner: null, sector: 'centre', radius: 150 },
   { id: 'K', name: 'Mindanao Sea', x: 0, z: 2100, owner: 'pact', sector: 'centre', radius: 150 },
 ];
@@ -49,6 +50,7 @@ export default {
   name: 'Surigao Strait',
   description: 'A narrow strait at night: the US Navy lies across its mouth into Leyte Gulf, the Imperial Navy comes up it from the south. Torpedo boats and destroyers down the sides, the big guns at the end.',
   epochs: ['1945'],
+  region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'night', weather: 'clear' },

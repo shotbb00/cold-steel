@@ -28,6 +28,7 @@ import { makeBuyer } from './shared.js';
 import { AIState } from '../ai/StackAI.js';
 import { rememberBattle, requestReplay } from '../core/replay.js';
 import { epoch } from '../data/epoch.js';
+import { runwayOpen } from '../systems/Airfields.js';
 
 const ww2 = () => epoch() === '1945';
 const doneKey = () => (epoch() === '1985' ? 'coldsteel.bootcamp' : `coldsteel.bootcamp.${epoch()}`);
@@ -216,6 +217,36 @@ const RECON = {
   tasks: [
     ['Send a recon flight over the machine gun', (g) => (g.air.readyAt[g.air.key(g.playerFaction, 'recon')] ?? 0) > 0],
     ['See what it photographed', (g) => g.world.stacksOf(enemyOf(g.playerFaction)).some((s) => s.units.some((u) => u.locatedUntil > g.time))],
+  ],
+};
+
+const AIRFIELD = {
+  title: 'Airfields and bombers',
+  touch: 'In battle your regular squadrons — helicopters, ground-attack aircraft, light bombers — fly from your <b>airfield</b> behind the lines, and are launched from its own buttons, not from Orders; only the special ones (fighters, recon) and the heavy bombers, too big for a field strip, still come in from the map edge. Here it holds bombers. Tap the airfield: its own buttons show what is in its hangar. Tap <b>Light bombers</b> there, then tap the machine gun: the flight taxis out, takes off, lines up and lays a stick of bombs along the line. While it is away the enemy bombs your runway — a shut runway launches nothing until <b>engineers</b> repair it: walk them to the airfield.',
+  text: 'In battle your regular squadrons — helicopters, ground-attack aircraft, light bombers — fly from your <b>airfield</b> behind the lines, and are launched from its own buttons, not from the support bar; only the special ones (fighters, recon) and the heavy bombers, too big for a field strip, still come in from the map edge. Here it holds bombers. Select the airfield: its own buttons show what is in its hangar. Click <b>Light bombers</b> there, then click the machine gun: the flight taxis out, takes off, lines up and lays a stick of bombs along the line. While it is away the enemy bombs your runway — a shut runway launches nothing until <b>engineers</b> repair it: walk them to the airfield.',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    game.air.limit[me] = undefined;
+    game.modeState.cp[me] += 800;
+    ctx.af = game.world.basesOf(me).find((s) => s.stats.airfield);
+    ctx.mg = game.world.stacksOf(enemyOf(me)).find((s) => s.alive) ?? target(game, 'mgTeam', spot(game, 250, -15), 'MG nest');
+    if (ctx.af) game.tutorial.highlight(ctx.af);
+  },
+  update(game, ctx) {
+    const me = game.playerFaction;
+    if (!ctx.af || ctx.shut || !game.air.sorties.some((s) => s.faction === me && s.p.bombs && s.state === 'ingress')) return;
+    ctx.shut = true; // the enemy's raid: the runway cratered, the engineers sent up from the rear
+    const u = ctx.af.units[0];
+    u.hp = u.maxHp * 0.3;
+    game.effects.explosion(u.pos, 1.5, { ground: true, fire: 2 });
+    game.tell(me, `${ctx.af.name}: enemy bombers over the runway — it is shut until it is repaired`);
+    ctx.eng = game.spawnStack('engineers', me, { x: u.pos.x + (u.pos.x > 0 ? -100 : 100), z: u.pos.z }, facing(game), 'Engineer section');
+    game.tutorial.highlight(ctx.eng);
+  },
+  tasks: [
+    ['Select your airfield', (g, c) => !c.af || g.commands.selected.has(c.af)],
+    ['Send its bombers onto the machine gun', (g, c) => !c.af || g.air.sorties.some((s) => s.faction === g.playerFaction && s.p.bombs)],
+    ['Repair the runway with the engineers', (g, c) => !c.af || (c.shut && runwayOpen(c.af))],
   ],
 };
 
@@ -695,7 +726,7 @@ const CONTROL_1806 = as1945(CONTROL, {
 export const CHAPTERS = [
   { id: 'basics', title: 'Basics', blurb: 'The camera, selecting and moving, facing and cover, a first firefight, taking ground.', steps: [CAMERA, SELECT, MOVE, FACE, CONTACT, POINT],
     outro: 'That is the core of command. Next: <b>Fire support</b> — what to do about a machine gun you can\'t walk up to.' },
-  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, recon flights.', steps: [SMOKE, SPOTTING, AIR, RECON],
+  { id: 'fire', title: 'Fire support', blurb: 'Mortar smoke, artillery and forward observers, helicopters and jets, recon flights, the airfield and its bombers.', steps: [SMOKE, SPOTTING, AIR, RECON, AIRFIELD],
     outro: 'Fire support wins fights before your men walk into them. Next: <b>Digging in</b> — making ground hard to take.' },
   { id: 'fortify', title: 'Digging in', blurb: 'Trenches, wire and mines, calling off a job, fighting from houses, engineers clearing a minefield.', steps: [TRENCH, OBSTACLES, CANCEL, HOUSE, ENGINEERS],
     outro: 'A dug-in squad behind wire costs the enemy dearly. Next: <b>Armour and transport</b>.' },
@@ -708,7 +739,7 @@ export const CHAPTERS = [
 /** 1945's boot camp: the same chapters told with its own aircraft and vehicles, and one of its own. */
 const swap = { [AIR.title]: AIR_1945, [RECON.title]: RECON_1945, [VEHICLE_SMOKE.title]: VEHICLE_SMOKE_1945, [IFV.title]: IFV_1945 };
 const BLURB_1945 = {
-  fire: 'Mortar smoke, artillery and forward observers, fighter-bombers, recon flights.',
+  fire: 'Mortar smoke, artillery and forward observers, fighter-bombers, recon flights, the airfield and its bombers.',
   armour: 'Reinforcements, smoke dischargers, carrying infantry in half-tracks, repairs.',
 };
 const CHAPTERS_1945 = [
@@ -838,15 +869,119 @@ const CHAPTERS_1918 = [
   { ...CHAPTERS[0], outro: 'That is the core of command. Next: <b>The trenches</b>.' },
   { id: 'trenches', title: 'The trenches', blurb: 'Digging in, wire, blowing a lane through the enemy\'s wire.', steps: [TRENCH, OBSTACLES, WIRE_1918],
     outro: 'A trench behind wire holds against anything but guns and tanks. Next: <b>Guns, gas and aircraft</b>.' },
-  { id: 'fire', title: 'Guns, gas and aircraft', blurb: 'Mortar smoke, observers, the creeping barrage, gas, ground attack, the spotter.', steps: [SMOKE, SPOTTING, BARRAGE_1918, GAS_1918, AIR_1918, RECON_1918],
+  { id: 'fire', title: 'Guns, gas and aircraft', blurb: 'Mortar smoke, observers, the creeping barrage, gas, ground attack, the spotter, the aerodrome and its bombers.', steps: [SMOKE, SPOTTING, BARRAGE_1918, GAS_1918, AIR_1918, RECON_1918, AIRFIELD],
     outro: 'The guns win the battles of 1918 — if someone can see for them. Next: <b>Tanks and horses</b>.' },
   { id: 'armour', title: 'Tanks and horses', blurb: 'Reinforcements, tanks that break down and the supply tank, the cavalry charge.', steps: [REINFORCE, TANKS_1918, CAVALRY_1918],
     outro: 'Tanks, infantry, guns and aircraft as one plan: that is how 1918 was won. Last: <b>Fighting in person</b>.' },
   { ...CHAPTERS[CHAPTERS.length - 1], outro: 'That is boot camp done. In battle the enemy plays the same game: it shells what its observers see, gasses your trenches and comes behind its own barrage. Try a <b>Frontline</b> battle on Villers-Bretonneux on Recruit, and look up any unit in the <b>Units</b> tab of the menu.' },
 ];
 
+// ------------------------------------------------------------------ 2027
+// 1985's chapters on the Suwałki Gap, and one of its own: drones, jamming, active protection, guided fires.
+
+const RECON_DRONE_2027 = {
+  title: 'Eyes in the sky',
+  touch: 'In 2027 your <b>scouts</b> and <b>observers</b> fly a recon drone. It climbs over the enemy nearest them and circles: everything under it shows on your map and becomes your guns’ and drones’ first target. Move the scouts into the ring and watch their drone find the enemy squad hiding up the field.',
+  text: 'In 2027 your <b>scouts</b> and <b>observers</b> fly a recon drone. It climbs over the enemy nearest them and circles: everything under it shows on your map and becomes your guns’ and drones’ first target. Move the scouts into the ring and watch their drone find the enemy squad hiding up the field.',
+  start(game, ctx) {
+    ctx.scouts = ensure(game, 'scouts', 40, 30, 'Scout team');
+    ctx.ring = spot(game, 120, 30);
+    ctx.marker = game.tutorial.marker(ctx.ring, 8);
+    ctx.enemy = target(game, 'rifles', spot(game, 330, 40), 'Hidden squad');
+    game.tutorial.highlight(ctx.scouts);
+  },
+  tasks: [
+    ['Move the scouts into the ring', (g, c) => near(c.scouts, c.ring, 10)],
+    ['Their drone finds the hidden squad', (g, c) => c.enemy.units.some((u) => u.alive && u.locatedUntil > g.time)],
+  ],
+};
+
+const FPV_2027 = {
+  title: 'FPV drones',
+  touch: 'An <b>FPV drone team</b> flies its drones into anything your side has spotted within half a kilometre — vehicles first, into the thin roof. Keep the team back and hidden; your scouts’ drone finds the targets. An enemy tank stands up the field, found by your drone: buy an FPV team in <b>Reinforce</b> (or use the one that has arrived) and let it work.',
+  text: 'An <b>FPV drone team</b> flies its drones into anything your side has spotted within half a kilometre — vehicles first, into the thin roof. Keep the team back and hidden; your scouts’ drone finds the targets. An enemy tank stands up the field, found by your drone: buy an FPV team in <b>Reinforce</b> (or use the one that has arrived) and let it work.',
+  start(game, ctx) {
+    ctx.team = ensure(game, 'fpvTeam', 30, -40, 'FPV team');
+    ctx.tank = target(game, 'tank', spot(game, 300, -30), 'Enemy tank');
+    game.tutorial.highlight(ctx.team);
+  },
+  update(game, ctx) { for (const u of ctx.tank.units) if (u.alive) u.locatedUntil = game.time + 2; }, // (your recon drone's find)
+  tasks: [['Hit the tank with an FPV drone', (g, c) => c.tank.units.some((u) => !u.alive || u.hp < u.maxHp)]],
+};
+
+const JAMMER_2027 = {
+  title: 'Jamming',
+  touch: 'The enemy has FPV teams too, and they are hunting your tank. A <b>jammer</b> parked with its masts up fills a wide circle with noise: drones in it lose their link and fall. Move the jammer into the ring beside the tank and wait for it to set up — then watch the enemy’s drones drop. (Your <b>sappers</b> carry a small trench jammer too.)',
+  text: 'The enemy has FPV teams too, and they are hunting your tank. A <b>jammer</b> parked with its masts up fills a wide circle with noise: drones in it lose their link and fall. Move the jammer into the ring beside the tank and wait for it to set up — then watch the enemy’s drones drop. (Your <b>sappers</b> carry a small trench jammer too.)',
+  start(game, ctx) {
+    const me = game.playerFaction;
+    ctx.tank = ensure(game, 'tank', 120, 40, 'Tank platoon');
+    ctx.tank.ai.halt?.();
+    ctx.jam = game.spawnStack('jammer', me, spot(game, 20, 60), facing(game), 'Jammer');
+    ctx.ring = spot(game, 105, 80);
+    ctx.marker = game.tutorial.marker(ctx.ring, 9);
+    ctx.fpv = target(game, 'fpvTeam', spot(game, 420, 40), 'Enemy FPV team');
+    ctx.downed = 0;
+    ctx.off = game.bus.on('drone:down', (e) => { if (e.faction !== me && e.jammed) ctx.downed++; });
+    game.tutorial.highlight(ctx.jam);
+  },
+  update(game, ctx) { for (const u of ctx.tank.units) if (u.alive) u.locatedUntil = game.time + 2; }, // (the enemy's drone sees your tank)
+  end(game, ctx) { ctx.off?.(); },
+  tasks: [
+    ['Set the jammer up in the ring', (g, c) => near(c.jam, c.ring, 12) && c.jam.units.some((u) => u.jamming)],
+    ['Jam two enemy drones out of the sky', (g, c) => c.downed >= 2],
+  ],
+};
+
+const APS_2027 = {
+  title: 'Active protection',
+  touch: 'Your heavy tanks carry <b>Trophy</b> (Russia’s: Arena-M): radar panels see a missile or a drone coming and a launcher shoots it down a few metres out — three times, then it needs a lull to reload. Drive the Abrams into the ring, where an enemy missile team waits.',
+  text: 'Your heavy tanks carry <b>Trophy</b> (Russia’s: Arena-M): radar panels see a missile or a drone coming and a launcher shoots it down a few metres out — three times, then it needs a lull to reload. Drive the Abrams into the ring, where an enemy missile team waits.',
+  start(game, ctx) {
+    ctx.tank = game.spawnStack('heavyTank', game.playerFaction, spot(game, 40, 0), facing(game), 'Heavy platoon');
+    ctx.ring = spot(game, 170, 0);
+    ctx.marker = game.tutorial.marker(ctx.ring, 10);
+    ctx.at = target(game, 'atTeam', spot(game, 260, 10), 'Missile team');
+    ctx.saved = 0;
+    ctx.off = game.bus.on('aps', (e) => { if (e.stack === ctx.tank) ctx.saved++; });
+    game.tutorial.highlight(ctx.tank);
+  },
+  update(game, ctx) { if (!ctx.at.alive && near(ctx.tank, ctx.ring, 20)) ctx.at = target(game, 'atTeam', spot(game, 250, -20 + Math.random() * 40), 'Missile team'); }, // (another team, if the tanks got the first)
+  end(game, ctx) { ctx.off?.(); },
+  tasks: [
+    ['Drive the heavy tanks into the ring', (g, c) => near(c.tank, c.ring, 14)],
+    ['Trophy shoots down a missile', (g, c) => c.saved >= 1],
+  ],
+};
+
+const GUIDED_2027 = {
+  title: 'Guided fires',
+  touch: 'Your howitzers fire <b>guided shells</b> (Excalibur): where the target is located, a third of them land within a few metres. An enemy jammer over the target throws them off. And once the enemy’s radar finds your guns, they <b>shoot and scoot</b> — drive off to a new spot by themselves. An enemy gun up the field has been found by your drone: let your battery fire on it.',
+  text: 'Your howitzers fire <b>guided shells</b> (Excalibur): where the target is located, a third of them land within a few metres. An enemy jammer over the target throws them off. And once the enemy’s radar finds your guns, they <b>shoot and scoot</b> — drive off to a new spot by themselves. An enemy gun up the field has been found by your drone: let your battery fire on it.',
+  start(game, ctx) {
+    ctx.guns = ensure(game, 'artillery', 10, -80, 'Battery');
+    ctx.gun = target(game, 'artillery', spot(game, 290, -60), 'Enemy battery');
+    game.tutorial.highlight(ctx.guns);
+  },
+  update(game, ctx) {
+    for (const u of ctx.gun.units) if (u.alive) u.locatedUntil = game.time + 2;
+    if (!ctx.found && ctx.guns.firedAt) { ctx.found = true; for (const u of ctx.guns.units) u.locatedUntil = game.time + 20; game.bus.emit('toast', 'Enemy counter-battery radar has found your guns'); }
+  },
+  tasks: [
+    ['Hit the enemy battery', (g, c) => c.gun.units.some((u) => !u.alive || u.hp < u.maxHp)],
+    ['Your guns relocate once found', (g, c) => c.guns.job === 'relocating' || !!c.guns.moveTarget && c.found],
+  ],
+};
+
+const CHAPTERS_2027 = [
+  ...CHAPTERS.slice(0, -1),
+  { id: 'drones', title: 'Drones and electronic warfare', blurb: 'Recon drones, FPV teams, jamming, active protection, guided shells and shoot-and-scoot.', steps: [RECON_DRONE_2027, FPV_2027, JAMMER_2027, APS_2027, GUIDED_2027],
+    outro: 'Whoever sees first and strikes first wins in 2027 — and whoever is seen, dies. Keep moving, keep jamming. Last: <b>Fighting in person</b>.' },
+  { ...CHAPTERS[CHAPTERS.length - 1], outro: 'That is boot camp done. In battle the enemy flies its own drones, jams yours and hunts your guns. Try a <b>Frontline</b> battle on the Suwałki Gap on Recruit, and look up any unit in the <b>Units</b> tab of the menu.' },
+];
+
 /** This war's chapters. */
-export const chapters = () => ({ 1945: CHAPTERS_1945, 1918: CHAPTERS_1918, 1806: CHAPTERS_1806 }[epoch()] ?? CHAPTERS);
+export const chapters = () => ({ 1945: CHAPTERS_1945, 1918: CHAPTERS_1918, 1806: CHAPTERS_1806, 2027: CHAPTERS_2027 }[epoch()] ?? CHAPTERS);
 
 /** Chapters finished on this browser (the menu ticks them). */
 export function chaptersDone() {
@@ -860,7 +995,7 @@ function markDone(id) {
 }
 
 /** The battle that runs boot camp chapter `id` (also what the menu deploys). */
-export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: { 1806: 'jena', 1918: 'villers-bretonneux' }[epoch()] ?? 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
+export const chapterBattle = (id, rules = {}) => ({ mode: 'bootcamp', map: { 1806: 'jena', 1918: 'villers-bretonneux', 2027: 'suwalki-gap' }[epoch()] ?? 'fulda-gap', side: 'nato', time: 'day', weather: 'clear', rules: { ...rules, chapter: id } });
 
 export default {
   id: 'bootcamp',

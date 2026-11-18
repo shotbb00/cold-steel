@@ -60,7 +60,7 @@ export const buildYMS = craft(() => {
     P.cyl(0.08, 0.1, 10, { y: fb + 7, z: 6, color: DARK }, 6),                                     // the mast
     P.box(3, 0.08, 0.08, { y: fb + 9.5, z: 6, color: DARK }),
     P.cyl(0.6, 0.7, 0.6, { y: fb + 0.4, z: L / 2 - 7, color: STEEL }, 10),                        // the 3-inch gun's mount
-    P.cyl(0.07, 0.09, 3, { y: fb + 0.9, z: L / 2 - 5.4, rx: Math.PI / 2, color: STEEL }, 8),
+    P.cyl(0.07, 0.09, 3, { y: fb + 0.72, z: L / 2 - 5.4, rx: Math.PI / 2, color: STEEL }, 8),
     box(2.4, 1.4, 2, { y: fb + 0.7, z: -L / 2 + 6, color: DARK }),                                 // the sweep winch
     ...[-1, 1].flatMap((s) => [
       P.cyl(0.35, 0.35, 2.4, { x: s * 2.2, y: fb + 0.4, z: -L / 2 + 2.5, rx: Math.PI / 2, color: 0xb84a2a }, 8), // the floats, red
@@ -68,6 +68,34 @@ export const buildYMS = craft(() => {
     ]),
   ]);
   return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, L / 2 - 4] };
+});
+
+/**
+ * LSM(R)-188: a medium landing ship turned rocket ship (Iwo Jima, Okinawa) — the long low hull, the round
+ * conning tower to starboard aft, the 5-inch gun on the stern, and the well deck forward full of rocket
+ * launchers in rows: a ripple of hundreds of 5-inch rockets onto the beach before the first wave lands.
+ */
+export const buildLSMR = craft(() => {
+  const L = 62, B = 10.5, fb = 2.8;
+  const fixed = merge([
+    box(B, 3.4, L - 6, { y: fb - 1.7, z: -2, color: GREY }),
+    P.box(B * 0.55, 3.0, 6, { y: fb - 1.4, z: L / 2 - 5, color: GREY, surf: 'plate' }),            // the bow, narrowing
+    box(B - 0.6, 0.12, L - 8, { y: fb + 0.05, z: -2, color: STEEL, surf: 'deck' }),
+    ...[-1, 1].map((s) => box(0.3, 1.0, L - 10, { x: s * (B / 2 - 0.15), y: fb + 0.5, z: -1, color: GREY })), // the bulwarks
+    P.cyl(2.1, 2.3, 5.5, { x: B / 2 - 2.6, y: fb + 2.75, z: -L / 2 + 14, color: GREY }, 16),      // the round conning tower, to starboard
+    box(3.6, 0.5, 0.1, { x: B / 2 - 2.6, y: fb + 4.6, z: -L / 2 + 16.1, color: 0x2a3a44 }),
+    P.cyl(0.08, 0.1, 9, { x: B / 2 - 2.6, y: fb + 9.5, z: -L / 2 + 14, color: DARK }, 6),           // the mast
+    P.cyl(0.9, 1.0, 1.0, { y: fb + 0.5, z: -L / 2 + 4.5, color: STEEL }, 12),                       // the 5-inch mount aft
+    P.box(1.6, 1.3, 2.0, { y: fb + 1.5, z: -L / 2 + 4.5, color: GREY }),
+    P.cyl(0.08, 0.1, 4, { y: fb + 1.6, z: -L / 2 + 1.7, rx: Math.PI / 2, color: STEEL }, 8),
+    // the rocket launchers: rows of racks over the forward deck, each a frame of rails angled up
+    ...Array.from({ length: 6 }, (_, i) => i).flatMap((i) => [-2.6, 0, 2.6].flatMap((x) => [
+      box(2.0, 0.12, 2.2, { x, y: fb + 0.9, z: -4 + i * 4.2, rx: -0.6, color: DARK }),
+      ...[-0.7, 0, 0.7].map((dx) => box(0.12, 0.12, 2.4, { x: x + dx, y: fb + 1.05, z: -4 + i * 4.2, rx: -0.6, color: STEEL })),
+      box(1.8, 0.7, 0.14, { x, y: fb + 0.4, z: -4 + i * 4.2 - 0.6, color: DARK }),
+    ])),
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 2, 4] };
 });
 
 /** A DD Sherman afloat: the canvas screen raised all round on its struts, the hull below the water, the turret top inside it, the twin propellers astern. */
@@ -80,7 +108,7 @@ export const buildDD = craft(() => {
     P.box(B + 0.5, 1.9, 0.08, { y: 0.85, z: -L / 2 + 0.1, color: CANVAS, surf: 'cloth' }),      // …and stern
     ...[-1, 1].flatMap((s) => [-2, 0, 2].map((z) => P.cyl(0.04, 0.04, 1.9, { x: s * (B / 2 + 0.2), y: 0.85, z, color: STEEL }, 4))), // the struts
     P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: -B / 2 - 0.25, color: STEEL }), P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: B / 2 + 0.25, color: STEEL }), // the top rail
-    P.cyl(0.9, 1.0, 0.7, { y: 1.3, z: -0.3, color: OLIVE }, 12),                                // the turret's top, inside it
+    P.cyl(0.9, 1.0, 1.6, { y: 0.85, z: -0.3, color: OLIVE }, 12),                               // the turret, its top inside the screen
     P.cyl(0.07, 0.08, 1.2, { y: 1.3, z: 0.6, rx: Math.PI / 2, color: OLIVE }, 6),               // the gun, stowed
     ...[-1, 1].map((s) => P.cyl(0.35, 0.35, 0.1, { x: s * 0.8, y: -0.5, z: -L / 2 - 0.4, rx: Math.PI / 2, color: STEEL }, 8)), // the propellers
   ]);
@@ -100,8 +128,9 @@ export const buildLCVP = craft(() => {
     box(B, 0.6, 1.4, { y: fb + 0.3, z: -L / 2 + 0.7, color: GREY }),                   // the stern sheets
     box(1.1, 0.8, 1.0, { x: 0.6, y: fb + 0.6, z: -L / 2 + 1.6, color: DARK }),         // the coxswain's station
     ...[-1, 1].flatMap((s) => [
-      P.cyl(0.45, 0.45, 0.1, { x: s * 1.1, y: fb + 0.65, z: -L / 2 + 2.1, color: STEEL }, 10),  // the gun rings
-      P.cyl(0.05, 0.05, 1.1, { x: s * 1.1, y: fb + 0.95, z: -L / 2 + 2.6, rx: Math.PI / 2 - 0.15, color: BLACK }, 5), // the .30s
+      P.cyl(0.45, 0.45, 0.1, { x: s * 1.15, y: fb + 0.52, z: -L / 2 + 2.1, color: STEEL }, 10),  // the gun rings (on her sides)
+      P.cyl(0.04, 0.04, 0.4, { x: s * 1.15, y: fb + 0.72, z: -L / 2 + 2.1, color: STEEL }, 5),    // the pintles
+      P.cyl(0.05, 0.05, 1.1, { x: s * 1.15, y: fb + 0.92, z: -L / 2 + 2.55, rx: Math.PI / 2 - 0.15, color: BLACK }, 5), // the .30s
     ]),
     box(B * 0.92, 0.25, 0.4, { y: -0.1, z: -0.4, color: 0x2a2420 }),                   // the keel's shadow line
   ]);
