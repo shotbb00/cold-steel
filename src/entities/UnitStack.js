@@ -2629,6 +2629,7 @@ export class UnitStack {
     }
     if (this.stats.structure) dir = null; // concrete all round: no weak sides
     if (this.stats.structure && source?.stats?.vsStructure) amount *= source.stats.vsStructure; // demolition charges are made for concrete
+    if (this.stats.structure && (source?.stats ?? source?.stack?.stats)?.ignite) { vsArmor = Math.max(vsArmor, 0.5); pierce = Math.max(pierce, 0.5); } // (flame: in through the embrasure — the concrete doesn't stop it)
     if (this.usesCover) {
       // Infantry: a solid hit is usually decisive — down, or wounded if lucky. Wounded men
       // don't survive a second one. Small grazes (splash edges, beam spill) just wear on them.

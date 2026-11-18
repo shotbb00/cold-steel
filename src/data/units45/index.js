@@ -588,6 +588,11 @@ pacific(rifles, 'usmc', { variant: { name: 'Marine Rifle Squad', weapon: 'M1 Gar
 pacific(mgTeam, 'usmc', { variant: { name: 'Marine MG Team', weapon: 'Browning M1919, .30 cal', text: 'The air-cooled Browning, carried up the terraces to hold what the riflemen took.' } });
 pacific(engineers, 'usmc', { variant: { name: 'Assault Engineers', weapon: 'M2-2 flamethrower, satchel charges', text: 'Iwo Jima’s cave-busters: the flamethrower into the opening, the satchel charge after it.' } });
 pacific(tank, 'usmc', { variant: { name: 'M4A3 Sherman (Marines)', weapon: '75 mm M3', text: 'The Marines’ Shermans, wooden planks on their sides against magnetic mines: they blast pillboxes point-blank for the riflemen.' } });
+// the Zippo in the heavy tank's place (the Marines had no Pershings on Iwo Jima): the 75's barrel swapped for a flame gun
+pacific(heavyTank, 'usmc', { model: buildUsSherman, cost: 0.85,
+  stats: { armor: 0.5, hp: 1150, speed: 5.2, noStabilizer: false, range: 70, aggroRange: 100, preferredRange: 40, damage: 90, splash: 2.6, fireCooldown: 0.08, burst: 1, burstInterval: 0,
+    boltSpeed: 34, boltSize: 1.6, tracer: 1, spread: 0.05, magSize: 60, reloadTime: 12, vsStructure: 3, suppressPower: 3, ignite: 0.7, vsArmor: 0.15, pierce: 0, weaponSound: 'flame', antiArmor: false },
+  variant: { name: 'M4A3R3 Zippo', weapon: 'flame gun, .30 cal', text: 'A Sherman with a flame gun in place of its 75: it drives up to the pillbox and burns it out from 60 metres. Useless against tanks — keep it with the riflemen, away from the 47s.' } });
 pacific(ifv, 'usmc', { model: buildUsLvt4, stats: { armor: 0.2, hp: 700, speed: 4.6 }, variant: { name: 'LVT-4 Water Buffalo', weapon: '.30 and .50 cal', text: 'The amphibian tractor: swims in from the ships and climbs the beach with a squad in its open hold. U unloads them over the stern ramp.' } });
 
 export const TYPES_1945 = {
