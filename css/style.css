@@ -967,3 +967,7 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 .pend-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; display: flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 106, 61, 0.6); border-radius: 4px; font: 700 12px/1 var(--font-ui); color: #efd59a; white-space: nowrap; }
 .pend-tag[hidden] { display: none; }
 .pend-tag .sup-ico { width: 26px; height: 26px; fill: #efd59a; color: #efd59a; }
+
+/* the reinforcement window's arrival roads on the map (ui/ReinforceWindow.js showRoads) */
+.road-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; padding: 2px 7px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 195, 90, 0.6); border-radius: 4px; font: 600 12px/1.2 var(--font-ui); color: #ffd27a; white-space: nowrap; }
+.road-tag[hidden] { display: none; }

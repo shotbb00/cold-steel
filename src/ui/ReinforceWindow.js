@@ -5,6 +5,8 @@
 // else any free road — or left, centre or right as you look at the field; each road brings one
 // arrival at a time); the window stays open for more, and Buy again repeats the last. Unit types sort themselves in by their `category`; anything new without
 // one lands under "Other". The battle doesn't pause.
+import { TargetMarker, MARK } from './TargetMarkers.js';
+import * as THREE_R from 'three';
 import { unitCost } from '../data/doctrine.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { forces } from '../modes/shared.js';
@@ -80,6 +82,11 @@ const damageRow = (type) => {
     return `<span class="g${d[k]}" title="${label === 'Inf' ? 'Infantry' : label === 'Arm' ? 'Armour' : 'Aircraft'}: ${word}">${label}<b>${mark}</b></span>`;
   }).join('')}</span>`;
 };
+
+const _r = new THREE_R.Vector3();
+/** An arrival road's mark: a ring where they come on, an arrow toward the battle (local +z). */
+const roadRing = () => { const sh = new THREE_R.Shape(); sh.absarc(0, 0, 21, 0, Math.PI * 2, false); const h = new THREE_R.Path(); h.absarc(0, 0, 18.5, 0, Math.PI * 2, true); sh.holes.push(h); return [sh]; };
+const roadArrow = () => { const sh = new THREE_R.Shape(); sh.moveTo(-2, 0); sh.lineTo(2, 0); sh.lineTo(2, 30); sh.lineTo(7, 30); sh.lineTo(0, 42); sh.lineTo(-7, 30); sh.lineTo(-2, 30); sh.closePath(); return [sh]; };
 
 export class ReinforceWindow {
   constructor(game, state) {
@@ -198,10 +205,53 @@ export class ReinforceWindow {
     this.root.hidden = !on;
     this.shown = null;
     if (on) this.update();
+    this.showRoads(on);
+  }
+
+  /**
+   * While the window is open, where new units come on, on the map (marker plan step 3): a gold ring and an arrow
+   * toward the battle at each road (modes/shared.js: base x + entry, a few metres in), the one picked bright, a
+   * busy one dim with its wait — and a set-up forward command post, which takes them when the road is Auto.
+   */
+  showRoads(on) {
+    const g = this.game;
+    if (!on) { for (const r of this.roadMarks ?? []) { r.m.clear(); r.m.group.removeFromParent(); r.el.remove(); } this.roadMarks = null; return; }
+    if (this.roadMarks || !this.roads.length || g.landing?.lands(g.playerFaction)) return; // (a side that lands: its roads are the beaches, the landing craft show them)
+    const base = g.map.bases[g.playerFaction], toward = -Math.sign(base.z) || 1;
+    this.roadMarks = this.roads.map((r) => {
+      const m = new TargetMarker(g.commands.surface ?? g.terrain);
+      const spec = { key: 'road', x: r.x, z: base.z + toward * 13, yaw: toward > 0 ? 0 : Math.PI,
+        parts: [{ shapes: roadRing(), color: MARK.troops, opacity: 0.9 }, { shapes: roadArrow(), color: MARK.troops, opacity: 0.9 }] };
+      m.place(spec);
+      g.scene.add(m.group);
+      const el = document.createElement('div');
+      el.className = 'road-tag';
+      document.body.appendChild(el);
+      return { r, m, el, spec };
+    });
+  }
+
+  /** Each frame while open: the picked road bright, busy roads dim with their wait, the tags over them. */
+  updateRoads() {
+    const g = this.game, cam = g.camera, rect = g.canvas.getBoundingClientRect(), me = g.playerFaction;
+    for (const o of this.roadMarks ?? []) {
+      const busy = (this.state.entryFree?.[`${me}:${o.r.i}`] ?? 0) - g.time;
+      const picked = g.reinforceEntry == null || g.reinforceEntry === o.r.i;
+      o.m.group.visible = true;
+      for (const d of o.m.decals) d.mesh.material.opacity = busy > 0 ? 0.3 : picked ? 0.9 : 0.45;
+      const name = this.entryBtns.find((b) => b.i === o.r.i)?.b.textContent || 'Road';
+      const txt = busy > 0 ? `${name} — busy ${Math.ceil(busy)} s` : g.reinforceEntry === o.r.i ? `${name} — next arrivals here` : name;
+      if (o.el.textContent !== txt) o.el.textContent = txt;
+      _r.set(o.spec.x, g.terrain.heightAt(o.spec.x, o.spec.z) + 4, o.spec.z).project(cam);
+      const off = _r.z > 1 || Math.abs(_r.x) > 1.05 || Math.abs(_r.y) > 1.05;
+      o.el.hidden = off;
+      if (!off) o.el.style.transform = `translate(${rect.left + (_r.x + 1) / 2 * rect.width}px, ${rect.top + (1 - _r.y) / 2 * rect.height}px) translate(-50%, -100%)`;
+    }
   }
 
   update() {
     if (!this.open) return;
+    this.updateRoads();
     const g = this.game;
     const me = g.playerFaction;
     const cp = Math.floor(this.state.cp[g.wallet(me, g.myOwner)]); // co-op: your own
