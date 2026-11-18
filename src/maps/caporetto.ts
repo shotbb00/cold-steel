@@ -1,32 +1,224 @@
-// STUB (copy of villersBretonneux.ts): being rebuilt as Caporetto. Remove `wip: true` when done.
-// Villers-Bretonneux, Picardy, April 1918: the last ridge before Amiens. The German spring offensive
-// ran out of breath here; on 24 April they took the town with tanks — the first tank-against-tank
-// fight in history, A7Vs against British Mark IVs at Cachy — and that night the Australians took it
-// back. Two trench systems face each other across a crater field: a front line with two belts of wire
-// and a support line behind it on each side, the town on its low ridge in no man's land between them,
-// shot to ruins, Hangard Wood and Monument Wood shredded to stumps. (maps/westernFront.ts)
-import { westernFront } from './westernFront.ts';
+// Caporetto, 24 October 1917: the Twelfth Battle of the Isonzo. At two in the morning the gas shells, at eight the
+// assault in rain and fog: Austro-Hungarian and German divisions — the Alpenkorps, Rommel's Württemberg mountain
+// battalion among them — came down the valley from Tolmein and Flitsch and up the ridges behind the Italian lines,
+// and by evening were in Caporetto (Kobarid). The Italian Second Army broke; the retreat ran to the Piave.
+// The Isonzo here runs green and fast over gravel along the bottom of a narrow valley, Kobarid on its banks round
+// the stone bridge, villages on the terraces; on either side the mountains go straight up — beech woods turning
+// in October, then pasture, then rock: Kolovrat's ridge over the Italian side, Krn and Mrzli vrh over the other.
+// Point-mirrored so it is fair: each side holds one wall of the valley — a saddle with its base, a pass village and
+// two summits over the valley — and the zigzag road down its central spur; both fight for the floor and the town.
+import { createNoise2D, fbm, ridged } from '../world/Noise.js';
+import { PropBuilder } from '../world/Props.js';
+import { createFields } from '../world/Fields.js';
+import { createRiver } from '../world/River.js';
+import { plantTrees, growGround } from '../world/Vegetation.js';
+import { mulberry32, smoothstep } from '../core/math.js';
+import { commandPost, trenchLine, buildSite } from './common.js';
+import { pointsFrom, both } from './common2027.js';
+import { segDist, farmVillage } from './greatWarHelpers.ts';
+import type { MapDef } from '../types.ts';
 
-export default westernFront({
-  id: 'villers-bretonneux',
-  armies: { nato: ['uk'], pact: ['de', 'st'] }, // (the British and Australians against the German assault — storm troops and the A7Vs)
-  name: 'Caporetto',
-  description: 'April 1918, the last ridge before Amiens: two trench systems face each other across a crater field, the ruined town between them. Wire in front of every line, woods shot to stumps — and the first tank-against-tank fight in history.',
-  seed: 1918,
-  points: [
-    { id: 'caporetto', wip: true, name: 'Bois l\'Abbé', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-    { id: 'B', name: 'Cachy', x: -380, z: 315, owner: null, sector: 'west' },
-    { id: 'C', name: 'Bois d\'Aquenne', x: -80, z: 405, owner: null, sector: 'centre' },
-    { id: 'D', name: 'Fouilloy', x: 250, z: 330, owner: null, sector: 'east' },
-    { id: 'E', name: 'Hangard Wood', x: -250, z: 55, owner: null, sector: 'west', radius: 24 },
-    { id: 'F', name: 'Villers-Bretonneux', x: 0, z: 0, owner: null, sector: 'centre', radius: 30 },
-    { id: 'G', name: 'Monument Wood', x: 250, z: -55, owner: null, sector: 'east', radius: 24 },
-    { id: 'H', name: 'Hangard', x: -250, z: -330, owner: null, sector: 'west' },
-    { id: 'I', name: 'Marcelcave', x: 80, z: -405, owner: null, sector: 'centre' },
-    { id: 'J', name: 'Warfusée', x: 380, z: -315, owner: null, sector: 'east' },
-    { id: 'K', name: 'Lamotte', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+const BASE_Z = 500;
+const SIDE_X = 330;
+const noise = createNoise2D(1917_10);
+const iso = (x: number) => 18 * Math.sin(x * 0.006) + 6 * Math.sin(x * 0.02); // (odd: point-mirrored)
+const river = createRiver({
+  path: iso, halfWidth: 13, level: 0, depth: 2.6, valley: 40,
+  crossings: [
+    { name: 'Idrsko ford', x: -SIDE_X, kind: 'ford', width: 16, depth: 0.7 },
+    { name: 'Kobarid bridge', x: 0, kind: 'bridge', width: 7 },
+    { name: 'Ladra ford', x: SIDE_X, kind: 'ford', width: 16, depth: 0.7 },
   ],
-  lines: [{ z: 150, wireAt: 26, belts: 2, seed: 11 }, { z: 255, wireAt: 18, belts: 1, gapEvery: 60, seed: 23 }],
-  front: 150, craters: 3.2, ridge: 4.5,
-  town: { quarters: [[48, 10], [-20, 46]], church: { x: 6, z: -26 } },
 });
+const away = (x: number, z: number) => Math.abs(z - iso(x));
+/** The zigzag road up each side's central spur to its saddle (north half; the south is its mirror), and the valley roads. */
+const SPUR = [[0, 60], [34, 130], [-34, 200], [36, 270], [-30, 340], [22, 410], [0, BASE_Z]];
+// the mule tracks in zigzags up to the pass and the summit: graded (height), so the guns' teams and the lorries get up them
+const TRACKS = [[[-SIDE_X, 60], [-SIDE_X + 50, 130], [-SIDE_X - 50, 190], [-SIDE_X + 40, 250], [-SIDE_X, 300]], [[SIDE_X, 70], [SIDE_X - 50, 130], [SIDE_X + 50, 190], [SIDE_X - 30, 250], [SIDE_X, 290]]];
+const half = (x: number, z: number) => (z > iso(x) ? [x, z] : [-x, -z]);
+const onRoad = (x: number, z: number) => {
+  const [ax, az] = half(x, z);
+  if (Math.abs(az - iso(ax) - 62) < 3.5) return 3.5 - Math.abs(az - iso(ax) - 62);   // the valley road along the bank
+  const d = Math.min(segDist(SPUR, ax, az), ...TRACKS.map((t) => segDist(t, ax, az) + 1));
+  return d < 3.5 ? 3.5 - d : 0;
+};
+
+/** The mountainside (no shelves): rises from the valley floor; gentler on the central spur, highest on the flanks. */
+function slope(x: number, z: number) {
+  const a = away(x, z), [ax, az] = half(x, z);
+  const spur = 0.32 + 0.68 * smoothstep(50, 190, Math.abs(ax));
+  const k = smoothstep(110, 470, a);
+  let h = 1.4 + smoothstep(16, 70, a) * 2.4;                                     // the gravel terraces
+  h += 150 * k ** 1.25 * spur;
+  h += ridged(noise, ax * 0.008 + 5, az * 0.008, 4) * 38 * k * spur;              // crests and gullies (the same both sides)
+  h += smoothstep(380, 560, Math.abs(ax)) * 70 * k;                               // the high summits on the flanks
+  h += fbm(noise, ax * 0.03, az * 0.03, 2) * 1.5;
+  return h;
+}
+// the shelves each point and base stands on (mirrored)
+const SHELVES = [[0, BASE_Z, 34], [-SIDE_X, 320, 40], [0, 250, 26], [SIDE_X, 310, 34]];
+const SHELF_H = SHELVES.map(([x, z]) => slope(x, z));
+/** Nearest point on a polyline: its distance and how far along (m), and the polyline's length. */
+function along(poly: number[][], x: number, z: number) {
+  let best = { d: Infinity, s: 0 }, run = 0;
+  for (let i = 0; i < poly.length - 1; i++) {
+    const [ax, az] = poly[i], [bx, bz] = poly[i + 1], l = Math.hypot(bx - ax, bz - az);
+    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (l * l)));
+    const d = Math.hypot(x - ax - (bx - ax) * t, z - az - (bz - az) * t);
+    if (d < best.d) best = { d, s: run + t * l };
+    run += l;
+  }
+  return { ...best, L: run };
+}
+const TRACK_H = TRACKS.map((t, i) => [slope(t[0][0], t[0][1]), SHELF_H[i ? 3 : 1]]);
+function height(x: number, z: number) {
+  let h = slope(x, z);
+  for (const m of [1, -1]) SHELVES.forEach(([sx, sz, r], i) => { h += (SHELF_H[i] - h) * smoothstep(r + 26, r, Math.hypot(x - sx * m, z - sz * m)); });
+  const [ax, az] = half(x, z);
+  TRACKS.forEach((t, i) => { const a = along(t, ax, az); if (a.d < 12) h += (TRACK_H[i][0] + (TRACK_H[i][1] - TRACK_H[i][0]) * (a.s / a.L) - h) * smoothstep(12, 4, a.d); });
+  return river.carve(x, z, h);
+}
+
+const points = pointsFrom([
+  ['A', 'Kolovrat saddle', 0, 470],
+  ['B', 'Luico pass', -SIDE_X, 320],
+  ['C', 'Hill 1114', 0, 250, { radius: 22 }],
+  ['D', 'Monte Kuk', SIDE_X, 310, { radius: 24 }],
+  ['E', 'Idrsko', -SIDE_X + 10, 95],
+  ['F', 'Kobarid', 0, 0, { radius: 32 }],
+], ['Ladra', 'Mrzli vrh', 'Vodil', 'Krn', 'Tolmein road']);
+
+const layout = [{ unit: 'rifles', x: 10, z: BASE_Z - 22, name: '1ª Squadra' }];
+
+export default {
+  id: 'caporetto',
+  name: 'Caporetto',
+  description: '24 October 1917, in rain and fog: the Isonzo valley under steep mountains, Kobarid round its bridge on the valley floor. Hold your wall of the valley — the pass, the summits, the road down the spur — and fight for the town. Mirrored to keep it fair.',
+  epochs: ['1918'],
+  region: 'italy',
+  armies: { nato: ['it'], pact: ['ah', 'de'] }, // (the Italian Second Army against the Austro-German Fourteenth Army: maps/index.js armiesOn)
+  sides: { nato: 'Italy', pact: 'Central Powers' },
+  conditions: { time: 'dawn', weather: 'rain' },
+  size: 1700,
+  segments: 720,
+  bounds: { x: 500, z: 560 },
+  steep: 0.55, // (wheels and horses keep to the roads and the gentler spurs; men climb anywhere)
+  overwatch: true,
+  camera: { maxHeight: 620, far: 3200 },
+  seed: 1917,
+  height,
+  river,
+  bridgeAt: (x: number, z: number) => river.bridgeAt(x, z),
+  fields: createFields({ seed: 191710, cell: 60, weights: [0.45, 0.2, 0.05, 0.3] as any }),
+
+  theme: {
+    // low cloud on the mountains, rain
+    fogColor: 0x9ca2a2, fogDensity: 0.0019, skyTop: 0x5c6670, skyHorizon: 0xa8aeac, skyBottom: 0x646862,
+    sunColor: 0xdcd8cc, sunIntensity: 1.3, sunDisk: 0.05, clouds: 0.95, cloudLight: 0xb8bcbc, cloudDark: 0x5e6468,
+    sunDir: [-0.3, 0.6, 0.5], hemiSky: 0xb4bcc0, hemiGround: 0x4c4838, hemiIntensity: 1.35, rimColor: 0xb8c0c6, rimIntensity: 0.2,
+    terrain: {
+      grass: '#56643a', grassAlt: '#4c5a34', dryGrass: '#8a7c50', dirt: '#5e5040', rock: '#8e8c84', strip: '#4a4032',
+      pasture: '#5a6a3a', ploughed: '#6a5c48', stubble: '#9a8c58', meadow: '#62703e',
+      farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,
+      surface(x: number, z: number, y: number) {
+        if (onRoad(x, z) > 0) return [0x8a8070, 0.9];                                       // the graded roads (limestone grit)
+        const a = away(x, z);
+        if (a < 30 && y < 2.2) return [0xc4c0b0, 0.95];                                    // the Isonzo's pale gravel
+        if (y > 40) {
+          const g = Math.hypot(height(x + 2, z) - height(x - 2, z), height(x, z + 2) - height(x, z - 2)) / 4;
+          if (g > 0.7) return [0x9a978c, Math.min(1, (g - 0.7) * 3)];                        // limestone crags
+          if (y > 130) return [0x7e7a58, 0.6];                                               // the high pastures, browned
+        }
+        return null;
+      },
+    },
+  },
+
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-60, 0, 60] }, pact: { x: 0, z: -BASE_Z, entries: [-60, 0, 60] } },
+  maxStacks: 26,
+  cameraStart: { nato: { x: 0, z: 330 }, pact: { x: 0, z: -330 } },
+  points,
+  spawns: {
+    nato: layout.map((s) => ({ ...s, facing: Math.PI })),
+    pact: layout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1. Schwarm' })),
+  },
+
+  /** The forward line on each side's lower slope over the valley (wire below it), the summits' posts. */
+  battlefield() {
+    const works: any[] = [];
+    for (const f of ['nato', 'pact'] as const) {
+      const s = f === 'nato' ? 1 : -1;
+      const pts: number[][] = [];
+      for (let x = -470; x <= 470; x += 30) pts.push([x * s, (iso(x) + 150 + 12 * Math.sin(x * 0.02)) * s]);
+      for (const w of trenchLine(pts, f, { wireAt: 18, belts: 1, gapEvery: 50 })) if (onRoad(w.x, w.z) === 0 && Math.abs(Math.abs(w.x) - SIDE_X) > 30) works.push(w);
+      for (const [x, z] of [[0, 250], [SIDE_X, 310], [-SIDE_X, 320]]) for (const dx of [-10, 10]) works.push({ kind: 'mgNest', x: (x + dx) * s, z: (z - 14) * s, yaw: f === 'nato' ? Math.PI : 0, faction: f });
+    }
+    return { blasts: [], ruins: [], works };
+  },
+
+  decorate({ scene, terrain, cover, rand, bounds }) {
+    const props = new PropBuilder({ scene, terrain, cover });
+    const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
+    const steepAt = (x: number, z: number) => Math.hypot(terrain.heightAt(x + 2, z) - terrain.heightAt(x - 2, z), terrain.heightAt(x, z + 2) - terrain.heightAt(x, z - 2)) / 4;
+    const skip = (x: number, z: number) => away(x, z) < 26 || onRoad(x, z) > 0 || onRoad(x + 6, z) > 0 || onRoad(x - 6, z) > 0 || steepAt(x, z) > 0.3;
+
+    // Kobarid: stone houses on both banks round the bridge and the square, the church; the bridge's guard posts
+    both(props, 1710, (m, flip) => {
+      const r = props.rand;
+      for (let i = 0; i < 40; i++) {
+        const x = (r() - 0.5) * 230, z = iso(x) + 30 + r() * 80;
+        if (skip(x * m, z * m) || Math.hypot(x, z) < 26) continue;
+        props.townHouse({ x: x * m, z: z * m, yaw: (r() < 0.5 ? 0 : Math.PI / 2) + flip, width: 7 + r() * 3, depth: 8 + r() * 2, storeys: r() < 0.4 ? 3 : 2, damaged: 0.05 });
+      }
+      props.church({ x: -48 * m, z: (iso(-48) + 78) * m, yaw: flip });
+      props.sandbagRing({ x: 9 * m, z: (iso(9) + 24) * m, radius: 4, toward: -m });
+    });
+    // the villages on the terraces and the pass villages up on their saddles
+    for (const p of points) {
+      if (!['E', 'B', 'G', 'J'].includes(p.id)) continue;
+      farmVillage(props, p.x, p.z, 6, 17100 + Math.round(Math.abs(p.x)), skip, 0.9);
+    }
+    // stone huts and stalls of the summer pastures on the summits, a cableway station on each saddle
+    both(props, 1720, (m) => {
+      for (const [x, z] of [[SIDE_X + 26, 296], [SIDE_X - 30, 330], [20, 262], [-18, 470], [26, 486]]) props.house({ x: x * m, z: z * m, yaw: props.rand() * 3, width: 7, depth: 5, height: 2.6 });
+    });
+    // rocks and old sangars over the slopes, cover sites on the valley floor
+    const r = mulberry32(1717);
+    for (let i = 0; i < 260; i++) {
+      const x = (r() * 2 - 1) * 480, z = 40 + r() * 500;
+      if (nearPoint(x, z, 30) || onRoad(x, z) > 0 || away(x, z) < 30 || Math.hypot(x, z - BASE_Z) < 40) continue;
+      const big = r(), seed = Math.floor(r() * 1e9);
+      both(props, seed, (m) => {
+        if (big < 0.7) props.boulder({ x: x * m, z: z * m, radius: 1 + props.rand() * 2 });
+        else props.lowWall({ x: x * m, z: z * m, yaw: props.rand() * 3, length: 5 + props.rand() * 5, height: 1.2, color: 0x9a968c });
+      });
+    }
+    for (let i = 0, n = 0; i < 2000 && n < 24; i++) {
+      const x = (r() * 2 - 1) * 460, z = iso(x) + 30 + r() * 90;
+      if (skip(x, z) || nearPoint(x, z, 40) || Math.abs(x) < 130) continue;
+      n++;
+      const s = { kind: ['hay', 'fieldwall', 'farm', 'fieldwall'][n % 4], seed: Math.floor(r() * 1e9) }, yaw = r() * 3;
+      buildSite(props, s, x, z, yaw);
+      buildSite(props, s, -x, -z, yaw + Math.PI);
+    }
+    commandPost(props, this.bases.nato, -1, 0x6e6c58);
+    commandPost(props, this.bases.pact, 1, 0x5e6250);
+    props.finish();
+    river.build(scene, terrain);
+
+    const avoid = [{ x: 0, z: BASE_Z, r: 30 }, { x: 0, z: -BASE_Z, r: 30 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 16 })),
+      { test: (x: number, z: number) => away(x, z) < 22 || onRoad(x, z) > 0 }];
+    // beech woods up the slopes in their October colours, pine higher; the valley floor open
+    const wood = (x: number, z: number) => { const [ax, az] = half(x, z); return fbm(noise, ax * 0.006 + 40, az * 0.006, 3); };
+    const trees = plantTrees({
+      scene, terrain, cover, rand, area: bounds, lane: bounds.x - 10, avoid, count: 5200, broadleaf: 0.7, autumn: 0.75, maxY: 260,
+      forest: (x: number, z: number) => { const a = away(x, z); if (a < 120) return a > 60 && wood(x, z) > 0.2 ? 0.4 : 0; return wood(x, z) > -0.15 ? 0.85 : 0.2; },
+    });
+    cover.finalize(bounds);
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 2.2, fields: this.fields });
+    return {
+      buildings: props.buildings,
+      update(dt: number, t: number) { ground.update(dt, t); trees.update(dt, t); },
+    };
+  },
+} satisfies MapDef;

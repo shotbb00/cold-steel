@@ -1,240 +1,273 @@
-// STUB (copy of huenfeld.ts): being rebuilt as Normandy Bocage. Remove `wip: true` when done.
-// Hünfeld, autumn 1985: the little Hessian town astride the road from the Fulda Gap, and the
-// Pact's first big objective (the big field, 1.0 × 1.12 km: the old town in the middle, the
-// station and the brickworks / tannery out at its edge, farmland and the home villages beyond). A town fight: a grid of cobbled streets lined with two-storey
-// houses (almost every one can be occupied), the market square with the town hall in the
-// middle, a church on each side of the old town, the railway station and goods yard on the
-// west, the brickworks and the tannery with their chimneys on the east. Short sight lines,
-// corners everywhere; tanks in the alleys are an RPG's dream. Open farmland and two villages
-// beyond the edges of town. NATO comes in from the south (+z), the Pact from the north.
-// Point-mirrored like the other maps (the streets, blocks and landmarks have a twin across
-// the square), so neither side gets the better quarter.
-import { createNoise2D, fbm, ridged } from '../world/Noise.js';
+// The Normandy bocage, July 1944 (1945 only): the hedgerow country south of the beaches round Villers-
+// Bocage, where the Allied advance stalled for two months. Small fields, each boxed in by a hedgerow on an
+// earth bank higher than a man — hawthorn, bramble and oaks rooted in it — with a gateway or two to each
+// field; the lanes run sunken between the banks. You see one field at a time: the banks block the view
+// and the hedges cut it further (map `woods`), and vehicles crossing a bank crawl (map `soft`: the routes
+// keep to the gateways and the lanes — no Rhino tusks yet). In the middle Villers-Bocage, its stone
+// houses wrecked by the bombing of 30 June; round it stone farms with their orchards and the villages on
+// the roads: Tracy-Bocage on its rise, Point 213 on the Caen road. The Allies come from the south (+z),
+// the Germans hold the north. Point-mirrored to keep it fair: fields, gaps and hedges have their twin.
+import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createFields } from '../world/Fields.js';
+import { createFields, FIELD } from '../world/Fields.js';
 import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { buildSite, buildVillage, commandPost, mirrored } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
+const BOUNDS = { x: 500, z: 560 };
 const BASE_Z = 500;
-const EDGE_X = 300;    // the station / goods yard and the brickworks / tannery, out at the edge of town
-const noise = createNoise2D(1987);
+const TOWN = 90;      // Villers-Bocage's radius
+const BANK = 1.5;     // the hedge bank's height, m: higher than a crouching man, about a standing man's eyes
+const noise = createNoise2D(1944_07);
+const gapNoise = createNoise2D(4407);
+const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
-// the town: streets north–south at STREETS_X, east–west at STREETS_Z, inside |x| < TOWN_X, |z| < TOWN_Z
-const TOWN_X = 180;
-const TOWN_Z = 150;
-const STREETS_X = [-124, -62, 0, 62, 124];
-const STREETS_Z = [-140, -95, -45, 45, 95, 140];
-const STREET = 4;     // half-width of a street
-const SQUARE = 26;    // half-size of the market square
-const RAIL_Z = 122;   // the railway along the west edge of town (and its twin on the east)
+const points: ControlPointDef[] = [
+  { id: 'A', name: 'Caumont-l’Éventé', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Cahagnes', x: -420, z: 230, owner: null, sector: 'west' },
+  { id: 'C', name: 'Livry', x: -60, z: 340, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Briquessard', x: 270, z: 390, owner: null, sector: 'east' },
+  { id: 'E', name: 'Tracy-Bocage', x: -190, z: 95, owner: null, sector: 'west' },
+  { id: 'F', name: 'Villers-Bocage', x: 0, z: 0, owner: null, sector: 'centre', radius: 24 },
+  { id: 'G', name: 'Point 213', x: 190, z: -95, owner: null, sector: 'east' },
+  { id: 'H', name: 'Amayé-sur-Seulles', x: -270, z: -390, owner: null, sector: 'west' },
+  { id: 'I', name: 'Montbrocq', x: 60, z: -340, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Tilly-sur-Seulles', x: 420, z: -230, owner: null, sector: 'east' },
+  { id: 'K', name: 'Noyers-Bocage', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+];
+const P = Object.fromEntries(points.map((p) => [p.id, p]));
 
-/** 1 inside the town, fading to 0 at its edge. */
-const town = (x, z) => smoothstep(TOWN_X + 20, TOWN_X - 10, Math.abs(x)) * smoothstep(TOWN_Z + 20, TOWN_Z - 10, Math.abs(z));
-
-/** 1 on a street or the square. */
-function street(x, z) {
-  if (Math.abs(x) < SQUARE && Math.abs(z) < SQUARE) return 1;
-  let k = 0;
-  for (const sx of STREETS_X) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(x - sx)));
-  for (const sz of STREETS_Z) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(z - sz)));
-  return k * town(x, z);
+// ---- the lanes: out of the town to the villages and on to the edges (our half; each has its mirror)
+const HALF: [number, number, number, number, number][] = [ // x0, z0, x1, z1, bend (m sideways at the middle)
+  [0, 0, P.E.x, P.E.z, -12], [0, 0, P.C.x, P.C.z, 16], [0, 0, P.D.x, P.D.z, -20],
+  [P.C.x, P.C.z, 0, 560, -8], [P.E.x, P.E.z, P.B.x, P.B.z, 18], [P.B.x, P.B.z, -560, 320, -10],
+  [P.D.x, P.D.z, 560, 450, 12], [P.C.x, P.C.z, P.D.x, P.D.z, 20], [P.B.x, P.B.z, -320, 560, 10],
+];
+const PIECES: number[][] = [];
+for (const [x0, z0, x1, z1, bend] of HALF) {
+  for (const m of [1, -1]) {
+    const len = Math.hypot(x1 - x0, z1 - z0), nx = -(z1 - z0) / len, nz = (x1 - x0) / len;
+    const at = (t) => [(x0 + (x1 - x0) * t + nx * bend * Math.sin(Math.PI * t)) * m, (z0 + (z1 - z0) * t + nz * bend * Math.sin(Math.PI * t)) * m];
+    for (let k = 0; k < 10; k++) PIECES.push([...at(k / 10), ...at((k + 1) / 10)]);
+  }
+}
+/** Distance to the nearest lane, up to NEAR m (beyond: NEAR). The terrain asks it for every sample, so the pieces
+ *  are sorted into CELL-m squares first: each question looks only at the few pieces near it. */
+const CELL = 50, NEAR = 40;
+const buckets = new Map<string, number[][]>();
+for (const pc of PIECES) {
+  const [ax, az, bx, bz] = pc;
+  for (let i = Math.floor((Math.min(ax, bx) - NEAR) / CELL); i <= Math.floor((Math.max(ax, bx) + NEAR) / CELL); i++)
+    for (let j = Math.floor((Math.min(az, bz) - NEAR) / CELL); j <= Math.floor((Math.max(az, bz) + NEAR) / CELL); j++) {
+      const k = i + ',' + j;
+      if (!buckets.has(k)) buckets.set(k, []);
+      buckets.get(k)!.push(pc);
+    }
+}
+function roadDist(x, z) {
+  let d = NEAR;
+  for (const [ax, az, bx, bz] of buckets.get(Math.floor(x / CELL) + ',' + Math.floor(z / CELL)) ?? []) {
+    const dx = bx - ax, dz = bz - az;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
+    d = Math.min(d, Math.hypot(x - ax - dx * t, z - az - dz * t));
+  }
+  return d;
 }
 
-/** The railway: west of the square on the south side, mirrored on the north-east. */
-const onRail = (x, z) => (x < -40 && x > -490 && Math.abs(z - RAIL_Z) < 5) || (x > 40 && x < 490 && Math.abs(z + RAIL_Z) < 5);
+/** 1 in the town, 0 outside it. */
+const town = (x, z) => smoothstep(TOWN + 12, TOWN - 12, Math.hypot(x, z));
 
+// ---- the fields: small, every boundary hedged but for the gateways; point-mirrored (the line z = 0 a hedge too)
+const base = createFields({ seed: 1944, cell: 58, weights: [0.5, 0.15, 0.15, 0.2] });
+const fields = {
+  cell: base.cell,
+  at(x: number, z: number) {
+    const flip = z < 0 || (z === 0 && x < 0);
+    const ax = flip ? -x : x, az = flip ? -z : z;
+    const f = base.at(ax, az);
+    f.edge = Math.min(f.edge, az + 0.4);
+    f.hedge = gapNoise(ax * 0.045, az * 0.045) > -0.42 && town(x, z) < 0.3 && roadDist(x, z) > 5
+      && Math.hypot(x, Math.abs(z) - BASE_Z) > 40;
+    return f;
+  },
+};
+/** 1 on a hedge bank, 0 off it. */
+const bank = (x, z) => {
+  const f = fields.at(x, z);
+  return f.hedge ? smoothstep(3.6, 1.2, f.edge) : 0;
+};
+/** Orchards: the meadows by the farms (and wherever the noise puts them), apple trees in the grass. */
+const orchard = (x, z) => {
+  const f = fields.at(x, z);
+  return f.type === FIELD.MEADOW && f.tint > 0 && f.edge > 4 && town(x, z) < 0.2 ? 1 : 0;
+};
+/** The line of the hedge itself, on top of the bank: where its oaks and ash stand. */
+const inHedge = (x, z) => { const f = fields.at(x, z); return f.hedge && f.edge < 1.4; };
+
+function raw(x, z) {
+  return fbm(noise, x * 0.004, z * 0.004, 4) * 9 + fbm(noise, x * 0.03 + 9, z * 0.03, 3) * 0.6
+    + hill(x, z, P.G.x + 30, P.G.z - 20, 110, 9);         // Point 213 on the Caen road (and its twin, the rise of Tracy-Bocage)
+}
 function height(x, z) {
-  const ax = Math.abs(x);
-  const az = Math.abs(z);
-  let h = fbm(noise, x * 0.006, z * 0.006, 5) * 7 + fbm(noise, x * 0.04 + 9, z * 0.04, 3) * 0.6;
-  h += smoothstep(500, 610, ax) * (14 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 22); // wooded hills at the edges
-  h += smoothstep(560, 670, az) * 18;
+  let h = (raw(x, z) + raw(-x, -z)) / 2 + 6;
   const t = town(x, z);
-  h += (2 + fbm(noise, x * 0.004, z * 0.004, 2) * 1.2 - h) * t; // the town sits on level ground
-  for (const bz of [BASE_Z, -BASE_Z]) {
-    const k = smoothstep(28, 15, Math.hypot(x, z - bz));
-    h += (1.2 - h) * k;
-  }
+  h += (6 + fbm(noise, x * 0.004, z * 0.004, 2) - h) * t * 0.85;
+  for (const bz of [BASE_Z, -BASE_Z]) h += (4 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
+  h += bank(x, z) * BANK;                                              // the hedge banks
+  h -= smoothstep(6, 3, roadDist(x, z)) * 1.4 * (1 - t);               // the sunken lanes between them
+  h += smoothstep(BOUNDS.x - 20, BOUNDS.x + 110, Math.abs(x)) * 10 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 110, Math.abs(z)) * 10;
   return h;
 }
 
-const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: 'Normandy Bocage' }];
-const pactName = { '1st Platoon': '1-ya Rota' };
+/** Sight: the hedges block it, the fields between them half-hidden too (orchards, standing crops, the next bank). */
+function woods(x, z) {
+  if (roadDist(x, z) < 4 || town(x, z) > 0.5) return 0;
+  const f = fields.at(x, z);
+  if (f.hedge && f.edge < 4) return 1;
+  return f.type === FIELD.MEADOW ? 0.5 : 0.28;
+}
 
-const points: ControlPointDef[] = [
-  { id: 'bocage', wip: true, name: 'Mackenzell', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Bahnhof', x: -EDGE_X, z: 104, owner: null, sector: 'west' },
-  { id: 'C', name: 'Südstadt', x: 0, z: 140, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Ziegelei', x: EDGE_X, z: 70, owner: null, sector: 'east' },
-  { id: 'E', name: 'Stiftskirche', x: -93, z: 20, owner: null, sector: 'west' },
-  { id: 'F', name: 'Marktplatz', x: 0, z: 0, owner: null, sector: 'centre', radius: 20 },
-  { id: 'G', name: 'St. Ulrich', x: 93, z: -20, owner: null, sector: 'east' },
-  { id: 'H', name: 'Gerberei', x: -EDGE_X, z: -70, owner: null, sector: 'west' },
-  { id: 'I', name: 'Nordstadt', x: 0, z: -140, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Güterbahnhof', x: EDGE_X, z: -104, owner: null, sector: 'east' },
-  { id: 'K', name: 'Molzbach', x: 0, z: -470, owner: 'pact', sector: 'centre' },
-];
+/** Going: across a hedge bank vehicles crawl, men climb it; the lanes and the gateways are firm. */
+function soft(x: number, z: number, foot: boolean) {
+  if (roadDist(x, z) < 5) return 1;
+  const f = fields.at(x, z);
+  return f.hedge && f.edge < 3 ? (foot ? 0.5 : 0.15) : 1;
+}
+
+const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 
 export default {
-  id: 'huenfeld',
-  armies: { 1945: { nato: ['us'], pact: ['wh', 'fj'] } }, // (spring 1945 in Hesse and Thuringia: the US Army against the Wehrmacht and the last Fallschirmjäger — maps/index.js armiesOn)
-  name: 'Hünfeld',
-  description: 'A town fight: cobbled streets, houses you can occupy on every corner, the market square, two churches, the station and the brickworks. Short sight lines; tanks beware.',
+  id: 'bocage',
+  armies: { nato: ['us', 'brit21'], pact: ['wh', 'fj'] }, // (the US First Army and the British Second Army against the Panzer-Lehr, the SS and the Fallschirmjäger of II Parachute Corps)
+  name: 'Normandy Bocage',
+  description: 'Normandy, July 1944: small fields boxed in by hedgerows on high earth banks, sunken lanes, orchards, stone farms, and Villers-Bocage in ruins in the middle. You see one field at a time. Mirrored to keep it fair.',
+  epochs: ['1945'],
+  region: 'europe',
   size: 1600,
   segments: 640,
-  bounds: { x: 500, z: 560 },
-  seed: 1987,
+  bounds: BOUNDS,
+  seed: 1944,
   height,
-  fields: createFields({ seed: 1987, cell: 60 }),
+  woods,
+  soft,
+  fields,
 
   theme: {
-    // a grey, still October afternoon
-    fogColor: 0xa4a8a6,
-    fogDensity: 0.002,
-    skyTop: 0x6e7680,
-    skyHorizon: 0xbcbeb8,
-    skyBottom: 0x70726c,
-    sunColor: 0xeae2cc,
-    sunIntensity: 1.6,
-    sunDisk: 0.1,
-    clouds: 0.8,
-    cloudLight: 0xcacbc6,
-    cloudDark: 0x7a7e82,
-    sunDir: [0.5, 0.55, 0.65],
-    hemiSky: 0xc4cad0,
-    hemiGround: 0x4a463a,
-    hemiIntensity: 1.3,
-    rimColor: 0xb8c0c8,
+    // a hazy July day, cloud building
+    fogColor: 0xb4bcb8,
+    fogDensity: 0.0019,
+    skyTop: 0x6e88a4,
+    skyHorizon: 0xc4ccca,
+    skyBottom: 0x7a8078,
+    sunColor: 0xfff0d6,
+    sunIntensity: 1.8,
+    sunDisk: 0.25,
+    clouds: 0.6,
+    cloudLight: 0xe2e4e2,
+    cloudDark: 0x8a9096,
+    sunDir: [0.45, 0.7, 0.5],
+    hemiSky: 0xc4d0dc,
+    hemiGround: 0x4a4a32,
+    hemiIntensity: 1.25,
+    rimColor: 0xc0c8c0,
     rimIntensity: 0.25,
     terrain: {
-      grass: '#55613a',
-      grassAlt: '#4b5734',
-      dryGrass: '#84764e',
-      dirt: '#54463a',
-      rock: '#6a6862',
-      pasture: '#56633a',
-      ploughed: '#4b3c2e',
-      stubble: '#8a7a4e',
-      meadow: '#66703e',
-      farmX: [520, 600],
-      farmZ: [580, 660],
-      roads: [-124, 0, 124],
-      roadZ: 540,
+      grass: '#4e6630',
+      grassAlt: '#45592a',
+      dryGrass: '#8a7e4a',
+      dirt: '#5e4c36',
+      rock: '#6e685c',
+      pasture: '#506a2e',
+      ploughed: '#5a4630',
+      stubble: '#a49458',
+      meadow: '#5c7434',
+      farmX: [560, 640],
+      farmZ: [620, 700],
+      roads: [],
       surface(x, z) {
-        if (onRail(x, z)) return [0x4e4a44, 0.9];                             // ballast
-        const s = street(x, z);
-        if (s > 0) return [Math.abs(x) < SQUARE && Math.abs(z) < SQUARE ? 0x77726a : 0x5f5c56, s * 0.95]; // the square, cobbles
+        const r = smoothstep(4.5, 2.5, roadDist(x, z));
+        if (r > 0) return [0x6e5e48, r * 0.9];                         // the lanes: packed earth, ruts
         const t = town(x, z);
-        return t > 0 ? [0x4a4e36, t * 0.45] : null;                          // trodden yards and gardens
+        if (t > 0) return [0x5e5a4c, t * 0.5];                         // yards, rubble dust
+        const b = bank(x, z);
+        return b > 0 ? [0x34401e, b * 0.7] : null;                     // the bank under the hedge: shade, nettles
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-124, 0, 124] }, pact: { x: 0, z: -BASE_Z, entries: [-124, 0, 124] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-200, 0, 200] }, pact: { x: 0, z: -BASE_Z, entries: [-200, 0, 200] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
-    nato: natoLayout.map((s) => ({ ...s, facing: Math.PI })),
-    pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: pactName[s.name] ?? s.name })),
+    nato: layout.map((s) => ({ ...s, facing: Math.PI })),
+    pact: layout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1. Zug' })),
   },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
-    const landmarks: any[] = [];   // footprints the street-filling houses keep clear of: [x, z, half-w, half-d]
-    const clear = (x, z, hw, hd) => landmarks.push([x, z, hw, hd], [-x, -z, hw, hd]);
+    const taken: number[][] = [];
 
-    // ---- landmarks, mirrored: the town hall on the square, a church on each side of the old town,
-    // the station and goods yard, the brickworks / tannery
-    mirrored(props, 1201, (m, flip) => {
-      props.townHouse({ x: 0, z: (SQUARE + 9) * m, yaw: flip, width: 22, depth: 11, storeys: 3, name: 'town hall', damaged: 0 });
-      props.church({ x: -93 * m, z: 4 * m, yaw: flip });
-      props.lowWall({ x: -93 * m, z: 38 * m, yaw: 0, length: 24 });                             // churchyard wall
-      for (const [x, z] of [[-6, -6], [8, 9], [-9, 12]]) props.wreckCar({ x: x * m, z: z * m, yaw: x + flip }); // the square
-      props.jersey({ x: 14 * m, z: -12 * m, yaw: 0.4, length: 6 });
-      // station: the building, platforms, the track, wagons in the goods yard
-      props.townHouse({ x: -EDGE_X * m, z: (RAIL_Z - 14) * m, yaw: flip, width: 20, depth: 10, storeys: 2, name: 'railway station', damaged: 0 });
-      props.rails({ x0: -510 * m, z0: RAIL_Z * m, x1: -42 * m, z1: RAIL_Z * m });
-      props.rails({ x0: -380 * m, z0: (RAIL_Z + 7) * m, x1: -240 * m, z1: (RAIL_Z + 7) * m });
-      const wagons: [number, string, number][] = [[-350, 'box', 0x5a3426], [-338, 'box', 0x4a3a2a], [-270, 'tank', 0x2a2a2a], [-258, 'open', 0x4a4038], [-246, 'box', 0x5a3426]];
-      for (const [x, kind, c] of wagons) {
-        props.wagon({ x: x * m, z: (RAIL_Z + (kind === 'tank' ? 0 : 7)) * m, yaw: Math.PI / 2, kind, color: c });
-      }
-      props.hall({ x: -345 * m, z: (RAIL_Z - 16) * m, yaw: flip, width: 22, depth: 12, height: 6, color: 0x6e5444, name: 'goods shed' });
-      // the brickworks (east) / tannery (west): halls, a chimney, yard walls
-      props.hall({ x: EDGE_X * m, z: 82 * m, yaw: flip, width: 30, depth: 16, height: 7.5, color: 0x7a4a38, name: 'brickworks' });
-      props.hall({ x: (EDGE_X + 34) * m, z: 52 * m, yaw: Math.PI / 2 + flip, width: 18, depth: 11, height: 6, color: 0x6e4a3a, name: 'kiln house' });
-      props.chimney({ x: (EDGE_X + 20) * m, z: 66 * m, height: 32 });
-      props.lowWall({ x: EDGE_X * m, z: 50 * m, yaw: 0, length: 30, height: 1.6 });
-      for (let k = 0; k < 3; k++) props.crates({ x: (EDGE_X - 24 + k * 5) * m, z: 58 * m, yaw: k });
+    // ---- Villers-Bocage: the church, the market hall on the square, stone houses down each road — wrecked
+    mirrored(props, 4407, (m, flip) => {
+      props.church({ x: -24 * m, z: 32 * m, yaw: flip - 0.64 });   // (between the roads, its nave along the gap)
+      props.hall({ x: 40 * m, z: 6 * m, yaw: flip + 0.3, width: 20, depth: 12, height: 6.5, color: 0x8c8474, roof: 0x4a4c50, door: 8, name: 'market hall' });
+      for (const [x, z] of [[-6, 9], [9, -3]]) props.wreckCar({ x: x * m, z: z * m, yaw: x + flip });
+      for (let k = 0; k < 8; k++) props.rubble((props.rand() - 0.5) * 30 * m, (14 + props.rand() * 10) * m, 0.5 + props.rand() * 0.6);
     });
-    clear(0, SQUARE + 9, 12, 7);
-    clear(-93, 4, 6, 18);
-    clear(-EDGE_X, RAIL_Z - 14, 11, 6);
-    clear(-345, RAIL_Z - 16, 12, 7);
-    clear(EDGE_X, 82, 16, 9);
-    clear(EDGE_X + 34, 52, 7, 10);
-    clear(EDGE_X + 20, 66, 3, 3);
-
-    // ---- the houses: rows facing the east–west streets, block by block (our half, mirrored)
-    const blocked = (x, z, hw, hd) => landmarks.some(([lx, lz, lw, ld]) => Math.abs(x - lx) < hw + lw + 1.5 && Math.abs(z - lz) < hd + ld + 1.5)
-      || (Math.abs(x) < SQUARE + 6 && Math.abs(z) < SQUARE + 6) || onRail(x, z) || Math.abs(z - RAIL_Z) < 12 && x < -40;
-    const r = mulberry32(4242);
-    const rows: any[] = [];
-    for (let i = 0; i + 1 < STREETS_X.length; i++) {
-      const x0 = STREETS_X[i] + STREET + 1.5;
-      const x1 = STREETS_X[i + 1] - STREET - 1.5;
-      // rows along the south side of z = 45, both sides of the block 45..95, 95..140; z > 0 only
-      for (const [zEdge, dir] of [[45, 1], [95, -1], [95, 1], [140, -1]]) rows.push({ x0, x1, z: zEdge + dir * (STREET + 1.5), dir });
-      rows.push({ x0, x1, z: 45 - STREET - 1.5, dir: -1 }); // the middle row's south edge
-    }
-    for (const row of rows) {
-      let x = row.x0;
-      while (x < row.x1 - 6) {
-        const w = 7 + r() * 3.5;
-        const d = 8 + r() * 2;
-        const cx = x + w / 2;
-        const cz = row.z + row.dir * d / 2;
-        x += w + 1 + r() * 3;
-        if (cx + w / 2 > row.x1 || r() < 0.3) continue;             // a yard, a gap, a lane
-        if (blocked(cx, cz, w / 2, d / 2)) continue;
-        const seed = Math.floor(r() * 1e9);
-        const storeys = r() < 0.25 ? 3 : 2;
-        // the door faces the street: front (+z local) toward it
-        mirrored(props, seed, (m, flip) => props.townHouse({ x: cx * m, z: cz * m, yaw: (row.dir > 0 ? Math.PI : 0) + flip, width: w, depth: d, storeys }));
+    taken.push([-24, 32, 14], [24, -32, 14], [40, 6, 13], [-40, -6, 13], [0, 0, 22]);
+    const free = (x, z, r) => !taken.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < r + tr) && roadDist(x, z) > r + 2.5;
+    const rr = mulberry32(1307);
+    for (const r0 of [0, 20, 40]) { // (PIECES: the first three roads out of the square, ten pieces each, ours before the mirror's)
+      for (let d = 26; d < TOWN + 8; d += 9 + rr() * 3) {
+        const L = Math.hypot(PIECES[r0 + 9][2], PIECES[r0 + 9][3]), k = Math.min(9, Math.floor(d / L * 10));
+        const [ax, az, bx, bz] = PIECES[r0 + k];
+        const len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+        const px = ax + ux * (d - k * L / 10), pz = az + uz * (d - k * L / 10); // the road's point d m out from the square
+        for (const side of [-1, 1]) {
+          if (rr() < 0.2) continue;
+          const w = 7 + rr() * 3, dep = 8 + rr() * 2, off = 6 + dep / 2;
+          const x = px - uz * side * off, z = pz + ux * side * off;
+          if (!free(x, z, Math.max(w, dep) / 2 - 1)) continue;
+          taken.push([x, z, Math.max(w, dep) / 2], [-x, -z, Math.max(w, dep) / 2]);
+          const yaw = Math.atan2(uz * side, -ux * side); // the front (local +z) toward the road
+          const seed = Math.floor(rr() * 1e9), storeys = rr() < 0.3 ? 3 : 2, ruined = rr() < 0.35;
+          mirrored(props, seed, (m, flip) => {
+            if (ruined) props.ruinBlock({ x: x * m, z: z * m, yaw: yaw + flip, width: w + 2, depth: dep, storeys, ruin: 0.5, name: 'bombed house' });
+            else props.townHouse({ x: x * m, z: z * m, yaw: yaw + flip, width: w, depth: dep, storeys, damaged: 0.7 });
+          });
+        }
       }
     }
-    // garden walls and rubble in the blocks' backyards, mirrored
-    for (let i = 0; i < 70; i++) {
-      const x = (r() * 2 - 1) * (TOWN_X - 10);
-      const z = 10 + r() * (TOWN_Z - 15);
-      if (street(x, z) > 0.1 || blocked(x, z, 2, 2) || onRail(x, z)) continue;
-      const seed = Math.floor(r() * 1e9);
-      const kind = r() < 0.5 ? 'wall' : r() < 0.5 ? 'wreck' : 'rubble';
-      mirrored(props, seed, (m, flip) => {
-        if (kind === 'wall') props.lowWall({ x: x * m, z: z * m, yaw: (props.rand() < 0.5 ? 0 : Math.PI / 2) + flip, length: 6 + props.rand() * 6, height: 1.2 });
-        else if (kind === 'wreck') props.wreckCar({ x: x * m, z: z * m, yaw: props.rand() * 3 + flip });
-        else for (let k = 0; k < 4; k++) props.rubble(x * m + (props.rand() - 0.5) * 4, z * m + (props.rand() - 0.5) * 4, 0.4 + props.rand() * 0.4);
-      });
-    }
-    // barricades across some street ends at the edge of town
-    for (const sx of STREETS_X) {
-      mirrored(props, 300 + sx, (m) => props.jersey({ x: sx * m, z: (TOWN_Z + 6) * m, yaw: 0, length: 6 }));
+    for (let i = 0; i < 30; i++) {
+      const a = rr() * Math.PI, d = 20 + rr() * (TOWN - 20), x = Math.cos(a) * d, z = Math.sin(a) * d + 2;
+      if (!free(x, z, 3)) continue;
+      const seed = Math.floor(rr() * 1e9);
+      mirrored(props, seed, (m) => { for (let k = 0; k < 5; k++) props.rubble(x * m + (props.rand() - 0.5) * 5, z * m + (props.rand() - 0.5) * 5, 0.4 + props.rand() * 0.6); });
     }
 
-    // ---- outside town: the two home villages, farm cover, the command posts
-    buildVillage(props, points[0], 9500, 1);
-    buildVillage(props, { x: -points[0].x, z: -points[0].z }, 9500, -1);
-    const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'hay', 'wrecks'];
+    // ---- the villages on the roads, a church in the bigger ones; Point 213: a farm and the dug-in line on the crest
+    for (const [p, seed, church] of [[P.A, 7401, true], [P.B, 7402, true], [P.C, 7403, false], [P.D, 7404, false]] as const) {
+      buildVillage(props, p, seed, 1);
+      buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
+      if (church) mirrored(props, seed + 1, (m, flip) => props.church({ x: (p.x + 24) * m, z: (p.z - 10) * m, yaw: flip + 0.3 }));
+    }
+    mirrored(props, 7410, (m, flip) => {
+      const q = { x: P.G.x * m, z: P.G.z * m };
+      props.house({ x: q.x + 20 * m, z: q.z + 16 * m, yaw: flip + 0.5, width: 11, depth: 7 });
+      props.house({ x: q.x - 22 * m, z: q.z + 10 * m, yaw: flip - 0.3, width: 9, depth: 6 });
+      for (let k = 0; k < 3; k++) props.sandbagRing({ x: q.x + (-12 + k * 12) * m, z: q.z - 16 * m, radius: 2.4, toward: -m });
+    });
+
+    // ---- the stone farms out in the fields: each set in its field, away from the hedges
+    const kinds = ['farm', 'farm', 'hay', 'fieldwall', 'farm', 'wrecks'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 100 && tries < 8000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 30 + rand() * (bounds.z - 40);
-      if (town(x, z) > 0 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28) || onRail(x, z) || Math.abs(z - RAIL_Z) < 14) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || points.some((p) => Math.hypot(x - p.x, z - p.z) < 40)) continue;
+    for (let tries = 0; sites.length < 70 && tries < 9000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 20), z = 15 + rand() * (bounds.z - 30);
+      if (town(x, z) > 0 || roadDist(x, z) < 10 || fields.at(x, z).edge < 10 || sites.some((s) => Math.hypot(s.x - x, s.z - z) < 34)) continue;
+      if (Math.hypot(x, z - BASE_Z) < 45 || points.some((p) => Math.hypot(x - p.x, z - p.z) < 36)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
     for (const s of sites) {
@@ -245,16 +278,17 @@ export default {
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);
     props.finish();
 
-    const avoid = [{ x: 0, z: BASE_Z, r: 22 }, { x: 0, z: -BASE_Z, r: 22 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 10 })),
-      { test: (x, z) => street(x, z) > 0.05 || onRail(x, z) }];
-    // a few garden trees in town, woods on the edge hills
+    const avoid = [{ x: 0, z: BASE_Z, r: 26 }, { x: 0, z: -BASE_Z, r: 26 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 10 })),
+      { test: (x, z) => roadDist(x, z) < 4.5 || town(x, z) > 0.6 }];
+    // oaks and ash standing in the hedgerows, apple trees in the orchards
     const trees = plantTrees({
-      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1500,
-      forest: (x, z) => (town(x, z) > 0.5 ? 0.05 : Math.max(0, (Math.abs(x) - 460) / 60)),
+      scene, terrain, cover, rand, area: bounds, lane: bounds.x - 10, count: 12000, broadleaf: 0.97, autumn: 0,
+      avoid: [...avoid, { test: (x, z) => !inHedge(x, z) && !orchard(x, z) }], // (nowhere else: the open fields stay open)
+      forest: (x, z) => (inHedge(x, z) ? 1 : 0.04),
     });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid: [...avoid, { test: (x, z) => town(x, z) > 0.2 }], count: 9000, lane: 0 });
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 2.6, fields: this.fields });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields, area: bounds, avoid, count: 22000, lane: 0 });
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 2.4, fields });
 
     return {
       buildings: props.buildings,

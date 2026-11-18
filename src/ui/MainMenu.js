@@ -7,6 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
+import { setClimate } from '../render/paint.js';
 import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas, armyIn } from '../data/factions.js';
@@ -680,13 +681,15 @@ export class MainMenu {
     const sideToggle = el('div', 'seg faction-seg');
     const only = theatreArmies(); // (the armies this theatre's maps field, as the battle picker: Aboukir France and Britain, no British on land)
     const regHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+    const climates = new Set(mapsFor(epoch()).map((m) => m.climate)); // (the Northern Flank's men in their snow smocks, as on its maps)
+    setClimate(climates.size === 1 ? [...climates][0] : undefined);
     const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
       .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
     const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
     sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
-      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? navyName()[a.faction] ?? a.name : a.name);
+      const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? a.navy ?? navyName()[a.faction] ?? a.name : a.name); // (an army's own navy: the k.u.k. Kriegsmarine)
       b.type = 'button';
       b.style.gridRow = a.faction === 'nato' ? '1' : '2'; // (the Allies' armies on the top row, their enemies' on the bottom)
       b.addEventListener('click', () => {
@@ -731,7 +734,7 @@ export class MainMenu {
     }
     this.info.replaceChildren();
     this.info.className = `unit-info ${faction}`;
-    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? navyName()[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
+    this.info.append(el('p', 'unit-side', (theatre() === 'sea' && hasTheatre(epoch(), 'sea') ? ARMIES[army]?.navy ?? navyName()[faction] : null) ?? ARMIES[army]?.name ?? FACTIONS[faction].name));
     this.info.append(el('h3', '', a.name));
     if (a.weapon) this.info.append(el('p', 'unit-weapon', a.weapon));
     if (a.text) this.info.append(el('p', 'unit-text', a.text));

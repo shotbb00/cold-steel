@@ -1,270 +1,238 @@
-// STUB (copy of elGuettar.ts): being rebuilt as Kohima. Remove `wip: true` when done.
-// El Guettar, 23 March 1943 (1945 only; the big field, 1.0 × 1.12 km): southern Tunisia. A broad, flat valley — the
-// Gafsa–Gabès road along its floor, good tank country with sight lines over a kilometre — between two lines of rocky
-// djebels. Their faces to the valley are steep rock that only men climb (`steep`); the vehicles go up by the passes
-// and the gentle back slopes. The US 1st Infantry Division held the southern heights — Hill 336 ("Wop Hill"), the
-// Keddab ridge, Djebel el Mcheltat — and the 10th Panzer Division came down the valley into its minefield and under
-// the guns and tank destroyers firing down from the hills. Each side here has its ridge (dug in on the crest, its mine
-// belt out on the valley floor below), its oasis at the valley's end (El Guettar / Bou Hamran: palms and flat-roofed
-// houses), and a pass behind; point-mirrored through the centre like the other maps. The US come from the south (+z).
-import { createNoise2D, fbm, ridged } from '../world/Noise.js';
+// Kohima, April–May 1944 (1945 only; the big field, 1.0 × 1.12 km; Burma: the 14th Army against the Imperial Japanese
+// Army's 31st Division). Kohima ridge stands across the road from Dimapur to Imphal, the only way the Japanese "March on
+// Delhi" could go: a narrow spine of steep, terraced, jungled hills — Garrison Hill, Kuki Piquet, the Field Supply Depot,
+// Jail Hill — with the road winding round it and over the saddle by the Deputy Commissioner's bungalow. For a fortnight
+// the garrison held on Garrison Hill with the Japanese in the bungalow's garden, the DC's tennis court between them as
+// no-man's-land, grenades thrown across it at a few yards. Here the spine runs the length of the field (z), the tennis
+// court on the saddle in its middle, and each side holds its end of the ridge with the spurs that run off it — Hospital
+// Spur and the Naga village for the British (from Zubza, +z), GPT Ridge and Treasury Hill for the Japanese (from the
+// Aradura Spur, -z). Point-mirrored: the same hills, heights, jungle and road for both. Monsoon green, mist in the valleys.
+import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createFields } from '../world/Fields.js';
-import { growGround } from '../world/Vegetation.js';
+import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, commandPost, mirrored, trenchLine } from './common.js';
+import { commandPost, mirrored, shellField, trenchLine } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const OASIS = { x: -340, z: 60, r: 62 };   // El Guettar (nato's end of the valley); Bou Hamran its mirror
-const MINE_U = 165;                         // each side's mine belt, this far out from the centre line
-const noise = createNoise2D(1943_03);
+const BOUNDS = { x: 500, z: 560 };
+const noise = createNoise2D(1944_04);
 
-// (all shapes in the half-plane frame: X, U = x, z for the US half, -x, -z for the German one — point-mirrored for free)
-const frame = (x: number, z: number) => (z >= 0 ? [x, z] : [-x, -z]);
-/** The crest line of a side's ridge (U at X). */
-export const crestU = (X: number) => 282 + Math.sin(X * 0.011) * 12 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10;
-/** The Gafsa–Gabès road along the valley floor (an odd function: its own point mirror). */
-export const roadZ = (x: number) => 16 * Math.sin(x * 0.006);
-/** Height of the ridge above the valley along the crest: Hill 336, the Keddab ridge, Djebel el Mcheltat. */
-const crestH = (X: number) => 20 + 22 * Math.exp(-(((X + 300) / 75) ** 2)) + 16 * Math.exp(-(((X - 320) / 85) ** 2)) + 6 * Math.exp(-(((X - 60) / 70) ** 2));
-/** The passes through a side's ridge (0 in a pass): the Keddab pass at X = 0, a narrow wadi track at X = 170. */
-const pass = (X: number) => (1 - 0.92 * Math.exp(-((X / 52) ** 2))) * (1 - 0.85 * Math.exp(-(((X - 170) / 26) ** 2)));
-/** The wadis: one winding along each side of the valley, the Wadi Keddab across it through the centre. */
-const wadi = (x: number, z: number) => {
-  const [X, U] = frame(x, z);
-  const along = smoothstep(16, 3, Math.abs(U - 118 - Math.sin(X * 0.013) * 24)) * smoothstep(440, 380, Math.abs(X));
-  const across = smoothstep(14, 3, Math.abs(x - 26 * Math.sin(z * 0.011))) * smoothstep(215, 150, Math.abs(z));
-  return Math.max(along, across);
+/** The Dimapur–Imphal road (x at z): round the ridge's east flank in the north, over the saddle at the bungalow, round the west in the south (odd: its own mirror). */
+export const roadX = (z: number) => 150 * Math.sin(z * 0.0058);
+const roadDist = (x: number, z: number) => Math.abs(x - roadX(z)) / Math.hypot(1, 150 * 0.0058 * Math.cos(z * 0.0058));
+
+// the hills of the British half (the Japanese half is their point mirror): [ax, az, bx, bz, width, height] — a ridge
+// from a to b, gaussian across (`width` m), plus knolls [x, z, r, h]
+const SPINE: number[][] = [[0, -440, 0, 440, 60, 24]];                     // Kohima ridge itself (self-mirroring)
+const SPURS: number[][] = [
+  [0, 240, -330, 275, 42, 19],     // Hospital Spur, west off Garrison Hill
+  [10, 300, 330, 270, 46, 14],     // the spur out to the Naga village
+  [0, 95, -150, 115, 32, 12],      // Kuki Piquet's spur
+];
+const KNOLLS: number[][] = [
+  [0, 255, 65, 22],                // Garrison Hill: the ridge's top
+  [-330, 275, 50, 8],
+  [330, 270, 70, 9],               // the Naga village's broad hilltop
+  [-150, 115, 30, 5],
+  [0, 60, 40, -6],                 // the saddle dips toward the bungalow
+];
+const both = (list: number[][], f: (x: number, z: number, p: number[]) => number, x: number, z: number) =>
+  list.reduce((s, p) => s + f(x, z, p) + f(-x, -z, p), 0);
+const seg = (x: number, z: number, [ax, az, bx, bz, w, h]: number[]) => {
+  const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
+  return h * Math.exp(-((Math.hypot(x - ax - dx * t, z - az - dz * t) / w) ** 2));
 };
-const onRoad = (x: number, z: number, w = 5) => Math.abs(z - roadZ(x)) < w && Math.abs(x) < 480;
-const inOasis = (x: number, z: number, pad = 0) => [1, -1].some((s) => Math.hypot(x - OASIS.x * s, z - OASIS.z * s) < OASIS.r + pad);
+const knoll = (x: number, z: number, [kx, kz, r, h]: number[]) => h * Math.exp(-((Math.hypot(x - kx, z - kz) / r) ** 2));
+
+const COURT = { x: 0, z: 0, level: 0 }; // the tennis court: levelled on the saddle (its height below)
+/** The valley floor and the spine only: the grade the road keeps where it cuts through a spur. */
+const lowGround = (x: number, z: number) => 6 + fbm(noise, x * 0.004, z * 0.004, 3) * 3 + both(SPINE, seg, x, z) / 2 + smoothstep(420, 520, Math.abs(x)) * 30;
 
 function height(x: number, z: number) {
-  const [X, U] = frame(x, z);
-  let h = 2 + fbm(noise, X * 0.005, U * 0.005, 3) * 2.2 + fbm(noise, X * 0.04, U * 0.04, 2) * 0.4; // the valley floor: flat gravel, a slight swell
-  // the ridge: a steep rock face to the valley, a long gentle slope back, broken crest, the passes cut through it
-  const c = crestU(X);
-  const face = smoothstep(c - 70, c - 6, U);
-  const back = 1 - 0.8 * smoothstep(c + 12, c + 175, U);
-  const rough = 1 + ridged(noise, X * 0.03 + 7, U * 0.03, 3) * 0.12 * face;
-  h += crestH(X) * pass(X) * Math.min(face, back) * rough;
-  h -= 2.4 * wadi(x, z);
-  h += smoothstep(430, 560, Math.abs(x)) * 34 + smoothstep(560, 680, Math.abs(z)) * 12; // the djebels beyond the edges
-  h += 0.6 * smoothstep(6, 2, Math.abs(z - roadZ(x))) * smoothstep(480, 440, Math.abs(x));   // the road on its low embankment
-  for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
-  for (const s of [1, -1]) h += (2.2 - h) * smoothstep(OASIS.r, OASIS.r - 20, Math.hypot(x - OASIS.x * s, z - OASIS.z * s)); // the oasis: level
+  const ax = Math.abs(x), az = Math.abs(z);
+  let h = lowGround(x, z) + both(SPURS, seg, x, z) + both(KNOLLS, knoll, x, z);
+  h += fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 2.2 * smoothstep(8, 20, h);                     // broken ground on the hills
+  // the terraces the Nagas cut into every slope: steps of about 2 m, softened
+  const step = 2.2, k = h / step, fr = k - Math.floor(k);
+  const terr = (Math.floor(k) + smoothstep(0.55, 1, fr)) * step;
+  h += (terr - h) * 0.55 * smoothstep(10, 16, h) * smoothstep(48, 40, h);
+  h += smoothstep(600, 680, az) * 14;                                                              // the hills beyond the ends
+  // the road: cut into the spurs, a bench along the hillside
+  const rd = roadDist(x, z);
+  if (rd < 16) h += (Math.min(h, lowGround(x, z) + 1.5) - h) * smoothstep(16, 6, rd);
+  // levelled: the bases, the tennis court
+  for (const bz of [BASE_Z, -BASE_Z]) h += (10 - h) * smoothstep(36, 20, Math.hypot(x, z - bz));
+  if (ax < 40 && az < 40) h += (COURT.level - h) * smoothstep(26, 14, Math.hypot(x, z));
   return h;
 }
+COURT.level = lowGround(0, 0) + both(SPURS, seg, 0, 0) + both(KNOLLS, knoll, 0, 0);
 
-const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: 'Kohima' }];
+/** The jungle: thick on the slopes, thinner on the shelled hilltops and the terraces round the villages. */
+const jungle = (x: number, z: number) => smoothstep(-0.25, 0.1, fbm(noise, x * 0.006 - 4, z * 0.006 + 3, 3) + fbm(noise, -x * 0.006 - 4, -z * 0.006 + 3, 3));
 
-const hill = (X: number, U?: number) => ({ x: X, z: U ?? crestU(X) });
+const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: 'B Company, 4th Royal West Kents' }];
+
 const points: ControlPointDef[] = [
-  { id: 'kohima', wip: true, name: 'Gafsa track', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Hill 336', ...hill(-300), owner: null, sector: 'west' },
-  { id: 'C', name: 'Keddab pass', x: 0, z: 262, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Djebel el Mcheltat', ...hill(320), owner: null, sector: 'east' },
-  { id: 'E', name: 'El Guettar', x: OASIS.x, z: OASIS.z, owner: null, sector: 'west' },
-  { id: 'F', name: 'Gafsa–Gabès road', x: 0, z: 0, owner: null, sector: 'centre' },
-  { id: 'G', name: 'Bou Hamran', x: -OASIS.x, z: -OASIS.z, owner: null, sector: 'east' },
-  { id: 'H', name: 'Djebel Chemsi', x: -320, z: -crestU(320), owner: null, sector: 'west' },
-  { id: 'I', name: 'Orbata pass', x: 0, z: -262, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Djebel Berda', x: 300, z: -crestU(-300), owner: null, sector: 'east' },
-  { id: 'K', name: 'Gabès track', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'A', name: 'Zubza', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Hospital Spur', x: -330, z: 275, owner: null, sector: 'west' },
+  { id: 'C', name: 'Garrison Hill', x: 0, z: 255, owner: null, sector: 'centre', radius: 26 },
+  { id: 'D', name: 'Naga Village', x: 330, z: 270, owner: null, sector: 'east' },
+  { id: 'E', name: 'Kuki Piquet', x: -150, z: 115, owner: null, sector: 'west' },
+  { id: 'F', name: 'The tennis court', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
+  { id: 'G', name: 'FSD Hill', x: 150, z: -115, owner: null, sector: 'east' },
+  { id: 'H', name: 'GPT Ridge', x: -330, z: -270, owner: null, sector: 'west' },
+  { id: 'I', name: 'Jail Hill', x: 0, z: -255, owner: null, sector: 'centre', radius: 26 },
+  { id: 'J', name: 'Treasury Hill', x: 330, z: -275, owner: null, sector: 'east' },
+  { id: 'K', name: 'Aradura Spur', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
-  id: 'el-guettar',
-  name: 'El Guettar',
-  description: '23 March 1943, southern Tunisia: a wide open valley between rocky djebels. Hold your ridge, its passes and the oasis; the panzers come across the valley floor into the minefields under the guns on the heights.',
+  id: 'kohima',
+  name: 'Kohima',
+  description: 'April 1944: the 14th Army holds the jungled ridge across the Imphal road — Garrison Hill, Kuki Piquet, Jail Hill — and the DC’s tennis court between the lines. Monsoon mist on the terraced slopes.',
   epochs: ['1945'],
-  region: 'africa', // (the menu's North Africa: maps/index.js REGIONS)
-  climate: 'desert', // sand paint and khaki drill (render/paint.js CLIMATE)
-  sides: { nato: 'United States', pact: 'Germany' },
-  armies: { nato: ['us'], pact: ['wh'] },
+  region: 'pacific',                                   // (the menu's Asia & Pacific: maps/index.js REGIONS)
+  pacific: true,                                       // (data/factions.js armiesFrom: the Imperial Army fights here)
+  sides: { nato: 'Britain', pact: 'Japan' },
+  armies: { nato: ['brit14'], pact: ['jp'] },
+  airfields: [],                                       // (no strip on the ridge: the RAF's Hurricanes and Dakotas come from Dimapur and Imphal)
   size: 1600,
   segments: 640,
-  bounds: { x: 500, z: 560 },
-  steep: 0.5, // (vehicles: the djebels' faces are for men only — the passes and the back slopes for the rest)
-  seed: 1943,
+  bounds: BOUNDS,
+  steep: 0.55, // (vehicles: the road, the saddle and the gentler spurs; the steep terraced faces are for men)
+  seed: 1944,
   height,
-  fields: createFields({ seed: 1943, cell: 80 }),
+  woods: (x: number, z: number) => jungle(x, z) * 0.9,
 
   theme: {
-    // a clear, cool March morning in the Tunisian steppe: pale sky, grey-ochre rock, long shadows off the djebels
-    fogColor: 0xd2cbbc,
-    fogDensity: 0.0006,
-    skyTop: 0x6f98c4,
-    skyHorizon: 0xdcd8cc,
-    skyBottom: 0xb0a690,
-    sunColor: 0xfff2dc,
-    sunIntensity: 2.2,
-    sunDisk: 0.8,
-    clouds: 0.25,
-    cloudLight: 0xf2f0ea,
-    cloudDark: 0xbcb8ae,
-    sunDir: [0.55, 0.62, 0.35],
-    hemiSky: 0xd4dbe2,
-    hemiGround: 0x988a70,
-    hemiIntensity: 1.15,
-    rimColor: 0xe8e0cc,
-    rimIntensity: 0.3,
+    // the monsoon breaking: low grey cloud on the hills, mist in the valleys, everything wet and green
+    fogColor: 0xa4aca4, fogDensity: 0.0016,
+    skyTop: 0x7c8a90, skyHorizon: 0xb4bcb6, skyBottom: 0x8a948c,
+    sunColor: 0xeef0e4, sunIntensity: 1.3, sunDisk: 0.05,
+    clouds: 0.85, cloudLight: 0xc8ccc8, cloudDark: 0x7a807e,
+    sunDir: [0.35, 0.6, 0.5],
+    hemiSky: 0xc0c8c4, hemiGround: 0x3e4632, hemiIntensity: 1.35,
+    rimColor: 0xc4ccc8, rimIntensity: 0.2,
     terrain: {
-      grass: '#c9b691',
-      grassAlt: '#bcab88',
-      dryGrass: '#d6c6a0',
-      dirt: '#a48e6c',
-      rock: '#7e796e',
-      pasture: '#c4b18a',
-      ploughed: '#b8a27c',
-      stubble: '#d0bf98',
-      meadow: '#c2b08a',
-      farmX: [0, 1], // no farmland
-      farmZ: [0, 1],
-      roads: [0],     // the track from each base down through its pass
-      roadZ: 540,
+      grass: '#4e6a30', grassAlt: '#46602c', dryGrass: '#6a7440', dirt: '#6a4a30', rock: '#6a6656',
+      pasture: '#567234', ploughed: '#5e4430', stubble: '#6e7444', meadow: '#58742f',
+      farmX: [0, 1], farmZ: [0, 1], roads: [], roadZ: 0,   // (no farmland patchwork, no straight tracks: the road is painted below)
       surface(x: number, z: number) {
-        if (onRoad(x, z, 4.5)) return [0x8c8070, 0.85];                               // the road: graded gravel
-        if (inOasis(x, z, -6)) return [0x9a8c62, 0.55];                               // the oasis: watered, darker
-        const w = wadi(x, z);
-        if (w > 0.3) return [0xb4a890, w * 0.7];                                      // the wadis: pale stones
-        const scrub = fbm(noise, x * 0.03 + 50, z * 0.03, 2);
-        return scrub > 0.25 ? [0xa8987a, Math.min(0.4, (scrub - 0.25) * 2)] : null;  // gravel and grey scrub
+        const rd = roadDist(x, z);
+        if (rd < 4.5) return [0x7a5a3a, smoothstep(4.5, 2.5, rd) * 0.9];                           // the road: red laterite mud
+        if (Math.abs(x - 6) < 9 && Math.abs(z + 4) < 16) return [0x8a5a3a, 0.85];                     // the tennis court: red clay
+        const bare = smoothstep(0.5, 0.15, jungle(x, z));
+        return bare > 0.3 ? [0x5a4a32, bare * 0.35] : null;                                          // shell-churned earth where the jungle is gone
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-130, 0, 130] }, pact: { x: 0, z: -BASE_Z, entries: [-130, 0, 130] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-160, 0, 160] }, pact: { x: 0, z: -BASE_Z, entries: [-160, 0, 160] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
     nato: natoLayout.map((s) => ({ ...s, facing: Math.PI })),
-    pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0 })),
+    pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '58th Regiment' })),
   },
 
-  /** Each side dug in on its crest over the hills, its mine belt on the valley floor below (gaps for the road and the pass track). */
+  /** A fortnight of mortaring on the hilltops; each side dug in on its end of the ridge and on its spurs. */
   battlefield() {
+    const blasts = shellField(1944_0405, BOUNDS, (x, z) => 0.05 + 0.6 * smoothstep(14, 30, height(x, z)) + 0.8 * smoothstep(60, 0, Math.hypot(x, z)));
     const works: any[] = [];
     for (const f of ['nato', 'pact'] as const) {
       const m = f === 'nato' ? 1 : -1;
-      for (const [x0, x1] of [[-360, -240], [-120, -40], [40, 130], [270, 370]]) { // (left to right as the owner faces the valley)
-        const pts: [number, number][] = [];
-        for (let X = x0; X <= x1; X += 20) pts.push([X * m, (crestU(X) - 14) * m]);
-        works.push(...trenchLine(pts, f, { zig: 1, belts: 0 }));
-      }
-      for (let X = -420; X <= 420; X += 34) {
-        if (Math.abs(X) < 40 || Math.abs(X - 170) < 22) continue; // (the pass tracks)
-        const U = MINE_U + Math.sin(X * 0.02) * 8;
-        works.push({ kind: 'mines', x: X * m, z: U * m, yaw: 0, faction: f });
-      }
+      const lines: [number, number][][] = [
+        [[-40, 215], [-15, 205], [15, 205], [40, 215]],          // Garrison Hill, its face toward the court
+        [[-170, 95], [-150, 88], [-130, 95]],                      // Kuki Piquet
+        [[-360, 250], [-330, 244], [-300, 250]],                   // Hospital Spur
+        [[300, 240], [330, 234], [360, 240]],                      // the Naga village
+      ];
+      for (const l of lines) works.push(...trenchLine(l.map(([x, z]) => [x * m, z * m] as [number, number]), f, { zig: 1, belts: 0 }));
     }
-    return { blasts: [], ruins: [], works };
+    return { blasts, ruins: [], works };
   },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
-    const r = mulberry32(1943);
     const near = (x: number, z: number, d: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < d);
-    const slope = (x: number, z: number) => Math.hypot(terrain.heightAt(x + 2, z) - terrain.heightAt(x - 2, z), terrain.heightAt(x, z + 2) - terrain.heightAt(x, z - 2)) / 4;
-    /** A burnt-out tank: hull, turret, gun (scorched dark), a track thrown. */
-    const hulk = (x: number, z: number, yaw: number, color: number) => {
-      const g = terrain.heightAt(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
-      props.box('metal', x, g + 0.9, z, 3, 1.5, 6, yaw, color);
-      props.box('metal', x - fz * 0.2, g + 2, z + fx * 0.2, 2.1, 0.9, 2.6, yaw + 0.4, color);
-      props.box('metal', x + fx * 2.4, g + 2, z + fz * 2.4, 0.18, 0.18, 3, yaw + 0.4, 0x2a2826);
-      props.box('metal', x + fz * 2, g + 0.2, z - fx * 2, 0.5, 0.35, 5, yaw + 0.3, 0x2a2826);
-      cover.addBox({ x, z, yaw, length: 6, thickness: 3, height: 1.8 });
+    const TIN = 0x6a6a62, THATCH = 0x8a7a50;
+    /** A basha: a bamboo hut on stilts under a thatch roof (the Naga houses, the depots' stores). */
+    const basha = (x: number, z: number, yaw: number, w: number, d: number) => {
+      const g = terrain.heightAt(x, z);
+      props.box('plain', x, g + 1.2, z, w, 1.6, d, yaw, 0x7a6a48);
+      props.box('plain', x, g + 2.4, z, w + 1, 0.9, d + 1.2, yaw, THATCH);
+      cover.addBox({ x, z, yaw, length: d, thickness: w, height: 2 });
     };
 
-    // ---- the two oases, El Guettar and its mirror Bou Hamran: flat-roofed houses on the road, the palm grove, garden walls, the well
-    mirrored(props, 3103, (m, flip) => {
-      const R = props.rand, cx = OASIS.x * m, cz = OASIS.z * m;
-      props.flatHouse({ x: cx + 4 * m, z: cz - 10 * m, yaw: flip, width: 11, depth: 9, name: 'mosque', dome: true });
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 9) * Math.PI * 2 + R() * 0.4, d = 17 + R() * 12;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m;
-        props.flatHouse({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2) + flip, width: 6 + R() * 4, depth: 5 + R() * 3, storeys: R() < 0.2 ? 2 : 1 });
-      }
-      props.column({ x: cx - 6 * m, z: cz + 4 * m, radius: 1.4, height: 0.9 }); // the well
-      for (let i = 0; i < 70; i++) {
-        const a = R() * Math.PI * 2, d = 34 + R() * 26;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, h = 7 + R() * 5;
-        if (onRoad(x, z, 6)) continue;
-        props.palm({ x, z, height: h });
-      }
-      for (let i = 0; i < 6; i++) { // the gardens' mud walls among the palms
-        const a = (i / 6) * Math.PI * 2 + R(), d = 40 + R() * 14;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, yaw = a + Math.PI / 2 + flip;
-        if (!onRoad(x, z, 8)) props.lowWall({ x, z, yaw, length: 10 + R() * 8, height: 1.4, color: 0xb4a07a });
-      }
-    });
-
-    // ---- the road: telegraph poles along it
-    for (let x = -470; x <= 470; x += 38) {
-      const z = roadZ(x) + 9;
-      if (inOasis(x, z, 4)) continue;
-      const g = terrain.heightAt(x, z);
-      props.box('plain', x, g + 3.5, z, 0.22, 7, 0.22, 0, 0x5a4a38);
-      props.box('plain', x, g + 6.6, z, 1.6, 0.12, 0.12, 0, 0x5a4a38);
+    // ---- the tennis court on the saddle: the court's wire, the DC's bungalow below it, the club on the other side
+    {
+      const g = terrain.heightAt(6, -4);
+      for (const [lx, lz, sx, sz] of [[6, -20, 18, 0.08], [6, 12, 18, 0.08], [-3, -4, 0.08, 32], [15, -4, 0.08, 32], [6, -4, 18, 0.06]]) props.box('plain', lx, g + 0.03, lz, sx, 0.02, sz, 0, 0xd8d4c4); // (the lines, then the net)
+      props.box('plain', 6, g + 0.5, -4, 18, 0.9, 0.05, 0, 0x2a2a26);
+      for (let i = 0; i < 7; i++) props.box('plain', -5, g + 1.6, -20 + i * 5.5, 0.1, 3.2, 0.1, 0, 0x3a3a36); // the stop-netting's posts
+      props.house({ x: 34, z: -26, yaw: 0.2, width: 12, depth: 9 });             // the Deputy Commissioner's bungalow (the Japanese side of the court)
+      props.house({ x: -30, z: 28, yaw: 0.2 + Math.PI, width: 10, depth: 8 });   // the Kohima Club
     }
 
-    // ---- each side's ridge: positions on the crest (sandbagged gun pits, a few tents behind), boulders on the rock face
-    mirrored(props, 3104, (m, flip) => {
+    mirrored(props, 1944, (m, flip) => {
       const R = props.rand;
-      for (const X of [-340, -300, -255, -90, 80, 290, 335]) {
-        const U = crestU(X) - 4;
-        props.sandbagRing({ x: X * m, z: U * m, radius: 4.5, toward: m });
+      // ---- the Naga village / Treasury Hill: bashas on the hilltop, its gateways, the terraced fields round it
+      for (let i = 0; i < 16; i++) {
+        const a = R() * Math.PI * 2, d = 12 + R() * 40;
+        const x = (330 + Math.cos(a) * d) * m, z = (270 + Math.sin(a) * d) * m;
+        if (near(x, z, 10) || roadDist(x, z) < 10) continue;
+        basha(x, z, a + flip, 5 + R() * 2, 7 + R() * 3);
       }
-      for (const X of [-310, 300, 60]) { // the gun lines on the back slopes, below the crest
-        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 18) * m, z: (crestU(X) + 50 + (k % 2) * 6) * m, radius: 4, toward: m });
-        props.tent({ x: (X + 30) * m, z: (crestU(X) + 80) * m, yaw: 0.2 + flip, color: 0xa89a78 });
-        props.crates({ x: (X - 30) * m, z: (crestU(X) + 74) * m, yaw: R() });
+      // ---- the hospital on its spur, the stores of the supply depot on Kuki Piquet's: long tin-roofed huts
+      for (const [x, z, yaw] of [[-300, 290, 0.1], [-355, 262, 0.15], [-325, 300, 0.1], [-130, 128, 0.4], [-168, 100, 0.4]]) {
+        if (near(x * m, z * m, 9)) continue;
+        props.hall({ x: x * m, z: z * m, yaw: yaw + flip, width: 16, depth: 7, height: 3.2, color: 0x6a6450, roof: TIN, door: 3, name: 'hut' });
       }
-      for (let i = 0; i < 140; i++) { // the rock face and the crest: boulders and scree
-        const X = (R() * 2 - 1) * 440, U = crestU(X) - 60 + R() * 90, rad = 0.8 + R() * 2.4;
-        if (pass(X) < 0.5 || near(X * m, U * m, 18)) continue;
-        props.boulder({ x: X * m, z: U * m, radius: rad });
+      // ---- Kohima's houses along the road below Garrison Hill: tin roofs, timber walls
+      for (let i = 0; i < 10; i++) {
+        const z = 150 + i * 24 + R() * 8, side = R() < 0.5 ? -1 : 1, x = roadX(z) + side * (11 + R() * 6);
+        if (near(x * m, z * m, 14)) continue;
+        props.house({ x: x * m, z: z * m, yaw: Math.atan2(150 * 0.0058 * Math.cos(z * 0.0058), 1) + Math.PI / 2 + flip, width: 7 + R() * 2, depth: 6 + R() });
       }
+      // ---- the telegraph line along the road
+      for (let z = -20; z < 520; z += 40) {
+        const x = (roadX(z) + 9) * m, zz = z * m, g = terrain.heightAt(x, zz);
+        props.box('plain', x, g + 3.5, zz, 0.22, 7, 0.22, 0, 0x4a3a2a);
+        props.box('plain', x, g + 6.6, zz, 1.6, 0.12, 0.12, flip, 0x4a3a2a);
+      }
+      // ---- the positions on the hilltops: sandbagged pits; the stripped trees of Garrison Hill
+      for (const [x, z] of [[-20, 240], [22, 248], [0, 275], [-150, 120], [-330, 262], [330, 252]]) props.sandbagRing({ x: x * m, z: z * m, radius: 4, toward: m });
+      for (let i = 0; i < 26; i++) {
+        const x = (R() - 0.5) * 90, z = 220 + R() * 70, g = terrain.heightAt(x * m, z * m), h = 2 + R() * 5;
+        if (near(x * m, z * m, 8)) continue;
+        props.box('plain', x * m, g + h / 2, z * m, 0.35, h, 0.35, R() * 3, 0x3a3228, (R() - 0.5) * 0.3); // shattered trunks
+      }
+      // ---- each side's supply drops on its back slopes: the parachutes' crates
+      for (let i = 0; i < 5; i++) props.crates({ x: (-60 + i * 30) * m, z: (400 + R() * 30) * m, yaw: R() * 3 });
     });
 
-    // ---- the valley floor: burnt-out tanks and trucks, old sangars, stones; mirrored
-    for (let i = 0; i < 70; i++) {
-      const x = (r() * 2 - 1) * (bounds.x - 40), z = 10 + r() * 200;
-      if (near(x, z, 40) || onRoad(x, z, 8) || inOasis(x, z, 10) || Math.abs(x) < 30 || wadi(x, z) > 0.1 || Math.abs(z - MINE_U) < 14) continue;
-      const seed = Math.floor(r() * 1e9), kind = r();
-      mirrored(props, seed, (m, flip) => {
-        const R = props.rand;
-        if (kind < 0.22) hulk(x * m, z * m, R() * 6.28, R() < 0.5 ? 0x4a4436 : 0x6a6450);
-        else if (kind < 0.42) props.wreckCar({ x: x * m, z: z * m, yaw: R() * 3 + flip });
-        else if (kind < 0.62) props.lowWall({ x: x * m, z: z * m, yaw: R() * 3, length: 5 + R() * 6, height: 1.1, color: 0xa49a84 }); // a stone sangar
-        else for (let k = 0; k < 3; k++) props.boulder({ x: x * m + (R() - 0.5) * 8, z: z * m + (R() - 0.5) * 8, radius: 0.7 + R() * 1.2 });
-      });
-    }
-    // ---- behind the ridges: rocks and wrecks among the scrub (not on the steep faces)
-    const sites: any[] = [];
-    for (let tries = 0; sites.length < 22 && tries < 4000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = 30 + rand() * (bounds.z - 40);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 40 * 40) || near(x, z, 45) || Math.hypot(x, z - BASE_Z) < 45 || inOasis(x, z, 10) || onRoad(x, z, 10) || slope(x, z) > 0.3 || slope(-x, -z) > 0.3) continue;
-      sites.push({ x, z, kind: r() < 0.6 ? 'rocks' : 'wrecks', yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
-    }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
-    commandPost(props, this.bases.nato, -1, 0xa89a78);
-    commandPost(props, this.bases.pact, 1, 0x9a9070);
+    commandPost(props, this.bases.nato, -1, 0x4e5236);
+    commandPost(props, this.bases.pact, 1, 0x6a6444);
     props.finish();
-    cover.finalize(bounds);
-    // thin camel-thorn and esparto scrub, none on the road
-    const avoid = [{ x: 0, z: BASE_Z, r: 24 }, { x: 0, z: -BASE_Z, r: 24 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })), { test: (x: number, z: number) => onRoad(x, z, 6) }];
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 0.45, fields: this.fields });
 
+    const avoid = [{ x: 0, z: BASE_Z, r: 30 }, { x: 0, z: -BASE_Z, r: 30 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 16 })),
+      { test: (x: number, z: number) => roadDist(x, z) < 8 || Math.hypot(x, z) < 45 }];
+    // the jungle: broadleaf, dense on the slopes, cleared on the shelled hilltops and round the villages
+    const trees = plantTrees({
+      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 9000, broadleaf: 1, autumn: 0, maxY: 90, size: 1.15,
+      forest: (x: number, z: number) => {
+        if (roadDist(x, z) < 9 || near(x, z, 34)) return -1;
+        return jungle(x, z) > 0.5 ? 1 : jungle(x, z) * 0.2;
+      },
+    });
+    cover.finalize(bounds);
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 2.2, fields: null });
     return {
       buildings: props.buildings,
-      update(dt: number, t: number) { ground.update(dt, t); },
+      update(dt: number, t: number) { trees.update?.(dt, t); ground.update(dt, t); },
     };
   },
 } satisfies MapDef;

@@ -7,16 +7,16 @@
 import { TYPES_1985 } from '../units/index.js';
 import { SHIPS_1918 } from './ships.js';
 import { COAST_1918 } from './coast.js';
+import fronts from './fronts.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
 import { buildBalloonUK, buildBalloonFR, buildBalloonDE, buildSupplyTank, buildAALorryUK, buildAALorryFR, buildAALorryDE, buildAmbulanceUK, buildAmbulanceFR, buildAmbulanceDE, buildSupplyLorryFR, buildSupplyLorryDE, buildStaffCarUK, buildStaffCarFR, buildStaffCarDE, buildMarkV, buildBeuteMarkIV, buildA7VU, buildWhippet, buildBeuteWhippet, buildRenaultFT, buildSchneiderCA1, buildA7V, buildRollsRoyceAC, buildPeugeotAC, buildEhrhardtAC } from '../models/ww1Armour.js';
 
 const T = TYPES_1985;
-const men = (o = {}) => ({
-  nato: () => buildWw1Soldier({ army: 'uk', ...o }), fr: () => buildWw1Soldier({ army: 'fr', ...o }),
-  pact: () => buildWw1Soldier({ army: 'de', ...o }), st: () => buildWw1Soldier({ army: 'st', ...o }),
-});
+/** Each table key's soldier (models/ww1Soldier.js): the Western Front's four, and the other fronts' five (./fronts.js). */
+const SOLDIER = { nato: 'uk', fr: 'fr', pact: 'de', st: 'st', ot: 'ot', anzac: 'anzac', it: 'it', ah: 'ah', ru: 'ru' };
+const men = (o = {}) => Object.fromEntries(Object.entries(SOLDIER).map(([k, army]) => [k, () => buildWw1Soldier({ army, ...o })]));
 const derive = (base, o) => ({ ...base, ...o, stats: { ...base.stats, ...o.stats }, specialist: o.specialist ?? base.specialist });
 
 const rifles = derive(T.rifles, {
@@ -158,7 +158,7 @@ const crew = derive(T.crew, {
 // what an observer or a balloon sees, they hit (the 1985 artillery rules). kind 'gun': limbered to move,
 // unlimbered (towed.deploy) to fire. The gunners stand in the open.
 const GUN_1918 = { nightSight: undefined, armor: 0.05, crew: 0, turnRate: 0.6, radius: 1.8, height: 1.8, eyeHeight: 1.7, aimHeight: 1, breakMorale: 0.25, noStabilizer: true, smokeRounds: 4 };
-const gunsOf = (size) => ({ nato: () => buildWw1Gun({ army: 'uk', size }), fr: () => buildWw1Gun({ army: 'fr', size }), pact: () => buildWw1Gun({ army: 'de', size }), st: () => buildWw1Gun({ army: 'st', size }) });
+const gunsOf = (size) => Object.fromEntries(Object.entries(SOLDIER).map(([k, army]) => [k, () => buildWw1Gun({ army, size })]));
 
 const artillery = derive(T.artillery, {
   kind: 'gun', name: 'Field Guns', shortName: 'Field guns', cost: 300, weaponSound: 'arty', engine: undefined, tracks: undefined, // (horse-drawn: none of the 1985 gun's diesel or tracks)
@@ -256,7 +256,7 @@ const airRadar = derive(T.airRadar, {
 
 // cavalry (the IFV slot; 1806's horses and charge: kind 'cavalry', UnitStack.startCharge / unhorse): carbines at a distance,
 // the sword and the lance at the charge — deadly against men caught in the open, slaughtered by machine guns
-const RIDERS = { nato: 'uk18', fr: 'fr18', pact: 'de18', st: 'st18' };
+const RIDERS = { nato: 'uk18', fr: 'fr18', pact: 'de18', st: 'st18', ot: 'ot18', anzac: 'anzac18', it: 'it18', ah: 'ah18', ru: 'ru18' };
 const mounts = (mounted = true) => Object.fromEntries(Object.entries(RIDERS).map(([k, army]) => [k, () => buildCavalry({ army, kind: 'medium', mounted })]));
 const HORSE_18 = {
   armor: 0, turnRate: 2.6, turretRate: 3, radius: 0.85, height: 2.6, eyeHeight: 2.5, aimHeight: 1.6, fov: 2.6, nightSight: undefined,
@@ -422,6 +422,7 @@ const commandPost = derive(T.commandPost, {
 
 mineClear.specialist = undefined;      // (the wire cutters: no flamethrower among them)
 mineClear.specialistModels = undefined;
+const FRONTS = fronts({ rifles, mgTeam, artillery, spMortar, rockets, mortar, observers, ifv, looseHorse, dismounted, reconVehicle, crew, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, commandPost }); // Italy, the east, the Middle East (./fronts.js)
 
 export const TYPES_1918 = {
   rifles, mgTeam, marines, sailors, tank, heavyTank, reconVehicle, crew,
@@ -430,6 +431,7 @@ export const TYPES_1918 = {
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
   ...SHIPS_1918,   // the North Sea maps' warships (./ships.js)
   ...COAST_1918,   // Zeebrugge's fixed guns (./coast.js)
+  ...FRONTS,       // the assault troops and the mountain guns
 };
 
 /** What stands in for the types not built yet: the riflemen (ponytail: each gets its own in its step). */

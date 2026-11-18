@@ -41,8 +41,9 @@ import { CLIMB, LOCAL, SHIP } from '../world/Nav.js';
 import { sailFactor, sailCourse, offWind, NO_GO } from './sailing.js';
 import { rakeFactor, sailHit, sailUpkeep, mastDrive, GALE } from './sailDamage.js';
 import { wind } from '../world/Wind.js';
-import { armyDoctrine, ARTILLERY } from '../data/doctrine.js';
+import { armyDoctrine, ARTILLERY, withMods } from '../data/doctrine.js';
 import { RECON } from '../systems/Doctrine.js';
+const SOFT = new Set(['ambulance', 'commandPost', 'artillery', 'spMortar', 'rockets', 'mortar', 'recovery', 'observers']); // (what the Cossacks ride down: wagons, gun teams, staff)
 
 const TRACERS = 1.6; // every weapon's tracer share (stats.tracer) times this: the battle reads better with more of them
 
@@ -134,14 +135,15 @@ let nextId = 1;
 
 /** A warship's own name (type.names per side, data/units45/ships.js): the class's next one not yet afloat in this battle. */
 function shipName(type, faction, world) {
-  const list = type.names?.[faction];
+  const own = type.names?.[world.armies?.[faction]]; // (an army's own navy, its names written in full: SMS Novara, Aquila — data/units1918/ships.js)
+  const list = world.river?.names?.[faction]?.[type.id] ?? own ?? type.names?.[faction]; // (a sea map's own navy: Copenhagen's Danish line)
   if (!list?.length) return null;
   const used = (world.shipNames ??= new Map());
   const key = `${type.id}:${faction}`;
   const i = used.get(key) ?? 0;
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
-  if (n.startsWith('SS ')) return n; // (a merchantman is SS already)
+  if (n.startsWith('SS ') || list === own) return n; // (a merchantman is SS already)
   if (/^[A-Z]{1,3} \d/.test(n)) return n; // (a numbered boat — S 53, UB 88, CMB 4 — goes by her number)
   const pre = year() < 1900 ? { pact: 'HMS' }[faction] : year() < 1930 ? { nato: 'HMS', pact: 'SMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; 1918 HMS and SMS; later the US Navy's USS)
   return pre ? `${pre} ${n}` : n;
@@ -176,6 +178,7 @@ export class UnitStack {
     if (s75) this.stats = { ...this.stats, fireCooldown: this.stats.fireCooldown / s75.fire, reloadTime: this.stats.reloadTime / s75.fire };
     const quick = this.stats.gun && this.stats.towed && armyDoctrine(this.army, 'quickGuns'); // Bavaria's reformed artillery unlimbers sooner
     if (quick) this.stats = { ...this.stats, towed: { ...this.stats.towed, deploy: this.stats.towed.deploy * quick.deploy } };
+    this.stats = withMods(this.army, type, this.stats); // every doctrine's plain numbers (data/doctrine.js mods)
     this.faction = faction;
     this.factionDef = FACTIONS[faction];
     this.name = name ?? shipName(type, faction, services.world ?? {}) ?? `${forArmy(type.variants, this.army, faction)?.name ?? type.shortName} ${this.id}`; // (the army's own name for it; a warship her own)
@@ -2619,6 +2622,9 @@ export class UnitStack {
     const hot = (source?.stats ?? source?.stack?.stats)?.hotShot; // (1801: a shore battery's red-hot shot in a ship's timbers)
     if (hot && this.stats.sail && Math.random() < hot) { u.blaze = Math.min(1, (u.blaze ?? 0) + 0.3); if (!u.hotTold) { u.hotTold = true; this.services.tell?.(this.faction, `${this.name}: red-hot shot in her timbers — fire aboard!`); } }
     if (this.markedUntil > this.world.time) amount *= this.markDamage; // spotted by the US Army's Cavalry screen
+    const by = source?.stack ?? source;
+    amount *= (this.stats.take ?? 1) * (this.doc?.take ?? 1) * (by?.doc?.dmg ?? 1); // the doctrines (systems/Doctrine.js, data/doctrine.js mods)
+    if (by?.stats?.cavalry && SOFT.has(this.type.id) && armyDoctrine(by.army, 'cossacks')) amount *= armyDoctrine(by.army, 'cossacks').soft; // (Russia 1918: the Cossacks among the wagons and the guns)
     if (u.invulnerable) {
       // a fortification that can't be attacked yet (modes/lanes.js): the round just spalls off
       u.flash = 0.06;

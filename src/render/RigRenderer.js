@@ -20,7 +20,11 @@ const rnd = ([a, b]) => a + Math.random() * (b - a);
 
 // camouflage per army (parts with camo 1): MERDC for the US Army, the Bundeswehr's NATO three-tone
 // of 1984 (bronze green, leather brown, tar black); the Pact armies paint plain green
-const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c] };
+const ARMY_CAMO = { bw: [0x3b4a2c, 0x4d3c2a, 0x1c1c1a, 0x3b4a2c],
+  no: [0x4a5236, 0xd6d9d4, 0x404830, 0x4a5236],     // Norway: olive green with the winter's whitewash over it
+  usmc: [0x4b5232, 0xd6d9d4, 0x1c1c1a, 0x4b5232],   // the Marines in Norway: MERDC winter — white, forest green, black
+  rok: [0x3e4a2c, 0x5a4630, 0x1c1c1a, 0x8a7d58],    // the ROK Army: four-colour woodland, a sand stripe
+  kpa: [0x4b5634, 0x48532f, 0x4f5a37, 0x46512e] };  // the KPA: plain green
 // 1945 (data/epoch.js): US olive drab and the Red Army's 4BO green, plain; the Germans' dark
 // yellow with olive green and red-brown over it
 const ARMY_CAMO_1945 = {
@@ -41,6 +45,11 @@ const ARMY_CAMO_1918 = {
   fr: [0x8a7a4e, 0x55603a, 0x6a4a30, 0x8a7a4e],
   de: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
   st: [0x6a6a5a, 0x8a7a4e, 0x4f5a38, 0x6a6a5a],
+  ot: [0x7a7458, 0x6e6a50, 0x857c5a, 0x6a6448],   // (German-supplied, dusty grey)
+  anzac: [0x5c5638, 0x585234, 0x5f5a3b, 0x555032],
+  it: [0x6a6e58, 0x646852, 0x70745c, 0x5e624e],   // grigio-verde
+  ah: [0x6e7468, 0x5e6a4c, 0x7a6e50, 0x6e7468],   // the k.u.k. three-colour of 1918
+  ru: [0x5c6444, 0x56603e, 0x606848, 0x525a3a],   // Russian green
 };
 
 // 2027: the US Army's NATO three-tone, the Polish three-colour, Russian green, the Belarusian

@@ -19,7 +19,7 @@ const STEEL = 0x2a2a2a;
 const HELMET = 0x4e5236;
 const NET = 0x3c3e28;
 
-function weapon(kind) {
+export function weapon(kind) { // (exported: data/models/soldier85.js arms the Northern Flank and Korea with it)
   switch (kind) {
     case 'mg': // MG3: the perforated barrel jacket, bipod, the 50-round belt drum
       return {

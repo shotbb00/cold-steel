@@ -412,3 +412,76 @@ const staffCar = (key, color, dark, flag) => car(key, {
 export const buildStaffCarUK = staffCar('staffUK', BR, BR_DK, 0xb02020);
 export const buildStaffCarFR = staffCar('staffFR', FR, FR_DK, 0x22325c);
 export const buildStaffCarDE = staffCar('staffDE', DE, DE_DK, 0x161616);
+
+// ---------------------------------------------------------------- the other fronts (Italy, the east, the Middle East)
+
+const IT = 0x6a6e58;    // Italian grey-green
+const IT_DK = 0x54584a;
+const AH = 0x6e7468;    // Austro-Hungarian grey-green
+const AH_DK = 0x565c52;
+const RU = 0x5c6444;    // Russian green
+const RU_DK = 0x464e34;
+
+/** The Red Crescent of the Ottoman Army's ambulances: a red disc with a white one over it, off centre. */
+const RED_CRESCENT = (x, y, z) => [P.box(0.02, 0.62, 0.62, { x, y, z, color: 0xe8e4da }),
+  P.cyl(0.24, 0.24, 0.03, { x, y, z, rz: Math.PI / 2, color: 0xb02020 }, 18), P.cyl(0.2, 0.2, 0.04, { x, y, z: z + 0.08, rz: Math.PI / 2, color: 0xe8e4da }, 18)];
+export const buildAmbulanceOT = lorry('ambOT', DE, DE_DK, [P.box(1.9, 1.5, 3.0, { y: 1.75, z: -1.45, color: DE, ...C }), ...pair((s) => RED_CRESCENT(s * 0.96, 1.85, -1.5)).flat()]);
+export const buildAmbulanceIT = lorry('ambIT', IT, IT_DK, ambulanceBody(IT));
+export const buildAmbulanceAH = lorry('ambAH', AH, AH_DK, ambulanceBody(AH));
+export const buildAmbulanceRU = lorry('ambRU', RU, RU_DK, ambulanceBody(RU));
+export const buildStaffCarOT = staffCar('staffOT', DE, DE_DK, 0xb02020);     // (the Ottoman red)
+export const buildStaffCarAU = staffCar('staffAU', BR, BR_DK, 0x2a3a7a);     // (the Australian blue ensign)
+export const buildStaffCarIT = staffCar('staffIT', IT, IT_DK, 0x2a7a3a);     // (the Savoy tricolour's green)
+export const buildStaffCarAH = staffCar('staffAH', AH, AH_DK, 0xd8b830);     // (black and yellow)
+export const buildStaffCarRU = staffCar('staffRU', RU, RU_DK, 0xd8d6cc);     // (white, blue, red)
+export const buildAALorryIT = aaLorry('aaIT', IT, IT_DK);   // the autocannone da 75 CK on a Lancia
+export const buildAALorryRU = aaLorry('aaRU', RU, RU_DK);   // the Lender 76 mm on a Russo-Balt
+
+/** Lancia 1ZM: 5.4 m, the big round turret with two MGs and a small one on top of it for a third. */
+export const buildLanciaAC = car('lancia', {
+  color: IT, dark: IT_DK, length: 5.4, width: 1.82, wheelR: 0.46, track: 0.8, base: [1.65, -1.55],
+  body: [
+    plated([[0.6, 0.74, 0.46, 0.46, 1.15, 0.36, 1.42], [2.3, 0.74, 0.44, 0.44, 1.08, 0.3, 1.26], [2.6, 0.74, 0.42, 0.42, 1.02, 0.28, 1.18]], { color: IT, ...C }), // the bonnet
+    ...[-0.18, 0.18].map((x) => P.box(0.3, 0.36, 0.03, { x, y: 0.97, z: 2.62, color: IT_DK })),
+    plated([[-2.5, 0.74, 0.82, 0.84, 1.45, 0.72, 1.85], [0.6, 0.74, 0.86, 0.88, 1.5, 0.76, 1.9]], { color: IT, ...C }),   // the hull
+    slit(0, 1.7, 0.6, 0.5), ...pair((sd) => door(sd * 0.87, 1.15, -0.7, 0.7, 0.6, IT_DK)).flat(),
+    ...pair((s) => P.box(0.05, 0.08, 4.4, { x: s * 0.6, y: 2.2, z: 0.2, rx: -0.12, color: STEEL })),                      // the wire-cutting rails from the bumper over the roof
+    P.cyl(0.42, 0.46, 0.38, { y: 2.42, z: -0.75, color: IT, ...C }, 12),                                                  // the upper turret on the main one
+  ],
+  turret: [P.cyl(0.66, 0.7, 0.5, { y: 0.25, color: IT, ...C }, 14)],
+  gun: [...pair((s) => P.cyl(0.04, 0.04, 0.6, { x: s * 0.22, z: 0.3, rx: Math.PI / 2, color: STEEL }, 8))],              // two Fiat-Revelli
+  turretAt: [0, 1.9, -0.75], gunAt: [0, 0.25, 0.62], muzzle: 0.62,
+});
+
+/** Austin-Putilov: 4.9 m, a high armoured body behind the bonnet, its two MG turrets side by side and staggered. */
+export const buildAustinAC = car('austin', {
+  color: RU, dark: RU_DK, length: 4.9, width: 1.95, wheelR: 0.45, track: 0.82, base: [1.5, -1.45],
+  body: [
+    plated([[0.5, 0.72, 0.46, 0.46, 1.15, 0.36, 1.4], [2.05, 0.72, 0.44, 0.44, 1.08, 0.3, 1.26], [2.3, 0.72, 0.42, 0.42, 1.0, 0.28, 1.16]], { color: RU, ...C }), // the bonnet
+    plated([[-2.3, 0.72, 0.9, 0.92, 1.5, 0.8, 2.0], [0.5, 0.72, 0.92, 0.94, 1.55, 0.84, 2.15]], { color: RU, ...C }),   // the body
+    P.box(1.5, 0.3, 0.05, { y: 1.95, z: 0.52, rx: -0.3, color: RU_DK }), slit(0, 1.95, 0.53, 0.5),
+    ...pair((sd) => door(sd * 0.93, 1.2, -0.3, 0.7, 0.7, RU_DK)).flat(),
+    P.cyl(0.42, 0.44, 0.5, { x: 0.45, y: 2.25, z: -1.2, color: RU, ...C }, 12),                                              // the right-hand turret, set back
+    P.cyl(0.05, 0.05, 0.55, { x: 0.45, y: 2.3, z: -0.75, rx: Math.PI / 2, color: STEEL }, 8),                                  // its Maxim
+  ],
+  turret: [P.cyl(0.42, 0.44, 0.5, { y: 0.25, color: RU, ...C }, 12)],                                                      // the left-hand turret, forward
+  gun: [P.cyl(0.05, 0.05, 0.55, { z: 0.28, rx: Math.PI / 2, color: STEEL }, 8)],
+  turretAt: [-0.45, 2.0, -0.55], gunAt: [0, 0.3, 0.4], muzzle: 0.56,
+});
+
+/** A light car patrol's Ford Model T: the open car, a Lewis gun on a post where the back seat was. */
+export const buildFordPatrol = car('fordPatrol', {
+  color: BR, dark: BR_DK, length: 3.6, width: 1.6, wheelR: 0.42, track: 0.7, base: [1.05, -1.0],
+  body: [
+    P.box(0.6, 0.45, 0.95, { y: 1.0, z: 1.15, color: BR, ...C }), P.box(0.62, 0.5, 0.05, { y: 1.0, z: 1.64, color: 0x26261f }), // the bonnet, the radiator
+    P.box(1.35, 0.45, 2.0, { y: 0.95, z: -0.35, color: BR, ...C }),
+    P.box(1.2, 0.05, 1.8, { y: 1.18, z: -0.35, color: 0x1e1a14 }),
+    P.box(1.15, 0.32, 0.4, { y: 1.3, z: 0.35, color: 0x3a2a1c }),                                                    // the seat back
+    P.box(1.1, 0.35, 0.04, { y: 1.42, z: 0.62, rx: -0.2, color: 0x9ab0b8 }),                                        // the windscreen
+    ...pair((s) => P.box(0.3, 0.3, 0.6, { x: s * 0.45, y: 1.3, z: -1.0, color: 0x5a4a34 })),                       // petrol tins and water
+    P.cyl(0.04, 0.05, 0.6, { y: 1.45, z: -0.45, color: STEEL }, 6),                                                    // the post
+  ],
+  turret: [P.box(0.12, 0.12, 0.2, { y: 0.06, color: STEEL })],
+  gun: [P.cyl(0.045, 0.04, 0.7, { z: 0.35, rx: Math.PI / 2, color: 0x2f3128 }, 8), P.cyl(0.1, 0.1, 0.03, { y: 0.07, z: 0.05, color: STEEL }, 12)], // the Lewis, its pan
+  turretAt: [0, 1.75, -0.45], gunAt: [0, 0.05, 0.1], muzzle: 0.72,
+});

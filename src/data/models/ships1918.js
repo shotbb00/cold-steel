@@ -440,3 +440,69 @@ function steamer(c, { len, beam, fb, band }) {
 }
 export const buildTroopshipRN = ship(() => steamer({ ...RN, hull: 0x3c3e40, upper: 0x6a6c6a, funnel: 0x6a6c6a }, { len: 125, beam: 16, fb: 6, band: 0x1c1e20 }));
 export const buildTroopshipKM = ship(() => steamer({ ...KM, hull: 0x3a3c3e, upper: 0x8c8e88, funnel: 0xc8a460 }, { len: 120, beam: 15.5, fb: 6, band: 0x1c1e20 }));
+
+// ---------------------------------------------------------------- the Adriatic (the Otranto Strait)
+
+const KUK = { hull: 0x8a9096, deck: 0x8a7e66, upper: 0x969ca2, gun: 0x8c9298, black: BLACK, boat: 0xa4a49a };   // the k.u.k. Kriegsmarine's light grey
+const RM = { hull: 0x7a8288, deck: 0x887c64, upper: 0x868e94, gun: 0x7e868c, black: BLACK, boat: 0x9a9a90 };    // the Regia Marina's grey
+
+/** SMS Novara (Helgoland class): 130.6 m, nine 10 cm singles (two abreast forward, the rest along the waist and aft), three funnels, two pole masts. */
+export const buildNovara = ship(() => warship(KUK, {
+  len: 130.6, beam: 12.8, fb: 4.6, draft: 4.6, fc: [30, 2.2],
+  guns: [{ x: 2.4, z: 52, len: 5, cal: 0.1 }, { x: -2.4, z: 52, len: 5, cal: 0.1 }, { x: 5, z: 24, len: 5, cal: 0.1, arc: 3 }, { x: -5, z: 24, len: 5, cal: 0.1, arc: 3 },
+    { x: 5, z: -14, aft: true, len: 5, cal: 0.1, arc: 3 }, { x: -5, z: -14, aft: true, len: 5, cal: 0.1, arc: 3 }, { z: -54, aft: true, len: 5, cal: 0.1 }],
+  bridge: { z: 36, w: 7, d: 5, h: 3.6 },
+  house: [[-24, 20, 7, 2.2]],
+  funnels: [[18, 1.9, 9], [6, 1.9, 9], [-6, 1.9, 9]],
+  fore: { z: 30, h: 22, y: 2.2 },
+  main: { z: -34, h: 18 },
+  tubeMounts: [[3.4, -28, 2], [-3.4, -28, 2]],
+  boats: [[4.6, -20, 6.5, 1], [-4.6, -20, 6.5, -1]],
+}));
+/** SMS Tátra: 85 m, two 10 cm (bow and stern), six 6.6 cm along the waist, four funnels, two twin tubes. */
+export const buildTatra = ship(() => warship(KUK, {
+  len: 85.3, beam: 7.8, fb: 3, draft: 3, fc: [18, 1.8], rake: 0.03,
+  guns: [{ z: 34, len: 4.2, cal: 0.08 }, { x: 2.6, z: 8, len: 3, cal: 0.06, arc: 2.6 }, { x: -2.6, z: 8, len: 3, cal: 0.06, arc: 2.6 }, { x: 2.6, z: -14, aft: true, len: 3, cal: 0.06, arc: 2.6 }, { x: -2.6, z: -14, aft: true, len: 3, cal: 0.06, arc: 2.6 }, { z: -36, aft: true, len: 4.2, cal: 0.08 }],
+  bridge: { z: 22, w: 5, d: 3.6, h: 2.4 },
+  funnels: [[14, 1.1, 5.5], [6, 1.1, 5.5], [-2, 1.1, 5.5], [-10, 1.1, 5.5]],
+  fore: { z: 19, h: 12, y: 1.8 },
+  main: { z: -26, h: 8 },
+  tubeMounts: [[0, -20, 2], [0, -30, 2]],
+}));
+/** A k.u.k. U-boat of the U 27 class (the German UB II, built at Pola): 37.9 m, two bow tubes, a 7.5 cm on the deck. */
+export const buildKukUboat = sub(() => uboat({ ...KUK, hull: 0x7a8288, deck: 0x5a6066 }, { len: 37.9, beam: 4.4, tower: [4, 2.2, 1], gunZ: 6, gunLen: 2.6 }));
+
+/** Aquila (esploratore): 94.7 m, three 152 mm (one forward, two aft), four 76 mm, three funnels. */
+export const buildAquila = ship(() => warship(RM, {
+  len: 94.7, beam: 9.5, fb: 3.6, draft: 3.6, fc: [20, 2.2],
+  guns: [{ z: 38, len: 6, cal: 0.12 }, { x: 3, z: 6, len: 3.4, cal: 0.07, arc: 2.6 }, { x: -3, z: 6, len: 3.4, cal: 0.07, arc: 2.6 }, { x: 3, z: -18, aft: true, len: 3.4, cal: 0.07, arc: 2.6 }, { x: -3, z: -18, aft: true, len: 3.4, cal: 0.07, arc: 2.6 },
+    { z: -30, y: 2, aft: true, len: 6, cal: 0.12 }, { z: -40, aft: true, len: 6, cal: 0.12 }],
+  bridge: { z: 24, w: 5.6, d: 4.4, h: 3 },
+  funnels: [[14, 1.4, 6.5], [4, 1.4, 6.5], [-6, 1.4, 6.5]],
+  fore: { z: 20, h: 15, y: 2.2 },
+  main: { z: -24, h: 10 },
+  tubeMounts: [[0, -12, 2]],
+}));
+/** An Italian destroyer of 1915 (the Indomito and Pilo types): 73 m, a 120 mm forward, 76 mm guns aft and in the waist, two twin tubes. */
+export const buildCacciatorpediniere = ship(() => warship(RM, {
+  len: 73, beam: 7.3, fb: 2.8, draft: 2.6, fc: [16, 1.6], rake: 0.04,
+  guns: [{ z: 29, len: 4, cal: 0.08 }, { x: 2.4, z: 4, len: 3, cal: 0.06, arc: 2.6 }, { x: -2.4, z: 4, len: 3, cal: 0.06, arc: 2.6 }, { z: -30, aft: true, len: 3.4, cal: 0.07 }],
+  bridge: { z: 19, w: 4.6, d: 3.4, h: 2.4 },
+  funnels: [[10, 1.1, 5], [2, 1.1, 5], [-6, 1.1, 5]],
+  fore: { z: 16, h: 11, y: 1.6 },
+  main: { z: -22, h: 7 },
+  tubeMounts: [[0, -12, 2], [0, -20, 2]],
+}));
+/** A MAS (Motoscafo Armato Silurante): 16 m, two torpedoes in their release frames either side, a machine gun. */
+export const buildMAS = ship(() => ({ fixed: motorBoat({ ...RM, hull: 0x6e767c }, { len: 16, beam: 2.6, trough: false }), mounts: [{ geo: merge([P.box(0.1, 0.1, 0.1, { color: BLACK })]), at: [0, 1.4, 0], arc: 6 }] }));
+
+/** A steam drifter of the Otranto barrage: 26 m, a wooden Scottish herring boat, the tall thin funnel, the mizzen, a 6-pounder on the bow. */
+export const buildDrifter = ship(() => warship({ ...RN, hull: 0x2a2826, upper: 0x7a6e5a, deck: 0x8a7a5c }, {
+  len: 26, beam: 5.6, fb: 2, draft: 2.4, sheer: 0.8,
+  guns: [{ z: 9, len: 1.8, cal: 0.05 }],
+  house: [[-6, -1, 3, 2]],
+  bridge: { z: 1, w: 2.6, d: 2, h: 1.4 },
+  funnels: [[-3, 0.5, 5]],
+  fore: { z: 6, h: 10 },
+  main: { z: -10, h: 7 },
+}));

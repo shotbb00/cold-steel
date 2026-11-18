@@ -1,291 +1,307 @@
-// STUB (copy of stalingrad.ts): being rebuilt as Okinawa. Remove `wip: true` when done.
-// Stalingrad, winter: a city fought over street by street (1945 only; the big field, 1.0 × 1.12 km).
-// Blocks of gutted apartment houses on a grid of snowed-over streets, Mamayev Kurgan in the middle
-// (a long hill with the water tanks on top, overlooking everything), and the landmarks of the battle
-// out in the districts: the grain elevator and the Red October works on the west, the tractor works
-// and the station on the east, Pavlov's House and the Univermag either side of the hill, the
-// Square of the Fallen and the Barrikady gun works north and south of it. Rubble everywhere, few
-// sight lines longer than a street. The Allies (the Red Army's side) come in from the south (+z),
-// the Wehrmacht from the north; point-mirrored like the other maps, so neither side gets the better
-// districts — only the names differ.
-import { createNoise2D, fbm } from '../world/Noise.js';
+// Okinawa, May 1945: the Shuri Line (1945 only; the big field, 1.0 × 1.12 km; the Pacific: the Marines and the US Army
+// against the Imperial Japanese Army's 32nd Army). Across the south of the island General Ushijima's men held a line of
+// coral limestone ridges from Naha on the west coast through Shuri Castle to Yonabaru on the east, every ridge honeycombed
+// with caves and tunnels, every hill's reverse slope sheltering the mortars that covered the next. Here each side holds
+// its ridge — a sheer escarpment toward the valley, a long back slope behind, two saddles where the tracks cross — over a
+// valley of flooded rice paddies (map.soft: men wade, tanks bog down) and the ruined towns at its ends: Naha in the west,
+// Yonabaru in the east, joined by the Naha–Yonabaru road. The Japanese ridge carries Sugar Loaf Hill, Shuri Castle and
+// Conical Hill; the American one, its point mirror, Kochi Ridge, the Maeda Escarpment and Kakazu Ridge. The rains came
+// in late May and turned it all to mud. The US come from the north-facing side (+z), the Japanese from -z.
+import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
-import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, buildVillage, commandPost, mirrored } from './common.js';
+import { commandPost, mirrored, shellField } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const EDGE_X = 300;   // the districts' landmarks, out toward the flanks
-const noise = createNoise2D(1942);
+const noise = createNoise2D(1945_05);
+const BOUNDS = { x: 500, z: 560 };
 
-// the city: streets north–south at STREETS_X, east–west at STREETS_Z (|z| > 0 half; mirrored), inside |x| < CITY_X, |z| < CITY_Z
-const CITY_X = 440;
-const CITY_Z = 340;
-const STREETS_X = [-400, -310, -220, -130, -45, 45, 130, 220, 310, 400];
-const STREETS_Z = [50, 120, 190, 260, 330];
-const STREET = 5;      // half-width of a street
-const KURGAN = 105;    // the hill's radius: no houses on it
-
-/** 1 inside the city, fading to 0 at its edge. */
-const city = (x, z) => smoothstep(CITY_X + 30, CITY_X - 10, Math.abs(x)) * smoothstep(CITY_Z + 30, CITY_Z - 10, Math.abs(z));
-const onKurgan = (x, z) => Math.hypot(x, z * 1.25) < KURGAN;
-
-/** 1 on a street. */
-function street(x, z) {
-  if (onKurgan(x, z)) return 0;
-  let k = 0;
-  for (const sx of STREETS_X) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(x - sx)));
-  for (const sz of STREETS_Z) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(Math.abs(z) - sz)));
-  return k * city(x, z);
+// (shapes in the half-plane frame: X, U = x, z for the US half, -x, -z for the Japanese one — point-mirrored for free)
+const frame = (x: number, z: number) => (z >= 0 ? [x, z] : [-x, -z]);
+/** The crest line of a side's ridge (U at X). */
+export const crestU = (X: number) => 272 + Math.sin(X * 0.011) * 14 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10;
+/** The ridge's height along the crest: Kakazu Ridge, the Maeda Escarpment, Kochi Ridge (Conical Hill, Shuri, Sugar Loaf mirrored). */
+const crestH = (X: number) => 16 + 18 * Math.exp(-(((X + 320) / 70) ** 2)) + 16 * Math.exp(-(((X - 60) / 80) ** 2)) + 14 * Math.exp(-(((X - 330) / 70) ** 2));
+/** The saddles the tracks cross the ridge by (0 in one). */
+const PASSES = [-140, 200];
+const pass = (X: number) => PASSES.reduce((k, p) => k * (1 - 0.88 * Math.exp(-(((X - p) / 34) ** 2))), 1);
+/** The Naha–Yonabaru road along the valley (an odd function: its own point mirror). */
+export const roadZ = (x: number) => -0.16 * x + 18 * Math.sin(x * 0.012);
+/** The tracks of the US half (mirrored for the Japanese): from the base over each saddle down to the valley road. */
+const TRACKS: [number, number][][] = [
+  [[0, 500], [0, 420], [-140, 340], [-140, 210], [-90, roadZ(-90)]],
+  [[0, 420], [200, 340], [200, 210], [250, roadZ(250)]],
+];
+function segDist(px: number, pz: number, [ax, az]: [number, number], [bx, bz]: [number, number]) {
+  const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(px - ax - dx * t, pz - az - dz * t);
+}
+/** Metres to the nearest road or track. */
+function roadDist(x: number, z: number) {
+  let d = Math.abs(x) < 490 ? Math.abs(z - roadZ(x)) : Infinity;
+  for (const t of TRACKS) for (let i = 0; i + 1 < t.length; i++) d = Math.min(d, segDist(x, z, t[i], t[i + 1]), segDist(-x, -z, t[i], t[i + 1]));
+  return d;
 }
 
-/** The railway: along the east of the city on the south side, mirrored on the north-west. */
-const onRail = (x, z) => (x > 160 && x < 490 && Math.abs(z - 84) < 5) || (x < -160 && x > -490 && Math.abs(z + 84) < 5);
+// the towns at the valley's ends: Naha (west, on the US side of the road) and Yonabaru, its mirror
+const TOWN = { x: -330, z: roadZ(-330) + 22, r: 70 };
+const inTown = (x: number, z: number, pad = 0) => [1, -1].some((s) => Math.hypot(x - TOWN.x * s, z - TOWN.z * s) < TOWN.r + pad);
 
-function height(x, z) {
-  const ax = Math.abs(x);
-  const az = Math.abs(z);
-  let h = fbm(noise, x * 0.005, z * 0.005, 5) * 4 + fbm(noise, x * 0.05 + 3, z * 0.05, 2) * 0.35;
-  h += smoothstep(500, 620, ax) * 16 + smoothstep(560, 680, az) * 14; // the steppe rising beyond the edges
-  h += (1.5 - h) * city(x, z) * 0.85;                                  // the city sits on level ground
-  // Mamayev Kurgan: a long, smooth hill (east–west), the summit at the middle
-  const k = Math.hypot(x / 1.0, z * 1.25) / KURGAN;
-  h += 20 * Math.max(0, 1 - k * k) ** 1.5;
-  for (const bz of [BASE_Z, -BASE_Z]) h += (1.2 - h) * smoothstep(28, 15, Math.hypot(x, z - bz));
+/** The rice paddies: the valley floor's flooded fields, each its own dyked plot on a grid centred on the map's middle
+ *  (so the point mirror of a plot is a plot), whole plots in or out by point-symmetric noise; none on the roads or in the towns. */
+const PW = 26, PD = 22;
+const paddyN = (x: number, z: number) => fbm(noise, x * 0.006 + 5, z * 0.006 - 9, 3);
+const hash = (i: number, j: number) => { const f = (a: number, b: number) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); }; return (f(i, j) + f(-i, -j)) / 2; };
+const plots = new Map<string, number>(); // (plot -> its water level, or -1: dry)
+function plot(x: number, z: number) {
+  const i = Math.round(x / PW), j = Math.round(z / PD), key = i + ',' + j;
+  let level = plots.get(key);
+  if (level === undefined) {
+    const cx = i * PW, cz = j * PD, [X, U] = frame(cx, cz);
+    const ok = U < crestU(X) - 110 && Math.abs(cx) < 440 && Math.max(paddyN(cx, cz), paddyN(-cx, -cz)) > -0.02
+      && roadDist(cx, cz) > 21 && !inTown(cx, cz, 16) && Math.hypot(cx, cz) > 40;
+    level = ok ? 1.3 + hash(i, j) * 0.6 : -1; // (the terraces: each plot a hand or two above or below its neighbours)
+    plots.set(key, level);
+  }
+  return { level, edge: Math.min(PW / 2 - Math.abs(x - i * PW), PD / 2 - Math.abs(z - j * PD)) };
+}
+/** 1 inside a flooded plot, falling to 0 over its dyke; 0 off the paddies. */
+function paddy(x: number, z: number) {
+  const p = plot(x, z);
+  return p.level < 0 ? 0 : smoothstep(1.2, 3, p.edge);
+}
+
+function height(x: number, z: number) {
+  const [X, U] = frame(x, z);
+  let h = 2.6 + fbm(noise, x * 0.006, z * 0.006, 3) * 1.8 + fbm(noise, x * 0.04, z * 0.04, 2) * 0.4; // the valley: low rolling ground
+  // the ridge: a sheer coral escarpment toward the valley, a long back slope behind, broken crest, the saddles
+  const c = crestU(X);
+  const face = smoothstep(c - 30, c - 4, U);
+  const back = 1 - 0.75 * smoothstep(c + 15, c + 190, U);
+  const rough = 1 + ridged(noise, x * 0.035 + 7, z * 0.035, 3) * 0.16;
+  h += crestH(X) * pass(X) * Math.min(face, back) * rough;
+  h += smoothstep(430, 560, Math.abs(x)) * 30 + smoothstep(560, 680, Math.abs(z)) * 12; // the hills beyond the edges
+  // the paddies: flat, sunk a little, terraced by their dykes (painted)
+  const pl = plot(x, z);
+  if (pl.level >= 0) h += (pl.level - h) * smoothstep(0.4, 3.5, pl.edge) + 0.35 * smoothstep(1.4, 0.4, pl.edge); // (the dyke round it a little proud)
+  for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
+  for (const s of [1, -1]) h += (3.2 - h) * smoothstep(TOWN.r, TOWN.r - 25, Math.hypot(x - TOWN.x * s, z - TOWN.z * s)); // the towns: level
   return h;
 }
 
-const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: 'Okinawa' }];
+/** The paddies are knee-deep mud: men wade, vehicles crawl and stick; the dykes and roads are firm. */
+function soft(x: number, z: number, foot: boolean) {
+  const p = paddy(x, z);
+  return p <= 0.2 ? 1 : 1 - p * (foot ? 0.3 : 0.6);
+}
 
+const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
+const hill = (X: number) => ({ x: X, z: crestU(X) });
 const points: ControlPointDef[] = [
-  { id: 'okinawa', wip: true, name: 'Volga landing', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Grain elevator', x: -EDGE_X, z: 104, owner: null, sector: 'west' },
-  { id: 'C', name: 'Square of the Fallen', x: 0, z: 150, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Station Stalingrad-1', x: EDGE_X, z: 70, owner: null, sector: 'east' },
-  { id: 'E', name: "Pavlov's House", x: -165, z: 30, owner: null, sector: 'west' },
-  { id: 'F', name: 'Mamayev Kurgan', x: 0, z: 0, owner: null, sector: 'centre', radius: 24 },
-  { id: 'G', name: 'Univermag', x: 165, z: -30, owner: null, sector: 'east' },
-  { id: 'H', name: 'Red October', x: -EDGE_X, z: -70, owner: null, sector: 'west' },
-  { id: 'I', name: 'Barrikady', x: 0, z: -150, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Tractor works', x: EDGE_X, z: -104, owner: null, sector: 'east' },
-  { id: 'K', name: 'Gumrak', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'A', name: 'Machinato', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Kakazu Ridge', ...hill(-320), owner: null, sector: 'west' },
+  { id: 'C', name: 'Maeda Escarpment', ...hill(60), owner: null, sector: 'centre' },
+  { id: 'D', name: 'Kochi Ridge', ...hill(330), owner: null, sector: 'east' },
+  { id: 'E', name: 'Naha', x: TOWN.x, z: TOWN.z, owner: null, sector: 'west' },
+  { id: 'F', name: 'Wana Draw', x: 0, z: 0, owner: null, sector: 'centre' },
+  { id: 'G', name: 'Yonabaru', x: -TOWN.x, z: -TOWN.z, owner: null, sector: 'east' },
+  { id: 'H', name: 'Sugar Loaf Hill', x: -330, z: -crestU(330), owner: null, sector: 'west' },
+  { id: 'I', name: 'Shuri Castle', x: -60, z: -crestU(60), owner: null, sector: 'centre' },
+  { id: 'J', name: 'Conical Hill', x: 320, z: -crestU(-320), owner: null, sector: 'east' },
+  { id: 'K', name: 'Haebaru', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
-  id: 'stalingrad',
-  armies: { nato: ['sov'], pact: ['wh'] }, // (the Red Army against the Wehrmacht)
-  sides: { nato: 'Soviet Union', pact: 'Germany' },
-  name: 'Stalingrad',
-  description: 'A ruined city in the snow: gutted blocks on every street, Mamayev Kurgan in the middle, the grain elevator, the tractor works and Pavlov\'s House. A fight from house to house.',
+  id: 'okinawa',
+  name: 'Okinawa',
+  description: 'May 1945, the Shuri Line: coral ridges riddled with caves — Sugar Loaf Hill, Shuri Castle, Conical Hill — over a valley of flooded paddies between ruined Naha and Yonabaru. The rains turn it all to mud.',
   epochs: ['1945'],
-  region: 'east', // (the menu's Eastern Front: maps/index.js REGIONS)
-  climate: 'winter',   // whitewash and snow smocks (render/paint.js CLIMATE)
+  region: 'pacific',                                   // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
+  pacific: true,                                       // (data/factions.js armiesFrom: the Pacific's armies)
+  sides: { nato: 'United States', pact: 'Japan' },
+  armies: { nato: ['usmc', 'us'], pact: ['jp'] },
+  conditions: { weather: 'rain' },                     // (the May rains)
+  airfields: [],                                       // (systems/Airfields.js: none on the field — the US aircraft come off the carriers and from Yontan, the kamikazes from Kyushu)
   size: 1600,
   segments: 640,
-  bounds: { x: 500, z: 560 },
-  seed: 1942,
+  bounds: BOUNDS,
+  steep: 0.5, // (vehicles: the escarpments are for men only — the saddles and the back slopes for the rest)
+  seed: 1945,
   height,
-  fields: createFields({ seed: 1942, cell: 70 }),
+  soft,
 
   theme: {
-    // a grey winter day, snow on the ground and smoke over the city
-    fogColor: 0xb6bac0,
-    fogDensity: 0.0018,
-    skyTop: 0x7a828c,
-    skyHorizon: 0xc4c8cc,
-    skyBottom: 0x80848a,
-    sunColor: 0xe8ecf0,
-    sunIntensity: 1.3,
-    sunDisk: 0.05,
-    clouds: 0.9,
-    cloudLight: 0xcfd2d6,
-    cloudDark: 0x7c8086,
-    sunDir: [0.4, 0.45, 0.7],
-    hemiSky: 0xd0d6de,
-    hemiGround: 0x8a8c90,
-    hemiIntensity: 1.4,
-    rimColor: 0xc0c8d2,
-    rimIntensity: 0.25,
+    // a grey, wet May day: low cloud, rain haze over the paddies, the ridges green-brown and shell-torn
+    fogColor: 0x9ea4a0, fogDensity: 0.0008,
+    skyTop: 0x6e7680, skyHorizon: 0xaab0b0, skyBottom: 0x7c827e,
+    sunColor: 0xe6e8e4, sunIntensity: 1.3, sunDisk: 0.05,
+    clouds: 0.9, cloudLight: 0xbcc0c0, cloudDark: 0x6c7276,
+    sunDir: [0.4, 0.5, 0.6],
+    hemiSky: 0xc4ccd0, hemiGround: 0x4a4a3c, hemiIntensity: 1.35,
+    rimColor: 0xbcc4c8, rimIntensity: 0.2,
     terrain: {
-      grass: '#f0f2f2',
-      grassAlt: '#e4e8ea',
-      dryGrass: '#d6d4cc',
-      dirt: '#9a948a',
-      rock: '#c4c6c6',
-      pasture: '#eceeee',
-      ploughed: '#cfccc4',
-      stubble: '#dcd8ce',
-      meadow: '#f4f6f6',
-      farmX: [520, 600],
-      farmZ: [580, 660],
-      roads: [-130, 0, 130],
-      roadZ: 540,
-      surface(x, z) {
-        if (onRail(x, z)) return [0x4e4a44, 0.9];                                   // ballast
-        const s = street(x, z);
-        if (s > 0) return [0x8c8880, s * 0.8];                                       // trodden, sooty snow on the streets
-        const c = city(x, z);
-        return c > 0 && !onKurgan(x, z) ? [0xb4b0a8, c * 0.4] : null;                 // rubble-strewn yards
+      grass: '#55613a', grassAlt: '#4c5634', dryGrass: '#6c6a46', dirt: '#5a4c38', rock: '#9a9482',
+      pasture: '#5a6640', ploughed: '#56483a', stubble: '#6e6a48', meadow: '#5e6a40',
+      farmX: [0, 1], farmZ: [0, 1], // (no farmland patchwork: the paddies are painted below)
+      roads: [], roadZ: 0,
+      surface(x: number, z: number) {
+        const rd = roadDist(x, z);
+        if (rd < 4) return [0x6a5a44, smoothstep(4, 2, rd) * 0.9];                            // the roads: churned mud
+        if (plot(x, z).level >= 0 && paddy(x, z) < 0.3) return [0x6a5c40, 0.8];               // the dykes: trodden mud
+        const p = paddy(x, z);
+        if (p > 0.3) {
+          const t = hash(Math.round(x / PW), Math.round(z / PD));
+          return [t < 0.5 ? 0x74827a : 0x66745a, 0.85 * p];                                  // the flooded fields, grey with the sky (some planted green)
+        }
+        if (inTown(x, z, -8)) return [0x7a7466, 0.6];                                          // the towns: rubble and coral dust
+        const [X, U] = frame(x, z);
+        const cliff = smoothstep(crestU(X) - 40, crestU(X) - 15, U) * smoothstep(crestU(X) + 5, crestU(X) - 8, U) * pass(X);
+        if (cliff > 0.3) return [0xb0a890, cliff * 0.7];                                      // the escarpment: bare coral limestone
+        return null;
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-130, 0, 130] }, pact: { x: 0, z: -BASE_Z, entries: [-130, 0, 130] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-140, 0, 200] }, pact: { x: 0, z: -BASE_Z, entries: [-200, 0, 140] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
 
   spawns: {
     nato: natoLayout.map((s) => ({ ...s, facing: Math.PI })),
-    pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0 })),
+    pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1st Company' })),
+  },
+
+
+  // weeks of shelling: craters thick on the ridges, scattered over the valley
+  battlefield() {
+    const blasts = shellField(1945_0511, BOUNDS, (x, z) => {
+      const c = crestU(x);
+      return 0.12 + 0.9 * smoothstep(70, 10, Math.abs(z - c + 20)) + (paddy(x, z) > 0.3 ? -0.08 : 0);
+    });
+    return { blasts, ruins: [], works: [] };
   },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
-    const landmarks: any[] = [];   // footprints the blocks keep clear of: [x, z, half-w, half-d]
-    const clear = (x, z, hw, hd) => landmarks.push([x, z, hw, hd], [-x, -z, hw, hd]);
-    const block = (x, z, sx, sy, sz, yaw, color) => { // a solid concrete mass (silo tower): seen from afar, cover at its foot
-      props.box('stone', x, terrain.heightAt(x, z) + sy / 2, z, sx, sy, sz, yaw, color);
-      cover.addBox({ x, z, yaw, length: sx, thickness: sz, height: sy });
+    const r = mulberry32(1945);
+    const near = (x: number, z: number, d: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < d);
+    const slope = (x: number, z: number) => Math.hypot(terrain.heightAt(x + 2, z) - terrain.heightAt(x - 2, z), terrain.heightAt(x, z + 2) - terrain.heightAt(x, z - 2)) / 4;
+    const CORAL = 0xb4ac98;
+    /** A burnt-out tank: hull, turret, gun (scorched), a track thrown. */
+    const hulk = (x: number, z: number, yaw: number, color: number) => {
+      const g = terrain.heightAt(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
+      props.box('metal', x, g + 0.9, z, 2.9, 1.5, 5.9, yaw, color);
+      props.box('metal', x - fz * 0.2, g + 2, z + fx * 0.2, 2, 0.9, 2.5, yaw + 0.4, color);
+      props.box('metal', x + fx * 2.3, g + 2, z + fz * 2.3, 0.16, 0.16, 2.8, yaw + 0.4, 0x2a2826);
+      props.box('metal', x + fz * 2, g + 0.2, z - fx * 2, 0.5, 0.35, 5, yaw + 0.3, 0x2a2826);
+      cover.addBox({ x, z, yaw, length: 6, thickness: 3, height: 1.8 });
+    };
+    /** An Okinawan turtleback tomb cut into a slope: the vault, its low wall round the forecourt — the Japanese fought from them. */
+    const tomb = (x: number, z: number, yaw: number) => {
+      const g = terrain.heightAt(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
+      props.box('stone', x - fx * 1.5, g + 1.1, z - fz * 1.5, 4.2, 2.6, 3.2, yaw, CORAL);
+      props.box('stone', x - fx * 1.5, g + 2.5, z - fz * 1.5, 3.6, 0.6, 2.6, yaw, 0xa49c88);
+      props.box('plain', x + fx * 0.12, g + 0.8, z + fz * 0.12, 0.8, 0.9, 0.1, yaw, 0x141210);
+      cover.addBox({ x: x - fx * 1.5, z: z - fz * 1.5, yaw, length: 4.2, thickness: 3.2, height: 2.4 });
+      props.lowWall({ x: x + fx * 3.2, z: z + fz * 3.2, yaw: yaw + Math.PI / 2, length: 5, height: 1.0, color: CORAL });
     };
 
-    // ---- the landmarks: the same footprints both sides (fair), each its own kind of building
-    // west: the grain elevator (south-west) / Red October (north-west, its twin's place on the east is the tractor works)
-    props.hall({ x: -EDGE_X, z: 90, yaw: Math.PI, width: 30, depth: 12, height: 8, color: 0x9c968a, name: 'grain elevator' });
-    props.tanks({ x: -EDGE_X, z: 112, yaw: 0, count: 4, radius: 3.2, height: 24, color: 0xb0aca2 });
-    block(-EDGE_X - 28, 100, 10, 34, 10, 0, 0xa8a49a);
-    props.hall({ x: EDGE_X, z: -90, yaw: 0, width: 34, depth: 14, height: 9, color: 0x7a5a48, name: 'tractor works' });
-    props.hall({ x: EDGE_X + 28, z: -116, yaw: Math.PI / 2, width: 22, depth: 12, height: 7, color: 0x6e5444, name: 'assembly hall' });
-    props.chimney({ x: EDGE_X - 24, z: -116, height: 34 });
-    props.hall({ x: -EDGE_X, z: -84, yaw: 0, width: 34, depth: 16, height: 10, color: 0x6e4a3a, name: 'Red October works' });
-    props.chimney({ x: -EDGE_X - 18, z: -60, height: 30 });
-    props.chimney({ x: -EDGE_X + 18, z: -60, height: 30 });
-    props.townHouse({ x: EDGE_X, z: 58, yaw: Math.PI, width: 22, depth: 11, storeys: 2, name: 'railway station', damaged: 1 });
-    props.rails({ x0: 160, z0: 84, x1: 510, z1: 84 });
-    props.rails({ x0: -510, z0: -84, x1: -160, z1: -84 });
-    for (const [x, kind, c] of [[230, 'box', 0x5a3426], [242, 'open', 0x4a4038], [380, 'tank', 0x2a2a2a], [392, 'box', 0x4a3a2a]] as [number, string, number][]) {
-      props.wagon({ x, z: 84, yaw: Math.PI / 2, kind, color: c });
-      props.wagon({ x: -x, z: -84, yaw: Math.PI / 2, kind, color: c });
-    }
-    // either side of the hill: Pavlov's House / the Univermag
-    props.ruinBlock({ x: -165, z: 46, yaw: 0, width: 26, depth: 12, storeys: 4, ruin: 0.25, name: "Pavlov's House" });
-    props.ruinBlock({ x: 165, z: -46, yaw: Math.PI, width: 26, depth: 12, storeys: 4, ruin: 0.25, name: 'Univermag' });
-    // the Square of the Fallen (a low wall round it, the fountain) / the Barrikady gun works
-    props.lowWall({ x: 0, z: 172, yaw: 0, length: 34, height: 1 });
-    props.lowWall({ x: -17, z: 150, yaw: Math.PI / 2, length: 30, height: 1 });
-    props.column({ x: 0, z: 150, radius: 2.2, height: 1.2 });
-    props.hall({ x: 0, z: -164, yaw: 0, width: 30, depth: 14, height: 8, color: 0x6a5446, name: 'Barrikady works' });
-    clear(-EDGE_X, 100, 36, 22);
-    clear(EDGE_X, -100, 44, 26);   // (its twin: Red October, above)
-    clear(EDGE_X, 62, 14, 10);
-    clear(-165, 46, 16, 9);
-    clear(0, 158, 22, 22);
-    clear(0, -164, 18, 10);
-    // Mamayev Kurgan: the water tanks on the summit, dugouts and wire on its slopes
-    props.tanks({ x: 0, z: -10, yaw: 0, count: 2, radius: 4, height: 6, color: 0x7a7c78 });
-    mirrored(props, 77, (m) => {
-      props.sandbagRing({ x: -40 * m, z: 22 * m, radius: 5, toward: m });
-      props.sandbagRing({ x: 48 * m, z: 30 * m, radius: 5, toward: m });
-      props.logBarricade({ x: -18 * m, z: 52 * m, yaw: 0.2, length: 8 });
+    // ---- the towns: Naha and Yonabaru — tile-roofed houses behind coral walls, nearly all ruined, the road through
+    mirrored(props, 4501, (m, flip) => {
+      const R = props.rand, cx = TOWN.x * m, cz = TOWN.z * m;
+      for (let i = 0; i < 26; i++) {
+        const a = R() * Math.PI * 2, d = 10 + R() * (TOWN.r - 16);
+        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, w = 8 + R() * 6, dp = 7 + R() * 3;
+        const yaw = Math.round(R() * 4) * (Math.PI / 2) + flip;
+        if (roadDist(x, z) < 9 || Math.hypot(x - cx, z - cz) < 14) continue;
+        if (R() < 0.3) props.house({ x, z, yaw, width: w, depth: dp });
+        else props.ruinBlock({ x, z, yaw, width: w, depth: dp, storeys: R() < 0.25 ? 2 : 1, ruin: 0.4 + R() * 0.4, name: 'house' });
+        if (R() < 0.6) props.lowWall({ x: x + 6 * m, z: z + 6 * m, yaw: yaw + Math.PI / 2, length: 6 + R() * 6, height: 1.4, color: CORAL });
+      }
+      for (let i = 0; i < 18; i++) props.rubble(cx + (R() - 0.5) * TOWN.r * 1.4, cz + (R() - 0.5) * TOWN.r * 1.4, 0.4 + R() * 0.6, true);
     });
 
-    // ---- the blocks: rows of gutted apartment houses along every street (our half, mirrored)
-    const blocked = (x, z, hw, hd) => landmarks.some(([lx, lz, lw, ld]) => Math.abs(x - lx) < hw + lw + 2 && Math.abs(z - lz) < hd + ld + 2)
-      || Math.hypot(x, z * 1.25) < KURGAN + Math.max(hw, hd) || onRail(x, z) || Math.abs(Math.abs(z) - 84) < 10 && Math.abs(x) > 150
-      || points.some((p) => Math.hypot(p.x - x, p.z - z) < 14 + Math.max(hw, hd));
-    const r = mulberry32(1942);
-    for (let i = 0; i + 1 < STREETS_X.length; i++) {
-      const x0 = STREETS_X[i] + STREET + 3;
-      const x1 = STREETS_X[i + 1] - STREET - 3;
-      for (let j = -1; j + 1 < STREETS_Z.length; j++) {
-        const z0 = (j < 0 ? 8 : STREETS_Z[j]) + STREET + 3;
-        const z1 = STREETS_Z[j + 1] - STREET - 3;
-        // rows of blocks along both long sides, house by house with a lane now and then; the outskirts thinner
-        const outskirts = Math.abs(x0 + x1) / 2 > 355 || z1 > 270;
-        const rows = [];
-        for (const zEdge of [z0, z1]) {
-          let x = x0;
-          while (x < x1 - 12) {
-            const w = Math.min(x1 - x, 16 + r() * 12);
-            const d = 10 + r() * 3;
-            const cx = x + w / 2;
-            const cz = zEdge === z0 ? z0 + d / 2 : z1 - d / 2;
-            x += w + 2 + r() * 3;
-            if (w < 10 || r() < (outskirts ? 0.5 : 0.12) || blocked(cx, cz, w / 2, d / 2)) continue;
-            rows.push({ cx, cz, w, d, yaw: zEdge === z0 ? 0 : Math.PI });
-          }
-        }
-        // and one across a short end of the bigger blocks, between the rows
-        const across = z1 - z0 - 2 * 13 - 6;
-        if (across >= 12 && !outskirts && r() < 0.6) {
-          const left = r() < 0.5;
-          const d = 10 + r() * 2;
-          const cx = left ? x0 + d / 2 : x1 - d / 2;
-          const cz = (z0 + z1) / 2;
-          if (!blocked(cx, cz, d / 2, across / 2)) rows.push({ cx, cz, w: across, d, yaw: left ? -Math.PI / 2 : Math.PI / 2 });
-        }
-        for (const h of rows) {
-          const seed = Math.floor(r() * 1e9);
-          const storeys = 2 + Math.floor(r() * 4);
-          const ruin = 0.2 + r() * 0.45;
-          mirrored(props, seed, (m, flip) => props.ruinBlock({ x: h.cx * m, z: h.cz * m, yaw: h.yaw + flip, width: h.w, depth: h.d, storeys, ruin }));
-        }
+    // ---- Shuri Castle on its ridge: the curving coral walls of the old Ryukyu kings' castle, battered to rubble
+    {
+      const p = points.find((q) => q.id === 'I')!;
+      for (let a = 0; a < Math.PI * 2; a += 0.23) {
+        if (Math.abs(Math.sin(a * 1.5)) > 0.94 || Math.abs(a - 4.0) < 0.3) continue; // (the breaches: the gate toward the valley and the shell holes)
+        const rad = 27 + Math.sin(a * 3) * 3, x = p.x + Math.cos(a) * rad, z = p.z + Math.sin(a) * rad * 0.75;
+        props.wall({ x, z, yaw: Math.PI / 2 - a, length: 6, height: 2.6 + Math.sin(a * 5) * 0.8, thickness: 1.4 });
       }
+      for (let i = 0; i < 4; i++) props.ruinBlock({ x: p.x + (i - 1.5) * 13 + 5, z: p.z - 14 - (i % 2) * 6, yaw: 0, width: 10, depth: 8, storeys: 1, ruin: 0.75, name: 'castle hall' });
     }
-    // rubble, wrecks and barricades in the streets and yards, mirrored
-    for (let i = 0; i < 110; i++) {
-      const x = (r() * 2 - 1) * (CITY_X - 10);
-      const z = 10 + r() * (CITY_Z - 15);
-      if (blocked(x, z, 2, 2)) continue;
-      const seed = Math.floor(r() * 1e9);
-      const onStreet = street(x, z) > 0.3;
-      const kind = onStreet ? (r() < 0.35 ? 'wreck' : r() < 0.6 ? 'barricade' : 'rubble') : (r() < 0.6 ? 'rubble' : 'wall');
+    // ---- the Maeda Escarpment's crest (its mirror): coral pinnacles in a ring of the same cover
+    {
+      const p = points.find((q) => q.id === 'C')!;
+      const R = mulberry32(4502);
+      for (let a = 0; a < Math.PI * 2; a += 0.35) props.boulder({ x: p.x + Math.cos(a) * (30 + R() * 8), z: p.z + Math.sin(a) * (24 + R() * 6), radius: 1.6 + R() * 1.6 });
+    }
+
+    // ---- both ridges: coral outcrops on the faces, tombs on the back slopes, gun pits behind the crest
+    mirrored(props, 4503, (m, flip) => {
+      const R = props.rand;
+      for (let i = 0; i < 170; i++) {
+        const X = (R() * 2 - 1) * 450, U = crestU(X) - 50 + R() * 80, rad = 0.8 + R() * 2.4;
+        if (pass(X) < 0.5 || near(X * m, U * m, 18)) continue;
+        props.boulder({ x: X * m, z: U * m, radius: rad });
+      }
+      for (const X of [-380, -250, -60, 130, 280, 400]) {
+        const U = crestU(X) + 40 + R() * 40;
+        if (roadDist(X * m, U * m) > 12) tomb(X * m, U * m, (m > 0 ? Math.PI : 0) + (R() - 0.5) * 0.6);
+      }
+      for (const X of [-300, 60, 320]) {
+        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 16) * m, z: (crestU(X) + 60 + (k % 2) * 6) * m, radius: 4, toward: m });
+        props.crates({ x: (X + 28) * m, z: (crestU(X) + 80) * m, yaw: R() });
+      }
+    });
+
+    // ---- the valley: burnt-out tanks, broken walls and tombs between the paddies; mirrored
+    for (let i = 0; i < 60; i++) {
+      const x = (r() * 2 - 1) * (bounds.x - 40), z = 12 + r() * 190;
+      if (near(x, z, 30) || roadDist(x, z) < 8 || inTown(x, z, 8) || paddy(x, z) > 0.1 || Math.abs(x) < 20) continue;
+      const seed = Math.floor(r() * 1e9), kind = r();
       mirrored(props, seed, (m, flip) => {
-        if (kind === 'wreck') props.wreckCar({ x: x * m, z: z * m, yaw: props.rand() * 3 + flip });
-        else if (kind === 'barricade') props.rand() < 0.5 ? props.logBarricade({ x: x * m, z: z * m, yaw: props.rand() * 3, length: 5 + props.rand() * 3 }) : props.hedgehog({ x: x * m, z: z * m });
-        else if (kind === 'wall') props.lowWall({ x: x * m, z: z * m, yaw: (props.rand() < 0.5 ? 0 : Math.PI / 2) + flip, length: 4 + props.rand() * 6, height: 1.3, color: 0x6a645c });
-        else for (let k = 0; k < 3; k++) props.rubble(x * m + (props.rand() - 0.5) * 5, z * m + (props.rand() - 0.5) * 5, 0.4 + props.rand() * 0.6, true);
+        const R = props.rand;
+        if (kind < 0.25) hulk(x * m, z * m, R() * 6.28, R() < 0.6 ? 0x4b4e34 : 0x6a6440);
+        else if (kind < 0.5) tomb(x * m, z * m, R() * 6.28);
+        else if (kind < 0.75) props.lowWall({ x: x * m, z: z * m, yaw: R() * 3 + flip, length: 5 + R() * 6, height: 1.3, color: CORAL });
+        else for (let k = 0; k < 3; k++) props.boulder({ x: x * m + (R() - 0.5) * 8, z: z * m + (R() - 0.5) * 8, radius: 0.7 + R() * 1.2 });
       });
     }
-
-    // ---- outside the city: the suburbs by each base, a little cover on the steppe, the command posts
-    buildVillage(props, points[0], 9420, 1);
-    buildVillage(props, { x: -points[0].x, z: -points[0].z }, 9420, -1);
-    const kinds = ['fieldwall', 'rocks', 'wrecks', 'fieldwall', 'farm'];
-    const sites: any[] = [];
-    for (let tries = 0; sites.length < 50 && tries < 6000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 30 + rand() * (bounds.z - 40);
-      if (city(x, z) > 0 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 30 * 30)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || points.some((p) => Math.hypot(x - p.x, z - p.z) < 40)) continue;
-      sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+    // ---- telegraph poles along the road, most of them shot down
+    for (let x = -470; x <= 470; x += 36) {
+      const z = roadZ(x) + 8;
+      if (inTown(x, z, 4) || r() < 0.4) continue;
+      const g = terrain.heightAt(x, z), lean = (r() - 0.5) * 0.5;
+      props.box('plain', x, g + 3.2, z, 0.22, 6.4, 0.22, 0, 0x4a3a2a, lean, 0);
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
-    commandPost(props, this.bases.nato, -1, 0x6a6c5a);
-    commandPost(props, this.bases.pact, 1, 0x6a6a5a);
+    commandPost(props, this.bases.nato, -1, 0x5a5e44);
+    commandPost(props, this.bases.pact, 1, 0x6f6a44);
     props.finish();
 
-    const avoid = [{ x: 0, z: BASE_Z, r: 22 }, { x: 0, z: -BASE_Z, r: 22 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })),
-      { test: (x, z) => street(x, z) > 0.05 || onRail(x, z) }];
-    // bare, burnt trees in the city, a few more out on the steppe's edges
+    const avoid = [{ x: 0, z: BASE_Z, r: 26 }, { x: 0, z: -BASE_Z, r: 26 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 14 })),
+      { test: (x: number, z: number) => paddy(x, z) > 0.15 || roadDist(x, z) < 7 }];
+    // Ryukyu pines and broadleaf scrub on the back slopes and the hills beyond, shell-thinned on the crests; a few in the towns
     const trees = plantTrees({
-      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 500,
-      forest: (x, z) => (city(x, z) > 0.5 ? 0.02 : Math.max(0, (Math.abs(x) - 470) / 80)),
+      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, broadleaf: 0.6, autumn: 0, maxY: 80,
+      forest: (x: number, z: number) => {
+        if (inTown(x, z)) return 0.04;
+        const [X, U] = frame(x, z), c = crestU(X);
+        if (slope(x, z) > 0.8) return -1;
+        const edge = Math.max(smoothstep(420, 480, Math.abs(x)), smoothstep(520, 560, Math.abs(z)));
+        return Math.max(edge, U > c + 30 ? 0.35 * smoothstep(0.0, 0.3, fbm(noise, x * 0.01 + 3, z * 0.01, 2) + 0.15) : U > c - 40 ? 0.05 : 0.1);
+      },
     });
     cover.finalize(bounds);
-    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid: [...avoid, { test: (x, z) => city(x, z) > 0.3 }], density: 0.8, fields: this.fields });
+    const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 1.6 });
 
     return {
       buildings: props.buildings,
-      update(dt, t) {
-        ground.update(dt, t);
-        trees.update(dt, t);
-      },
+      update(dt: number, t: number) { trees.update?.(dt, t); ground.update(dt, t); },
     };
   },
 } satisfies MapDef;

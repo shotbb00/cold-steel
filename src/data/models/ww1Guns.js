@@ -3,6 +3,7 @@
 //   field    18-pounder / 75 / FK 16: the long steel barrel on its recoil cylinder, the shield, the
 //            box trail, wooden wheels with steel tyres; laid a little up
 //   heavy    6-inch / 155 / sFH 13: the short fat howitzer barrel, big wheels, laid high
+//   mountain the mountain gun (65/17, Škoda M.15): a short barrel on small wheels, a low shield
 //   mortar   the heavy trench mortar: a squat tube on its timber bed, laid steeply (no wheels of its
 //            own: the limber carries it)
 import * as THREE from 'three';
@@ -10,13 +11,14 @@ import { P, merge, pair } from '../units/geometry.js';
 import { buildFieldGun, wheel } from './napGuns.js';
 import { buildWw1Soldier } from './ww1Soldier.js';
 
-const PAINT = { uk: 0x5a5c46, fr: 0x6c7480, de: 0x5c5e50, st: 0x5c5e50 };   // British service green, French grey-blue, German field grey
+const PAINT = { uk: 0x5a5c46, fr: 0x6c7480, de: 0x5c5e50, st: 0x5c5e50, ot: 0x5c5e50, anzac: 0x5a5c46, it: 0x5e6450, ah: 0x5e6658, ru: 0x56603e };   // British service green, French grey-blue, German field grey (the Ottomans' guns were German), Italian grey-green, Austrian grey-green, Russian green
 const STEEL = 0x2e302c;
 const WOOD = 0x6a4a2c;
 const SIZES = {
   field: { wheel: 0.66, barrel: 2.4, bore: 0.05, trail: 2.6, shield: true, elevate: 0.22 },
   heavy: { wheel: 0.78, barrel: 2.0, bore: 0.09, trail: 3.0, shield: false, elevate: 0.6 },
   mortar: { wheel: 0, barrel: 1.3, bore: 0.13, trail: 1.4, shield: false, elevate: 1.0 },
+  mountain: { wheel: 0.48, barrel: 1.3, bore: 0.042, trail: 1.9, shield: true, elevate: 0.35 },   // the 65/17, the Škoda 7.5 cm M.15: small, light, taken apart for the mules
 };
 
 const material = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.15 });

@@ -5,7 +5,8 @@
 // searchlight drill, Jutland's night action) — no ASDIC, only hydrophones that hear a boat close by;
 // slower torpedoes that run shorter; little anti-aircraft fire; coal smoke. German rangefinders and
 // shells: the tighter salvoes; British guns: the heavier ones. Battlecruisers: big guns on thin armour.
-import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious, buildVindictive, buildMerseyFerry, buildML, buildBlockship } from '../models/ships1918.js';
+import { buildQueenElizabeth, buildBayern, buildLion, buildDerfflinger, buildCaledon, buildKonigsberg, buildVandW, buildGrossesTorpedoboot, buildFlower, buildABoot, buildEClass, buildUB3, buildCMB, buildLM, buildTroopshipRN, buildTroopshipKM, buildAbdiel, buildBrummer, buildHuntSweeper, buildMBoot, buildFurious, buildVindictive, buildMerseyFerry, buildML, buildBlockship,
+  buildNovara, buildTatra, buildKukUboat, buildAquila, buildCacciatorpediniere, buildMAS, buildDrifter } from '../models/ships1918.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.4, pact: 0.48 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -342,4 +343,69 @@ export const blockship = ship({
   },
 });
 
-export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier, vindictive, ferry, ml, blockship };
+// ---------------------------------------------------------------- the Adriatic (the Otranto Strait, 1917–18)
+// The k.u.k. Kriegsmarine (army `ah`, the pact side) and the Regia Marina (army `it`) beside the British drifters and destroyers:
+// both armies are `own`, so at sea each fields only the ships given it here (their names written in full: UnitStack shipName).
+
+const TEN_CM = { range: 2000, reload: 4, damage: 180, splash: 3.5, pierce: 0.25, shell: 760, size: 1.6 };
+const SIX_SIX = { range: 1500, reload: 3, damage: 90, splash: 2.5, pierce: 0.15, shell: 700, size: 1.1 };
+const SEVENTY_SIX = { range: 1600, reload: 3, damage: 100, splash: 2.5, pierce: 0.15, shell: 700, size: 1.1 };
+
+/** Ship type `t` in `army`'s navy: her names, model, variant, the mounts and the stats over her side's (on the sea scale). */
+const navy = (t, army, { names, model, variant, stats, mounts, cost }) => {
+  t.names = { ...t.names, [army]: names };
+  t.models = { ...t.models, [army]: model };
+  t.variants = { ...t.variants, [army]: variant };
+  if (stats) t.factionStats = { ...t.factionStats, [army]: near(stats) };
+  if (mounts) t.mounts = { ...t.mounts, [army]: mounts.map(near) };
+  if (cost) t.armyCost = { ...t.armyCost, [army]: cost };
+};
+
+// the k.u.k. Kriegsmarine: the night raid of 15 May 1917 — Horthy's three cruisers on the drifters, two destroyers off Albania, U 4 waiting
+navy(lightCruiser, 'ah', { names: ['SMS Novara', 'SMS Helgoland', 'SMS Saida'], model: buildNovara, cost: 480,
+  stats: { hp: 5200, armor: 0.22, speed: 16.5, flareRounds: 8, range: 2000, aggroRange: 2000, preferredRange: 1500, damage: 180, fireCooldown: 4, boltSize: 1.6, splash: 3.5, pierce: 0.25 },
+  mounts: [gun([2.4, 7, 52], FWD, TEN_CM), gun([-2.4, 7, 52], FWD, TEN_CM), gun([5, 6, 24], BEAM, { ...TEN_CM, arc: 3 }), gun([-5, 6, 24], -BEAM, { ...TEN_CM, arc: 3 }),
+    gun([5, 6, -14], BEAM, { ...TEN_CM, arc: 3 }), gun([-5, 6, -14], -BEAM, { ...TEN_CM, arc: 3 }), gun([0, 6, -54], AFT, TEN_CM), torps([0, 5, -28], { count: 4, reload: 140 })],
+  variant: { name: 'Novara-class scout cruiser', weapon: '9 × 10 cm, 6 torpedo tubes', text: 'The Helgoland class: small, fast, lightly armed — nine 10 cm guns. Captain Horthy took the three of them through the Otranto barrage on 15 May 1917 and sank fourteen drifters before the British cruisers caught them.' } });
+navy(destroyer, 'ah', { names: ['SMS Tátra', 'SMS Balaton', 'SMS Csepel', 'SMS Orjen', 'SMS Lika', 'SMS Triglav', 'SMS Dukla', 'SMS Uzsok'], model: buildTatra,
+  stats: { hp: 2400, speed: 16.5, damage: 180, range: 2000, aggroRange: 2000, preferredRange: 1400 },
+  mounts: [gun([0, 5, 34], FWD, TEN_CM), gun([2.6, 5, 8], BEAM, { ...SIX_SIX, arc: 2.6 }), gun([-2.6, 5, 8], -BEAM, { ...SIX_SIX, arc: 2.6 }), gun([2.6, 5, -14], BEAM, { ...SIX_SIX, arc: 2.6 }), gun([-2.6, 5, -14], -BEAM, { ...SIX_SIX, arc: 2.6 }),
+    gun([0, 5, -36], AFT, TEN_CM), torps([0, 5, -20], { count: 2 }), torps([0, 5, -30], { count: 2 })],
+  variant: { name: 'Tátra-class destroyer', weapon: '2 × 10 cm, 6 × 6.6 cm, 4 torpedo tubes', text: 'Built at Porto Ré on the Adriatic, the fastest destroyers of their day: four funnels, a 10 cm at each end. Csepel and Balaton raided the Albanian convoys the night Novara struck the drifters.' } });
+navy(submarine, 'ah', { names: ['U 4', 'U 5', 'U 27', 'U 28', 'U 40', 'U 41', 'U 43', 'U 47'], model: buildKukUboat, cost: 380,
+  stats: { hp: 1100, speed: 7.5, radius: 3, height: 4, range: 1000, aggroRange: 1000, preferredRange: 800, damage: 110 },
+  mounts: [TUBES([0, -1, 16], 0, { count: 2, range: 1200, damage: 2200, reload: 60 }), gun([0, 3, 6], 0, { range: 1000, reload: 5, damage: 110, splash: 2.5, surfaced: true, arc: 5.2 })],
+  variant: { name: 'U 27-class U-boat', weapon: '2 torpedo tubes, 7.5 cm', text: 'A small coastal U-boat built at Pola to the German UB II design: two bow tubes, a deck gun. Out of Cattaro she slips under the barrage\'s nets — if the drifters\' hydrophones don\'t hear her first.' } });
+
+// the Regia Marina: the scouts and destroyers out of Brindisi, and the MAS boats that sank Szent István
+navy(lightCruiser, 'it', { names: ['Aquila', 'Sparviero', 'Nibbio'], model: buildAquila, cost: 460,
+  stats: { hp: 3800, armor: 0.12, speed: 17.5, damage: 330 },
+  mounts: [gun([0, 6, 38], FWD, SIX_INCH), gun([3, 5, 6], BEAM, { ...SEVENTY_SIX, arc: 2.6 }), gun([-3, 5, 6], -BEAM, { ...SEVENTY_SIX, arc: 2.6 }), gun([3, 5, -18], BEAM, { ...SEVENTY_SIX, arc: 2.6 }), gun([-3, 5, -18], -BEAM, { ...SEVENTY_SIX, arc: 2.6 }),
+    gun([0, 7, -30], AFT, SIX_INCH), gun([0, 5, -40], AFT, SIX_INCH), torps([0, 5, -12], { count: 2 })],
+  variant: { name: 'Aquila-class scout cruiser', weapon: '3 × 152 mm, 4 × 76 mm, 4 torpedo tubes', text: 'An esploratore built for Romania and taken over in 1915: a big destroyer with cruiser guns, very fast. Aquila led the Italian destroyers after Novara and was stopped by a shell in her boiler room.' } });
+navy(destroyer, 'it', { names: ['Rosolino Pilo', 'Antonio Mosto', 'Simone Schiaffino', 'Giovanni Acerbi', 'Giuseppe Missori', 'Insidioso', 'Indomito', 'Impavido'], model: buildCacciatorpediniere,
+  stats: { hp: 2000, speed: 15.5, damage: 160 },
+  mounts: [gun([0, 5, 29], FWD, FOUR_INCH), gun([2.4, 5, 4], BEAM, { ...SEVENTY_SIX, arc: 2.6 }), gun([-2.4, 5, 4], -BEAM, { ...SEVENTY_SIX, arc: 2.6 }), gun([0, 5, -30], AFT, SEVENTY_SIX),
+    torps([0, 5, -12], { count: 2 }), torps([0, 5, -20], { count: 2 })],
+  variant: { name: 'Cacciatorpediniere', weapon: '120 mm, 76 mm guns, 4 torpedo tubes', text: 'The Italian destroyers of the Brindisi flotillas: small and quick, a heavier gun forward. They hunt the raiders back toward Cattaro.' } });
+navy(ptBoat, 'it', { names: ['MAS 15', 'MAS 21', 'MAS 9', 'MAS 13', 'MAS 5', 'MAS 7'], model: buildMAS, stats: { speed: 18, hp: 260 },
+  variant: { name: 'MAS', weapon: 'two torpedoes, a machine gun', text: 'The Motoscafo Armato Silurante: a fast motor boat with two torpedoes. On 10 June 1918 Luigi Rizzo\'s MAS 15 sank the battleship Szent István off Premuda.' } });
+
+/** The Otranto barrage's drifters: Scottish herring boats with a 6-pounder, the steel nets and a hydrophone (the British only). */
+export const drifter = ship({
+  fleet: 'escort', armies: ['uk'],
+  id: 'drifter', name: 'Drifter', shortName: 'Drifter', cost: 90,
+  names: { uk: ['HMD Gowanlea', 'HMD Admirable', 'HMD Avondale', 'HMD Coral Haven', 'HMD Felicitas', 'HMD Girl Gracie', 'HMD Helenora', 'HMD Quarry Knowe', 'HMD Selby', 'HMD Serene', 'HMD Taits', 'HMD Craignoon', 'HMD Floandi', 'HMD Bon Espoir'] },
+  hull: { length: 26, beam: 5.6 },
+  stats: { hp: 450, armor: 0, speed: 5.5, accel: 0.1, turnRate: 0.14, turretRate: 0.8, radius: 3, height: 5, eyeHeight: 6, sight: 1500, sonar: 450, depthCharges: DC({ count: 2, reload: 30 }), ...AA(200, 0.04, 0.01), range: 900, aggroRange: 1000, preferredRange: 700, leash: 40, damage: 60, fireCooldown: 3, spread: 0.02, boltSpeed: 700, boltSize: 0.8, splash: 1.5, pierce: 0.1 },
+  mounts: { nato: [gun([0, 3, 9], FWD, { range: 900, reload: 3, damage: 60, splash: 1.5, pierce: 0.1, size: 0.8, arc: 4 })], pact: [] },
+  camera: { distance: 30, height: 10, shoulder: 0 },
+  models: { nato: buildDrifter, pact: buildDrifter },
+  variants: {
+    nato: { name: 'Steam drifter', weapon: '6-pounder, nets, hydrophone, 2 depth charges', text: 'A herring drifter from Banff or Lowestoft with her fishermen crew, strung across the strait with a steel net to catch U-boats. Slow and nearly unarmed — on 15 May 1917 Skipper Watt of Gowanlea fought Novara with his one gun and won the Victoria Cross.' },
+    pact: { name: 'Drifter', weapon: '—', text: 'A drifter.' },
+  },
+});
+
+export const SHIPS_1918 = { battleship, cruiser, lightCruiser, destroyer, frigate, submarine, ptBoat, transport, minelayer, minesweeper, carrier, vindictive, ferry, ml, blockship, drifter };
+

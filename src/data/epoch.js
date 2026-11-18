@@ -39,7 +39,8 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
-      gb: { id: 'gb', faction: 'pact', name: 'British Army', coastal: true }, // (only where a map names it: the Aboukir landing)
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
+      gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -61,10 +62,13 @@ export const EPOCHS = {
         { id: 'squares', name: 'Steady squares', text: 'Squares never break against cavalry and lose less nerve under artillery (the Saxon grenadiers left Jena in square).' },
         { id: 'gardeDuCorps', name: 'Garde du Corps', text: 'Heavy cavalry starts as Veterans.' },
       ],
-      // (the British reuse Prussia's and France's mechanics under their own names: line fire, skirmishers)
+      ru: [
+        { id: 'greatBattery', name: 'Great batteries', text: 'Guns with two more of yours within 60 m fire 30 % faster: the Russian army massed more guns than anyone, and at Eylau they stood wheel to wheel on the ridge.', near: 60, count: 2, fire: 1.3 },
+        { id: 'stubborn', name: 'Stubborn defence', text: 'Infantry in line takes 20 % less damage: at Eylau the Russian lines stood in the snow and had to be killed where they stood.', take: 0.8 },
+      ],
       gb: [
-        { id: 'peloton', name: 'Two-deep line', text: 'Line infantry in line aims 25 % better: every musket of the thin two-rank line can fire.', reload: 1, spread: 0.75 },
-        { id: 'tirailleurs', name: 'Rifles and light bobs', text: 'Light infantry and riflemen in skirmish order are harder to spot, and their fire pins 30 % more.', stealth: 1.3, suppress: 1.3 },
+        { id: 'twoDeep', name: 'Two-deep line', text: 'Infantry in line that has stood still for 3 s hits 20 % harder: the thin line waits, then every musket fires at once.', still: 3, dmg: 1.2 },
+        { id: 'baker', name: 'The Baker rifle', text: 'Riflemen reach 30 % further and cost 20 % less: the 95th picked off officers at ranges no musket could answer.', mods: { sniper: { range: 1.3 } }, costs: { sniper: 0.8 } },
       ],
     },
   },
@@ -84,6 +88,12 @@ export const EPOCHS = {
       fr: { id: 'fr', faction: 'nato', name: 'French Army' },
       de: { id: 'de', faction: 'pact', name: 'German Army' },
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
+      // the other fronts (own: only the types data/units1918/fronts.js writes for them)
+      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'] },
+      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'] },
+      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
+      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy'] },
+      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'] },
     },
     defaults: { nato: 'uk', pact: 'de' },
     types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
@@ -105,6 +115,27 @@ export const EPOCHS = {
         { id: 'infiltrate', name: 'Infiltration', text: 'Storm troops move 20 % faster and are harder to spot: they slip past the strongpoints and leave them to the next wave.', speed: 1.2, stealth: 1.3 },
         { id: 'grenades', name: 'Grenade fighting', text: 'Grenades are thrown 30 % further: the storm troops clear a trench bay from the next one.', reach: 1.3 },
       ],
+      // the other fronts: the mechanics above, 1945's and 1985's, under their own names
+      ot: [
+        { id: 'digIn', name: 'Dig in', text: 'Infantry that has stood still for 15 s takes 25 % less damage: at Gallipoli the Ottoman trenches were dug in a night and held for eight months.', still: 15, take: 0.75 },
+        { id: 'ridge', name: 'Hold the ridge', text: 'Infantry at least 4 m above the nearest enemy (within 300 m) aims 25 % better: Kemal’s men on Chunuk Bair looked down on every attack.', rise: 4, within: 300, aim: 1.25 },
+      ],
+      anzac: [
+        { id: 'walers', name: 'The Light Horse', text: 'Horsemen move 20 % faster and are 15 % tougher: the Walers carried the Light Horse across the desert to the wells of Beersheba at the gallop.', mods: { cavalry: { speed: 1.2, hp: 1.15 } } },
+        { id: 'hamel', name: 'Monash’s tanks', text: 'Infantry within 40 m of a friendly tank takes 20 % less damage: at Hamel the Australians walked in behind the tanks and took the village in 93 minutes.', range: 40, take: 0.8 },
+      ],
+      it: [
+        { id: 'bombarde', name: 'The bombarde', text: 'Mortars reach 30 % further and their bombs burst 30 % wider: the Italian trench mortars cut the Austrian wire on the Isonzo.', mods: { mortar: { range: 1.3, splash: 1.3 }, spMortar: { range: 1.3, splash: 1.3 } } },
+        { id: 'arditi', name: 'Arditi', text: 'Infantry with an enemy within 40 m hits 30 % harder: the Arditi went in with dagger and grenade, black flames on their collars.', range: 40, dmg: 1.3 },
+      ],
+      ah: [
+        { id: 'skoda', name: 'Škoda guns', text: 'Field guns reach 15 % further and hit fortifications twice as hard: the Škoda works built the guns that broke the forts of Belgium.', mods: { artillery: { range: 1.15, vsStructure: 2 } } },
+        { id: 'standschuetzen', name: 'Standschützen', text: 'Snipers and scouts see 20 % further and cost 30 % less: the Tyrolean rifle clubs knew every crag of their own mountains.', mods: { sniper: { sight: 1.2 }, scouts: { sight: 1.2 } }, costs: { sniper: 0.7, scouts: 0.7 } },
+      ],
+      ru: [
+        { id: 'committees', name: 'The army of 1917', text: 'Rifle squads cost 20 % less but break sooner: after the Revolution the soldiers’ committees voted on orders, and the will to go on drained away.', costs: { rifles: 0.8 }, mods: { rifles: { breakMorale: 1.3 } } },
+        { id: 'cossacks', name: 'Cossacks', text: 'Horsemen do double damage to guns, mortars, ambulances, observers and staff: the Cossacks rode for the rear, not for the trenches.', soft: 2 },
+      ],
     },
   },
   1985: {
@@ -115,10 +146,15 @@ export const EPOCHS = {
       korea: { title: 'Korea, 1985', blurb: 'The second Korean War: the North’s army pours through the DMZ against South Korea and the US 2nd Infantry Division.' },
     },
     armies: {
-      us: { id: 'us', faction: 'nato', name: 'US Army' },
-      bw: { id: 'bw', faction: 'nato', name: 'Bundeswehr' },
-      sov: { id: 'sov', faction: 'pact', name: 'Soviet Army' },
-      nva: { id: 'nva', faction: 'pact', name: 'NVA' },
+      us: { id: 'us', faction: 'nato', name: 'US Army', regions: ['europe', 'korea'] },
+      bw: { id: 'bw', faction: 'nato', name: 'Bundeswehr', regions: ['europe'] },
+      sov: { id: 'sov', faction: 'pact', name: 'Soviet Army', regions: ['europe', 'north'] },
+      nva: { id: 'nva', faction: 'pact', name: 'NVA', regions: ['europe'] },
+      // the Northern Flank and Korea: each only the types written for it (data/units/armies85.js)
+      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'] },
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'] },
+      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'] },
+      kpa: { id: 'kpa', faction: 'pact', name: 'Korean People’s Army', own: true, regions: ['korea'] },
     },
     defaults: { nato: 'us', pact: 'sov' },
     types: TYPES_1985, alias: {}, air: AIR_1985, doctrine: DOCTRINE_1985,
@@ -190,18 +226,24 @@ export const EPOCHS = {
         { id: 'paradrop', name: 'Paradrop', text: 'Their paradrop costs 30 % less and is ready again 30 % sooner. (The paradrop arrives with the next units.)', cost: 0.7, cooldown: 0.7 },
       ],
       usmc: [
-        { ...DOCTRINE_1985.us[0], name: 'Marine air', text: 'The Marines’ own aviation over their own riflemen: air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
-        { id: 'hold', name: 'Semper Fidelis', text: 'Squads in cover break only at less than half the losses other squads do.', morale: 0.4 },
+        { id: 'flame', name: 'Corkscrew and blowtorch', text: 'Engineers hit bunkers and fortifications 50 % harder: on Iwo Jima the Marines burned and blasted the caves one at a time.', mods: { engineers: { vsStructure: 1.5 } } },
+        { id: 'valor', name: 'Uncommon valor', text: 'Squads down to half their men aim 25 % better and don’t break: “uncommon valor was a common virtue.”', aim: 1.25 },
       ],
       brit: [
-        { ...DOCTRINE_1985.sov[0], name: 'Lightfoot barrage', text: 'The opening barrage of El Alamein: a support power (Z) — a whole sector shelled for a minute, everything inside pinned, the sappers going in behind it.' },
-        { id: 'airsup', name: 'Desert Air Force', text: 'Fighter patrols cost 40 % less and are ready again 30 % sooner: the RAF over the desert.', cost: 0.6, cooldown: 0.7 },
+        { id: 'stonk', name: 'The stonk', text: 'Guns, mortars and rockets fire 25 % faster while you have a Forward Observation Officer: at Alamein the Royal Artillery’s fire plans came down on one map reference.', fire: 1.25 },
+        { id: 'reme', name: 'REME', text: 'Recovery vehicles cost 40 % less and repair twice as fast: the desert war went to whoever got his knocked-out tanks back first.', costs: { recovery: 0.6 }, mods: { recovery: { repair: 2 } } },
       ],
-      brit21: [], // (filled with data/units45/brit21.js)
-      brit14: [], // (filled with data/units45/brit14.js)
+      brit21: [
+        { id: 'funnies', name: 'Hobart’s Funnies', text: 'Assault and mine-clearing tanks cost 30 % less and are 30 % tougher: the 79th Armoured Division’s specialised tanks led every landing and every breach.', costs: { cev: 0.7, mineClear: 0.7 }, mods: { cev: { hp: 1.3 }, mineClear: { hp: 1.3 } } },
+        { id: 'cabRank', name: 'Cab rank', text: 'Air support recharges 40 % faster: the Typhoons circled over the front waiting to be called down, like taxis on a rank.', cooldown: 0.6 },
+      ],
+      brit14: [
+        { id: 'adminBox', name: 'The Admin Box', text: 'Units within 80 m of your command post don’t break: in the Arakan the boxes stood and fought surrounded instead of falling back.', range: 80 },
+        { id: 'airSupply', name: 'Air supply', text: 'Every 20 s each infantry squad patches up a wounded man from what the Dakotas dropped: the 14th Army lived off the air.', every: 20, hp: 40 },
+      ],
       jp: [
-        { id: 'tempo', name: 'Banzai', text: 'Infantry and tanks closing on the enemy move 30 % faster and fire 15 % faster. Units stalled in contact for 20 s take 30 % more suppression.', speed: 1.3, fire: 1.15, stall: 20, suppression: 1.3 },
-        { ...DOCTRINE_1985.bw[0], name: 'Cave fortresses', text: 'Engineers build twice as fast and fortifications cost 40 % less. A dug-in line of trenches and wire waits in front of your base at the start.' },
+        { id: 'banzai', name: 'Banzai', text: 'Infantry within 60 m of the enemy charges: 30 % faster, 20 % harder hitting, unbreakable — and 15 % easier to kill.', range: 60, speed: 1.3, dmg: 1.2, take: 1.15 },
+        { id: 'caves', name: 'Cave fortresses', text: 'Bunkers and fortifications take 40 % less damage: on Iwo Jima and Okinawa the defences were cut into the rock.', mods: { structures: { take: 0.6 } } },
       ],
     },
   },

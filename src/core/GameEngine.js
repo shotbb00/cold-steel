@@ -31,7 +31,7 @@ import { AutoFlares } from '../systems/AutoFlares.js';
 import { Breakdowns } from '../systems/Breakdowns.js';
 import { Gas } from '../systems/Gas.js';
 import { SEA_STATE } from '../world/Sea.js';
-import { unitCost, armyDoctrine } from '../data/doctrine.js';
+import { unitCost, armyDoctrine, doctrineCovers } from '../data/doctrine.js';
 import { NavGrid } from '../world/Nav.js';
 import * as THREE from 'three';
 
@@ -338,6 +338,7 @@ export class GameEngine {
   /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
     const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    if (doctrineCovers(stack.army, 'veteran', stack.type, stack.stats) && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // (data/doctrine.js veteran: the ROK's conscripts)
     if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
     if (stack.type.id === 'tank' && stack.stats.cavalry && armyDoctrine(stack.army, 'gardeDuCorps') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // Saxony's Garde du Corps: Veteran
     const light = stack.type.id === 'reconVehicle' && stack.stats.cavalry && armyDoctrine(stack.army, 'lightHorse');
