@@ -71,13 +71,19 @@ export class Airfields {
 
   /** The best flat open strip near `faction`'s base: the runway along x, the tower on the side toward the battle. */
   find(faction) {
+    // flat ground first; hilly maps (Thuringian Forest) take a steeper strip — the runway follows the ground (lay) — further out
+    for (const [rise, reach] of [[5, 200], [9, 320], [14, 420]]) { const a = this.findWith(faction, rise, reach); if (a) return a; }
+    return null;
+  }
+
+  findWith(faction, rise, reach) {
     const g = this.game, map = g.map, T = g.terrain, base = map.bases?.[faction];
     if (!base) return null;
     const b = map.bounds, level = g.world.river?.level ?? -Infinity;
     const toward = -Math.sign(base.z) || 1; // (the battle lies this way in z)
     const blocked = (x, z, r) => (g.buildings?.list ?? []).some((h) => Math.hypot(h.x - x, h.z - z) < r) || (map.points ?? []).some((p) => Math.hypot(p.x - x, p.z - z) < r + (p.radius ?? 18));
     let best = null, bestS = Infinity;
-    for (let dz = 0; dz <= 200; dz += 20) {
+    for (let dz = 0; dz <= reach; dz += 20) {
       const z = base.z + toward * (40 + dz);
       if (Math.abs(z) > b.z - 30) continue;
       for (let x = -b.x * 0.75; x <= b.x * 0.75; x += 20) {
@@ -91,7 +97,7 @@ export class Airfields {
           }
         }
         const tz = z + toward * RUNWAY.side;
-        if (bad || hi - lo > 5 || blocked(x, tz, 18) || T.heightAt(x, tz) < level + 1) continue;
+        if (bad || hi - lo > rise || blocked(x, tz, 18) || T.heightAt(x, tz) < level + 1) continue;
         const score = (hi - lo) + dz * 0.02 + Math.abs(Math.abs(x) - b.x * 0.4) * 0.01;
         if (score < bestS) { bestS = score; best = { faction, x, z: tz, yaw: toward > 0 ? -Math.PI / 2 : Math.PI / 2, large: false }; }
       }
@@ -121,10 +127,10 @@ export class Airfields {
     for (const f of g.cover.forests ?? []) f.clear?.((x, z) => Math.abs(along(x, z)) < s.len / 2 + 30 && Math.abs(across(x, z)) < s.width / 2 + 45);
     const yaw = Math.atan2(s.fx, s.fz);
     // the asphalt: a sheet draped over the ground every 4 m (a flat slab would sink into a slope)
-    const sheet = new THREE.PlaneGeometry(s.width, s.len, Math.ceil(s.width / 4), Math.ceil(s.len / 4)).rotateX(-Math.PI / 2), pos = sheet.attributes.position;
+    const sheet = new THREE.PlaneGeometry(s.width, s.len, Math.ceil(s.width / 2.5), Math.ceil(s.len / 2.5)).rotateX(-Math.PI / 2), pos = sheet.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const w = pos.getX(i), t = pos.getZ(i), x = s.cx + s.fx * t + s.fz * w, z = s.cz + s.fz * t - s.fx * w;
-      pos.setXYZ(i, x, T.heightAt(x, z) + 0.2, z);
+      pos.setXYZ(i, x, T.heightAt(x, z) + 0.3, z);
     }
     sheet.computeVertexNormals();
     props.push('stone', sheet, new THREE.Matrix4(), 0x55555a);
