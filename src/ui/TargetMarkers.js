@@ -219,8 +219,9 @@ function fine(geo) {
 
 /** The draped decals of a spec, in one group: `place(spec)` moves them, `dispose()` frees them. */
 export class TargetMarker {
-  constructor(surface) {
+  constructor(surface, dim = 1) { // (dim: a placed one's fainter copy — PendingMarkers)
     this.surface = surface;
+    this.dim = dim;
     this.group = new THREE.Group();
     this.decals = [];
     this.key = null;
@@ -232,7 +233,7 @@ export class TargetMarker {
     for (const part of spec.parts) {
       if (!part.shapes.length) continue;
       const geo = fine(new THREE.ShapeGeometry(part.shapes, 24).rotateX(Math.PI / 2)); // (shape y → +z: the approach; small triangles, so it follows the ground)
-      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(part.color).multiplyScalar(part.opacity < 0.3 ? 1 : 1.4), transparent: true, opacity: part.opacity, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide }); // (no haze: readable from high up)
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(part.color).multiplyScalar(part.opacity < 0.3 ? 1 : 1.4), transparent: true, opacity: part.opacity * this.dim, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide }); // (no haze: readable from high up)
       const d = new GroundDecal(geo, mat, this.surface, 0.3 + this.decals.length * 0.02);
       d.mesh.renderOrder = 2 + this.decals.length;
       this.decals.push(d);
@@ -250,3 +251,48 @@ export class TargetMarker {
     this.decals = [];
   }
 }
+
+// ---------------------------------------------------------------- after it is placed
+
+/**
+ * What you called stays on the map (marker plan step 2): a fainter copy of its footprint until it is over, and a
+ * tag over it — the power's icon and the time to the first bomb or shell, then 'now'. A creeping barrage's belt
+ * moves forward with the shells. Each entry knows when it ends: the sortie that flies it leaves the run, the
+ * barrage's time runs out, or (what the client cannot see) a set time.
+ *   add(t, at, follow) — `follow()`: { impactAt, over, x?, z? } each frame (null: over)
+ */
+export class PendingMarkers {
+  constructor(game, surface) {
+    this.game = game;
+    this.surface = surface;
+    this.list = [];
+  }
+
+  add(t, at, icon, follow) {
+    const g = this.game, spec = markerSpec(g, g.playerFaction, t, at);
+    const m = new TargetMarker(this.surface, 0.5);
+    m.place(spec);
+    g.scene.add(m.group);
+    const el = document.createElement('div');
+    el.className = 'pend-tag';
+    el.innerHTML = `${icon}<span></span>`;
+    document.body.appendChild(el);
+    this.list.push({ m, spec, el, text: el.querySelector('span'), follow, x0: spec.x, z0: spec.z });
+  }
+
+  update() {
+    const g = this.game, now = g.time, cam = g.camera, r = g.canvas.getBoundingClientRect();
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const e = this.list[i], f = e.follow();
+      if (!f) { e.m.clear(); e.m.group.removeFromParent(); e.el.remove(); this.list.splice(i, 1); continue; }
+      if (f.x != null) { e.spec.x = f.x; e.spec.z = f.z; e.m.place(e.spec); } // (the belt walking on)
+      const left = Math.ceil(f.impactAt - now), txt = left > 0 ? `${left} s` : 'now';
+      if (e.text.textContent !== txt) e.text.textContent = txt;
+      _t.set(e.spec.x, g.terrain.heightAt(e.spec.x, e.spec.z) + 6, e.spec.z).project(cam);
+      const off = _t.z > 1 || Math.abs(_t.x) > 1.1 || Math.abs(_t.y) > 1.1;
+      e.el.hidden = off;
+      if (!off) e.el.style.transform = `translate(${r.left + (_t.x + 1) / 2 * r.width}px, ${r.top + (1 - _t.y) / 2 * r.height}px) translate(-50%, -100%)`;
+    }
+  }
+}
+const _t = new THREE.Vector3();

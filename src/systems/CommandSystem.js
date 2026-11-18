@@ -21,7 +21,8 @@ import { CameraMode } from '../core/CameraManager.js';
 import { enemyOf } from '../data/factions.js';
 import { dist2DSq } from '../core/math.js';
 import { GroundDecal } from '../world/GroundDecal.js';
-import { TargetMarker, markerSpec, flightOf, turnable } from '../ui/TargetMarkers.js';
+import { TargetMarker, markerSpec, flightOf, turnable, PendingMarkers } from '../ui/TargetMarkers.js';
+import { supportIcon } from '../ui/SupportIcons.js';
 import { keys, keyOf } from '../core/Keys.js';
 import { planCover } from '../world/CoverPlan.js';
 
@@ -662,7 +663,52 @@ export class CommandSystem {
     } else {
       this.addMarker(p, 'attack');
     }
+    if (t.kind === 'air' || (t.kind === 'smoke' && (t.power || t.barrage || t.gas || t.walze || t.fire === 'area' || t.fire === 'salvo'))) this.remember(t, p.clone());
     this.cancelTargeting();
+  }
+
+  /**
+   * Keep what was just called on the map until it is over (ui/TargetMarkers.js PendingMarkers): followed through the
+   * sortie that flies it or the barrage it started (the host's — a co-op guest sees a set time), else for a while.
+   */
+  remember(t, p) {
+    const g = this.game, era = epoch(), t0 = g.time;
+    this.pending ??= new PendingMarkers(g, this.surface);
+    const bar = t.barrage ? barrageOf(g, this.faction) : null;
+    const icon = t.kind === 'air' ? supportIcon(`air:${t.air}`, era) : t.power ? supportIcon(`power:${t.power}`, era) : t.gas ? supportIcon('gas', era)
+      : t.barrage ? supportIcon('barrage', era, bar?.id === 'tot' ? 'tot' : bar?.id === 'creep' ? 'creep' : 'barrage') : t.walze ? supportIcon('barrage', era, 'walze') : supportIcon('barrage', era);
+    const timed = (impact, end) => () => (g.time > t0 + end ? null : { impactAt: t0 + impact });
+    let follow = timed(10, 30);
+    if (t.kind === 'air') {
+      const s = [...(g.air.sorties ?? [])].reverse().find((q) => q.kind === t.air && q.faction === this.faction && !q.remembered);
+      if (s) {
+        s.remembered = true;
+        const OVER = new Set(['break', 'home', 'landing', 'rollout', 'done', 'down']);
+        follow = () => {
+          if (OVER.has(s.state) || g.time > t0 + 600) return null;
+          const d = Math.hypot(s.pos.x - p.x, s.pos.z - p.z);
+          const impactAt = s.state === 'inbound' ? s.appearAt + (s.p.approach ?? d) / s.p.cruiseSpeed : s.state === 'attack' || s.p.orbit ? g.time : g.time + d / Math.max(30, s.speed || s.p.cruiseSpeed);
+          return { impactAt };
+        };
+      } else follow = timed(25, 60);
+    } else if (t.barrage) {
+      const b = g.barrage.active.at(-1);
+      if (b && b.faction === this.faction && Math.hypot(b.x - p.x, b.z - p.z) < 1) {
+        follow = () => {
+          if (g.time > b.end || !g.barrage.active.includes(b)) return null;
+          if (!b.creep) return { impactAt: b.start };
+          const c = b.creep, k = Math.max(0, Math.min(c.steps - 1, Math.floor((g.time - b.start) / c.every)));
+          return { impactAt: b.start, x: b.x + b.dx * k * c.step, z: b.z + b.dz * k * c.step }; // (the belt walking on)
+        };
+      } else follow = timed(9, 20); // (Time on Target: all the shells at once)
+    } else if (t.walze) {
+      const st = t.stacks?.[0];
+      follow = () => (st?.barrage ? { impactAt: t0 + 4, x: st.barrage.target.pos.x, z: st.barrage.target.pos.z } : g.time > t0 + 6 ? null : { impactAt: t0 + 4 });
+    } else if (t.gas) follow = timed(10, 22);
+    else if (t.power) follow = t.power === 'monitors' ? timed(14, 46) : timed(4, 25);
+    else if (t.fire === 'area') follow = timed(6, 66);
+    else if (t.fire === 'salvo') follow = timed(6, 25);
+    this.pending.add(t, p, icon, follow);
   }
 
   updateTargeting() {
@@ -1054,6 +1100,7 @@ export class CommandSystem {
 
   update(dt) {
     this.updateTargeting();
+    this.pending?.update();
     this.updatePreview();
     this.drawRoutes();
     // right-drag: show which way they'll face

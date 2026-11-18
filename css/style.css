@@ -962,3 +962,8 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 .side-tag b { display: block; }
 .side-tag small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); }
 @media (max-height: 520px) { .side-tag { font-size: 10px; padding: 2px 5px; } .side-tag small { font-size: 9.5px; } }
+
+/* a called power's tag over its marker (ui/TargetMarkers.js PendingMarkers): its icon and the time to the first bomb or shell */
+.pend-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; display: flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 106, 61, 0.6); border-radius: 4px; font: 700 12px/1 var(--font-ui); color: #efd59a; white-space: nowrap; }
+.pend-tag[hidden] { display: none; }
+.pend-tag .sup-ico { width: 26px; height: 26px; fill: #efd59a; color: #efd59a; }
