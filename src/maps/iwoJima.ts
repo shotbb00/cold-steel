@@ -128,6 +128,7 @@ export default {
   description: '19 February 1945: black volcanic sand under Mount Suribachi. The Marines land on Green, Red and Blue beaches, the Imperial Army waits inland in pillboxes and caves, every gun laid on the terraces.',
   epochs: ['1945'],
   theatre: 'coastal',
+  tab: 'pacific',                                      // (the menu's Pacific tab: maps/index.js)
   pacific: true,                                       // (data/factions.js armiesFrom: the Pacific's armies)
   modes: ['landing'],
   sides: { nato: 'United States', pact: 'Japan' },

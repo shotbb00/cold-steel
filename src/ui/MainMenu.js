@@ -62,6 +62,9 @@ const TIPS = { 1985: [
  * The armies the theatre's maps allow (a map's `armies`: Omaha is the US Army against the Wehrmacht), per side —
  * null where any of them takes any army.
  */
+/** The year's title and line — or the Pacific's, on its tab (data/epoch.js `pacific`). */
+const tabInfo = () => (theatre() === 'pacific' && hasTheatre(epoch(), 'pacific') && epochInfo().pacific) || epochInfo();
+
 export function theatreArmies() {
   const maps = mapsFor(epoch());
   return Object.fromEntries(['nato', 'pact'].map((f) => [f, maps.length && maps.every((m) => m.armies?.[f]) ? [...new Set(maps.flatMap((m) => m.armies[f]))] : null]));
@@ -90,7 +93,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal))) {
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : !a.coastal && !!a.pacific === (theatre() === 'pacific')))) { // (Japan and the Marines: the Pacific tab only)
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -316,7 +319,7 @@ export class MainMenu {
     r.classList.remove('loading-open', 'boot');
     r.replaceChildren();
     const side = el('aside', 'menu-side');
-    side.append(el('div', 'menu-brand', logo(GAME.title, epochInfo().title)));
+    side.append(el('div', 'menu-brand', logo(GAME.title, tabInfo().title)));
     // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
     const year = el('div', 'seg menu-epoch');
     for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
@@ -351,7 +354,7 @@ export class MainMenu {
       nav.append(b);
       this.tabs[id] = b;
     }
-    side.append(nav, el('p', 'menu-blurb', epochInfo().blurb ?? GAME.blurb));
+    side.append(nav, el('p', 'menu-blurb', tabInfo().blurb ?? GAME.blurb));
     this.panel = el('section', 'menu-panel');
     r.append(side, this.panel);
     this.sheet = new MapSheet(r);   // the map table behind it all (ui/MapSheet.js)
@@ -482,7 +485,7 @@ export class MainMenu {
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
       coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
       coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
-    }[atSea ? 'sea' : theatre() === 'coastal' && hasTheatre(epoch(), 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
+    }[atSea ? 'sea' : mapsFor(epoch()).some((m) => m.theatre === 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
@@ -594,7 +597,7 @@ export class MainMenu {
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
     const tips = TIPS[epoch()] ?? TIPS[1985]; // (this war's hints)
     const tip = tips[Math.floor(Math.random() * tips.length)];
-    const box = el('div', 'loading-card', `${logo(GAME.title, epochInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    const box = el('div', 'loading-card', `${logo(GAME.title, tabInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page
@@ -613,7 +616,7 @@ export class MainMenu {
     // on the coast also what only a landing brings (the coastal maps' `landing`): the craft, the landing's warships, the shore's fortifications, the swimmers
     // — per side: the side that lands (its base out at sea, as systems/Landing.js lands()) its craft, warships and swimmers; the other its forts
     const coast = { nato: new Set(), pact: new Set() }, landers = new Set();
-    const onCoast = theatre() === 'coastal' && hasTheatre(epoch(), 'coastal');
+    const onCoast = mapsFor(epoch()).some((m) => m.theatre === 'coastal');
     if (onCoast) {
       for (const m of mapsFor(epoch(), 'coastal')) {
         const L = m.landing ?? {};

@@ -141,19 +141,21 @@ export function getMap(id) {
  * Where the battle is fought (the menu's second picker, under the years): on land, at sea — and,
  * later, on a coast (landings: land and sea together). A map's `theatre` (land unless it says).
  */
-export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal' }];
+export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' }, { id: 'coastal', name: 'Coastal' }, { id: 'pacific', name: 'Pacific' }];
+/** The menu tab a map is listed under: its own `tab` (the Pacific's land and coastal battles), else its theatre. */
+const tabOf = (m) => m.tab ?? m.theatre ?? 'land';
 let theatreNow = 'land';
 export const theatre = () => theatreNow;
 export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id && !t.soon) ? id : 'land'; }
 /** Does year `ep` have any map in theatre `th`? (the picker greys out the empty ones) */
-export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && (m.theatre ?? 'land') === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep)));
+export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep)));
 /** Years that fight only on maps made for them (1918: the Western Front, nothing in Hesse). */
 const OWN_MAPS = new Set(['1918', '2027']);
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {
   if (!hasTheatre(ep, th)) th = 'land'; // (a year with no sea yet: its land)
-  const all = Object.values(MAPS).filter((m) => !m.wip && (m.theatre ?? 'land') === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))); // (wip: not offered yet)
+  const all = Object.values(MAPS).filter((m) => !m.wip && tabOf(m) === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))); // (wip: not offered yet)
   return [...all.filter((m) => m.epochs), ...all.filter((m) => !m.epochs)];
 }
 
