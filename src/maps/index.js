@@ -1,5 +1,6 @@
 // Map registry. Add a map file shaped like fuldaGap.js and register it here;
 // load it with ?map=<id>.
+import { epoch } from '../data/epoch.js';
 import fuldaGap from './fuldaGap.ts';
 import werraValley from './werraValley.ts';
 import hauneFulda from './hauneFulda.ts';
@@ -29,6 +30,10 @@ import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
 import omaha from './omaha.ts';
 import iwoJima from './iwoJima.ts';
+import elGuettar from './elGuettar.ts';
+import kasserinePass from './kasserinePass.ts';
+import bobruisk from './bobruisk.ts';
+import berlin from './berlin.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
@@ -45,6 +50,10 @@ import orzyszBase from './orzyszBase.ts';
 export const MAPS = {
   [omaha.id]: omaha,
   [iwoJima.id]: iwoJima,
+  [elGuettar.id]: elGuettar,
+  [kasserinePass.id]: kasserinePass,
+  [bobruisk.id]: bobruisk,
+  [berlin.id]: berlin,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [villersBretonneux.id]: villersBretonneux,
@@ -164,6 +173,17 @@ export function setTheatre(id) { theatreNow = THEATRES.some((t) => t.id === id &
 export const hasTheatre = (ep, th) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep)));
 /** Years that fight only on maps made for them (1918: the Western Front, nothing in Hesse). */
 const OWN_MAPS = new Set(['1918', '2027']);
+
+/**
+ * The armies a map is fought by in war `ep` (each side's list; null: any): a map's `armies` is either one set
+ * ({ nato, pact } — for the one war it is made for: Omaha) or one per war ({ 1945: { nato, pact }, … } — the Hesse
+ * maps: the US Army against the Wehrmacht in 1945, open in 1985's war that never was).
+ */
+export function armiesOn(map, ep = epoch()) {
+  const a = map?.armies;
+  if (!a) return null;
+  return a[ep] ?? (a.nato || a.pact ? a : null);
+}
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {
