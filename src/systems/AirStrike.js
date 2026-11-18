@@ -494,7 +494,7 @@ class Sortie {
         this.state = 'attack';
         if (this.type.siren) this.siren = game.audio.loop(this.type.siren, this.pos, 1.2, 40); // the Stuka's Jericho trumpet, all down the dive
       }
-      if (this.state === 'attack' && d < p.gunTo - 15) {
+      if (this.state === 'attack' && (p.bombs ? this.bombsLeft <= 0 || d < -p.runLength : d < p.gunTo - 15)) { // (a bomber: once the stick is gone — a run begun late still lays it, a little past the spot)
         this.state = 'break';
         if (this.kind === 'asw') game.tell(this.faction, this.subsFound ? `${this.type.name}: ${this.subsFound} submarine contact${this.subsFound > 1 ? 's' : ''} — on your map for ${p.hold} s` : `${this.type.name}: no submarine found along the run`);
         if (this.kind === 'recon' || this.kind === 'navScout') {
@@ -774,8 +774,11 @@ class Sortie {
       if (this.rollV <= 0) this.finish();
       return;
     }
-    if (this.state === 'home') { // to a point some way astern of her, at circuit height
-      const ax = d.cx - d.fx * 700, az = d.cz - d.fz * 700;
+    if (this.state === 'home') { // to a point some way astern of her, at circuit height (an airfield's: as far out as the map allows)
+      let L = 700;
+      const B = d.land && this.game.world.bounds;
+      if (B) while (L > 250 && (Math.abs(d.cx - d.fx * L) > B.x - 60 || Math.abs(d.cz - d.fz * L) > B.z - 60)) L -= 50;
+      const ax = d.cx - d.fx * L, az = d.cz - d.fz * L;
       turn(Math.atan2(ax - this.pos.x, az - this.pos.z), 0.7);
       this.speed += (this.p.cruiseSpeed - this.speed) * Math.min(1, dt);
       this.pos.y += (level + 60 - this.pos.y) * Math.min(1, dt);
@@ -833,15 +836,24 @@ class Sortie {
     });
   }
 
+  /** How fast a bomber turns onto its line (rad/s): a hard bank — harder at speed, so its circle fits the map (220 m at most). */
+  bankRate() { return Math.max(0.6, this.speed / 220); }
+
   /** A bomber too close to its spot (off a near airfield): out and round again until it can make a straight run in. */
   lineUp(dt) {
     const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z, dist = Math.hypot(dx, dz), need = this.p.rocketsFrom + 300;
     if (!this.aligned) { // (out far enough that the turn back in still leaves a straight run)
-      if (dist < need) this.out = true;
-      else if (dist > need + (2.4 * this.speed) / 0.6) this.out = false;
+      const R = this.speed / this.bankRate(); // (its turning circle at this speed)
+      if (dist < need && !this.outDone) this.out = true;
+      else if (dist > need + 2.4 * R) this.out = false;
+      // (a backstop: in from wherever it is after 30 s out — and round again if it still can't line up)
+      if (this.out && (this.outT = (this.outT ?? 0) + dt) > 30) { this.out = false; this.outDone = true; this.inT = 0; }
+      if (!this.out && this.outDone && (this.inT += dt) > 10) { this.outDone = false; this.outT = 0; }
     }
-    const off = angleDelta(this.yaw, this.out ? Math.atan2(-dx, -dz) : Math.atan2(dx, dz));
-    this.yaw += clamp(off, -0.6 * dt, 0.6 * dt);
+    // out: straight away from the spot (past the map's edge for a moment on a small map: a stick needs ~1 km of straight run in)
+    const outYaw = Math.atan2(-dx, -dz);
+    const off = angleDelta(this.yaw, this.out ? outYaw : Math.atan2(dx, dz));
+    this.yaw += clamp(off, -this.bankRate() * dt, this.bankRate() * dt);
     if (!this.out && Math.abs(off) < 0.1) this.aligned = true; // on the line in: the run begins at rocketsFrom
     this.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     this.side.set(this.dir.z, 0, -this.dir.x);
