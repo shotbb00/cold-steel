@@ -7,7 +7,7 @@ import { settings } from '../core/Settings.js';
 import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
-import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -460,7 +460,7 @@ export class MainMenu {
     const chips = el('div', 'map-chips');
     chips.setAttribute('role', 'radiogroup');
     c.map = mapIn(c.map, epoch());
-    const about = el('p', 'map-about', MAPS[c.map]?.description ?? '');
+    const about = el('p', 'map-about', mapAbout(MAPS[c.map]));
     const mapChips = [];
     for (const m of mapsFor(epoch())) {
       const b = el('button', `map-chip${c.map === m.id ? ' on' : ''}`, m.name);
@@ -472,7 +472,7 @@ export class MainMenu {
         c.map = m.id;
         if (m.conditions) { Object.assign(c, m.conditions); this.refreshConditions?.(); }
         for (const o of chips.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
-        about.textContent = m.description ?? '';
+        about.textContent = mapAbout(m);
         this.sheet?.show(m, c.side);
       });
       chips.append(b);

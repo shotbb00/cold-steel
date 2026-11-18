@@ -39,6 +39,7 @@ import aboukirLanding from './aboukirLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
+import soissons from './soissons.ts';
 import suwalkiGap from './suwalkiGap.ts';
 import suwalkiTown from './suwalkiTown.ts';
 import nemanCrossing from './nemanCrossing.ts';
@@ -59,6 +60,7 @@ export const MAPS = {
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
+  [soissons.id]: soissons,
   [suwalkiGap.id]: suwalkiGap,
   [suwalkiTown.id]: suwalkiTown,
   [nemanCrossing.id]: nemanCrossing,
@@ -184,6 +186,13 @@ export function armiesOn(map, ep = epoch()) {
   if (!a) return null;
   return a[ep] ?? (a.nato || a.pact ? a : null);
 }
+
+/**
+ * A map's line in the menu: its description, and — every land map is point-mirrored through its centre, so both sides
+ * have the same ground — a word saying so (the far end repeats this side's villages and hills under other names).
+ */
+export const MIRRORED_NOTE = 'Mirrored to keep it fair: both sides have the same ground, so the far half repeats this half under other names.';
+export const mapAbout = (m) => (m ? `${m.description ?? ''}${(m.theatre ?? 'land') === 'land' && m.mirrored !== false ? ` ${MIRRORED_NOTE}` : ''}` : '');
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {
