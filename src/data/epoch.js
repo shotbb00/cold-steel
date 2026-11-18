@@ -28,7 +28,8 @@ export const EPOCHS = {
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
     sides: { nato: 'France', pact: 'Prussia' },
     regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
-      europe: { name: 'Germany' },
+      europe: { name: 'Germany', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
+        sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
       east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Winter and spring 1807: the Grande Armée against the Russian army — snow at Eylau, the river at Friedland.' },
       iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–09: Wellington’s redcoats in their line against the French columns.' },
       africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
@@ -77,7 +78,8 @@ export const EPOCHS = {
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
     sides: { nato: 'Allies', pact: 'Germany' },
     regions: {
-      europe: { name: 'Western Front' },
+      europe: { name: 'Western Front',
+        sea: { name: 'North Sea', title: 'The North Sea, 1914–18', blurb: 'Dogger Bank, the Heligoland Bight and the Dover Strait: the Grand Fleet against the High Seas Fleet.' } },
       east: { title: 'The Eastern Front, 1917', blurb: 'Riga, September 1917: the German storm troops’ first great attack — a short hurricane bombardment, then infiltration across the Dvina.' },
       italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy against Austria-Hungary and Germany in the mountains and along the rivers.' },
       middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },

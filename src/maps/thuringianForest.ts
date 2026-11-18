@@ -4,13 +4,17 @@
 // `woods` density cuts every spotter's range — systems/VisibilitySystem.js), so armour is tied to
 // the roads and the flanks, and infantry, scouts and AT teams decide the forest. The points: the
 // forester's lodges at home, the sawmill and the Rennsteig inn in the forest, hamlets, a quarry and
-// hunting lodges out on the flanks. NATO holds the south (+z), the Pact comes from the north. The
-// hills are point-symmetric by construction.
+// hunting lodges out on the flanks. NATO holds the south (+z), the Pact comes from the north.
+// Not a mirror: the hills are the forest's own, the roads wind their own ways, and each side's
+// clearings hold their own works — the sawmill against the timber yard, the Steinbruch against the
+// Schleusingen quarry, the hunting lodge against the Kickelhahn's lookout tower. Fair by value: each
+// side a lodge at home, a works in the trees by the centre road, a quarry hamlet and a flank
+// hamlet, a hut on the high ground toward the Rennsteig, all at matching distances from its base.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
-import { smoothstep } from '../core/math.js';
-import { buildSite, buildVillage, commandPost, mirrored } from './common.js';
+import { mulberry32, smoothstep } from '../core/math.js';
+import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -20,10 +24,12 @@ const ROADS_X = [-340, 0, 340];    // the forest road in the middle, a lane up e
 const noise = createNoise2D(1988);
 
 /** A road's line: x of road k at depth z (wiggling along the valley floor). */
-const roadX = (rx, z) => rx + Math.sin(z * 0.009 + rx * 0.01) * 16 + Math.sin(z * 0.027) * 5;
+const wiggle = (rx, z) => Math.sin(z * 0.009 + rx * 0.01 + 0.8) * 16 + Math.sin(z * 0.027 + 1.9) * 5;
+const roadX = (rx, z) => rx + wiggle(rx, z) - wiggle(rx, 0); // (each road through its x on the Rennsteig)
+const trackZ = (x) => Math.sin(x * 0.008 + 1.1) * 12 - Math.sin(1.1) * 12; // the Rennsteig track, through the crossroads at (0, 0)
 /** Distance to the nearest road (the three roads and the Rennsteig track across z ≈ 0). */
 function roadDist(x, z) {
-  let d = Math.abs(z - Math.sin(x * 0.008) * 12);                // the Rennsteig track
+  let d = Math.abs(z - trackZ(x));                               // the Rennsteig track
   for (const rx of ROADS_X) d = Math.min(d, Math.abs(x - roadX(rx, z)));
   return d;
 }
@@ -33,12 +39,12 @@ const points: ControlPointDef[] = [
   { id: 'B', name: 'Oberhof', x: -420, z: 230, owner: null, sector: 'west' },
   { id: 'C', name: 'Sägewerk', x: -60, z: 340, owner: null, sector: 'centre' },
   { id: 'D', name: 'Steinbruch', x: 270, z: 390, owner: null, sector: 'east' },
-  { id: 'E', name: 'Jagdhütte', x: -190, z: 95, owner: null, sector: 'west', radius: 20 },
+  { id: 'E', name: 'Jagdhütte', x: -172, z: 105, owner: null, sector: 'west', radius: 20 },
   { id: 'F', name: 'Rennsteig', x: 0, z: 0, owner: null, sector: 'centre', radius: 20 },
-  { id: 'G', name: 'Kickelhahn', x: 190, z: -95, owner: null, sector: 'east', radius: 20 },
-  { id: 'H', name: 'Schleusingen Bruch', x: -270, z: -390, owner: null, sector: 'west' },
-  { id: 'I', name: 'Holzplatz', x: 60, z: -340, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Frauenwald', x: 420, z: -230, owner: null, sector: 'east' },
+  { id: 'G', name: 'Kickelhahn', x: 218, z: -84, owner: null, sector: 'east', radius: 20 },
+  { id: 'H', name: 'Schleusingen Bruch', x: -305, z: -368, owner: null, sector: 'west' },
+  { id: 'I', name: 'Holzplatz', x: 30, z: -355, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Frauenwald', x: 400, z: -255, owner: null, sector: 'east' },
   { id: 'K', name: 'Allzunah', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(points.map((p) => [p.id, p]));
@@ -54,7 +60,7 @@ function raw(x, z) {
 }
 
 function height(x, z) {
-  let h = (raw(x, z) + raw(-x, -z)) / 2 + 6;          // point-symmetric hills; the flanks roll gently
+  let h = raw(x, z) + 6;                               // the forest's hills; the flanks roll gently
   h -= smoothstep(30, 6, roadDist(x, z)) * h * 0.45;  // the roads run in the valleys / cuttings
   for (const p of points) {                            // clearings are level-ish
     const k = smoothstep(CLEARING, CLEARING * 0.4, Math.hypot(x - p.x, z - p.z));
@@ -65,11 +71,8 @@ function height(x, z) {
   return Math.min(30, h);                              // trees grow up to 32 m above zero
 }
 
-/** Copses on the open flanks (0..1), point-symmetric. */
-const copse = (x, z) => {
-  const [ax, az] = z < 0 || (z === 0 && x < 0) ? [-x, -z] : [x, z];
-  return smoothstep(0.5, 0.66, fbm(noise, ax * 0.008 - 17, az * 0.008 + 9, 3));
-};
+/** Copses on the open flanks (0..1). */
+const copse = (x, z) => smoothstep(0.5, 0.66, fbm(noise, x * 0.008 - 17, z * 0.008 + 9, 3));
 
 /** Forest density 0..1: the spruce band and the flank copses, but not the roads, the clearings or the bases. */
 function woods(x, z) {
@@ -143,47 +146,63 @@ export default {
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
 
-    mirrored(props, 2201, (m, flip) => {
-      const at = (p, dx, dz) => ({ x: (p.x + dx) * m, z: (p.z + dz) * m }); // a spot near point p (mirrored)
-      const { A, C, D, E, F } = P;
-      // the forester's lodge at each home clearing
-      props.townHouse({ ...at(A, 14, 0), yaw: flip, width: 12, depth: 9, storeys: 2, name: "forester's lodge" });
-      props.hall({ ...at(A, -16, 8), yaw: Math.PI / 2 + flip, width: 12, depth: 7, height: 4, color: 0x5a4632, name: 'barn' });
-      // sawmill: the mill hall, timber yard, log piles
-      props.hall({ ...at(C, -12, 2), yaw: Math.PI / 2 + flip, width: 26, depth: 12, height: 6.5, color: 0x5e4a36, roof: 0x3e3a34, door: 10, name: 'sawmill' });
-      for (let k = 0; k < 5; k++) props.logPile({ ...at(C, 12 + (k % 2) * 6, -14 + k * 7), yaw: 0.1 * k + flip, length: 9 });
-      props.townHouse({ ...at(C, 20, 20), yaw: flip, width: 9, depth: 8, storeys: 2, name: 'mill house' });
-      // the quarry: a face of rock, boulders, the crusher shed
-      for (let k = 0; k < 9; k++) props.boulder({ ...at(D, -14 + (props.rand() - 0.5) * 40, 14 + (props.rand() - 0.5) * 22), radius: 1.4 + props.rand() * 1.8 });
-      props.hall({ ...at(D, 16, -6), yaw: flip, width: 14, depth: 9, height: 6, color: 0x707068, name: 'crusher shed' });
-      props.wreckCar({ ...at(D, -2, -14), yaw: 0.6 + flip });
-      // the hunting lodge in its copse, a high seat at the clearing's edge
-      props.townHouse({ ...at(E, 0, 2), yaw: 0.3 + flip, width: 9, depth: 7, storeys: 1, name: 'hunting lodge' });
-      props.highSeat({ ...at(E, -26, 16), yaw: flip });
-      props.logPile({ ...at(E, 12, -14), yaw: 1.2 + flip, length: 7 });
-      // the inn at the Rennsteig crossroads (one each side of the track)
-      props.townHouse({ ...at(F, 12, 12), yaw: flip, width: 14, depth: 9, storeys: 2, name: 'Rennsteig inn' });
-      props.lowWall({ ...at(F, -12, 10), yaw: 0, length: 10 });
-    });
-    // hamlets out on the flanks: Oberhof / Frauenwald and Schleusingen Bruch / Steinbruch's neighbour
-    for (const [p, seed] of [[P.B, 9300], [P.H, 9400]] as const) {
-      buildVillage(props, p, seed, 1);
-      buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
-    }
+    props.rand = mulberry32(2201);
+    const at = (p, dx, dz) => ({ x: p.x + dx, z: p.z + dz }); // a spot near point p
+    const { A, C, D, E, F, G, H, I, K } = P;
+    // home: the forester's lodge and its barn (NATO); the Pact's, a forest hut with its stables
+    props.townHouse({ ...at(A, 14, 0), yaw: 0, width: 12, depth: 9, storeys: 2, name: "forester's lodge" });
+    props.hall({ ...at(A, -16, 8), yaw: Math.PI / 2, width: 12, depth: 7, height: 4, color: 0x5a4632, name: 'barn' });
+    props.townHouse({ ...at(K, -10, 6), yaw: 0.2, width: 13, depth: 8, storeys: 2, name: 'forest hut' });
+    props.hall({ ...at(K, 15, -6), yaw: 0.2, width: 14, depth: 6, height: 3.6, color: 0x54422e, name: 'stables' });
+    // the sawmill (NATO's centre): the mill hall, log piles, the mill house
+    props.hall({ ...at(C, -12, 2), yaw: Math.PI / 2, width: 26, depth: 12, height: 6.5, color: 0x5e4a36, roof: 0x3e3a34, door: 10, name: 'sawmill' });
+    for (let k = 0; k < 5; k++) props.logPile({ ...at(C, 12 + (k % 2) * 6, -14 + k * 7), yaw: 0.1 * k, length: 9 });
+    props.townHouse({ ...at(C, 20, 20), yaw: 0, width: 9, depth: 8, storeys: 2, name: 'mill house' });
+    // the timber yard (the Pact's centre): long stacks in rows, the loading shed, the yard office
+    for (let k = 0; k < 7; k++) props.logPile({ ...at(I, -22 + (k % 4) * 11, (k < 4 ? -8 : 8) + props.rand() * 3), yaw: Math.PI / 2 + props.rand() * 0.2, length: 10 });
+    props.hall({ ...at(I, 18, 16), yaw: 0.1, width: 22, depth: 10, height: 5.5, color: 0x5a4834, roof: 0x3e3a34, door: 12, name: 'timber shed' });
+    props.townHouse({ ...at(I, 20, -16), yaw: Math.PI, width: 8, depth: 7, storeys: 2, name: 'yard office' });
+    // the Steinbruch (NATO's east): a face of rock, boulders, the crusher shed
+    for (let k = 0; k < 9; k++) props.boulder({ ...at(D, -14 + (props.rand() - 0.5) * 40, 14 + (props.rand() - 0.5) * 22), radius: 1.4 + props.rand() * 1.8 });
+    props.hall({ ...at(D, 16, -6), yaw: 0, width: 14, depth: 9, height: 6, color: 0x707068, name: 'crusher shed' });
+    props.wreckCar({ ...at(D, -2, -14), yaw: 0.6 });
+    // the Schleusingen quarry (the Pact's west): the face along the far side, spoil, the works shed and a hut
+    for (let k = 0; k < 10; k++) props.boulder({ ...at(H, 20 + (props.rand() - 0.5) * 16, -30 + k * 6 + (props.rand() - 0.5) * 4), radius: 1.2 + props.rand() * 2 });
+    props.hall({ ...at(H, -14, 10), yaw: Math.PI / 2, width: 16, depth: 8, height: 5.5, color: 0x6a6a64, name: 'works shed' });
+    props.townHouse({ ...at(H, -16, -14), yaw: Math.PI / 2, width: 8, depth: 6, storeys: 1, name: "quarrymen's hut" });
+    // the hunting lodge in its copse (NATO's west), a high seat at the clearing's edge
+    props.townHouse({ ...at(E, 0, 2), yaw: 0.3, width: 9, depth: 7, storeys: 1, name: 'hunting lodge' });
+    props.highSeat({ ...at(E, -26, 16), yaw: 0 });
+    props.logPile({ ...at(E, 12, -14), yaw: 1.2, length: 7 });
+    // the Kickelhahn (the Pact's east): the lookout tower on the top and Goethe's hut below it
+    props.tower({ ...at(G, 8, -6), concrete: false });
+    props.townHouse({ ...at(G, -10, 8), yaw: 2.6, width: 8, depth: 6, storeys: 1, name: "Goethe's hut" });
+    props.highSeat({ ...at(G, 24, 18), yaw: Math.PI });
+    props.lowWall({ ...at(G, -2, -16), yaw: 0.4, length: 8 });
+    // the Rennsteig crossroads: the inn on the south side of the track, the forestry barn on the north
+    props.townHouse({ ...at(F, 12, 12), yaw: 0, width: 14, depth: 9, storeys: 2, name: 'Rennsteig inn' });
+    props.lowWall({ ...at(F, -12, 10), yaw: 0, length: 10 });
+    props.hall({ ...at(F, -14, -14), yaw: Math.PI, width: 14, depth: 8, height: 4.5, color: 0x5a4632, name: 'forestry barn' });
+    props.logPile({ ...at(F, 12, -12), yaw: 0.3, length: 8 });
+    // hamlets out on the flanks (Oberhof, Frauenwald) and by the quarries
+    for (const [p, seed] of [[P.B, 9300], [P.J, 9311], [P.D, 9400], [P.H, 9422]] as const) buildVillage(props, p, seed, 1);
     // log piles and woodcutters' wrecks along the roads (cover by the roadside)
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 60 && tries < 6000; tries++) {
-      const rx = ROADS_X[Math.floor(rand() * 3)];
-      const z = 20 + rand() * (bounds.z - 60);
-      const x = roadX(rx, z) + (rand() < 0.5 ? -1 : 1) * (8 + rand() * 4);
-      if (points.some((p) => Math.hypot(p.x - x, p.z - z) < CLEARING + 6) || sites.some((s) => Math.hypot(s.x - x, s.z - z) < 30) || Math.hypot(x, z - BASE_Z) < 40) continue;
-      sites.push({ x, z, seed: Math.floor(rand() * 1e9), kind: rx === 0 ? (rand() < 0.6 ? 'logs' : 'wrecks') : ['farm', 'fieldwall', 'hay', 'logs'][Math.floor(rand() * 4)] });
+    for (const side of [1, -1]) {
+      let n = 0;
+      for (let tries = 0; n < 60 && tries < 6000; tries++) {
+        const rx = ROADS_X[Math.floor(rand() * 3)];
+        const z = side * (20 + rand() * (bounds.z - 60));
+        const x = roadX(rx, z) + (rand() < 0.5 ? -1 : 1) * (8 + rand() * 4);
+        if (points.some((p) => Math.hypot(p.x - x, p.z - z) < CLEARING + 6) || sites.some((s) => Math.hypot(s.x - x, s.z - z) < 30) || Math.hypot(x, z - side * BASE_Z) < 40) continue;
+        sites.push({ x, z, seed: Math.floor(rand() * 1e9), kind: rx === 0 ? (rand() < 0.6 ? 'logs' : 'wrecks') : ['farm', 'fieldwall', 'hay', 'logs'][Math.floor(rand() * 4)] });
+        n++;
+      }
     }
     for (const s of sites) {
-      mirrored(props, s.seed, (m, flip) => {
-        if (s.kind === 'logs') props.logPile({ x: s.x * m, z: s.z * m, yaw: flip + props.rand() * 0.3, length: 7 + props.rand() * 4 });
-        else buildSite(props, { kind: s.kind, seed: s.seed }, s.x * m, s.z * m, flip);
-      });
+      props.rand = mulberry32(s.seed);
+      if (s.kind === 'logs') props.logPile({ x: s.x, z: s.z, yaw: props.rand() * 0.3, length: 7 + props.rand() * 4 });
+      else buildSite(props, { kind: s.kind, seed: s.seed }, s.x, s.z, 0);
     }
     commandPost(props, this.bases.nato, -1, 0x4e5236);
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);

@@ -5,34 +5,44 @@
 // its ridge — a sheer escarpment toward the valley, a long back slope behind, two saddles where the tracks cross — over a
 // valley of flooded rice paddies (map.soft: men wade, tanks bog down) and the ruined towns at its ends: Naha in the west,
 // Yonabaru in the east, joined by the Naha–Yonabaru road. The Japanese ridge carries Sugar Loaf Hill, Shuri Castle and
-// Conical Hill; the American one, its point mirror, Kochi Ridge, the Maeda Escarpment and Kakazu Ridge. The rains came
-// in late May and turned it all to mud. The US come from the north-facing side (+z), the Japanese from -z.
+// Conical Hill; the American one Kochi Ridge, the Maeda Escarpment and Kakazu Ridge. Not mirrored, but fair: the two
+// ridges are as high and as long on the whole but not twins (Kakazu tall in the west against the Japanese Conical Hill
+// in the east, Shuri's broad height against the Maeda Escarpment, Sugar Loaf small and steep), each side's saddles are
+// its own, and Naha and Yonabaru differ in size and layout. The rains came in late May and turned it all to mud.
+// The US come from the north-facing side (+z), the Japanese from -z.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { commandPost, mirrored, shellField } from './common.js';
+import { commandPost, shellField } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
 const noise = createNoise2D(1945_05);
 const BOUNDS = { x: 500, z: 560 };
 
-// (shapes in the half-plane frame: X, U = x, z for the US half, -x, -z for the Japanese one — point-mirrored for free)
-const frame = (x: number, z: number) => (z >= 0 ? [x, z] : [-x, -z]);
+// (shapes in each side's own frame: X, U = x, z on the US half (s = 1), -x, -z on the Japanese one (s = -1): X runs
+// left to right as that side faces the valley, U is the distance back from the middle)
+const frame = (x: number, z: number): [number, number, number] => (z >= 0 ? [x, z, 1] : [-x, -z, -1]);
 /** The crest line of a side's ridge (U at X). */
-export const crestU = (X: number) => 272 + Math.sin(X * 0.011) * 14 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10;
-/** The ridge's height along the crest: Kakazu Ridge, the Maeda Escarpment, Kochi Ridge (Conical Hill, Shuri, Sugar Loaf mirrored). */
-const crestH = (X: number) => 16 + 18 * Math.exp(-(((X + 320) / 70) ** 2)) + 16 * Math.exp(-(((X - 60) / 80) ** 2)) + 14 * Math.exp(-(((X - 330) / 70) ** 2));
-/** The saddles the tracks cross the ridge by (0 in one). */
-const PASSES = [-140, 200];
-const pass = (X: number) => PASSES.reduce((k, p) => k * (1 - 0.88 * Math.exp(-(((X - p) / 34) ** 2))), 1);
-/** The Naha–Yonabaru road along the valley (an odd function: its own point mirror). */
-export const roadZ = (x: number) => -0.16 * x + 18 * Math.sin(x * 0.012);
-/** The tracks of the US half (mirrored for the Japanese): from the base over each saddle down to the valley road. */
+export const crestU = (X: number, s = 1) => s > 0
+  ? 272 + Math.sin(X * 0.011) * 14 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10
+  : 266 + Math.sin(X * 0.008 + 1.3) * 18 + fbm(noise, X * 0.006 + 90, 7.1, 2) * 10;
+/** The ridge's height along the crest: Kakazu Ridge, the Maeda Escarpment, Kochi Ridge; Sugar Loaf (small and steep), Shuri (broad, highest), Conical Hill. */
+const crestH = (X: number, s = 1) => s > 0
+  ? 16 + 18 * Math.exp(-(((X + 320) / 70) ** 2)) + 16 * Math.exp(-(((X - 60) / 80) ** 2)) + 14 * Math.exp(-(((X - 330) / 70) ** 2))
+  : 15 + 12 * Math.exp(-(((X - 270) / 45) ** 2)) + 17 * Math.exp(-(((X - 20) / 95) ** 2)) + 17 * Math.exp(-(((X + 360) / 60) ** 2));
+/** The saddles the tracks cross each ridge by (0 in one), in that side's X. */
+const PASSES = { 1: [-140, 200], [-1]: [-170, 150] };
+const pass = (X: number, s = 1) => PASSES[s].reduce((k, p) => k * (1 - 0.88 * Math.exp(-(((X - p) / 34) ** 2))), 1);
+/** The Naha–Yonabaru road along the valley. */
+export const roadZ = (x: number) => -0.16 * x + 18 * Math.sin(x * 0.012 + 0.6) - 18 * Math.sin(0.6);
+/** The tracks: from each base over its saddles down to the valley road. */
 const TRACKS: [number, number][][] = [
   [[0, 500], [0, 420], [-140, 340], [-140, 210], [-90, roadZ(-90)]],
   [[0, 420], [200, 340], [200, 210], [250, roadZ(250)]],
+  [[0, -500], [0, -420], [170, -340], [170, -205], [120, roadZ(120)]],
+  [[0, -420], [-150, -345], [-150, -205], [-230, roadZ(-230)]],
 ];
 function segDist(px: number, pz: number, [ax, az]: [number, number], [bx, bz]: [number, number]) {
   const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
@@ -41,26 +51,27 @@ function segDist(px: number, pz: number, [ax, az]: [number, number], [bx, bz]: [
 /** Metres to the nearest road or track. */
 function roadDist(x: number, z: number) {
   let d = Math.abs(x) < 490 ? Math.abs(z - roadZ(x)) : Infinity;
-  for (const t of TRACKS) for (let i = 0; i + 1 < t.length; i++) d = Math.min(d, segDist(x, z, t[i], t[i + 1]), segDist(-x, -z, t[i], t[i + 1]));
+  for (const t of TRACKS) for (let i = 0; i + 1 < t.length; i++) d = Math.min(d, segDist(x, z, t[i], t[i + 1]));
   return d;
 }
 
-// the towns at the valley's ends: Naha (west, on the US side of the road) and Yonabaru, its mirror
-const TOWN = { x: -330, z: roadZ(-330) + 22, r: 70 };
-const inTown = (x: number, z: number, pad = 0) => [1, -1].some((s) => Math.hypot(x - TOWN.x * s, z - TOWN.z * s) < TOWN.r + pad);
+// the towns at the valley's ends: Naha (west, on the US side of the road), wide and low; Yonabaru (east, on the Japanese
+// side), smaller and tighter round its crossroads
+const TOWNS = [{ x: -330, z: roadZ(-330) + 22, r: 70 }, { x: 345, z: roadZ(345) - 26, r: 62 }];
+const inTown = (x: number, z: number, pad = 0) => TOWNS.some((t) => Math.hypot(x - t.x, z - t.z) < t.r + pad);
 
-/** The rice paddies: the valley floor's flooded fields, each its own dyked plot on a grid centred on the map's middle
- *  (so the point mirror of a plot is a plot), whole plots in or out by point-symmetric noise; none on the roads or in the towns. */
+/** The rice paddies: the valley floor's flooded fields, each its own dyked plot on a grid, whole plots in or out by
+ *  noise; none on the roads or in the towns. */
 const PW = 26, PD = 22;
 const paddyN = (x: number, z: number) => fbm(noise, x * 0.006 + 5, z * 0.006 - 9, 3);
-const hash = (i: number, j: number) => { const f = (a: number, b: number) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); }; return (f(i, j) + f(-i, -j)) / 2; };
+const hash = (i: number, j: number) => { const v = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return v - Math.floor(v); };
 const plots = new Map<string, number>(); // (plot -> its water level, or -1: dry)
 function plot(x: number, z: number) {
   const i = Math.round(x / PW), j = Math.round(z / PD), key = i + ',' + j;
   let level = plots.get(key);
   if (level === undefined) {
-    const cx = i * PW, cz = j * PD, [X, U] = frame(cx, cz);
-    const ok = U < crestU(X) - 110 && Math.abs(cx) < 440 && Math.max(paddyN(cx, cz), paddyN(-cx, -cz)) > -0.02
+    const cx = i * PW, cz = j * PD, [X, U, s] = frame(cx, cz);
+    const ok = U < crestU(X, s) - 110 && Math.abs(cx) < 440 && paddyN(cx, cz) > -0.12
       && roadDist(cx, cz) > 21 && !inTown(cx, cz, 16) && Math.hypot(cx, cz) > 40;
     level = ok ? 1.3 + hash(i, j) * 0.6 : -1; // (the terraces: each plot a hand or two above or below its neighbours)
     plots.set(key, level);
@@ -74,20 +85,20 @@ function paddy(x: number, z: number) {
 }
 
 function height(x: number, z: number) {
-  const [X, U] = frame(x, z);
+  const [X, U, s] = frame(x, z);
   let h = 2.6 + fbm(noise, x * 0.006, z * 0.006, 3) * 1.8 + fbm(noise, x * 0.04, z * 0.04, 2) * 0.4; // the valley: low rolling ground
   // the ridge: a sheer coral escarpment toward the valley, a long back slope behind, broken crest, the saddles
-  const c = crestU(X);
+  const c = crestU(X, s);
   const face = smoothstep(c - 30, c - 4, U);
   const back = 1 - 0.75 * smoothstep(c + 15, c + 190, U);
   const rough = 1 + ridged(noise, x * 0.035 + 7, z * 0.035, 3) * 0.16;
-  h += crestH(X) * pass(X) * Math.min(face, back) * rough;
+  h += crestH(X, s) * pass(X, s) * Math.min(face, back) * rough;
   h += smoothstep(430, 560, Math.abs(x)) * 30 + smoothstep(560, 680, Math.abs(z)) * 12; // the hills beyond the edges
   // the paddies: flat, sunk a little, terraced by their dykes (painted)
   const pl = plot(x, z);
   if (pl.level >= 0) h += (pl.level - h) * smoothstep(0.4, 3.5, pl.edge) + 0.35 * smoothstep(1.4, 0.4, pl.edge); // (the dyke round it a little proud)
   for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
-  for (const s of [1, -1]) h += (3.2 - h) * smoothstep(TOWN.r, TOWN.r - 25, Math.hypot(x - TOWN.x * s, z - TOWN.z * s)); // the towns: level
+  for (const t of TOWNS) h += (3.2 - h) * smoothstep(t.r, t.r - 25, Math.hypot(x - t.x, z - t.z)); // the towns: level
   return h;
 }
 
@@ -99,18 +110,19 @@ function soft(x: number, z: number, foot: boolean) {
 
 const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 const hill = (X: number) => ({ x: X, z: crestU(X) });
+const theirHill = (X: number) => ({ x: -X, z: -crestU(X, -1) }); // (X in the Japanese frame)
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Machinato', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'A', name: 'Machinato', x: 25, z: 470, owner: 'nato', sector: 'centre' },
   { id: 'B', name: 'Kakazu Ridge', ...hill(-320), owner: null, sector: 'west' },
   { id: 'C', name: 'Maeda Escarpment', ...hill(60), owner: null, sector: 'centre' },
   { id: 'D', name: 'Kochi Ridge', ...hill(330), owner: null, sector: 'east' },
-  { id: 'E', name: 'Naha', x: TOWN.x, z: TOWN.z, owner: null, sector: 'west' },
+  { id: 'E', name: 'Naha', x: TOWNS[0].x, z: TOWNS[0].z, owner: null, sector: 'west' },
   { id: 'F', name: 'Wana Draw', x: 0, z: 0, owner: null, sector: 'centre' },
-  { id: 'G', name: 'Yonabaru', x: -TOWN.x, z: -TOWN.z, owner: null, sector: 'east' },
-  { id: 'H', name: 'Sugar Loaf Hill', x: -330, z: -crestU(330), owner: null, sector: 'west' },
-  { id: 'I', name: 'Shuri Castle', x: -60, z: -crestU(60), owner: null, sector: 'centre' },
-  { id: 'J', name: 'Conical Hill', x: 320, z: -crestU(-320), owner: null, sector: 'east' },
-  { id: 'K', name: 'Haebaru', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'G', name: 'Yonabaru', x: TOWNS[1].x, z: TOWNS[1].z, owner: null, sector: 'east' },
+  { id: 'H', name: 'Sugar Loaf Hill', ...theirHill(270), owner: null, sector: 'west' },
+  { id: 'I', name: 'Shuri Castle', ...theirHill(20), owner: null, sector: 'centre' },
+  { id: 'J', name: 'Conical Hill', ...theirHill(-360), owner: null, sector: 'east' },
+  { id: 'K', name: 'Haebaru', x: 25, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
@@ -156,15 +168,15 @@ export default {
           return [t < 0.5 ? 0x74827a : 0x66745a, 0.85 * p];                                  // the flooded fields, grey with the sky (some planted green)
         }
         if (inTown(x, z, -8)) return [0x7a7466, 0.6];                                          // the towns: rubble and coral dust
-        const [X, U] = frame(x, z);
-        const cliff = smoothstep(crestU(X) - 40, crestU(X) - 15, U) * smoothstep(crestU(X) + 5, crestU(X) - 8, U) * pass(X);
+        const [X, U, s] = frame(x, z), c = crestU(X, s);
+        const cliff = smoothstep(c - 40, c - 15, U) * smoothstep(c + 5, c - 8, U) * pass(X, s);
         if (cliff > 0.3) return [0xb0a890, cliff * 0.7];                                      // the escarpment: bare coral limestone
         return null;
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-140, 0, 200] }, pact: { x: 0, z: -BASE_Z, entries: [-200, 0, 140] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-140, 0, 200] }, pact: { x: 0, z: -BASE_Z, entries: [-150, 0, 170] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
@@ -177,10 +189,13 @@ export default {
 
   // weeks of shelling: craters thick on the ridges, scattered over the valley
   battlefield() {
-    const blasts = shellField(1945_0511, BOUNDS, (x, z) => {
-      const c = crestU(x);
-      return 0.12 + 0.9 * smoothstep(70, 10, Math.abs(z - c + 20)) + (paddy(x, z) > 0.3 ? -0.08 : 0);
-    });
+    const density = (x, z) => {
+      const [X, U, s] = frame(x, z);
+      return 0.12 + 0.9 * smoothstep(70, 10, Math.abs(U - crestU(X, s) + 20)) + (paddy(x, z) > 0.3 ? -0.08 : 0);
+    };
+    // (shellField scatters one half and mirrors it: keep its first half each time, the second from another seed turned round)
+    const half = (seed, f) => shellField(seed, BOUNDS, f).filter((_, i) => i % 2 === 0);
+    const blasts = [...half(1945_0511, density), ...half(1945_0512, (x, z) => density(-x, -z)).map(([x, z, r, d]) => [-x, -z, r, d])];
     return { blasts, ruins: [], works: [] };
   },
 
@@ -210,18 +225,18 @@ export default {
     };
 
     // ---- the towns: Naha and Yonabaru — tile-roofed houses behind coral walls, nearly all ruined, the road through
-    mirrored(props, 4501, (m, flip) => {
-      const R = props.rand, cx = TOWN.x * m, cz = TOWN.z * m;
-      for (let i = 0; i < 26; i++) {
-        const a = R() * Math.PI * 2, d = 10 + R() * (TOWN.r - 16);
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, w = 8 + R() * 6, dp = 7 + R() * 3;
-        const yaw = Math.round(R() * 4) * (Math.PI / 2) + flip;
+    TOWNS.forEach((t, k) => {
+      const R = mulberry32(4501 + k), cx = t.x, cz = t.z, n = k ? 30 : 26, grid = k ? 0.4 : 0; // (Yonabaru: tighter, its streets turned)
+      for (let i = 0; i < n; i++) {
+        const a = R() * Math.PI * 2, d = 10 + R() * (t.r - 16);
+        const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d, w = 8 + R() * 6, dp = 7 + R() * 3;
+        const yaw = Math.round(R() * 4) * (Math.PI / 2) + grid;
         if (roadDist(x, z) < 9 || Math.hypot(x - cx, z - cz) < 14) continue;
         if (R() < 0.3) props.house({ x, z, yaw, width: w, depth: dp });
         else props.ruinBlock({ x, z, yaw, width: w, depth: dp, storeys: R() < 0.25 ? 2 : 1, ruin: 0.4 + R() * 0.4, name: 'house' });
-        if (R() < 0.6) props.lowWall({ x: x + 6 * m, z: z + 6 * m, yaw: yaw + Math.PI / 2, length: 6 + R() * 6, height: 1.4, color: CORAL });
+        if (R() < 0.6) props.lowWall({ x: x + 6, z: z + 6, yaw: yaw + Math.PI / 2, length: 6 + R() * 6, height: 1.4, color: CORAL });
       }
-      for (let i = 0; i < 18; i++) props.rubble(cx + (R() - 0.5) * TOWN.r * 1.4, cz + (R() - 0.5) * TOWN.r * 1.4, 0.4 + R() * 0.6, true);
+      for (let i = 0; i < 18; i++) props.rubble(cx + (R() - 0.5) * t.r * 1.4, cz + (R() - 0.5) * t.r * 1.4, 0.4 + R() * 0.6, true);
     });
 
     // ---- Shuri Castle on its ridge: the curving coral walls of the old Ryukyu kings' castle, battered to rubble
@@ -234,7 +249,7 @@ export default {
       }
       for (let i = 0; i < 4; i++) props.ruinBlock({ x: p.x + (i - 1.5) * 13 + 5, z: p.z - 14 - (i % 2) * 6, yaw: 0, width: 10, depth: 8, storeys: 1, ruin: 0.75, name: 'castle hall' });
     }
-    // ---- the Maeda Escarpment's crest (its mirror): coral pinnacles in a ring of the same cover
+    // ---- the Maeda Escarpment's crest: coral pinnacles in a ring, cover like Shuri's walls
     {
       const p = points.find((q) => q.id === 'C')!;
       const R = mulberry32(4502);
@@ -242,35 +257,33 @@ export default {
     }
 
     // ---- both ridges: coral outcrops on the faces, tombs on the back slopes, gun pits behind the crest
-    mirrored(props, 4503, (m, flip) => {
-      const R = props.rand;
+    // (each side in its own frame: X, U → x = X·m, z = U·m)
+    for (const [m, seed, tombs, guns] of [[1, 4503, [-380, -250, -60, 130, 280, 400], [-300, 60, 320]], [-1, 4504, [-410, -230, -40, 90, 210, 380], [-360, 20, 270]]] as const) {
+      const R = mulberry32(seed), flip = m > 0 ? 0 : Math.PI;
       for (let i = 0; i < 170; i++) {
-        const X = (R() * 2 - 1) * 450, U = crestU(X) - 50 + R() * 80, rad = 0.8 + R() * 2.4;
-        if (pass(X) < 0.5 || near(X * m, U * m, 18)) continue;
+        const X = (R() * 2 - 1) * 450, U = crestU(X, m) - 50 + R() * 80, rad = 0.8 + R() * 2.4;
+        if (pass(X, m) < 0.5 || near(X * m, U * m, 18)) continue;
         props.boulder({ x: X * m, z: U * m, radius: rad });
       }
-      for (const X of [-380, -250, -60, 130, 280, 400]) {
-        const U = crestU(X) + 40 + R() * 40;
+      for (const X of tombs) {
+        const U = crestU(X, m) + 40 + R() * 40;
         if (roadDist(X * m, U * m) > 12) tomb(X * m, U * m, (m > 0 ? Math.PI : 0) + (R() - 0.5) * 0.6);
       }
-      for (const X of [-300, 60, 320]) {
-        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 16) * m, z: (crestU(X) + 60 + (k % 2) * 6) * m, radius: 4, toward: m });
-        props.crates({ x: (X + 28) * m, z: (crestU(X) + 80) * m, yaw: R() });
+      for (const X of guns) {
+        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 16) * m, z: (crestU(X, m) + 60 + (k % 2) * 6) * m, radius: 4, toward: m });
+        props.crates({ x: (X + 28) * m, z: (crestU(X, m) + 80) * m, yaw: R() + flip });
       }
-    });
+    }
 
-    // ---- the valley: burnt-out tanks, broken walls and tombs between the paddies; mirrored
-    for (let i = 0; i < 60; i++) {
-      const x = (r() * 2 - 1) * (bounds.x - 40), z = 12 + r() * 190;
-      if (near(x, z, 30) || roadDist(x, z) < 8 || inTown(x, z, 8) || paddy(x, z) > 0.1 || Math.abs(x) < 20) continue;
-      const seed = Math.floor(r() * 1e9), kind = r();
-      mirrored(props, seed, (m, flip) => {
-        const R = props.rand;
-        if (kind < 0.25) hulk(x * m, z * m, R() * 6.28, R() < 0.6 ? 0x4b4e34 : 0x6a6440);
-        else if (kind < 0.5) tomb(x * m, z * m, R() * 6.28);
-        else if (kind < 0.75) props.lowWall({ x: x * m, z: z * m, yaw: R() * 3 + flip, length: 5 + R() * 6, height: 1.3, color: CORAL });
-        else for (let k = 0; k < 3; k++) props.boulder({ x: x * m + (R() - 0.5) * 8, z: z * m + (R() - 0.5) * 8, radius: 0.7 + R() * 1.2 });
-      });
+    // ---- the valley: burnt-out tanks, broken walls and tombs between the paddies
+    for (let i = 0; i < 120; i++) {
+      const x = (r() * 2 - 1) * (bounds.x - 40), z = (r() * 2 - 1) * 200;
+      if (near(x, z, 30) || roadDist(x, z) < 8 || inTown(x, z, 8) || paddy(x, z) > 0.1 || Math.hypot(x, z) < 20) continue;
+      const kind = r();
+      if (kind < 0.25) hulk(x, z, r() * 6.28, r() < 0.6 ? 0x4b4e34 : 0x6a6440);
+      else if (kind < 0.5) tomb(x, z, r() * 6.28);
+      else if (kind < 0.75) props.lowWall({ x, z, yaw: r() * 3, length: 5 + r() * 6, height: 1.3, color: CORAL });
+      else for (let k = 0; k < 3; k++) props.boulder({ x: x + (r() - 0.5) * 8, z: z + (r() - 0.5) * 8, radius: 0.7 + r() * 1.2 });
     }
     // ---- telegraph poles along the road, most of them shot down
     for (let x = -470; x <= 470; x += 36) {
@@ -290,7 +303,7 @@ export default {
       scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, broadleaf: 0.6, autumn: 0, maxY: 80,
       forest: (x: number, z: number) => {
         if (inTown(x, z)) return 0.04;
-        const [X, U] = frame(x, z), c = crestU(X);
+        const [X, U, s] = frame(x, z), c = crestU(X, s);
         if (slope(x, z) > 0.8) return -1;
         const edge = Math.max(smoothstep(420, 480, Math.abs(x)), smoothstep(520, 560, Math.abs(z)));
         return Math.max(edge, U > c + 30 ? 0.35 * smoothstep(0.0, 0.3, fbm(noise, x * 0.01 + 3, z * 0.01, 2) + 0.15) : U > c - 40 ? 0.05 : 0.1);

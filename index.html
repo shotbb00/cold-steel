@@ -80,11 +80,15 @@
     <div class="boot-card">
       <div class="logo"><img class="logo-art" src="brand/mark.svg" alt="Cold Steel" width="605" height="268"><span class="logo-tag">World War III, 1985</span></div>
       <script>
-        // the boot screen's tagline in the war the game is set in (data/epoch.js; settings 'epoch', or ?epoch=)
+        // the boot screen's tagline: the war and region the menu was left on (ui/MainMenu.js keeps every title in
+        // 'coldsteel.titles'; settings 'epoch' / 'theatre' / 'region', or ?epoch=)
         try {
-          const year = new URLSearchParams(location.search).get('epoch') || JSON.parse(localStorage.getItem('coldsteel.settings') || '{}').epoch;
-          // (the titles of data/epoch.js; a year it doesn't know: no tagline rather than the wrong war)
-          const tag = { 1806: 'Jena and Auerstedt, 1806 (beta)', 1945: 'Western Front, spring 1945', 1985: 'World War III, 1985' }[year || '1985'];
+          const s = JSON.parse(localStorage.getItem('coldsteel.settings') || '{}');
+          const year = new URLSearchParams(location.search).get('epoch') || s.epoch || '1985';
+          const T = JSON.parse(localStorage.getItem('coldsteel.titles') || '{}')[year];
+          const t = T && (T[s.theatre] || T.land);
+          // (never run the menu yet: the war's own title, as data/epoch.js has it; a year it doesn't know: none)
+          const tag = (t && (t[s.region] || t._)) || { 1806: 'Jena and Auerstedt, 1806', 1918: 'The Western Front, 1918', 1945: 'Western Front, spring 1945', 1985: 'World War III, 1985', 2027: 'The Suwałki Gap, 2027' }[year];
           document.querySelector('#loading .logo-tag').textContent = tag || '';
         } catch (e) { /* storage blocked: 1985 */ }
       </script>

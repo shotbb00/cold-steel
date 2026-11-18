@@ -2,7 +2,7 @@
 // Lithuanian countryside — villages of plastered houses with their farm sheds, silos and church,
 // blocks of flats, wind turbines, solar fields, power lines, asphalt with its lane lines — and the
 // usual mirrored layout (NATO south, +z; Russia north) and the vegetation pass. Everything builds in
-// point-mirrored pairs from one seed, so neither side gets the better ground.
+// point-mirrored pairs from one seed, so neither side gets the better ground (coverSites with `mirror` false: each half its own).
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32 } from '../core/math.js';
@@ -108,16 +108,16 @@ export function laneLines(props, terrain, cx, z0 = -600, z1 = 600, step = 12, me
   }
 }
 
-/** Cover sites over the fields, mirrored (`ok(x, z)` says where one may go). */
-export function coverSites(props, rand, bounds, ok, count = 130, kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'], build) {
+/** Cover sites over the fields, mirrored (`ok(x, z)` says where one may go); `mirror` false: `count` over the whole map, each its own. */
+export function coverSites(props, rand, bounds, ok, count = 130, kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'], build, mirror = true) {
   const sites = [];
   for (let tries = 0; sites.length < count && tries < 9000; tries++) {
     const x = (rand() * 2 - 1) * (bounds.x - 20);
-    const z = 14 + rand() * (bounds.z - 60);
+    const z = mirror ? 14 + rand() * (bounds.z - 60) : (rand() * 2 - 1) * (bounds.z - 40);
     if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 30 * 30) || !ok(x, z)) continue;
     sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
   }
-  for (const s of sites) { build(props, s, s.x, s.z, s.yaw); build(props, s, -s.x, -s.z, s.yaw + Math.PI); }
+  for (const s of sites) { build(props, s, s.x, s.z, s.yaw); if (mirror) build(props, s, -s.x, -s.z, s.yaw + Math.PI); }
 }
 
 /** The vegetation pass every map ends with: trees (`forest(x, z)`: density, -1 none), hedges (not where `noHedge(x, z)`), ground cover. @param {any} o */

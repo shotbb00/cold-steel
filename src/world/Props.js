@@ -1119,8 +1119,9 @@ export class PropBuilder {
 
   /** Merge every batch into one mesh per material and add them to the scene. */
   finish() {
-    const add = (geo, key) => {
+    const add = (geo, key, loose = false) => {
       const mesh = new THREE.Mesh(packColors(geo), this.material(key));
+      if (loose) mesh.userData.props = true; // (walls, fences, rocks, wrecks — not houses: an airfield may fold them away, systems/Airfields.js carve)
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.scene.add(mesh);
@@ -1131,7 +1132,7 @@ export class PropBuilder {
     const cells = new Map();
     for (const [k, geos] of this.batches) {
       const [key, group] = k.split('#');
-      if (group === undefined) { add(mergeGeometries(geos, false), key); continue; }
+      if (group === undefined) { add(mergeGeometries(geos, false), key, true); continue; }
       const b = this.buildings[+group];
       const ck = `${key}@${Math.floor(b.x / BUILDING_CELL)},${Math.floor(b.z / BUILDING_CELL)}`;
       if (!cells.has(ck)) cells.set(ck, []);

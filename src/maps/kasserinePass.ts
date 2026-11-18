@@ -1,32 +1,40 @@
 // Kasserine Pass, February 1943 (1945 only; North Africa): Rommel's panzers through the Western Dorsal of
 // Tunisia against the green troops of US II Corps. The pass runs along z through the middle of the map: a
-// throat ~200 m wide between Djebel Chambi (west) and Djebel Semmama (east), steep rock 200+ m high that only
-// men on foot climb (`steep`). Through it, side by side, the dry stony bed of the Hatab (a few pools), the road
-// and the railway — they cross at the ford in the throat. At each end the pass opens onto the grey-brown
-// highland plain: a crossroads where the Tebessa road forks off, an Arab village of flat-roofed mud-brick
-// houses, a supply dump, foxholes and sandbagged positions. Point-mirrored like the other maps: each side holds
-// one end and the plain beyond it, both fight for the throat. The US comes in from the north (+z, Thala),
-// the Germans from the south (Kasserine, Sbeitla).
+// throat ~200 m wide between Djebel Chambi (west: Tunisia's highest, broad and massive) and Djebel Semmama
+// (east: a narrower, lower ridge with the plain again behind it, reaching a little further south), steep rock 140+ m high
+// that only men on foot climb (`steep`). Through it, side by side, the dry stony bed of the Hatab (a few
+// pools), the road and the railway — they cross at the ford in the throat. At each end the pass opens onto the
+// grey-brown highland plain. In the north (US): the Hatab crossroads where the Tebessa road forks off west, the
+// Arab village on the Bou Chebka road, the US supply dump, a shelf on Chambi's flank over the throat. In the
+// south (German): the Kasserine crossroads with the Sbeitla road running off east, Douar Kasserine out east,
+// the Afrika Korps dump in the west, a shelf on Semmama's flank. Not a mirror but fair: each end has the same
+// two mountains' flanks, a village, a dump, a crossroads and a shelf over the throat, all as
+// far from its base as the other side's. The US come in from the north (+z, Thala), the Germans from the
+// south (Kasserine, Sbeitla).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, commandPost, mirrored } from './common.js';
+import { buildSite, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 560, z: 720 };
 const BASE_Z = 660;
 const noise = createNoise2D(1943_02);
 
-// ---- the lines through the pass, all odd in z (point-mirrored): x of the road, the wadi, the railway at z
-const road = (z: number) => (Math.abs(z) < 380 ? 35 * Math.sin((Math.PI * z) / 380) : 0);
-const wadi = (z: number) => -45 * Math.sin((Math.PI * z) / 560) - Math.sign(z) * smoothstep(380, 700, Math.abs(z)) * 200;
-const rail = (z: number) => (Math.abs(z) < 400 ? -80 * Math.sin((Math.PI * z) / 400) : Math.sign(z) * (Math.abs(z) - 400) * 0.9);
-const line = (f: (z: number) => number) => Array.from({ length: 61 }, (_, i) => [f(i * 12), i * 12]);
-// the roads in the north half (the south half is their point-mirror): the Thala road through the pass, the
-// Tebessa road forking off north-west at the crossroads, the track to the supply dump
-const ROADS = [line(road), [[0, 380], [-150, 420], [-300, 452], [-570, 505]], [[0, 470], [150, 452], [300, 432]]];
+// ---- the lines through the pass: x of the road, the wadi, the railway at z
+const road = (z: number) => (Math.abs(z) < 380 ? (z > 0 ? 35 : 26) * Math.sin((Math.PI * z) / 380) + 6 * Math.sin(z * 0.02) : 0);
+const wadi = (z: number) => -45 * Math.sin((Math.PI * z) / 560) + 10 * Math.cos(z * 0.012) - 10 - (z > 0 ? smoothstep(380, 700, z) * 200 : -smoothstep(-380, -700, z) * 150);
+const rail = (z: number) => (Math.abs(z) < 400 ? -(z > 0 ? 80 : 64) * Math.sin((Math.PI * z) / 400) : (Math.abs(z) - 400) * (z > 0 ? 0.9 : 0.55));
+const line = (f: (z: number) => number) => Array.from({ length: 121 }, (_, i) => [f(-720 + i * 12), -720 + i * 12]);
+const XR = 380;   // the crossroads at each end
+// the roads: the Thala–Kasserine road through the pass; in the north the Tebessa road forking off north-west at the
+// crossroads and the track to the US dump; in the south the Sbeitla road running off east past Douar Kasserine and the
+// track to the Afrika Korps dump
+const ROADS = [line(road),
+  [[0, XR], [-150, 420], [-300, 452], [-570, 505]], [[0, 470], [150, 452], [300, 432]],
+  [[0, -XR + 20], [170, -392], [330, -410], [570, -440]], [[0, -480], [-140, -470], [-262, -470]]];
 const RAIL = line(rail);
 
 function segDist(poly: number[][], x: number, z: number) {
@@ -39,52 +47,59 @@ function segDist(poly: number[][], x: number, z: number) {
   }
   return best;
 }
-/** Distance to the nearest road (both halves). */
-const roadDist = (x: number, z: number) => Math.min(...ROADS.map((p) => Math.min(segDist(p, x, z), segDist(p, -x, -z))));
-const onRail = (x: number, z: number) => Math.min(segDist(RAIL, x, z), segDist(RAIL, -x, -z)) < 2.4;
+/** Distance to the nearest road. */
+const roadDist = (x: number, z: number) => Math.min(...ROADS.map((p) => segDist(p, x, z)));
+const onRail = (x: number, z: number) => segDist(RAIL, x, z) < 2.4;
 const wadiDist = (x: number, z: number) => Math.abs(x - wadi(z));
 
-/** The west mountain, Djebel Chambi; Djebel Semmama is its point-mirror. */
-function djebel(x: number, z: number) {
-  const az = Math.abs(z);
-  const foot = 82 + fbm(noise, z * 0.008, 5.5, 2) * 16 + 70 * smoothstep(140, 400, az);
-  const u = -x - foot;                                                    // m in from its foot
+/**
+ * A djebel on side w (-1 west, 1 east): `u` m in from its foot (x = w·foot(z)); it ends in a steep, broken face
+ * over the plain at `endN` (north) / `endS` (south).
+ */
+function djebel(x: number, z: number, w: number, foot0: number, endN: number, endS: number, peak0: number, seed: number, width = 0) {
+  const az = Math.abs(z), end = z > 0 ? endN : endS;
+  const foot = foot0 + fbm(noise, z * 0.008 + seed, 5.5, 2) * 16 + 70 * smoothstep(140, 400, az);
+  const u = w * x - foot;
   if (u < -12) return 0;
-  const end = smoothstep(440, 270, az + fbm(noise, x * 0.008, 9.1, 3) * 70); // it ends in a steep, broken face over the plain
-  const k = smoothstep(0, 220, u) * end;
-  const peak = 170 + fbm(noise, x * 0.004 + 3, z * 0.004, 4) * 110;
-  return peak * k ** 1.3 + ridged(noise, x * 0.006 + 2, z * 0.006, 4) * 90 * k * k // the crests and gullies
-    + ridged(noise, x * 0.025, z * 0.025, 3) * 12 * k + 2.5 * smoothstep(-12, 30, u) * end; // rock, and a scree apron at the foot
+  const k0 = smoothstep(end, end - 170, az + fbm(noise, x * 0.008 + seed, 9.1, 3) * 70);
+  const k = smoothstep(0, 220, u) * k0 * (width ? smoothstep(width + 160, width, u) : 1); // (a narrow ridge falls away again behind its crest)
+  const peak = peak0 + fbm(noise, x * 0.004 + 3 + seed, z * 0.004, 4) * 110;
+  return peak * k ** 1.3 + ridged(noise, x * 0.006 + 2 + seed, z * 0.006, 4) * 90 * k * k // the crests and gullies
+    + ridged(noise, x * 0.025, z * 0.025, 3) * 12 * k + 2.5 * smoothstep(-12, 30, u) * k0; // rock, and a scree apron at the foot
 }
+/** Djebel Chambi: broad and high, Tunisia's highest; Djebel Semmama: a narrow, lower ridge nearer the road, the plain again behind it. */
+const chambi = (x: number, z: number) => djebel(x, z, -1, 86, 440, 410, 210, 0);
+const semmama = (x: number, z: number) => djebel(x, z, 1, 74, 400, 430, 140, 17, 90);
 
-// levelled ground (and its point-mirror): the bases, the village, the crossroads, the dump, the hamlet in the pass
-const FLAT = [[0, BASE_Z, 34], [-300, 452, 58], [-10, 375, 56], [300, 432, 48], [62, 142, 26]];
-const SPUR = { x: -140, z: 60, h: 24 }; // the shelf on Chambi's flank over the throat (and its mirror on Semmama)
+// levelled ground: the bases, the villages, the crossroads, the dumps, the hamlets in the pass
+const FLAT = [[0, BASE_Z, 34], [0, -BASE_Z, 34], [-300, 452, 58], [330, -410, 58], [-10, 375, 56], [20, -355, 56], [300, 432, 48], [-262, -470, 48], [62, 142, 26], [-55, -195, 26]];
+const SPURS = [{ x: -140, z: 60, h: 24 }, { x: 135, z: -100, h: 24 }]; // the shelves over the throat: on Chambi's flank (US), on Semmama's (German)
 
 function height(x: number, z: number) {
-  const plain = (a: number, b: number) => fbm(noise, a * 0.004, b * 0.004, 4) * 2.6 + ridged(noise, a * 0.02 + 11, b * 0.02, 2) * 0.7;
-  let h = plain(x, z) + plain(-x, -z) + djebel(x, z) + djebel(-x, -z);
+  let h = fbm(noise, x * 0.004, z * 0.004, 4) * 2.6 + ridged(noise, x * 0.02 + 11, z * 0.02, 2) * 0.7;
+  h += fbm(noise, x * 0.0035 + 40, z * 0.0035 - 20, 3) * 2.6;
+  h += chambi(x, z) + semmama(x, z);
   h += smoothstep(500, 620, Math.abs(x)) * 10;                                        // the rising ground beyond the edges
   h -= 2.6 * smoothstep(14, 4, wadiDist(x, z));                                         // the Hatab's stony bed
-  for (const [fx, fz, fr] of FLAT) for (const m of [1, -1]) h += (1.5 - h) * smoothstep(fr, fr - 20, Math.hypot(x - fx * m, z - fz * m));
-  for (const m of [1, -1]) h += (SPUR.h - h) * smoothstep(34, 14, Math.hypot(x - SPUR.x * m, z - SPUR.z * m));
+  for (const [fx, fz, fr] of FLAT) h += (1.5 - h) * smoothstep(fr, fr - 20, Math.hypot(x - fx, z - fz));
+  for (const s of SPURS) h += (s.h - h) * smoothstep(34, 14, Math.hypot(x - s.x, z - s.z));
   return h;
 }
 
 const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Thala road', x: 0, z: 625, owner: 'nato', sector: 'centre' },
+  { id: 'A', name: 'Thala road', x: -30, z: 625, owner: 'nato', sector: 'centre' },
   { id: 'B', name: 'Bou Chebka road', x: -300, z: 452, owner: null, sector: 'west' },
-  { id: 'C', name: 'Hatab crossroads', x: 0, z: 380, owner: null, sector: 'centre' },
+  { id: 'C', name: 'Hatab crossroads', x: 0, z: XR, owner: null, sector: 'centre' },
   { id: 'D', name: 'US supply dump', x: 300, z: 432, owner: null, sector: 'east' },
-  { id: 'E', name: 'Djebel Chambi', x: SPUR.x, z: SPUR.z, owner: null, sector: 'west' },
-  { id: 'F', name: 'The Throat', x: 0, z: 0, owner: null, sector: 'centre', radius: 30 },
-  { id: 'G', name: 'Djebel Semmama', x: -SPUR.x, z: -SPUR.z, owner: null, sector: 'east' },
-  { id: 'H', name: 'Afrika Korps dump', x: -300, z: -432, owner: null, sector: 'west' },
-  { id: 'I', name: 'Kasserine crossroads', x: 0, z: -380, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Douar Kasserine', x: 300, z: -452, owner: null, sector: 'east' },
-  { id: 'K', name: 'Sbeitla road', x: 0, z: -625, owner: 'pact', sector: 'centre' },
+  { id: 'E', name: 'Djebel Chambi', x: SPURS[0].x, z: SPURS[0].z, owner: null, sector: 'west' },
+  { id: 'F', name: 'The Throat', x: 10, z: 0, owner: null, sector: 'centre', radius: 30 },
+  { id: 'G', name: 'Djebel Semmama', x: SPURS[1].x, z: SPURS[1].z, owner: null, sector: 'east' },
+  { id: 'H', name: 'Afrika Korps dump', x: -262, z: -470, owner: null, sector: 'west' },
+  { id: 'I', name: 'Kasserine crossroads', x: 20, z: -355, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Douar Kasserine', x: 330, z: -410, owner: null, sector: 'east' },
+  { id: 'K', name: 'Sbeitla road', x: -30, z: -625, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
@@ -104,7 +119,7 @@ export default {
   // each side's airstrip on its own plain, west of the road (east for the Germans): clear of the railway
   airfields: [
     { faction: 'nato', x: -320, z: 585, yaw: Math.PI / 2, name: 'Thala airstrip' },
-    { faction: 'pact', x: 320, z: -585, yaw: -Math.PI / 2, name: 'Sbeitla airstrip' },
+    { faction: 'pact', x: 290, z: -600, yaw: -Math.PI / 2, name: 'Sbeitla airstrip' },
   ],
   seed: 1943,
   height,
@@ -169,19 +184,22 @@ export default {
     pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0 })),
   },
 
-  /** The positions dug before the battle: foxholes and MG nests across each mouth of the pass, mirrored. */
+  /** The positions dug before the battle: foxholes and MG nests across each mouth of the pass, each side's own line. */
   battlefield() {
     const works: any[] = [];
-    const add = (kind: string, x: number, z: number) => {
-      works.push({ kind, x, z, yaw: Math.PI, faction: 'nato' });
-      works.push({ kind, x: -x, z: -z, yaw: 0, faction: 'pact' });
-    };
-    for (const x of [-82, -72, -62, -52]) add('trench', x, 300);  // the north mouth, west of the road
-    for (const x of [50, 60, 70]) add('trench', x, 296);           // and east of it
-    add('mgNest', -40, 292);
-    add('mgNest', 86, 292);
-    add('mgNest', SPUR.x + 6, SPUR.z - 14);                        // on the spur, over the throat
-    for (const x of [-26, 22]) add('sandbags', x, 360);            // the crossroads
+    const add = (f: 'nato' | 'pact', kind: string, x: number, z: number) => works.push({ kind, x, z, yaw: f === 'nato' ? Math.PI : 0, faction: f });
+    for (const x of [-108, -98, -88, -78]) add('nato', 'trench', x, 300); // the north mouth, west of the road and the Hatab
+    for (const x of [50, 60, 70]) add('nato', 'trench', x, 296);            // and east of it
+    add('nato', 'mgNest', -40, 292);
+    add('nato', 'mgNest', 86, 292);
+    add('nato', 'mgNest', SPURS[0].x + 6, SPURS[0].z - 14);                 // on the shelf, over the throat
+    for (const x of [-26, 22]) add('nato', 'sandbags', x, 360);             // the crossroads
+    for (const x of [-60, -50, -40]) add('pact', 'trench', x, -318);        // the south mouth, west of the road
+    for (const x of [60, 70, 80, 90]) add('pact', 'trench', x, -310);       // and east of it, beyond the railway
+    add('pact', 'mgNest', -74, -310);
+    add('pact', 'mgNest', 100, -302);
+    add('pact', 'mgNest', SPURS[1].x - 8, SPURS[1].z + 14);
+    for (const x of [-8, 44]) add('pact', 'sandbags', x, -334);
     return { blasts: [], ruins: [], works };
   },
 
@@ -193,98 +211,96 @@ export default {
     const clear = (x: number, z: number, d = 10) => roadDist(x, z) > d && !onRail(x, z) && wadiDist(x, z) > d;
     const MUD = 0xb09c80;
 
-    // ---- the villages: flat-roofed mud-brick houses round a mosque, garden walls (Bou Chebka road / Douar Kasserine)
-    mirrored(props, 31, (m, flip) => {
-      const cx = -300 * m, cz = 452 * m;
-      const placed = [[cx + 4 * m, cz - 26 * m, 9]];
-      props.flatHouse({ x: placed[0][0], z: placed[0][1], yaw: flip, width: 11, depth: 9, name: 'mosque', dome: true });
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 9) * Math.PI * 2 + props.rand() * 0.4;
+    // ---- the villages: flat-roofed mud-brick houses round a mosque, garden walls (Bou Chebka road, round; Douar
+    // Kasserine, strung out along the Sbeitla road)
+    for (const [cx, cz, seed, sx, sz, myaw] of [[-300, 452, 31, 1, 1, 0], [330, -410, 35, 1.45, 0.7, Math.PI]] as number[][]) {
+      props.rand = mulberry32(seed);
+      const placed = [[cx + 4, cz + (myaw ? 24 : -26), 9]];
+      props.flatHouse({ x: placed[0][0], z: placed[0][1], yaw: myaw, width: 11, depth: 9, name: 'mosque', dome: true });
+      for (let i = 0; i < 11; i++) {
+        const a = (i / 11) * Math.PI * 2 + props.rand() * 0.4;
         const d = 18 + props.rand() * 18;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m;
+        const x = cx + Math.cos(a) * d * sx, z = cz + Math.sin(a) * d * sz;
         if (roadDist(x, z) < 8 || placed.some(([px, pz, pr]) => Math.hypot(px - x, pz - z) < pr + 7)) continue;
         placed.push([x, z, 6]);
         props.flatHouse({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), width: 6 + props.rand() * 4, depth: 5 + props.rand() * 3, storeys: props.rand() < 0.2 ? 2 : 1 });
-        if (props.rand() < 0.6) props.lowWall({ x: x + 5 * m, z: z + 4 * m, yaw: props.rand() < 0.5 ? 0 : Math.PI / 2, length: 6 + props.rand() * 6, height: 1.6, color: MUD });
+        if (props.rand() < 0.6) props.lowWall({ x: x + 5, z: z + 4, yaw: props.rand() < 0.5 ? 0 : Math.PI / 2, length: 6 + props.rand() * 6, height: 1.6, color: MUD });
       }
-      props.column({ x: cx - 6 * m, z: cz + 2 * m, radius: 1.4, height: 0.9 }); // the well
-    });
+      props.column({ x: cx - 6, z: cz + 2, radius: 1.4, height: 0.9 }); // the well
+    }
     // ---- the crossroads at each mouth: a few houses, a café, the level crossing
-    mirrored(props, 32, (m, flip) => {
-      props.flatHouse({ x: 26 * m, z: 400 * m, yaw: flip, width: 9, depth: 7, name: 'café' });
-      props.flatHouse({ x: 28 * m, z: 360 * m, yaw: flip + Math.PI / 2, width: 8, depth: 6 });
-      props.flatHouse({ x: -62 * m, z: 362 * m, yaw: flip, width: 7, depth: 6, name: 'gendarmerie', storeys: 2 });
-      props.lowWall({ x: 38 * m, z: 380 * m, yaw: Math.PI / 2, length: 14, height: 1.5, color: MUD });
-      props.wreckCar({ x: 12 * m, z: 345 * m, yaw: 0.6 + flip });
-    });
-    // ---- the hamlet in the pass, by the road, under the east (west) mountain
-    mirrored(props, 33, (m, flip) => {
-      props.flatHouse({ x: 58 * m, z: 130 * m, yaw: flip + Math.PI / 2, width: 7, depth: 6 });
-      props.flatHouse({ x: 70 * m, z: 150 * m, yaw: flip + Math.PI / 2, width: 8, depth: 6 });
-      props.flatHouse({ x: 56 * m, z: 158 * m, yaw: flip, width: 6, depth: 5 });
-      props.lowWall({ x: 74 * m, z: 132 * m, yaw: 0, length: 9, height: 1.5, color: MUD });
-    });
-    // ---- the supply dumps on the plain: crate stacks, fuel drums, tents, a store shed, trucks
-    mirrored(props, 34, (m, flip) => {
-      const cx = 300 * m, cz = 432 * m;
-      props.hall({ x: cx + 22 * m, z: cz + 14 * m, yaw: flip, width: 20, depth: 10, height: 5, color: 0x9a8c70, roof: 0x6a665c, door: 6, name: 'store shed' });
-      for (let row = 0; row < 3; row++) for (let k = 0; k < 4; k++) props.crates({ x: cx + (-20 + k * 5) * m, z: cz + (-6 - row * 5) * m, yaw: flip });
-      for (let k = 0; k < 3; k++) props.tanks({ x: cx + (-18 + k * 4) * m, z: cz + 14 * m, yaw: flip, count: 4, radius: 0.35, height: 0.9, color: 0x4a5034 });
+    props.flatHouse({ x: 26, z: 400, yaw: 0, width: 9, depth: 7, name: 'café' });
+    props.flatHouse({ x: 28, z: 360, yaw: Math.PI / 2, width: 8, depth: 6 });
+    props.flatHouse({ x: -62, z: 362, yaw: 0, width: 7, depth: 6, name: 'gendarmerie', storeys: 2 });
+    props.lowWall({ x: 38, z: 380, yaw: Math.PI / 2, length: 14, height: 1.5, color: MUD });
+    props.wreckCar({ x: 12, z: 345, yaw: 0.6 });
+    props.flatHouse({ x: -24, z: -372, yaw: Math.PI, width: 10, depth: 7, name: 'café' });
+    props.flatHouse({ x: -30, z: -336, yaw: -Math.PI / 2, width: 7, depth: 6 });
+    props.flatHouse({ x: 58, z: -378, yaw: Math.PI, width: 8, depth: 7, name: 'gendarmerie', storeys: 2 });
+    props.flatHouse({ x: 62, z: -340, yaw: Math.PI, width: 6, depth: 5 });
+    props.lowWall({ x: -40, z: -352, yaw: Math.PI / 2, length: 12, height: 1.5, color: MUD });
+    props.wreckCar({ x: 4, z: -330, yaw: 2.3 });
+    // ---- the hamlets in the pass, by the road: under Semmama in the north, under Chambi in the south
+    props.flatHouse({ x: 58, z: 130, yaw: Math.PI / 2, width: 7, depth: 6 });
+    props.flatHouse({ x: 70, z: 150, yaw: Math.PI / 2, width: 8, depth: 6 });
+    props.flatHouse({ x: 56, z: 158, yaw: 0, width: 6, depth: 5 });
+    props.lowWall({ x: 74, z: 132, yaw: 0, length: 9, height: 1.5, color: MUD });
+    props.flatHouse({ x: -52, z: -182, yaw: -Math.PI / 2, width: 8, depth: 6 });
+    props.flatHouse({ x: -66, z: -200, yaw: -Math.PI / 2, width: 7, depth: 6 });
+    props.flatHouse({ x: -48, z: -210, yaw: Math.PI, width: 7, depth: 5 });
+    props.lowWall({ x: -70, z: -186, yaw: Math.PI / 2, length: 10, height: 1.5, color: MUD });
+    // ---- the supply dumps on the plain: crate stacks, fuel drums, tents, a store shed, trucks (the US one in rows,
+    // the German one under the camouflage of a palm-thatch shed and a ring of sandbags)
+    for (const [cx, cz, seed, flip] of [[300, 432, 34, 0], [-262, -470, 36, Math.PI]] as number[][]) {
+      const m = flip ? -1 : 1;
+      props.rand = mulberry32(seed);
+      props.hall({ x: cx + (flip ? 18 : 22), z: cz + (flip ? 28 : 14) * m, yaw: flip + (flip ? 0.3 : 0), width: 20, depth: 10, height: 5, color: 0x9a8c70, roof: 0x6a665c, door: 6, name: 'store shed' });
+      for (let row = 0; row < 3; row++) for (let k = 0; k < 4; k++) props.crates({ x: cx + (flip ? -14 + k * 5 + row * 3 : -20 + k * 5), z: cz + (-6 - row * 5) * m, yaw: flip + (flip ? 0.3 : 0) });
+      for (let k = 0; k < 3; k++) props.tanks({ x: cx + (flip ? -30 : -18 + k * 4), z: cz + (flip ? -10 + k * 5 : 14), yaw: flip, count: 4, radius: 0.35, height: 0.9, color: 0x4a5034 });
       props.tent({ x: cx - 30 * m, z: cz + 8 * m, yaw: 0.2 + flip, color: 0xa8a080 });
-      props.tent({ x: cx - 30 * m, z: cz - 6 * m, yaw: -0.1 + flip, color: 0xa8a080 });
-      props.sandbagRing({ x: cx + 4 * m, z: cz - 30 * m, radius: 5, toward: -m });
-      props.wreckCar({ x: cx + 8 * m, z: cz + 2 * m, yaw: 1.5 + flip });
+      props.tent({ x: cx + (flip ? 30 : -30), z: cz - 6 * m, yaw: -0.1 + flip, color: 0xa8a080 });
+      props.sandbagRing({ x: cx + 4, z: cz - 30 * m, radius: 5, toward: -m });
+      if (flip) props.sandbagRing({ x: cx - 34, z: cz - 26, radius: 5, toward: 1 });
+      props.wreckCar({ x: cx + 8, z: cz + 2, yaw: 1.5 + flip });
       props.wreckCar({ x: cx - 40 * m, z: cz + 24 * m, yaw: 0.4 + flip });
-    });
+    }
     // ---- the railway, a few wagons standing on it
-    const railTrack = (sign: number) => {
-      for (let i = 0; i < RAIL.length - 1; i++) {
-        const [x0, z0] = RAIL[i], [x1, z1] = RAIL[i + 1];
-        props.rails({ x0: x0 * sign, z0: z0 * sign, x1: x1 * sign, z1: z1 * sign });
-      }
-    };
-    railTrack(1);
-    railTrack(-1);
-    for (const [z, kind, c] of [[520, 'box', 0x7a5a40], [532, 'tank', 0x3a3a34]] as [number, string, number][]) {
+    for (let i = 0; i < RAIL.length - 1; i++) {
+      const [x0, z0] = RAIL[i], [x1, z1] = RAIL[i + 1];
+      props.rails({ x0, z0, x1, z1 });
+    }
+    for (const [z, kind, c] of [[520, 'box', 0x7a5a40], [532, 'tank', 0x3a3a34], [-470, 'open', 0x6a5440], [-482, 'box', 0x7a5a40], [-494, 'box', 0x5a4434]] as [number, string, number][]) {
       const x = rail(z), yaw = Math.atan2(rail(z + 6) - rail(z - 6), 12);
       props.wagon({ x, z, yaw, kind, color: c });
-      props.wagon({ x: -x, z: -z, yaw: yaw + Math.PI, kind, color: c });
     }
     // ---- old sangars, boulders and wrecks in the pass and on the plains; scree and boulders up the djebels
-    for (let i = 0; i < 140; i++) {
+    for (let i = 0; i < 280; i++) {
       const x = (r() * 2 - 1) * (bounds.x - 20);
-      const z = 10 + r() * (BASE_Z - 60);
+      const z = (r() * 2 - 1) * (BASE_Z - 60);
       if (near(x, z, 40) || !clear(x, z) || Math.abs(x) < 15) continue;
-      const seed = Math.floor(r() * 1e9);
       const kind = r();
       const slope = steepAt(x, z);
-      mirrored(props, seed, (m, flip) => {
-        if (slope > 0.35 || kind > 0.75) { for (let k = 0; k < 3; k++) props.boulder({ x: x * m + (props.rand() - 0.5) * 10, z: z * m + (props.rand() - 0.5) * 10, radius: 1 + props.rand() * 1.8 }); }
-        else if (kind < 0.2) props.wreckCar({ x: x * m, z: z * m, yaw: props.rand() * 3 + flip });
-        else if (kind < 0.5) props.lowWall({ x: x * m, z: z * m, yaw: props.rand() * 3, length: 5 + props.rand() * 6, height: 1.1, color: 0x8a8274 }); // a stone sangar
-        else props.sandbagRing({ x: x * m, z: z * m, radius: 3.5 + props.rand() * 1.5, toward: m });
-      });
+      const R = (props.rand = mulberry32(Math.floor(r() * 1e9)));
+      if (slope > 0.35 || kind > 0.75) { for (let k = 0; k < 3; k++) props.boulder({ x: x + (R() - 0.5) * 10, z: z + (R() - 0.5) * 10, radius: 1 + R() * 1.8 }); }
+      else if (kind < 0.2) props.wreckCar({ x, z, yaw: R() * 6.28 });
+      else if (kind < 0.5) props.lowWall({ x, z, yaw: R() * 3, length: 5 + R() * 6, height: 1.1, color: 0x8a8274 }); // a stone sangar
+      else props.sandbagRing({ x, z, radius: 3.5 + R() * 1.5, toward: z > 0 ? 1 : -1 });
     }
     // boulders along the wadi bed
-    for (let i = 0; i < 40; i++) {
-      const z = 20 + r() * 640;
+    for (let i = 0; i < 80; i++) {
+      const z = (r() * 2 - 1) * 660;
       const x = wadi(z) + (r() - 0.5) * 10;
       if (roadDist(x, z) < 8 || onRail(x, z) || near(x, z, 25)) continue;
-      const rad = 0.6 + r() * 1;
-      props.boulder({ x, z, radius: rad });
-      props.boulder({ x: -x, z: -z, radius: rad });
+      props.boulder({ x, z, radius: 0.6 + r() * 1 });
     }
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 26 && tries < 4000; tries++) {
+    for (let tries = 0; sites.length < 52 && tries < 8000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 30 + rand() * (bounds.z - 40);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 40 * 40) || near(x, z, 50) || !clear(x, z, 12) || steepAt(x, z) > 0.3 || Math.hypot(x, z - BASE_Z) < 45) continue;
+      const z = (rand() * 2 - 1) * (bounds.z - 30);
+      if (Math.abs(z) < 30 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 40 * 40) || near(x, z, 50) || !clear(x, z, 12) || steepAt(x, z) > 0.3 || Math.hypot(x, Math.abs(z) - BASE_Z) < 45) continue;
       sites.push({ x, z, kind: r() < 0.6 ? 'rocks' : 'wrecks', yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     commandPost(props, this.bases.nato, -1, 0xa8a080);
     commandPost(props, this.bases.pact, 1, 0xa09878);
     props.finish();

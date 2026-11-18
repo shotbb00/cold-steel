@@ -40,7 +40,7 @@ export function createLakes({ lakes, level = 0 }) {
 
     carve(x, z, h) {
       for (const L of lakes) {
-        const v = q(L, x, z), m = Math.hypot(x - L.x, z - L.z) * (1 - 1 / v); // metres out from the shore (q scales with the radius)
+        const v = q(L, x, z), m = Math.hypot(x - L.x, z - L.z) * (1 - 1 / Math.max(v, 1e-9)); // metres out from the shore (q scales with the radius; the guard: no NaN at a lake's very middle)
         if (m > BASIN) continue;
         h += (level + SHORE - h) * (1 - smoothstep(0, BASIN, m)) ** 1.6;      // the land slopes down to the water
         if (v < 1) h = Math.min(h, level + SHORE - ((L.depth ?? 4) + SHORE) * smoothstep(1, 0.55, v)); // the bed

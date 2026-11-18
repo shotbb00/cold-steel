@@ -2,32 +2,39 @@
 // Pact's first big objective (the big field, 1.0 × 1.12 km: the old town in the middle, the
 // station and the brickworks / tannery out at its edge, farmland and the home villages beyond). A town fight: a grid of cobbled streets lined with two-storey
 // houses (almost every one can be occupied), the market square with the town hall in the
-// middle, a church on each side of the old town, the railway station and goods yard on the
-// west, the brickworks and the tannery with their chimneys on the east. Short sight lines,
-// corners everywhere; tanks in the alleys are an RPG's dream. Open farmland and two villages
-// beyond the edges of town. NATO comes in from the south (+z), the Pact from the north.
-// Point-mirrored like the other maps (the streets, blocks and landmarks have a twin across
-// the square), so neither side gets the better quarter.
+// middle, the Stiftskirche and St. Ulrich either side of the old town, the railway station on the
+// south-west, the goods yard on the north-east, the brickworks with its chimney on the east and
+// the tannery on the west. Short sight lines, corners everywhere; tanks in the alleys are an
+// RPG's dream. Open farmland and two villages beyond the edges of town. NATO comes in from the
+// south (+z), the Pact from the north.
+// Not a mirror: the Südstadt and the Nordstadt are laid out on their own street grids (the
+// streets jog where they meet at the square), the town hall faces the department store across the
+// square, and each quarter's landmarks are their own buildings. Fair by value: each side has a
+// church, a railway site (the station and its goods shed / the goods yard with its sheds) and a
+// works (brickworks / tannery) within the same few metres of its base, the same number of street
+// rows and the same street count in its half of town.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, buildVillage, commandPost, mirrored } from './common.js';
+import { buildSite, buildVillage, commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const EDGE_X = 300;    // the station / goods yard and the brickworks / tannery, out at the edge of town
 const noise = createNoise2D(1987);
 
-// the town: streets north–south at STREETS_X, east–west at STREETS_Z, inside |x| < TOWN_X, |z| < TOWN_Z
+// the town: inside |x| < TOWN_X, |z| < TOWN_Z; each half its own grid of streets (north–south at
+// x, east–west at z), the square in the middle
 const TOWN_X = 180;
 const TOWN_Z = 150;
-const STREETS_X = [-124, -62, 0, 62, 124];
-const STREETS_Z = [-140, -95, -45, 45, 95, 140];
+const SOUTH = { x: [-124, -62, 0, 62, 124], z: [45, 95, 140] };   // the Südstadt
+const NORTH = { x: [-138, -76, -16, 50, 116], z: [-48, -92, -134] }; // the Nordstadt
+const grid = (z) => (z >= 0 ? SOUTH : NORTH);
 const STREET = 4;     // half-width of a street
 const SQUARE = 26;    // half-size of the market square
-const RAIL_Z = 122;   // the railway along the west edge of town (and its twin on the east)
+const RAIL_S = 122;   // the main line along the south-west edge of town
+const RAIL_N = -112;  // the goods line along the north-east
 
 /** 1 inside the town, fading to 0 at its edge. */
 const town = (x, z) => smoothstep(TOWN_X + 20, TOWN_X - 10, Math.abs(x)) * smoothstep(TOWN_Z + 20, TOWN_Z - 10, Math.abs(z));
@@ -35,14 +42,23 @@ const town = (x, z) => smoothstep(TOWN_X + 20, TOWN_X - 10, Math.abs(x)) * smoot
 /** 1 on a street or the square. */
 function street(x, z) {
   if (Math.abs(x) < SQUARE && Math.abs(z) < SQUARE) return 1;
+  const g = grid(z);
   let k = 0;
-  for (const sx of STREETS_X) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(x - sx)));
-  for (const sz of STREETS_Z) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(z - sz)));
+  for (const sx of g.x) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(x - sx)));
+  for (const sz of g.z) k = Math.max(k, smoothstep(STREET + 1, STREET - 0.5, Math.abs(z - sz)));
   return k * town(x, z);
 }
 
-/** The railway: west of the square on the south side, mirrored on the north-east. */
-const onRail = (x, z) => (x < -40 && x > -490 && Math.abs(z - RAIL_Z) < 5) || (x > 40 && x < 490 && Math.abs(z + RAIL_Z) < 5);
+/** The dirt roads out of town: each half's three middle streets run on to its home village. */
+function track(x, z) {
+  const g = grid(z);
+  let d = 1e9;
+  for (const sx of [g.x[0], g.x[2], g.x[4]]) d = Math.min(d, Math.abs(x - sx * smoothstep(BASE_Z, TOWN_Z, Math.abs(z)) + Math.sin(z * 0.04 + sx) * 3));
+  return smoothstep(5, 2.5, d) * (1 - town(x, z)) * smoothstep(540, 512, Math.abs(z));
+}
+
+/** The railways: the main line west of the square on the south side, the goods line on the north-east. */
+const onRail = (x, z) => (x < -40 && x > -490 && Math.abs(z - RAIL_S) < 5) || (x > 40 && x < 490 && Math.abs(z - RAIL_N) < 5);
 
 function height(x, z) {
   const ax = Math.abs(x);
@@ -62,17 +78,18 @@ function height(x, z) {
 const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 const pactName = { '1st Platoon': '1-ya Rota' };
 
+// each where its quarter puts it, at matching distances from the two bases (tools/map_fairness.py)
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Mackenzell', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Bahnhof', x: -EDGE_X, z: 104, owner: null, sector: 'west' },
+  { id: 'B', name: 'Bahnhof', x: -312, z: 112, owner: null, sector: 'west' },
   { id: 'C', name: 'Südstadt', x: 0, z: 140, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Ziegelei', x: EDGE_X, z: 70, owner: null, sector: 'east' },
-  { id: 'E', name: 'Stiftskirche', x: -93, z: 20, owner: null, sector: 'west' },
+  { id: 'D', name: 'Ziegelei', x: 288, z: 56, owner: null, sector: 'east' },
+  { id: 'E', name: 'Stiftskirche', x: -110, z: 12, owner: null, sector: 'west' },
   { id: 'F', name: 'Marktplatz', x: 0, z: 0, owner: null, sector: 'centre', radius: 20 },
-  { id: 'G', name: 'St. Ulrich', x: 93, z: -20, owner: null, sector: 'east' },
-  { id: 'H', name: 'Gerberei', x: -EDGE_X, z: -70, owner: null, sector: 'west' },
-  { id: 'I', name: 'Nordstadt', x: 0, z: -140, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Güterbahnhof', x: EDGE_X, z: -104, owner: null, sector: 'east' },
+  { id: 'G', name: 'St. Ulrich', x: 102, z: -42, owner: null, sector: 'east' },
+  { id: 'H', name: 'Gerberei', x: -262, z: -98, owner: null, sector: 'west' },
+  { id: 'I', name: 'Nordstadt', x: -16, z: -128, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Güterbahnhof', x: 352, z: -72, owner: null, sector: 'east' },
   { id: 'K', name: 'Molzbach', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
@@ -119,19 +136,20 @@ export default {
       meadow: '#66703e',
       farmX: [520, 600],
       farmZ: [580, 660],
-      roads: [-124, 0, 124],
-      roadZ: 540,
+      roads: [],             // (the roads are the map's own: track() below)
       surface(x, z) {
         if (onRail(x, z)) return [0x4e4a44, 0.9];                             // ballast
         const s = street(x, z);
         if (s > 0) return [Math.abs(x) < SQUARE && Math.abs(z) < SQUARE ? 0x77726a : 0x5f5c56, s * 0.95]; // the square, cobbles
         const t = town(x, z);
-        return t > 0 ? [0x4a4e36, t * 0.45] : null;                          // trodden yards and gardens
+        if (t > 0) return [0x4a4e36, t * 0.45];                               // trodden yards and gardens
+        const r = track(x, z);
+        return r > 0 ? [0x54463a, r * 0.6] : null;                            // dirt roads
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-124, 0, 124] }, pact: { x: 0, z: -BASE_Z, entries: [-124, 0, 124] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-124, 0, 124] }, pact: { x: 0, z: -BASE_Z, entries: [-138, -16, 116] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
@@ -144,108 +162,133 @@ export default {
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
     const landmarks: any[] = [];   // footprints the street-filling houses keep clear of: [x, z, half-w, half-d]
-    const clear = (x, z, hw, hd) => landmarks.push([x, z, hw, hd], [-x, -z, hw, hd]);
+    const clear = (x, z, hw, hd) => landmarks.push([x, z, hw, hd]);
+    props.rand = mulberry32(1201);
 
-    // ---- landmarks, mirrored: the town hall on the square, a church on each side of the old town,
-    // the station and goods yard, the brickworks / tannery
-    mirrored(props, 1201, (m, flip) => {
-      props.townHouse({ x: 0, z: (SQUARE + 9) * m, yaw: flip, width: 22, depth: 11, storeys: 3, name: 'town hall', damaged: 0 });
-      props.church({ x: -93 * m, z: 4 * m, yaw: flip });
-      props.lowWall({ x: -93 * m, z: 38 * m, yaw: 0, length: 24 });                             // churchyard wall
-      for (const [x, z] of [[-6, -6], [8, 9], [-9, 12]]) props.wreckCar({ x: x * m, z: z * m, yaw: x + flip }); // the square
-      props.jersey({ x: 14 * m, z: -12 * m, yaw: 0.4, length: 6 });
-      // station: the building, platforms, the track, wagons in the goods yard
-      props.townHouse({ x: -EDGE_X * m, z: (RAIL_Z - 14) * m, yaw: flip, width: 20, depth: 10, storeys: 2, name: 'railway station', damaged: 0 });
-      props.rails({ x0: -510 * m, z0: RAIL_Z * m, x1: -42 * m, z1: RAIL_Z * m });
-      props.rails({ x0: -380 * m, z0: (RAIL_Z + 7) * m, x1: -240 * m, z1: (RAIL_Z + 7) * m });
-      const wagons: [number, string, number][] = [[-350, 'box', 0x5a3426], [-338, 'box', 0x4a3a2a], [-270, 'tank', 0x2a2a2a], [-258, 'open', 0x4a4038], [-246, 'box', 0x5a3426]];
-      for (const [x, kind, c] of wagons) {
-        props.wagon({ x: x * m, z: (RAIL_Z + (kind === 'tank' ? 0 : 7)) * m, yaw: Math.PI / 2, kind, color: c });
-      }
-      props.hall({ x: -345 * m, z: (RAIL_Z - 16) * m, yaw: flip, width: 22, depth: 12, height: 6, color: 0x6e5444, name: 'goods shed' });
-      // the brickworks (east) / tannery (west): halls, a chimney, yard walls
-      props.hall({ x: EDGE_X * m, z: 82 * m, yaw: flip, width: 30, depth: 16, height: 7.5, color: 0x7a4a38, name: 'brickworks' });
-      props.hall({ x: (EDGE_X + 34) * m, z: 52 * m, yaw: Math.PI / 2 + flip, width: 18, depth: 11, height: 6, color: 0x6e4a3a, name: 'kiln house' });
-      props.chimney({ x: (EDGE_X + 20) * m, z: 66 * m, height: 32 });
-      props.lowWall({ x: EDGE_X * m, z: 50 * m, yaw: 0, length: 30, height: 1.6 });
-      for (let k = 0; k < 3; k++) props.crates({ x: (EDGE_X - 24 + k * 5) * m, z: 58 * m, yaw: k });
-    });
+    // ---- the square: the town hall on its south side, the department store facing it on the north
+    props.townHouse({ x: 0, z: SQUARE + 9, yaw: 0, width: 22, depth: 11, storeys: 3, name: 'town hall', damaged: 0 });
+    props.townHouse({ x: -6, z: -SQUARE - 8, yaw: Math.PI, width: 26, depth: 10, storeys: 3, name: 'department store', damaged: 0.1 });
     clear(0, SQUARE + 9, 12, 7);
-    clear(-93, 4, 6, 18);
-    clear(-EDGE_X, RAIL_Z - 14, 11, 6);
-    clear(-345, RAIL_Z - 16, 12, 7);
-    clear(EDGE_X, 82, 16, 9);
-    clear(EDGE_X + 34, 52, 7, 10);
-    clear(EDGE_X + 20, 66, 3, 3);
+    clear(-6, -SQUARE - 8, 14, 6);
+    for (const [x, z, yaw] of [[-6, -6, 0.4], [8, 9, 2.1], [-9, 12, 1.3], [12, -14, 2.8], [-15, 3, 0.9]]) props.wreckCar({ x, z, yaw });
+    props.jersey({ x: 14, z: -12, yaw: 0.4, length: 6 });
+    props.jersey({ x: -16, z: 15, yaw: 2.6, length: 6 });
 
-    // ---- the houses: rows facing the east–west streets, block by block (our half, mirrored)
+    // ---- the Südstadt (NATO's half): the Stiftskirche, the station, the brickworks
+    props.church({ x: -93, z: 6, yaw: 0 });
+    props.lowWall({ x: -93, z: 38, yaw: 0, length: 24 });                     // churchyard wall
+    clear(-93, 6, 6, 18);
+    // station: the building, the main line, a siding by the platform, wagons, the goods shed
+    props.townHouse({ x: -312, z: RAIL_S - 14, yaw: 0, width: 20, depth: 10, storeys: 2, name: 'railway station', damaged: 0 });
+    props.rails({ x0: -510, z0: RAIL_S, x1: -42, z1: RAIL_S });
+    props.rails({ x0: -390, z0: RAIL_S + 7, x1: -250, z1: RAIL_S + 7 });
+    for (const [x, kind, c] of [[-362, 'box', 0x5a3426], [-350, 'box', 0x4a3a2a], [-282, 'tank', 0x2a2a2a], [-270, 'open', 0x4a4038], [-258, 'box', 0x5a3426]] as [number, string, number][]) {
+      props.wagon({ x, z: RAIL_S + (kind === 'tank' ? 0 : 7), yaw: Math.PI / 2, kind, color: c });
+    }
+    props.hall({ x: -357, z: RAIL_S - 16, yaw: 0, width: 22, depth: 12, height: 6, color: 0x6e5444, name: 'goods shed' });
+    clear(-312, RAIL_S - 14, 11, 6);
+    clear(-357, RAIL_S - 16, 12, 7);
+    // the brickworks: the drying hall, the kiln house, the chimney, the yard wall and stacked bricks
+    props.hall({ x: 288, z: 70, yaw: 0, width: 30, depth: 16, height: 7.5, color: 0x7a4a38, name: 'brickworks' });
+    props.hall({ x: 322, z: 40, yaw: Math.PI / 2, width: 18, depth: 11, height: 6, color: 0x6e4a3a, name: 'kiln house' });
+    props.chimney({ x: 308, z: 54, height: 32 });
+    props.lowWall({ x: 288, z: 38, yaw: 0, length: 30, height: 1.6 });
+    for (let k = 0; k < 3; k++) props.crates({ x: 264 + k * 5, z: 46, yaw: k });
+    clear(288, 70, 16, 9);
+    clear(322, 40, 7, 10);
+
+    // ---- the Nordstadt (the Pact's half): St. Ulrich, the goods yard, the tannery
+    props.church({ x: 84, z: -66, yaw: -Math.PI / 2 });                      // the nave east–west, the tower to the west
+    props.lowWall({ x: 84, z: -80, yaw: 0, length: 24 });                       // churchyard wall
+    clear(84, -66, 23, 6);
+    // the goods yard: the goods line and two sidings full of wagons, the big shed, the freight office, the signal box
+    props.rails({ x0: 42, z0: RAIL_N, x1: 510, z1: RAIL_N });
+    props.rails({ x0: 260, z0: RAIL_N + 7, x1: 440, z1: RAIL_N + 7 });
+    props.rails({ x0: 300, z0: RAIL_N + 14, x1: 410, z1: RAIL_N + 14 });
+    for (const [x, kind, c, dz] of [[276, 'open', 0x4a4038, 7], [289, 'open', 0x4a4038, 7], [302, 'box', 0x5a3426, 7], [398, 'tank', 0x2a2a2a, 7], [411, 'tank', 0x2a2a2a, 7],
+      [318, 'box', 0x4a3a2a, 14], [331, 'box', 0x5a3426, 14], [385, 'open', 0x4a4038, 14], [440, 'box', 0x5a3426, 0]] as [number, string, number, number][]) {
+      props.wagon({ x, z: RAIL_N + dz, yaw: Math.PI / 2, kind, color: c });
+    }
+    props.hall({ x: 372, z: -78, yaw: Math.PI, width: 28, depth: 12, height: 7, color: 0x6a5242, name: 'goods shed' });
+    props.townHouse({ x: 322, z: -78, yaw: Math.PI, width: 12, depth: 8, storeys: 2, name: 'freight office' });
+    props.townHouse({ x: 262, z: RAIL_N - 12, yaw: 0, width: 7, depth: 6, storeys: 2, name: 'signal box', damaged: 0 });
+    props.lowWall({ x: 352, z: -92, yaw: 0, length: 16, height: 1.3 });         // the loading ramp's edge
+    clear(372, -78, 15, 7);
+    clear(322, -78, 7, 5);
+    // the tannery: the tan house, its long drying sheds, a lower chimney, the yard wall round the pits
+    props.hall({ x: -262, z: -114, yaw: Math.PI, width: 24, depth: 12, height: 6, color: 0x6a5040, name: 'tannery' });
+    props.hall({ x: -230, z: -86, yaw: Math.PI / 2, width: 18, depth: 8, height: 5, color: 0x5e4a3a, name: 'drying shed' });
+    props.townHouse({ x: -294, z: -84, yaw: Math.PI / 2, width: 11, depth: 8, storeys: 2, name: "tanner's house" });
+    props.chimney({ x: -246, z: -126, height: 22 });
+    props.lowWall({ x: -262, z: -70, yaw: 0, length: 28, height: 1.6 });
+    for (const [x, z] of [[-270, -94], [-256, -94]]) props.lowWall({ x, z, yaw: 0, length: 6, height: 0.8 }); // the pits' kerbs
+    for (let k = 0; k < 3; k++) props.crates({ x: -284 + k * 4, z: -104, yaw: k * 0.7 });
+
+    // ---- the houses: rows facing the east–west streets, block by block, each half on its own grid
     const blocked = (x, z, hw, hd) => landmarks.some(([lx, lz, lw, ld]) => Math.abs(x - lx) < hw + lw + 1.5 && Math.abs(z - lz) < hd + ld + 1.5)
-      || (Math.abs(x) < SQUARE + 6 && Math.abs(z) < SQUARE + 6) || onRail(x, z) || Math.abs(z - RAIL_Z) < 12 && x < -40;
+      || (Math.abs(x) < SQUARE + 6 && Math.abs(z) < SQUARE + 6) || onRail(x, z)
+      || (Math.abs(z - RAIL_S) < 12 && x < -40) || (Math.abs(z - RAIL_N) < 12 && x > 40);
     const r = mulberry32(4242);
-    const rows: any[] = [];
-    for (let i = 0; i + 1 < STREETS_X.length; i++) {
-      const x0 = STREETS_X[i] + STREET + 1.5;
-      const x1 = STREETS_X[i + 1] - STREET - 1.5;
-      // rows along the south side of z = 45, both sides of the block 45..95, 95..140; z > 0 only
-      for (const [zEdge, dir] of [[45, 1], [95, -1], [95, 1], [140, -1]]) rows.push({ x0, x1, z: zEdge + dir * (STREET + 1.5), dir });
-      rows.push({ x0, x1, z: 45 - STREET - 1.5, dir: -1 }); // the middle row's south edge
-    }
-    for (const row of rows) {
-      let x = row.x0;
-      while (x < row.x1 - 6) {
-        const w = 7 + r() * 3.5;
-        const d = 8 + r() * 2;
-        const cx = x + w / 2;
-        const cz = row.z + row.dir * d / 2;
-        x += w + 1 + r() * 3;
-        if (cx + w / 2 > row.x1 || r() < 0.3) continue;             // a yard, a gap, a lane
-        if (blocked(cx, cz, w / 2, d / 2)) continue;
-        const seed = Math.floor(r() * 1e9);
-        const storeys = r() < 0.25 ? 3 : 2;
-        // the door faces the street: front (+z local) toward it
-        mirrored(props, seed, (m, flip) => props.townHouse({ x: cx * m, z: cz * m, yaw: (row.dir > 0 ? Math.PI : 0) + flip, width: w, depth: d, storeys }));
+    for (const [g, s] of [[SOUTH, 1], [NORTH, -1]] as const) {
+      const [z1, z2, z3] = g.z;
+      const rows: any[] = [];
+      for (let i = 0; i + 1 < g.x.length; i++) {
+        const x0 = g.x[i] + STREET + 1.5;
+        const x1 = g.x[i + 1] - STREET - 1.5;
+        // both sides of the blocks between the east–west streets, and the inner row toward the square
+        for (const [zEdge, dir] of [[z1, s], [z2, -s], [z2, s], [z3, -s], [z1, -s]]) rows.push({ x0, x1, z: zEdge + dir * (STREET + 1.5), dir });
       }
-    }
-    // garden walls and rubble in the blocks' backyards, mirrored
-    for (let i = 0; i < 70; i++) {
-      const x = (r() * 2 - 1) * (TOWN_X - 10);
-      const z = 10 + r() * (TOWN_Z - 15);
-      if (street(x, z) > 0.1 || blocked(x, z, 2, 2) || onRail(x, z)) continue;
-      const seed = Math.floor(r() * 1e9);
-      const kind = r() < 0.5 ? 'wall' : r() < 0.5 ? 'wreck' : 'rubble';
-      mirrored(props, seed, (m, flip) => {
-        if (kind === 'wall') props.lowWall({ x: x * m, z: z * m, yaw: (props.rand() < 0.5 ? 0 : Math.PI / 2) + flip, length: 6 + props.rand() * 6, height: 1.2 });
-        else if (kind === 'wreck') props.wreckCar({ x: x * m, z: z * m, yaw: props.rand() * 3 + flip });
-        else for (let k = 0; k < 4; k++) props.rubble(x * m + (props.rand() - 0.5) * 4, z * m + (props.rand() - 0.5) * 4, 0.4 + props.rand() * 0.4);
-      });
-    }
-    // barricades across some street ends at the edge of town
-    for (const sx of STREETS_X) {
-      mirrored(props, 300 + sx, (m) => props.jersey({ x: sx * m, z: (TOWN_Z + 6) * m, yaw: 0, length: 6 }));
+      for (const row of rows) {
+        let x = row.x0;
+        while (x < row.x1 - 6) {
+          const w = 7 + r() * 3.5;
+          const d = 8 + r() * 2;
+          const cx = x + w / 2;
+          const cz = row.z + row.dir * d / 2;
+          x += w + 1 + r() * 3;
+          if (cx + w / 2 > row.x1 || r() < 0.3) continue;             // a yard, a gap, a lane
+          if (blocked(cx, cz, w / 2, d / 2)) continue;
+          props.rand = mulberry32(Math.floor(r() * 1e9));
+          // the door faces the street: front (+z local) toward it
+          props.townHouse({ x: cx, z: cz, yaw: row.dir > 0 ? Math.PI : 0, width: w, depth: d, storeys: r() < 0.25 ? 3 : 2 });
+        }
+      }
+      // garden walls and rubble in the blocks' backyards
+      for (let i = 0; i < 70; i++) {
+        const x = (r() * 2 - 1) * (TOWN_X - 10);
+        const z = s * (10 + r() * (TOWN_Z - 15));
+        if (street(x, z) > 0.1 || blocked(x, z, 2, 2)) continue;
+        const kind = r();
+        if (kind < 0.5) props.lowWall({ x, z, yaw: r() < 0.5 ? 0 : Math.PI / 2, length: 6 + r() * 6, height: 1.2 });
+        else if (kind < 0.75) props.wreckCar({ x, z, yaw: r() * 6 });
+        else for (let k = 0; k < 4; k++) props.rubble(x + (r() - 0.5) * 4, z + (r() - 0.5) * 4, 0.4 + r() * 0.4);
+      }
+      // barricades across some street ends at the edge of town
+      for (const sx of g.x) if (r() < 0.8) props.jersey({ x: sx + (r() - 0.5) * 2, z: s * (TOWN_Z + 6), yaw: (r() - 0.5) * 0.4, length: 6 });
     }
 
-    // ---- outside town: the two home villages, farm cover, the command posts
+    // ---- outside town: the two home villages, farm cover (as much on each half), the command posts
     buildVillage(props, points[0], 9500, 1);
-    buildVillage(props, { x: -points[0].x, z: -points[0].z }, 9500, -1);
+    buildVillage(props, points[10], 9611, 1);
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'hay', 'wrecks'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 100 && tries < 8000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 30 + rand() * (bounds.z - 40);
-      if (town(x, z) > 0 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 28 * 28) || onRail(x, z) || Math.abs(z - RAIL_Z) < 14) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || points.some((p) => Math.hypot(x - p.x, z - p.z) < 40)) continue;
-      sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+    for (const s of [1, -1]) {
+      let n = 0;
+      for (let tries = 0; n < 100 && tries < 8000; tries++) {
+        const x = (rand() * 2 - 1) * (bounds.x - 20);
+        const z = s * (30 + rand() * (bounds.z - 40));
+        if (town(x, z) > 0 || sites.some((q) => (q.x - x) ** 2 + (q.z - z) ** 2 < 28 * 28) || onRail(x, z) || Math.abs(z - (s > 0 ? RAIL_S : RAIL_N)) < 14 || track(x, z) > 0) continue;
+        if (Math.hypot(x, z - s * BASE_Z) < 40 || points.some((p) => Math.hypot(x - p.x, z - p.z) < 40)) continue;
+        sites.push({ x, z, kind: kinds[n++ % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
+      }
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const q of sites) buildSite(props, q, q.x, q.z, q.yaw);
     commandPost(props, this.bases.nato, -1, 0x4e5236);
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);
     props.finish();
 
     const avoid = [{ x: 0, z: BASE_Z, r: 22 }, { x: 0, z: -BASE_Z, r: 22 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 10 })),
-      { test: (x, z) => street(x, z) > 0.05 || onRail(x, z) }];
+      { test: (x, z) => street(x, z) > 0.05 || onRail(x, z) || track(x, z) > 0.2 }];
     // a few garden trees in town, woods on the edge hills
     const trees = plantTrees({
       scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 1500,

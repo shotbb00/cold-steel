@@ -2,10 +2,11 @@
 // Belarus in summer: wide bogs and wet meadows where vehicles bog down and men wade (map.soft, shallow pools), dense
 // pine and birch on the islands of dry ground, and only a few raised causeways through it all. In the middle the
 // Berezina and its old arm close round the island Bobruisk stands on — wooden houses, two churches, the station and
-// the rail line on its embankment — with a bridge over each arm and fords out on the flanks. Hamlets of log houses
-// sit on the dry islands; a log-corduroy road the sappers laid crosses the swamp on each side. The Red Army comes
-// from the south (+z), the Wehrmacht holds from the north; point-mirrored like the other land maps, so neither side
-// gets the better ground — only the names differ.
+// the rail line on its embankment running slantwise along the island — with the one highway bridging both arms just
+// west of the square and fords out on the flanks. Hamlets of log houses sit on the dry islands; a log-corduroy road
+// the sappers laid crosses the swamp on each side. The Red Army comes from the south (+z), the Wehrmacht holds from
+// the north. Not a mirror but fair: each side has the highway bridge, two fords at its own places, a gravel and a
+// corduroy lateral, its hamlets at its own spots as far from its base as the other side's, and its own woods.
 import * as THREE from 'three';
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -13,21 +14,22 @@ import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
-import { commandPost, mirrored } from './common.js';
+import { commandPost } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const SIDE = 330;     // the flank causeways and fords
+const HWY = -30;      // the Parichi–Osipovichi highway through the town, over both bridges
 const CH = 78;        // the two arms of the river, ~78 m either side of the middle
 const HW = 13;        // the arms' half-width
-const RAIL_Z = 42;    // the rail embankment on the island (z = -42 west of the middle, +42 east)
 const noise = createNoise2D(1944);
 const lerp = (a, b, k) => a + (b - a) * k;
 
-// ---- the river: the Berezina (north arm) and its old arm (south) — a point-mirrored pair, the town island between
-const wob = (x) => 10 * Math.sin(x * 0.0065) + 5 * Math.sin(x * 0.017 + 1.3);
-const chanN = (x) => -CH + wob(x);
-const chanS = (x) => CH - wob(-x);
+// ---- the river: the Berezina (north arm) and its old arm (south), each winding its own way, the town island between
+const chanN = (x) => -CH + 10 * Math.sin(x * 0.0065) + 5 * Math.sin(x * 0.017 + 1.3);
+const chanS = (x) => CH + 9 * Math.sin(x * 0.0052 + 2.1) + 6 * Math.sin(x * 0.013 - 0.4);
+// the side causeways and their fords: the Red Army's on the old arm, the Germans' on the Berezina
+const SIDE_N = [-300, 350];   // (z > 0)
+const SIDE_P = [-360, 280];   // (z < 0)
 const river = createRiver({
   path: chanN,
   paths: [chanN, chanS],
@@ -36,27 +38,29 @@ const river = createRiver({
   depth: 2.4,
   valley: 32,
   crossings: [
-    { name: 'Berezina bridge', x: 0, kind: 'bridge', width: 9, channel: 0 },
-    { name: 'Old-arm bridge', x: 0, kind: 'bridge', width: 9, channel: 1 },
-    { name: 'Shatkovo ford', x: -SIDE, kind: 'ford', width: 14, channel: 1 },
-    { name: 'Ozatichi ford', x: -SIDE, kind: 'ford', width: 14, channel: 0 },
-    { name: 'Kozulichi ford', x: SIDE, kind: 'ford', width: 14, channel: 0 },
-    { name: 'Titovka ford', x: SIDE, kind: 'ford', width: 14, channel: 1 },
+    { name: 'Berezina bridge', x: HWY, kind: 'bridge', width: 9, channel: 0 },
+    { name: 'Old-arm bridge', x: HWY, kind: 'bridge', width: 9, channel: 1 },
+    { name: 'Glusha ford', x: SIDE_N[0], kind: 'ford', width: 14, channel: 1 },
+    { name: 'Shatkovo ford', x: SIDE_N[1], kind: 'ford', width: 14, channel: 1 },
+    { name: 'Ozatichi ford', x: SIDE_P[0], kind: 'ford', width: 14, channel: 0 },
+    { name: 'Sychkovo ford', x: SIDE_P[1], kind: 'ford', width: 14, channel: 0 },
   ],
 });
 /** Between the two arms (> 0: metres inside the island from the nearer arm's middle). */
 const island = (x, z) => Math.min(z - chanN(x), chanS(x) - z);
 
-// ---- the causeways: three north–south (straight over the river, winding out in the swamp), the island road, and
-// the laterals on each side (one of them the sappers' log-corduroy road)
-const NS = [-SIDE, 0, SIDE];
-const nsX = (rx, z) => rx + (rx ? 14 : 9) * Math.sin(z * 0.011) * smoothstep(120, 200, Math.abs(z));
-const islZ = (x) => 10 * Math.sin(x * 0.012);
-const LAT = [
-  { a: [-SIDE, 330], b: [0, 250], logs: true },   // the corduroy road: Glusha – Titovka
-  { a: [0, 250], b: [SIDE, 210], logs: false },   // gravel causeway: Titovka – Shatkovo
+// ---- the causeways: the highway and each side's two flank causeways (straight over the river, winding out in the
+// swamp), the island road, and each side's laterals (one of them the sappers' log-corduroy road)
+const NS = [...SIDE_N.map((x) => [x, 1]), ...SIDE_P.map((x) => [x, -1]), [HWY, 0]];
+const nsX = (rx, z) => rx + (rx === HWY ? 9 : 14) * Math.sin(z * 0.011 + (z < 0 ? 1.7 : 0)) * smoothstep(120, 200, Math.abs(z));
+const islZ = (x) => 10 * Math.sin(x * 0.012 + 0.7) - 3;
+const SEGS = [
+  { a: [-300, 330], b: [HWY, 250], logs: true },    // the corduroy road: Glusha – Titovka
+  { a: [HWY, 250], b: [350, 210], logs: false },    // gravel causeway: Titovka – Shatkovo
+  { a: [280, -320], b: [HWY, -262], logs: true },   // the German corduroy road: Sychkovo – Kartsevichi
+  { a: [HWY, -262], b: [-210, -250], logs: false }, // gravel causeway: Kartsevichi – Ozatichi, by the Ozatichi hamlet
+  { a: [-210, -250], b: [-360, -228], logs: false },
 ];
-const SEGS = LAT.flatMap((s) => [s, { a: [-s.a[0], -s.a[1]], b: [-s.b[0], -s.b[1]], logs: s.logs }]);
 function segDist(x, z, a, b) {
   const dx = b[0] - a[0], dz = b[1] - a[1];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
@@ -65,36 +69,36 @@ function segDist(x, z, a, b) {
 /** Metres from the nearest causeway's middle. */
 function roadDist(x, z) {
   let d = Infinity;
-  for (const rx of NS) d = Math.min(d, Math.abs(x - nsX(rx, z)));
+  for (const [rx, s] of NS) if (s * z > -10) d = Math.min(d, Math.abs(x - nsX(rx, z))); // (a side causeway ends on the island)
   if (Math.abs(z) < 120) d = Math.min(d, Math.abs(z - islZ(x)));
   for (const s of SEGS) d = Math.min(d, segDist(x, z, s.a, s.b));
   return d;
 }
 const corduroy = (x, z) => SEGS.some((s) => s.logs && segDist(x, z, s.a, s.b) < 3.4);
-/** Metres from the rail line's middle. */
-const railDist = (x, z) => (x < -18 && x > -560 ? Math.abs(z + RAIL_Z) : x > 18 && x < 560 ? Math.abs(z - RAIL_Z) : Infinity);
+/** The rail line along the island on its embankment, slantwise from the Berezina side in the west to the old arm in the east. */
+const railZ = (x) => -40 + 0.075 * (x + 500);
+const railDist = (x, z) => (Math.abs(x) < 560 ? Math.abs(z - railZ(x)) : Infinity);
 
-// ---- the control points (our half, mirrored: G mirrors E … K mirrors A)
-const HALF: [string, string, number, number, string][] = [
-  ['A', 'Parichi road', 0, 470, 'centre'],
-  ['B', 'Glusha', -SIDE, 330, 'west'],
-  ['C', 'Titovka', 0, 250, 'centre'],
-  ['D', 'Shatkovo', SIDE, 210, 'east'],
-  ['E', 'Mikhalevo', -SIDE, -18, 'west'],
-];
-const MIRROR_NAMES = { E: ['G', 'Kozulichi'], D: ['H', 'Ozatichi'], C: ['I', 'Kartsevichi'], B: ['J', 'Sychkovo'], A: ['K', 'Osipovichi road'] };
-const flipSector = (s) => (s === 'west' ? 'east' : s === 'east' ? 'west' : 'centre');
 const points: ControlPointDef[] = [
-  ...HALF.map(([id, name, x, z, sector]) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : null, sector } as ControlPointDef)),
-  { id: 'F', name: 'Bobruisk', x: 0, z: 0, owner: null, sector: 'centre', radius: 30 },
-  ...HALF.map(([id, , x, z, sector]) => ({ id: MIRROR_NAMES[id][0], name: MIRROR_NAMES[id][1], x: -x, z: -z, owner: id === 'A' ? 'pact' : null, sector: flipSector(sector) } as ControlPointDef)),
-].sort((a, b) => a.id.localeCompare(b.id)) as ControlPointDef[];
+  { id: 'A', name: 'Parichi road', x: HWY, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Glusha', x: -300, z: 330, owner: null, sector: 'west' },
+  { id: 'C', name: 'Titovka', x: HWY, z: 250, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Shatkovo', x: 350, z: 210, owner: null, sector: 'east' },
+  { id: 'E', name: 'Mikhalevo', x: -330, z: 15, owner: null, sector: 'west' },
+  { id: 'F', name: 'Bobruisk', x: -15, z: 0, owner: null, sector: 'centre', radius: 30 },
+  { id: 'G', name: 'Kozulichi', x: 300, z: -15, owner: null, sector: 'east' },
+  { id: 'H', name: 'Ozatichi', x: -360, z: -228, owner: null, sector: 'west' },
+  { id: 'I', name: 'Kartsevichi', x: HWY, z: -262, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Sychkovo', x: 280, z: -320, owner: null, sector: 'east' },
+  { id: 'K', name: 'Osipovichi road', x: HWY, z: -470, owner: 'pact', sector: 'centre' },
+];
 
-// ---- dry ground: islands round the hamlets and the bases, the town island, the wooded rises (point-symmetric noise), the edges
-const AIR = { x: -170, z: 452 }; // the Red Army's field airstrip (its tower; the runway 55 m north of it — systems/Airfields.js), mirrored for the Luftwaffe
-const ISLANDS =[...points.map((p) => [p.x, p.z, 52]), [0, BASE_Z, 75], [0, -BASE_Z, 75]];
-const woodsN = (x, z) => fbm(noise, x * 0.0042 + 11, z * 0.0042 - 7, 3);
-const woodsK = (x, z) => smoothstep(0.17, 0.3, Math.max(woodsN(x, z), woodsN(-x, -z)));
+// ---- dry ground: islands round the hamlets and the bases, the town island, the wooded rises, the edges
+// each side's field airstrip (its tower; the runway 55 m off it — systems/Airfields.js), on a dry meadow
+const AIRS = [{ faction: 'nato', x: -170, z: 452, yaw: -Math.PI / 2, dz: -25 }, { faction: 'pact', x: 130, z: -448, yaw: Math.PI / 2, dz: 25 }];
+const ISLANDS = [...points.map((p) => [p.x, p.z, 52]), [0, BASE_Z, 75], [0, -BASE_Z, 75]];
+const woodsN = (x, z) => fbm(noise, x * 0.0042 + 5, z * 0.0042 + 63, 3); // (this patch of the noise: as much wood on each side)
+const woodsK = (x, z) => smoothstep(0.05, 0.18, woodsN(x, z));
 const edgeK = (x, z) => Math.max(smoothstep(440, 500, Math.abs(x)), smoothstep(530, 580, Math.abs(z)));
 function dryK(x, z) {
   let k = Math.max(woodsK(x, z), edgeK(x, z));
@@ -104,16 +108,16 @@ function dryK(x, z) {
   }
   const i = island(x, z);
   if (i > 0) k = Math.max(k, smoothstep(HW, HW + 14, i));
-  for (const m of [1, -1]) k = Math.max(k, smoothstep(170, 145, Math.abs(x * m - AIR.x)) * smoothstep(80, 60, Math.abs(z * m - AIR.z + 25))); // the airstrips' meadows
+  for (const a of AIRS) k = Math.max(k, smoothstep(170, 145, Math.abs(x - a.x)) * smoothstep(80, 60, Math.abs(z - a.z - a.dz))); // the airstrips' meadows
   return k;
 }
 
-// ---- the bog's pools: shallow open water among the reeds (wading depth), our half then mirrored
+// ---- the bog's pools: shallow open water among the reeds (wading depth), scattered over both halves
 const POOLS: { x: number; z: number; rx: number; rz: number; rot: number; s: number }[] = [];
 const poolQ1 = (L, x, z) => {
   const c = Math.cos(L.rot), s = Math.sin(L.rot), dx = x - L.x, dz = z - L.z;
   const lx = (dx * c - dz * s) / L.rx, lz = (dx * s + dz * c) / L.rz, a = Math.atan2(lz, lx);
-  return Math.hypot(lx, lz) * (1 + 0.12 * Math.sin(2 * a + L.s) + 0.07 * Math.sin(4 * a + 2 * L.s)); // (even harmonics: the mirror is the same shape)
+  return Math.hypot(lx, lz) * (1 + 0.12 * Math.sin(2 * a + L.s) + 0.07 * Math.sin(3 * a + 2 * L.s));
 };
 /** < 1 inside a pool, 1 at its edge. */
 const poolQ = (x, z) => {
@@ -123,16 +127,17 @@ const poolQ = (x, z) => {
 };
 {
   const r = mulberry32(1944_06);
-  const half: typeof POOLS = [];
-  for (let i = 0; half.length < 30 && i < 4000; i++) {
-    const x = (r() * 2 - 1) * 450, z = 120 + r() * 410, rx = 12 + r() * 24, rz = 8 + r() * 14, rot = r() * 3, s = r() * 6;
-    const R = Math.max(rx, rz) * 1.2;
+  const count = [0, 0];
+  for (let i = 0; count[0] + count[1] < 60 && i < 8000; i++) {
+    const x = (r() * 2 - 1) * 450, z = (r() * 2 - 1) * 530, rx = 12 + r() * 24, rz = 8 + r() * 14, rot = r() * 3, s = r() * 6;
+    const R = Math.max(rx, rz) * 1.2, side = z > 0 ? 0 : 1;
+    if (count[side] >= 30 || Math.abs(z) < 120) continue;                  // (30 a side: the same bog to cross)
     if (dryK(x, z) > 0.05 || dryK(x + rx, z) > 0.05 || dryK(x - rx, z) > 0.05 || dryK(x, z + rx) > 0.05 || dryK(x, z - rx) > 0.05) continue;
-    if (roadDist(x, z) < R + 16 || z - chanS(x) < R + 40 || Math.hypot(x, z - BASE_Z) < 120) continue;
-    if (half.some((p) => Math.hypot(p.x - x, p.z - z) < (Math.max(p.rx, p.rz) + Math.max(rx, rz)) * 1.25 + 14)) continue;
-    half.push({ x, z, rx, rz, rot, s });
+    if (roadDist(x, z) < R + 16 || (z > 0 ? z - chanS(x) : chanN(x) - z) < R + 40 || Math.hypot(x, Math.abs(z) - BASE_Z) < 120) continue;
+    if (POOLS.some((p) => Math.hypot(p.x - x, p.z - z) < (Math.max(p.rx, p.rz) + Math.max(rx, rz)) * 1.25 + 14)) continue;
+    POOLS.push({ x, z, rx, rz, rot, s });
+    count[side]++;
   }
-  for (const p of half) POOLS.push(p, { ...p, x: -p.x, z: -p.z });
 }
 
 function height(x, z) {
@@ -178,8 +183,7 @@ export default {
   river,
   bridgeAt: (x, z) => river.bridgeAt(x, z),
   airfields: [
-    { faction: 'nato', x: AIR.x, z: AIR.z, yaw: -Math.PI / 2, large: false },
-    { faction: 'pact', x: -AIR.x, z: -AIR.z, yaw: Math.PI / 2, large: false },
+    ...AIRS.map((a) => ({ faction: a.faction, x: a.x, z: a.z, yaw: a.yaw, large: false })),
   ],
   woods: (x, z) => Math.max(woodsK(x, z), edgeK(x, z)) * 0.85,
   fields: createFields({ seed: 1944, cell: 70 }),
@@ -211,7 +215,7 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: NS }, pact: { x: 0, z: -BASE_Z, entries: NS } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [SIDE_N[0], HWY, SIDE_N[1]] }, pact: { x: 0, z: -BASE_Z, entries: [SIDE_P[0], HWY, SIDE_P[1]] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 400 }, pact: { x: 0, z: -400 } },
   points,
@@ -248,65 +252,68 @@ export default {
       cover.addBox({ x, z, yaw, length, thickness: 0.3, height: 1.1 });
     };
 
-    // ---- Bobruisk on its island: wooden houses along the island road, a few brick ones by the square (west half, mirrored)
-    const CLEAR = [[-50, 30, 9, 16], [-85, -55, 13, 8], [-115, -55, 5, 5]]; // church, station, water tower
+    // ---- Bobruisk on its island: wooden houses along the island road, brick ones round the square by the highway
+    const CLEAR = [[-80, 32, 9, 16], [70, -26, 9, 16], [-140, railZ(-140) - 15, 13, 8], [-172, railZ(-172) - 14, 5, 5]]; // two churches, station, water tower
     const clearOf = (x, z, hw) => !CLEAR.some(([cx, cz, w, d]) => Math.abs(x - cx) < w + hw + 2 && Math.abs(z - cz) < d + hw + 2);
-    mirrored(props, 1944_01, (m, flip) => {
+    props.rand = mulberry32(1944_01);
+    {
       const r = props.rand;
-      for (const row of [-15, 15, 31]) {
-        for (let x = -24 - r() * 4; x > -200; x -= 13 + r() * 6) {
+      for (const row of [-31, -15, 15, 31]) {
+        for (let x = -230 + r() * 6; x < 230; x += 13 + r() * 6) {
           const z = islZ(x) + row + (r() - 0.5) * 2;
           const w = 7 + r() * 3, d = 6 + r() * 1.5;
-          const brick = Math.abs(x) < 80 && row !== 31 && r() < 0.6;
-          const skip = r() < 0.15;
-          if (skip || !clearOf(x, z, w / 2) || railDist(x, z) < 11 || island(x, z) < HW + 16 || Math.abs(nsX(-SIDE, z) - x) < 14) continue;
-          const yaw = (row < 0 ? 0 : Math.PI) + flip;
-          if (brick) props.townHouse({ x: x * m, z: z * m, yaw, width: w + 1, depth: d + 2, storeys: 2, name: 'brick house', damaged: 0.3 });
-          else logHouse(x * m, z * m, yaw, w, d);
-          if (row !== -15 && r() < 0.5) fence((x + (r() - 0.5) * 4) * m, (z + (row < 0 ? -1 : 1) * (d / 2 + 4)) * m, flip, w + 2);
+          const brick = Math.abs(x - HWY) < 80 && Math.abs(row) !== 31 && r() < 0.6;
+          const skip = r() < (Math.abs(x) > 150 ? 0.35 : 0.15);
+          if (skip || !clearOf(x, z, w / 2) || Math.abs(x - HWY) < 12 || railDist(x, z) < 11 || island(x, z) < HW + 16 || NS.some(([rx]) => Math.abs(rx - x) < 14) || Math.hypot(x + 15, z) < 14) continue;
+          const yaw = row < 0 ? 0 : Math.PI;
+          if (brick) props.townHouse({ x, z, yaw, width: w + 1, depth: d + 2, storeys: 2, name: 'brick house', damaged: 0.3 });
+          else logHouse(x, z, yaw, w, d);
+          if (Math.abs(row) === 31 && r() < 0.5) fence(x + (r() - 0.5) * 4, z + Math.sign(row) * (d / 2 + 4), 0, w + 2);
         }
       }
-      props.church({ x: -50 * m, z: 30 * m, yaw: Math.PI + flip });
-      props.townHouse({ x: -85 * m, z: -55 * m, yaw: flip, width: 20, depth: 9, storeys: 2, name: 'railway station', damaged: 0.4 });
-      props.tanks({ x: -115 * m, z: -55 * m, yaw: 0, count: 1, radius: 2.4, height: 10, color: 0x7a5a44 });
-      props.rails({ x0: -560 * m, z0: -RAIL_Z * m, x1: -18 * m, z1: -RAIL_Z * m });
-      for (const [x, kind, c] of [[-150, 'box', 0x5a3426], [-162, 'open', 0x4a4038], [-174, 'box', 0x4e3a2a], [-420, 'tank', 0x2a2a2a], [-432, 'box', 0x5a3426]] as [number, string, number][]) {
-        props.wagon({ x: x * m, z: -RAIL_Z * m, yaw: Math.PI / 2, kind, color: c });
-      }
-      // the bridgeheads: sandbagged posts on the island at each bridge, barricades beside the road
-      props.sandbagRing({ x: 14 * m, z: (chanN(14) + HW + 16) * m, radius: 5, toward: -m });
-      props.logBarricade({ x: -11 * m, z: (chanN(-11) + HW + 12) * m, yaw: 0.15 + flip, length: 6 });
-      // the square: a low wall round the memorial
-      props.lowWall({ x: -16 * m, z: 18 * m, yaw: flip, length: 10, height: 0.9 });
-      props.column({ x: 12 * m, z: -14 * m, radius: 1.2, height: 2.4 });
-    });
+    }
+    props.church({ x: -80, z: 32, yaw: Math.PI });
+    props.church({ x: 70, z: -26, yaw: 0 });
+    props.townHouse({ x: -140, z: railZ(-140) - 15, yaw: Math.atan2(1, 0.075) - Math.PI / 2, width: 20, depth: 9, storeys: 2, name: 'railway station', damaged: 0.4 });
+    props.tanks({ x: -172, z: railZ(-172) - 14, yaw: 0, count: 1, radius: 2.4, height: 10, color: 0x7a5a44 });
+    props.rails({ x0: -560, z0: railZ(-560), x1: 560, z1: railZ(560) });
+    for (const [x, kind, c] of [[-190, 'box', 0x5a3426], [-202, 'open', 0x4a4038], [-214, 'box', 0x4e3a2a], [-420, 'tank', 0x2a2a2a], [-432, 'box', 0x5a3426], [260, 'open', 0x4a4038], [380, 'box', 0x5a3426]] as [number, string, number][]) {
+      props.wagon({ x, z: railZ(x), yaw: Math.atan2(1, 0.075), kind, color: c });
+    }
+    // the bridgeheads: sandbagged posts on the island at each bridge, barricades beside the highway
+    props.sandbagRing({ x: HWY + 14, z: chanN(HWY + 14) + HW + 16, radius: 5, toward: -1 });
+    props.logBarricade({ x: HWY - 11, z: chanN(HWY - 11) + HW + 12, yaw: 0.15, length: 6 });
+    props.sandbagRing({ x: HWY - 15, z: chanS(HWY - 15) - HW - 15, radius: 5, toward: 1 });
+    props.logBarricade({ x: HWY + 12, z: chanS(HWY + 12) - HW - 11, yaw: Math.PI - 0.2, length: 6 });
+    // the square: a low wall round the memorial
+    props.lowWall({ x: 6, z: 16, yaw: 0, length: 10, height: 0.9 });
+    props.column({ x: -4, z: -16, radius: 1.2, height: 2.4 });
 
-    // ---- hamlets of log houses on the dry islands (each mirrored pair from one seed)
+    // ---- hamlets of log houses on the dry islands, each its own layout
     for (const p of points) {
-      if (!'ABCDE'.includes(p.id)) continue; // (the mirror builds G–K)
-      mirrored(props, 7000 + Math.round(p.x * 3 + p.z), (m, flip) => {
-        const r = props.rand;
-        const n = p.id === 'A' ? 4 : 7;
-        const placed: number[][] = [];
-        for (let i = 0; i < 26 && placed.length < n; i++) {
-          const a = (i / 13) * Math.PI * 2 + r() * 0.4;
-          const dist = 15 + r() * 16;
-          const x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
-          const w = 6.5 + r() * 2.5, d = 5.5 + r() * 1.5;
-          const yaw = Math.atan2(-Math.cos(a), -Math.sin(a)); // facing the middle of the hamlet
-          const extra = r();
-          if (roadDist(x, z) < 11 || railDist(x, z) < 11 || dryK(x, z) < 0.7 || Math.hypot(x, z - BASE_Z) < 34 || Math.hypot(x, z + BASE_Z) < 34 || placed.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < 12)) continue;
-          placed.push([x, z]);
-          logHouse(x * m, z * m, yaw + flip, w, d, placed.length % 3 === 0 ? 'barn' : 'log house');
-          const [fx, fz] = PropBuilder.local(x, z, yaw, 0, -d / 2 - 5);
-          if (extra < 0.4 && roadDist(fx, fz) > 8) fence(fx * m, fz * m, yaw + flip, w + 3);
-          else if (extra < 0.7 && roadDist(fx, fz) > 8) props.logPile({ x: fx * m, z: fz * m, yaw: yaw + flip, length: 6 });
-          else if (roadDist(fx, fz) > 8) props.hayBales({ x: fx * m, z: fz * m, yaw: yaw + flip, count: 2 });
-        }
-      });
+      if (p.id === 'F') continue;
+      props.rand = mulberry32(7000 + Math.round(p.x * 3 + p.z));
+      const r = props.rand;
+      const n = p.owner ? 4 : 7;
+      const placed: number[][] = [];
+      for (let i = 0; i < 26 && placed.length < n; i++) {
+        const a = (i / 13) * Math.PI * 2 + r() * 0.4;
+        const dist = 15 + r() * 16;
+        const x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
+        const w = 6.5 + r() * 2.5, d = 5.5 + r() * 1.5;
+        const yaw = Math.atan2(-Math.cos(a), -Math.sin(a)); // facing the middle of the hamlet
+        const extra = r();
+        if (roadDist(x, z) < 11 || railDist(x, z) < 11 || dryK(x, z) < 0.7 || Math.abs(island(x, z)) < HW + 6 || Math.hypot(x, z - BASE_Z) < 34 || Math.hypot(x, z + BASE_Z) < 34 || placed.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < 12)) continue;
+        placed.push([x, z]);
+        logHouse(x, z, yaw, w, d, placed.length % 3 === 0 ? 'barn' : 'log house');
+        const [fx, fz] = PropBuilder.local(x, z, yaw, 0, -d / 2 - 5);
+        if (extra < 0.4 && roadDist(fx, fz) > 8) fence(fx, fz, yaw, w + 3);
+        else if (extra < 0.7 && roadDist(fx, fz) > 8) props.logPile({ x: fx, z: fz, yaw, length: 6 });
+        else if (roadDist(fx, fz) > 8) props.hayBales({ x: fx, z: fz, yaw, count: 2 });
+      }
     }
 
-    // ---- the corduroy road's logs, and wrecks of the columns caught on the causeways
+    // ---- the corduroy roads' logs, and wrecks of the columns caught on the causeways
     props.rand = mulberry32(1944_02);
     for (const s of SEGS) {
       if (!s.logs) continue;
@@ -316,17 +323,19 @@ export default {
         props.box('plain', x, terrain.heightAt(x, z) + 0.1, z, 5.6 + props.rand() * 0.6, 0.22, 0.3, yaw + (props.rand() - 0.5) * 0.06, new THREE.Color().setHSL(0.07, 0.2, 0.08 + props.rand() * 0.05).getHex());
       }
     }
-    mirrored(props, 1944_03, (m, flip) => {
+    props.rand = mulberry32(1944_03);
+    {
       const r = props.rand;
-      for (let i = 0; i < 14; i++) {
-        const rx = NS[i % 3], z = 140 + r() * 360, side = r() < 0.5 ? -1 : 1;
+      for (let i = 0; i < 28; i++) {
+        const [rx, s] = NS[i % NS.length], sg = s || (r() < 0.5 ? 1 : -1), z = sg * (140 + r() * 360), side = r() < 0.5 ? -1 : 1;
         const x = nsX(rx, z) + side * (7.5 + r() * 2);
-        if (nearPoint(x, z, 30) || Math.hypot(x, z - BASE_Z) < 50) continue;
-        props.wreckCar({ x: x * m, z: z * m, yaw: r() * 6.28 + flip });
+        if (nearPoint(x, z, 30) || Math.hypot(x, Math.abs(z) - BASE_Z) < 50) continue;
+        props.wreckCar({ x, z, yaw: r() * 6.28 });
       }
-      // dug-in positions beside the causeways where they leave the islands
-      for (const [x, z] of [[-SIDE + 12, 268], [14, 300], [SIDE - 13, 160], [-SIDE - 12, 70]]) props.sandbagRing({ x: x * m, z: z * m, radius: 4.5, toward: -m });
-    });
+    }
+    // dug-in positions beside the causeways where they leave the islands
+    for (const [x, z] of [[-288, 268], [-16, 300], [337, 160], [-312, 70]]) props.sandbagRing({ x, z, radius: 4.5, toward: -1 });
+    for (const [x, z] of [[268, -262], [-44, -312], [-348, -172], [-372, -45]]) props.sandbagRing({ x, z, radius: 4.5, toward: 1 });
     commandPost(props, this.bases.nato, -1, 0x5a5a40);
     commandPost(props, this.bases.pact, 1, 0x4e5236);
 
@@ -366,7 +375,7 @@ export default {
       scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 10000, broadleaf: 0.4, autumn: 0, maxY: 40,
       forest: (x, z) => {
         if (wet(x, z) || roadDist(x, z) < 9 || railDist(x, z) < 8 || nearPoint(x, z, 30)) return -1;
-        if (island(x, z) > 0 && Math.abs(x) < 200) return 0.02;   // the town
+        if (island(x, z) > 0 && Math.abs(x) < 240) return 0.02;   // the town
         const w = Math.max(woodsK(x, z), edgeK(x, z));
         if (w > 0.5) return 1;
         return dryK(x, z) > 0.5 ? 0.1 : -0.04;      // (bog: a birch here and there — the base 6 % less 4)

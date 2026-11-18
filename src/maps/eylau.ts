@@ -3,16 +3,18 @@
 // up from the west through the town, its church and its walled churchyard on the rise. A blizzard blew
 // into Augereau's columns, they lost their way in the snow and walked into the Russian guns; then Murat
 // led eighty squadrons through the Russian centre. The frozen ponds and lakes round the town bore men and
-// horses. The French come from the west (+z), the Russians hold the east (−z). Point-mirrored for a fair
-// fight: the Russian ridge has its twin in the Ziegelhof heights in front of the French, each frozen lake
-// its twin; the town and its church stand at the centre, owned by neither. No `climate`: the winter tint
+// horses. The French come from the west (+z), the Russians hold the east (−z). Not mirrored but fair,
+// ground traded like for like: the long low Russian ridge with the great battery against the round,
+// higher Ziegelhof heights before the French; the Waschkeiten lake and the long lake on the French left
+// against the bigger pond by Serpallen and the one at Kutschitten on the Russian left; the Rothenen wood
+// against the Schmoditten wood; the town and its church at the centre, owned by neither. No `climate`: the winter tint
 // whitens the soldiers' clothing (snow smocks), and 1807 fought in its coloured coats.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, buildVillage, mirrored } from './common.js';
+import { buildSite, buildVillage } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -20,57 +22,57 @@ const BASE_Z = 500;
 const TOWN = 80;    // Eylau's radius
 const noise = createNoise2D(1807_02);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
-const mirror = (x, z): [number, number] => (z < 0 || (z === 0 && x < 0) ? [-x, -z] : [x, z]);
 
 const POINTS: ControlPointDef[] = [
   { id: 'A', name: 'Landsberg road', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Tenknitten', x: -390, z: 330, owner: null, sector: 'west' },
-  { id: 'C', name: 'Ziegelhof', x: -110, z: 245, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Rothenen', x: 210, z: 375, owner: null, sector: 'east' },
+  { id: 'B', name: 'Tenknitten', x: -380, z: 345, owner: null, sector: 'west' },
+  { id: 'C', name: 'Ziegelhof', x: -120, z: 250, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Rothenen', x: 230, z: 360, owner: null, sector: 'east' },
   { id: 'E', name: 'Waschkeiten lake', x: -265, z: 105, owner: null, sector: 'west', radius: 24 },
   { id: 'F', name: 'Eylau church', x: 0, z: 0, owner: null, sector: 'centre', radius: 28 },
-  { id: 'G', name: 'Serpallen', x: 265, z: -105, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Schmoditten', x: -210, z: -375, owner: null, sector: 'west' },
-  { id: 'I', name: 'Great battery', x: 110, z: -245, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Kutschitten', x: 390, z: -330, owner: null, sector: 'east' },
+  { id: 'G', name: 'Serpallen', x: 320, z: -100, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Schmoditten', x: -260, z: -320, owner: null, sector: 'west' },
+  { id: 'I', name: 'Great battery', x: 40, z: -255, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Kutschitten', x: 370, z: -370, owner: null, sector: 'east' },
   { id: 'K', name: 'Anklappen', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
-// the frozen lakes (our half; each has its twin): beside Tenknitten and the long one north of the town
-const LAKES = [[-300, 190, 70, 34, 0.5], [-170, 395, 50, 26, -0.4]];
+// the frozen lakes: the Waschkeiten lake and the long one north of the town (French left), the pond by
+// Serpallen and the small one at Kutschitten (Russian left) — the same ice, laid out otherwise
+const LAKES = [[-300, 190, 70, 34, 0.5], [-170, 395, 50, 26, -0.4], [250, -150, 82, 30, 1.2], [420, -250, 38, 24, 0.2]];
 /** 1 on the ice, 0 off it. */
 function ice(x, z) {
-  const [ax, az] = mirror(x, z);
   let k = 0;
   for (const [cx, cz, rx, rz, a] of LAKES) {
-    const dx = ax - cx, dz = az - cz, u = (dx * Math.cos(a) + dz * Math.sin(a)) / rx, v = (-dx * Math.sin(a) + dz * Math.cos(a)) / rz;
-    k = Math.max(k, smoothstep(1.05, 0.85, Math.hypot(u, v) + fbm(noise, ax * 0.03, az * 0.03, 2) * 0.12));
+    const dx = x - cx, dz = z - cz, u = (dx * Math.cos(a) + dz * Math.sin(a)) / rx, v = (-dx * Math.sin(a) + dz * Math.cos(a)) / rz;
+    k = Math.max(k, smoothstep(1.05, 0.85, Math.hypot(u, v) + fbm(noise, x * 0.03, z * 0.03, 2) * 0.12));
   }
   return k;
 }
 /** 1 in the town, 0 outside it. */
 const town = (x, z) => smoothstep(TOWN + 15, TOWN - 15, Math.hypot(x, z));
-/** Birch and fir copses (0..1), the same on both halves. */
+/** Birch and fir copses (0..1). */
 const copse = (x, z) => {
-  const [ax, az] = mirror(x, z);
-  let k = smoothstep(0.36, 0.52, fbm(noise, ax * 0.006 + 40, az * 0.006 - 12, 3));
-  k = Math.max(k, smoothstep(70, 40, Math.hypot(ax - 330, az - 180)) * 0.85); // (the wood by Rothenen)
+  let k = smoothstep(0.36, 0.52, fbm(noise, x * 0.006 + 40, z * 0.006 - 12, 3));
+  k = Math.max(k, smoothstep(70, 40, Math.hypot(x - 330, z - 180)) * 0.85);            // (the wood by Rothenen)
+  k = Math.max(k, smoothstep(62, 36, Math.hypot((x + 330) * 0.7, z + 190)) * 0.85);    // (the Schmoditten wood)
   k = Math.min(k, 1 - town(x, z), 1 - ice(x, z));
   for (const p of POINTS) k = Math.min(k, smoothstep(30, 55, Math.hypot(x - p.x, z - p.z)));
   return k;
 };
 
 function height(x, z) {
-  const [ax, az] = mirror(x, z);
-  let h = fbm(noise, ax * 0.0025, az * 0.0025, 3) * 4 + fbm(noise, ax * 0.02 + 7, az * 0.02, 3) * 0.4;
-  h += hill(ax, az, P.C.x, P.C.z, 95, 9);                                            // the Ziegelhof heights (and the Russian ridge, their twin)
-  h += hill(ax, az, P.C.x + 60, P.C.z - 30, 60, 3);
-  h += hill(ax, az, 0, 0, 70, 3);                                                     // the rise the church and churchyard stand on
-  h += smoothstep(390, 560, az) * 10;
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 26 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, az) * 22;
+  let h = fbm(noise, x * 0.0025, z * 0.0025, 3) * 5.5 + fbm(noise, x * 0.02 + 7, z * 0.02, 3) * 0.4;
+  h += hill(x, z, P.C.x, P.C.z, 95, 9);                                               // the Ziegelhof heights: round and high
+  h += hill(x, z, P.C.x + 60, P.C.z - 30, 60, 3);
+  const rz = z + 265 - x * 0.12;                                                       // the Russian ridge: long and lower, Schmoditten to Serpallen
+  h += 8 * Math.exp(-((rz / 75) ** 2)) * smoothstep(-420, -250, x) * smoothstep(330, 180, x);
+  h += hill(x, z, 0, 0, 70, 3);                                                        // the rise the church and churchyard stand on
+  h += smoothstep(390, 560, z) * 10 + smoothstep(360, 600, -z) * 10;                   // the Landsberg road's rise behind the French, the Anklappen slope behind the Russians
+  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 26 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 22;
   const k = ice(x, z);
-  if (k > 0) h += (0.6 - h) * k + fbm(noise, ax * 0.02, az * 0.02, 2) * 0.1 * (1 - k); // the lakes: flat ice in a hollow
+  if (k > 0) h += (0.6 - h) * k + fbm(noise, x * 0.02, z * 0.02, 2) * 0.1 * (1 - k);   // the lakes: flat ice in a hollow
   for (const p of POINTS) if (!'CEI'.includes(p.id)) h += (h * 0.5 + 1.5 - h) * smoothstep(40, 20, Math.hypot(x - p.x, z - p.z)) * 0.5; // villages on level ground
   return h;
 }
@@ -81,7 +83,7 @@ export default {
   id: 'eylau',
   armies: { nato: ['fr'], pact: ['ru'] }, // (Napoleon against Bennigsen's Russians — L'Estocq's Prussians came late in the day)
   name: 'Eylau',
-  description: 'East Prussia, February 1807: the town, its church and churchyard on the rise, frozen lakes and the Russian great battery on the ridge, in driving snow. Mirrored to keep it fair.',
+  description: 'East Prussia, February 1807: the town, its church and churchyard on the rise, frozen lakes and the Russian great battery on the ridge, in driving snow.',
   epochs: ['1806'],
   region: 'east',
   conditions: { time: 'day', weather: 'overcast' },
@@ -158,50 +160,43 @@ export default {
     for (let i = 0; i < 9; i++) props.boulder({ x: 12 + (i % 3) * 5, z: -8 - Math.floor(i / 3) * 5, radius: 0.35 }); // the graves under the snow
     const taken: number[][] = [[-10, 14, 16], [18, -14, 15]];
     const rr = mulberry32(1807);
-    for (const a0 of [0.3, 1.9, 3.4, 5.0]) { // the streets out of the market (mirrored pairs)
+    for (const a0 of [0.3, 1.2, 2.3, 3.5, 4.4, 5.4]) { // the streets out of the market
       for (let d = 32; d < TOWN; d += 11 + rr() * 4) {
         for (const side of [-1, 1]) {
           if (rr() < 0.3) continue;
           const x = Math.cos(a0) * d - Math.sin(a0) * side * 10, z = Math.sin(a0) * d + Math.cos(a0) * side * 10, w = 7 + rr() * 2; // (a row each side of the street)
-          if (taken.some(([tx, tz, r]) => Math.hypot(x - tx, z - tz) < r + 7) || taken.some(([tx, tz, r]) => Math.hypot(-x - tx, -z - tz) < r + 7)) continue;
-          taken.push([x, z, 6], [-x, -z, 6]);
-          const seed = Math.floor(rr() * 1e9);
-          mirrored(props, seed, (m, flip) => props.townHouse({ x: x * m, z: z * m, yaw: a0 + Math.PI / 2 + flip, width: w, depth: 8, storeys: 2, damaged: 0 }));
+          if (taken.some(([tx, tz, r]) => Math.hypot(x - tx, z - tz) < r + 7)) continue;
+          taken.push([x, z, 6]);
+          props.rand = mulberry32(Math.floor(rr() * 1e9));
+          props.townHouse({ x, z, yaw: a0 + Math.PI / 2, width: w, depth: 8, storeys: rr() < 0.7 ? 2 : 1, damaged: 0 });
         }
       }
     }
 
-    // ---- the villages; the great battery's emplacement on the ridge (and its twin on the Ziegelhof)
-    for (const p of POINTS) {
-      if (p.z < 0 || (p.z === 0 && p.x <= 0) || p.id === 'E') continue;
-      const seed = 18072 + Math.round(p.x * 3 + p.z);
-      buildVillage(props, p, seed, 1);
-      buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
-    }
-    mirrored(props, 1807_3, (m, flip) => {
-      const q = { x: P.I.x * m, z: P.I.z * m };
-      for (let k = -2; k <= 2; k++) props.wall({ x: q.x + k * 14 * m, z: q.z + 12 * m, yaw: flip, length: 9, height: 0.9, color: 0x8a8070 }); // the gun line's breastwork
-      props.house({ x: q.x - 30 * m, z: q.z - 22 * m, yaw: flip + 0.3, width: 9, depth: 6 });
-    });
-    // a fisher's hut and boats drawn up on the lake shores
-    mirrored(props, 1807_4, (m, flip) => {
-      props.house({ x: -240 * m, z: 150 * m, yaw: flip + 0.6, width: 6, depth: 5 });
-      props.logPile({ x: -232 * m, z: 140 * m, yaw: flip + 1.2, length: 6 });
-    });
+    // ---- the villages; the great battery's breastwork along the ridge, the Ziegelhof's brickworks and its gun pits
+    for (const p of POINTS) if (!p.owner && !'EFI'.includes(p.id)) buildVillage(props, p, 18072 + Math.round(p.x * 3 + p.z * 7));
+    props.rand = mulberry32(1807_3);
+    for (let k = -3; k <= 2; k++) props.wall({ x: P.I.x + k * 14, z: P.I.z + 14 + k * 14 * 0.12, yaw: Math.atan(0.12), length: 9, height: 0.9, color: 0x8a8070 }); // (the gun line's breastwork, along the crest)
+    props.house({ x: P.I.x - 34, z: P.I.z - 24, yaw: 0.3, width: 9, depth: 6 });
+    props.hall({ x: P.C.x + 30, z: P.C.z + 26, yaw: 0.5, width: 16, depth: 8, height: 4, color: 0x8a5a44, roof: 0x5a3a2a, door: 4, name: 'brick kiln' }); // (the Ziegelhof: the brickworks)
+    for (const [dx, dz, yaw] of [[-20, -16, 0.4], [6, -22, -0.1]] as const) props.wall({ x: P.C.x + dx, z: P.C.z + dz, yaw, length: 10, height: 0.9, color: 0x8a8070 });
+    // fishers' huts and log piles on the lake shores
+    props.rand = mulberry32(1807_4);
+    props.house({ x: -240, z: 150, yaw: 0.6, width: 6, depth: 5 });
+    props.logPile({ x: -232, z: 140, yaw: 1.2, length: 6 });
+    props.house({ x: 200, z: -112, yaw: 2.6, width: 6, depth: 5 });
+    props.logPile({ x: 436, z: -218, yaw: 0.3, length: 6 });
 
     // ---- farms, field walls and hay in the snow
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'farm'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 40 && tries < 6000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = 20 + rand() * (bounds.z - 80);
+    for (let tries = 0; sites.length < 80 && tries < 12000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 60);
       if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 60 * 60)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 50 || nearPoint(x, z, 50) || copse(x, z) > 0.3 || ice(x, z) > 0 || ice(x + 25, z) > 0 || ice(x - 25, z) > 0 || town(x, z) > 0) continue;
+      if (Math.hypot(x, z - BASE_Z) < 50 || Math.hypot(x, z + BASE_Z) < 50 || nearPoint(x, z, 50) || copse(x, z) > 0.3 || ice(x, z) > 0 || ice(x + 25, z) > 0 || ice(x - 25, z) > 0 || town(x, z) > 0) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     // each army's bivouac behind its base
     for (const [base, toward, canvas] of [[this.bases.nato, -1, 0xd8d0b8], [this.bases.pact, 1, 0xc8c4b0]] as const) {
       props.tent({ x: base.x - 6, z: base.z - toward * 4, yaw: 0.2, color: canvas });

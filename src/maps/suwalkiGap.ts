@@ -4,8 +4,11 @@
 // Via Baltica highway straight up the middle. Russia attacks from the Kaliningrad border (north,
 // -z) to cut the highway; NATO holds the south (+z). Three sectors like the Fulda Gap, but the
 // dividers are ribbon lakes with dry isthmuses between them instead of wooded ridges. Wind
-// turbines, solar fields and a power line on both sides. Point-mirrored, so neither side has the
-// better ground.
+// turbines, solar fields and a power line on both sides. Not a mirror: each half has its own lakes,
+// villages and woods (the Polish side's long lakes run north–south, the far side's lie aslant with its
+// big lake far back on the flank), but both get two ribbon lakes splitting the sectors with a dry
+// isthmus through each, one big flank lake, the same distances to their points and the same moraine
+// swells, so neither side has the better ground.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -18,12 +21,12 @@ import type { MapDef, ControlPointDef } from '../types.ts';
 const BASE_Z = 500;
 const SECTOR_X = 330;
 const noise = createNoise2D(2027);
-/** The Via Baltica's centre line (odd in z: the highway is point-mirrored too). */
+/** The Via Baltica's centre line: a long gentle S-bend through both halves. */
 const viaX = (z) => 18 * Math.sin(z * 0.004);
 
-// Our half's lakes; each is mirrored through the centre. Ribbon lakes split the sectors (x ≈ ∓170)
-// with isthmuses at the forward villages' row (z ≈ ±290) and at the border; a big lake on the flank.
-const HALF = [
+// Each half's lakes. Ribbon lakes split the sectors (x ≈ ±170) with isthmuses at the forward villages'
+// row and at the border; a big lake on a flank.
+const NATO_LAKES = [
   { x: -170, z: 150, rx: 32, rz: 95, rot: 0.12, depth: 5, seed: 1 },
   { x: -175, z: 425, rx: 28, rz: 68, rot: -0.1, depth: 4, seed: 2 },
   { x: 170, z: 120, rx: 30, rz: 70, rot: -0.15, depth: 4.5, seed: 3 },
@@ -31,7 +34,15 @@ const HALF = [
   { x: -440, z: 120, rx: 50, rz: 85, rot: 0.3, depth: 7, seed: 5 },
   { x: 95, z: 370, rx: 22, rz: 16, rot: 0.5, depth: 2.5, seed: 6 },
 ];
-const lakes = createLakes({ lakes: [...HALF, ...HALF.map((l) => ({ ...l, x: -l.x, z: -l.z, seed: l.seed }))] });
+const PACT_LAKES = [
+  { x: -150, z: -215, rx: 26, rz: 112, rot: -0.28, depth: 6, seed: 7 },   // a long trough like Hańcza's, aslant
+  { x: -205, z: -468, rx: 30, rz: 46, rot: 0.35, depth: 4, seed: 8 },
+  { x: 190, z: -150, rx: 40, rz: 58, rot: 0.3, depth: 4.5, seed: 9 },
+  { x: 140, z: -405, rx: 24, rz: 70, rot: -0.35, depth: 4, seed: 10 },
+  { x: -440, z: -395, rx: 44, rz: 92, rot: 0.15, depth: 7, seed: 11 },
+  { x: -70, z: -350, rx: 18, rz: 22, rot: 0.2, depth: 2.5, seed: 12 },
+];
+const lakes = createLakes({ lakes: [...NATO_LAKES, ...PACT_LAKES] });
 
 function height(x, z) {
   const ax = Math.abs(x);
@@ -54,19 +65,19 @@ const pactName = { '1st Platoon': '1-ya Rota' };
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Raczki', x: viaX(470), z: 470, owner: 'nato', sector: 'centre' },
   { id: 'B', name: 'Filipów', x: -SECTOR_X, z: 340, owner: null, sector: 'west' },
-  { id: 'C', name: 'Jeleniewo', x: viaX(230), z: 230, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Puńsk', x: SECTOR_X, z: 270, owner: null, sector: 'east' },
-  { id: 'E', name: 'Przerośl', x: -SECTOR_X, z: 75, owner: null, sector: 'west', radius: 22 },
-  { id: 'F', name: 'Budzisko', x: 0, z: 0, owner: null, sector: 'centre', radius: 22 },
-  { id: 'G', name: 'Wiżajny', x: SECTOR_X, z: -75, owner: null, sector: 'east', radius: 22 },
-  { id: 'H', name: 'Żytkiejmy', x: -SECTOR_X, z: -270, owner: null, sector: 'west' },
-  { id: 'I', name: 'Dubeninki', x: viaX(-230), z: -230, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Gołdap', x: SECTOR_X, z: -340, owner: null, sector: 'east' },
+  { id: 'C', name: 'Jeleniewo', x: viaX(245) + 30, z: 245, owner: null, sector: 'centre' },
+  { id: 'D', name: 'Puńsk', x: 365, z: 300, owner: null, sector: 'east' },
+  { id: 'E', name: 'Przerośl', x: -300, z: 95, owner: null, sector: 'west', radius: 22 },
+  { id: 'F', name: 'Budzisko', x: viaX(-6) + 34, z: -6, owner: null, sector: 'centre', radius: 22 },
+  { id: 'G', name: 'Wiżajny', x: 340, z: -95, owner: null, sector: 'east', radius: 22 },
+  { id: 'H', name: 'Żytkiejmy', x: -295, z: -245, owner: null, sector: 'west' },
+  { id: 'I', name: 'Dubeninki', x: viaX(-220) - 36, z: -220, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Gołdap', x: 300, z: -370, owner: null, sector: 'east' },
   { id: 'K', name: 'Krasnoznamensk', x: viaX(-470), z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 const ASPHALT = 0x3c3d3f;
-const SOLAR = [[-82, 105], [420, 175]]; // solar fields (and their mirrors)
+const SOLAR = [[-82, 105], [420, 175], [-250, -110], [60, -150]]; // solar fields, two each side
 export default {
   id: 'suwalki-gap',
   name: 'Suwałki Gap',
@@ -143,12 +154,11 @@ export default {
     const both = (seed, fn) => { for (const m of [1, -1]) { props.rand = mulberry32(seed); fn(m, m > 0 ? 0 : Math.PI); } };
 
     // Villages: houses along the street, a farm shed and silos, garden walls; a church in the bigger ones.
-    for (const p of points) {
-      if (p.z < 0 || (p.z === 0 && p.x > 0)) continue;
-      const seed = 2700 + Math.round(p.x * 3 + p.z);
-      both(seed, (m, flip) => {
-        const r = props.rand, X = p.x * m, Z = p.z * m;
-        const street = (p.sector === 'centre' ? 0 : r() * Math.PI) + flip; // the centre villages line the highway
+    for (const p of points) { // each its own street plan
+      props.rand = mulberry32(2700 + Math.round(p.x * 3 + p.z));
+      {
+        const r = props.rand, X = p.x, Z = p.z;
+        const street = p.sector === 'centre' ? 0 : r() * Math.PI; // the centre villages line the highway
         const off = p.sector === 'centre' ? 20 : 0;
         const n = p.radius ? 4 : 6;
         for (let i = 0; i < n; i++) {
@@ -171,22 +181,21 @@ export default {
         }
         const [wx, wz] = PropBuilder.local(X, Z, street, (r() - 0.5) * 8, (r() - 0.5) * 30);
         if (!onRoad(wx, wz, 0) || p.sector !== 'centre') props.wreckCar({ x: wx, z: wz, yaw: street + r() });
-      });
+      }
     }
 
-    // Cover across the fields, mirrored.
+    // Cover across the fields, each half its own.
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'fieldwall', 'roadblock'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 130 && tries < 9000; tries++) {
+    for (let tries = 0; sites.length < 260 && tries < 18000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20);
-      const z = 14 + rand() * (bounds.z - 60);
+      const z = (rand() * 2 - 1) * (bounds.z - 40);
       if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 30 * 30)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 40 || nearPoint(x, z, 45) || wet(x, z, 1.5) || onRoad(x, z, 6)) continue;
+      if (Math.hypot(x, Math.abs(z) - BASE_Z) < 40 || Math.abs(z) < 6 || nearPoint(x, z, 45) || wet(x, z, 1.5) || onRoad(x, z, 6)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
     for (const s of sites) {
       buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
     }
 
     // The highway: lane lines, crash barriers in the median, and a checkpoint at the border.
@@ -208,16 +217,14 @@ export default {
     props.fence({ x0: -bounds.x - 30, x1: bounds.x + 30, z: -1.5, breaches: gaps });
 
     // Wind turbines on the high ground behind each side, a solar field, the power line.
-    for (const [x, z, yaw] of [[-255, 445, 0.5], [250, 470, 0.5], [430, 360, 0.5], [-60, 545, 0.5]]) {
-      for (const m of [1, -1]) rotors.push(props.windTurbine({ x: x * m, z: z * m, yaw }));
+    for (const [x, z, yaw] of [[-255, 445, 0.5], [250, 470, 0.5], [430, 360, 0.5], [-60, 545, 0.5], [-330, -455, 0.5], [-110, -525, 0.5], [270, -480, 0.5], [455, -300, 0.5]]) {
+      rotors.push(props.windTurbine({ x, z, yaw }));
     }
-    for (const [fx, fz] of SOLAR) {
-      for (const m of [1, -1]) for (let k = 0; k < 6; k++) props.solarRow({ x: fx * m, z: fz * m + (k - 2.5) * 5.5, length: 34 });
-    }
-    both(909, (m) => {
+    for (const [fx, fz] of SOLAR) for (let k = 0; k < 6; k++) props.solarRow({ x: fx, z: fz + (k - 2.5) * 5.5, length: 34 });
+    both(909, (m) => { // a line behind each front, each on its own course
       let prev: any = null;
       for (let x = -540; x <= 540; x += 72) {
-        const z = 395 + x * 0.1, X = x * m, Z = z * m;
+        const X = x, Z = m > 0 ? 395 + x * 0.1 : -415 + x * 0.05 + 22 * Math.sin(x * 0.008);
         if (wet(X, Z, 1.05) || onRoad(X, Z, 4) || nearPoint(X, Z, 20)) continue; // (the wires span the gap)
         const tips = props.pylon({ x: X, z: Z, yaw: Math.atan2(1, 0.1) });
         if (prev) props.wires(prev, tips);
@@ -231,15 +238,15 @@ export default {
     lakes.build(scene);
 
     const avoid = [{ x: 0, z: BASE_Z, r: 26 }, { x: 0, z: -BASE_Z, r: 26 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })),
-      { test: (x, z) => wet(x, z, 1.02) || onRoad(x, z, 0) || SOLAR.some(([fx, fz]) => Math.abs(Math.abs(x) - Math.abs(fx)) < 20 && Math.abs(Math.abs(z) - Math.abs(fz)) < 18 && Math.sign(x * z) === Math.sign(fx * fz)) }];
-    // woods on the moraine hummocks (mirrored patches), alders on the shores, open farmland between
-    const patch = (x, z) => noise(x * 0.006 + 50, z * 0.006 - 20) > 0.38 || ridged(noise, x * 0.011 + 40, z * 0.011, 4) > 0.82;
+      { test: (x, z) => wet(x, z, 1.02) || onRoad(x, z, 0) || SOLAR.some(([fx, fz]) => Math.abs(x - fx) < 20 && Math.abs(z - fz) < 18) }];
+    // woods on the moraine hummocks (each half its own), alders on the shores, open farmland between
+    const patch = (x, z) => noise(x * 0.006 + 50.3, z * 0.006 - 30.1) > 0.38 || ridged(noise, x * 0.011 + 40, z * 0.011, 4) > 0.82;
     const forest = (x, z) => {
       const v = lakes.q(x, z);
       if (v < 1.02) return -1;
       if (v < 1.3) return 0.45;
       if (Math.abs(x) > 470) return 0.75;
-      return patch(x, z) || patch(-x, -z) ? 0.8 : 0;
+      return patch(x, z) ? 0.8 : 0;
     };
     const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 3000, forest, autumn: 0.15 });
     cover.finalize(bounds);

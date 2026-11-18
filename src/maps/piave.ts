@@ -5,70 +5,78 @@
 // braided bed of white gravel — arms of fast grey-green water round the grave, the gravel islands (the Isola dei Morti
 // among them, named for the dead it gave back) — between the high dykes (the argini) that each army held as its
 // line; behind them the flat Venetian plain of maize, vines and mulberry rows, villages with their campaniles, and
-// the wooded whale-back of the Montello over the Italian bank. Point-mirrored to keep it fair: each side has its dyke,
-// its wooded hill (the Montello, and the Collalto hills over the left bank), its villages and both arms to cross.
+// the wooded whale-back of the Montello over the Italian bank. Not mirrored but fair: each side has its dyke, its wooded
+// height at the same reach from its base (the Montello's broad hump on the right bank, the longer, narrower Collalto
+// ridge with its castle on the left), its villages and both arms to cross; the river's bends its own.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { createRiver } from '../world/River.js';
-import { smoothstep } from '../core/math.js';
+import { smoothstep, mulberry32 } from '../core/math.js';
 import { commandPost, trenchLine, buildSite } from './common.js';
-import { pointsFrom, both, coverSites, vegetation } from './common2027.js';
-import { pontoons, farmVillage } from './greatWarHelpers.ts';
+import { vegetation } from './common2027.js';
+import { pontoons, farmVillage, evenThreshold } from './greatWarHelpers.ts';
 import type { MapDef } from '../types.ts';
 
 const BASE_Z = 500;
 const SIDE_X = 330;
 const HW = 20;
 const DYKE = 138;                                            // the dykes' crests, m off the bed's middle
-const HILL = { x: -290, z: 335, r: 190, h: 36 };             // the Montello (the Collalto hills are its mirror)
+const HILL = { x: -290, z: 335, r: 190, h: 36 };             // the Montello
+const COLLALTO = { x: 380, z: -330, rx: 150, rz: 160, h: 36 };  // the Collalto ridge over the left bank, running back from the river
 const noise = createNoise2D(1918_06);
-const mid = (x: number) => 15 * Math.sin(x * 0.004) + 6 * Math.sin(x * 0.011);
+const mid = (x: number) => 15 * Math.sin(x * 0.004) + 6 * Math.sin(x * 0.011) + 24 * Math.cos(x * 0.008) - 10; // (its own bends, not a mirror)
 const wob = (x: number) => 7 * Math.sin(x * 0.019 + 0.7);
 const armN = (x: number) => mid(x) + 50 + wob(x);
-const armS = (x: number) => mid(x) - 50 - wob(-x);           // (= −armN(−x): the pair is point-mirrored)
+const armS = (x: number) => mid(x) - 50 - 8 * Math.sin(x * 0.015 + 2.3);
 const bridges = [-SIDE_X, 0, SIDE_X].flatMap((x) => [0, 1].map((channel) => ({ name: `${['Priula', 'Isola dei Morti', 'Falzè'][[-SIDE_X, 0, SIDE_X].indexOf(x)]} pontoon bridge`, x, kind: 'bridge', width: 6, channel, pontoon: true })));
 const river = createRiver({ path: armN, paths: [armN, armS], halfWidth: HW, level: 0, depth: 2.8, valley: 34, crossings: bridges });
 const away = (x: number, z: number) => Math.min(Math.abs(z - armN(x)), Math.abs(z - armS(x)));
 const bed = (x: number, z: number) => Math.abs(z - mid(x));
-const half = (x: number, z: number) => (z > mid(x) ? [x, z] : [-x, -z]);
-const hillK = (x: number, z: number) => { const [ax, az] = half(x, z); return Math.max(0, 1 - Math.hypot(ax - HILL.x, (az - HILL.z) * 1.25) / HILL.r); };
+const hillK = (x: number, z: number) => Math.max(0, 1 - Math.hypot(x - HILL.x, (z - HILL.z) * 1.25) / HILL.r, 1 - Math.hypot((x - COLLALTO.x) / COLLALTO.rx, (z - COLLALTO.z) / COLLALTO.rz));
 /** The roads: along behind each dyke, from each bridge up to it, the main road on to the base. */
 const onRoad = (x: number, z: number) => {
-  const [ax, az] = half(x, z);
-  if (Math.abs(az - mid(ax) - DYKE - 22) < 3.2) return true;
-  for (const bx of [-SIDE_X, 0, SIDE_X]) if (Math.abs(ax - bx) < 3 && away(ax, az) > HW + 6 && az > mid(ax) && az < mid(ax) + DYKE + (bx ? 24 : 600)) return true;
+  const s = z > mid(x) ? 1 : -1, o = (z - mid(x)) * s;                                     // (m out from the bed's middle, either bank)
+  if (Math.abs(o - DYKE - 22) < 3.2) return true;
+  for (const bx of [-SIDE_X, 0, SIDE_X]) if (Math.abs(x - bx) < 3 && away(x, z) > HW + 6 && o < DYKE + (bx ? 24 : 600)) return true;
   return false;
 };
 
 function height(x: number, z: number) {
-  const b = bed(x, z), [ax, az] = half(x, z);
-  let h = 3 + fbm(noise, ax * 0.005, az * 0.005, 3) * 1.2;                             // the plain
+  const b = bed(x, z);
+  let h = 3 + fbm(noise, x * 0.005, z * 0.005, 3) * 1.2;                               // the plain
   h += (1.1 + fbm(noise, x * 0.02, z * 0.02, 2) * 0.5 - h) * (1 - smoothstep(DYKE - 22, DYKE - 10, b)); // the gravel bed between the dykes
   const crest = 4.6 * (1 - smoothstep(4, 13, Math.abs(b - DYKE)));                     // the argine
-  const gap = [-SIDE_X, 0, SIDE_X].some((bx) => Math.abs(ax - bx) < 12) ? 0.35 : 1;     // (cut down where the bridge roads go over it)
+  const gap = [-SIDE_X, 0, SIDE_X].some((bx) => Math.abs(x - bx) < 12) ? 0.35 : 1;     // (cut down where the bridge roads go over it)
   h += crest * gap;
   const k = hillK(x, z);
-  h += HILL.h * k ** 1.3 + fbm(noise, ax * 0.02 + 3, az * 0.02, 3) * 4 * k;            // the Montello: a long wooded hump, dolines in its top
+  h += (z > mid(x) ? HILL.h : COLLALTO.h) * k ** 1.3 + fbm(noise, x * 0.02 + 3, z * 0.02, 3) * 4 * k; // the Montello: a wooded hump, dolines in its top; Collalto's ridge
+  h += 16 * smoothstep(130, 0, Math.hypot(x + 130, z + 340)) ** 1.5;                     // the low wooded rise by Moriago, answering the Montello's shoulder
   for (const bz of [BASE_Z, -BASE_Z]) h += (4 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
   return river.carve(x, z, h);
 }
 
-const points = pointsFrom([
-  ['A', 'Treviso road', 0, 470],
-  ['B', 'Montello', HILL.x, HILL.z],
-  ['C', 'Nervesa', 0, 250],
-  ['D', 'Arcade', SIDE_X, 300],
-  ['E', 'Ponte della Priula', -SIDE_X, Math.round(mid(-SIDE_X) + DYKE + 4), { radius: 24 }],
-  ['F', 'Isola dei Morti', 0, 0, { radius: 26 }],
-], ['Falzè', 'Sernaglia', 'Moriago', 'Collalto', 'Conegliano road']);
+const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
+const points = [
+  P('A', 'Treviso road', 0, 470, 'centre'),
+  P('B', 'Montello', HILL.x, HILL.z, 'west'),
+  P('C', 'Nervesa', 30, 250, 'centre'),
+  P('D', 'Arcade', SIDE_X, 300, 'east'),
+  P('E', 'Ponte della Priula', -SIDE_X, Math.round(mid(-SIDE_X) + DYKE + 4), 'west', { radius: 24 }),
+  P('F', 'Isola dei Morti', 0, Math.round(mid(0)), 'centre', { radius: 26 }),
+  P('G', 'Falzè', SIDE_X, Math.round(mid(SIDE_X) - DYKE - 4), 'east', { radius: 24 }),
+  P('H', 'Sernaglia', -270, -270, 'west'),
+  P('I', 'Moriago', -50, -225, 'centre'),
+  P('J', 'Collalto', COLLALTO.x - 30, COLLALTO.z + 10, 'east'),
+  P('K', 'Conegliano road', 0, -470, 'centre'),
+] as any[];
 
 const layout = [{ unit: 'rifles', x: 10, z: BASE_Z - 22, name: '1ª Squadra' }];
 
 export default {
   id: 'piave',
   name: 'Piave',
-  description: 'June 1918, the Battle of the Solstice: the braided Piave in flood between its dykes — arms of fast water round white gravel islands, pontoon bridges over each arm, the wooded Montello over one bank and the Collalto hills over the other. Mirrored to keep it fair.',
+  description: 'June 1918, the Battle of the Solstice: the braided Piave in flood between its dykes — arms of fast water round white gravel islands, pontoon bridges over each arm, the wooded Montello over one bank and the Collalto ridge over the other.',
   epochs: ['1918'],
   region: 'italy',
   armies: { nato: ['it'], pact: ['ah'] }, // (the Italian Eighth Army against the Austro-Hungarian Isonzo Army: maps/index.js armiesOn)
@@ -116,9 +124,9 @@ export default {
     for (const f of ['nato', 'pact'] as const) {
       const s = f === 'nato' ? 1 : -1;
       const pts: number[][] = [];
-      for (let x = -480; x <= 480; x += 30) pts.push([x * s, (mid(x) + DYKE + 3) * s]);
+      for (let x = -480; x <= 480; x += 30) pts.push([x * s, mid(x * s) + (DYKE + 3) * s]);   // (left to right as its owner looks)
       for (const w of trenchLine(pts, f, { wireAt: 16, belts: 1, gapEvery: 60 })) if ([-SIDE_X, 0, SIDE_X].every((bx) => Math.abs(w.x - bx) > 10)) works.push(w);
-      for (const bx of [-SIDE_X, 0, SIDE_X]) for (const dx of [-18, 18]) works.push({ kind: 'mgNest', x: (bx + dx) * s, z: (mid(bx + dx) + DYKE) * s, yaw: f === 'nato' ? Math.PI : 0, faction: f });
+      for (const bx of [-SIDE_X, 0, SIDE_X]) for (const dx of [-18, 18]) works.push({ kind: 'mgNest', x: bx + dx * s, z: mid(bx + dx * s) + DYKE * s, yaw: f === 'nato' ? Math.PI : 0, faction: f });
     }
     return { blasts: [], ruins: [], works };
   },
@@ -131,20 +139,28 @@ export default {
     // the villages with their campaniles
     for (const p of points) {
       if (!['C', 'D', 'E', 'G', 'H', 'I'].includes(p.id)) continue;
-      farmVillage(props, p.x, p.z, p.id === 'C' || p.id === 'I' ? 9 : 6, 19180 + Math.round(Math.abs(p.x) + Math.abs(p.z)), skip, p.id === 'C' || p.id === 'I' ? 1.3 : 1);
+      const big = p.id === 'C' || p.id === 'I';
+      farmVillage(props, p.x, p.z, big ? 9 : 6, 19180 + Math.round(p.x * 3 + p.z * 7), skip, big ? 1.3 : 1);
     }
-    both(props, 1806, (m, flip) => { props.church({ x: 30 * m, z: 280 * m, yaw: flip }); props.church({ x: (SIDE_X - 34) * m, z: 320 * m, yaw: flip + Math.PI / 2 }); });
-    // the Montello's farms on its slopes; boats drawn up on the gravel by the bridges; the stone abbey of Nervesa
-    both(props, 1807, (m, flip) => {
-      for (const [x, z] of [[HILL.x + 70, HILL.z - 60], [HILL.x - 90, HILL.z - 30], [HILL.x + 20, HILL.z + 60]]) props.house({ x: x * m, z: z * m, yaw: flip + props.rand(), width: 9, depth: 7 });
-      for (const bx of [-SIDE_X, 0, SIDE_X]) {
-        props.logPile({ x: (bx + 18) * m, z: (armN(bx) + HW + 12) * m, yaw: flip + 0.2, length: 7 });
-        props.crates({ x: (bx - 16) * m, z: (armN(bx) + HW + 16) * m, yaw: flip });
-      }
-      props.hall({ x: -70 * m, z: 255 * m, yaw: flip, width: 18, depth: 12, height: 8, color: 0x9a8a72, roof: 0x7a3e2c, door: 4, name: 'abbey' });
-    });
-    coverSites(props, rand, bounds, (x, z) => z > mid(x) + DYKE + 40 && Math.hypot(x, z - BASE_Z) > 45 && !nearPoint(x, z, 45) && !skip(x, z), 80,
-      ['farm', 'hay', 'fieldwall', 'hay', 'farm', 'rocks'], buildSite);
+    props.rand = mulberry32(1806);
+    for (const [x, z, yaw] of [[60, 282, 0], [SIDE_X - 34, 322, Math.PI / 2], [-84, -292, Math.PI + 0.3], [-250, -312, -Math.PI / 2]]) props.church({ x, z, yaw });
+    // the farms on the Montello's slopes and along Collalto's; boats drawn up on the gravel by the bridges (each bank its own);
+    // the stone abbey of Nervesa, the castle of Collalto
+    for (const [x, z] of [[HILL.x + 70, HILL.z - 60], [HILL.x - 90, HILL.z - 30], [HILL.x + 20, HILL.z + 60], [COLLALTO.x - 120, COLLALTO.z + 70], [COLLALTO.x + 50, COLLALTO.z - 110]]) props.house({ x, z, yaw: props.rand() * 3, width: 9, depth: 7 });
+    for (const s of [1, -1]) for (const bx of [-SIDE_X, 0, SIDE_X]) {
+      const z = (s > 0 ? armN(bx) : armS(bx)) + (HW + 12 + props.rand() * 6) * s, dx = 12 + props.rand() * 10;
+      props.logPile({ x: bx + dx, z, yaw: props.rand() * 0.6, length: 7 });
+      props.crates({ x: bx - dx, z: z + 4 * s, yaw: props.rand() * 3 });
+    }
+    props.hall({ x: -40, z: 255, yaw: 0, width: 18, depth: 12, height: 8, color: 0x9a8a72, roof: 0x7a3e2c, door: 4, name: 'abbey' });
+    props.hall({ x: COLLALTO.x + 20, z: COLLALTO.z + 30, yaw: 0.4, width: 16, depth: 14, height: 9, color: 0x9a8a72, roof: 0x7a3e2c, door: 4, name: 'castle' });
+    // farmsteads and hay over each bank's plain (each its own)
+    const kinds = ['farm', 'hay', 'fieldwall', 'hay', 'farm', 'rocks'];
+    for (let tries = 0, n = 0; n < 160 && tries < 9000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 20), z = (rand() * 2 - 1) * (bounds.z - 40);
+      if (bed(x, z) < DYKE + 40 || Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || nearPoint(x, z, 45) || skip(x, z)) continue;
+      buildSite(props, { kind: kinds[n++ % kinds.length], seed: Math.floor(rand() * 1e9) }, x, z, rand() * Math.PI);
+    }
     commandPost(props, this.bases.nato, -1, 0x6e6c58);
     commandPost(props, this.bases.pact, 1, 0x5e6250);
     props.finish();
@@ -153,16 +169,17 @@ export default {
 
     const avoid = [{ x: 0, z: BASE_Z, r: 28 }, { x: 0, z: -BASE_Z, r: 28 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })),
       { test: (x: number, z: number) => away(x, z) < HW + 3 || onRoad(x, z) }];
+    const tP = evenThreshold((x, z) => (bed(x, z) > DYKE + 16 && hillK(x, z) <= 0.25 ? fbm(noise, x * 0.008 + 50, z * 0.008, 3) : -9), 0.38, (x, z) => z > mid(x));
     const update = vegetation({
       scene, terrain, cover, rand, bounds, fields: this.fields, palette: this.theme.terrain, avoid, trees: 2600, hedges: 6000, autumn: 0, broadleaf: 0.92,
       noHedge: (x: number, z: number) => bed(x, z) < DYKE + 20,
       forest: (x: number, z: number) => {
-        const b = bed(x, z), [ax, az] = half(x, z);
+        const b = bed(x, z);
         if (away(x, z) < HW + 2) return -1;
-        if (hillK(x, z) > 0.25) return 0.85;                                                     // the Montello's oak and chestnut woods
-        if (b < DYKE - 14) return fbm(noise, ax * 0.03, az * 0.03, 2) > 0.25 ? 0.5 : 0;         // willow scrub on the gravel islands
+        if (hillK(x, z) > 0.25 || Math.hypot(x + 130, z + 340) < 90) return 0.85;                                                     // the Montello's oak and chestnut woods
+        if (b < DYKE - 14) return fbm(noise, x * 0.03, z * 0.03, 2) > 0.25 ? 0.5 : 0;         // willow scrub on the gravel islands
         if (Math.abs(b - DYKE) < 16) return 0.03;
-        return fbm(noise, ax * 0.008 + 50, az * 0.008, 3) > 0.38 ? 0.6 : 0;                      // poplar rows and copses on the plain
+        return fbm(noise, x * 0.008 + 50, z * 0.008, 3) > (z > mid(x) ? 0.38 : tP) ? 0.6 : 0;                      // poplar rows and copses on the plain
       },
     });
     return { buildings: props.buildings, update };

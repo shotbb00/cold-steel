@@ -1,7 +1,8 @@
 // Trafalgar, 1805 (the 1806 sea battles): the Atlantic off Cape Trafalgar. The Combined Fleet — the French
 // here — in the south, heading up the coast; the Royal Navy comes down from the north with the wind behind
 // it, the weather gauge (the wind from the west-north-west, world/Wind.js: the map's own). The cape and its
-// shoals on the east edge, the long Atlantic swell. Sailing ships only (data/units1806/ships.js).
+// shoals on the east edge, the long Atlantic swell. Fair: every zone as far from one fleet as the
+// other — the British have the wind, the French the cape's lee. Sailing ships only (data/units1806/ships.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -29,7 +30,7 @@ const points: ControlPointDef[] = [
   { id: 'A', name: 'Combined Fleet', x: -300, z: 1750, owner: 'nato', sector: 'centre', radius: 150 },
   { id: 'B', name: 'Open Atlantic', x: -1300, z: 0, owner: null, sector: 'west', radius: 180 },
   { id: 'C', name: 'The line of battle', x: 0, z: 0, owner: null, sector: 'centre', radius: 170 },
-  { id: 'D', name: 'Off the cape', x: 1000, z: -300, owner: null, sector: 'east', radius: 160 },
+  { id: 'D', name: 'Off the cape', x: 1000, z: 0, owner: null, sector: 'east', radius: 160 },
   { id: 'K', name: 'Weather column', x: -300, z: -1750, owner: 'pact', sector: 'centre', radius: 150 },
 ];
 

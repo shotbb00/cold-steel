@@ -5,8 +5,11 @@
 // the four stone towers — and on the far bank the Erpeler Ley, the basalt cliff over the bridge's east end with the
 // railway tunnel in its foot. Out on the flanks the engineers' bridges of the days after: the treadway at Kripp and
 // the heavy pontoon bridge. The quick way down to the river for vehicles is by the side valleys’ roads.
-// The Americans come down from the west bank's plateau (+z), the Wehrmacht holds the east bank (-z). Point-mirrored
-// like the other land maps, so neither side gets the better ground: Remagen faces Erpel, the Apollinarisberg the Ley.
+// The Americans come down from the west bank's plateau (+z), the Wehrmacht holds the east bank (-z). Not mirrored, but
+// fair: the Ley stands right over the bridge's east end, where it really is, but Remagen's two rows of houses come
+// down to the bridge's west end against smaller Erpel behind the cliff, and the Apollinarisberg over Remagen is as high;
+// the slopes, the side valleys and the engineers' bridges are the same for both, and each point is about as far from
+// one base as its counterpart is from the other.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createNoise2D, fbm } from '../world/Noise.js';
@@ -26,20 +29,22 @@ const TERRACE = 104;   // where the slope starts, from the river's middle…
 const TOP = 186;       // …and where the plateau does
 const RAIL = HW + 12;  // the riverside railway on each bank
 const ROAD = HW + 21;  // the riverside road (Reichsstraße 9 on the west bank)
-const HILL = { x: 62, a: 112, r: 46, h: 46 }; // the Apollinarisberg over Remagen; mirrored, the Erpeler Ley over the bridge
+/** The spurs, by bank (1 the west bank, -1 the east): the Apollinarisberg downstream of Remagen; the Erpeler Ley, narrower and
+ *  steeper, right over the bridge's east end. */
+const SPUR = { 1: { x: 62, a: 112, r: 46, h: 46 }, [-1]: { x: -14, a: 106, r: 38, h: 47 } };
 const noise = createNoise2D(1945_03);
 const lerp = (a, b, k) => a + (b - a) * k;
-const sym = (f) => (x, z) => (f(x, z) + f(-x, -z)) * 0.5; // point-symmetric noise
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
-// an odd function: the river is point-mirrored too
-const riverZ = (x) => 9 * Math.sin(x * 0.004) + 4 * Math.sin(x * 0.011);
+// the river, bending a little more round the Ley's foot
+const riverZ = (x) => 9 * Math.sin(x * 0.004) + 4 * Math.sin(x * 0.011) + 14 * (1 - Math.cos(x * 0.005));
 const away = (x, z) => Math.abs(z - riverZ(x));
-const hillZ = (m) => riverZ(m * HILL.x) + m * HILL.a; // (the hill's z on bank m: +1 ours, -1 theirs)
+const bankOf = (x, z) => (z > riverZ(x) ? 1 : -1);
+const hillZ = (m) => riverZ(SPUR[m].x) + m * SPUR[m].a; // (the spur's z on bank m: +1 ours, -1 theirs)
 /** The spurs: a flat-topped ridge out of the plateau that ends at the terrace in a cliff (the Ley's basalt face to the Rhine). */
 const HILLS = (x, z) => {
-  const a = away(x, z), dx = Math.abs(x - Math.sign(z - riverZ(x)) * HILL.x);
-  return HILL.h * Math.exp(-((dx / HILL.r) ** 4)) * smoothstep(HILL.a - 40, HILL.a - 16, a) * (1 - 0.35 * smoothstep(HILL.a + 40, HILL.a + 150, a));
+  const a = away(x, z), H = SPUR[bankOf(x, z)], dx = Math.abs(x - H.x);
+  return H.h * Math.exp(-((dx / H.r) ** 4)) * smoothstep(H.a - 40, H.a - 16, a) * (1 - 0.35 * smoothstep(H.a + 40, H.a + 150, a));
 };
 
 const river = createRiver({
@@ -55,11 +60,13 @@ const river = createRiver({
   ],
 });
 
-/** The side valleys' roads: straight down to the river, winding a little up on the plateau. */
-const roadX = (rx, z) => rx + 9 * Math.sin(z * 0.012 + rx) * smoothstep(TOP, TOP + 80, away(rx, z));
-const slopeStart = sym((x, z) => TERRACE + fbm(noise, x * 0.006 + 9, z * 0.006, 2) * 8);
-const plateauN = sym((x, z) => fbm(noise, x * 0.004, z * 0.004, 4));
-const woodsN = sym((x, z) => fbm(noise, x * 0.005 + 31, z * 0.005 - 4, 3));
+/** The side valleys' roads: straight down to the river, winding a little up on the plateau (the middle one on the east
+ *  bank swings round the Ley's east side). */
+const roadX = (rx, z) => rx + (rx === 0 && z < riverZ(0) ? 55 * smoothstep(HW + 6, HW + 30, away(0, z)) : 0) + 9 * Math.sin(z * 0.012 + rx + (z < 0 ? 2.1 : 0)) * smoothstep(TOP, TOP + 80, away(rx, z));
+const slopeStart = (x, z) => TERRACE + (z > riverZ(x) ? 10 : -4) + fbm(noise, x * 0.006 + 9, z * 0.006, 2) * 8; // (Remagen's terrace the wider)
+const plateauN = (x, z) => fbm(noise, x * 0.004, z * 0.004, 4);
+const woodsN = (x, z) => fbm(noise, x * 0.005 + 31, z * 0.005 - 4, 3);
+const woodsCut = (x, z) => (z > riverZ(x) ? 0.08 : 0.15); // (where the plateau's woods begin: about as much wood on each)
 const valleyK = (x, z) => {
   let k = 0;
   for (const rx of [-SIDE, 0, SIDE]) k = Math.max(k, smoothstep(36, 13, Math.abs(x - roadX(rx, z))));
@@ -70,9 +77,10 @@ function height(x, z) {
   const a = away(x, z);
   const ax = Math.abs(x);
   let h = 2.3 + plateauN(x, z) * 0.6;                                        // the terrace
-  const P = PLATEAU + plateauN(x, z) * 7;
+  const P = PLATEAU + plateauN(x, z) * 10;
   h += smoothstep(slopeStart(x, z), TOP, a) * (P - 2.3);                      // the gorge's slopes: steep slate
-  h += smoothstep(TOP, TOP + 120, a) * plateauN(x * 2.3, z * 2.3) * 5;       // the plateau rolls
+  h += smoothstep(TOP, TOP + 120, a) * plateauN(x * 2.3, z * 2.3) * 8;       // the plateau rolls
+  h += smoothstep(TOP, TOP + 70, a) * (hill(x, z, 200, 300, 110, 9) + hill(x, z, 245, -315, 125, 9)); // a wooded height on each plateau, not each other's twin
   h = Math.max(h, HILLS(x, z)); // the Apollinarisberg; the Ley
   h += smoothstep(460, 600, ax) * 12;                                        // the wooded edges
   // the side valleys: each road comes down at an easy grade, cut into the slope
@@ -90,22 +98,21 @@ function roadDist(x, z) {
   return d;
 }
 
-// ---- the control points (our half, mirrored: G mirrors E … K mirrors A)
+// ---- the control points
 const zAt = (x, a) => riverZ(x) + a;
-const HALF: [string, string, number, number, string][] = [
-  ['A', 'Meckenheim road', 0, 470, 'centre'],
-  ['B', 'Birresdorf', -310, 300, 'west'],
-  ['C', 'Remagen', 182, zAt(182, 78), 'east'],
-  ['D', 'Apollinarisberg', HILL.x, hillZ(1), 'centre'],
-  ['E', 'Kripp', -330, zAt(-330, 76), 'west'],
-];
-const MIRROR_NAMES = { E: ['G', 'Unkel'], D: ['H', 'Erpeler Ley'], C: ['I', 'Erpel'], B: ['J', 'Orsberg'], A: ['K', 'Kalenborn'] };
-const flipSector = (s) => (s === 'west' ? 'east' : s === 'east' ? 'west' : 'centre');
 const points: ControlPointDef[] = [
-  ...HALF.map(([id, name, x, z, sector]) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : null, sector } as ControlPointDef)),
+  { id: 'A', name: 'Meckenheim road', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Birresdorf', x: -310, z: 300, owner: null, sector: 'west' },
+  { id: 'C', name: 'Remagen', x: 182, z: zAt(182, 78), owner: null, sector: 'east' },
+  { id: 'D', name: 'Apollinarisberg', x: SPUR[1].x, z: hillZ(1), owner: null, sector: 'centre' },
+  { id: 'E', name: 'Kripp', x: -330, z: zAt(-330, 76), owner: null, sector: 'west' },
   { id: 'F', name: 'Ludendorff Bridge', x: 0, z: 0, owner: null, sector: 'centre', radius: 34 }, // (on the deck: whoever holds it stands on the bridge)
-  ...HALF.map(([id, , x, z, sector]) => ({ id: MIRROR_NAMES[id][0], name: MIRROR_NAMES[id][1], x: -x, z: -z, owner: id === 'A' ? 'pact' : null, sector: flipSector(sector) } as ControlPointDef)),
-].sort((a, b) => a.id.localeCompare(b.id)) as ControlPointDef[];
+  { id: 'G', name: 'Unkel', x: 300, z: zAt(300, -80), owner: null, sector: 'east' },
+  { id: 'H', name: 'Erpeler Ley', x: SPUR[-1].x, z: hillZ(-1), owner: null, sector: 'centre' },
+  { id: 'I', name: 'Erpel', x: -140, z: zAt(-140, -78), owner: null, sector: 'west' },
+  { id: 'J', name: 'Orsberg', x: 330, z: -330, owner: null, sector: 'east' },
+  { id: 'K', name: 'Kalenborn', x: -35, z: -470, owner: 'pact', sector: 'centre' },
+];
 
 // ---- the bridges' looks: the Ludendorff Bridge's steel arch over its span, the engineers' treadways on floats
 const STEEL = new THREE.MeshStandardMaterial({ color: 0x3c3f3d, roughness: 0.7, metalness: 0.45 });
@@ -186,8 +193,8 @@ function soft(x: number, z: number, foot: boolean) {
   if (roadDist(x, z) < 6) return 1;
   const a = away(x, z), ss = slopeStart(x, z);
   const slope = smoothstep(ss + 5, ss + 22, a) * (1 - smoothstep(TOP - 22, TOP - 5, a)) * (1 - valleyK(x, z));
-  const dx = Math.abs(x - Math.sign(z - riverZ(x)) * HILL.x);
-  const face = Math.exp(-((dx / HILL.r) ** 4)) * smoothstep(HILL.a - 44, HILL.a - 36, a) * (1 - smoothstep(HILL.a - 20, HILL.a - 12, a));
+  const H = SPUR[bankOf(x, z)], dx = Math.abs(x - H.x);
+  const face = Math.exp(-((dx / H.r) ** 4)) * smoothstep(H.a - 44, H.a - 36, a) * (1 - smoothstep(H.a - 20, H.a - 12, a));
   const k = Math.max(slope, face);
   return 1 - k * (foot ? 0.3 : 0.5); // (no more: a heavier toll and the routes round it grow too long to plan)
 }
@@ -197,7 +204,7 @@ const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 export default {
   id: 'remagen',
   name: 'Remagen',
-  description: 'March 1945, the Rhine gorge: the Ludendorff Bridge still standing between its stone towers, steep vineyards and the Erpeler Ley over it, the towns on their narrow terraces. Vehicles come down by the side valleys. Mirrored to keep it fair.',
+  description: 'March 1945, the Rhine gorge: the Ludendorff Bridge still standing between its stone towers, steep vineyards and the Erpeler Ley over it, the towns on their narrow terraces. Vehicles come down by the side valleys.',
   epochs: ['1945'],
   region: 'europe',
   sides: { nato: 'United States', pact: 'Germany' },
@@ -210,7 +217,7 @@ export default {
   river,
   soft, // (the slate slopes and the Ley's face: men climb slowly, tanks crawl — the side valleys' roads are the quick way)
   bridgeAt: (x, z) => river.bridgeAt(x, z),
-  woods: (x, z) => (away(x, z) > TOP + 30 && woodsN(x, z) > 0.12 ? 0.8 : 0),
+  woods: (x, z) => (away(x, z) > TOP + 30 && woodsN(x, z) > woodsCut(x, z) ? 0.8 : 0),
   fields: createFields({ seed: 1945_03, cell: 66 }),
 
   theme: {
@@ -289,7 +296,7 @@ export default {
     }
     {
       // the bridge's line on the east bank runs straight into the cliff: the tunnel mouth where the ground rises
-      const cx = -HILL.x, cz = hillZ(-1), x0 = 0, z0 = lud.z - (HW + 24);
+      const cx = SPUR[-1].x, cz = hillZ(-1), x0 = 0, z0 = lud.z - (HW + 24);
       let t = 0;
       for (; t < 1; t += 0.01) if (terrain.heightAt(lerp(x0, cx, t), lerp(z0, cz, t)) > 8) break;
       const px = lerp(x0, cx, t), pz = lerp(z0, cz, t), yaw = Math.atan2(x0 - cx, z0 - cz);
@@ -305,71 +312,72 @@ export default {
       props.rails({ x0: 0, z0: lud.z + HW + 24, x1: 60, z1: zAt(60, RAIL) });
     }
 
-    // ---- Remagen on its terrace (and, mirrored, Erpel): two rows of houses along the riverside road, a church, the station
-    mirrored(props, 1945_0308, (m, flip) => {
-      const r = props.rand;
+    // ---- Remagen on its terrace, Erpel behind the Ley: two rows of houses along the riverside road, a church, the station
+    // (Remagen the bigger: from the bridge's west end downstream; Erpel upstream of the cliff, round its church)
+    const TOWNS = [
+      { m: 1, name: 'house in Remagen', x0: 100, x1: 335, skip: [[140, 22], [270, 11]], church: 130, station: 270, wagons: [[90, 'box', 0x5a3426], [102, 'open', 0x4a4038], [114, 'box', 0x4e3a2a], [-80, 'tank', 0x2a2a2a]], barricade: 104 },
+      { m: -1, name: 'house in Erpel', x0: -262, x1: -64, skip: [[-120, 20], [-175, 11]], church: -120, station: -175, wagons: [[-70, 'box', 0x4e3a2a], [-58, 'box', 0x5a3426], [130, 'tank', 0x2a2a2a]], barricade: -60 },
+    ] as const;
+    for (const T of TOWNS) {
+      const m = T.m, flip = m > 0 ? 0 : Math.PI, r = props.rand = mulberry32(1945_0308 + m);
       for (const [row, yaw] of [[ROAD + 9, Math.PI], [ROAD + 25, 0]] as [number, number][]) {
-        for (let x = 100 + r() * 4; x < 335; x += 11 + r() * 5) {
-          const a = row + (r() - 0.5) * 2, z = zAt(x, a), w = 8 + r() * 3, d = 8 + r() * 2;
-          if (r() < 0.12 || nearPoint(x * m, z * m, 15) || Math.abs(x - 140) < 22 || Math.abs(x - 270) < 11 || Math.abs(x - SIDE) < 14 || !flat(x * m, z * m, 5) || a + d / 2 > slopeStart(x, z) - 2) continue;
-          props.townHouse({ x: x * m, z: z * m, yaw: yaw + flip, width: w, depth: d, storeys: r() < 0.6 ? 2 : 3, name: m > 0 ? 'house in Remagen' : 'house in Erpel', damaged: 0.3 });
+        for (let x = T.x0 + r() * 4; x < T.x1; x += 11 + r() * 5) {
+          const a = row + (r() - 0.5) * 2, z = riverZ(x) + m * a, w = 8 + r() * 3, d = 8 + r() * 2;
+          if (r() < 0.12 || nearPoint(x, z, 15) || T.skip.some(([sx, sr]) => Math.abs(x - sx) < sr) || Math.abs(Math.abs(x) - SIDE) < 14 || !flat(x, z, 5) || a + d / 2 > slopeStart(x, z) - 2) continue;
+          props.townHouse({ x, z, yaw: yaw + flip, width: w, depth: d, storeys: r() < 0.6 ? 2 : 3, name: T.name, damaged: 0.3 });
         }
       }
-      props.church({ x: 130 * m, z: zAt(130, ROAD + 13) * m, yaw: Math.PI / 2 + flip });
-      props.townHouse({ x: 270 * m, z: zAt(270, ROAD + 10) * m, yaw: Math.PI + flip, width: 18, depth: 8, storeys: 2, name: 'station', damaged: 0.2 });
-      for (const [x, kind, c] of [[90, 'box', 0x5a3426], [102, 'open', 0x4a4038], [114, 'box', 0x4e3a2a], [-80, 'tank', 0x2a2a2a]] as [number, string, number][]) {
-        props.wagon({ x: x * m, z: zAt(x, RAIL) * m, yaw: Math.PI / 2, kind, color: c });
-      }
+      props.church({ x: T.church, z: riverZ(T.church) + m * (ROAD + 13), yaw: Math.PI / 2 + flip });
+      props.townHouse({ x: T.station, z: riverZ(T.station) + m * (ROAD + 10), yaw: Math.PI + flip, width: 18, depth: 8, storeys: 2, name: 'station', damaged: 0.2 });
+      for (const [x, kind, c] of T.wagons) props.wagon({ x, z: riverZ(x) + m * RAIL, yaw: Math.PI / 2, kind, color: c });
       // the riverside: a quay wall's low parapet, a barricade on the road at the town's end
-      for (let x = 100; x < 335; x += 14) if (Math.abs(x - SIDE) > 14) props.lowWall({ x: x * m, z: zAt(x, HW + 6.5) * m, yaw: flip, length: 10, height: 0.9, color: 0x6e6a62 });
-      props.logBarricade({ x: 104 * m, z: zAt(104, ROAD) * m, yaw: Math.PI / 2 + flip, length: 6 });
-      // the riverside village out on the flank (Kripp; Unkel) and the hamlet on the plateau (Birresdorf; Orsberg)
-      for (const [px, pa, n] of [[-330, 76, 6], [-310, 300, 6]]) {
-        const pz = pa > 200 ? pa : zAt(px, pa);
-        for (let i = 0; i < n; i++) {
-          const ang = (i / n) * Math.PI * 2 + r() * 0.5, d = 16 + r() * 10;
-          const x = px + Math.cos(ang) * d, z = pz + Math.sin(ang) * d;
-          if (roadDist(x, z) < 8 || !flat(x * m, z * m, 5) || away(x, z) < ROAD + 5) continue;
-          if (pa > 200) props.house({ x: x * m, z: z * m, yaw: ang + Math.PI / 2 + flip, width: 8 + r() * 3, depth: 6 + r() * 2 });
-          else props.townHouse({ x: x * m, z: z * m, yaw: ang + Math.PI / 2 + flip, width: 8, depth: 8, storeys: 2, name: 'house', damaged: 0.2 });
-        }
+      for (let x = T.x0; x < T.x1; x += 14) if (Math.abs(Math.abs(x) - SIDE) > 14) props.lowWall({ x, z: riverZ(x) + m * (HW + 6.5), yaw: flip, length: 10, height: 0.9, color: 0x6e6a62 });
+      props.logBarricade({ x: T.barricade, z: riverZ(T.barricade) + m * ROAD, yaw: Math.PI / 2 + flip, length: 6 });
+    }
+    // the riverside villages out on the flanks (Kripp; Unkel) and the hamlets on the plateau (Birresdorf; Orsberg)
+    props.rand = mulberry32(1945_0310);
+    for (const [id, riverside, n] of [['E', true, 6], ['B', false, 6], ['G', true, 7], ['J', false, 5]] as const) {
+      const p = points.find((q) => q.id === id)!, r = props.rand;
+      for (let i = 0; i < n; i++) {
+        const ang = (i / n) * Math.PI * 2 + r() * 0.5, d = 16 + r() * 10;
+        const x = p.x + Math.cos(ang) * d, z = p.z + Math.sin(ang) * d;
+        if (roadDist(x, z) < 8 || !flat(x, z, 5) || away(x, z) < ROAD + 5) continue;
+        if (!riverside) props.house({ x, z, yaw: ang + Math.PI / 2, width: 8 + r() * 3, depth: 6 + r() * 2 });
+        else props.townHouse({ x, z, yaw: ang + Math.PI / 2, width: 8, depth: 8, storeys: 2, name: 'house', damaged: 0.2 });
       }
-    });
+    }
     // the hilltops: the Apollinariskirche on its hill over Remagen; on the Ley, the flak position and its trenches
-    props.church({ x: HILL.x, z: hillZ(1) + 26, yaw: Math.PI });
+    props.church({ x: SPUR[1].x, z: hillZ(1) + 26, yaw: Math.PI });
     props.rand = mulberry32(88);
-    props.sandbagRing({ x: -HILL.x + 6, z: hillZ(-1) - 22, radius: 6, toward: 1 });
-    for (const [dx, dz] of [[-14, 6], [13, 8], [0, -14]]) props.sandbagRing({ x: -HILL.x + dx, z: hillZ(-1) + dz, radius: 3.5, toward: 1 });
+    props.sandbagRing({ x: SPUR[-1].x + 6, z: hillZ(-1) - 22, radius: 6, toward: 1 });
+    for (const [dx, dz] of [[-14, 6], [13, 8], [0, -14]]) props.sandbagRing({ x: SPUR[-1].x + dx, z: hillZ(-1) + dz, radius: 3.5, toward: 1 });
 
     // ---- the vineyards: rows of stakes along the contour, dry-stone terrace walls, on the slopes where the ground is not wood
-    const vines = sym((x, z) => fbm(noise, x * 0.008 - 13, z * 0.008 + 5, 2));
+    const vines = (x, z) => fbm(noise, x * 0.008 - 13, z * 0.008 + 5, 2);
     const slopeBand = (x, z) => { const a = away(x, z); return a > slopeStart(x, z) + 4 && a < TOP - 4; };
     props.rand = mulberry32(1945_0309);
     for (const m of [1, -1]) {
       for (let x = -490; x < 490; x += 9) {
         for (let a = TERRACE - 6; a < TOP; a += 3) {
-          const z = zAt(x, a) * m, wx = x * m;
-          if (!slopeBand(wx, z) || vines(wx, z) < -0.05 || valleyK(wx, z) > 0.05 || nearPoint(wx, z, 26)) continue;
-          const yaw = Math.atan2(1, (riverZ(x + 1) - riverZ(x - 1)) / 2) + (m < 0 ? Math.PI : 0) - Math.PI / 2;
-          if (Math.round(a) % 15 < 3 && Math.round(x / 9) % 2 === 0) { props.lowWall({ x: wx, z, yaw, length: 8, height: 1.0, color: 0x5a5650 }); continue; } // a terrace wall
-          props.box('plain', wx, terrain.heightAt(wx, z) + 0.45, z, 7, 0.95, 0.07, yaw, 0x7a6a52);
+          const z = riverZ(x) + m * a;
+          if (!slopeBand(x, z) || vines(x, z) < -0.05 || valleyK(x, z) > 0.05 || nearPoint(x, z, 26)) continue;
+          const yaw = Math.atan2(1, (riverZ(x + 1) - riverZ(x - 1)) / 2) - Math.PI / 2;
+          if (Math.round(a) % 15 < 3 && Math.round(x / 9) % 2 === 0) { props.lowWall({ x, z, yaw, length: 8, height: 1.0, color: 0x5a5650 }); continue; } // a terrace wall
+          props.box('plain', x, terrain.heightAt(x, z) + 0.45, z, 7, 0.95, 0.07, yaw, 0x7a6a52);
         }
       }
     }
 
-    // ---- farms and cover up on the plateau (mirrored), the command posts
+    // ---- farms and cover up on the plateaus, the command posts
     const kinds = ['farm', 'fieldwall', 'hay', 'fieldwall', 'rocks', 'wrecks', 'hay', 'farm'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 70 && tries < 9000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = 30 + rand() * (bounds.z - 50);
-      if (away(x, z) < TOP + 15 || z < 0 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 30 * 30)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 45 || nearPoint(x, z, 34) || roadDist(x, z) < 10) continue;
+    for (let tries = 0; sites.length < 140 && tries < 18000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 30);
+      if (away(x, z) < TOP + 15 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 30 * 30)) continue;
+      if (Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || nearPoint(x, z, 34) || roadDist(x, z) < 10) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     commandPost(props, this.bases.nato, -1, 0x4e5236);
     commandPost(props, this.bases.pact, 1, 0x5a5a3c);
     props.finish();
@@ -386,7 +394,7 @@ export default {
         if (a < TERRACE) return 0.02;
         if (slopeBand(x, z)) return vines(x, z) < -0.05 ? 0.55 : -1;
         if (Math.abs(x) > 470) return 0.9;
-        return woodsN(x, z) > 0.12 ? 0.85 : -0.03;
+        return woodsN(x, z) > woodsCut(x, z) ? 0.85 : -0.03;
       },
     });
     cover.finalize(bounds);

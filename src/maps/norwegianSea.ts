@@ -2,7 +2,8 @@
 // group waits off the Norwegian coast. Open grey ocean to the west; to the east the mainland — snow-capped
 // mountains three hundred metres high, cut by the mouth of a fjord with a fishing village in it — and off
 // it a chain of steep Lofoten peaks and the skerries round them. The peaks hide a ship from radar: a group
-// can wait silent behind them, or come round them close. Ships only (data/units/ships85.js).
+// can wait silent behind them, or come round them close. Fair: the fjord mouth nearer NATO, the passage
+// and the open Atlantic nearer the Northern Fleet, in sum as near one as the other. Ships only (data/units/ships85.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -16,8 +17,9 @@ const sea = createSea({ level: 0, size: SIZE, color: 0x23404f });
 
 // the Lofoten peaks: [x, z, radius, height] — steep, bare rock
 const PEAKS = [[900, -1300, 230, 260], [1150, -700, 170, 210], [700, 50, 260, 280], [1050, 650, 150, 190], [850, 1400, 210, 240], [-1400, 600, 140, 120]];
-/** The mainland coast's line (x) at z: the fjord mouth cuts in near z = 1100. */
-const coastX = (z: number) => 1850 + fbm(noise, z * 0.0012, 3.1, 3) * 220 + (Math.abs(z - 1100) < 380 ? (380 - Math.abs(z - 1100)) * 1.4 : 0);
+/** The mainland coast's line (x) at z: the fjord mouth cuts in near z = FJORD. */
+const FJORD = 500;
+const coastX = (z: number) => 1850 + fbm(noise, z * 0.0012, 3.1, 3) * 220 + (Math.abs(z - FJORD) < 380 ? (380 - Math.abs(z - FJORD)) * 1.4 : 0);
 
 function height(x: number, z: number) {
   let h = -70 + fbm(noise, x * 0.0005, z * 0.0005, 4) * 12;
@@ -32,8 +34,8 @@ function height(x: number, z: number) {
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Carrier group', x: -700, z: 2150, owner: 'nato', sector: 'centre', radius: 150 },
   { id: 'B', name: 'Open Atlantic', x: -1600, z: -100, owner: null, sector: 'west', radius: 180 },
-  { id: 'C', name: 'Lofoten passage', x: 300, z: -300, owner: null, sector: 'centre', radius: 170 },
-  { id: 'D', name: 'Vestfjord mouth', x: 1550, z: 1100, owner: null, sector: 'east', radius: 160 },
+  { id: 'C', name: 'Lofoten passage', x: 300, z: -350, owner: null, sector: 'centre', radius: 170 },
+  { id: 'D', name: 'Vestfjord mouth', x: 1550, z: 500, owner: null, sector: 'east', radius: 160 },
   { id: 'K', name: 'Northern Fleet', x: -700, z: -2150, owner: 'pact', sector: 'centre', radius: 150 },
 ];
 
@@ -91,10 +93,10 @@ export default {
     sea.build(scene, terrain);
     // the fishing village at the head of the fjord mouth, and its lighthouse on the point
     for (let i = 0; i < 14; i++) {
-      const z = 900 + rand() * 400, x = coastX(z) + 40 + rand() * 120;
+      const z = FJORD - 200 + rand() * 400, x = coastX(z) + 40 + rand() * 120;
       if (height(x, z) > 3 && height(x, z) < 40) props.house({ x, z, yaw: Math.PI / 2 + (rand() - 0.5) * 0.4, width: 7 + rand() * 3, depth: 6 + rand() * 2 });
     }
-    props.tower({ x: coastX(700) + 30, z: 700, concrete: true });
+    props.tower({ x: coastX(FJORD - 400) + 30, z: FJORD - 400, concrete: true });
     props.finish();
     const trees = plantTrees({ scene, terrain, cover, rand, area: { x: HALF, z: HALF }, lane: 0, count: 1600, broadleaf: 0, autumn: 0, maxY: 110, size: 1.4,
       avoid: [{ test: (x: number, z: number) => terrain.heightAt(x, z) < 6 }] });

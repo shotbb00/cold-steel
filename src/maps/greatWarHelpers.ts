@@ -1,7 +1,7 @@
 // What the 1917–18 maps away from the Western Front share (Riga, Caporetto, Piave, Megiddo): distance to a
 // road's polyline, the engineers' pontoon bridges over a river, and villages — farmsteads round a lane in Europe,
-// flat-roofed mud-brick houses round a well in Palestine. Everything takes its own seed so a map can build
-// point-mirrored copies that come out alike.
+// flat-roofed mud-brick houses round a well in Palestine, and the per-half wood threshold that keeps woods of other
+// shapes on each side the same in area. Everything takes its own seed.
 import * as THREE from 'three';
 import { mulberry32 } from '../core/math.js';
 import { buildSite } from './common.js';
@@ -89,4 +89,15 @@ export function arabVillage(props: any, x: number, z: number, n: number, seed: n
     if (r() < 0.5) props.lowWall({ x: px + 5, z: pz + 4, yaw: r() < 0.5 ? 0 : Math.PI / 2, length: 6 + r() * 6, height: 1.6, color: 0xb8a07a });
   }
   props.column({ x: x - 4, z: z + 3, radius: 1.3, height: 0.9 }); // the well
+}
+
+/**
+ * Woods of their own shapes on each half but the same area: `f(x, z)` over the field, `t` the threshold on nato's half
+ * (`nato(x, z)` says which half); returns pact's threshold, cut so the same share of its half is over it.
+ */
+export function evenThreshold(f: (x: number, z: number) => number, t: number, nato: (x: number, z: number) => boolean) {
+  const n: number[] = [], p: number[] = [];
+  for (let x = -480; x <= 480; x += 16) for (let z = -540; z <= 540; z += 16) (nato(x, z) ? n : p).push(f(x, z));
+  p.sort((a, b) => b - a);
+  return p[Math.min(p.length - 1, Math.floor(p.length * n.filter((v) => v > t).length / n.length))];
 }

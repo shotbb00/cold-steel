@@ -38,7 +38,7 @@ export function sideObjectiveDefs(game, points) {
     for (let x = o.from[0] * bounds.x; x <= o.from[1] * bounds.x; x += 10) {
       for (const z of [0, 25, -25, 50, -50]) {
         if (river && river.level - t.heightAt(x, z) > -0.3) continue; // in or at the water
-        if (game.cover.pointBlocked(x, z, 6)) continue;
+        if (game.cover.pointBlocked(x, z, 6) || game.airfields?.covers(x, z, 25)) continue; // (not on a runway: systems/Airfields.js)
         const d = Math.min(...points.map((p) => Math.hypot(p.x - x, p.z - z)), ...taken.map((q) => Math.hypot(q.x - x, q.z - z)));
         const score = Math.min(d, 160) - Math.abs(z) * 1.5;
         if (d > 70 && score > bestScore) { bestScore = score; best = { x, z }; }

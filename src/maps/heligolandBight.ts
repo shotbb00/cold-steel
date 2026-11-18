@@ -2,7 +2,8 @@
 // cruisers come in from the west at dawn after the German patrols, Beatty's battlecruisers behind them; the
 // German light cruisers come out of the Jade and the Elbe one by one into the mist. Heligoland in the middle
 // of the German half — red sandstone cliffs, the Oberland's houses and the lighthouse on top, the harbour mole
-// and the sandy Düne off it — and the Amrum Bank's shoals on the British side.
+// and the sandy Düne off it — and the Amrum Bank's shoals on the British side. Fair: the Amrum Bank as near
+// the British as Heligoland Roads the Germans, the open Bight between as near either.
 import { island, shore } from '../world/Sea.js';
 import { northSea } from './northSea.ts';
 
@@ -44,7 +45,7 @@ export default northSea({
   points: [
     { id: 'A', name: 'Harwich Force', x: 0, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
     { id: 'B', name: 'Amrum Bank', x: -1100, z: -350, owner: null, sector: 'west', radius: 170 },
-    { id: 'C', name: 'The Bight', x: -150, z: 200, owner: null, sector: 'centre', radius: 180 },
+    { id: 'C', name: 'The Bight', x: -150, z: -50, owner: null, sector: 'centre', radius: 180 },
     { id: 'D', name: 'Heligoland Roads', x: 1150, z: 400, owner: null, sector: 'east', radius: 160 },
     { id: 'K', name: 'The Jade', x: 0, z: 2100, owner: 'pact', sector: 'centre', radius: 150 },
   ],

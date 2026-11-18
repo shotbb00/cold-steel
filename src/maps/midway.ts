@@ -3,6 +3,9 @@
 // Island inside it with the airfield — and sandbanks and shoals out on the open water. The US Navy
 // comes in from the south (+z), the Imperial Navy from the north. Ships only (data/units45/ships.js).
 // Frontline only for now (`modes`): the five zones are held by warships on the surface (systems/ControlPoints.js).
+// Fair, not mirrored: one big rock off the west flank, two smaller ones off the east, as much cover each way;
+// the shoals scattered, as many in each half; the lagoon mouth (the real one, Brooks Channel, on the south-west
+// of the reef) and the passage on the far side each as near one fleet as the other.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
@@ -16,10 +19,10 @@ const ATOLL = 950;      // the reef ring's radius
 const noise = createNoise2D(1942);
 const sea = createSea({ level: 0, size: SIZE, color: 0x1e5a78 });
 
-// sandbanks and shoals: [x, z, radius] (point-mirrored pairs)
-const SHOALS = [[-2300, 900, 160], [2300, -900, 160], [1150, 1950, 120], [-1150, -1950, 120]]; // (out of the way: a wide passage everywhere round the atoll — tester feedback 2026-11-17)
-// two rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius]
-const PINNACLES = [[-2700, -450, 230], [2700, 450, 230]];
+// sandbanks and shoals: [x, z, radius]
+const SHOALS = [[-2200, 1100, 190], [1500, 1850, 110], [2450, -800, 130], [-900, -2050, 120], [2000, -1500, 80]]; // (out of the way: a wide passage everywhere round the atoll — tester feedback 2026-11-17)
+// rocky pinnacles out by the flank zones, cliffs and jungle a ship can hide behind: [x, z, radius, height]
+const PINNACLES = [[-2650, -250, 260, 120], [2450, 650, 160, 90], [2850, -100, 150, 80]];
 
 function height(x, z) {
   let h = -38 + fbm(noise, x * 0.0008, z * 0.0008, 4) * 10;                 // the open ocean floor (deep enough everywhere)
@@ -33,16 +36,16 @@ function height(x, z) {
     h += (ih + fbm(noise, x * 0.01, z * 0.01, 2) * 1.5 - h) * k;
   }
   for (const [sx, sz, sr] of SHOALS) h += (-3 - h) * smoothstep(sr, sr * 0.4, Math.hypot(x - sx, z - sz)); // just under the surface: too shallow for any keel (world/Nav.js SHIP_DEPTH)
-  for (const [px, pz, pr] of PINNACLES) h = Math.max(h, island(pr - Math.hypot(x - px, z - pz) + fbm(noise, x * 0.006, z * 0.006, 2) * 45, pr, 110, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 10));
+  for (const [px, pz, pr, ph] of PINNACLES) h = Math.max(h, island(pr - Math.hypot(x - px, z - pz) + fbm(noise, x * 0.006, z * 0.006, 2) * 45, pr, ph, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 10));
   return h;
 }
 
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Task Force 16', x: 0, z: 2050, owner: 'nato', sector: 'centre', radius: 120 },
-  { id: 'B', name: 'West reef', x: -1400, z: 0, owner: null, sector: 'west', radius: 150 },
-  { id: 'C', name: 'Midway lagoon mouth', x: 0, z: 1050, owner: null, sector: 'centre', radius: 150 },
-  { id: 'D', name: 'East shoals', x: 1400, z: 0, owner: null, sector: 'east', radius: 150 },
-  { id: 'E', name: 'Kure passage', x: 0, z: -1050, owner: null, sector: 'centre', radius: 150 },
+  { id: 'B', name: 'West reef', x: -1550, z: 40, owner: null, sector: 'west', radius: 150 },
+  { id: 'C', name: 'Midway lagoon mouth', x: -300, z: 1060, owner: null, sector: 'centre', radius: 150 },
+  { id: 'D', name: 'East shoals', x: 1350, z: -30, owner: null, sector: 'east', radius: 150 },
+  { id: 'E', name: 'Kure passage', x: 250, z: -1070, owner: null, sector: 'centre', radius: 150 },
   { id: 'K', name: 'Kidō Butai', x: 0, z: -2050, owner: 'pact', sector: 'centre', radius: 120 },
 ];
 

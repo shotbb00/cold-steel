@@ -4,24 +4,24 @@
 // Alle at the town and split the Russian army in two; the Sortlack wood stood south of the town. In the
 // evening Ney came down past the wood into the loop, the French guns closed to canister range, the town
 // burned and the bridges with it. The French hold the north (+z), the Russians the town and the river
-// (−z). Fair as a battle, not a re-run of the trap: the ground is point-mirrored (the Sortlack wood has its
-// twin in the Damerau wood, the town its twin in Posthenen, the ravine's three crossings lie at the same
-// distance from both sides), and the Alle runs only behind the Russian base, where its bridges are the
-// Russians' own way in — no one fights across it.
+// (−z). Fair as a battle, not a re-run of the trap, and not mirrored: the long Sortlack wood by the
+// Russian right is traded for the Damerau wood and its copses before the French left, the rise over the
+// Alle bend for the rise by Georgenau, the town for Posthenen's walled manor; the ravine winds down the
+// middle with its crossings as far from each base, and the Alle runs only behind the Russian base, where
+// its bridges are the Russians' own way in — no one fights across it.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
-import { buildSite, buildVillage, mirrored } from './common.js';
+import { buildSite, buildVillage } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
 const BASE_Z = 450;
 const noise = createNoise2D(1807_06);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
-const mirror = (x, z): [number, number] => (z < 0 || (z === 0 && x < 0) ? [-x, -z] : [x, z]);
 
 const POINTS: ControlPointDef[] = [
   { id: 'A', name: 'Posthenen', x: 0, z: 420, owner: 'nato', sector: 'centre' },
@@ -30,10 +30,10 @@ const POINTS: ControlPointDef[] = [
   { id: 'D', name: 'Georgenau', x: 210, z: 345, owner: null, sector: 'east' },
   { id: 'E', name: 'Domnau road', x: -265, z: 95, owner: null, sector: 'west' },
   { id: 'F', name: 'The mill', x: 0, z: 0, owner: null, sector: 'centre', radius: 24 },
-  { id: 'G', name: 'Sortlack', x: 265, z: -95, owner: null, sector: 'east' },
-  { id: 'H', name: 'Allenburg road', x: -210, z: -345, owner: null, sector: 'west' },
-  { id: 'I', name: 'Sortlack wood', x: 110, z: -225, owner: null, sector: 'centre' },
-  { id: 'J', name: 'The Alle bend', x: 390, z: -300, owner: null, sector: 'east' },
+  { id: 'G', name: 'Sortlack', x: 310, z: -85, owner: null, sector: 'east' },
+  { id: 'H', name: 'Allenburg road', x: -235, z: -300, owner: null, sector: 'west' },
+  { id: 'I', name: 'Sortlack wood', x: 150, z: -250, owner: null, sector: 'centre' },
+  { id: 'J', name: 'The Alle bend', x: 370, z: -340, owner: null, sector: 'east' },
   { id: 'K', name: 'Friedland', x: 0, z: -420, owner: 'pact', sector: 'centre', radius: 26 },
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
@@ -53,9 +53,9 @@ const river = createRiver({
   ],
 });
 
-// the millstream's ravine, down the middle (point-symmetric), and its crossings: the mill, two fords, the town lanes
-const streamX = (z) => 34 * Math.sin(z * 0.007);
-const CROSS = [0, 230, -230, 400, -400];
+// the millstream's ravine, winding down the middle, and its crossings: the mill, two fords, the village lanes
+const streamX = (z) => 30 * Math.sin(z * 0.006 + 0.8) + 12 * Math.sin(z * 0.017) - 20;
+const CROSS = [0, 240, -215, 400, -395];
 const ravine = (x, z) => {
   const d = Math.abs(x - streamX(z));
   const ford = Math.max(...CROSS.map((c) => smoothstep(20, 8, Math.abs(z - c))));
@@ -63,9 +63,10 @@ const ravine = (x, z) => {
 };
 /** The woods (0..1): the Sortlack wood and the Damerau wood, copses, the alders along the ravine. */
 const woods = (x, z) => {
-  const [ax, az] = mirror(x, z);
-  let k = smoothstep(0.5, 0.66, fbm(noise, ax * 0.006 + 21, az * 0.006 - 4, 3));
-  k = Math.max(k, smoothstep(95, 60, Math.hypot((ax - P.C.x - 30) * 0.8, az - P.C.z - 20)));
+  let k = smoothstep(0.5, 0.66, fbm(noise, x * 0.006 + 21, z * 0.006 - 4, 3));
+  k = Math.max(k, smoothstep(80, 50, Math.hypot((x - P.C.x - 20) * 0.9, z - P.C.z - 15)), smoothstep(45, 25, Math.hypot(x + 250, z - 200)) * 0.9); // (the Damerau wood and its copse)
+  const su = (x - P.I.x - 20) * 0.85 + (z - P.I.z + 10) * 0.53, sv = (z - P.I.z + 10) * 0.85 - (x - P.I.x - 20) * 0.53;
+  k = Math.max(k, smoothstep(1.05, 0.8, Math.hypot(su / 150, sv / 60)));        // (the Sortlack wood: long, along the Alle side)
   const d = Math.abs(x - streamX(z));
   if (d > 9 && d < 20) k = Math.max(k, 0.5);
   for (const p of POINTS) if (p.id !== 'C' && p.id !== 'I') k = Math.min(k, smoothstep(32, 56, Math.hypot(x - p.x, z - p.z)));
@@ -74,9 +75,9 @@ const woods = (x, z) => {
 };
 
 function height(x, z) {
-  const [ax, az] = mirror(x, z);
-  let h = fbm(noise, ax * 0.0024, az * 0.0024, 3) * 5 + fbm(noise, ax * 0.02 + 7, az * 0.02, 3) * 0.4 + 6;
-  h += hill(ax, az, P.D.x + 40, P.D.z - 70, 90, 5);                                // the low rise by Georgenau (and its twin over the Alle bend)
+  let h = fbm(noise, x * 0.0024, z * 0.0024, 3) * 5 + fbm(noise, x * 0.02 + 7, z * 0.02, 3) * 0.4 + 6;
+  h += hill(x, z, P.D.x + 40, P.D.z - 70, 90, 5);                                  // the low rise by Georgenau
+  h += hill(x, z, P.J.x - 70, P.J.z + 60, 75, 5) + hill(x, z, P.J.x - 170, P.J.z + 40, 75, 4); // the longer, lower rise over the Alle bend
   h -= ravine(x, z) * 5.5;                                                          // the millstream's ravine
   h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 24 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, z) * 20;
   for (const p of POINTS) if (p.id !== 'F') h += (h * 0.6 + 2.4 - h) * smoothstep(42, 20, Math.hypot(x - p.x, z - p.z)) * 0.5;
@@ -90,7 +91,7 @@ export default {
   id: 'friedland',
   armies: { nato: ['fr'], pact: ['ru'] }, // (Lannes, Ney and the Emperor against Bennigsen)
   name: 'Friedland',
-  description: 'East Prussia, June 1807: the town in the loop of the Alle and its bridges behind the Russians, the millstream\'s ravine down the middle, the Sortlack wood. Mirrored to keep it fair.',
+  description: 'East Prussia, June 1807: the town in the loop of the Alle and its bridges behind the Russians, the millstream\'s ravine down the middle, the Sortlack wood.',
   epochs: ['1806'],
   region: 'east',
   size: 1600,
@@ -160,42 +161,39 @@ export default {
     const nearPoint = (x, z, r) => POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < r);
     const nearWater = (x, z, r) => Math.abs(z - alleZ(x)) < river.halfWidth + r;
 
-    // ---- Friedland (and Posthenen, its twin): houses along the street to the bridge, the church in Friedland
+    // ---- Friedland: houses along the street to the bridge, the church; Posthenen: a village round the manor and its walled yard
     const rr = mulberry32(1806_14);
     const taken: number[][] = [];
-    for (let i = 0; i < 26; i++) {
-      const a = rr() * Math.PI * 2, d = 18 + rr() * 50;
-      const x = Math.cos(a) * d, z = P.A.z + Math.sin(a) * d * 0.8;
-      if (Math.abs(x) < 7 || Math.hypot(x, z - BASE_Z) < 38 || taken.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 14)) continue; // (the street down the middle)
+    for (let i = 0; i < 34; i++) {
+      const a = rr() * Math.PI * 2, d = 18 + rr() * 56;
+      const x = Math.cos(a) * d, z = P.K.z + Math.sin(a) * d * 0.8;
+      if (Math.abs(x) < 7 || Math.hypot(x, z + BASE_Z) < 38 || nearWater(x, z, 20) || taken.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 14)) continue; // (the street down the middle)
       taken.push([x, z]);
-      const seed = Math.floor(rr() * 1e9), yaw = Math.abs(x) < 30 ? Math.PI / 2 : 0, w = 7 + rr() * 3;
-      mirrored(props, seed, (m, flip) => props.townHouse({ x: x * m, z: z * m, yaw: yaw + flip, width: w, depth: 8, storeys: rr() < 0.5 ? 2 : 1, damaged: 0 }));
+      props.rand = mulberry32(Math.floor(rr() * 1e9));
+      props.townHouse({ x, z, yaw: Math.abs(x) < 30 ? Math.PI / 2 : 0, width: 7 + rr() * 3, depth: 8, storeys: rr() < 0.5 ? 2 : 1, damaged: 0 });
     }
     props.rand = mulberry32(14061807);
     props.church({ x: 22, z: P.K.z - 6, yaw: 0 });
+    buildVillage(props, { x: P.A.x + 50, z: P.A.z - 5 }, 1807_61);
+    buildVillage(props, { x: P.A.x - 55, z: P.A.z + 10 }, 1807_62);
     props.hall({ x: -22, z: P.A.z + 6, yaw: Math.PI, width: 18, depth: 9, height: 5, color: 0x8a7a62, roof: 0x5a3a2a, door: 5, name: 'barn' }); // (Posthenen's manor barn)
+    for (const [x, z, yaw, length] of [[-22, P.A.z - 16, 0, 26], [-38, P.A.z - 4, Math.PI / 2, 18]] as const) props.wall({ x, z, yaw, length, height: 1.6 }); // (its yard wall)
     // the mill on the stream, the bridge lane past it
-    mirrored(props, 1807_5, (m, flip) => props.house({ x: 42 * m, z: 16 * m, yaw: flip + 0.2, width: 9, depth: 7 }));
+    props.rand = mulberry32(1807_5);
+    props.house({ x: streamX(16) + 26, z: 16, yaw: 0.2, width: 9, depth: 7 });
+    props.house({ x: streamX(-14) - 24, z: -14, yaw: 1.4, width: 7, depth: 6 });
 
     // ---- the villages; a few farms on the field; walls and hay
-    for (const p of POINTS) {
-      if (p.z <= 0 || p.id === 'A' || p.id === 'C') continue;
-      const seed = 18076 + Math.round(p.x * 3 + p.z);
-      buildVillage(props, p, seed, 1);
-      buildVillage(props, { x: -p.x, z: -p.z }, seed, -1);
-    }
+    for (const p of POINTS) if (!p.owner && !'CFI'.includes(p.id)) buildVillage(props, p, 18076 + Math.round(p.x * 3 + p.z * 7));
     const kinds = ['farm', 'fieldwall', 'hay', 'hay', 'fieldwall', 'farm'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 44 && tries < 6000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = 20 + rand() * (bounds.z - 120);
+    for (let tries = 0; sites.length < 88 && tries < 12000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 100);
       if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 55 * 55)) continue;
-      if (Math.hypot(x, z - BASE_Z) < 60 || nearPoint(x, z, 55) || woods(x, z) > 0.25 || ravine(x, z) > 0.05 || ravine(-x, -z) > 0.05 || nearWater(-x, -z, 50)) continue;
+      if (Math.hypot(x, z - BASE_Z) < 60 || Math.hypot(x, z + BASE_Z) < 90 || nearPoint(x, z, 55) || woods(x, z) > 0.25 || ravine(x, z) > 0.05 || nearWater(x, z, 50)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     for (const [base, toward, canvas] of [[this.bases.nato, -1, 0xd8d0b8], [this.bases.pact, 1, 0xc8c4b0]] as const) {
       props.tent({ x: base.x - 26, z: base.z - toward * 4, yaw: 0.2, color: canvas });
       props.tent({ x: base.x + 26, z: base.z - toward * 6, yaw: -0.15, color: canvas });

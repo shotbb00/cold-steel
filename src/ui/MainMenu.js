@@ -57,14 +57,82 @@ const TIPS = { 1985: [
   'A rider can fall and leave his horse running loose. A dismounted trooper climbs back onto a loose horse of his side.',
   'Only foot takes points. Cavalry rides through, but holds nothing.',
   'The Guard comes once a battle. Keep it for the moment that decides the day.',
+], 1918: [
+  'Infantry takes points; tanks cannot. Send the riflemen in close behind the barrage.',
+  'Machine guns in a trench rule the open ground in front of it. Smoke, the guns or a tank get you across.',
+  'Wire stops infantry dead. Engineers cut it; tanks crush it flat.',
+  'The tanks of 1918 are slow and break down. Keep infantry with them, and a recovery crew behind.',
+  'Gas settles in the low ground. Masked men see less and move slower.',
+  'Forward observers make the guns land tight. Without them, the shells plough no man’s land.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
+], 2027: [
+  'Infantry takes points; vehicles cannot. Let the riflemen lead into the villages.',
+  'Drones see what your squads cannot — and the enemy’s see you. Keep under cover, or keep moving.',
+  'A jammer near the front blinds the enemy’s drones and radios around it. Find theirs, and hit it.',
+  'Guns and rockets hit whatever a drone or an observer has found. Do not bunch up.',
+  'Right-drag a move to choose which way the squad faces — and which side of the wall it takes.',
+  'A pinned squad hugs the ground and barely fires back. Suppress first, then move.',
+  'Smoke blinds both sides for about forty seconds. Lay it between the gun and your advance.',
 ] };
+// at sea (the year's own ships), on a landing, and the modes' own rules — all shown with the year's
+const SEA_TIPS = {
+  1806: [
+    'A ship of the line fires her broadside to the side, not ahead. Bring her across the enemy, not straight at him.',
+    'The wind decides how fast you sail: against it, a square-rigger crawls. Plan your course with it.',
+    'Shore batteries fire red-hot shot. A ship that catches fire is in more danger than one that is holed.',
+  ],
+  1918: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'A torpedo is slow, but it sinks a battleship. Destroyers screen the big ships against them.',
+    'Big guns hit hard at long range; at short range, the destroyers’ torpedoes decide it.',
+  ],
+  1945: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'Carrier aircraft strike far beyond any gun. Keep fighters over your own fleet.',
+    'Submarines are hard to find. Destroyers hunt them; everything else should stay out of their way.',
+  ],
+  1985: [
+    'Ships take the zones at sea, as infantry takes points on land. Keep a ship in every zone you hold.',
+    'Anti-ship missiles strike from beyond sight. Spread your ships out.',
+    'Submarines are hard to find. Frigates and helicopters hunt them; the big ships stay out of their way.',
+  ],
+};
+const LANDING_TIPS = {
+  1806: ['Take the beach sectors first: each one opens the way inland.', 'The boats are easy targets on the row in. The ships’ broadsides cover them.', 'Defending the coast: the batteries cover the beach, but the infantry behind them decides the day.'],
+  1918: ['Take the beach sectors first: each one opens the way inland.', 'The boats and lighters are easy targets on the run in. The warships’ guns cover them.', 'Defending the coast: the trenches and machine guns cover the beach, but the reserves behind them decide the day.'],
+  1945: ['Take the beach sectors first: each one opens the way inland.', 'Landing craft are easy targets on the run in. The naval guns and smoke cover them.', 'Defending the coast: the bunkers cover the beach, but the infantry behind them decides the day.'],
+};
+const MODE_TIPS = {
+  breakthrough: ['Breakthrough: only the line being fought over can be taken. Every line taken brings more reserves and more time.'],
+  hill: ['King of the Hill: while you hold the hill, the enemy’s bar runs down. Five minutes on it wins.'],
+  rearguard: ['Rearguard: supplies are cut halfway through. Dig in early and keep reserves for the second half.'],
+  recon: ['Recon raid: stay hidden. A fight your scouts start is a fight they cannot win.'],
+  lanes: ['Lanes: a lane’s two fortifications must fall before its headquarters can be attacked.'],
+  pitched: ['Pitched battle: no points to take. Set up on good ground — the last side with troops on the field wins.'],
+  infantry: ['Infantry only: no vehicles and no air support — the men on foot and the weapons they carry.'],
+  skirmish: ['Skirmish: the enemy’s follow-on echelons keep coming. Fall back to the next good position in time.'],
+};
+/** A loading-screen tip that fits the battle: its year, at sea or on a landing, sometimes its mode's own. */
+function tipFor(ep, map, mode) {
+  const own = MODE_TIPS[mode] ?? [];
+  const pool = map?.theatre === 'sea' ? SEA_TIPS[ep] ?? SEA_TIPS[1945] : [...(map?.theatre === 'coastal' ? LANDING_TIPS[ep] ?? LANDING_TIPS[1945] : []), ...(TIPS[ep] ?? TIPS[1985])];
+  const from = own.length && Math.random() < 0.5 ? own : pool;
+  return from[Math.floor(Math.random() * from.length)];
+}
 
 /**
  * The armies the theatre's maps allow (a map's `armies`: Omaha is the US Army against the Wehrmacht), per side —
  * null where any of them takes any army.
  */
 /** The year's title and line — or the Pacific's, on its tab (data/epoch.js `pacific`). */
-const tabInfo = () => epochInfo().regions?.[regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land')] ?? epochInfo(); // (a region's own title and line: data/epoch.js)
+/** A region's own title and line in theatre `th` (data/epoch.js), the war's where it has none (1806's Germany on land: Jena and Auerstedt). */
+const regionInfo = (ep, reg, th = 'land') => {
+  const R = EPOCHS[ep].regions?.[reg] ?? {}, own = (o) => Object.fromEntries(['title', 'blurb'].filter((k) => o?.[k] != null).map((k) => [k, o[k]]));
+  return { title: EPOCHS[ep].title, blurb: EPOCHS[ep].blurb, ...own(R), ...own(R[th]) };
+};
+const tabTheatre = () => (hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+const tabInfo = () => regionInfo(epoch(), regionIn(epoch(), tabTheatre()), tabTheatre());
 
 export function theatreArmies() {
   const maps = mapsFor(epoch());
@@ -321,6 +389,14 @@ export class MainMenu {
     r.replaceChildren();
     const side = el('aside', 'menu-side');
     side.append(el('div', 'menu-brand', logo(GAME.title, tabInfo().title)));
+    try { // (the boot screen's tagline after a reload: index.html reads these before any module has loaded)
+      const T = {};
+      for (const ep of Object.keys(EPOCHS)) for (const th of THEATRES) {
+        const rs = regionsFor(ep, th.id);
+        if (rs.length) (T[ep] ??= {})[th.id] = Object.fromEntries([['_', regionInfo(ep, rs[0].id, th.id).title], ...rs.map((r) => [r.id, regionInfo(ep, r.id, th.id).title])]);
+      }
+      localStorage.setItem('coldsteel.titles', JSON.stringify(T));
+    } catch (e) { /* storage blocked: the boot screen keeps the war's title */ }
     // the war it's set in (data/epoch.js): switching reloads, so every list is that war's
     const year = el('div', 'seg menu-epoch');
     for (const e of [...Object.values(EPOCHS), ...COMING_EPOCHS].sort((a, b) => a.id - b.id)) {
@@ -612,9 +688,9 @@ export class MainMenu {
     this.root.classList.remove('menu-open');
     const sheet = this.sheet?.canvas;
     this.sheet?.show(MAPS[choice.map] ?? MAPS[this.choice.map], choice.side, false, 'full'); // drawn at once: the build is about to block the page
-    const tips = TIPS[epoch()] ?? TIPS[1985]; // (this war's hints)
-    const tip = tips[Math.floor(Math.random() * tips.length)];
-    const box = el('div', 'loading-card', `${logo(GAME.title, tabInfo().title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
+    const map = MAPS[choice.map] ?? MAPS[this.choice.map];
+    const tip = tipFor(epoch(), map, choice.mode); // (this war's, this kind of battle's)
+    const box = el('div', 'loading-card', `${logo(GAME.title, regionInfo(epoch(), map?.region ?? 'europe', map?.theatre ?? 'land').title)}<div id="ts-status">Deploying forces on ${MAPS[choice.map]?.name ?? 'the map'}…</div><p class="loading-tip">${tip}</p>`);
     this.root.replaceChildren(...(sheet ? [sheet] : []), box);
     this.root.classList.add('loading-open');
     // let the loading screen paint before the heavy world build blocks the page

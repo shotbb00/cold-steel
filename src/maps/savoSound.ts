@@ -2,7 +2,8 @@
 // between Guadalcanal's north coast (the south edge of the map), Florida Island and Tulagi (the north-east)
 // and the volcanic cone of Savo Island (the north-west). The US Navy guards the transports' anchorage off
 // Lunga Point in the east; the Imperial Navy comes down "the Slot" from the north-west, round either side
-// of Savo, at night. Ships only (data/units45/ships.js). Night and clear by default (map.conditions).
+// of Savo, at night. Ships only (data/units45/ships.js). Night and clear by default (map.conditions). Fair:
+// the Savo channel well nearer the Slot, the sound and Tulagi roads a little nearer Lunga — in sum as near either.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, shore, island, jungle, jungleTint } from '../world/Sea.js';
@@ -34,11 +35,11 @@ function height(x: number, z: number) {
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Lunga Point', x: 1900, z: 1250, owner: 'nato', sector: 'east', radius: 130 },
+  { id: 'A', name: 'Lunga Point', x: 825, z: 700, owner: 'nato', sector: 'east', radius: 130 },
   { id: 'B', name: 'Savo channel', x: -1500, z: 200, owner: null, sector: 'west', radius: 160 },
   { id: 'C', name: 'Ironbottom Sound', x: 200, z: 100, owner: null, sector: 'centre', radius: 170 },
   { id: 'D', name: 'Tulagi roads', x: 900, z: -1150, owner: null, sector: 'east', radius: 150 },
-  { id: 'K', name: 'The Slot', x: -2050, z: -1900, owner: 'pact', sector: 'west', radius: 130 },
+  { id: 'K', name: 'The Slot', x: -975, z: -925, owner: 'pact', sector: 'west', radius: 130 },
 ];
 
 export default {
@@ -90,14 +91,16 @@ export default {
     },
   },
 
-  bases: { nato: { x: 2150, z: 1100, entries: [-250, 0, 250] }, pact: { x: -2150, z: -1950, entries: [-250, 0, 250] } },
+  // (half-way in: maps/index.js widenSea doubles the homes — off Lunga Point at 2150, 1100 and in the Slot at -2150, -1950,
+  // where the sound puts them; doubled from where they lie, the US fleet started ashore on Guadalcanal)
+  bases: { nato: { x: 1075, z: 550, entries: [-250, 0, 250] }, pact: { x: -1075, z: -975, entries: [-250, 0, 250] } },
   maxStacks: 12,
-  cameraStart: { nato: { x: 1950, z: 1000 }, pact: { x: -1950, z: -1800 } },
+  cameraStart: { nato: { x: 875, z: 450 }, pact: { x: -875, z: -825 } },
   points,
 
   spawns: {
-    nato: [{ unit: 'destroyer', x: 1850, z: 950, facing: -Math.PI / 2 }, { unit: 'destroyer', x: 1900, z: 1250, facing: -Math.PI / 2 }, { unit: 'lightCruiser', x: 2150, z: 1100, facing: -Math.PI / 2 }, { unit: 'transport', x: 2250, z: 1350, facing: -Math.PI / 2 }],
-    pact: [{ unit: 'destroyer', x: -1950, z: -1750, facing: Math.PI / 4 }, { unit: 'destroyer', x: -2150, z: -1700, facing: Math.PI / 4 }, { unit: 'cruiser', x: -2150, z: -1950, facing: Math.PI / 4 }, { unit: 'ptBoat', x: -1900, z: -2000, facing: Math.PI / 4 }],
+    nato: [{ unit: 'destroyer', x: 775, z: 400, facing: -Math.PI / 2 }, { unit: 'destroyer', x: 825, z: 700, facing: -Math.PI / 2 }, { unit: 'lightCruiser', x: 1075, z: 550, facing: -Math.PI / 2 }, { unit: 'transport', x: 1175, z: 800, facing: -Math.PI / 2 }],
+    pact: [{ unit: 'destroyer', x: -875, z: -775, facing: Math.PI / 4 }, { unit: 'destroyer', x: -1075, z: -725, facing: Math.PI / 4 }, { unit: 'cruiser', x: -1075, z: -975, facing: Math.PI / 4 }, { unit: 'ptBoat', x: -825, z: -1025, facing: Math.PI / 4 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {

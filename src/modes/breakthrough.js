@@ -31,17 +31,22 @@ const DEFENCE_FORCE = ['rifles', 'rifles', 'rifles', 'mgTeam', 'mgTeam', 'atTeam
 
 /** "Britain is beaten.", "The Warsaw Pact is beaten.", "The Allies are beaten." (a side's name: a country, or an alliance) */
 const beaten = (n) => `${/Pact|Allies/.test(n) ? 'The ' : ''}${n} ${n === 'Allies' ? 'are' : 'is'} beaten.`;
+/** A side by this war's name (data/epoch.js sides): "the Warsaw Pact", "NATO", "Prussia", "the Allies" — and its verb. */
+const side = (f) => { const n = FACTIONS[f].name; return /Pact|Allies/.test(n) ? `the ${n}` : n; };
+const verb = (f, one, many) => (FACTIONS[f].name === 'Allies' ? many : one);
+const cap = (t) => t[0].toUpperCase() + t.slice(1);
+const DEF = enemyOf(ATTACKER);
 
 export default {
   id: 'breakthrough',
   name: 'Breakthrough',
-  description: 'The Pact attacks line by line; NATO has two minutes to dig in. Take every line — or hold until the clock runs out.',
+  get description() { return `${cap(side(ATTACKER))} ${verb(ATTACKER, 'attacks', 'attack')} line by line; ${side(DEF)} ${verb(DEF, 'has', 'have')} two minutes to dig in. Take every line — or hold until the clock runs out.`; },
   multiplayer: true,
 
   setup(game) {
     if (game.net?.isClient) {
       clientSetup(game);
-      game.bus.emit('toast', 'Breakthrough — the Pact attacks, NATO holds. One line at a time.');
+      game.bus.emit('toast', `Breakthrough — ${side(ATTACKER)} ${verb(ATTACKER, 'attacks', 'attack')}, ${side(DEF)} ${verb(DEF, 'holds', 'hold')}. One line at a time.`);
       return;
     }
     const map = game.map;
@@ -111,7 +116,7 @@ export default {
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     if (camp) game.tell(game.playerFaction, `Campaign: ${camp.sector}`);
     game.bus.emit('toast', game.playerFaction === att
-      ? 'Breakthrough — take the line ahead, then the next. NATO has two minutes to dig in.'
+      ? `Breakthrough — take the line ahead, then the next. ${cap(side(def))} ${verb(def, 'has', 'have')} two minutes to dig in.`
       : 'Breakthrough — two minutes to dig in. Hold every line as long as you can.');
     this.pointsOf = pointsOf;
   },

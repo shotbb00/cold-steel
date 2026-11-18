@@ -57,7 +57,7 @@ function height(x: number, z: number) {
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Trekroner', x: -1250, z: 1800, owner: 'nato', sector: 'centre', radius: 170 },
   { id: 'B', name: 'The Danish line', x: -1650, z: 250, owner: null, sector: 'west', radius: 220 },
-  { id: 'C', name: 'King\'s Deep', x: -1450, z: -1500, owner: null, sector: 'west', radius: 200 },
+  { id: 'C', name: 'King\'s Deep', x: -1450, z: -1150, owner: null, sector: 'west', radius: 200 },
   { id: 'D', name: 'Holland Deep', x: 100, z: 200, owner: null, sector: 'east', radius: 220 },
   { id: 'K', name: 'Nelson\'s squadron', x: 500, z: -2450, owner: 'pact', sector: 'centre', radius: 170 },
 ];

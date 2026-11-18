@@ -1,76 +1,107 @@
 // El Guettar, 23 March 1943 (1945 only; the big field, 1.0 × 1.12 km): southern Tunisia. A broad, flat valley — the
 // Gafsa–Gabès road along its floor, good tank country with sight lines over a kilometre — between two lines of rocky
 // djebels. Their faces to the valley are steep rock that only men climb (`steep`); the vehicles go up by the passes
-// and the gentle back slopes. The US 1st Infantry Division held the southern heights — Hill 336 ("Wop Hill"), the
-// Keddab ridge, Djebel el Mcheltat — and the 10th Panzer Division came down the valley into its minefield and under
-// the guns and tank destroyers firing down from the hills. Each side here has its ridge (dug in on the crest, its mine
-// belt out on the valley floor below), its oasis at the valley's end (El Guettar / Bou Hamran: palms and flat-roofed
-// houses), and a pass behind; point-mirrored through the centre like the other maps. The US come from the south (+z).
+// and the gentle back slopes. The US 1st Infantry Division held the southern heights — Hill 336 ("Wop Hill") at the
+// west end, the Keddab ridge with its pass in the middle, Djebel el Mcheltat far out east — and the 10th Panzer
+// Division came down the valley into its minefield and under the guns and tank destroyers firing down from the hills.
+// Across the valley the German side has its own djebels: Djebel Chemsi in the west, the Orbata pass a little east of
+// the middle, a wadi gap to its west, and the long Djebel Berda with a lower shoulder in front of it in the east.
+// Each side has its ridge (dug in on the crest, its mine belt out on the valley floor below), an oasis (El Guettar
+// in the US west, Bou Hamran on the German east) and two ways up through its ridge. Not a mirror but fair: two
+// peaks of about the same height each, the passes and oases as far from each base, the crests as far out.
+// The US come from the south (+z).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
-import { buildSite, commandPost, mirrored, trenchLine } from './common.js';
+import { buildSite, commandPost, trenchLine } from './common.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const OASIS = { x: -340, z: 60, r: 62 };   // El Guettar (nato's end of the valley); Bou Hamran its mirror
-const MINE_U = 165;                         // each side's mine belt, this far out from the centre line
 const noise = createNoise2D(1943_03);
 
-// (all shapes in the half-plane frame: X, U = x, z for the US half, -x, -z for the German one — point-mirrored for free)
-const frame = (x: number, z: number) => (z >= 0 ? [x, z] : [-x, -z]);
-/** The crest line of a side's ridge (U at X). */
-export const crestU = (X: number) => 282 + Math.sin(X * 0.011) * 12 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10;
-/** The Gafsa–Gabès road along the valley floor (an odd function: its own point mirror). */
-export const roadZ = (x: number) => 16 * Math.sin(x * 0.006);
-/** Height of the ridge above the valley along the crest: Hill 336, the Keddab ridge, Djebel el Mcheltat. */
-const crestH = (X: number) => 20 + 22 * Math.exp(-(((X + 300) / 75) ** 2)) + 16 * Math.exp(-(((X - 320) / 85) ** 2)) + 6 * Math.exp(-(((X - 60) / 70) ** 2));
-/** The passes through a side's ridge (0 in a pass): the Keddab pass at X = 0, a narrow wadi track at X = 170. */
-const pass = (X: number) => (1 - 0.92 * Math.exp(-((X / 52) ** 2))) * (1 - 0.85 * Math.exp(-(((X - 170) / 26) ** 2)));
-/** The wadis: one winding along each side of the valley, the Wadi Keddab across it through the centre. */
+// (each ridge in its owner's frame: X, U = x, z for the US half, -x, -z for the German one; s = 1 | -1)
+const frame = (x: number, z: number) => (z >= 0 ? [x, z, 1] : [-x, -z, -1]);
+const RIDGES = {
+  // the US heights: Hill 336 (X -250), the Keddab ridge, Djebel el Mcheltat (X 330); the Keddab pass at X 0, a wadi track at X 170
+  1: {
+    crest: (X: number) => 282 + Math.sin(X * 0.011) * 12 + fbm(noise, X * 0.006 + 40, 3.3, 2) * 10,
+    high: (X: number) => 20 + 22 * Math.exp(-(((X + 250) / 75) ** 2)) + 16 * Math.exp(-(((X - 330) / 85) ** 2)) + 6 * Math.exp(-(((X - 60) / 70) ** 2)),
+    passes: [[0, 52, 0.92], [170, 26, 0.85]],
+    mines: 165,
+    back: 175,
+    trenches: [[-300, -200], [-120, -40], [40, 130], [280, 380]],
+    posts: [-290, -250, -205, -90, 80, 300, 345],
+    guns: [-260, 300, 60],
+  },
+  // the German heights (X = -x): Djebel Chemsi (X 275, the west), Djebel Berda (X -300, the east) with a shoulder at X -150;
+  // the Orbata pass at X -70 (x 70), a wadi gap at X 130 (x -130)
+  [-1]: {
+    crest: (X: number) => 268 + Math.sin(X * 0.007 + 1.1) * 22 + fbm(noise, X * 0.006 - 60, 7.7, 2) * 10,
+    high: (X: number) => 18 + 21 * Math.exp(-(((X - 275) / 90) ** 2)) + 20 * Math.exp(-(((X + 300) / 70) ** 2)) + 16 * Math.exp(-(((X + 150) / 70) ** 2)),
+    passes: [[-70, 48, 0.92], [130, 30, 0.85]],
+    mines: 150,
+    back: 130,
+    trenches: [[-350, -250], [-200, -110], [-20, 90], [190, 320]],
+    posts: [-330, -290, -150, -10, 60, 240, 300],
+    guns: [270, -290, -150],
+  },
+};
+/** The crest line of side s's ridge (U at X). */
+const crestU = (s: number, X: number) => RIDGES[s].crest(X);
+/** The Gafsa–Gabès road along the valley floor. */
+export const roadZ = (x: number) => 14 * Math.sin(x * 0.006) + 8 * Math.cos(x * 0.0045 + 0.6) - 6;
+/** The passes through side s's ridge (0 in a pass). */
+const pass = (s: number, X: number) => RIDGES[s].passes.reduce((k, [px, w, d]) => k * (1 - d * Math.exp(-(((X - px) / w) ** 2))), 1);
+/** Each base's track down through its main pass to the road. */
+const trackX = (z: number) => (z >= 0 ? 0 : 70 * smoothstep(-470, -330, z));
+const onTrack = (x: number, z: number, w = 4.5) => Math.abs(x - trackX(z)) < w && Math.abs(z) < 540 && Math.abs(z) > Math.abs(roadZ(x)) - 2;
+/** The wadis: one winding along each side of the valley, the Wadi Keddab across it east of the middle. */
 const wadi = (x: number, z: number) => {
-  const [X, U] = frame(x, z);
-  const along = smoothstep(16, 3, Math.abs(U - 118 - Math.sin(X * 0.013) * 24)) * smoothstep(440, 380, Math.abs(X));
-  const across = smoothstep(14, 3, Math.abs(x - 26 * Math.sin(z * 0.011))) * smoothstep(215, 150, Math.abs(z));
+  const [X, U, s] = frame(x, z);
+  const line = s > 0 ? 118 + Math.sin(X * 0.013) * 24 : 132 + Math.sin(X * 0.01 + 2) * 30;
+  const along = smoothstep(16, 3, Math.abs(U - line)) * smoothstep(440, 380, Math.abs(X));
+  const across = smoothstep(14, 3, Math.abs(x - 40 - 30 * Math.sin(z * 0.009 + 0.8))) * smoothstep(215, 150, Math.abs(z));
   return Math.max(along, across);
 };
+const OASES = [{ x: -340, z: 60, r: 62, name: 'El Guettar' }, { x: 290, z: -95, r: 54, name: 'Bou Hamran' }];
 const onRoad = (x: number, z: number, w = 5) => Math.abs(z - roadZ(x)) < w && Math.abs(x) < 480;
-const inOasis = (x: number, z: number, pad = 0) => [1, -1].some((s) => Math.hypot(x - OASIS.x * s, z - OASIS.z * s) < OASIS.r + pad);
+const inOasis = (x: number, z: number, pad = 0) => OASES.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + pad);
 
 function height(x: number, z: number) {
-  const [X, U] = frame(x, z);
-  let h = 2 + fbm(noise, X * 0.005, U * 0.005, 3) * 2.2 + fbm(noise, X * 0.04, U * 0.04, 2) * 0.4; // the valley floor: flat gravel, a slight swell
+  const [X, U, s] = frame(x, z);
+  let h = 2 + fbm(noise, x * 0.005, z * 0.005, 3) * 2.2 + fbm(noise, x * 0.04, z * 0.04, 2) * 0.4; // the valley floor: flat gravel, a slight swell
   // the ridge: a steep rock face to the valley, a long gentle slope back, broken crest, the passes cut through it
-  const c = crestU(X);
-  const face = smoothstep(c - 70, c - 6, U);
-  const back = 1 - 0.8 * smoothstep(c + 12, c + 175, U);
-  const rough = 1 + ridged(noise, X * 0.03 + 7, U * 0.03, 3) * 0.12 * face;
-  h += crestH(X) * pass(X) * Math.min(face, back) * rough;
+  const c = crestU(s, X);
+  const face = smoothstep(c - 66, c - 6, U);
+  const back = 1 - 0.8 * smoothstep(c + 12, c + RIDGES[s].back, U); // (the German back slopes shorter)
+  const rough = 1 + ridged(noise, x * 0.03 + 7, z * 0.03, 3) * 0.12 * face;
+  h += RIDGES[s].high(X) * pass(s, X) * Math.min(face, back) * rough;
   h -= 2.4 * wadi(x, z);
   h += smoothstep(430, 560, Math.abs(x)) * 34 + smoothstep(560, 680, Math.abs(z)) * 12; // the djebels beyond the edges
   h += 0.6 * smoothstep(6, 2, Math.abs(z - roadZ(x))) * smoothstep(480, 440, Math.abs(x));   // the road on its low embankment
   for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
-  for (const s of [1, -1]) h += (2.2 - h) * smoothstep(OASIS.r, OASIS.r - 20, Math.hypot(x - OASIS.x * s, z - OASIS.z * s)); // the oasis: level
+  for (const o of OASES) h += (2.2 - h) * smoothstep(o.r, o.r - 20, Math.hypot(x - o.x, z - o.z)); // the oasis: level
   return h;
 }
 
 const natoLayout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 
-const hill = (X: number, U?: number) => ({ x: X, z: U ?? crestU(X) });
+/** A point on side s's crest at X (U: in front of it by `fwd` m), in world coordinates. */
+const hill = (s: number, X: number, fwd = 0) => ({ x: X * s, z: (crestU(s, X) - fwd) * s });
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Gafsa track', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Hill 336', ...hill(-300), owner: null, sector: 'west' },
-  { id: 'C', name: 'Keddab pass', x: 0, z: 262, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Djebel el Mcheltat', ...hill(320), owner: null, sector: 'east' },
-  { id: 'E', name: 'El Guettar', x: OASIS.x, z: OASIS.z, owner: null, sector: 'west' },
-  { id: 'F', name: 'Gafsa–Gabès road', x: 0, z: 0, owner: null, sector: 'centre' },
-  { id: 'G', name: 'Bou Hamran', x: -OASIS.x, z: -OASIS.z, owner: null, sector: 'east' },
-  { id: 'H', name: 'Djebel Chemsi', x: -320, z: -crestU(320), owner: null, sector: 'west' },
-  { id: 'I', name: 'Orbata pass', x: 0, z: -262, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Djebel Berda', x: 300, z: -crestU(-300), owner: null, sector: 'east' },
-  { id: 'K', name: 'Gabès track', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'A', name: 'Gafsa track', x: -30, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Hill 336', ...hill(1, -250), owner: null, sector: 'west' },
+  { id: 'C', name: 'Keddab pass', ...hill(1, 0, 20), owner: null, sector: 'centre' },
+  { id: 'D', name: 'Djebel el Mcheltat', ...hill(1, 330), owner: null, sector: 'east' },
+  { id: 'E', name: 'El Guettar', x: OASES[0].x, z: OASES[0].z, owner: null, sector: 'west' },
+  { id: 'F', name: 'Gafsa–Gabès road', x: 25, z: roadZ(25), owner: null, sector: 'centre' },
+  { id: 'G', name: 'Bou Hamran', x: OASES[1].x, z: OASES[1].z, owner: null, sector: 'east' },
+  { id: 'H', name: 'Djebel Chemsi', ...hill(-1, 275), owner: null, sector: 'west' },
+  { id: 'I', name: 'Orbata pass', ...hill(-1, -70, 20), owner: null, sector: 'centre' },
+  { id: 'J', name: 'Djebel Berda', ...hill(-1, -300), owner: null, sector: 'east' },
+  { id: 'K', name: 'Gabès track', x: -30, z: -470, owner: 'pact', sector: 'centre' },
 ];
 
 export default {
@@ -121,10 +152,10 @@ export default {
       meadow: '#c2b08a',
       farmX: [0, 1], // no farmland
       farmZ: [0, 1],
-      roads: [0],     // the track from each base down through its pass
+      roads: [],      // (each base's track down through its pass is painted below)
       roadZ: 540,
       surface(x: number, z: number) {
-        if (onRoad(x, z, 4.5)) return [0x8c8070, 0.85];                               // the road: graded gravel
+        if (onRoad(x, z, 4.5) || onTrack(x, z)) return [0x8c8070, 0.85];               // the road and the tracks: graded gravel
         if (inOasis(x, z, -6)) return [0x9a8c62, 0.55];                               // the oasis: watered, darker
         const w = wadi(x, z);
         if (w > 0.3) return [0xb4a890, w * 0.7];                                      // the wadis: pale stones
@@ -144,19 +175,19 @@ export default {
     pact: natoLayout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0 })),
   },
 
-  /** Each side dug in on its crest over the hills, its mine belt on the valley floor below (gaps for the road and the pass track). */
+  /** Each side dug in on its crest over the hills, its mine belt on the valley floor below (gaps for the road and the pass tracks). */
   battlefield() {
     const works: any[] = [];
     for (const f of ['nato', 'pact'] as const) {
-      const m = f === 'nato' ? 1 : -1;
-      for (const [x0, x1] of [[-360, -240], [-120, -40], [40, 130], [270, 370]]) { // (left to right as the owner faces the valley)
+      const m = f === 'nato' ? 1 : -1, R = RIDGES[m];
+      for (const [x0, x1] of R.trenches) { // (left to right as the owner faces the valley)
         const pts: [number, number][] = [];
-        for (let X = x0; X <= x1; X += 20) pts.push([X * m, (crestU(X) - 14) * m]);
+        for (let X = x0; X <= x1; X += 20) pts.push([X * m, (crestU(m, X) - 14) * m]);
         works.push(...trenchLine(pts, f, { zig: 1, belts: 0 }));
       }
       for (let X = -420; X <= 420; X += 34) {
-        if (Math.abs(X) < 40 || Math.abs(X - 170) < 22) continue; // (the pass tracks)
-        const U = MINE_U + Math.sin(X * 0.02) * 8;
+        if (R.passes.some(([px, w]) => Math.abs(X - px) < w * 0.6)) continue; // (the pass tracks)
+        const U = R.mines + Math.sin(X * 0.02 + m) * 8;
         works.push({ kind: 'mines', x: X * m, z: U * m, yaw: 0, faction: f });
       }
     }
@@ -178,25 +209,26 @@ export default {
       cover.addBox({ x, z, yaw, length: 6, thickness: 3, height: 1.8 });
     };
 
-    // ---- the two oases, El Guettar and its mirror Bou Hamran: flat-roofed houses on the road, the palm grove, garden walls, the well
-    mirrored(props, 3103, (m, flip) => {
-      const R = props.rand, cx = OASIS.x * m, cz = OASIS.z * m;
-      props.flatHouse({ x: cx + 4 * m, z: cz - 10 * m, yaw: flip, width: 11, depth: 9, name: 'mosque', dome: true });
+    // ---- the two oases: El Guettar, round among its palms, and Bou Hamran, strung out along the road — flat-roofed
+    // houses, the mosque, the palm grove, garden walls, the well (the same number of houses and walls: the same cover)
+    OASES.forEach((o, k) => {
+      const R = mulberry32(3103 + k), cx = o.x, cz = o.z, sx = k ? 1.5 : 1, sz = k ? 0.65 : 1;
+      props.flatHouse({ x: cx + (k ? -14 : 4), z: cz + (k ? 6 : -10), yaw: k ? Math.PI / 2 : 0, width: 11, depth: 9, name: 'mosque', dome: true });
       for (let i = 0; i < 9; i++) {
         const a = (i / 9) * Math.PI * 2 + R() * 0.4, d = 17 + R() * 12;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m;
-        props.flatHouse({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2) + flip, width: 6 + R() * 4, depth: 5 + R() * 3, storeys: R() < 0.2 ? 2 : 1 });
+        const x = cx + Math.cos(a) * d * sx, z = cz + Math.sin(a) * d * sz;
+        props.flatHouse({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), width: 6 + R() * 4, depth: 5 + R() * 3, storeys: R() < 0.2 ? 2 : 1 });
       }
-      props.column({ x: cx - 6 * m, z: cz + 4 * m, radius: 1.4, height: 0.9 }); // the well
+      props.column({ x: cx - 6, z: cz + 4, radius: 1.4, height: 0.9 }); // the well
       for (let i = 0; i < 70; i++) {
         const a = R() * Math.PI * 2, d = 34 + R() * 26;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, h = 7 + R() * 5;
+        const x = cx + Math.cos(a) * d * (k ? 1.2 : 1), z = cz + Math.sin(a) * d * (k ? 0.8 : 1), h = 7 + R() * 5;
         if (onRoad(x, z, 6)) continue;
         props.palm({ x, z, height: h });
       }
       for (let i = 0; i < 6; i++) { // the gardens' mud walls among the palms
         const a = (i / 6) * Math.PI * 2 + R(), d = 40 + R() * 14;
-        const x = cx + Math.cos(a) * d * m, z = cz + Math.sin(a) * d * m, yaw = a + Math.PI / 2 + flip;
+        const x = cx + Math.cos(a) * d * (k ? 1.2 : 1), z = cz + Math.sin(a) * d * (k ? 0.8 : 1), yaw = a + Math.PI / 2;
         if (!onRoad(x, z, 8)) props.lowWall({ x, z, yaw, length: 10 + R() * 8, height: 1.4, color: 0xb4a07a });
       }
     });
@@ -211,54 +243,47 @@ export default {
     }
 
     // ---- each side's ridge: positions on the crest (sandbagged gun pits, a few tents behind), boulders on the rock face
-    mirrored(props, 3104, (m, flip) => {
-      const R = props.rand;
-      for (const X of [-340, -300, -255, -90, 80, 290, 335]) {
-        const U = crestU(X) - 4;
-        props.sandbagRing({ x: X * m, z: U * m, radius: 4.5, toward: m });
-      }
-      for (const X of [-310, 300, 60]) { // the gun lines on the back slopes, below the crest
-        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 18) * m, z: (crestU(X) + 50 + (k % 2) * 6) * m, radius: 4, toward: m });
-        props.tent({ x: (X + 30) * m, z: (crestU(X) + 80) * m, yaw: 0.2 + flip, color: 0xa89a78 });
-        props.crates({ x: (X - 30) * m, z: (crestU(X) + 74) * m, yaw: R() });
+    for (const m of [1, -1]) {
+      const R = mulberry32(3104 + m), D = RIDGES[m], flip = m > 0 ? 0 : Math.PI;
+      for (const X of D.posts) props.sandbagRing({ x: X * m, z: (crestU(m, X) - 4) * m, radius: 4.5, toward: m });
+      for (const X of D.guns) { // the gun lines on the back slopes, below the crest
+        for (let k = 0; k < 3; k++) props.sandbagRing({ x: (X + (k - 1) * 18) * m, z: (crestU(m, X) + 50 + (k % 2) * 6) * m, radius: 4, toward: m });
+        props.tent({ x: (X + 30) * m, z: (crestU(m, X) + 80) * m, yaw: 0.2 + flip, color: 0xa89a78 });
+        props.crates({ x: (X - 30) * m, z: (crestU(m, X) + 74) * m, yaw: R() });
       }
       for (let i = 0; i < 140; i++) { // the rock face and the crest: boulders and scree
-        const X = (R() * 2 - 1) * 440, U = crestU(X) - 60 + R() * 90, rad = 0.8 + R() * 2.4;
-        if (pass(X) < 0.5 || near(X * m, U * m, 18)) continue;
+        const X = (R() * 2 - 1) * 440, U = crestU(m, X) - 60 + R() * 90, rad = 0.8 + R() * 2.4;
+        if (pass(m, X) < 0.5 || near(X * m, U * m, 18)) continue;
         props.boulder({ x: X * m, z: U * m, radius: rad });
       }
-    });
+    }
 
-    // ---- the valley floor: burnt-out tanks and trucks, old sangars, stones; mirrored
-    for (let i = 0; i < 70; i++) {
-      const x = (r() * 2 - 1) * (bounds.x - 40), z = 10 + r() * 200;
-      if (near(x, z, 40) || onRoad(x, z, 8) || inOasis(x, z, 10) || Math.abs(x) < 30 || wadi(x, z) > 0.1 || Math.abs(z - MINE_U) < 14) continue;
-      const seed = Math.floor(r() * 1e9), kind = r();
-      mirrored(props, seed, (m, flip) => {
-        const R = props.rand;
-        if (kind < 0.22) hulk(x * m, z * m, R() * 6.28, R() < 0.5 ? 0x4a4436 : 0x6a6450);
-        else if (kind < 0.42) props.wreckCar({ x: x * m, z: z * m, yaw: R() * 3 + flip });
-        else if (kind < 0.62) props.lowWall({ x: x * m, z: z * m, yaw: R() * 3, length: 5 + R() * 6, height: 1.1, color: 0xa49a84 }); // a stone sangar
-        else for (let k = 0; k < 3; k++) props.boulder({ x: x * m + (R() - 0.5) * 8, z: z * m + (R() - 0.5) * 8, radius: 0.7 + R() * 1.2 });
-      });
+    // ---- the valley floor: burnt-out tanks and trucks, old sangars, stones
+    for (let i = 0; i < 140; i++) {
+      const x = (r() * 2 - 1) * (bounds.x - 40), z = (r() * 2 - 1) * 200;
+      if (near(x, z, 40) || onRoad(x, z, 8) || inOasis(x, z, 10) || Math.abs(x) < 30 || wadi(x, z) > 0.1) continue;
+      if (Math.abs(Math.abs(z) - RIDGES[z >= 0 ? 1 : -1].mines) < 14) continue;
+      const kind = r();
+      const R = (props.rand = mulberry32(Math.floor(r() * 1e9)));
+      if (kind < 0.22) hulk(x, z, R() * 6.28, R() < 0.5 ? 0x4a4436 : 0x6a6450);
+      else if (kind < 0.42) props.wreckCar({ x, z, yaw: R() * 6.28 });
+      else if (kind < 0.62) props.lowWall({ x, z, yaw: R() * 3, length: 5 + R() * 6, height: 1.1, color: 0xa49a84 }); // a stone sangar
+      else for (let k = 0; k < 3; k++) props.boulder({ x: x + (R() - 0.5) * 8, z: z + (R() - 0.5) * 8, radius: 0.7 + R() * 1.2 });
     }
     // ---- behind the ridges: rocks and wrecks among the scrub (not on the steep faces)
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 22 && tries < 4000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = 30 + rand() * (bounds.z - 40);
-      if (sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 40 * 40) || near(x, z, 45) || Math.hypot(x, z - BASE_Z) < 45 || inOasis(x, z, 10) || onRoad(x, z, 10) || slope(x, z) > 0.3 || slope(-x, -z) > 0.3) continue;
+    for (let tries = 0; sites.length < 44 && tries < 6000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 30);
+      if (Math.abs(z) < 30 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 40 * 40) || near(x, z, 45) || Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || inOasis(x, z, 10) || onRoad(x, z, 10) || onTrack(x, z, 10) || slope(x, z) > 0.3) continue;
       sites.push({ x, z, kind: r() < 0.6 ? 'rocks' : 'wrecks', yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
-    for (const s of sites) {
-      buildSite(props, s, s.x, s.z, s.yaw);
-      buildSite(props, s, -s.x, -s.z, s.yaw + Math.PI);
-    }
+    for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
     commandPost(props, this.bases.nato, -1, 0xa89a78);
     commandPost(props, this.bases.pact, 1, 0x9a9070);
     props.finish();
     cover.finalize(bounds);
     // thin camel-thorn and esparto scrub, none on the road
-    const avoid = [{ x: 0, z: BASE_Z, r: 24 }, { x: 0, z: -BASE_Z, r: 24 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })), { test: (x: number, z: number) => onRoad(x, z, 6) }];
+    const avoid = [{ x: 0, z: BASE_Z, r: 24 }, { x: 0, z: -BASE_Z, r: 24 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 12 })), { test: (x: number, z: number) => onRoad(x, z, 6) || onTrack(x, z, 5) }];
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 0.45, fields: this.fields });
 
     return {

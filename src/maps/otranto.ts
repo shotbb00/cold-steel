@@ -6,7 +6,7 @@
 // fought it out in the middle of the strait until the Austro-Hungarian armoured cruiser Sankt Georg came out to cover
 // them. The open Adriatic: the low limestone coast of Apulia on the west, Otranto's castle and harbour; the mountains of
 // Albania on the east, the Karaburun cliffs and the island of Saseno off Valona. Fair: each side's fleet the same,
-// its home the same distance from the drifter line and from each coast.
+// its home the same distance from the drifter line; Otranto as near the Allies as Saseno the raiders.
 import { shore, island } from '../world/Sea.js';
 import { northSea } from './northSea.ts';
 
@@ -44,9 +44,9 @@ const sea = northSea({
   ],
   points: [
     { id: 'A', name: 'Brindisi squadron', x: 0, z: -2050, owner: 'nato', sector: 'centre', radius: 150 },
-    { id: 'B', name: 'Otranto', x: -1650, z: -300, owner: null, sector: 'west', radius: 160 },
+    { id: 'B', name: 'Otranto', x: -1650, z: -450, owner: null, sector: 'west', radius: 160 },
     { id: 'C', name: 'The drifter line', x: 0, z: 0, owner: null, sector: 'centre', radius: 180 },
-    { id: 'D', name: 'Saseno', x: 1550, z: 600, owner: null, sector: 'east', radius: 160 },
+    { id: 'D', name: 'Saseno', x: 1550, z: 440, owner: null, sector: 'east', radius: 160 },
     { id: 'K', name: 'Cattaro squadron', x: 0, z: 2100, owner: 'pact', sector: 'centre', radius: 150 },
   ],
   bases: { nato: { x: 0, z: -2300, entries: [-500, 0, 500] }, pact: { x: 0, z: 2300, entries: [-500, 0, 500] } },
