@@ -207,6 +207,7 @@ export class NetHost {
         (() => { const u = s.stats.landingCraft && s.units[0]; return u ? Math.round((u.rampK ?? 0) * 100) + (u.beached ? 1000 : 0) : 0; })(), // (a landing craft: her ramp, aground)
         s.stats.submarine ? Math.round((s.units[0]?.depth ?? 0) * 10) / 10 : 0, // (a submarine: how deep she is)
         stockChips(s), // (what its tag shows it has left: systems/Stocks.js)
+        s.tunnel ? 1 : 0, // (underground: systems/Caves.js — the guest hides it too)
       ]),
       cp: round(ms?.cp),
       str: round(ms?.strength),
