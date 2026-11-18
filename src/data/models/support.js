@@ -1333,7 +1333,7 @@ export const buildNatoTACJAM = vehicle(() => {
       // the cab: its doors, side windows and mirrors, headlights, tow hooks
       ...pair((s) => P.box(0.03, 0.75, 0.8, { x: s * 1.26, y: 1.68, z: 1.85, color: NATO_DK })),
       ...pair((s) => P.box(0.03, 0.3, 0.45, { x: s * 1.27, y: 1.85, z: 1.85, color: GLASS })),
-      ...pair((s) => P.box(0.05, 0.22, 0.14, { x: s * 1.5, y: 1.95, z: 2.2, color: STEEL })),
+      ...pair((s) => [P.box(0.05, 0.22, 0.14, { x: s * 1.5, y: 1.95, z: 2.2, color: STEEL }), P.box(0.4, 0.03, 0.03, { x: s * 1.3, y: 2.0, z: 2.2, color: STEEL })]).flat(), // (the mirrors, on their arms)
       ...pair((s) => P.cyl(0.08, 0.08, 0.1, { x: s * 0.9, y: 1.3, z: 2.62, rx: Math.PI / 2, color: STEEL }, 10)),
       ...pair((s) => P.cyl(0.065, 0.065, 0.02, { x: s * 0.9, y: 1.3, z: 2.68, rx: Math.PI / 2, color: 0x9a9a88 }, 10)),
       ...pair((s) => P.box(0.12, 0.14, 0.16, { x: s * 0.6, y: 0.85, z: 2.8, color: STEEL })),

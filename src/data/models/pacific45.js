@@ -23,7 +23,10 @@ const once = (key, make) => (cache[key] ??= make());
 /** Rivets: a row of small studs along x from x0 to x1 at (y, z) — the Japanese hulls' look. */
 const rivets = (x0, x1, y, z, n, color) => Array.from({ length: n }, (_, i) => P.cyl(0.018, 0.018, 0.02, { x: x0 + ((x1 - x0) * i) / (n - 1), y, z, rx: Math.PI / 2, color }, 5));
 /** The horseshoe antenna over a Chi-Ha's turret. */
-const horseshoe = (r, y, color) => Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (0.15 + (0.7 * i) / 8) + Math.PI / 2; return P.box(0.025, 0.025, r * 0.38, { x: Math.cos(a) * r, y, z: -Math.sin(a) * r - 0.15, ry: a, color }); });
+const horseshoe = (r, y, color) => [
+  ...Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (0.15 + (0.7 * i) / 8) + Math.PI / 2; return P.box(0.025, 0.025, r * 0.38, { x: Math.cos(a) * r, y, z: -Math.sin(a) * r - 0.15, ry: a, color }); }),
+  ...[0, 4, 8].map((i) => { const a = Math.PI * (0.15 + (0.7 * i) / 8) + Math.PI / 2; return P.box(0.03, 0.4, 0.03, { x: Math.cos(a) * r, y: y - 0.2, z: -Math.sin(a) * r - 0.15, color }); }), // (its posts on the turret)
+];
 const tyre = (x, y, z, r, w) => [
   P.cyl(r, r, w, { x, y, z, rz: Math.PI / 2, color: RUBBER, surf: 'rubber' }, 14),
   P.cyl(r * 0.55, r * 0.55, w + 0.02, { x, y, z, rz: Math.PI / 2, color: STEEL }, 10),

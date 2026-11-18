@@ -627,7 +627,7 @@ export const buildTexas = ship(() => {
       ...mast(c, 0, fb + 5, -26, 22, { yard: 8 }),                       // the pole mainmast
       box(8, 3, 8, { y: fb + 6.5, z: -26, color: c.upper }),
       ...[-1, 1].flatMap((s) => every(-40, 40, 10).map((z) => box(0.4, 1.2, 1.6, { x: s * (H.side(z, fb - 2) + 0.1), y: fb - 2.2, z, color: BLACK }))), // the casemate ports
-      ...[-1, 1].flatMap((s) => [38, 20, -14, -38].map((z) => aa(c, s * 7.5, fb + 5, z, { ry: s * Math.PI / 2 }))),
+      ...[-1, 1].flatMap((s) => [38, 20, -14, -22].map((z) => aa(c, s * 7.5, fb + 5, z, { ry: s * Math.PI / 2 }))), // (on the boat deck's casing)
       ...[-1, 1].flatMap((s) => every(-70, 70, 10).filter((z) => Math.abs(z) > 46).map((z) => oerlikon(c, s * (H.side(z, fb) - 1.1), H.top(z), z, s * Math.PI / 2))),
       ...[-1, 1].map((s) => boat(c, s * 7.5, fb + 5, -6, 9, s)),
     ]),

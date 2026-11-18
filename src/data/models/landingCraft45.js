@@ -60,7 +60,7 @@ export const buildYMS = craft(() => {
     P.cyl(0.08, 0.1, 10, { y: fb + 7, z: 6, color: DARK }, 6),                                     // the mast
     P.box(3, 0.08, 0.08, { y: fb + 9.5, z: 6, color: DARK }),
     P.cyl(0.6, 0.7, 0.6, { y: fb + 0.4, z: L / 2 - 7, color: STEEL }, 10),                        // the 3-inch gun's mount
-    P.cyl(0.07, 0.09, 3, { y: fb + 0.9, z: L / 2 - 5.4, rx: Math.PI / 2, color: STEEL }, 8),
+    P.cyl(0.07, 0.09, 3, { y: fb + 0.72, z: L / 2 - 5.4, rx: Math.PI / 2, color: STEEL }, 8),
     box(2.4, 1.4, 2, { y: fb + 0.7, z: -L / 2 + 6, color: DARK }),                                 // the sweep winch
     ...[-1, 1].flatMap((s) => [
       P.cyl(0.35, 0.35, 2.4, { x: s * 2.2, y: fb + 0.4, z: -L / 2 + 2.5, rx: Math.PI / 2, color: 0xb84a2a }, 8), // the floats, red
@@ -108,7 +108,7 @@ export const buildDD = craft(() => {
     P.box(B + 0.5, 1.9, 0.08, { y: 0.85, z: -L / 2 + 0.1, color: CANVAS, surf: 'cloth' }),      // …and stern
     ...[-1, 1].flatMap((s) => [-2, 0, 2].map((z) => P.cyl(0.04, 0.04, 1.9, { x: s * (B / 2 + 0.2), y: 0.85, z, color: STEEL }, 4))), // the struts
     P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: -B / 2 - 0.25, color: STEEL }), P.box(0.3, 0.12, L * 0.9, { y: 1.85, x: B / 2 + 0.25, color: STEEL }), // the top rail
-    P.cyl(0.9, 1.0, 0.7, { y: 1.3, z: -0.3, color: OLIVE }, 12),                                // the turret's top, inside it
+    P.cyl(0.9, 1.0, 1.6, { y: 0.85, z: -0.3, color: OLIVE }, 12),                               // the turret, its top inside the screen
     P.cyl(0.07, 0.08, 1.2, { y: 1.3, z: 0.6, rx: Math.PI / 2, color: OLIVE }, 6),               // the gun, stowed
     ...[-1, 1].map((s) => P.cyl(0.35, 0.35, 0.1, { x: s * 0.8, y: -0.5, z: -L / 2 - 0.4, rx: Math.PI / 2, color: STEEL }, 8)), // the propellers
   ]);
@@ -128,8 +128,9 @@ export const buildLCVP = craft(() => {
     box(B, 0.6, 1.4, { y: fb + 0.3, z: -L / 2 + 0.7, color: GREY }),                   // the stern sheets
     box(1.1, 0.8, 1.0, { x: 0.6, y: fb + 0.6, z: -L / 2 + 1.6, color: DARK }),         // the coxswain's station
     ...[-1, 1].flatMap((s) => [
-      P.cyl(0.45, 0.45, 0.1, { x: s * 1.1, y: fb + 0.65, z: -L / 2 + 2.1, color: STEEL }, 10),  // the gun rings
-      P.cyl(0.05, 0.05, 1.1, { x: s * 1.1, y: fb + 0.95, z: -L / 2 + 2.6, rx: Math.PI / 2 - 0.15, color: BLACK }, 5), // the .30s
+      P.cyl(0.45, 0.45, 0.1, { x: s * 1.15, y: fb + 0.52, z: -L / 2 + 2.1, color: STEEL }, 10),  // the gun rings (on her sides)
+      P.cyl(0.04, 0.04, 0.4, { x: s * 1.15, y: fb + 0.72, z: -L / 2 + 2.1, color: STEEL }, 5),    // the pintles
+      P.cyl(0.05, 0.05, 1.1, { x: s * 1.15, y: fb + 0.92, z: -L / 2 + 2.55, rx: Math.PI / 2 - 0.15, color: BLACK }, 5), // the .30s
     ]),
     box(B * 0.92, 0.25, 0.4, { y: -0.1, z: -0.4, color: 0x2a2420 }),                   // the keel's shadow line
   ]);

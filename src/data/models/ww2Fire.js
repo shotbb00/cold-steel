@@ -170,7 +170,7 @@ const mortarTrack = (o, color) => {
   return vehicle(() => ({
     wheels: { geo: g.wheel, list: g.gear.wheels, r: g.gear.wheelR },
     hull: g.hull,
-    turret: { geo: merge([P.box(0.5, 0.06, 0.5, { y: 0.03, color: STEEL })]), at: [0, 1.0, -1.4] },
+    turret: { geo: merge([P.box(0.5, 0.06, 0.5, { y: 0.03, color: STEEL }), P.box(0.14, 0.34, 0.14, { y: 0.2, z: -0.3, color: STEEL })]), at: [0, 1.0, -1.4] }, // (the plate, and the post the tube pivots on)
     gun: { geo: merge([P.cyl(0.05, 0.06, 1.5, { z: 0.75, rx: Math.PI / 2, color }, 12), P.cyl(0.07, 0.07, 0.12, { z: 0.15, rx: Math.PI / 2, color: STEEL }, 10)]), at: [0, 0.3, -0.3], pitch: 1.15 }, // (the tube's mouth up over the sides)
     muzzle: [0, 0, 1.5],
     recoil: 0.08,

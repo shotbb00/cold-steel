@@ -327,7 +327,7 @@ export function halfTrack({ color, dark, length, width, wheelZ, trackZ, trackLen
         ...pair((s) => P.box(0.12, 0.28, 2.3, { x: s * (hw + 0.07), y: 1.18, z: tail + length * 0.3, color: dark })),
         ...pair((s) => [0, 1, 2, 3].map((k) => P.cyl(0.13, 0.13, 0.08, { x: s * (hw + 0.14), y: 1.22, z: tail + length * 0.3 - 0.8 + k * 0.53, rz: Math.PI / 2, color: 0x4e5038 }, 10))).flat(),
         ...pair((s) => P.cyl(0.11, 0.11, 2.4, { x: s * (hw - 0.04), y: 1.96, z: tail + length * 0.28, rx: Math.PI / 2, color: 0x5a5c42 }, 10)),
-        P.cyl(0.006, 0.006, 2.4, { x: hw - 0.15, y: 3.1, z: tail + 0.3, color: STEEL }, 4),
+        P.cyl(0.006, 0.006, 2.8, { x: hw - 0.15, y: 2.6, z: tail + 0.3, color: STEEL }, 4), // (its foot down in the hull, whatever its top's slope)
       ] : []),
     ]);
   return {
