@@ -116,7 +116,7 @@ export const buildFjFlakvierling = lightAA({ color: GREY, wheels4: false, len: 1
 
 // ---------------------------------------------------------------- heavy AA guns
 
-const heavyAA = (color, len, dark, bonnet) => vehicle(() => ({
+export const heavyAA = (color, len, dark, bonnet) => vehicle(() => ({
   hull: grime(merge(cruciform(color)), 1, 0.3),
   turret: { geo: grime(merge([P.box(1.2, 0.8, 1.6, { y: 0.4, color }), P.box(2.0, 1.1, 0.05, { y: 0.9, z: 0.8, rx: -0.1, color })]), 0.8, 0, 0.3), at: [0, 0.8, 0] },
   gun: { geo: merge([P.cyl(0.07, 0.085, len, { z: len / 2 - 0.3, rx: Math.PI / 2, color }, 12), P.box(0.45, 0.45, 1.6, { z: 0.1, color: dark })]), at: [0, 0.95, -0.2], pitch: null },

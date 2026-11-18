@@ -10,7 +10,7 @@
 //   buildBrScammell   Scammell Pioneer recovery lorry with its jib
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { trackedHull, castTurret, runningGear, roadWheelGeometry, stationHull } from './vehicleCommon.js';
-import { rig } from './ww2Armour.js';
+import { rig, crane } from './ww2Armour.js';
 import { vehicle, wheeled, towTruck } from './support.js';
 import { truckUnit } from './truck.js';
 
@@ -42,8 +42,8 @@ export const buildBrCrusader = (mats) => rig(once('crusader', () => {
     hull: grime(merge([
       ...gear.parts,
       trackedHull([[-3.0, 1.6, 0.5], [2.1, 1.6, 0.5], [2.55, 1.35, 0.55], [3.0, 1.0, 0.6]], { belly: 0.8, fender: 1.4, fenderY: 1.05, chamfer: 0.05 }, { color: STONE, ...C }),
-      P.box(0.9, 0.45, 0.8, { x: 0.45, y: 1.78, z: 1.95, color: STONE, ...C }),                // the auxiliary MG turret's place, driver's hood
-      P.box(0.3, 0.1, 0.04, { x: 0.45, y: 1.82, z: 2.36, color: GLASS }),                         // (the visor, on the hood's front)
+      P.box(0.7, 0.18, 0.5, { x: 0.5, y: 1.68, z: 1.95, color: STONE, ...C }),                 // the driver's hood: low, under the 6-pdr's barrel
+      P.box(0.3, 0.08, 0.04, { x: 0.5, y: 1.7, z: 2.21, color: GLASS }),                          // (the visor, on the hood's front)
       P.box(1.9, 0.12, 1.6, { y: 1.67, z: -2.0, color: STONE_DK }),                            // engine deck louvres
       ...pair((s) => P.box(0.05, 0.5, 4.8, { x: s * 1.43, y: 1.2, z: -0.1, color: STONE })),    // the sand shields over the tracks
       ...[-1, 1].flatMap((s) => flash(s * 1.46, 1.3, -1.2)),
@@ -66,12 +66,13 @@ export const buildBrGrant = (mats) => rig(once('grant', () => {
     hull: grime(merge([
       ...gear.parts,
       // the tall riveted hull, its upper part boxy and high
-      trackedHull([[-2.85, 2.35, 0.55], [1.6, 2.4, 0.55], [2.4, 1.6, 0.6], [2.85, 1.1, 0.6]], { belly: 0.85, fender: 1.32, fenderY: 1.05, chamfer: 0.06 }, { color: STONE, ...C }),
-      ...Array.from({ length: 8 }, (_, i) => P.cyl(0.02, 0.02, 0.02, { x: -0.9 + i * 0.25, y: 2.3, z: 1.65, rx: Math.PI / 2, color: STONE_DK }, 5)), // rivets
+      trackedHull([[-2.85, 2.15, 0.55], [1.3, 2.2, 0.55], [2.3, 1.6, 0.6], [2.85, 1.1, 0.6]], { belly: 0.85, fender: 1.32, fenderY: 1.05, chamfer: 0.06 }, { color: STONE, ...C }),
+      ...Array.from({ length: 8 }, (_, i) => P.cyl(0.02, 0.02, 0.02, { x: -0.9 + i * 0.25, y: 2.12, z: 1.4, rx: Math.PI / 2, color: STONE_DK }, 5)), // rivets
       // the 75 mm in its sponson on the right front
-      P.box(0.75, 0.75, 0.9, { x: 0.78, y: 1.75, z: 1.85, color: STONE, ...C }),
-      P.cyl(0.055, 0.065, 1.8, { x: 0.78, y: 1.75, z: 2.9, rx: Math.PI / 2, color: STONE_DK }, 10),
-      ...[-1, 1].flatMap((s) => flash(s * 1.34, 1.9, -1.0)),
+      P.box(0.8, 0.8, 1.0, { x: 0.72, y: 1.85, z: 2.05, color: STONE, ...C }),                  // (its front out of the glacis)
+      P.cyl(0.32, 0.32, 0.2, { x: 0.72, y: 1.85, z: 2.6, rx: Math.PI / 2, color: STONE, ...C }, 14), // the round gun mount
+      P.cyl(0.055, 0.065, 1.7, { x: 0.72, y: 1.85, z: 3.5, rx: Math.PI / 2, color: STONE_DK }, 10),
+      ...[-1, 1].flatMap((s) => flash(s * 1.34, 1.7, -1.0)),
     ]), 1.25, 0.3),
     turret: grime(merge([
       castTurret([[0.65, 0.62, 0.55], [0.35, 0.66, 0.6], [-0.6, 0.62, 0.58], [-0.8, 0.52, 0.5]], { color: STONE, ...C }, 3),
@@ -79,22 +80,23 @@ export const buildBrGrant = (mats) => rig(once('grant', () => {
     ]), 0.9, 0.0, 0.3),
     gun: merge([P.cyl(0.03, 0.035, 1.5, { z: 0.75, rx: Math.PI / 2, color: STONE_DK }, 8)]),
   };
-}), mats, { turretAt: [-0.35, 2.4, 0.1], gunAt: [0, 0.28, 0.75], muzzle: 1.55 });
+}), mats, { turretAt: [-0.35, 2.2, 0.0], gunAt: [0, 0.28, 0.75], muzzle: 1.55 });
 
 // ---------------------------------------------------------------- Daimler armoured car
 
 export const buildBrDaimler = vehicle(() => ({
-  wheels: wheeled([1.15, -1.15], 1.08, 0.5),
+  wheels: wheeled([1.15, -1.15], 1.06, 0.5),
   hull: grime(merge([
     stationHull([
-      [-2.0, [[0, 0.55], [0.95, 0.55], [1.0, 1.25], [0.75, 1.55], [0, 1.55]]],
-      [1.4, [[0, 0.55], [0.95, 0.55], [1.0, 1.25], [0.75, 1.55], [0, 1.55]]],
-      [2.0, [[0, 0.7], [0.8, 0.7], [0.82, 1.1], [0.6, 1.35], [0, 1.35]]],
+      [-2.0, [[0, 0.6], [0.66, 0.6], [0.8, 1.05], [0.62, 1.5], [0, 1.5]]],
+      [1.3, [[0, 0.6], [0.66, 0.6], [0.8, 1.05], [0.62, 1.5], [0, 1.5]]],
+      [2.0, [[0, 0.7], [0.55, 0.7], [0.66, 1.0], [0.5, 1.3], [0, 1.3]]],
     ], { color: STONE, ...C }),
-    P.box(0.5, 0.12, 0.04, { y: 1.4, z: 1.98, color: GLASS }),
-    ...[-1, 1].flatMap((s) => flash(s * 1.0, 1.0, -0.5)),
+    ...pair((s) => [1.15, -1.15].map((z) => P.box(0.42, 0.05, 1.15, { x: s * 1.0, y: 1.06, z, color: STONE_DK }))).flat(), // the mudguards over the wheels
+    P.box(0.45, 0.1, 0.04, { y: 1.2, z: 1.9, rx: -0.5, color: GLASS }),
+    ...[-1, 1].flatMap((s) => flash(s * 0.78, 1.05, -0.5)),
   ]), 1, 0.4),
-  turret: { geo: grime(merge([castTurret([[0.5, 0.5, 0.5], [-0.5, 0.48, 0.5], [-0.65, 0.4, 0.45]], { color: STONE, ...C }, 4)]), 0.8, 0, 0.3), at: [0, 1.55, -0.2] },
+  turret: { geo: grime(merge([castTurret([[0.5, 0.5, 0.5], [-0.5, 0.48, 0.5], [-0.65, 0.4, 0.45]], { color: STONE, ...C }, 4)]), 0.8, 0, 0.3), at: [0, 1.5, -0.2] },
   gun: { geo: merge([P.cyl(0.03, 0.035, 1.3, { z: 0.65, rx: Math.PI / 2, color: STONE_DK }, 8)]), at: [0, 0.25, 0.4], pitch: null },
   muzzle: [0, 0, 1.3],
   recoil: 0.1,
@@ -119,9 +121,11 @@ export const buildBrDeacon = vehicle(() => {
 export const buildBr25pdr = vehicle(() => ({
   hull: grime(merge([
     P.cyl(1.0, 1.0, 0.08, { y: 0.05, color: STEEL }, 18),                                      // the round firing platform
-    P.box(0.16, 0.18, 2.6, { y: 0.28, z: -1.3, color: STONE }),                                // the box trail
+    P.box(0.16, 0.18, 2.6, { y: 0.42, z: -1.3, rx: -0.12, color: STONE }),                                // the box trail
     P.box(0.5, 0.3, 0.1, { y: 0.18, z: -2.55, color: STEEL }),
-    ...pair((s) => tyre(s * 0.8, 0.55, 0.05, 0.55, 0.18)).flat(),
+    ...pair((s) => tyre(s * 0.8, 0.64, 0.05, 0.55, 0.18)).flat(),
+    P.cyl(0.06, 0.06, 1.6, { y: 0.64, z: 0.05, rz: Math.PI / 2, color: STEEL }, 8),                // the axle
+    P.box(0.5, 0.42, 0.7, { y: 0.66, z: 0.0, color: STONE }),                                    // the carriage the cradle sits on
   ]), 1, 0.3),
   turret: { geo: grime(merge([P.box(1.4, 0.8, 0.05, { y: 0.75, z: 0.5, rx: -0.1, color: STONE, ...C }), P.box(0.36, 0.42, 0.9, { y: 0.5, color: STEEL })]), 0.8, 0, 0.3), at: [0, 0.4, 0] },
   gun: { geo: merge([P.box(0.3, 0.28, 1.0, { color: STEEL }), P.cyl(0.05, 0.06, 2.2, { z: 1.4, rx: Math.PI / 2, color: STONE_DK }, 12)]), at: [0, 0.75, 0.1], pitch: 0.38 },
@@ -138,19 +142,20 @@ export const buildBrCarrier = (mats) => rig(once('bren', () => {
     gear, wheel: roadWheelGeometry(0.3, 0.2, STONE_DK),
     hull: grime(merge([
       ...gear.parts,
-      // the open steel box: low sides, the sloped front plate with the Bren's slot
-      stationHull([
-        [-1.85, [[0, 0.35], [1.0, 0.35], [1.02, 1.05], [0, 1.05]]],
-        [1.3, [[0, 0.35], [1.0, 0.35], [1.02, 1.05], [0, 1.05]]],
-        [1.85, [[0, 0.5], [0.95, 0.5], [0.97, 0.9], [0, 0.9]]],
-      ], { color: STONE, ...C }),
-      P.box(1.8, 0.06, 2.6, { y: 1.02, z: -0.3, color: 0x3a3428 }),                            // (the open top: the dark floor seen inside)
-      ...[-1, 1].flatMap((s) => flash(s * 1.03, 0.75, -0.6)),
+      // the open steel box: the floor, low walls round it, the sloped front plate with the Bren's slot
+      P.box(1.24, 0.08, 3.4, { y: 0.4, z: -0.15, color: STONE_DK }),
+      ...pair((s) => P.box(0.06, 0.7, 3.4, { x: s * 0.62, y: 0.7, z: -0.15, color: STONE, ...C })),
+      ...pair((s) => P.box(0.36, 0.06, 3.3, { x: s * 0.86, y: 0.8, z: -0.1, color: STONE, ...C })),         // the guards over the tracks
+      P.box(1.3, 0.7, 0.06, { y: 0.7, z: -1.85, color: STONE, ...C }),
+      P.box(1.3, 0.75, 0.06, { y: 0.72, z: 1.62, rx: -0.35, color: STONE, ...C }),
+      P.box(2.0, 0.3, 0.5, { y: 0.55, z: 1.95, color: STONE, ...C }),                              // the nose over the final drives
+      P.box(0.5, 0.35, 0.8, { y: 0.6, z: -0.2, color: STONE_DK }),                                 // the engine cover between the seats
+      ...[-1, 1].flatMap((s) => flash(s * 0.655, 0.95, -0.6)),
     ]), 1.25, 0.3),
     turret: merge([P.box(0.2, 0.15, 0.2, { y: 0.08, color: STEEL })]),
     gun: merge([P.cyl(0.02, 0.02, 0.8, { z: 0.4, rx: Math.PI / 2, color: STEEL }, 6), P.box(0.06, 0.14, 0.06, { y: 0.1, z: 0.2, rx: -0.3, color: STEEL })]),
   };
-}), mats, { turretAt: [0.35, 1.05, 1.55], gunAt: [0, 0.12, 0.05], muzzle: 0.8 });
+}), mats, { turretAt: [0.35, 1.0, 1.5], gunAt: [0, 0.12, 0.05], muzzle: 0.8 });
 
 // ---------------------------------------------------------------- lorries
 
@@ -167,7 +172,5 @@ export const buildBrDorchester = lorry({ ...MATADOR, bodyH: 2.1 }, (L) => [
   P.box(2.6, 0.1, 2.0, { y: L.top + 0.05, z: L.rear + 1.6, color: STONE_DK }),                  // the awning rolled on the roof
 ], 'box');
 export const buildBrScammell = lorry({ ...MATADOR, length: 6.8 }, (L) => [
-  P.box(0.3, 2.2, 0.3, { y: L.deck + 1.1, z: L.rear + 0.4, color: STONE_DK }),                   // the jib's post…
-  P.box(0.22, 0.22, 2.4, { y: L.deck + 2.1, z: L.rear - 0.6, rx: 0.35, color: STONE_DK }),       // …and the jib over the back
-  P.box(0.05, 0.8, 0.05, { y: L.deck + 1.2, z: L.rear - 1.7, color: STEEL }),
+  ...crane(0, L.deck, L.deck + 2.2, L.rear + 0.4, -1.9, 0.7, STONE_DK),                         // the jib's post and the jib over the back, the hook
 ], 'flat');

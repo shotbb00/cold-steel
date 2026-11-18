@@ -14,6 +14,7 @@ import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, 
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 import { SHIPS_1945 } from './ships.js';
+import { buildJpChiNu, buildJpHoI, buildJpHoHa, buildJpHaTo, buildJpLorryAA, buildJpLorry25, buildJpTachi6, buildJpSmoke, buildJpType88, buildJpSeri, buildJpBridge, buildJpSsKi } from '../models/jp45.js';
 import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
@@ -585,6 +586,30 @@ pacific(towedAA, 'jp', { model: buildJpType98, stats: { antiAir: { range: 240, o
   variant: { name: 'Type 98 20 mm AA', weapon: '20 mm Type 98', text: 'The light AA gun: against low aircraft — and, lowered, against men on the beach.' } });
 pacific(ambulance, 'jp', { model: buildJpIsuzuAmb, variant: { name: 'Medical Lorry', weapon: 'unarmed', text: 'An Isuzu lorry with a red cross: patches up the wounded nearby.' } });
 pacific(commandPost, 'jp', { model: buildJpIsuzu, variant: { name: 'Command Post', weapon: 'field telephones', text: 'The battalion’s headquarters in a lorry: nearby squads hold longer and react faster.' } });
+// …and the rest of its roster (models/jp45.js): every 1945 type but the DD tank (a landing army's)
+pacific(ifv, 'jp', { model: buildJpHoHa, stats: { armor: 0.15, hp: 480 }, cost: 0.85,
+  variant: { name: 'Type 1 Ho-Ha', weapon: 'Type 97 7.7 mm MGs', text: 'The Army’s armoured half-track, built in small numbers: a squad rides up behind riveted plate. U unloads the squad.' } });
+pacific(airAssault, 'jp', { model: () => buildWw2Soldier({ army: 'jp' }),
+  variant: { name: 'Teishin Paratroopers', weapon: 'Type 100 SMG, Type 99 rifle', text: 'The raiding paratroopers who took the Palembang oil fields: dropped onto the objective, lightly armed, they hold to the last.' } });
+pacific(heavyTank, 'jp', { model: buildJpChiNu, stats: { armor: 0.5, hp: 1150, damage: 330, range: 190, fireCooldown: 5, speed: 4.6 }, cost: 0.7,
+  variant: { name: 'Type 3 Chi-Nu', weapon: 'Type 3 75 mm', text: 'The last medium tank Japan built, held back to defend the home islands: at last a gun that can kill a Sherman. Stops to fire.' } });
+pacific(cev, 'jp', { model: buildJpHoI, stats: { damage: 750, vsStructure: 2, splash: 5, fireCooldown: 7, traverse: 0.3, armor: 0.45, hp: 1000 }, cost: 0.7,
+  variant: { name: 'Type 2 Ho-I', weapon: 'Type 99 75 mm short gun', text: 'The support tank: a short 75 in the turret, high explosive into bunkers and houses ahead of the infantry. Stops to fire.' } });
+pacific(spMortar, 'jp', { model: buildJpHaTo, stats: { damage: 420, splash: 10, range: 260, armor: 0.2, hp: 700 }, cost: 1.1,
+  variant: { name: 'Type 4 Ha-To', weapon: '300 mm Type 4 mortar', text: 'A huge mortar in an open box on a lengthened tracked hull, a handful built at the war’s end: few rounds, each one a crater.' } });
+pacific(cbRadar, 'jp', { variant: { name: 'Sound Ranging Team', weapon: 'microphones, plotting board', text: 'The field artillery’s listening posts: every enemy gun that fires within reach is plotted for your guns.' } });
+pacific(aa, 'jp', { model: buildJpLorryAA, stats: { ...lorryStats, antiAir: { ...aa.stats.antiAir, rate: 6, burst: 1.5, pause: 1 } }, cost: 0.75,
+  variant: { name: 'Type 98 on an Isuzu', weapon: 'Type 98 20 mm', text: 'The 20 mm AA cannon on a lorry bed: it keeps the strafing fighters off the column. Unarmoured.' } });
+pacific(gunMissile, 'jp', { model: buildJpLorry25, stats: { armor: 0.05, hp: 400 }, cost: 0.8,
+  variant: { name: 'Type 96 25 mm on a lorry', weapon: '3 × Type 96 25 mm', text: 'The Navy’s triple 25 mm — the light AA gun of every island garrison — bolted to a lorry bed. Unarmoured.' } });
+pacific(sam, 'jp', { model: buildJpType88, stats: { damage: 400, range: 300 }, cost: 0.85,
+  variant: { name: 'Type 88 75 mm AA Gun', weapon: 'Type 88 75 mm', text: 'The Army’s heavy AA gun on its cross: it reaches the bombers — and on Iwo Jima and Okinawa it was turned on the Shermans.' } });
+pacific(manpads, 'jp', { variant: { name: 'AA MG Team', weapon: 'Type 92 HMG on its AA mount', text: 'The heavy machine gun turned to the sky: low fliers pay for their strafing run.' } });
+pacific(airRadar, 'jp', { model: buildJpTachi6, variant: { name: 'Tachi-6 Radar', weapon: 'unarmed', text: 'The Army’s early-warning radar, its aerials on a turning mast: warns of aircraft coming and guides the AA guns onto them.' } });
+pacific(recovery, 'jp', { model: buildJpSeri, variant: { name: 'Type 1 Seri', weapon: 'crane, winch', text: 'The recovery vehicle on the Chi-Ha’s hull, a crane where the turret was: it gets knocked-out tanks moving again.' } });
+pacific(bridgeLayer, 'jp', { model: buildJpBridge, variant: { name: 'Chi-Ha Bridge-Layer', weapon: 'bridge on a Chi-Ha', text: 'A Chi-Ha hull carrying its bridge, built in small numbers for the engineers: it lays it across the gap and backs off.' } });
+pacific(mineClear, 'jp', { model: buildJpSsKi, variant: { name: 'Type 1 SS Engineer Vehicle', weapon: 'mine plough, charges', text: 'The engineers’ armoured vehicle: it ploughs a lane through the minefield and blows what stands in the way.' } });
+pacific(jammer, 'jp', { model: buildJpSmoke, variant: { name: 'Smoke Lorry', weapon: 'smoke generator, smoke candles', text: 'Set up, it keeps a smoke screen standing 20 m in front of it for as long as it stays: turn it toward the enemy’s guns.' } });
 // the Marines: their own names; the LVT amtrac in the half-track's place
 pacific(rifles, 'usmc', { variant: { name: 'Marine Rifle Squad', weapon: 'M1 Garand, BAR, Thompson', text: 'A Marine rifle squad of three fire teams, each round its BAR: built for the assault from the sea.' } });
 pacific(mgTeam, 'usmc', { variant: { name: 'Marine MG Team', weapon: 'Browning M1919, .30 cal', text: 'The air-cooled Browning, carried up the terraces to hold what the riflemen took.' } });
