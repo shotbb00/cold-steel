@@ -58,6 +58,7 @@ export default {
   name: 'El Alamein',
   description: 'The Western Desert: open ground and long sight lines, two ridges for hull-down tanks, an oasis village, the station and the mosque. A tank battle.',
   epochs: ['1945'],
+  region: 'africa', // (the menu's North Africa: maps/index.js REGIONS)
   climate: 'desert',   // sand paint and khaki drill (render/paint.js CLIMATE)
   size: 1600,
   segments: 640,

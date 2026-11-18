@@ -63,7 +63,7 @@ const TIPS = { 1985: [
  * null where any of them takes any army.
  */
 /** The year's title and line — or the Pacific's, on its tab (data/epoch.js `pacific`). */
-const tabInfo = () => (regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific' && epochInfo().pacific) || epochInfo();
+const tabInfo = () => epochInfo().regions?.[regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land')] ?? epochInfo(); // (a region's own title and line: data/epoch.js)
 
 export function theatreArmies() {
   const maps = mapsFor(epoch());

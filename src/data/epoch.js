@@ -129,8 +129,12 @@ export const EPOCHS = {
   1945: {
     id: '1945', name: '1945', title: 'Western Front, spring 1945',
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
-    // the menu's Pacific tab (maps/index.js): its own title and line
-    pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
+    // the menu's regions (maps/index.js REGIONS): each its own title and line
+    regions: {
+      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad, the ruined city on the Volga, fought house by house and floor by floor.' },
+      africa: { title: 'North Africa', blurb: 'The Western Desert: El Alamein, minefields and open sand between the sea and the Qattara Depression, where armour fights at long range.' },
+      pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
+    },
     sides: { nato: 'Allies', pact: 'Germany' },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army' },

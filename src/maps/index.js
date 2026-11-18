@@ -145,9 +145,10 @@ export const THEATRES = [{ id: 'land', name: 'Land' }, { id: 'sea', name: 'Sea' 
 const tabOf = (m) => m.theatre ?? 'land';
 /**
  * Inside a theatre, the scenario's region (the menu's row under Land / Sea / Coastal, shown when a year has maps in more
- * than one): Europe — or Asia & the Pacific (Iwo Jima, Midway), where Japan and the Marines fight (data/factions.js armiesFrom).
+ * than one): Western Europe (unless a map says otherwise), the Eastern Front (Stalingrad), North Africa (El Alamein), Asia & the
+ * Pacific (Iwo Jima, Midway — where Japan and the Marines fight: data/factions.js armiesFrom).
  */
-export const REGIONS = [{ id: 'europe', name: 'Europe' }, { id: 'pacific', name: 'Asia & Pacific' }];
+export const REGIONS = [{ id: 'europe', name: 'Western Europe' }, { id: 'east', name: 'Eastern Front' }, { id: 'africa', name: 'North Africa' }, { id: 'pacific', name: 'Asia & Pacific' }];
 export const regionOf = (m) => m.region ?? 'europe';
 let regionNow = 'europe';
 export const region = () => regionNow;

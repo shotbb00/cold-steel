@@ -77,6 +77,7 @@ export default {
   name: 'Stalingrad',
   description: 'A ruined city in the snow: gutted blocks on every street, Mamayev Kurgan in the middle, the grain elevator, the tractor works and Pavlov\'s House. A fight from house to house.',
   epochs: ['1945'],
+  region: 'east', // (the menu's Eastern Front: maps/index.js REGIONS)
   climate: 'winter',   // whitewash and snow smocks (render/paint.js CLIMATE)
   size: 1600,
   segments: 640,
