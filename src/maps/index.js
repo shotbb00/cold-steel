@@ -187,12 +187,8 @@ export function armiesOn(map, ep = epoch()) {
   return a[ep] ?? (a.nato || a.pact ? a : null);
 }
 
-/**
- * A map's line in the menu: its description, and — every land map is point-mirrored through its centre, so both sides
- * have the same ground — a word saying so (the far end repeats this side's villages and hills under other names).
- */
-export const MIRRORED_NOTE = 'Mirrored to keep it fair: both sides have the same ground, so the far half repeats this half under other names.';
-export const mapAbout = (m) => (m ? `${m.description ?? ''}${(m.theatre ?? 'land') === 'land' && m.mirrored !== false ? ` ${MIRRORED_NOTE}` : ''}` : '');
+/** A map's line in the menu: its description. */
+export const mapAbout = (m) => m?.description ?? '';
 
 /** The maps an epoch can fight on (a map's `epochs` limits it, e.g. Jena is 1806 only) in the chosen theatre, its own maps first. */
 export function mapsFor(ep, th = theatreNow) {

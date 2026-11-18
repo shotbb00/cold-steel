@@ -61,6 +61,10 @@ function piston(key, o) {
   return (mats) => mountMulti(key, mats, geo, { props: pair((s) => nac.map(({ ex, y, f }) => [s * ex, y, f + 0.1])).flat(), blades, r, door: [0, y0 - fat, zw] });
 }
 
+export const buildBrBoston = piston('boston', { len: 14.6, span: 18.7, engines: 2, color: 0x9c8a5c, kind: 'uk', fat: 0.8, chord: 1.9, r: 1.8 });
+export const buildBrWellington = piston('wellington', { len: 19.7, span: 26.3, engines: 2, color: 0x5a5848, kind: 'uk', fat: 1.0, chord: 2.6, r: 2.0 });
+export const buildJpKi48 = piston('ki48', { len: 12.8, span: 17.5, engines: 2, color: 0x56603c, kind: 'jp', fat: 0.75, chord: 1.8, r: 1.6 });
+export const buildJpG4M = piston('g4m', { len: 20.0, span: 25.0, engines: 2, color: 0x3c4a34, kind: 'jp', fat: 1.05, chord: 2.6, r: 2.0 });
 export const buildB26 = piston('b26', { len: 17.8, span: 21.6, engines: 2, color: 0x4d4f34, kind: 'us', fat: 0.85, chord: 1.9, r: 2.0, blades: 4 });
 export const buildJu88 = piston('ju88', { len: 14.4, span: 20.0, engines: 2, color: 0x5a6248, kind: 'de', fat: 0.8, chord: 1.8, r: 1.7 });
 export const buildB17 = piston('b17', { len: 22.7, span: 31.6, engines: 4, color: 0x4d4f34, kind: 'us', fat: 1.1, chord: 3.6, r: 1.7 });

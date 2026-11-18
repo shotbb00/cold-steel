@@ -33,6 +33,7 @@ export function mark(kind, x, y, z, r, up = false) {
   if (kind === 'us') return [disc(r, 0x22325c), disc(r * 0.6, WHITE, 0.012), bar(r * 2.6, r * 0.35, WHITE, 0.006)];
   if (kind === 'sov') return [disc(r, WHITE), disc(r * 0.85, 0xa8231c, 0.012)];
   if (kind === 'jp') return [disc(r, 0xb01e28)]; // the hinomaru
+  if (kind === 'uk') return [disc(r, 0x2a3a6a), disc(r * 0.62, WHITE, 0.012), disc(r * 0.3, 0xa8231c, 0.024)]; // the RAF roundel
   return [bar(r * 2, r * 0.6, WHITE, 0), bar(r * 0.6, r * 2, WHITE, 0), bar(r * 1.7, r * 0.3, 0x141414, 0.012), bar(r * 0.3, r * 1.7, 0x141414, 0.012)];
 }
 
@@ -196,10 +197,12 @@ function dakota(color, kind) {
     ...pair((s) => P.cyl(0.58, 0.58, 0.02, { x: s * 2.8, y: 2.0, z: 3.91, rx: Math.PI / 2, color: HOLE }, 16)),
     ...pair((s) => surface([[s * 0.3, 3.0, -8.4, 1.4, 0.1], [s * 4.3, 3.0, -8.9, 0.6, 0.04]], { color, ...C })),
     fin([[3.1, -7.6, 1.9, 0.12], [4.5, -8.4, 1.5, 0.09], [6.0, -9.0, 0.8, 0.05]], { color, ...C }),
-    ...(kind === 'us' ? [...pair((s) => mark('us', s * 9.5, 2.3, -0.3, 0.9, true)), ...pair((s) => mark('us', s * 1.18, 2.6, -5.8, 0.75))]
-      : [...pair((s) => mark('sov', s * 0.15, 4.6, -8.5, 0.6)), ...pair((s) => mark('sov', s * 1.2, 2.6, -5.8, 0.6))]),
+    ...(kind === 'sov' ? [...pair((s) => mark('sov', s * 0.15, 4.6, -8.5, 0.6)), ...pair((s) => mark('sov', s * 1.2, 2.6, -5.8, 0.6))]
+      : [...pair((s) => mark(kind, s * 9.5, 2.3, -0.3, 0.9, true)), ...pair((s) => mark(kind, s * 1.18, 2.6, -5.8, 0.75))]), // (the US star, the RAF roundel, the hinomaru)
   ]);
 }
+export const buildBrDakota = (mats) => mountMulti('dakota-uk', mats, () => dakota(0x9c8a5c, 'uk'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
+export const buildJpKi57 = (mats) => mountMulti('ki57', mats, () => dakota(0x56603c, 'jp'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
 export const buildUsC47 = (mats) => mountMulti('c47', mats, () => dakota(0x4d4f34, 'us'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
 export const buildSovLi2 = (mats) => mountMulti('li2', mats, () => dakota(0x4f5a34, 'sov'), { props: [[-2.8, 2.0, 4.05], [2.8, 2.0, 4.05]], blades: 3, r: 1.7, door: [-1.4, 2.2, -4.2] });
 
@@ -286,4 +289,10 @@ export const buildUsHelldiver = navyMount('sb2c', { len: 11.2, span: 15.2, color
 export const buildUsAvenger = navyMount('tbf', { len: 12.2, span: 16.5, color: SEA_BLUE, nat: 'us', chord: 1.9, deep: 0.3, long: 1.8 });
 export const buildJpZero = navyMount('a6m', { len: 9.1, span: 12, color: IJN_GREEN, nat: 'jp', chord: 1.5 });
 export const buildJpVal = navyMount('d3a', { len: 10.2, span: 14.4, color: IJN_GREEN, nat: 'jp', chord: 1.7, long: 1.2 }, { blades: 3 });
+// the land air forces of North Africa and the Pacific: the Desert Air Force and the Imperial Army Air Service
+const DESERT = 0x9c8a5c, JP_ARMY = 0x56603c;
+export const buildBrHurricane = navyMount('hurricane', { len: 9.8, span: 12.2, color: DESERT, nat: 'uk', chord: 1.7 });
+export const buildBrKittyhawk = navyMount('p40', { len: 9.7, span: 11.4, color: DESERT, nat: 'uk', chord: 1.6, deep: 0.1 });
+export const buildJpKi84 = navyMount('ki84', { len: 9.9, span: 11.2, color: JP_ARMY, nat: 'jp', chord: 1.5 }, { blades: 4 });
+export const buildJpSaiun = navyMount('c6n', { len: 11.0, span: 12.5, color: IJN_GREEN, nat: 'jp', chord: 1.6, long: 1.6 }, { blades: 4 });
 export const buildJpJill = navyMount('b6n', { len: 10.9, span: 14.9, color: IJN_GREEN, nat: 'jp', chord: 1.75, long: 1.8 }, { blades: 4 });

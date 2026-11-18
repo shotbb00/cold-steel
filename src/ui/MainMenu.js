@@ -639,7 +639,7 @@ export class MainMenu {
         for (const f of ['nato', 'pact']) {
           const b = m.bases?.[f], lands = !!(b && m.river && m.height(b.x, b.z) < m.river.level);
           if (lands) landers.add(f);
-          (lands ? [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...Object.values(L.swim ?? {})] : (L.forts ?? []).map((x) => x.unit)).forEach((id) => coast[f].add(id));
+          (lands ? [...Object.values(L.craft ?? { infantry: 'lcvp', vehicle: 'lct' }).flat(), ...(L.navy ?? []), ...Object.values(L.swim ?? {})] : []).forEach((id) => coast[f].add(id)); // (the shore's forts: placed by the map, never bought — not on this list)
         }
       }
     }
@@ -679,11 +679,16 @@ export class MainMenu {
     const firstShown = () => { if (!list.querySelector('.on:not([hidden])')) list.querySelector('button:not([hidden])')?.click(); }; // (the shown unit isn't this side's: the first that is)
     const sideToggle = el('div', 'seg faction-seg');
     const only = theatreArmies(); // (the armies this theatre's maps field, as the battle picker: Aboukir France and Britain, no British on land)
-    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : !a.coastal)).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i); // (at sea: one navy a side)
+    const pacificHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land') === 'pacific';
+    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : !a.coastal && !!a.pacific === pacificHere)).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
+      .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
+    const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
+    sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
       const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? navyName()[a.faction] ?? a.name : a.name);
       b.type = 'button';
+      b.style.gridRow = a.faction === 'nato' ? '1' : '2'; // (the Allies' armies on the top row, their enemies' on the bottom)
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;

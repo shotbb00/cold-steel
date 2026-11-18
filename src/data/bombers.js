@@ -5,7 +5,7 @@
 // `bombs` per plane over KINDS' (count, damage, splash, crater), `flight` the war's own speeds and heights.
 // Keyed like the rest: an army without its own flies its side's (forArmy).
 import { plane } from './models/ww1Aircraft.js';
-import { buildB26, buildJu88, buildB17, buildPe8, buildHe177, buildF111, buildTornado, buildSu24M, buildTu22M3, buildB1B, buildB52 } from './models/bombers.js';
+import { buildBrBoston, buildBrWellington, buildJpKi48, buildJpG4M, buildB26, buildJu88, buildB17, buildPe8, buildHe177, buildF111, buildTornado, buildSu24M, buildTu22M3, buildB1B, buildB52 } from './models/bombers.js';
 import { buildSovPe2 } from './models/ww2Aircraft.js';
 import { buildNatoF15 } from './models/fighters.js';
 import { buildF16, buildSu35 } from './models/aircraft2027.js';
@@ -54,11 +54,15 @@ export const BOMBERS = {
     lightBomber: {
       nato: { ...prop, name: 'B-26 Marauder', weapon: '4,000 lb of bombs · .50 cals', text: 'The Ninth Air Force’s medium bomber: a flight in at a few thousand feet, sticks across the target.', model: buildB26, paint: OD, hp: 10, bombs: B45, flight: MED45 },
       sov: { ...prop, name: 'Pe-2', weapon: 'FAB-100 bombs', text: 'The Peshka: fast twin-engined dive and level bomber of the Red Air Force, bombs in a short stick.', model: buildSovPe2, paint: SOVG, hp: 9, bombs: B45, flight: MED45 },
+      brit: { ...prop, name: 'Boston III', weapon: '2,000 lb of bombs', text: 'The Desert Air Force’s light bomber: the “Boston tea parties” — formations of eighteen laying their sticks across the enemy’s line.', model: buildBrBoston, paint: paint([0x9c8a5c, 0x8a7a4e, 0xa89868, 0x6a5e42]), hp: 9, bombs: B45, flight: MED45 },
+      jp: { ...prop, name: 'Ki-48 Lily', weapon: '400 kg of bombs', text: 'The Army’s light twin-engined bomber: a short stick, from low down.', model: buildJpKi48, paint: paint([0x56603c, 0x4a5434, 0x606a44, 0x8a8058], 0.7), hp: 8, bombs: B45, flight: MED45 },
       pact: { ...prop, name: 'Ju 88 A-4', weapon: 'SC 250 bombs · MG 81', text: 'The Luftwaffe’s workhorse bomber, flying what fuel allows in the last winter.', model: buildJu88, paint: RLM, hp: 9, bombs: B45, flight: MED45 },
     },
     heavyBomber: {
       nato: { ...prop, name: 'B-17G Flying Fortress', weapon: '13 × .50 cal · 6,000 lb of bombs', text: 'Four engines and a box of guns: high over the target, the bombardier sees the spot, and a carpet of bombs falls along the line.', model: buildB17, paint: paint([0xb4b7b6, 0xa9acab, 0xbfc2c1, 0xa2a5a4], 1.2), hp: 16, bombs: H45, flight: HEAVY45 },
       sov: { ...prop, name: 'Pe-8', weapon: 'FAB-250 / FAB-500 bombs', text: 'The Soviet four-engined bomber of the long-range aviation: few, but big.', model: buildPe8, paint: SOVG, hp: 15, bombs: H45, flight: HEAVY45 },
+      brit: { ...prop, name: 'Wellington', weapon: '4,500 lb of bombs', text: 'The geodetic “Wimpy” of No. 205 Group: night after night over the enemy’s rear, a carpet along the line.', model: buildBrWellington, paint: paint([0x5a5848, 0x4a4838, 0x646252, 0x1e1e1c]), hp: 14, bombs: H45, flight: HEAVY45 },
+      jp: { ...prop, name: 'G4M Betty', weapon: '800 kg of bombs', text: 'The Navy’s long-range bomber: fast, far-reaching — and the “flying lighter” that burned when hit.', model: buildJpG4M, paint: paint([0x3c4a34, 0x36432f, 0x43523a, 0x8a8058], 0.8), hp: 11, bombs: H45, flight: HEAVY45 },
       pact: { ...prop, name: 'He 177 A-5 Greif', weapon: 'SC 500 bombs', text: 'The Luftwaffe’s only heavy bomber: two coupled engines in each nacelle, and a habit of catching fire.', model: buildHe177, paint: RLM, hp: 14, bombs: H45, flight: HEAVY45 },
     },
   },

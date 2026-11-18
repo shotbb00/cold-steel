@@ -212,7 +212,7 @@ function headgear(army, c, crew) {
     ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.13, y: 1.68, z: 0.0, color: c.web })),
   ];
   if (army === 'brit') return [ // the Brodie helmet: a shallow dome on a wide flat brim
-    helmet([[1.742, 0.205, 1.0], [1.75, 0.2], [1.762, 0.128], [1.8, 0.12], [1.838, 0.09], [1.858, 0.035]], { color: c.helmet }),
+    helmet([[1.742, 0.205, 1.0], [1.75, 0.2], [1.762, 0.13], [1.8, 0.126], [1.84, 0.104], [1.866, 0.07], [1.882, 0.022]], { color: c.helmet }), // (the dome clears the crown of the head: 1.862)
     ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.11, y: 1.68, z: 0.02, color: c.web })),
   ];
   if (army === 'usmc') return [ // the M1 in the Marines' camouflage cover: green with brown blotches
@@ -221,7 +221,7 @@ function headgear(army, c, crew) {
     ...pair((s) => P.box(0.008, 0.12, 0.014, { x: s * 0.13, y: 1.68, z: 0.0, color: c.web })),
   ];
   if (army === 'jp') return [ // Type 90: a low rounded dome, a small flared rim, the star on the front, the cloth neck flap
-    helmet([[1.75, 0.152, 1.04], [1.762, 0.146], [1.8, 0.139], [1.835, 0.118], [1.858, 0.08], [1.87, 0.03]], { color: c.helmet }),
+    helmet([[1.75, 0.152, 1.04], [1.762, 0.146], [1.8, 0.14], [1.835, 0.12], [1.86, 0.086], [1.874, 0.05], [1.884, 0.016]], { color: c.helmet }),
     P.box(0.028, 0.028, 0.006, { y: 1.81, z: 0.142, color: 0xc9a43a }),                                        // the star
     loft([[0, 1.64, -0.09, 0.12, 0.05, 2], [0, 1.74, -0.11, 0.135, 0.06, 2]], { color: c.coatDk }, 10),        // neck flap
   ];

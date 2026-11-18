@@ -43,9 +43,9 @@ export const buildJpChiHa = (mats) => rig(once('chiha', () => {
     hull: grime(merge([
       ...gear.parts,
       trackedHull([[-2.75, 1.5, 0.45], [-1.2, 1.62, 0.45], [1.6, 1.62, 0.45], [2.0, 1.45, 0.55], [2.75, 0.95, 0.6]], { belly: 0.72, fender: 1.15, fenderY: 0.98, chamfer: 0.05 }, { color: JP, ...C }),
-      P.box(1.1, 0.42, 0.7, { x: -0.25, y: 1.78, z: 1.1, color: JP, ...C }),                                  // the stepped front superstructure
-      P.cyl(0.06, 0.06, 0.18, { x: 0.35, y: 1.62, z: 1.47, rx: Math.PI / 2, color: STEEL }, 8),            // the bow MG
-      P.box(0.3, 0.1, 0.04, { x: -0.45, y: 1.85, z: 1.46, color: STEEL }),                                  // driver's visor
+      P.box(0.9, 0.36, 0.55, { x: -0.4, y: 1.76, z: 1.55, color: JP, ...C }),                                 // the stepped front superstructure (the driver and the hull MG: forward of the turret)
+      P.cyl(0.06, 0.06, 0.18, { x: -0.6, y: 1.78, z: 1.86, rx: Math.PI / 2, color: STEEL }, 8),            // the bow MG
+      P.box(0.3, 0.1, 0.04, { x: -0.25, y: 1.84, z: 1.83, color: STEEL }),                                  // driver's visor
       ...pair((s) => rivets(-0.9, 0.9, 1.5, 2.0 + s * 0.0, 9, JP_DK)).flat(),
       P.box(0.9, 0.3, 0.9, { y: 1.75, z: -1.9, color: JP_DK }),                                              // the engine deck's louvres
       ...pair((s) => P.cyl(0.08, 0.08, 0.7, { x: s * 0.75, y: 1.6, z: -2.55, color: STEEL }, 8)),          // the exhausts
@@ -70,8 +70,8 @@ export const buildJpHaGo = (mats) => rig(once('hago', () => {
     hull: grime(merge([
       ...gear.parts,
       trackedHull([[-2.15, 1.42, 0.45], [1.1, 1.45, 0.45], [1.5, 1.3, 0.5], [2.2, 0.9, 0.55]], { belly: 0.6, fender: 1.0, fenderY: 0.95, chamfer: 0.05 }, { color: JP, ...C }),
-      P.box(0.8, 0.35, 0.6, { x: 0.2, y: 1.6, z: 0.8, color: JP, ...C }),                                    // the hull MG's bay
-      P.cyl(0.05, 0.05, 0.16, { x: 0.35, y: 1.6, z: 1.12, rx: Math.PI / 2, color: STEEL }, 8),
+      P.box(0.7, 0.32, 0.5, { x: 0.35, y: 1.6, z: 1.2, color: JP, ...C }),                                   // the hull MG's bay (right front, forward of the turret)
+      P.cyl(0.05, 0.05, 0.16, { x: 0.45, y: 1.62, z: 1.48, rx: Math.PI / 2, color: STEEL }, 8),
       ...rivets(-0.7, 0.7, 1.38, 1.62, 7, JP_DK),
       P.box(0.7, 0.2, 0.8, { x: -0.2, y: 1.52, z: -1.5, color: JP_DK }),
       P.cyl(0.07, 0.07, 0.6, { x: 0.65, y: 1.5, z: -2.0, color: STEEL }, 8),

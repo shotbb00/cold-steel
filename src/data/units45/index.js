@@ -14,6 +14,7 @@ import { buildUsWC54, buildSovGazAmb, buildWh2518, buildFjBlitzAmb, buildUsM32, 
 import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, buildSovBA64, buildWhPuma, buildFjKettenkrad, buildUsHellcat, buildSovSU100, buildWhJagdpanzerIV, buildFjHetzer, buildUsM4Dozer, buildSovISU152, buildWhBrummbaer, buildFjSturmtiger } from '../models/ww2Armour2.js';
 
 import { SHIPS_1945 } from './ships.js';
+import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
 
@@ -597,8 +598,8 @@ pacific(heavyTank, 'usmc', { model: buildUsSherman, cost: 0.85,
 pacific(ifv, 'usmc', { model: buildUsLvt4, stats: { armor: 0.2, hp: 700, speed: 4.6 }, variant: { name: 'LVT-4 Water Buffalo', weapon: '.30 and .50 cal', text: 'The amphibian tractor: swims in from the ships and climbs the beach with a squad in its open hold. U unloads them over the stern ramp.' } });
 
 // ---------------------------------------------------------------- North Africa: the British 8th Army (El Alamein)
-// Its own roster (data/epoch.js `own`): its infantry in khaki drill, and the American-built vehicles it fought in —
-// the Shermans and Priests that came for Second Alamein, the Bofors — under the US Army's models.
+// Its own roster (data/epoch.js `own`): its infantry in khaki drill, its own desert vehicles in Light Stone
+// (models/brit45.js) — and the American-built ones it fought in, the Shermans that came for Second Alamein, the Bofors.
 const brit = (t, o) => pacific(t, 'brit', o);
 brit(rifles, { stats: { fireCooldown: 1.9, magSize: 10, reloadTime: 3, playerFireInterval: 0.9 },
   variant: { name: 'Rifle Section', weapon: 'Lee-Enfield No. 1, Bren gun', text: 'The 8th Army’s infantry section: ten rifles round the Bren gun — the fastest bolt action of the war, a light machine gun that never jams.' } });
@@ -610,11 +611,22 @@ brit(sniper, { variant: { name: 'Sniper', weapon: 'Lee-Enfield No. 4 (T)', text:
 brit(engineers, { variant: { name: 'Royal Engineers', weapon: 'Lee-Enfield, mine detectors, flamethrower', text: 'The sappers who cleared the lanes through the Devil’s Gardens with mine detectors and bayonets — and burn out the strongpoints.' } });
 brit(observers, { variant: { name: 'Forward Observation Officer', weapon: 'Lee-Enfield, wireless set', text: 'The gunners’ officer up with the infantry: where he looks, the 25-pounders and the Priests land.' } });
 brit(crew, { variant: { name: 'Tank Crew', weapon: 'Thompson', text: CREW_TEXT } });
-brit(tank, { variant: { name: 'M4A1 Sherman (8th Army)', weapon: '75 mm M3', text: 'The American tank that reached the 8th Army just before Alamein: at last a gun that answers the Panzer IV, and armour to take a hit.' } });
-brit(artillery, { variant: { name: 'Priest (8th Army)', weapon: '105 mm M2A1 howitzer', text: 'The self-propelled 105 that came with the Shermans: it keeps up with the armour across the desert.' } });
+brit(tank, { model: buildBrCrusader, stats: { armor: 0.45, hp: 950, damage: 300, speed: 6.2, fireCooldown: 4.5 }, cost: 0.85,
+  variant: { name: 'Crusader III', weapon: '6-pdr (57 mm)', text: 'The fast British cruiser tank: low and quick across the sand, the new 6-pounder at last a match for the Panzer III — thin armour, and an engine the desert wears out.' } });
+brit(heavyTank, { model: buildBrGrant, stats: { armor: 0.6, hp: 1350, damage: 360, range: 190, fireCooldown: 6, speed: 4.8, traverse: 0.26 }, cost: 0.85,
+  variant: { name: 'M3 Grant', weapon: '75 mm M2 in the sponson, 37 mm in the turret', text: 'The American tall tank with the 75 mm low in its side: the first British tank that could fire high explosive back at the anti-tank guns. It must turn its hull to bring the big gun round.' } });
+brit(reconVehicle, { model: buildBrDaimler, stats: { weapon: 'cannon', damage: 140, vsArmor: 0.6, pierce: 0.4, splash: 1, fireCooldown: 2.4 }, cost: 0.9,
+  variant: { name: 'Daimler Armoured Car', weapon: '2-pdr (40 mm)', text: 'The reconnaissance regiments’ armoured car: fast on the desert tracks, a small turret with the 2-pounder.' } });
+brit(tankDestroyer, { model: buildBrDeacon, stats: { armor: 0.15, hp: 650, speed: 6.5, damage: 330, fireCooldown: 4.5 }, cost: 0.75,
+  variant: { name: 'Deacon', weapon: '6-pdr on an AEC Matador', text: 'A 6-pounder behind a shield on the back of an armoured lorry: hit, and drive off before the answer comes. Soft-skinned underneath.' } });
+brit(artillery, { model: buildBr25pdr, stats: { towed: { deploy: 14 }, traverse: 6.3 }, cost: 0.9,
+  variant: { name: '25-pounder', weapon: 'Ordnance QF 25-pdr', text: 'The British field gun of the whole war, on its round platform that lets it swing all the way round: the Lightfoot barrage was nine hundred of them.' } });
+brit(ifv, { model: buildBrCarrier, stats: { armor: 0.15, hp: 420, speed: 6.4, weapon: 'rifle', damage: 32, range: 120, gunRange: 120, vsArmor: 0.05 }, cost: 0.8,
+  variant: { name: 'Universal Carrier', weapon: 'Bren gun', text: 'The little open tracked carrier: it brings a section and its Bren up under cover of the dust. U puts them down.' } });
+brit(recovery, { model: buildBrScammell, variant: { name: 'Scammell Pioneer', weapon: 'crane, winch', text: 'The heavy recovery lorry: it gets knocked-out tanks moving again behind the line.' } });
 brit(towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun of every British army: clips of heavy shells against the Stukas.' } });
-brit(ambulance, { variant: { name: 'Field Ambulance', weapon: 'unarmed', text: 'The field ambulance: patches up the wounded nearby.' } });
-brit(commandPost, { variant: { name: 'Command Post', weapon: 'wireless sets', text: 'Brigade headquarters in a half-track: nearby squads hold longer and react faster.' } });
+brit(ambulance, { model: buildBrAustinAmb, variant: { name: 'Austin K2 Ambulance', weapon: 'unarmed', text: 'The “Katy”: the field ambulance of the desert — patches up the wounded nearby.' } });
+brit(commandPost, { model: buildBrDorchester, variant: { name: 'Dorchester Command Vehicle', weapon: 'wireless sets', text: 'The armoured command vehicle — “Dorchester” after the hotel: brigade headquarters on wheels. Nearby squads hold longer and react faster.' } });
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
