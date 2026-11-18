@@ -76,8 +76,10 @@ export function markerSpec(game, faction, t, at) {
     spec.yaw = base ? toward(base.centroid, at) : (t.yaw ?? t.autoYaw ?? 0);
     spec.key = `air:${k}`;
     spec.from = base?.name ?? null;
-    if (p.orbit) { // a patrol circle (fighters) — with a radar picture's reach round it
+    if (p.orbit) { // a patrol circle (fighters) — with a radar picture's reach round it; its centre kept `orbit` in from the edges, as the call does
       spec.yaw = 0;
+      const bb = g.map.bounds ?? { x: 1e4, z: 1e4 }, cx = Math.max(0, bb.x - p.orbit), cz = Math.max(0, bb.z - p.orbit);
+      spec.x = Math.max(-cx, Math.min(cx, at.x)); spec.z = Math.max(-cz, Math.min(cz, at.z));
       if (p.picture) spec.parts.push({ shapes: disc(p.picture), color: MARK.recon, opacity: 0.08 }, { shapes: ring(p.picture, 6), color: MARK.recon, opacity: 0.5 });
       spec.parts.push({ shapes: ring(p.orbit, 4), color: p.picture ? MARK.recon : MARK.air, opacity: 0.7 });
       if (p.aam?.range) spec.parts.push({ shapes: dashed(p.aam.range, 3), color: MARK.air, opacity: 0.35 }); // (how far their missiles reach)
