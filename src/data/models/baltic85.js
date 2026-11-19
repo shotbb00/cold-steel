@@ -233,3 +233,46 @@ export function afloat(build, sink) {
     return { ...rig, root, animate: (u, dt, t) => rig.animate?.({ ...u, vel: { x: 0, z: 0 }, recoil: u.recoil ?? 0, turretYaw: u.turretYaw ?? u.yaw }, dt, t, FLAT) };
   };
 }
+
+// ---------------------------------------------------------------- 2027: the Baltic Fleet's landing ships (Gotland)
+
+/** Ropucha (Project 775): 112 × 15 m — the long high-sided tank landing ship, bow doors and ramp, the big block aft. */
+export const buildRopuchaL = craft(() => {
+  const L = 112, B = 15, fb = 5;
+  const fixed = merge([
+    ...hull(L, B, fb, 3.4, GREY, true, 1.5),
+    ...bridge(fb, -24, 12, 7, 24), ...bridge(fb + 7, -20, 9, 3.2, 12),         // the superstructure, the bridge on it
+    box(10, 3, 8, { y: fb + 4.5, z: -40, color: GREY }),                        // the after deckhouse
+    ...mast(0, fb + 10.2, -16, 10),
+    cyl(1.4, 1.6, 4, { x: 3.5, y: fb + 9, z: -30, color: DARK }), cyl(1.4, 1.6, 4, { x: -3.5, y: fb + 9, z: -30, color: DARK }), // the twin funnels
+    ...twin(0, fb + 7, -9.6, 1.3, 3.4), ...twin(0, fb + 3, -43, 1.3, 3.4, true), // twin 57 mm fore and aft of the block
+    box(B - 2, 0.3, 50, { y: fb + 0.2, z: 18, color: DARK }),                   // the tank deck's hatch covers
+    ...[-1, 1].map((s) => box(1.8, 1.4, 3, { x: s * 3, y: fb + 2.2, z: L / 2 - 13, color: STEEL })), // the Grad-M launchers on the forecastle
+  ]);
+  const ramp = merge([box(B * 0.45, 5, 0.3, { y: 2.5, color: STEEL, surf: 'metal' })]);
+  return { fixed, ramp, hinge: [0.7, L / 2 - 1.5], gunAt: [fb + 8, -8] };
+});
+
+/** Zubr (Project 12322): 57 × 25.6 m — the biggest hovercraft afloat: the vehicle deck down the middle between two long
+ *  side houses, the bridge across the front, three huge ducted propellers on pylons aft, the blower intakes on top. */
+export const buildZubr = craft(() => {
+  const L = 57, B = 25.6, h = 2.4;
+  const fixed = merge([
+    box(B, 1.8, L, { y: 0.6, color: BLACK }),                                    // the skirt
+    box(B - 1, 1.3, L - 2, { y: 2.1, color: GREY }),                            // the buoyancy hull
+    ...[-1, 1].flatMap((s) => [
+      box(6, 5, L - 12, { x: s * 8.8, y: h + 3.3, z: -2, color: GREY }),         // the side houses: crew, engines, troops
+      ...[-14, 0, 14].map((z) => cyl(1.6, 1.6, 0.4, { x: s * 8.8, y: h + 5.9, z, color: DARK }, 14)), // the blowers' intakes
+    ]),
+    box(11.6, 0.2, L - 10, { y: h + 0.9, z: 0, color: DECK, surf: 'deck' }),    // the vehicle deck
+    ...bridge(h + 5.8, 14, 17.6, 2.6, 5),                                       // the bridge across the front, on the houses
+    ...[-1, 0, 1].flatMap((k) => [
+      box(1, 8, 2.4, { x: k * 8, y: h + 8, z: -L / 2 + 6, color: GREY }),         // the pylons
+      cyl(2.9, 2.9, 1.6, { x: k * 8, y: h + 10, z: -L / 2 + 5.5, rx: Math.PI / 2, color: DARK }, 16), // the propeller ducts
+      cyl(2.6, 2.6, 0.1, { x: k * 8, y: h + 10, z: -L / 2 + 6.32, rx: Math.PI / 2, color: BLACK }, 16),
+    ]),
+    ...twin(-8.8, h + 5.8, 6, 0.9, 2), ...twin(8.8, h + 5.8, 6, 0.9, 2),        // the AK-630s on the houses
+  ]);
+  const ramp = merge([box(11, 3.2, 0.25, { y: 1.6, color: STEEL, surf: 'metal' })]);
+  return { fixed, ramp, hinge: [h + 0.9, L / 2 - 0.5], gunAt: [h + 6.4, 6] };
+});

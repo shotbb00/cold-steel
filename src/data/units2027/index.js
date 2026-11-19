@@ -11,6 +11,7 @@ import { TYPES_1985 } from '../units/index.js';
 import { buildModernSoldier } from '../models/modernSoldier.js';
 import * as M from '../models/modern2027.js';
 import { SHIPS_2027, SHIP_ALIAS_2027 } from './ships.js';
+import { coastal2027 } from './coastal.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -395,6 +396,7 @@ export const TYPES_2027 = {
   artillery, rockets, jammer, cbRadar,
   aa, gunMissile, sam, towedAA, airRadar, spMortar, ambulance, recovery, bridgeLayer, cev, mineClear, commandPost, kampfgruppe,
   ...SHIPS_2027, // the Baltic's warships and the shore's missile trucks (./ships.js)
+  ...coastal2027({ ifv, reconVehicle }), // Gotland's landing ships and swimmers (./coastal.js)
 };
 for (const id of Object.keys(SHIP_ALIAS_2027)) delete TYPES_2027[id]; // (1985's cruisers, battleship, supercarrier, missile sub: not in the Baltic in 2027)
 /** No stand-ins on land: every 1985 type serves until its own step replaces it. At sea the classes gone since 1985 (./ships.js). */

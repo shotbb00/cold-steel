@@ -169,6 +169,13 @@ export const EPOCHS = {
   2027: {
     id: '2027', name: '2027', title: 'The Suwałki Gap, 2027', beta: true,
     blurb: '2027, a war that has not happened: Russia strikes for the Suwałki Gap, the narrow land bridge between Poland and Lithuania. Drones overhead, jammers in every wood, and rockets that hit what they can find.',
+    // the menu's regions (maps/index.js REGIONS): the land is the Gap (the war's own title), the sea and the coast their own
+    regions: {
+      europe: {
+        sea: { title: 'The Baltic, 2027', blurb: '2027 at sea: the US and Polish navies against the Russian Baltic Fleet — stealthy missiles, sea drones and drones over the horizon, from the Gotland Gap to the Gulf of Finland.' },
+        coastal: { title: 'Gotland, 2027', blurb: 'The island in the middle of the Baltic: whoever holds it can cover the whole sea with air defence. The Baltic Fleet lands at dawn on Gotland’s west coast; US and Polish troops hold the beaches.' },
+      },
+    },
     sides: { nato: 'NATO', pact: 'Russia' },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army', navy: 'US Navy' },

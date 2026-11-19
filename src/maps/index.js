@@ -36,6 +36,7 @@ import bobruisk from './bobruisk.ts';
 import berlin from './berlin.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
+import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
@@ -107,6 +108,7 @@ export const MAPS = {
   [berlin.id]: berlin,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
+  [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,

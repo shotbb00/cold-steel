@@ -101,6 +101,7 @@ const SEA_TIPS = {
 const LANDING_TIPS = {
   1806: ['Take the beach sectors first: each one opens the way inland.', 'The boats are easy targets on the row in. The ships’ broadsides cover them.', 'Defending the coast: the batteries cover the beach, but the infantry behind them decides the day.'],
   1918: ['Take the beach sectors first: each one opens the way inland.', 'The boats and lighters are easy targets on the run in. The warships’ guns cover them.', 'Defending the coast: the trenches and machine guns cover the beach, but the reserves behind them decide the day.'],
+  2027: ['Take the beach sectors first: each one opens the way inland.', 'The NSM trucks hide inland and move after every salvo: find them with drones before they find the Ropuchas.', 'The Zubrs ride over the mines and up the sand; the Ropuchas must keep to the lanes.', 'Defending Gotland: FPV teams over the beach catch the swimmers as they climb out of the water.'],
   1945: ['Take the beach sectors first: each one opens the way inland.', 'Landing craft are easy targets on the run in. The naval guns and smoke cover them.', 'Defending the coast: the bunkers cover the beach, but the infantry behind them decides the day.'],
 };
 const MODE_TIPS = {
@@ -590,6 +591,7 @@ export class MainMenu {
       2027: { nato: 'Hold the Gap: keep the land bridge to the Baltic open — find them with drones, jam theirs, and strike what you find before it moves.', pact: 'Cut the Gap: break through between Poland and Lithuania before NATO’s reinforcements arrive — mass the guns, swarm the drones, keep moving.' },
       1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
       coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
+      coast2027: { nato: 'Hold Gotland: the mines and the wire, the NSM trucks against their ships, drones over the beach — then the Abrams from Visby.', pact: 'Take Gotland: the Zubrs and Ropuchas onto the beaches, the BTRs swimming in, helicopters behind them — and the island’s air defence over the whole Baltic.' },
       coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
     }[atSea ? 'sea' : mapsFor(epoch()).some((m) => m.theatre === 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
       nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
