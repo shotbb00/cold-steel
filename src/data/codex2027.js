@@ -194,3 +194,38 @@ Object.assign(CODEX2027, {
     pact: 'The Ka-27M, the coaxial-rotor Helix, is the Russian Navy’s ship helicopter, modernised with a new radar and sonar.',
   },
 });
+
+// ---- on the coast: Gotland (data/units2027/coastal.js, the NSM battery in ./units2027/ships.js)
+Object.assign(CODEX2027, {
+  ropucha: {
+    use: 'The landing ship for the armour: she brings tanks and BTRs onto the sand through her bow doors. She must keep to the swept lanes through the mines, and she is the biggest target on the water.',
+    strong: 'Getting heavy armour ashore', weak: 'Mines, anti-ship missiles, being slow',
+    counter: 'The NSM trucks inland; mines off the beach; ATGMs on her as she grounds.',
+    pact: 'The Project 775 Ropucha was built in Gdańsk in the 1970s and 80s; four still serve in the Baltic Fleet, among them Kaliningrad, Minsk and Korolev.',
+  },
+  alexandrit: {
+    use: 'Send her into the mine band off a beach: where she steams the mines are cut, so the landing ships get a new lane or a wider one. Keep her behind the escorts’ air defence.',
+    strong: 'Mines', weak: 'Aircraft, missiles, anything that shoots at her',
+    counter: 'Strike her before she opens the lane: the F-35s’ JSMs or the NSM trucks.',
+    pact: 'The Project 12700 Alexandrit has the biggest fibreglass hull ever moulded; Aleksandr Obukhov, the first of the class, serves in the Baltic Fleet.',
+  },
+  zubr: {
+    use: 'The fast way in: she rides over the mines and the beach obstacles and straight up the sand, then unloads three tanks or a battalion’s worth of men. Loud and fast, but thin-skinned.',
+    strong: 'Speed, mines, obstacles', weak: 'Anything that hits her — her skirt and hull are light',
+    counter: 'Heavy machine guns and ATGMs as she comes up the beach; drones on her before she unloads.',
+    pact: 'The Project 12322 Zubr is the world’s biggest hovercraft, 57 m long and over 500 tonnes; the Baltic Fleet keeps its two, Mordoviya and Yevgeny Kocheshkov, at Baltiysk.',
+  },
+  'air:coastStrike': {
+    use: 'The coast’s defence only: two F-35As fly in from the mainland and fire four stealthy JSMs at the landing ship nearest the spot, then turn for home.',
+    strong: 'The landing ships and their escorts, from beyond their guns', weak: 'Ship air defence; it can’t hit anything on land',
+    counter: 'Keep the escorts’ air defence close to the landing ships, and Su-35s over the beach.',
+    nato: 'The Joint Strike Missile is the Naval Strike Missile reshaped to fit inside an F-35’s weapons bay; Poland ordered JSMs for its F-35A Husarz fleet.',
+    pl: 'Poland’s first F-35A Husarz squadron stands up at Łask, the air base that guards the Baltic coast.',
+  },
+  nsmBattery: {
+    use: 'Two launcher trucks hidden inland: they fire Naval Strike Missiles at the biggest ship in reach, then move to a new hide. They never fire at the land.',
+    strong: 'Landing ships and escorts', weak: 'Drones and helicopters that find them, the ships’ air defence',
+    counter: 'Find them with drones and hit them while they reload; shoot the missiles down with the escorts.',
+    nato: 'Poland’s Naval Strike Missile coastal unit (MJR) has guarded the Polish coast since 2013; in 2027 its trucks are flown in to Gotland.',
+  },
+});

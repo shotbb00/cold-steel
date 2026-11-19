@@ -13,9 +13,9 @@ import rockets from './rockets.ts';
 const NAVAL = { naval: true, eyeHeight: 14, aimHeight: 3, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
 const AFT = Math.PI;
-const AA = (range, hitNear, hitFar) => ({ antiAir: { range, optical: 1, rate: 2.4, burst: 6, pause: 0.4, hitNear: hitNear * 0.3, hitFar: hitFar * 0.3 } });
+export const AA = (range, hitNear, hitFar) => ({ antiAir: { range, optical: 1, rate: 2.4, burst: 6, pause: 0.4, hitNear: hitNear * 0.3, hitFar: hitFar * 0.3 } });
 const RADAR = (range = 2400, height = 16) => ({ range, height });
-const gun = (at, facing, o) => ({ at, facing, arc: 4.6, spread: 0.012, splash: 2.5, pierce: 0.25, shell: 900, size: 1.2, ...o });
+export const gun = (at, facing, o) => ({ at, facing, arc: 4.6, spread: 0.012, splash: 2.5, pierce: 0.25, shell: 900, size: 1.2, ...o });
 const G57 = { range: 1300, reload: 1.2, damage: 110, splash: 2.5, size: 1.2 };  // (twin AK-725)
 const G30 = { range: 900, reload: 0.5, damage: 40, splash: 1.2, size: 0.8 };    // (twin AK-230)
 const OSA_SAM = { range: 800, channels: 1, load: 20, reload: 2.5, speed: 240, pk: 0.4 };
@@ -29,7 +29,7 @@ const ship = (o) => ({
   stats: { ...NAVAL, weapon: 'cannon', leash: 60, spread: 0.012, boltSpeed: 900, boltSize: 1.2, splash: 2.5, pierce: 0.25, fireCooldown: 1.2, ...o.stats },
 });
 /** A landing craft: never bought (hidden, uncapped), steered by systems/Landing.js. */
-const craftType = (o) => ship({ hidden: true, uncapped: true, cost: 0, ...o, stats: { landingCraft: true, range: 900, aggroRange: 900, preferredRange: 0, damage: 40, ...o.stats } });
+export const craftType = (o) => ship({ hidden: true, uncapped: true, cost: 0, ...o, stats: { landingCraft: true, range: 900, aggroRange: 900, preferredRange: 0, damage: 40, ...o.stats } });
 
 export const parchim = ship({
   fleet: 'escort',
@@ -134,7 +134,7 @@ export const pt76 = {
 };
 
 /** A vehicle swimming in: `of` its land type, drawn with that type's own models (low in the water). */
-const swimmer = (id, of, sink) => craftType({
+export const swimmer = (id, of, sink) => craftType({
   id, name: `${of.name} (swimming)`, shortName: 'Afloat', engine: 'engine.dieselSmall',
   hull: { length: 7, beam: 3 },
   stats: { swims: true, draft: 1.2, hp: 400, armor: 0.08, speed: 3.5, accel: 0.5, turnRate: 0.3, turretRate: 1, radius: 2.4, height: 1.6, eyeHeight: 2, sight: 400, smallCraft: true, stealth: 0.5,
