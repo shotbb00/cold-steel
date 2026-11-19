@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { buildNapSoldier, ARMIES_1806 } from './napSoldier.js';
+import { splitFlag } from './ships1806.js';
 
 const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c };   // carriages: French olive green, the Germans' blue-grey, the Russians' pea green
 const BRONZE = 0x9a7a3a;
@@ -151,8 +152,9 @@ export function buildFieldGun({ army = 'fr', size = 'field', make = piece, man =
  * A shore gun (the coastal battle, Aboukir 1801: data/units1806 shoreBattery): a 24-pounder on its garrison carriage
  * behind a sand parapet with an embrasure, laid on the sea; beside it the furnace where the shot is heated red
  * (the glow at its mouth) and a pile of cold shot. Fixed: the barrel traverses within the embrasure.
+ * `flag` 'dk': the Danish split flag on a staff behind it (Copenhagen's Trekroner fort).
  */
-export function buildShoreGun() {
+export function buildShoreGun(flag = null) {
   const SAND = 0xc8ab78, BRICK = 0x8a4a32;
   const base = merge([
     // the parapet: a long bank of sand in front, cut by the embrasure, the cheeks of the cut faced with fascines
@@ -166,6 +168,7 @@ export function buildShoreGun() {
     P.box(0.6, 0.5, 0.05, { x: 4.4, y: 0.5, z: -0.79, color: 0xff7a2a }),
     // the shot, piled
     ...[[0, 0], [0.32, 0], [0.16, 0.28], [0.16, 0.1]].map(([x, z], i) => P.sphere(0.15, { x: -3.6 + x, y: 0.15 + (i === 3 ? 0.24 : 0), z: -1.2 + z, color: IRON }, 8, 6)),
+    ...(flag === 'dk' ? [P.cyl(0.08, 0.1, 9, { x: -2.4, y: 4.5, z: -3, color: 0x6e5236 }, 6), ...splitFlag(8, -3.1, 0.7).map((g) => g.translate(-2.4, 0, 0))] : []),
   ]);
   const gunGeo = merge([
     P.box(0.9, 0.5, 1.8, { y: 0.4, z: -0.1, color: 0x5a4a34 }),                                              // the garrison carriage (trucks, not wheels)

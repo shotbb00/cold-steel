@@ -5,8 +5,10 @@
 // guns forward and aft, so a broadside ripples down her side), firing roundshot at what bears on that beam.
 // Speeds are twice the real ones (a 74 makes 8 knots; the game's 16), the ranges the game's sea scale.
 // Ids follow the other eras' ships, so the modes and the AI work: the 74 is `cruiser` (the line of battle).
+// The Royal Danish Navy (army `dk`, Copenhagen only: data/epoch.js) sails the French hulls' stats under her own
+// colours and names (`dk` models and variants; the ships' own names are the map's: maps/copenhagen.ts).
 import { lcvp } from '../units45/ships.js';
-import { buildFlatboat, buildHorseBoat, buildSeventyFourRN, buildSeventyFourFR, buildFirstRateRN, buildFirstRateFR, buildFrigateRN, buildFrigateFR, buildBrigRN, buildBrigFR, buildFireship, buildGunboatRN, buildGunboatFR } from '../models/ships1806.js';
+import { buildFlatboat, buildHorseBoat, buildSeventyFourRN, buildSeventyFourFR, buildFirstRateRN, buildFirstRateFR, buildFrigateRN, buildFrigateFR, buildBrigRN, buildBrigFR, buildFireship, buildGunboatRN, buildGunboatFR, buildSeventyFourDK, buildFrigateDK, buildBrigDK, buildGunboatDK } from '../models/ships1806.js';
 
 const SAIL = {
   naval: true, sail: true, eyeHeight: 40, aimHeight: 5, nightSight: { nato: 0.45, pact: 0.45 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0,
@@ -47,9 +49,10 @@ export const cruiser = ship({
     pact: twoDecker(14.6, 52, { ...LOWER, reload: LOWER.reload * DRILLED }, { ...UPPER, reload: UPPER.reload * DRILLED }),
   },
   camera: { distance: 75, height: 26, shoulder: 0 },
-  models: { nato: buildSeventyFourFR, pact: buildSeventyFourRN },
+  models: { nato: buildSeventyFourFR, pact: buildSeventyFourRN, dk: buildSeventyFourDK },
   variants: {
     nato: { name: 'Téméraire-class 74', weapon: '28 × 36-pdr, 30 × 18-pdr, 16 × 8-pdr', text: 'The French 74: bigger and faster than the British, with heavy guns — but her crews are less drilled, and she was built to fight from to leeward, firing high into the rigging.' },
+    dk: { name: 'Blockship', weapon: '24-pdr and 18-pdr', text: 'An old ship of the line cut down and moored in the King\'s Deep: a floating battery of two gun decks, fought where she lies — Prøvesteenen, Jylland, Holsteen.' },
     pact: { name: '74-gun third rate', weapon: '28 × 32-pdr, 28 × 18-pdr, 18 × 9-pdr', text: 'The backbone of the Royal Navy\'s line: two gun decks of black and ochre, crews drilled to fire a broadside faster than anyone afloat.' },
   },
 });
@@ -73,9 +76,10 @@ export const battleship = ship({
     pact: threeDecker(16, 57, [[2.3, drilled(G32)], [4.6, drilled(G24)], [6.9, drilled(G12)]]),
   },
   camera: { distance: 85, height: 30, shoulder: 0 },
-  models: { nato: buildFirstRateFR, pact: buildFirstRateRN },
+  models: { nato: buildFirstRateFR, pact: buildFirstRateRN, dk: buildSeventyFourDK }, // (the Danes' flagship Dannebrog: a 62-gun two-decker)
   variants: {
     nato: { name: 'Océan-class 118', weapon: '32 × 36-pdr, 34 × 24-pdr, 34 × 12-pdr', text: "The biggest ships afloat: three gun decks and the admiral's flag. Slow and heavy — but her broadside crushes a 74, and while she fights near them the fleet's crews hold on longer." },
+    dk: { name: 'Flagship (ship of the line)', weapon: '24-pdr and 18-pdr', text: "Dannebrog, Commodore Fischer's flagship in the middle of the line: where his broad pennant flies the line holds out longer." },
     pact: { name: '100-gun first rate', weapon: '30 × 32-pdr, 28 × 24-pdr, 42 × 12-pdr', text: "The flagship: Victory's kind, three decks of guns, the admiral on her quarterdeck. Where her flag flies the squadron holds out longer." },
   },
 });
@@ -89,9 +93,10 @@ export const frigate = ship({
   factionStats: { nato: { speed: 10.6 } },
   mounts: { nato: oneDecker(12.4, 48, 3, { range: 650, reload: 24, damage: 180 }), pact: oneDecker(12, 46, 3, drilled({ range: 650, reload: 24, damage: 180 })) },
   camera: { distance: 65, height: 22, shoulder: 0 },
-  models: { nato: buildFrigateFR, pact: buildFrigateRN },
+  models: { nato: buildFrigateFR, pact: buildFrigateRN, dk: buildFrigateDK },
   variants: {
     nato: { name: 'Pallas-class frigate', weapon: '28 × 18-pdr, 12 × 8-pdr', text: 'The eyes of the fleet: fast and weatherly, one gun deck of 18-pounders. She scouts, carries the signals, and takes on anything her size — never a ship of the line.' },
+    dk: { name: 'Frigate', weapon: '18-pdr and 12-pdr', text: 'A Danish frigate of the defence line: one gun deck, quick enough to shift her berth, and the eyes of the line.' },
     pact: { name: '38-gun frigate', weapon: '28 × 18-pdr, 14 × 32-pdr carronades', text: 'The frigate: fast, handy, out ahead of the line to see — and to fight her own kind ship to ship.' },
   },
 });
@@ -104,9 +109,10 @@ export const destroyer = ship({
   stats: { masts: 2, hp: 1300, armor: 0.05, speed: 10.5, accel: 0.09, turnRate: 0.13, turretRate: 1, radius: 5, height: 13, sight: 3000, range: 450, aggroRange: 600, preferredRange: 220, leash: 80, damage: 90, fireCooldown: 18, spread: 0.025, boltSpeed: 400, boltSize: 0.45, splash: 1.5, pierce: 0.3 },
   mounts: { nato: oneDecker(9, 30, 1.8, { range: 450, reload: 18, damage: 90 }), pact: oneDecker(9, 30, 1.8, drilled({ range: 450, reload: 18, damage: 90 })) },
   camera: { distance: 45, height: 16, shoulder: 0 },
-  models: { nato: buildBrigFR, pact: buildBrigRN },
+  models: { nato: buildBrigFR, pact: buildBrigRN, dk: buildBrigDK },
   variants: {
     nato: { name: 'Abeille-class brig', weapon: '16 × 24-pdr carronades', text: 'A two-masted brig: cheap, quick, short-ranged carronades. She carries signals, chases gunboats, takes struck ships in hand.' },
+    dk: { name: 'Brig', weapon: 'carronades', text: 'A two-masted brig: cheap, quick, short-ranged. She carries the signals and the boats of the line.' },
     pact: { name: 'Cruizer-class brig-sloop', weapon: '16 × 32-pdr carronades, 2 × 6-pdr', text: "The Navy's most numerous warship: a brig with smashing carronades at close range — and nothing to stand against a frigate." },
   },
 });
@@ -122,6 +128,7 @@ export const fireship = ship({
   models: { nato: buildFireship, pact: buildFireship },
   variants: {
     nato: { name: 'Brûlot', weapon: 'pitch, tar and powder', text: 'An old brig filled with everything that burns: sent down the wind onto the enemy line, her crew lighting her and pulling away in the boat. What she touches burns.' },
+    dk: { name: 'Brander', weapon: 'pitch, tar and powder', text: 'An old hull filled with everything that burns, sent down the wind onto the enemy line.' },
     pact: { name: 'Fireship', weapon: 'combustibles', text: "A hulk crammed with tar barrels and powder: steer her onto an enemy and she sets him ablaze — an anchored line's nightmare." },
   },
 });
@@ -134,9 +141,10 @@ export const ptBoat = ship({
   stats: { masts: 1, oars: 0.45, smallCraft: true, stealth: 0.6, hp: 500, armor: 0, speed: 7, accel: 0.15, turnRate: 0.3, turretRate: 1, radius: 3, height: 7, eyeHeight: 6, sight: 2200, range: 800, aggroRange: 900, preferredRange: 450, leash: 80, damage: 280, fireCooldown: 30, spread: 0.02, boltSpeed: 430, boltSize: 0.6, splash: 2.5, pierce: 0.5 },
   mounts: { nato: [{ ...battery(0, 1.8, 9, { range: 800, reload: 30, damage: 280 }), facing: 0, arc: 0.9 }], pact: [{ ...battery(0, 1.8, 9, drilled({ range: 800, reload: 30, damage: 280 })), facing: 0, arc: 0.9 }] },
   camera: { distance: 30, height: 10, shoulder: 0 },
-  models: { nato: buildGunboatFR, pact: buildGunboatRN },
+  models: { nato: buildGunboatFR, pact: buildGunboatRN, dk: buildGunboatDK },
   variants: {
     nato: { name: 'Chaloupe canonnière', weapon: '1 × 24-pdr', text: "An open boat with one long gun in her bow and sweeps along her sides: in a calm she rows where ships can't sail, and lays her gun on a helpless stern." },
+    dk: { name: 'Kanonbåd', weapon: '1 × 24-pdr', text: 'An open boat with a long 24-pounder and sweeps along her sides: in a calm she rows where ships can\'t sail and lays her gun on a helpless stern.' },
     pact: { name: 'Gunboat', weapon: '1 × 24-pdr', text: 'A big rowing boat with a heavy gun forward: worthless in a breeze, deadly in a calm.' },
   },
 });

@@ -209,6 +209,10 @@
 .army-perks { margin: -2px 0 6px 84px; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12px; line-height: 1.4; color: var(--muted); max-width: 456px; }
 .army-perks b { color: var(--text, #e8e4d8); font-weight: 600; }
 .rules .cond-label { width: 110px; cursor: help; }
+/* a rule this map can't have (no runway: maps/index.js runwayNote) — shown off, with why */
+.rules .cond-row.off .seg button { opacity: 0.45; cursor: not-allowed; }
+.rules .cond-row.off .seg button.on { opacity: 0.7; }
+.rules .cond-note { flex-basis: 100%; margin: -6px 0 2px 124px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 
 .mp-together { margin-top: 10px; }
 
@@ -290,6 +294,7 @@
 @media (max-width: 560px) {
   .rules .cond-row { flex-direction: column; align-items: flex-start; gap: 6px; }
   .rules .cond-label { width: auto; }
+  .rules .cond-note { margin: 0; }
   .army-perks { margin-left: 0; }
 }
 

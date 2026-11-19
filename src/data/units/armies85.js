@@ -16,7 +16,7 @@ const MEN = {
   rifles: [{}], atTeam: [{ weapon: 'at' }, {}], mgTeam: [{}, { weapon: 'mg' }], mortar: [{}, { weapon: 'mortar' }],
   scouts: [{ scout: true }], sniper: [{ scout: true }, { weapon: 'sniper', scout: true }], engineers: [{}],
   observers: [{ scout: true, radio: true }], manpads: [{}, { weapon: 'manpads' }], crew: [{ weapon: 'smg', crew: true }],
-  kampfgruppe: [{ militia: true }],
+  kampfgruppe: [{ militia: true }], airAssault: [{ airAssault: true }],
 };
 const CREW = 'The crew of a knocked-out vehicle, making for the rear. Walk them to one of your knocked-out vehicles that didn’t burn out and they man it again.';
 
@@ -65,6 +65,7 @@ export default function armies85(T) {
   no('recovery', { name: 'Leopard 1 ARV', weapon: 'crane, winch, dozer blade', text: 'The Leopard’s recovery vehicle: it hauls knocked-out tanks out of the snow and gets them running again.' },
     { model: T.recovery.models.bw });
   no('ambulance', { name: 'M113 Ambulance', weapon: 'Unarmed · red cross', text: 'Wounded men near it are patched up and kept warm: in the Arctic winter that saves as many as the dressings.' });
+  no('airAssault', { name: 'Heliborne Infantry Section', weapon: 'AG3, MG3 · by UH-1B (P)', text: 'Brigade Nord’s infantry flown up the valley by the Air Force’s Hueys: onto the ridge before the enemy column reaches it, or behind it to close the road.' });
   no('commandPost', { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion’s headquarters in a tall M113: nearby squads hold longer and react faster.' });
 
   // ---------------------------------------------------------------- US Marine Corps
@@ -91,6 +92,7 @@ export default function armies85(T) {
     { model: buildUsM198, stats: { towed: { deploy: 20 }, traverse: 0.4, range: 330, armor: 0.1, hp: 420 } });
   mc('recovery', { name: 'M88A1 Recovery Vehicle', weapon: '.50 cal M2, A-frame boom, winch', text: 'Brings the M60s back from wherever they were knocked out.' });
   mc('bridgeLayer', { name: 'M60 AVLB', weapon: 'Unarmed · 18 m scissors bridge', text: 'An M60 hull carrying a folding bridge: it lays it across the gap and backs away.' });
+  mc('airAssault', { name: 'Heliborne Rifle Squad', weapon: 'M16A2, M203 · by CH-46E (P)', text: 'Vertical envelopment: a Sea Knight puts a Marine squad down wherever you point (P) — on the objective, behind the enemy, on the pass. Lose the helicopter before it lands and you lose them too.' });
   mc('commandPost', { name: 'AAVC7A1 command vehicle', weapon: 'radios', text: 'The amphibious tractor fitted out as a command post: the battalion’s staff and its radios. Nearby squads hold longer and react faster.' },
     { model: buildUsAAV7 });
 
@@ -120,6 +122,7 @@ export default function armies85(T) {
   rok('towedAA', { name: 'M167 Vulcan', weapon: '20 mm M61 Vulcan', text: 'The towed Vulcan, dug in on the hills behind the line.' });
   rok('recovery', { name: 'M88A1 Recovery Vehicle', weapon: '.50 cal M2, A-frame boom, winch', text: 'Brings damaged tanks back into the fight.' });
   rok('ambulance', { name: 'M113 Ambulance', weapon: 'Unarmed · red cross', text: 'Wounded men near it are patched up.' });
+  rok('airAssault', { name: 'Airmobile Rifle Squad', weapon: 'M16A1, M60 · by UH-1H (P)', text: 'ROK infantry landed by Huey on the hill the North’s infiltrators are making for, or behind the column on the valley road.' });
   rok('commandPost', { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion’s command post: nearby squads hold longer and react faster.' });
 
   // ---------------------------------------------------------------- Korean People's Army
@@ -152,5 +155,6 @@ export default function armies85(T) {
   kpa('aa', { name: 'ZSU-23-4 Shilka', weapon: '4 × 23 mm, radar', text: 'Four radar-directed cannons over the columns: every helicopter that comes looking takes a gamble.' });
   kpa('towedAA', { name: 'ZU-23-2', weapon: '2 × 23 mm 2A14', text: 'The North is the most AA-gunned country in the world: twin 23 mm guns on every hill, cheap and everywhere.' },
     { cost: 0.8 });
+  kpa('airAssault', { name: 'Light Infantry Squad', weapon: 'Type 58, RPG-7 · by Mi-8 (P)', text: 'The KPA’s light infantry, the special forces trained to fight behind the line: a Hip drops them on a bridge, a pass or a gun line in the South’s rear.' });
   kpa('commandPost', { name: 'BTR-60PU', weapon: 'unarmed', text: 'The regiment’s command post on wheels: nearby squads hold longer and react faster.' });
 }

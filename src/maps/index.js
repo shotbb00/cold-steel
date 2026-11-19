@@ -152,6 +152,7 @@ export const MAPS = {
 function widenSea(m, k = 2) {
   if (m.widened || m.theatre !== 'sea') return;
   m.widened = true;
+  m.widenedHere = true; // (core/GameEngine.js seaward: its homes may have moved ashore)
   m.size *= k;
   m.segments = Math.round((m.segments ?? 400) * 1.6);
   m.bounds = { x: m.bounds.x * k, z: m.bounds.z * k };
@@ -165,7 +166,7 @@ function widenSea(m, k = 2) {
     shift[f] = { x: b.x * (k - 1), z: b.z * (k - 1) };
     m.bases[f] = { ...b, x: b.x * k, z: b.z * k };
   }
-  const move = (p, f) => (shift[f] ? { ...p, x: p.x + shift[f].x, z: p.z + shift[f].z } : p);
+  const move = (p, f) => (shift[f] && !p.anchored ? { ...p, x: p.x + shift[f].x, z: p.z + shift[f].z } : p); // (a line at anchor stays where the map lays it: Aboukir's off the shoals)
   for (const f of ['nato', 'pact']) {
     if (m.spawns?.[f]) m.spawns[f] = m.spawns[f].map((s) => move(s, f));
     if (m.cameraStart?.[f]) m.cameraStart[f] = move(m.cameraStart[f], f);
@@ -211,6 +212,10 @@ export const REGIONS = [
   { id: 'caribbean', name: 'Caribbean' }, { id: 'pacific', name: 'Asia & Pacific' }, { id: 'korea', name: 'Korea' },
 ];
 export const regionOf = (m) => m.region ?? 'europe';
+/** Why `map` in year `ep` has no airfields (the battle rules show the option off, with this as the hint), or null when it has them. */
+export const runwayNote = (map, ep) => (ep === '1806' ? 'No aircraft in 1806.'
+  : map?.theatre === 'sea' && !map.airfields?.length ? 'At sea the squadrons fly from the carriers.'
+    : Array.isArray(map?.airfields) && !map.airfields.length ? 'No room for a runway on this map: the aircraft come in from the map edge.' : null);
 let regionNow = 'europe';
 export const region = () => regionNow;
 export function setRegion(id) { regionNow = REGIONS.some((r) => r.id === id) ? id : 'europe'; }

@@ -8,7 +8,7 @@ import { EPOCHS, epoch, epochInfo, year } from '../data/epoch.js';
 import { GAME } from '../data/game.js';
 import { MODES, DEFAULT_MODE } from '../modes/index.js';
 import { setClimate } from '../render/paint.js';
-import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout } from '../maps/index.js';
+import { MAPS, mapsFor, mapIn, THEATRES, theatre, hasTheatre, regionsFor, regionIn, armiesOn, mapAbout, runwayNote } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { FACTIONS, ARMIES, armiesFrom, forArmy, DEFAULT_ARMY, armyHas, armyIn } from '../data/factions.js';
 import { DOCTRINE, unitCost } from '../data/doctrine.js';
@@ -145,10 +145,12 @@ export function sideName(f) {
   return n && maps.every((m) => m.sides?.[f] === n) ? n : FACTIONS[f].name;
 }
 
-/** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. */
-export function armiesPicker(choice, onChange = () => {}) {
+/** Which army each side fields (data/factions.js ARMIES): a row of two per side. Sets choice.armies. `region`: the armies of that region, not the menu's (the campaign's own ground). */
+export function armiesPicker(choice, onChange = () => {}, region = null) {
   choice.armies = armiesFrom(choice.armies);
-  const only = theatreArmies();
+  const only = region ? {} : theatreArmies();
+  const reg = region ?? regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land');
+  for (const f of ['nato', 'pact']) if (region && !armyIn(ARMIES[choice.armies[f]], reg)) choice.armies[f] = Object.values(ARMIES).find((a) => a.faction === f && armyIn(a, reg))?.id ?? choice.armies[f];
   for (const f of ['nato', 'pact']) if (only[f] && !only[f].includes(choice.armies[f])) choice.armies[f] = only[f][0]; // (not one this theatre's maps field: the first that is)
   const box = el('div', 'conditions armies');
   for (const f of ['nato', 'pact']) {
@@ -162,7 +164,7 @@ export function armiesPicker(choice, onChange = () => {}) {
       li.append(d.text);
       return li;
     }));
-    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : armyIn(a, regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land'))))) { // (Japan and the Marines: Asia & Pacific only; an army's `regions`)
+    for (const a of Object.values(ARMIES).filter((a) => a.faction === f && (only[f] ? only[f].includes(a.id) : armyIn(a, reg)))) { // (Japan and the Marines: Asia & Pacific only; an army's `regions`)
       const b = el('button', choice.armies[f] === a.id ? 'on' : '', a.name);
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -211,7 +213,7 @@ const RULES_KEY = 'coldsteel.rules';
 export function loadRules() {
   try { return rulesFrom(JSON.parse(localStorage.getItem(RULES_KEY) ?? 'null')); } catch { return rulesFrom(null); }
 }
-export function rulesPicker(rules, economy, onChange = () => {}, budget = false) {
+export function rulesPicker(rules, economy, onChange = () => {}, budget = false, map = null) {
   const box = el('div', 'conditions rules');
   const rows = [['difficulty', 'AI difficulty', 'How well the enemy shoots, how fast it earns and how soon it attacks'], ['air', 'Air support', 'Helicopters, jets, air assault, fighters and recon flights for both sides'], ['airfields', 'Airfields', 'Each side’s squadrons are based on an airfield near its base: they take off and land there, and a bombed runway is shut until sappers repair it. Off: they fly in from the map edge'], ['airGroups', 'Air reserve', 'Squadrons of each kind on every carrier and airfield: the ship’s own, or up to ten'], ['changingWeather', 'Weather', 'Every few minutes the weather moves on — rain, fog, clearing skies — with a radio warning first'], ['timePasses', 'Time of day', 'The day goes on: a dusk battle runs into the night, a night one into the dawn']];
   if (economy) rows.push(
@@ -228,10 +230,12 @@ export function rulesPicker(rules, economy, onChange = () => {}, budget = false)
     l.title = hint;
     row.append(l);
     const seg = el('div', 'seg');
+    const none = key === 'airfields' ? runwayNote(map, epoch()) : null; // (a map with no runway: off, and why — maps/index.js)
     for (const [v, text] of RULE_OPTIONS[key]) {
-      const b = el('button', v === rules[key] ? 'on' : '', text);
+      const b = el('button', (none ? v === false : v === rules[key]) ? 'on' : '', text);
       b.type = 'button';
-      b.title = hint;
+      b.title = none ?? hint;
+      if (none) { b.disabled = true; seg.append(b); continue; }
       b.addEventListener('click', () => {
         for (const o of seg.children) o.classList.toggle('on', o === b);
         rules[key] = v;
@@ -241,6 +245,7 @@ export function rulesPicker(rules, economy, onChange = () => {}, budget = false)
       seg.append(b);
     }
     row.append(seg);
+    if (none) { row.classList.add('off'); row.append(el('small', 'cond-note', none)); }
     box.append(row);
   }
   return box;
@@ -271,6 +276,8 @@ const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fig
 /** The sea's two navies (one army per side there): 1945 the US Navy and the Imperial Navy, 1985 the US Navy and the Soviet Navy. */
 const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1918: { nato: 'Royal Navy', pact: 'Kaiserliche Marine' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
+/** Side `f`'s navy on map `id`: the army the map names, if it has a navy of its own (Copenhagen's Royal Danish Navy), else the war's. */
+const navyOn = (id, f) => ARMIES[armiesOn(MAPS[id])?.[f]?.[0]]?.navy ?? navyName()[f];
 /** The wars still to come: in the year picker, greyed out (data/epoch.js has the playable ones). */
 const COMING_EPOCHS = [];
 const airLabel = (kind) => (epoch() === '1918' ? { jet: 'Ground attack', cap: 'Fighters', recon: 'Spotter', navCap: 'Fighter cover', torpBomb: 'Torpedo seaplanes', navScout: 'Air scouting', asw: 'Sub hunt' } : epoch() === '1945' ? AIR_LABEL_1945 : AIR_LABEL)[kind] ?? AIR_LABEL[kind] ?? KINDS[kind]?.label; // (1985 at sea: the powers' own labels — Missile strike, Fighter cover…)
@@ -289,7 +296,7 @@ function aircraftRows(kind, faction, army) {
   if (p.swath) rows.push(['Cameras', `everything within ${p.swath} m of the run, on the map for ${p.hold} s`]);
   if (p.aam || p.swath) return rows; // (no gun or rockets fired)
   if (a.gun) rows.push(['Gun', `${a.gun.rate} rounds/s`]);
-  if (a.rockets) rows.push([kind === 'jet' && a.rockets.count <= 4 ? 'Missiles' : 'Rockets', `${a.rockets.count}`]);
+  if (a.rockets) rows.push([a.rockets.label ?? (kind === 'jet' && a.rockets.count <= 4 ? 'Missiles' : 'Rockets'), `${a.rockets.count}`]); // (a store may say what it is: bombs)
   if (a.squad) rows.push(['Carries', '8-man air assault squad, landed on the spot']);
   return rows;
 }
@@ -551,6 +558,8 @@ export class MainMenu {
         for (const o of chips.children) { o.classList.toggle('on', o === b); o.setAttribute('aria-checked', String(o === b)); }
         about.textContent = mapAbout(m);
         this.sheet?.show(m, c.side);
+        this.nameNavies?.();
+        this.drawRules(); // (its airfields: off on a map with no runway)
       });
       chips.append(b);
     }
@@ -568,7 +577,9 @@ export class MainMenu {
     const atSea = theatre() === 'sea' && hasTheatre(epoch(), 'sea'); // (the navies, not the armies)
     const sideText = {
       1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
-      sea: epoch() === '1918'
+      sea: epoch() === '1806'
+        ? { nato: 'Fight under sail: hold the line or the anchorage, fire into their hulls as they come down on you, and keep your flag flying.', pact: 'The Royal Navy: break their line, double-shot the guns and fight them yardarm to yardarm.' }
+        : epoch() === '1918'
         ? { nato: 'The Royal Navy: the Grand Fleet\'s heavy guns and the Harwich Force\'s destroyers — bring their fleet to battle and keep the U-boats down.', pact: 'The Kaiserliche Marine: pick off their squadrons one by one, torpedoes by night, the U-boats and the mines where they must pass.' }
         : epoch() === '1985'
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
@@ -583,7 +594,7 @@ export class MainMenu {
       pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
     };
     for (const f of ['nato', 'pact']) {
-      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyName()[f] : sideName(f)}</b><span>${sideText[f]}</span>`);
+      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyOn(c.map, f) : sideName(f)}</b><span>${sideText[f]}</span>`);
       b.type = 'button';
       b.setAttribute('aria-pressed', String(c.side === f));
       b.addEventListener('click', () => {
@@ -594,6 +605,7 @@ export class MainMenu {
       sides.append(b);
     }
     if (atSea) c.armies = armiesFrom(); // (at sea: one navy a side, no army to pick)
+    this.nameNavies = () => { if (atSea) for (const [i, f] of ['nato', 'pact'].entries()) sides.children[i].firstChild.textContent = navyOn(c.map, f); }; // (Copenhagen: the Danes)
     q('Which side', sides, ...(atSea ? [] : [armiesPicker(c)]));
 
     // conditions and rules: one sentence, the controls folded away until asked for
@@ -667,7 +679,7 @@ export class MainMenu {
   /** The rules rows for the chosen mode (economy rows only where command points matter). */
   drawRules() {
     if (!this.rulesBox) return;
-    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.drawSummary(), !!MODES[this.choice.mode]?.budget));
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.drawSummary(), !!MODES[this.choice.mode]?.budget, MAPS[this.choice.map]));
   }
 
   card(title, text, on, pick, group, extra = '') {

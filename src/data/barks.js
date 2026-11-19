@@ -130,6 +130,27 @@ LINES.gb = {
   officer: ['The captain\'s down!', 'The colonel\'s hit!', 'Who commands?'],
   landing: ['Over the side, lads!', 'Keep your powder dry!', 'Up the beach!', 'Form on the sand!', 'Fix bayonets!', 'At them!'],
 };
+// the Royal Danish Navy at Copenhagen, 1801 (army `dk`), in Danish
+LINES.dk = {
+  straddle: ['Godt sigtet!', 'Fyr!', 'En bredside til!', 'Skyd i rigningen!'],
+  shipHit: ['Vi er ramt!', 'Et skud i batteriet!', 'Ild om bord!', 'Riggen er skudt itu!'],
+  shipBad: ['Til pumperne!', 'Vi tager vand ind!', 'Masten falder!', 'Hun synker!'],
+  shipContact: ['Sejl i sigte!', 'Engelske skibe!', 'De kommer op ad Kongedybet!', 'Klar skib til slag!'],
+};
+// the Russian army of 1806–07 (Eylau, Friedland), transliterated: the volley's 'Pli!', Suvorov's bayonet and 'Ura!'
+LINES.ru1806 = {
+  contact: ['Nepriyatel\'!', 'Frantsuzy!', 'Vot oni!', 'Nepriyatel\' vperedi!'],
+  cover: ['Somknis\'!', 'Derzhis\', rebyata!', 'Stoy tvyordo!'],
+  reload: ['Zaryazhay!', 'Skusi patron!', 'Shompol!', 'Gotovs\'! Pli!'],
+  hit: ['Ranen!', 'Okh!', 'Pustyaki!'],
+  wounded: ['Ya ranen!', 'Pomogite, bratsy!', 'Noga moya!'],
+  down: ['Ubit!', 'Upal, bednyaga!', 'Somknut\' ryady!'],
+  pinned: ['Ogon\' slishkom silen!', 'Ne proyti!'],
+  retreat: ['Otkhodi!', 'Nazad!', 'Otstupay!'],
+  flank: ['V shtyki!', 'Obkhodi sleva!', 'Ura-a-a!'],
+  rally: ['Za mnoy!', 'Ura!', 'K znameni!', 'Pulya — dura, shtyk — molodets!'],
+  officer: ['Kapitana ubili!', 'Ofitser ranen!', 'Kto komanduyet?!'],
+};
 LINES.fr.boats = ['Les chaloupes!', 'Feu sur les barques!', 'Ils débarquent!', 'Aux armes — les Anglais!', 'Mitraille sur la plage!']; // (Aboukir: the boats coming in)
 
 // the British infantry of 1918: the Tommies' own words (the 1918 Germans shout the German lines, the French the French)
@@ -214,11 +235,12 @@ LINES.ru27 = {
   drone: ['Dron! Dron nad nami!', 'FPV-shka letit!', 'Vozdukh! Vozdukh!', 'Ptichka! V ukrytiye!', 'Sbey yego!'],
 };
 const LANG27 = { us: 'us27', pl: 'pl', ru: 'ru27', by: 'ru27' };
-const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', jp: 'jpa', usmc: 'nato', brit: 'nato', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
+const LANG_WAR = { 2027: LANG27, 1806: { ru: 'ru1806' } }; // (an army id that speaks differently in another war: 1806's Russians, 2027's)
+const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de', ijn: 'ja', jp: 'jpa', usmc: 'nato', brit: 'nato', fr: 'fr', frn: 'fr', by: 'de1806', pr: 'de1806', sx: 'de1806', rn: 'rn', gb: 'gb', uk: 'uk18', de: 'de', st: 'de', rn18: 'rn18', km: 'km', raid18: 'raid18', dk: 'dk' }; // (1918: the British their own; the German Army and the Sturmtruppen German)
 
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
-  const lang = (epoch() === '2027' ? LANG27[army] : null) ?? LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'jpa' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const lang = LANG_WAR[epoch()]?.[army] ?? LANG[army] ?? faction;
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'jpa' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' || lang === 'dk' || lang === 'ru1806' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

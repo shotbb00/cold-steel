@@ -81,7 +81,9 @@ export default {
     },
   },
 
-  bases: { nato: { x: -200, z: 1450, entries: [-500, 0, 500] }, pact: { x: 0, z: -1950, entries: [-700, 0, 700] } },
+  // (the French home at half: maps/index.js widenSea doubles it to (-200, 850) — deep water just behind the anchored line;
+  // the shoals start at z 1000, where it used to be, and doubled from there it was ashore)
+  bases: { nato: { x: -100, z: 425, entries: [-500, 0, 500] }, pact: { x: 0, z: -1950, entries: [-700, 0, 700] } },
   maxStacks: 10,
   cameraStart: { nato: { x: -200, z: 900 }, pact: { x: 0, z: -1600 } },
   points,

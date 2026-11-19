@@ -152,7 +152,7 @@ export function buildBwAlphaJet(mats) {
 // ---------------------------------------------------------------- UH-1D
 
 let HUEY = null;
-export function buildBwUH1D(mats) {
+export function buildBwUH1D(mats, crosses = true) {
   HUEY ??= {
     body: merge([
       // the cabin: the rounded nose, the boxy body, the boom rising to the fin
@@ -188,13 +188,14 @@ export function buildBwUH1D(mats) {
       P.box(0.3, 0.06, 0.06, { x: 1.03, y: 1.08, z: 0.9, color: STEEL }),                                  // the pintle's arm out of the door
       P.cyl(0.025, 0.025, 0.6, { x: 1.15, y: 1.35, z: 0.9, color: STEEL }, 5),
       P.box(0.08, 0.12, 1.1, { x: 1.15, y: 1.7, z: 1.1, color: STEEL }),
-      ...pair((s) => balken(s * 0.3, 2.04, -4.0, 0.6)).flat(),
       P.box(0.5, 0.18, 0.02, { y: 1.25, z: 3.2, rx: 0.3, color: WHITE }),                                  // the nose number
     ]),
     rotor: merge([...blades(2, 7.3, 0.53, BLADE, 0.4), P.box(1.6, 0.04, 0.06, { y: 0.1, ry: Math.PI / 2, color: STEEL }), P.cyl(0.25, 0.25, 0.25, { color: STEEL }, 10)]),
     tailRotor: merge([P.box(0.04, 2.6, 0.2, { color: BLADE, surf: 'paint' }), P.cyl(0.08, 0.08, 0.1, { rz: Math.PI / 2, color: STEEL }, 8)]),
+    crosses: merge(pair((s) => balken(s * 0.3, 2.04, -4.0, 0.6)).flat()),
   };
   const r = heli(HUEY, mats, { rotorAt: [0, 3.45, 0.2], tailAt: [-0.3, 3.2, -8.8] });
+  if (crosses) meshAdder(r.root)(HUEY.crosses, mats.body);
   return {
     ...r, rotorRadius: 7.3, blades: 2,
     gun: point(r.root, 1.15, 1.7, 1.65),
@@ -202,6 +203,9 @@ export function buildBwUH1D(mats) {
     doors: [new THREE.Vector3(-1.6, 0, 0.4), new THREE.Vector3(1.6, 0, 0.4)],
   };
 }
+
+/** Another army's Huey (data/air.ts: Norway's UH-1B, the ROK's UH-1H): the same airframe without the Balkenkreuz. */
+export const buildUH1 = (mats) => buildBwUH1D(mats, false);
 
 // ---------------------------------------------------------------- Su-22M4
 

@@ -3,7 +3,8 @@
   py -I tools/airfield_check.py http://localhost:5173 [mapId,mapId|all]
 
 Per airfield: its side, where, how many colliders (trees excluded: the runway clears them) on the strip and
-by the tower, the ground's rise along the strip, water under it. 0 / 0 is what every map should show.
+by the tower, the ground's rise along the strip, water under it. 0 / 0 is what every map should show — and a
+map where no strip is found must say so itself (`airfields: []`), so the battle rules can show the option off.
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -11,9 +12,12 @@ from playwright.sync_api import sync_playwright
 URL = sys.argv[1]
 ONLY = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != 'all' else None
 
-CHECK = """() => {
+CHECK = """async () => {
   const A = game.airfields;
-  if (!A) return 'no airfields';
+  if (!A?.list?.length) { // none: fine where the map says so (the battle rules show it off), else the map must declare it
+    const { runwayNote } = await import('/src/maps/index.js'), ep = new URLSearchParams(location.search).get('epoch');
+    return runwayNote(game.map, ep) || game.world.coastal ? '' : 'strip ? tower ? NONE FOUND — give the map airfields: [] (maps/index.js runwayNote)';
+  }
   const T = game.terrain, level = game.world.river?.level ?? -Infinity;
   const stand = (game.cover?.colliders ?? []).filter((c) => !c.tree && !c.airfield); // (the airfield's own tower and hangars aside)
   return (A.list ?? []).map((a) => {
@@ -43,7 +47,7 @@ with sync_playwright() as p:
             pg.goto(f'{URL}/?mode={mode}&map={id}&epoch={ep}&side=nato&time=day&weather=clear', timeout=180000)
             pg.wait_for_function("window.game && !document.getElementById('loading')", timeout=400000, polling=2000)
             r = pg.evaluate(CHECK)
-            flag = any(seg.split('strip ')[1].split(' ')[0] != '0' or seg.split('tower ')[1].split(' ')[0] != '0' or ' wet 0' not in seg for seg in r.split(' | ') if 'strip' in seg)
+            flag = 'NONE FOUND' in r or any(seg.split('strip ')[1].split(' ')[0] != '0' or seg.split('tower ')[1].split(' ')[0] != '0' or ' wet 0' not in seg for seg in r.split(' | ') if 'strip' in seg)
             bad += bool(flag)
             print(('BAD ' if flag else 'ok  ') + id, r, flush=True)
         except Exception as e:

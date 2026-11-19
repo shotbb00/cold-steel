@@ -9,7 +9,8 @@
 //   kpa   Korean People's Army: the khaki-brown cotton uniform, the canvas chest rig for three AK
 //         magazines, a Soviet-pattern steel helmet; the AK (Type 58/68), PK, RPG-7, SVD from the NVA's kit.
 //         Militia (the Worker-Peasant Red Guards): grey-brown work clothes and a soft cap.
-// Options as natoSoldier: weapon, crew, scout, radio; `militia` for the Red Guards.
+// Options as natoSoldier: weapon, crew, scout, radio, airAssault (goggles on the helmet; the KPA's light infantry
+// in the soft cap); `militia` for the Red Guards.
 import { P, merge, pair, grime, loft } from '../units/geometry.js';
 import { FACTIONS } from '../factions.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, helmet, binoculars, finish } from './soldierBody.js';
@@ -37,8 +38,9 @@ const cap = (color, dk, star) => [
   ...(star ? [P.box(0.025, 0.025, 0.01, { y: 1.815, z: 0.107, rz: 0.78, color: 0xb02a20 })] : []),
 ];
 
-function headgear(army, c, { crew, scout, militia }) {
+function headgear(army, c, { crew, scout, militia, airAssault }) {
   if (militia) return cap(MILITIA.coatDk, MILITIA.coatDk, true);
+  if (airAssault && army === 'kpa') return cap(c.coat, c.coatDk, true);
   if (crew) {
     if (army === 'no') return [ // the armoured troops' black beret with the headset over it
       loft([[0.01, 1.795, -0.005, 0.1, 0.11, 2.2], [0.03, 1.83, -0.01, 0.124, 0.13, 2.2], [0.045, 1.852, -0.01, 0.1, 0.11, 2.2], [0.05, 1.858, -0.01, 0.02, 0.02, 2]], { color: 0x141414 }, 12),
@@ -75,7 +77,7 @@ function headgear(army, c, { crew, scout, militia }) {
   ];
 }
 
-export function buildSoldier85({ army = 'no', weapon: kind = 'rifle', crew = false, scout = false, radio = false, militia = false } = {}) {
+export function buildSoldier85({ army = 'no', weapon: kind = 'rifle', crew = false, scout = false, radio = false, militia = false, airAssault = false } = {}) {
   const base = ARMY[army] ?? ARMY.no;
   // crews leave the snow kit off: Norway's in the green M75, the Marines in woodland
   const c = militia ? { ...base, ...MILITIA } : crew ? { ...base, coat: base.under, coatDk: base.coatDk === SNOW_DK ? 0x3e432b : base.coatDk, trousers: base.under } : base;
@@ -112,7 +114,8 @@ export function buildSoldier85({ army = 'no', weapon: kind = 'rifle', crew = fal
       P.cyl(0.006, 0.006, 1.3, { x: 0.1, y: 2.15, z: gear ? -0.35 : -0.23, rx: -0.12, color: BLACK }, 4),
     ] : []),
     ...head(),
-    ...headgear(army, c, { crew, scout, militia }),
+    ...headgear(army, c, { crew, scout, militia, airAssault }),
+    ...(airAssault && army !== 'kpa' ? [P.box(0.22, 0.05, 0.05, { y: 1.81, z: 0.12, color: BLACK })] : []),           // goggles on the helmet
     ...(scout ? binoculars(BLACK) : []),
   ];
   const arms = [...armsHold({ sleeve: c.coat, camo: c.camo, cuff: c.coatDk, band: FACTIONS[c.side].marking }), ...w.parts];
