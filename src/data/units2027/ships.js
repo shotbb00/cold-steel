@@ -36,7 +36,7 @@ const G130 = { range: 1600, reload: 2.2, damage: 220, splash: 3.5 };            
 
 // the missiles (systems/Missiles.js): 1985's scale — subsonic 160, Mach 2.5 about 280
 const MSL = (o) => ({ at: [0, 8, 0], missile: true, arc: 6.3, count: 2, reload: 8, pierce: 0.6, ...o });
-const NSM = { count: 4, name: 'NSMs', speed: 160, range: 4800, seeker: 1200, skim: true, stealth: 0.5, damage: 1900 }; // (Naval Strike Missile: shaped and coated to be seen late, an imaging seeker that picks the ship out of the chaff)
+const NSM = { count: 4, name: 'NSMs', speed: 160, range: 4800, seeker: 1200, skim: true, stealth: 0.7, damage: 1900 }; // (Naval Strike Missile: shaped and coated to be seen late, an imaging seeker that picks the ship out of the chaff)
 const RBS15 = { count: 2, name: 'RBS15s', speed: 165, range: 4400, seeker: 1200, skim: true, damage: 2000 };   // (RBS15 Mk3, Orkan's)
 const TOMAHAWK = { count: 2, name: 'Tomahawks', speed: 160, range: 6000, seeker: 1400, skim: true, damage: 2800 }; // (Block Va Maritime Strike: the land-attack missile with a ship seeker)
 const URAN = { count: 4, name: 'Kh-35Us', speed: 160, range: 4400, seeker: 1100, skim: true, damage: 1700 };  // (Uran, Bal: the Russian Harpoon)
@@ -45,20 +45,20 @@ const ONIKS = { count: 2, name: 'Oniks', speed: 270, range: 5000, seeker: 1500, 
 const ZIRCON = { count: 2, name: 'Zircons', speed: 520, range: 5800, seeker: 1800, alt: 50, damage: 3600, pierce: 0.75 }; // (3M22: hypersonic, very few aboard; little time to shoot at it — Missiles.js FAST)
 
 // the defences: area SAMs, point SAMs, the last-ditch gun, chaff, the jammer
-const SM6 = { range: 3000, channels: 8, load: 64, reload: 0.7, speed: 360, pk: 0.55, shots: 2 }; // (SPY-6 and Aegis Baseline 10: SM-2 and SM-6 — two shots at what the first missed)
+const SM6 = { range: 3000, channels: 6, load: 48, reload: 0.7, speed: 360, pk: 0.5, shots: 2 }; // (SPY-6 and Aegis Baseline 10: SM-2 and SM-6 — two shots at what the first missed)
 const SM2 = { range: 2600, channels: 4, load: 24, reload: 1, speed: 330, pk: 0.5 };              // (Constellation: Aegis, SPY-6(V)3, SM-2 in her 32 cells)
 const ESSM = { range: 1300, channels: 4, load: 24, reload: 1, speed: 320, pk: 0.5 };             // (Evolved Sea Sparrow, four to a cell)
 const RAM = { range: 500, channels: 2, load: 21, reload: 1, speed: 300, pk: 0.55 };               // (Rolling Airframe Missile, Mk 49: 21 rounds)
 const CAMM = { range: 1300, channels: 3, load: 24, reload: 1.2, speed: 320, pk: 0.5 };            // (Sea Ceptor: Miecznik's)
-const POLIMENT = { range: 2600, channels: 6, load: 32, reload: 1, speed: 340, pk: 0.5 };          // (Poliment-Redut: four fixed faces, 32 cells)
-const REDUT = { range: 2000, channels: 2, load: 12, reload: 1.5, speed: 320, pk: 0.45 };          // (Redut on the 20380: 12 cells, the Furke radar)
-const PANTSIR = { range: 700, channels: 2, load: 32, reload: 1.2, speed: 300, pk: 0.45 };         // (Pantsir-M: the missiles; its guns are its CIWS)
+const POLIMENT = { range: 2600, channels: 8, load: 40, reload: 1, speed: 340, pk: 0.5 };          // (Poliment-Redut: four fixed faces, 32 cells)
+const REDUT = { range: 2000, channels: 3, load: 16, reload: 1.5, speed: 320, pk: 0.45 };          // (Redut on the 20380: 12 cells, the Furke radar)
+const PANTSIR = { range: 700, channels: 3, load: 32, reload: 1.2, speed: 300, pk: 0.45 };         // (Pantsir-M: the missiles; its guns are its CIWS)
 const PHALANX = { range: 300, pk: 0.22 };   // (Block 1B)
 const AK630 = { range: 260, pk: 0.18 };     // (AK-630M)
 const DUET = { range: 280, pk: 0.22 };      // (AK-630M-2 Duet, Pantsir-M's twin 30 mm, Palash: two guns)
 const MILLENNIUM = { range: 280, pk: 0.2 }; // (35 mm Millennium: Miecznik's)
 const CHAFF = { count: 8, cooldown: 8 };
-const ECM = { nato: 0.3, pact: 0.25 }; // (SEWIP, the TK-25 sets: a little better than 1985's)
+const ECM = { nato: 0.3, pact: 0.3 }; // (balance 2026-11-19, AI soaks: Russian air defence raised toward the Burke's so the Baltic Fleet isn't swept first) // (SEWIP, the TK-25 sets: a little better than 1985's)
 
 /** One class: the shared parts and the class's own. */
 const ship = (o) => ({
@@ -71,7 +71,7 @@ const ship = (o) => ({
 
 export const frigate = ship({
   fleet: 'escort',
-  id: 'frigate', name: 'Frigate', shortName: 'Frigate', cost: 380,
+  id: 'frigate', name: 'Frigate', shortName: 'Frigate', cost: 380, armyCost: { ru: 330 }, // (balance: the Steregushchiy carries half the Constellation's missiles — Russia fields more of them)
   names: { nato: ['Constellation', 'Congress', 'Chesapeake', 'Lafayette', 'Hamilton'], pl: ['ORP Wicher', 'ORP Burza', 'ORP Huragan'], pact: ['Steregushchiy', 'Soobrazitelny', 'Boikiy', 'Stoikiy', 'Merkuriy'] },
   hull: { length: 140, beam: 18 },
   stats: { helo: 7, hp: 3600, armor: 0.05, speed: 15, accel: 0.14, turnRate: 0.1, turretRate: 0.8, radius: 7, height: 14, radar: RADAR(3200, 28), sonar: 800, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
@@ -96,7 +96,7 @@ export const frigate = ship({
 
 export const destroyer = ship({
   fleet: 'escort',
-  id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 620,
+  id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 620, armyCost: { ru: 560 }, // (the Gorshkov: a frigate against the Burke, fewer cells)
   names: { nato: ['Jack H. Lucas', 'Ted Stevens', 'Jeremiah Denton', 'Louis H. Wilson Jr.', 'Sam Nunn', 'William Charette'], pact: ['Admiral Gorshkov', 'Admiral Kasatonov', 'Admiral Golovko', 'Admiral Isakov'] },
   hull: { length: 150, beam: 19 },
   stats: { helo: 7, hp: 5000, armor: 0.06, speed: 15.5, accel: 0.12, turnRate: 0.09, turretRate: 0.6, radius: 8, height: 18, radar: RADAR(3600, 35), sonar: 900, depthCharges: DC(), asTorp: ASROC, ...AA(600, 0.2, 0.05),

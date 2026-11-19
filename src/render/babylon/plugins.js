@@ -186,13 +186,15 @@ export class PaintPlugin extends GlslPlugin {
             float fold = pFold(vPaintPos);
             surfaceAlbedo *= mix(1.0, 0.76 + 0.42 * fold, fab);
           #endif
-          if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki)
+          #ifndef PAINT_AIR
+          if (uClimate > 0.0) { // (render/paint.js CLIMATE: whitewash and smocks, sand paint and khaki — aircraft keep their squadron's paint)
             float sf = pSurf(vPaint.x);
             float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
             float wash = smoothstep(0.32, 0.58, pFbm(pp * 0.7 + vec3(3.1, 0.0, 5.7)));
             float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
             surfaceAlbedo = mix(surfaceAlbedo, uClimateColor * vTint, uClimate * paintable * k);
           }
+          #endif
           #if defined(PAINT_CLOTH) || defined(PAINT_COAT)
             normalW = pBumpNormal(vPositionW, normalW, fab > 0.5 ? pFoldH(vPaintPos, fold) : pBump(pSurf(vPaint.x), vPaintPos));
             surfaceAlbedo *= 1.0 + pSheen(normalW, viewDirectionW) * fab;
