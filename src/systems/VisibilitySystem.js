@@ -26,6 +26,7 @@ const AWARE = 12;          // metres: noticed this close in any direction, line 
 const WOODS_CUT = 0.7;     // sight lost looking through solid forest
 const WOODS_CELL = 6;      // metres per woods grid cell
 
+const DRONE_EYE = { fpv: [70, 0.9], lancet: [110, 1.1], recon: [140, 6.3] }; // [sight m, field of view rad]: an FPV goggle's narrow picture, the recon quad's camera looking down
 const CONTACT_FADE = 45; // s a lost submarine contact stays marked
 
 /**
@@ -39,6 +40,12 @@ export function airEyes(game, faction) {
     const scout = s.kind === 'navScout' || s.kind === 'recon';
     eyes.push({ pos: s.pos, faction, alive: true, moving: false, yaw: s.yaw ?? 0, turretYaw: s.yaw ?? 0, depth: 0, stack: { usesCover: false },
       stats: { sight: scout ? 1200 : 600, eyeHeight: 0, fov: 6.3, naval: true } });
+  }
+  // the drones' cameras (systems/Drones.js): an FPV's or a Lancet's narrow view ahead of it, a recon drone's all round under it
+  for (const d of game.drones?.list ?? []) {
+    if (d.faction !== faction || d.state === 'fall' || d.dark || !DRONE_EYE[d.kind]) continue;
+    const [sight, fov] = DRONE_EYE[d.kind], yaw = Math.hypot(d.vel.x, d.vel.z) > 0.5 ? Math.atan2(d.vel.x, d.vel.z) : d.yaw ?? 0;
+    eyes.push({ pos: d.pos, faction, alive: true, moving: false, yaw, turretYaw: yaw, depth: 0, stack: { usesCover: false }, stats: { sight, eyeHeight: 0, fov } }); // (not `naval`: on a coast that would cast all round over the water)
   }
   return eyes;
 }

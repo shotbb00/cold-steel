@@ -116,7 +116,7 @@ export class FogOfWar {
         this.queue.push([u, facing]);
       }
     }
-    for (const e of airEyes(g, g.playerFaction)) this.queue.push([e, 0]); // (your aircraft in the air: views of their own)
+    for (const e of airEyes(g, g.playerFaction)) this.queue.push([e, e.yaw]); // (your aircraft and drones in the air: views of their own)
     if (!this.queue.length) this.target.fill(0);
   }
 

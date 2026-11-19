@@ -191,6 +191,7 @@ export function markerSpec(game, faction, t, at) {
   const ships = (t.stacks ?? []).some((s) => s.stats.naval);
   if (t.fire === 'salvo') { spec.parts.push(...area(15, MARK.fire)); return spec; }
   if (t.fire === 'area') { spec.parts.push(...area(25, MARK.fire)); return spec; }
+  if (t.fire === 'drone') { spec.parts.push({ shapes: disc(140), color: MARK.recon, opacity: 0.07 }, { shapes: ring(140, 2.5), color: MARK.recon, opacity: 0.7 }, { shapes: disc(4), color: MARK.recon, opacity: 0.8 }); return spec; } // (a recon drone's camera: what it locates under it, systems/Drones.js DRONE.recon.radius)
   if (t.fire === 'helo') { spec.parts.push({ shapes: ring(120, 2.5), color: MARK.recon, opacity: 0.7 }, { shapes: disc(5), color: MARK.recon, opacity: 0.8 }); return spec; }
   if (t.fire === 'board') { spec.parts.push({ shapes: dashed(150, 2.5), color: MARK.troops, opacity: 0.75 }); return spec; }
   if (t.fire === 'missile') { spec.parts.push({ shapes: dashed(600, 4), color: MARK.fire, opacity: 0.7 }, { shapes: disc(8), color: MARK.fire, opacity: 0.8 }); return spec; }

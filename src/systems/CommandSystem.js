@@ -271,6 +271,10 @@ export class CommandSystem {
       if (!inside.length) return this.game.bus.emit('toast', 'Select a stack inside a building');
       this.game.orders.issue({ t: 'leave', s: ids(inside) });
       this.game.bus.emit('order', { kind: 'move' });
+    } else if (cmd === 'drone:recon') { // 2027: send the team's recon drone (systems/Drones.js sendRecon)
+      const teams = [...this.selected].filter((s) => s.alive && s.stats.drone?.kind === 'recon');
+      if (!teams.length) return this.game.bus.emit('toast', 'Select a scout team or observers');
+      this.startTargeting({ kind: 'smoke', stacks: teams, fire: 'drone' });
     } else if (cmd === 'flare') {
       if (!this.game.conditions?.night) return this.game.bus.emit('toast', 'Illumination rounds are for night battles');
       const mortars = [...this.selected].filter((s) => s.alive && s.flareRounds > 0);
@@ -498,6 +502,7 @@ export class CommandSystem {
         : t.gas ? `Gas (${GAS.cost} CP): ${click} where the shells land — the cloud drifts with the wind — ${cancel}` : t.barrage ? (bar?.id === 'creep' ? `Creeping barrage (${bar.cost} CP): ${click} where it opens — it walks on toward the enemy — ${cancel}` : bar?.id === 'tot' ? `Time on Target (${bar.cost} CP): ${click} the target — every gun in range fires, all the rounds land at once — ${cancel}` : `Barrage (${bar?.cost} CP): ${click} the middle of the sector — ${cancel}`)
         : t.walze ? `Feuerwalze: ${click} where the barrage starts — it walks on toward the enemy — ${cancel}`
         : t.fire === 'helo' ? `Helicopter: ${click} where it should hover and listen — ${cancel}`
+        : t.fire === 'drone' ? `Recon drone: ${click} where it should circle and watch (within ${t.stacks[0]?.stats.drone?.range ?? 380} m of the team) — ${cancel}`
         : t.fire === 'missile' ? `Missile strike: ${click} where to send them — the seekers take what they find there — ${cancel}`
         : t.fire === 'board' ? `Board: ${click} the enemy ship to run alongside and board — ${cancel}`
         : t.fire === 'salvo' ? `Salvo: ${click} the spot — four rounds from every tube — ${cancel}`
@@ -649,6 +654,9 @@ export class CommandSystem {
     } else if (t.kind === 'smoke' && t.fire === 'helo') {
       this.game.orders.issue({ t: 'helo', s: ids(t.stacks), x: p.x, z: p.z });
       this.addMarker(p, 'hold');
+    } else if (t.kind === 'smoke' && t.fire === 'drone') {
+      this.game.orders.issue({ t: 'drone', s: ids(t.stacks), x: p.x, z: p.z });
+      this.addMarker(p, 'hold');
     } else if (t.kind === 'smoke' && t.fire === 'board') {
       const foe = this.game.world.stacks.filter((s) => s.alive && s.faction !== this.faction && s.stats.sail)
         .map((s) => [s, Math.hypot(s.centroid.x - p.x, s.centroid.z - p.z)]).filter(([, d]) => d < 150).sort((a, b) => a[1] - b[1])[0]?.[0];
@@ -718,6 +726,21 @@ export class CommandSystem {
     else if (t.fire === 'area') follow = timed(6, 66);
     else if (t.fire === 'salvo') follow = timed(6, 25);
     this.pending.add(t, p, icon, follow);
+  }
+
+  /** Your recon drones in the air: the circle their camera watches stays on the map (and a tag with the battery's seconds left). */
+  watchDrones() {
+    const g = this.game;
+    for (const d of g.drones?.list ?? []) {
+      if (d.kind !== 'recon' || d.faction !== this.faction || d.marked) continue;
+      d.marked = true;
+      this.pending ??= new PendingMarkers(g, this.surface);
+      const at = () => d.spot ?? d.pos; // (a guest: where the host's drone is)
+      this.pending.add({ kind: 'smoke', fire: 'drone' }, { x: at().x, z: at().z }, supportIcon('air:recon', epoch()), () => {
+        if (!g.drones.list.includes(d) || d.state === 'fall' || (d.P?.station && d.age > d.P.station)) return null;
+        return { impactAt: d.P?.station ? g.time + d.P.station - d.age : g.time, x: at().x, z: at().z };
+      });
+    }
   }
 
   updateTargeting() {
@@ -1109,6 +1132,7 @@ export class CommandSystem {
 
   update(dt) {
     this.updateTargeting();
+    this.watchDrones();
     this.pending?.update();
     this.updatePreview();
     this.drawRoutes();
