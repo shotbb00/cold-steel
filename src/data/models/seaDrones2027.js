@@ -26,13 +26,13 @@ const tender = (c) => ship(() => {
   const deck = H.top(-5);
   const fixed = merge([
     ...H.parts,
-    ...house(c, 0, fb, 14, 10, 3, 12), ...house(c, 0, fb + 3, 15, 9, 2.6, 9, 1.2),  // the bridge block
-    ...lattice(c, 0, fb + 5.6, 15, 4, 2.4, [radome(0.8)]),
+    ...house(c, 0, fb, 9, 9.4, 3, 10), ...house(c, 0, fb + 3, 10, 8.6, 2.6, 8, 1.2),  // the bridge block (aft of the bow's taper)
+    ...lattice(c, 0, fb + 5.6, 10, 4, 2.4, [radome(0.8)]),
     ...[-12, -6, 0].flatMap((z) => [-2.6, 2.6].flatMap((x) => usvParts(x, deck, z))),                                    // six USVs on the after deck
-    P.cyl(0.5, 0.6, 3, { x: 4.6, y: deck + 1.5, z: 5, color: c.upper }, 10), strut([4.6, deck + 3, 5], [1.5, deck + 6.5, -6], 0.22, c.upper), // the crane
+    P.cyl(0.5, 0.6, 3, { x: 4.6, y: deck + 1.5, z: 2.4, color: c.upper }, 10), strut([4.6, deck + 3, 2.4], [1.5, deck + 6.5, -7], 0.22, c.upper), // the crane
     strut([-4.5, deck, -24], [-3, deck + 6, -25], 0.3, c.upper), strut([4.5, deck, -24], [3, deck + 6, -25], 0.3, c.upper), box(6.4, 0.5, 0.5, { y: deck + 6.1, z: -25, color: c.upper }), // the A-frame
   ]);
-  return { fixed, mounts: [{ geo: merge([P.cyl(0.4, 0.45, 0.5, { y: 0.25, color: c.gun }, 10), box(0.7, 0.6, 0.9, { y: 0.8, color: c.gun }), P.cyl(0.05, 0.05, 1.6, { y: 0.85, z: 1.2, rx: Math.PI / 2, color: BLACK }, 6)]), at: [0, fb + 5.6, 11], arc: 5 }] };
+  return { fixed, mounts: [{ geo: merge([P.cyl(0.4, 0.45, 0.5, { y: 0.25, color: c.gun }, 10), box(0.7, 0.6, 0.9, { y: 0.8, color: c.gun }), P.cyl(0.05, 0.05, 1.6, { y: 0.85, z: 1.2, rx: Math.PI / 2, color: BLACK }, 6)]), at: [0, fb + 5.6, 6.5], arc: 5 }] };
 });
 export const buildUsvTender = tender(NAVY);
 export const buildUsvTenderRu = tender(RUS);

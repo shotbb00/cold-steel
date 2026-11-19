@@ -75,11 +75,14 @@ export const buildF35C = (mats) => mount('f35c', mats, () => lightning(0x6d747a,
 /** A twin-jet airliner `len` long, `span` across, radius `r`: low swept wing, engines under it; `extra(y)` its own fittings. */
 function airliner(color, { len, span, r, extra = () => [] }) {
   const c = { color, ...C }, y = 3.4, wz = len * 0.04, half = span / 2, sweep = half * 0.47;
+  const nose = [[0.5, -0.3, 0.2, 0.3], [0.47, -0.1, r * 0.75, r * 0.8], [0.4, 0, r, r]]; // the nose: [z/len, y, half-width, half-height]
+  const at = (t) => { const i = nose.findIndex((n) => n[0] <= t), [a, b] = [nose[i - 1], nose[i]], k = (a[0] - t) / (a[0] - b[0]); return a.map((v, j) => v + (b[j] - v) * k); };
+  const glass = [0.482, 0.472, 0.458, 0.446].map((t) => { const [, gy, w, h] = at(t); return [len * t, y + gy + 0.28, w * 0.9, h * 0.94]; });
   const ex = half * 0.33, f = (ex - r * 0.6) / (half - r * 0.6), ez = wz - sweep * f, ey = y - r - 0.9, wy = y - r * 0.6 + r * 0.25 * f; // the engines: under the wing a third of the way out
   return {
     body: M([
       body([[len * 0.5, y - 0.3, 0.2, 0.3], [len * 0.47, y - 0.1, r * 0.75, r * 0.8], [len * 0.4, y, r, r], [-len * 0.25, y, r, r], [-len * 0.42, y + 0.5, r * 0.55, r * 0.6], [-len * 0.5, y + 0.9, 0.2, 0.25]], c),
-      body([[len * 0.48, y + 0.5, 0.25, 0.15], [len * 0.455, y + 0.75, r * 0.6, 0.3], [len * 0.43, y + 0.75, r * 0.6, 0.28]], { color: GLASS }),
+      body(glass, { color: GLASS }), // the cockpit windows: a cap on the nose's top, set up so only its top shows
       // the low wing, its raked tips; the engines on pylons under it
       ...pair((sx) => surface([[sx * r * 0.6, y - r * 0.6, wz, 3.6, 0.35], [sx * half, y - r * 0.35, wz - sweep, 0.9, 0.08]], c)),
       ...pair((sx) => body([[ez + 4.6, ey, 0.8, 0.8], [ez + 4.3, ey, 0.95, 0.95], [ez + 0.6, ey, 0.85, 0.85], [ez, ey, 0.5, 0.5]], { x: sx * ex, ...c })),
