@@ -47,6 +47,10 @@ import augustowCanal from './augustowCanal.ts';
 import eastShield from './eastShield.ts';
 import biebrzaMarshes from './biebrzaMarshes.ts';
 import orzyszBase from './orzyszBase.ts';
+import gotlandGap from './gotlandGap.ts';
+import gulfOfFinland from './gulfOfFinland.ts';
+import gdanskBay from './gdanskBay.ts';
+import bornholmStrait from './bornholmStrait.ts';
 
 import eylau from './eylau.ts';
 import friedland from './friedland.ts';
@@ -114,6 +118,10 @@ export const MAPS = {
   [eastShield.id]: eastShield,
   [biebrzaMarshes.id]: biebrzaMarshes,
   [orzyszBase.id]: orzyszBase,
+  [gotlandGap.id]: gotlandGap,
+  [gulfOfFinland.id]: gulfOfFinland,
+  [gdanskBay.id]: gdanskBay,
+  [bornholmStrait.id]: bornholmStrait,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,

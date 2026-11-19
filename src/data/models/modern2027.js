@@ -431,3 +431,6 @@ export const buildPrzebisnieg = vehicle(() => {
     marks: merge([...pair((s) => P.box(0.02, 0.3, 0.3, { x: s * (L.hw - 0.03), y: L.deck + 0.7, z: L.cabFront - 0.6 }))]),
   };
 });
+
+// (the coastal missile launchers at sea: models/ships2027.js)
+export { launcherTruck, pod };

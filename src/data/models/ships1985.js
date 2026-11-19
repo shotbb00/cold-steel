@@ -648,3 +648,6 @@ export const buildLosAngeles = sub(() => modernSub(SUB, { len: 110, beam: 10, sa
 export const buildVictor = sub(() => modernSub(SUB, { len: 106, beam: 10.6, sail: [14, 4.6, 6], sailPlanes: false, pod: true }));
 export const buildLosAngelesVLS = sub(() => modernSub(SUB, { len: 110, beam: 10, sail: [12, 6, 26], vls: 12 }));
 export const buildOscar = sub(() => modernSub(SUB, { len: 154, beam: 13, sail: [24, 6, 16], sailPlanes: false, lids: 12, wide: 1.3 }));
+
+/** The 1985 kit for the later fleets (models/ships2027.js). */
+export const KIT85 = { hull, put, mk45, gun76, phalanx, ak630, ak130, canisters, boxLauncher, lids, lattice, dish, slab, radome, house, helideck, mack, modernSub, supercarrier, USN, VMF, SUB, DOME, DARK };

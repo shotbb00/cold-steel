@@ -207,6 +207,12 @@ export const KINDS = {
     rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0,
     orbit: 500, station: 90, picture: 3000,
   },
+  seaDrone: { // 2027: a long-endurance drone (MQ-9B, Orion) — as the radar picture, slower, lower, longer on station (Sortie.patrol)
+    sea: true, deck: 'optional', label: 'Sea drone', key: 'none', cost: 70, cooldown: 90, delay: 6,
+    approach: 2200, cruiseAlt: 260, attackAlt: 260, cruiseSpeed: 70, attackSpeed: 55,
+    rocketsFrom: 0, gunFrom: 0, gunTo: 0, runLength: 0, turn: 0,
+    orbit: 400, station: 150, picture: 2200,
+  },
   helo: { // a ship's own helicopter (AirStrike.launchHelo — not a support power): out from her, hovering at the spot, back to her
     aircraft: HELO, sea: true, deck: 'ship', label: 'Helicopter', key: 'none', cost: 0, cooldown: 0, delay: 2,
     approach: 0, cruiseAlt: 60, attackAlt: 45, cruiseSpeed: 55, attackSpeed: 25,
@@ -475,7 +481,7 @@ class Sortie {
     if (this.state === 'down') return this.updateCrash(dt);
     if (this.state === 'takeoff') return this.takeoff(dt);
     if ((this.p.sea || this.cvUnit) && !this.orphan && this.cvUnit?.alive && (this.state === 'home' || this.state === 'landing' || this.state === 'rollout')) return this.type.rotorSound ? this.padHome(dt) : this.recover(dt); // (an airfield's helicopters: straight down onto the apron)
-    if (this.kind === 'cap' || this.kind === 'navCap' || this.kind === 'seaCap' || this.kind === 'aew' || this.kind === 'helo') return this.patrol(dt);
+    if (this.kind === 'cap' || this.kind === 'navCap' || this.kind === 'seaCap' || this.kind === 'aew' || this.kind === 'seaDrone' || this.kind === 'helo') return this.patrol(dt);
     this.trackShip();
     if (this.p.bombs && this.state === 'ingress') this.lineUp(dt);
     const p = this.p;

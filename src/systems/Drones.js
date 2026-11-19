@@ -13,6 +13,12 @@
 // short of the roof; active protection (stats.aps) shoots them down like a missile; a jammer
 // (systems/Jamming.js) cuts the link — FPVs and Lancets fall out of the sky, a recon drone's
 // picture goes dark.
+//   usv    — 2027 at sea: an explosive sea drone (Magura V5 and the like), put over the side of a tender
+//            (data/units2027/ships.js droneBoat) three at a time at a ship that has been found: low and fast
+//            across the water at her, weaving, round the islands, into her side at the waterline — a heavy
+//            torpedo's hit. Only the guns can touch it, and poorly (a CIWS or a RAM close in a little better);
+//            each ship fights one at a time, so a swarm swamps her. Her jammer (defence.ecm) or one ashore
+//            cuts its link: it stops dead in the water.
 // Host-side simulation; a multiplayer guest draws what the host sends (net: `snap` / `apply`).
 import * as THREE from 'three';
 import { doctrine } from '../data/doctrine.js';
@@ -20,6 +26,7 @@ import { doctrine } from '../data/doctrine.js';
 export const DRONE = {
   recon: { speed: 16, alt: 70, radius: 140, station: 80, hold: 4, mesh: 'quad', scale: 1.6, sound: ['drone.quad', 0.85, 0.2] },
   fpv: { speed: 30, alt: 12, damage: 950, pierce: 0.92, splash: 3, life: 40, search: 70, mesh: 'quad', scale: 1.2, sound: ['drone.quad', 2.1, 0.3] }, // (a racing quad's whine: high)
+  usv: { speed: 22, alt: 0, damage: 2600, pierce: 0.7, splash: 4, life: 320, search: 2500, mesh: 'usv', scale: 1, sound: ['engine.dieselSmall', 1.8, 0.35] }, // (40 knots; ~5.5 m)
   lancet: { speed: 44, alt: 75, damage: 1500, pierce: 0.95, splash: 3.5, life: 100, search: 240, mesh: 'wing', scale: 1, sound: ['drone.lancet', 1, 0.24] },
 };
 const TICK = 0.25;
@@ -32,6 +39,8 @@ const _s = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _near = [];
+const NO_DIR = { x: 0, z: 0 };
+const USV_JAM = 700; // m: how close a ship's jammer reaches a sea drone's link
 
 function quadGeometry() {
   const parts = [new THREE.BoxGeometry(0.22, 0.09, 0.32)];
@@ -60,6 +69,18 @@ function wingGeometry() {
   }
   return merge(parts);
 }
+function usvGeometry() {
+  const hull = new THREE.BoxGeometry(1.5, 0.5, 4.2);
+  hull.translate(0, 0, -0.5);
+  const bow = new THREE.ConeGeometry(0.75, 1.4, 4);
+  bow.rotateX(Math.PI / 2);
+  bow.rotateZ(Math.PI / 4);
+  bow.scale(1, 0.45, 1);
+  bow.translate(0, 0, 2.3);
+  const hump = new THREE.BoxGeometry(0.8, 0.3, 1.2);
+  hump.translate(0, 0.4, -1.2);
+  return merge([hull, bow, hump]);
+}
 function merge(parts) {
   const geos = parts.map((g) => (g.index ? g.toNonIndexed() : g));
   for (const g of geos) { g.deleteAttribute('uv'); }
@@ -83,6 +104,7 @@ export class Drones {
     this.meshes = {
       quad: new THREE.InstancedMesh(quadGeometry(), mat, MAX),
       wing: new THREE.InstancedMesh(wingGeometry(), mat.clone(), MAX),
+      usv: new THREE.InstancedMesh(usvGeometry(), new THREE.MeshStandardMaterial({ color: 0x3c4248, roughness: 0.5, metalness: 0.2 }), MAX),
     };
     for (const m of Object.values(this.meshes)) {
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -118,6 +140,16 @@ export class Drones {
       this.restock(s, D, step);
       if (now < (s.droneAt ?? 0)) continue;
       if (s.dronesLeft <= 0) continue;
+      if (D.kind === 'usv') { // a swarm over the side at the best ship in reach
+        const t = this.pickShip(s, op.pos, D.range);
+        if (!t) continue;
+        const n = Math.min(D.salvo ?? 1, s.dronesLeft);
+        for (let i = 0; i < n; i++) this.launch(s, op, 'usv', t, null);
+        s.dronesLeft -= n;
+        s.droneAt = now + D.every;
+        g.tell(s.faction, `${s.name}: ${n} sea drone${n > 1 ? 's' : ''} away at the ${t.stack.name}`);
+        continue;
+      }
       if (D.kind === 'recon') {
         if (this.list.some((d) => d.owner === s)) continue;
         const spot = this.reconSpot(s, op, D.range);
@@ -180,11 +212,29 @@ export class Drones {
     return best;
   }
 
+  /** A sea drone's target: a surfaced enemy ship found (seen or located) in reach, the biggest first. */
+  pickShip(s, from, range) {
+    const g = this.game;
+    let best = null, bs = -Infinity;
+    for (const e of g.world.stacks) {
+      if (e.faction === s.faction || !e.alive || !e.stats.naval) continue;
+      for (const u of e.units) {
+        if (!u.alive || (u.depth ?? 0) > 1 || !(u.spotted || u.locatedUntil > g.time)) continue;
+        const d = Math.hypot(u.pos.x - from.x, u.pos.z - from.z);
+        const score = (e.type.hull?.length ?? 50) * 10 - d;
+        if (d < range && score > bs) { bs = score; best = u; }
+      }
+    }
+    return best;
+  }
+
   launch(s, op, kind, target, spot) {
     const P = DRONE[kind];
     const g = this.game;
-    const pos = new THREE.Vector3(op.pos.x, op.pos.y + 1.5, op.pos.z);
-    const d = { id: this.nextId++, kind, P, faction: s.faction, owner: s, target, spot, pos, vel: new THREE.Vector3(), age: 0, yaw: 0, state: 'fly', orbitA: Math.random() * 6.28 };
+    const usv = kind === 'usv', level = g.world.river?.level ?? 0;
+    const pos = usv ? new THREE.Vector3(op.pos.x + (Math.random() - 0.5) * 16, level + 0.35, op.pos.z + (Math.random() - 0.5) * 16) : new THREE.Vector3(op.pos.x, op.pos.y + 1.5, op.pos.z);
+    const yaw = target ? Math.atan2(target.pos.x - pos.x, target.pos.z - pos.z) : 0;
+    const d = { id: this.nextId++, kind, P, faction: s.faction, owner: s, target, spot, pos, vel: new THREE.Vector3(), age: 0, yaw, state: 'fly', orbitA: Math.random() * 6.28 };
     d.sound = g.audio?.loop?.(P.sound[0], pos, P.sound[2], 8);
     d.sound?.setRate?.(P.sound[1]);
     this.list.push(d);
@@ -196,6 +246,7 @@ export class Drones {
   fly(d, dt) {
     const g = this.game, T = g.world.terrain, P = d.P;
     d.age += dt;
+    if (d.kind === 'usv') return this.sail(d, dt);
     const ground = T.heightAt(d.pos.x, d.pos.z);
     if (d.state === 'fall') {
       d.vel.y -= 9.8 * dt;
@@ -249,6 +300,30 @@ export class Drones {
     if (d.kind === 'recon' && !d.dark && d.age < P.station) this.watch(d);
   }
 
+  /** A sea drone: low over the water at its ship, led a little, weaving; round the land ahead; into her side. */
+  sail(d, dt) {
+    const g = this.game, T = g.world.terrain, P = d.P, level = g.world.river?.level ?? 0;
+    if (d.age > P.life) return this.fall(d);
+    if (!d.target?.alive || (d.target.depth ?? 0) > 1) d.target = this.pickShip(d.owner, d.pos, P.search); // (the operator picks another in the camera)
+    const t = d.target;
+    if (t) d.spot = { x: t.pos.x, z: t.pos.z };
+    const goal = t?.pos ?? d.spot; // (her gone: on to where she was, looking for another)
+    const dist = Math.hypot(goal.x - d.pos.x, goal.z - d.pos.z), lead = t ? Math.min(20, dist / P.speed) * 0.8 : 0;
+    if (!t && dist < 80) return this.fall(d);
+    let want = Math.atan2(goal.x + (t?.vel?.x ?? 0) * lead - d.pos.x, goal.z + (t?.vel?.z ?? 0) * lead - d.pos.z);
+    if (dist > 300) want += Math.sin(d.age * 0.9 + d.orbitA) * 0.3; // (weaving: a harder shot for the guns)
+    // land or shallows ahead: the first heading either side that is open water (ponytail: a feeler, not a path — a long island can still trap it)
+    for (const k of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) if (T.heightAt(d.pos.x + Math.sin(want + k) * 40, d.pos.z + Math.cos(want + k) * 40) < level - 0.8) { want += k; break; }
+    d.yaw += Math.max(-1.4 * dt, Math.min(1.4 * dt, Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw))));
+    d.vel.set(Math.sin(d.yaw) * P.speed, 0, Math.cos(d.yaw) * P.speed);
+    d.pos.addScaledVector(d.vel, dt);
+    d.pos.y = level + 0.35 + Math.sin(d.age * 9 + d.orbitA) * 0.08; // (slamming through the chop)
+    d.sound?.setPos?.(d.pos);
+    if ((d.wakeT = (d.wakeT ?? 0) - dt) <= 0) { d.wakeT = 0.12; g.effects.smoke?.spawn(d.pos.x - d.vel.x * 0.12, level + 0.3, d.pos.z - d.vel.z * 0.12, { vx: 0, vy: 0.3, vz: 0, size: 0.9, grow: 1.4, life: 1.6, alpha: 0.5, color: 0xf2f4f4, drag: 1, wind: 0.3 }); }
+    if (T.heightAt(d.pos.x, d.pos.z) > level - 0.3) return this.burst(d, null, 0.4); // (run up on the rocks)
+    if (t && g.missiles?.hits({ pos: d.pos, dir: NO_DIR }, t)) this.strike(d, t);
+  }
+
   /** What stands in its way: the highest roof, wall or treetop under it and up to 1.5 s ahead (4 times a second). */
   lookAhead(d) {
     if (d.state !== 'fly') return;
@@ -281,9 +356,10 @@ export class Drones {
   // ---------------------------------------------------------------- defences
 
   defences(step) {
-    const g = this.game;
+    const g = this.game, busy = new Set();
     for (const d of [...this.list]) {
       if (d.state !== 'fly') continue;
+      if (d.kind === 'usv') { this.seaDefence(d, step, busy); continue; }
       // a jammer: the link is cut
       const jammed = g.jamming?.jammed(d.faction, d.pos.x, d.pos.z) || this.trenchJam(d);
       d.dark = d.kind === 'recon' && jammed;
@@ -304,6 +380,33 @@ export class Drones {
         this.shotDown(d);
         break;
       }
+    }
+  }
+
+  /**
+   * A sea drone under fire: a jammer (the ship's, or one ashore) may cut its link; the guns of each enemy ship in reach
+   * shoot at one drone at a time (`busy`) — a poor chance, better for a CIWS and point missiles close in.
+   */
+  seaDefence(d, step, busy) {
+    const g = this.game;
+    if (g.jamming?.jammed(d.faction, d.pos.x, d.pos.z) && Math.random() < step * 0.3) return this.fall(d, true);
+    for (const s of g.world.stacks) {
+      if (s.faction === d.faction || !s.alive || !s.stats.naval || s.stats.submarine || busy.has(s)) continue;
+      const u = s.units[0];
+      if (!u?.alive) continue;
+      const dist = Math.hypot(u.pos.x - d.pos.x, u.pos.z - d.pos.z), D = s.stats.defence ?? {};
+      if (D.ecm && dist < USV_JAM && Math.random() < step * D.ecm * 0.15) return this.fall(d, true);
+      let p = dist < 1200 ? 0.02 : 0; // (the guns: something small, low in the waves and quick)
+      if (D.point && dist < D.point.range) p += 0.03;
+      if (D.ciws && dist < D.ciws.range) p += 0.06;
+      if (!p) continue;
+      busy.add(s);
+      if (Math.random() < 0.5) this.tracer(u, d, true);
+      if (Math.random() < p * step) {
+        g.effects.waterSplash?.({ x: d.pos.x, y: d.pos.y, z: d.pos.z }, 2);
+        this.shotDown(d);
+      }
+      return; // (one ship's guns on it this tick: the rest are busy with the others)
     }
   }
 
@@ -340,12 +443,21 @@ export class Drones {
     d.vel.multiplyScalar(0.4);
     d.sound?.stop?.();
     d.sound = null;
+    if (d.kind === 'usv') this.remove(d); // (dead in the water, or gone up: nothing to fall)
   }
 
   // ---------------------------------------------------------------- the strike
 
   strike(d, t) {
     const g = this.game, s = t.stack, P = d.P, now = g.time;
+    if (d.kind === 'usv') { // into her side at the waterline: as a torpedo (systems/Torpedoes.js)
+      const sp = Math.hypot(d.vel.x, d.vel.z) || 1;
+      t.receiveDamage(P.damage * (1 - (s.stats.armor ?? 0) * 0.5) * (d.owner?.units?.find((u) => u.alive)?.damageMult ?? 1), d.owner?.alive ? d.owner : null, P.pierce, { x: d.vel.x / sp, z: d.vel.z / sp }, 1);
+      if (t.alive) s.shipHit?.(t, 0, true);
+      g.effects.waterSplash?.({ x: d.pos.x, y: d.pos.y, z: d.pos.z }, 6);
+      g.tell(s.faction, `${s.name}: sea drone hit!`);
+      return this.burst(d, t, 1.8, true);
+    }
     let dmg = P.damage;
     if (!s.usesCover) {
       const aps = s.stats.aps;
@@ -389,11 +501,11 @@ export class Drones {
   // ---------------------------------------------------------------- looks and the net
 
   draw() {
-    const counts = { quad: 0, wing: 0 };
+    const counts = { quad: 0, wing: 0, usv: 0 };
     for (const d of this.list) {
       const m = this.meshes[d.P.mesh], i = counts[d.P.mesh]++;
       if (i >= MAX) continue;
-      const pitch = d.kind === 'lancet' ? -Math.atan2(d.vel.y, Math.hypot(d.vel.x, d.vel.z) || 1) : Math.min(0.4, Math.hypot(d.vel.x, d.vel.z) * 0.015);
+      const pitch = d.kind === 'usv' ? -0.06 : d.kind === 'lancet' ? -Math.atan2(d.vel.y, Math.hypot(d.vel.x, d.vel.z) || 1) : Math.min(0.4, Math.hypot(d.vel.x, d.vel.z) * 0.015);
       _m.compose(d.pos, _q.setFromEuler(_e.set(pitch, d.yaw, 0, 'YXZ')), _s.setScalar(d.P.scale));
       m.setMatrixAt(i, _m);
     }

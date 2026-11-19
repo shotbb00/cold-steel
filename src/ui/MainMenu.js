@@ -274,7 +274,7 @@ const POSE_LABEL = { idle: 'At ease', aim: 'Aim', kneel: 'Kneel', prone: 'Prone'
 const AIR_LABEL = { heli: 'Helicopter', jet: 'Jet', lift: 'Transport', cap: 'Fighter', recon: 'Recon jet' }; // support powers in the units list
 const AIR_LABEL_1945 = { jet: 'Strike plane', lift: 'Transport plane', cap: 'Fighter', recon: 'Recon plane', diveBomb: 'Dive bomber', torpBomb: 'Torpedo bomber', navCap: 'Carrier fighter', navScout: 'Scout plane' }; // (no jets yet: data/epoch.js)
 /** The sea's two navies (one army per side there): 1945 the US Navy and the Imperial Navy, 1985 the US Navy and the Soviet Navy. */
-const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1918: { nato: 'Royal Navy', pact: 'Kaiserliche Marine' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' } };
+const NAVIES = { 1806: { nato: 'French Navy', pact: 'Royal Navy' }, 1918: { nato: 'Royal Navy', pact: 'Kaiserliche Marine' }, 1945: { nato: 'US Navy', pact: 'Imperial Navy' }, 1985: { nato: 'US Navy', pact: 'Soviet Navy' }, 2027: { nato: 'US Navy', pact: 'Russian Baltic Fleet' } };
 const navyName = () => NAVIES[epoch()] ?? NAVIES[1945];
 /** Side `f`'s navy on map `id`: the army the map names, if it has a navy of its own (Copenhagen's Royal Danish Navy), else the war's. */
 const navyOn = (id, f) => ARMIES[armiesOn(MAPS[id])?.[f]?.[0]]?.navy ?? navyName()[f];
@@ -364,7 +364,7 @@ function statRows(type, faction, army = DEFAULT_ARMY[faction]) {
   if (s.observer) rows.push(['Observes', `indirect fire on what they see: ${Math.round(s.observer.scatter * 100)} % of the scatter`]);
   if (s.atgm) rows.push(['Missile', `${s.atgm.count} per vehicle, out to ${s.atgm.range} m`]);
   if (s.aps) rows.push(['Active protection', `${s.aps.name}: shoots down ${s.aps.charges} incoming missiles or rockets, reloaded in a lull`]);
-  if (s.drone) rows.push(['Drones', { recon: `a recon drone over the enemy out to ${s.drone.range} m: what it sees is located for your guns`, fpv: `${s.drone.count} FPV strike drones, one every ${s.drone.every} s, at spotted enemies out to ${s.drone.range} m — into the roof`, lancet: `${s.drone.count} loitering munitions, out to ${s.drone.range} m, at spotted vehicles and guns` }[s.drone.kind]]);
+  if (s.drone) rows.push(['Drones', { recon: `a recon drone over the enemy out to ${s.drone.range} m: what it sees is located for your guns`, fpv: `${s.drone.count} FPV strike drones, one every ${s.drone.every} s, at spotted enemies out to ${s.drone.range} m — into the roof`, lancet: `${s.drone.count} loitering munitions, out to ${s.drone.range} m, at spotted vehicles and guns`, usv: `${s.drone.count} explosive sea drones, ${s.drone.salvo} at a time every ${s.drone.every} s, at found ships out to ${s.drone.range} m — a torpedo's hit at the waterline` }[s.drone.kind]]);
   if (s.guided) rows.push(['Guided', `${Math.round((s.guided.share ?? 1) * 100)} % of rounds ${s.guided.gps ? 'GPS-guided (not into an enemy jammer)' : 'laser-guided where an observer or drone marks the target'}`]);
   if (s.scoot) rows.push(['Shoot and scoot', 'once the enemy locates it, it drives to a new firing spot']);
   if (s.droneJam) rows.push(['Drone jammer', `drones within ${s.droneJam.radius} m lose their link`]);
@@ -581,6 +581,8 @@ export class MainMenu {
         ? { nato: 'Fight under sail: hold the line or the anchorage, fire into their hulls as they come down on you, and keep your flag flying.', pact: 'The Royal Navy: break their line, double-shot the guns and fight them yardarm to yardarm.' }
         : epoch() === '1918'
         ? { nato: 'The Royal Navy: the Grand Fleet\'s heavy guns and the Harwich Force\'s destroyers — bring their fleet to battle and keep the U-boats down.', pact: 'The Kaiserliche Marine: pick off their squadrons one by one, torpedoes by night, the U-boats and the mines where they must pass.' }
+        : epoch() === '2027'
+        ? { nato: 'The US and Polish navies: NSM and the Burkes’ SM-6 against the Baltic Fleet — find them first, with drones, and strike before their Oniks find you.', pact: 'The Russian Baltic Fleet: Kalibr, Oniks and Zircon from the corvettes and the shore — swarm their defences, jam their drones, hold the zones off Kaliningrad.' }
         : epoch() === '1985'
         ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
         : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
@@ -771,7 +773,7 @@ export class MainMenu {
     const regHere = regionIn(epoch(), hasTheatre(epoch(), theatre()) ? theatre() : 'land');
     const climates = new Set(mapsFor(epoch()).map((m) => m.climate)); // (the Northern Flank's men in their snow smocks, as on its maps)
     setClimate(climates.size === 1 ? [...climates][0] : undefined);
-    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction) === i) // (at sea: one navy a side; Japan and the Marines in Asia & Pacific only)
+    const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction && (o.navy ?? navyName()[o.faction]) === (a.navy ?? navyName()[a.faction])) === i) // (at sea: each navy once — 2027's US and Polish navies; Japan and the Marines in Asia & Pacific only)
       .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
     const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
     sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
