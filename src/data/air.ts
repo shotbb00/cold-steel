@@ -6,7 +6,9 @@
 import { buildNatoCobra } from './models/natoCobra.js';
 import { buildPactHind, buildNvaHind } from './models/pactHind.js';
 import { buildNatoA10, buildPactSu25, buildNatoUH60, buildPactMi8, buildNvaMi8 } from './models/aircraft.js';
-import { buildBwPAH1, buildBwAlphaJet, buildBwUH1D, buildNvaSu22 } from './models/armyAircraft.js';
+import { buildBwPAH1, buildBwAlphaJet, buildBwUH1D, buildUH1, buildNvaSu22 } from './models/armyAircraft.js';
+import { buildF5E, buildRF5A, buildF16Strike, buildAV8B, buildCH46, buildMD500 } from './models/aircraft85.js';
+import { buildF16 } from './models/aircraft2027.js';
 import { MERDC } from '../render/paint.js';
 import { buildNatoF15, buildPactMiG23, buildBwF4F, buildBwRF4E, buildNatoRF4C, buildNvaMiG21, buildPactMiG25 } from './models/fighters.js';
 import type { Aircraft, PerFaction } from '../types.ts';
@@ -183,3 +185,53 @@ export const LIFT = {
     hp: 8,
   },
 } satisfies PerFaction<Aircraft>;
+
+// The Northern Flank and Korea, 1985 (data/epoch.js no / usmc / rok / kpa): each army's own machines, on top
+// of the tables above (forArmy: an army's own entry before its side's). Models: models/aircraft85.js where the
+// type is new here, else the airframe another table already has, in the army's paint.
+const paint = (colors: [number, number, number, number], scale: number) => ({ colors, scale });
+const F16_GREY = paint([0x6e7479, 0x5f656a, 0x7a8085, 0x666c71], 0.9);
+const NO_GREEN = paint([0x5c6658, 0x4e5749, 0x687262, 0x566050], 0.8);
+const HELI_OD = paint([0x3c4530, 0x2f3626, 0x46503a, 0x353d2b], 0.7);
+const USMC_GREEN = paint([0x3f4733, 0x363d2c, 0x48503b, 0x3a4130], 0.7);
+const USMC_HARRIER = paint([0x45503a, 0x3a4431, 0x55604a, 0x4a5440], 0.8);
+const USMC_GREY = paint([0x7f878e, 0x6f777e, 0x8b9398, 0x767e85], 1.0); // the Phantoms' tactical grey
+const SEA_CAMO = paint([0x6e6447, 0x50573b, 0x3e4a30, 0x5f5a40], 0.7); // South-East Asia tan and two greens
+const KPA_HELI = paint([0x4b5634, 0x6b5f3e, 0x3c4529, 0x5a5236], 0.6);
+const KPA_SILVER = paint([0x9fa4a3, 0x8f9493, 0xaeb2b1, 0x979c9b], 1.4);
+const KPA_CAMO = paint([0x5a6440, 0x7a6a48, 0x4a5434, 0x6a6040], 0.9);
+const TOW = { count: 4, interval: 0.8, damage: 780, splash: 2.2, vsArmor: 1, pierce: 0.8, speed: 280, sound: 'jet.missile' };
+const MK82 = { count: 2, interval: 0.25, damage: 950, splash: 6, vsArmor: 0.9, pierce: 0.5, speed: 160, sound: 'heli.rocket', label: 'Bombs' }; // (label: the Units card's row — ui/MainMenu.js)
+
+Object.assign(AIRCRAFT, {
+  no: { ...AIRCRAFT.nato, name: 'AH-1T SeaCobra (4th MAB)', weapon: '20 mm M197 · TOW', text: 'Norway has no attack helicopters of its own: its strafing run is flown by the SeaCobras of the US Marine brigade sent to reinforce it — TOWs at the tanks in the valley, then the chin gun.', paint: USMC_GREEN, rockets: TOW },
+  usmc: { ...AIRCRAFT.nato, name: 'AH-1T SeaCobra', weapon: '20 mm M197 · TOW', text: 'The Marines’ twin-engined Cobra, flown off the amphibious ships: four TOWs at the nearest armour, then the chin gun walked along the line.', paint: USMC_GREEN, rockets: TOW, hp: 9 },
+  rok: { ...AIRCRAFT.bw, name: '500MD Defender', weapon: 'TOW anti-tank missiles', text: 'The ROK Army’s tank hunter, built under licence by Korean Air: a small, quick helicopter with four TOWs and a sight in its nose, fired one after another down the line. Every shot a missile — deadly to armour, wasted on infantry.', model: buildMD500, paint: HELI_OD, hp: 5 },
+  kpa: { ...AIRCRAFT.nva, name: 'Mi-24D', text: 'The North’s Hinds: the armoured tub, the four-barrel nose gun and a heavy rocket salvo, low over the hills.', paint: KPA_HELI },
+});
+Object.assign(JETS, {
+  no: { ...JETS.bw, name: 'F-16A Fighting Falcon', weapon: '20 mm M61A1 · Mk 82 bombs', text: 'The Royal Norwegian Air Force’s new fighter from Bodø and Ørland: two bombs onto the column in the valley, then the cannon. Fast and agile — but not armoured.', model: buildF16Strike, paint: F16_GREY, rockets: MK82, hp: 6 },
+  usmc: { ...JETS.bw, name: 'AV-8B Harrier II', weapon: '25 mm GAU-12 · Rockeye cluster bombs', text: 'New in 1985: the Marines’ jump jet, flying from the ships or a clearing ashore. Two Rockeyes on the target, then the five-barrel 25 mm.', model: buildAV8B, paint: USMC_HARRIER,
+    gun: { ...JETS.bw.gun, rate: 30, damage: 200, vsArmor: 0.6, pierce: 0.5 }, rockets: { ...MK82, damage: 800, splash: 8, vsArmor: 0.8 }, hp: 6 },
+  rok: { ...JETS.bw, name: 'F-5E Tiger II', weapon: '2 × 20 mm M39 · 2.75 in rockets', text: 'The ROK Air Force’s workhorse, built in Korea as the Jegongho: a ripple of rockets, then the two nose guns. Small, quick, hard to see.', model: buildF5E, paint: SEA_CAMO, hp: 6 },
+  kpa: { ...JETS.nva, name: 'Su-7BMK', weapon: '2 × 30 mm NR-30 · S-5 rockets', text: 'The North’s old swept-wing Sukhoi fighter-bomber: a heavy rocket salvo from its pods, then the two big cannon. Thirsty and short-legged, it comes from airfields close behind the DMZ.', paint: KPA_SILVER },
+});
+Object.assign(FIGHTERS, {
+  no: air(JETS, 'nato', { name: 'F-16A Fighting Falcon', weapon: 'AIM-9L Sidewinder · M61A1', text: 'Norway’s F-16s on patrol over the valleys: the Sidewinders for whatever comes over the border.', model: buildF16, paint: F16_GREY }),
+  usmc: air(JETS, 'nato', { name: 'F-4S Phantom II', weapon: 'AIM-7 Sparrow · AIM-9 Sidewinder', text: 'The Marines’ last Phantoms, slatted wings and smokeless engines, on patrol over the beachhead (the Hornet is replacing them squadron by squadron).', model: buildBwF4F, paint: USMC_GREY }),
+  rok: air(JETS, 'nato', { name: 'F-4E Phantom II', weapon: 'AIM-7 Sparrow · AIM-9 Sidewinder', text: 'The ROK Air Force’s heavy fighter: a pair circles over the spot and shoots down what comes over the DMZ.', model: buildBwF4F, paint: SEA_CAMO }),
+  kpa: air(JETS, 'pact', { name: 'MiG-23ML', weapon: 'R-23 · R-60', text: 'The North’s newest fighter, delivered from 1984: swing wings at 45° for the patrol.', model: buildPactMiG23, paint: KPA_CAMO }),
+});
+Object.assign(RECON, {
+  no: air(JETS, 'nato', { name: 'RF-5A', weapon: 'camera nose', text: 'The Air Force’s camera-nosed Freedom Fighters: one fast, low run up the valley.', model: buildRF5A, paint: NO_GREEN }),
+  usmc: air(JETS, 'nato', { name: 'RF-4B Phantom II', weapon: 'cameras', text: 'The Marines’ own reconnaissance Phantoms of VMFP-3: one fast photo run along the line.', model: buildNatoRF4C, paint: USMC_GREY }),
+  rok: air(JETS, 'nato', { name: 'RF-5A', weapon: 'camera nose', text: 'The ROK Air Force’s reconnaissance Freedom Fighter: one fast, low run along the line.', model: buildRF5A, paint: SEA_CAMO }),
+  kpa: air(JETS, 'pact', { name: 'MiG-21 with recon pod', weapon: 'reconnaissance pod', text: 'A MiG-21 with a camera pod: one fast run south of the DMZ.', model: buildNvaMiG21, paint: KPA_SILVER }),
+});
+Object.assign(LIFT, {
+  no: { ...LIFT.bw, name: 'UH-1B Iroquois', weapon: 'door gun · a section', text: 'The Air Force’s Hueys of 339 Squadron at Bardufoss: they fly Brigade Nord’s infantry up the valleys and onto the ridges. Light — it takes few hits.', model: buildUH1, paint: HELI_OD },
+  usmc: { ...LIFT.nato, name: 'CH-46E Sea Knight', weapon: '.50 cal door gun · a squad', text: 'The Marines’ tandem-rotor assault transport: off the ship and onto the landing zone, the squad out down the rear ramp, the crew chief on the .50 cal.', model: buildCH46, paint: USMC_GREEN,
+    rotorSound: 'rotor.mi8', rotorSpeed: 24, gun: { ...LIFT.nato.gun, rate: 8, damage: 120, vsArmor: 0.1, sound: 'nato.aa' }, hp: 7 },
+  rok: { ...LIFT.bw, name: 'UH-1H Iroquois', weapon: 'M60 door gun · a squad', text: 'The ROK Army’s Hueys: the airmobile infantry onto the hills, the door gunner on anyone near the landing zone.', model: buildUH1, paint: HELI_OD },
+  kpa: { ...LIFT.nva, name: 'Mi-8T', text: 'The North’s Hips: rockets on the landing zone, then the light infantry out of the clamshell doors behind the line.', paint: KPA_HELI },
+});

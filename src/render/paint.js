@@ -248,13 +248,15 @@ export function paintMaterial(mat, { colors = WOODLAND, scale = 6, mud = 0x4a3d2
           float fold = pFold(vPaintPos);
           diffuseColor.rgb *= mix(1.0, 0.76 + 0.42 * fold, fab);
         #endif
-        if (uClimate > 0.0) { // the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
+        #ifndef PAINT_AIR
+        if (uClimate > 0.0) { // (aircraft keep their squadron's paint: no whitewash) the climate's paint (vehicles: patchy, worn through) or clothing (soldiers: nearly all over); not metal, rubber, skin, glass
           float sf = pSurf(vPaint.x);
           float paintable = (sf < 0.5 || sf > 3.5) ? 1.0 : 0.0;
           float wash = smoothstep(0.32, 0.58, pFbm(pp * 0.7 + vec3(3.1, 0.0, 5.7)));
           float k = uSmock > 0.5 ? uClimateSmock + 0.1 * wash : uClimateCover + (0.9 - uClimateCover) * wash;
           diffuseColor.rgb = mix(diffuseColor.rgb, uClimateColor * vTint, uClimate * paintable * k);
-        }`)
+        }
+        #endif`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
         #ifdef PAINT_SURF
           vec2 surfRM = pSurfRM(pSurf(vPaint.x), pNoise(pp * 3.7));

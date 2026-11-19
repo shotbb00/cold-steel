@@ -113,6 +113,7 @@ export default {
   description: '24 October 1917, in rain and fog: the Isonzo valley under steep mountains, Kobarid round its bridge on the valley floor. Hold your wall of the valley — the pass, the summits, the road down the spur — and fight for the town.',
   epochs: ['1918'],
   region: 'italy',
+  airfields: [], // (no flat ground clear of Kobarid and the lines in the Isonzo valley: the aircraft come in from the map edge — systems/Airfields.js)
   armies: { nato: ['it'], pact: ['ah', 'de'] }, // (the Italian Second Army against the Austro-German Fourteenth Army: maps/index.js armiesOn)
   sides: { nato: 'Italy', pact: 'Central Powers' },
   conditions: { time: 'dawn', weather: 'rain' },

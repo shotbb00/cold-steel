@@ -74,9 +74,9 @@ export class Airfields {
 
   /** The best flat open strip near `faction`'s base: the runway along x, the tower on the side toward the battle. */
   find(faction) {
-    // flat ground first; hilly maps (Thuringian Forest) take a steeper strip — the runway follows the ground (lay) — further out
+    // flat ground first, further out before steeper (a runway up a slope looks wrong); hilly maps (Thuringian Forest) take a steeper strip — the runway follows the ground (lay)
     // and nothing standing on it (a wall, a fence, a wreck: props can't be taken away once laid) — only if a crowded map has no such strip, one anyway
-    for (const clean of [true, false]) for (const [rise, reach] of [[5, 200], [9, 320], [14, 420], [14, 560]]) { const a = this.findWith(faction, rise, reach, clean); if (a) return a; }
+    for (const clean of [true, false]) for (const [rise, reach] of [[5, 200], [5, 360], [5, 560], [9, 360], [9, 560], [14, 560]]) { const a = this.findWith(faction, rise, reach, clean); if (a) return a; }
     return null;
   }
 

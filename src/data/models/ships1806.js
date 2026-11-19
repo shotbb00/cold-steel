@@ -18,6 +18,7 @@ const IRON = 0x262624;
 const NAVY = {
   rn: { band: 0xc8973a, port: 0x2a1e14, lid: 0x9a2a20, stern: 0xc8973a, flag: 'rn' },   // black and ochre, the port lids' red insides
   fr: { band: 0x8e3322, port: 0x241812, lid: 0x8e3322, stern: 0x2e4a7a, flag: 'fr' },   // black and red ochre, the stern in blue
+  dk: { band: 0xd6caa4, port: 0x241812, lid: 0x9a2a20, stern: 0x1c1a17, flag: 'dk' },  // black, a buff band (Copenhagen 1801: the Danish line)
   fire: { band: 0x5a4a32, port: 0x1a1410, lid: 0x3a2e22, stern: 0x4a3c2c, flag: 'none' }, // a fireship: an old hull, the ports shut
 };
 
@@ -34,6 +35,20 @@ const square = (w, h, y) => [
   loft([[0, y - h, 0.25, w * 0.47, 0.06, 3], [0, y - h * 0.5, 0.9, w * 0.5, 0.06, 3], [0, y - 0.15, 0.25, w * 0.5, 0.06, 3]], { color: SAIL, surf: 'cloth' }, 6),
   P.cyl(0.22, 0.22, w * 1.08, { y, rz: Math.PI / 2, color: WOOD }, 6),                       // the yard
 ];
+
+/**
+ * The Danish naval ensign, the Orlogsflag: the Dannebrog's white cross on red, the fly cut into a swallow tail.
+ * Hoist at z0 (aft along −z), centred at height y; `k` scales the 2.4 × 4.8 flag of a ship of the line.
+ */
+export function splitFlag(y, z0, k = 1) {
+  const RED = 0xc8102e, WHITE = 0xeeeeea, h = 2.4 * k, bar = h / 7, red = h * 3 / 7;
+  return [
+    P.box(0.05, h, 3.4 * k, { y, z: z0 - 1.7 * k, color: RED }),                                 // the field, to the notch
+    ...[-1, 1].map((s) => P.box(0.05, red, 1.4 * k, { y: y + s * (bar + red) / 2, z: z0 - 4.1 * k, color: RED })), // the two tails
+    P.box(0.07, h, bar, { y, z: z0 - 1.2 * k, color: WHITE }),                                   // the cross: upright near the hoist…
+    P.box(0.07, bar, 3.4 * k, { y, z: z0 - 1.7 * k, color: WHITE }),                             // …and the arm to the notch
+  ];
+}
 
 /**
  * A three-masted ship of the line. `o`: { len, beam, fb (upper deck above the water), draft, decks (gun
@@ -132,10 +147,11 @@ function shipOfTheLine(o) {
   // the colours: at the stern, and the masthead pennant
   const flag = c.flag === 'none' ? [P.box(0.05, 0.5, 0.5, { y: fb + 7.5, z: -len / 2 - 2, color: 0x2a2a2a })] : c.flag === 'rn'
     ? [P.box(0.05, 2.4, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xe8e8e2 }), P.box(0.06, 2.4, 0.5, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.06, 0.45, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.07, 1.2, 2, { y: fb + 8.1, z: -len / 2 - 2, color: 0x1f2e6e })]
+    : c.flag === 'dk' ? splitFlag(fb + 7.5, -len / 2 - 1, 1)
     : [P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 1.9, color: 0x1f3a8e }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 3.2, color: 0xeeeeea }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 4.5, color: 0xc8221e })];
   hull.push(P.cyl(0.12, 0.15, 7, { y: fb + 5, z: -len / 2 - 1, rx: -0.3, color: WOOD }, 6));
   const colours = merge(flag); // (their own: they come down when she strikes)
-  hull.push(P.box(0.04, 0.25, 6, { y: fb + masts[Math.min(1, n - 1)][1] + 0.2, z: masts[Math.min(1, n - 1)][0] - 3, color: c.flag === 'rn' ? 0xb8221e : 0x1f3a8e }));
+  hull.push(P.box(0.04, 0.25, 6, { y: fb + masts[Math.min(1, n - 1)][1] + 0.2, z: masts[Math.min(1, n - 1)][0] - 3, color: c.flag === 'rn' || c.flag === 'dk' ? 0xb8221e : 0x1f3a8e }));
   return { fixed: merge(hull), rig, colours, len, beam, mastCount: n };
 }
 
@@ -236,7 +252,7 @@ function gunboat(navy) {
   ]);
   const oars = [-1, 1].flatMap((s) => Array.from({ length: 6 }, (_, i) => ({ at: [s * (beam / 2), 1.15, -5 + i * 1.8], side: s })));
   const sail = merge([P.box(0.08, 7, 6, { y: 7, z: -0.6, rx: 0.08, color: SAIL, surf: 'cloth' }), P.cyl(0.1, 0.1, 7.5, { y: 10.4, z: -0.6, rx: Math.PI / 2 - 0.25, color: WOOD }, 5)]);
-  const colours = merge(c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
+  const colours = merge(c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : c.flag === 'dk' ? splitFlag(2.6, -len / 2, 0.42) : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
   parts.push(P.cyl(0.05, 0.05, 2.4, { y: 1.9, z: -len / 2, color: WOOD }, 4));
   return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail, spars: merge([P.cyl(0.18, 0.22, 12, { y: 6.9, z: 1, color: WOOD }, 8)]) }], colours, len, beam, mastCount: 1, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) } };
 }
@@ -253,6 +269,10 @@ export const buildBrigFR = sailRig(() => shipOfTheLine({ ...BRIG, navy: 'fr' }))
 export const buildFireship = sailRig(() => shipOfTheLine({ ...BRIG, navy: 'fire' })); // (an old brig, her ports nailed shut and her hold full of pitch and powder)
 export const buildGunboatRN = sailRig(() => gunboat('rn'));
 export const buildGunboatFR = sailRig(() => gunboat('fr'));
+// the Royal Danish Navy (Copenhagen, 1801): the 74's lines, her own paint and the split flag
+export const buildFrigateDK = sailRig(() => shipOfTheLine({ ...FRIGATE, navy: 'dk', len: 44 }));
+export const buildBrigDK = sailRig(() => shipOfTheLine({ ...BRIG, navy: 'dk' }));
+export const buildGunboatDK = sailRig(() => gunboat('dk'));
 
 /**
  * The landing boats (1801, Aboukir: data/units1806/ships.js flatboat, horseBoat): open and flat-bottomed, raked at both
@@ -307,3 +327,4 @@ export const buildHorseBoat = sailRig(() => landingBoat({ len: 15, beam: 4.4, oa
 const SEVENTY_FOUR = { len: 52, beam: 14.6, fb: 6.2, draft: 6.4, decks: 2, ports: 14, masts: [[15, 46], [0.5, 52], [-14, 36]] };
 export const buildSeventyFourRN = sailRig(() => shipOfTheLine({ ...SEVENTY_FOUR, navy: 'rn' }));
 export const buildSeventyFourFR = sailRig(() => shipOfTheLine({ ...SEVENTY_FOUR, navy: 'fr', len: 55, beam: 15.2 })); // (the French 74s: bigger, finer)
+export const buildSeventyFourDK = sailRig(() => shipOfTheLine({ ...SEVENTY_FOUR, navy: 'dk', len: 50, beam: 14 }));

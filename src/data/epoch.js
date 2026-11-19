@@ -42,6 +42,7 @@ export const EPOCHS = {
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
       ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
       gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
+      dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', regions: [] }, // (Søetaten, at Copenhagen only: the map names it — its ships in the French hulls, her own colours: data/units1806/ships.js)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -70,6 +71,10 @@ export const EPOCHS = {
       gb: [
         { id: 'twoDeep', name: 'Two-deep line', text: 'Infantry in line that has stood still for 3 s hits 20 % harder: the thin line waits, then every musket fires at once.', still: 3, dmg: 1.2 },
         { id: 'baker', name: 'The Baker rifle', text: 'Riflemen reach 30 % further and cost 20 % less: the 95th picked off officers at ranges no musket could answer.', mods: { sniper: { range: 1.3 } }, costs: { sniper: 0.8 } },
+      ],
+      dk: [
+        { id: 'blockships', name: 'Blockships', text: 'Ships of the line cost 20 % less: old hulls cut down and moored as floating batteries, fought where they lay.', costs: { cruiser: 0.8 } },
+        { id: 'volunteers', name: 'Copenhagen\'s volunteers', text: 'Ships of the line and frigates take 10 % less damage: students, dock hands and the city\'s men rowed out to fill the gaps at the guns.', mods: { cruiser: { take: 0.9 }, frigate: { take: 0.9 } } },
       ],
     },
   },
@@ -175,11 +180,15 @@ export const EPOCHS = {
     types: TYPES_2027, alias: ALIAS_2027, air: { ...AIR_2027, ...BOMBERS[2027] },
     // each army's two signatures: 1985's mechanics where they still fit, three of their own (systems/Drones.js, CounterBattery.js, data/doctrine.js unitCost)
     doctrine: {
-      us: [{ ...DOCTRINE_1985.us[0], name: 'Joint fires', text: 'Air support costs 30 % less and recharges 40 % faster while your troops are in contact. Knocking out enemy artillery and command posts pays 20 CP.' },
+      // (2027: each army its own — the plain doctrine numbers, data/doctrine.js mods/costs; Poland keeps its volunteers, the militia mechanic)
+      us: [{ id: 'precision', name: 'Precision fires', text: 'Guided shells and rockets: guns cost 15 % less, rocket launchers 20 % less and reload 20 % faster — GMLRS and Excalibur hit what they are aimed at.', costs: { artillery: 0.85, rockets: 0.8 }, mods: { rockets: { fireCooldown: 0.8 } } },
         { id: 'sensor', name: 'Sensor-to-shooter', text: 'Whatever your drones and counter-battery radars find is marked: marked enemies take 15 % more damage from everyone for 10 s.', mark: 10, damage: 1.15 }],
-      pl: [{ ...DOCTRINE_1985.bw[0], name: 'Eastern Shield', text: 'Engineers build twice as fast and fortifications cost 40 % less. A line of trenches and obstacles waits in front of your base at the start.' }, { ...DOCTRINE_1985.nva[0], name: 'Territorial Defence', text: 'Obrona Terytorialna: cheap local volunteers with modern rifles and missiles that don’t count against your unit cap.' }],
-      ru: [{ ...DOCTRINE_1985.sov[0], name: 'Fire superiority' }, { id: 'dronewar', name: 'Drone war', text: 'FPV and loitering munition teams cost 30 % less and launch their drones 30 % faster.', cost: 0.7, every: 0.7 }],
-      by: [{ ...DOCTRINE_1985.nva[1], name: 'Massed guns', text: 'Guns, rocket launchers and mortars cost 25 % less and reload 35 % faster. Their creeping barrage order walks the shells forward ahead of your advance.' }, { ...DOCTRINE_1985.sov[1], name: 'Assault tempo' }],
+      pl: [{ id: 'armouredFist', name: 'Armoured fist', text: 'Tanks cost 15 % less and are 10 % tougher: Poland bought K2s and Abrams by the hundred to have the strongest tank force in Europe.', costs: { tank: 0.85, heavyTank: 0.85 }, mods: { tank: { hp: 1.1 }, heavyTank: { hp: 1.1 } } },
+        { ...DOCTRINE_1985.nva[0], name: 'Territorial Defence', text: 'Obrona Terytorialna: cheap local volunteers with modern rifles and missiles that don’t count against your unit cap.' }],
+      ru: [{ id: 'thermobaric', name: 'Thermobaric rockets', text: 'Rocket launchers burst 40 % wider and hit buildings and fortifications half again as hard: the TOS-1A burns out whole villages.', mods: { rockets: { splash: 1.4, vsStructure: 1.5 } } },
+        { id: 'dronewar', name: 'Drone war', text: 'FPV and loitering munition teams cost 30 % less and launch their drones 30 % faster.', cost: 0.7, every: 0.7 }],
+      by: [{ id: 'polonez', name: 'Polonez', text: 'Rocket launchers reach 20 % further: Belarus’ own long-range Polonez fires deep into the enemy’s rear.', mods: { rockets: { range: 1.2 } } },
+        { id: 'airDefence', name: 'Unified air defence', text: 'Air-defence guns, missiles and teams see 30 % further and reach 15 % further: Belarus and Russia guard one shared sky.', mods: { aa: { sight: 1.3, range: 1.15 }, sam: { sight: 1.3, range: 1.15 }, manpads: { sight: 1.3, range: 1.15 }, gunMissile: { sight: 1.3, range: 1.15 } } }],
     },
   },
   1945: {

@@ -1,14 +1,15 @@
 // Fulda Gap, autumn 1985: rolling Hessian farmland on both sides of the inner-German border,
 // three sectors side by side — west (Rasdorf / Geisa), centre (Point Alpha) and east
-// (Grüsselbach / Buttlar) — split by wooded ridges with passable saddles, so a battle can run on
-// several axes at once and flanking means real distance. Each control point is a village with
+// (Grüsselbach / Buttlar) — split by broken wooded ridges, spurs and Kuppen with open ground
+// between them, so a battle can run on several axes at once and flanking means real distance. Each control point is a village with
 // houses to fight from. The border runs east–west through the middle (z = 0): a ploughed control
 // strip, a fence blown open at each sector's crossing, a US observation post and an East German
 // watchtower. NATO holds the south (+z), the Warsaw Pact attacks from the north. Not a mirror:
 // the Hessian side has the broad Rasdorfer Berg over its west sector, the Thuringian side the
-// steeper Rockenstuhl cone by Geisa and a long rise behind Borsch; the ridges wander and their
-// saddles lie at other depths on each side. Fair by value instead: each side has an overwatch
-// hill per sector, a saddle through each ridge, and its villages at the same few hundred metres.
+// steeper Rockenstuhl cone by Geisa and a long rise behind Borsch; no ridge runs the map's length,
+// each bends and ends where its own ground says (RISES below). Fair by value instead: each side
+// has a wooded ridge between each pair of sectors, an overwatch hill per sector, the same height
+// in front of its base, and its villages at the same few hundred metres.
 //
 // A map is plain data plus hooks:
 //   id, name, description, size (terrain edge, m), segments, bounds {x, z} (playable half-extents),
@@ -29,43 +30,83 @@ import type { MapDef, ControlPointDef } from '../types.ts';
 const BASE_Z = 500;
 const SECTOR_X = 330;   // west / east sector axes at x = ∓330
 const noise = createNoise2D(1985);
-const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
-
-// the wooded ridges between the sectors: each wanders on its own line, its saddles at its own depths
-const RIDGES = [
-  { x: (z) => -168 + 22 * Math.sin(z * 0.0055 + 0.9), saddles: [300, 0, -235] },
-  { x: (z) => 176 + 24 * Math.sin(z * 0.0048 - 0.4) + 9 * Math.sin(z * 0.013), saddles: [245, 0, -325] },
+// The Rhön foreland is no row of walls: short ridges that bend, break and end, spurs at an angle,
+// lone basalt Kuppen and brook valleys that wander. Each rise is a path (one point: a lone hill),
+// its half-width, height and whether it carries wood. Each half its own ground, paired by value:
+// the Hessian half has the long west ridge, the spur toward the broad open Rasdorfer Berg and the
+// hooked ridge over Grüsselbach's brook; the Thuringian half the curving ridge east of Geisa, the
+// wooded Rockenstuhl cone, the diagonal ridge toward Wenigentaft above the Ulster and the long
+// rise behind Borsch.
+type Rise = { p: number[][]; w: number; a: number; wood?: boolean };
+const RISES: Rise[] = [
+  // Hessian side (+z)
+  { p: [[-222, 545], [-176, 452], [-196, 368], [-150, 296]], w: 24, a: 12, wood: true },   // west ridge, ends above Mackenzell's saddle
+  { p: [[-55, 268], [-118, 226], [-168, 140]], w: 18, a: 8, wood: true },                   // spur off it, running down toward the border
+  { p: [[-292, 150]], w: 56, a: 7 },                                                         // the Rasdorfer Berg: broad, open top
+  { p: [[118, 515], [150, 450], [176, 408]], w: 20, a: 10, wood: true },                    // stub north-east of Hünfeld
+  { p: [[232, 350], [204, 262], [146, 190], [158, 112]], w: 22, a: 11, wood: true },         // hooked ridge over Grüsselbach
+  { p: [[52, 140]], w: 30, a: 4.6 },                                                         // low rise by Mackenzell
+  { p: [[392, 118]], w: 38, a: 5.4 },                                                        // the hill over Grüsselbach
+  { p: [[-410, 300]], w: 22, a: 6, wood: true },                                             // a Kuppe west of Rasdorf
+  { p: [[300, 470]], w: 26, a: 5, wood: true },                                              // a Kuppe behind Grüsselbach
+  { p: [[-64, 392]], w: 18, a: 5, wood: true },                                              // and one west of Hünfeld
+  { p: [[6, 10]], w: 24, a: 2 },                                                             // the knoll at Point Alpha
+  // Thuringian side (-z)
+  { p: [[-104, -58], [-170, -128], [-150, -232], [-196, -318]], w: 22, a: 11, wood: true }, // the ridge east of Geisa, curving
+  { p: [[-218, -405], [-282, -470], [-246, -548]], w: 20, a: 9, wood: true },               // its broken-off end, bent north-west
+  { p: [[-372, -100]], w: 28, a: 10, wood: true },                                           // the Rockenstuhl: steep wooded cone
+  { p: [[96, -306], [168, -222], [232, -138], [246, -46]], w: 22, a: 11, wood: true },      // diagonal ridge toward Wenigentaft
+  { p: [[172, -540], [140, -446]], w: 18, a: 9, wood: true },                                // stub by Vacha
+  { p: [[-90, -142], [10, -112]], w: 30, a: 4.4 },                                           // the long open rise behind Borsch
+  { p: [[318, -168]], w: 34, a: 5.6 },                                                       // the knoll over Wenigentaft
+  { p: [[-330, -420]], w: 34, a: 4 },                                                        // a low hill behind Geisa
+  { p: [[420, -300]], w: 22, a: 6, wood: true },                                             // a Kuppe east of Buttlar
+  { p: [[-112, -418]], w: 18, a: 5, wood: true },                                            // and one west of Vacha
 ];
-const RIDGE_X = RIDGES.map((r) => r.x(0)); // where they cross the border
+// brook valleys, wandering: Hünfeld's brook on the Hessian side, the Ulster past Buttlar on the other
+const VALLEYS = [
+  [[92, 570], [74, 440], [108, 340], [62, 262], [86, 150]],
+  [[228, -570], [276, -456], [246, -330], [292, -228], [270, -118]],
+];
 
-/** Ridge strength 0..1 at (x, z): the wooded spines between sectors, with saddles to cross. */
-function ridge(x, z) {
-  let k = 0;
-  for (const r of RIDGES) {
-    const spine = Math.exp(-((x - r.x(z)) ** 2) / (20 * 20));
-    const saddle = 1 - 0.8 * r.saddles.reduce((a, sz) => a + Math.exp(-((z - sz) ** 2) / (sz === 0 ? 1200 : 1600)), 0);
-    k = Math.max(k, spine * Math.max(0, saddle));
+/** Distance from (x, z) to a path, and how far along it the nearest point lies (0..1). */
+function along(x, z, p) {
+  if (p.length === 1) return [Math.hypot(x - p[0][0], z - p[0][1]), 0.5];
+  let best = Infinity, at = 0, run = 0, total = 0;
+  for (let i = 1; i < p.length; i++) total += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+  for (let i = 1; i < p.length; i++) {
+    const [ax, az] = p[i - 1], dx = p[i][0] - ax, dz = p[i][1] - az, L = Math.hypot(dx, dz);
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (L * L)));
+    const d = Math.hypot(x - ax - dx * t, z - az - dz * t);
+    if (d < best) { best = d; at = (run + t * L) / total; }
+    run += L;
   }
-  return k * smoothstep(520, 460, Math.abs(z));
+  return [best, at];
 }
 
-// overwatch for each sector on each side, each side its own: the Hessian half has the broad
-// Rasdorfer Berg in the west, a low rise by Mackenzell and the hill over Grüsselbach; the
-// Thuringian half the steep Rockenstuhl cone by Geisa, the long rise behind Borsch and the knoll
-// over Wenigentaft. Paired by value (height × spread), not by shape.
-const HILLS = [
-  [-290, 150, 52, 5.6], [45, 150, 30, 4.6], [360, 95, 40, 5.4], [-225, 395, 32, 4], [265, 365, 26, 4.2],
-  [-372, -100, 28, 7], [-40, -128, 44, 4], [300, -150, 36, 5.6], [-285, -395, 36, 3.8], [205, -380, 26, 4.4],
-];
+/** How much of rise `r` stands at (x, z), 0..1: tapering to its ends, the crest dipping here and there. */
+function rise(x, z, r) {
+  const [d, t] = along(x, z, r.p);
+  if (d > r.w * 3) return 0;
+  const ends = r.p.length === 1 ? 1 : smoothstep(0, 0.2, t) * smoothstep(1, 0.8, t);
+  return Math.exp(-(d * d) / (r.w * r.w)) * ends * (0.82 + 0.3 * noise(x * 0.011 + 3, z * 0.011));
+}
+
+/** Wood strength 0..1 at (x, z): the wooded ridges and Kuppen. */
+function ridge(x, z) {
+  let k = 0;
+  for (const r of RISES) if (r.wood) k = Math.max(k, rise(x, z, r));
+  return k * smoothstep(560, 500, Math.abs(z));
+}
 
 function height(x, z) {
   const ax = Math.abs(x);
   const az = Math.abs(z);
   let h = fbm(noise, x * 0.0045, z * 0.0045, 5) * 6;           // rolling farmland (broad swells: long views across a sector)
   h += fbm(noise, x * 0.045 + 100, z * 0.045, 3) * 0.7;        // furrows and bumps
-  h += Math.exp(-(z * z) / 1200) * (2.5 + 1.5 * noise(x * 0.02, 9.1)); // the border rise
-  h += ridge(x, z) * (11 + 4 * noise(x * 0.03 + 7, z * 0.03));        // sector ridges
-  for (const [cx, cz, r, a] of HILLS) h += hill(x, z, cx, cz, r, a);
+  h += Math.exp(-(z * z) / 1200) * Math.max(0.4, 1.8 + 2.4 * noise(x * 0.011, 9.1)); // the border rise, coming and going
+  for (const r of RISES) h += rise(x, z, r) * r.a;
+  for (const v of VALLEYS) { const [d] = along(x, z, v); h -= 3.5 * Math.exp(-(d * d) / (30 * 30)); }
   h += smoothstep(500, 620, ax) * (16 + ridged(noise, x * 0.012 + 31, z * 0.012, 4) * 26); // wooded hills at the edges
   h += smoothstep(560, 680, az) * 20;
   for (const bz of [BASE_Z, -BASE_Z]) {
@@ -203,7 +244,7 @@ export default {
     // The border: fence breached at each sector's crossing, the US OP and the East German
     // tower at Point Alpha, roadblocks and tank obstacles at the crossings.
     props.rand = mulberry32(303);
-    const gaps = [[-37, -13], [-SECTOR_X - 12, -SECTOR_X + 12], [SECTOR_X - 12, SECTOR_X + 12], ...RIDGE_X.map((rx) => [rx - 6, rx + 6])];
+    const gaps = [[-37, -13], [-SECTOR_X - 12, -SECTOR_X + 12], [SECTOR_X - 12, SECTOR_X + 12], [-171, -159], [179, 191]]; // (and between the sectors)
     props.fence({ x0: -bounds.x - 30, x1: bounds.x + 30, z: -1.5, breaches: gaps });
     props.tower({ x: 2, z: 11, concrete: false });   // the US observation post, on the knoll
     props.tower({ x: -58, z: -12, concrete: true });  // the East German tower, back from the strip

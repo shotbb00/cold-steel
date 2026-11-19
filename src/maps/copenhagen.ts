@@ -3,7 +3,8 @@
 // end of it, the long sandbank of the Middle Ground outside them. Nelson took his squadron round the shoal
 // to the south and came up the King's Deep with the wind from the south-east, anchored by the stern
 // abreast of the Danish line and fought it gun to gun for four hours — three of his ships went aground on
-// the Middle Ground. The Danes (the `nato` side, in the French hulls) start moored (spawn `anchored`) with
+// the Middle Ground. The Danes (the `nato` side: the Royal Danish Navy, army `dk` — the French hulls' stats under the
+// Danish flag, data/units1806/ships.js) start moored (spawn `anchored`) with
 // the fort's guns behind them; the British come up from the south. Fair: the Danish line holds one point,
 // the King's Deep's southern entrance is as near the British, the Holland Deep east of the shoal lies
 // halfway between; the fort is matched by one more British ship. Laid out at its full size (`widened`:
@@ -17,7 +18,7 @@ const SIZE = 8000;
 const HALF = 3000;
 const noise = createNoise2D(1801_04);
 const sea = createSea({ level: 0, size: SIZE, color: 0x2a4a58 });
-// the Danish names for the French hulls that stand in for them (entities/UnitStack.js shipName), Nelson's for the British
+// the Danish ships' names (entities/UnitStack.js shipName), Nelson's for the British
 Object.assign(sea, {
   names: {
     nato: {
@@ -79,6 +80,7 @@ export default {
   wind: { from: 150, speed: 5.5, veer: 0.2 },   // south-south-east: fair up the King's Deep for the British, foul for the Danes to come out
   fow: 0.5,
   sides: { nato: 'Denmark', pact: 'Britain' },
+  armies: { nato: ['dk'] }, // (the Royal Danish Navy: maps/index.js armiesOn)
   size: SIZE,
   segments: 520,
   bounds: { x: HALF, z: HALF },

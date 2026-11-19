@@ -101,6 +101,28 @@ import { Fire } from '../systems/Fire.js';
 const CRATER_COVER = 0.4; // m: a crater this deep (artillery, rockets) shelters men lying in it
 const RENDERER = new URLSearchParams(location.search).get('renderer') === 'three' ? 'three' : 'babylon';
 
+/**
+ * A sea map's homes and spawn points in water a ship can float in. maps/index.js widenSea moves them out with the map
+ * but leaves the coasts where they are, so one can end up on land (Savo Sound, the Baltic, North Cape did): each
+ * ship's spawn (and, on a widened map, a home) goes to the nearest water at least DEEP m deep; the console says so — the map wants fixing.
+ */
+function seaward(map, terrain, DEEP = 4) {
+  const level = map.river?.level ?? 0, b = map.bounds;
+  const wet = (x, z) => Math.abs(x) < b.x - 40 && Math.abs(z) < b.z - 40 && level - terrain.heightAt(x, z) >= DEEP;
+  const fix = (p, what) => {
+    if (!p || wet(p.x, p.z)) return p;
+    for (let r = 25; r <= 2000; r += 25) for (let k = 0; k < 32; k++) {
+      const x = p.x + Math.cos((k / 32) * Math.PI * 2) * r, z = p.z + Math.sin((k / 32) * Math.PI * 2) * r;
+      if (wet(x, z)) { console.warn(`${map.id}: ${what} was ashore at ${Math.round(p.x)},${Math.round(p.z)} — moved ${r} m out to sea`); return { ...p, x, z }; }
+    }
+    return p;
+  };
+  for (const f of ['nato', 'pact']) {
+    if (map.widenedHere && map.bases?.[f]) map.bases[f] = fix(map.bases[f], `${f} home`); // (a map laid out by hand keeps its own: Copenhagen's)
+    if (map.spawns?.[f]) map.spawns[f] = map.spawns[f].map((sp, i) => (getUnitType(sp.unit)?.stats?.naval ? fix(sp, `${f} ${sp.unit} ${i + 1}`) : sp)); // (ships only: a shore battery stands ashore)
+  }
+}
+
 export class GameEngine {
   /** How rough the sea runs (1 calm … 1.8 rough: the weather at sea, systems/Squalls.js); 1 on land. */
   get seaState() { return this.squalls ? SEA_STATE.value : 1; }
@@ -169,6 +191,7 @@ export class GameEngine {
       scene: this.scene, terrain: this.terrain, cover: this.cover, bounds: map.bounds, rand: mulberry32(map.seed ?? 1),
     }) ?? null;
     if (!this.cover.finalized) this.cover.finalize(map.bounds);
+    if (map.theatre === 'sea') seaward(map, this.terrain); // (no fleet ashore: the widening moves homes, not coasts)
     this.world = new BattleWorld({ bounds: map.bounds, terrain: this.terrain, cover: this.cover, bases: map.bases });
     this.world.playerFaction = playerFaction;
     this.world.river = map.river ?? null; // water that stops and slows (a sea map: world/Sea.js)

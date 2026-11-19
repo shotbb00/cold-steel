@@ -10,7 +10,7 @@
 // the campaign back. Only the host ends the turn and starts (or resolves) the battle.
 import { FACTIONS, ARMIES, DEFAULT_ARMY, enemyOf } from '../data/factions.js';
 import { UNIT_TYPES } from '../data/units/index.js';
-import { MAPS, mapsFor } from '../maps/index.js';
+import { MAPS, mapsFor, regionOf } from '../maps/index.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
 import { RANKS } from '../entities/UnitStack.js';
 import { unitCost } from '../data/doctrine.js';
@@ -38,6 +38,8 @@ const btn = (label, cls, fn) => {
 const ww2 = () => epoch() === '1945';
 /** The map the campaign screen shows before a battle is planned: this war's first (1985: the Fulda Gap; 1918: Villers-Bretonneux). */
 const homeMap = () => (epoch() === '1985' || epoch() === '1945' ? 'fulda-gap' : mapsFor(epoch())[0].id); // (1985 and 1945 fight their campaigns over Hesse)
+/** The region the campaign is fought in (its sectors' maps: 1806 Germany), whatever region the menu shows — its armies only (no Russians at Jena). */
+const campaignRegion = () => regionOf(MAPS[Object.values(SECTORS)[0].map] ?? {});
 const LENGTHS = () => ({ endless: ['Endless', 'Until one side has no battalions left.'], timetable: ['Eight days', epoch() === '2027'
   ? 'Russia must take Suwałki and Kalvarija in 16 turns and close the gap; NATO holds them, or takes Gusev in Kaliningrad.'
   : epoch() === '1918'
@@ -142,7 +144,7 @@ export class CampaignPanel {
       });
       sideCards.append(card);
     }
-    r.append(sideCards, armiesPicker(ch));
+    r.append(sideCards, armiesPicker(ch, undefined, campaignRegion()));
     r.append(el('h3', 'menu-sub', 'How long'));
     const seg = el('div', 'seg cp-length');
     const note = el('p', 'cp-hint', esc(LENGTHS()[ch.length][1]));

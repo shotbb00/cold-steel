@@ -235,7 +235,7 @@ export class Lobby {
     q('What kind of battle', modes, together);
     setTogether();
     this.choice.map = mapIn(this.choice.map, epoch());
-    q('Where', this.chips(mapsFor(epoch()), this.choice.map, (m) => { this.choice.map = m.id; this.sendLobby(); }));
+    q('Where', this.chips(mapsFor(epoch()), this.choice.map, (m) => { this.choice.map = m.id; this.renderRules(); this.sendLobby(); }));
     this.sidesBox = el('div', 'side-pick');
     q('Which side', this.sidesBox, armiesPicker(this.choice, () => this.sendLobby()));
     this.renderSides();
@@ -248,7 +248,7 @@ export class Lobby {
   /** The same battle rules as single player (the economy rows for point-capture modes). */
   renderRules() {
     if (!this.rulesBox) return;
-    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.sendLobby(), !!MODES[this.choice.mode]?.budget));
+    this.rulesBox.replaceChildren(rulesPicker(this.choice.rules, !!MODES[this.choice.mode]?.economy, () => this.sendLobby(), !!MODES[this.choice.mode]?.budget, MAPS[this.choice.map]));
     // versus: nobody plays the AI, so its difficulty doesn't count
     if (!this.choice.coop) this.rulesBox.querySelector('.cond-row')?.remove();
   }

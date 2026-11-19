@@ -156,6 +156,7 @@ export default {
   description: 'The ore port in winter, between the Rombaksfjord and the Beisfjord: steep mountains straight out of the water, the E6 over two bridges, the ore railway through its tunnels. Whoever holds the bridges holds the town.',
   epochs: ['1985'],
   region: 'north',
+  airfields: [], // (no flat strip between the fjords and the fells: the aircraft come in from the map edge — systems/Airfields.js)
   armies: { nato: ['no', 'usmc'], pact: ['sov'] }, // (Brigade Nord and the US Marines' reinforcement for Norway against the Soviet Army)
   sides: { nato: 'NATO', pact: 'Soviet Union' },
   climate: 'winter',
