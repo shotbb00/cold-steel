@@ -971,3 +971,8 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 /* the reinforcement window's arrival roads on the map (ui/ReinforceWindow.js showRoads) */
 .road-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; padding: 2px 7px; background: rgba(18, 20, 18, 0.82); border: 1px solid rgba(255, 195, 90, 0.6); border-radius: 4px; font: 600 12px/1.2 var(--font-ui); color: #ffd27a; white-space: nowrap; }
 .road-tag[hidden] { display: none; }
+.range-tag { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; padding: 1px 5px; background: rgba(18, 20, 18, 0.7); border-radius: 3px; font: 600 11px/1.25 var(--font-ui); white-space: nowrap; text-shadow: 0 0 2px #000; }
+.range-tag[hidden] { display: none; }
+.sel-weapons { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; margin-top: 3px; }
+.sel-weapons b { font-weight: 600; }
+.sel-weapons small { opacity: 0.7; }

@@ -8,6 +8,7 @@ import { requestReplay, toMenu } from '../core/replay.js';
 import { rejoinAfterBattle } from './Lobby.js';
 import { renderReport } from './AfterAction.js';
 import { ActionBar } from './ActionBar.js';
+import { weapons, ROLE_CSS } from './RangeIndicators.js';
 import { settings } from '../core/Settings.js';
 import { CameraMode } from '../core/CameraManager.js';
 import { ACTIONS, keys, keyName } from '../core/Keys.js';
@@ -180,7 +181,7 @@ export class HUD {
       const top = document.createElement('div');
       top.className = 'sel-top';
       top.append(span('sel-name', s.name), span('sel-type', `${s.type.shortName} · ${s.aliveCount}/${s.units.length}`));
-      box.replaceChildren(top, span('sel-state', `${s.stateText} · ${s.moraleWord}`), bar(s));
+      box.replaceChildren(top, span('sel-state', `${s.stateText} · ${s.moraleWord}`), bar(s), this.weaponRow(s));
       box.insertAdjacentHTML('afterbegin', silhouette(s.type.id, artKey(s.type, s.army, s.faction), 'sel-sil'));
       return;
     }
@@ -194,6 +195,21 @@ export class HUD {
     });
     if (sel.length > 4) rows.push(span('sel-more', `+ ${sel.length - 4} more`));
     box.replaceChildren(head, ...rows);
+  }
+
+  /** A selected stack's weapons, coloured as their rings on the ground (ui/RangeIndicators.js): name, reach, what it is for. */
+  weaponRow(s) {
+    const row = document.createElement('div');
+    row.className = 'sel-weapons';
+    for (const w of weapons(s)) {
+      const it = document.createElement('span');
+      it.style.color = ROLE_CSS[w.role];
+      it.innerHTML = '<b></b> <small></small>';
+      it.querySelector('b').textContent = `${w.name} ${Math.round(w.range)} m`;
+      it.querySelector('small').textContent = w.vs;
+      row.append(it);
+    }
+    return row;
   }
 
   /** The key card (F1, the ? in the top bar): built fresh each time, so it shows rebindings. */
