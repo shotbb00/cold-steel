@@ -515,13 +515,13 @@ export class Drones {
   /** The host's drones for its state message. */
   snap() {
     const r = (v) => Math.round(v * 10) / 10;
-    return this.list.map((d) => [d.id, d.kind, r(d.pos.x), r(d.pos.y), r(d.pos.z), r(d.vel.x), r(d.vel.y), r(d.vel.z)]);
+    return this.list.map((d) => [d.id, d.kind, r(d.pos.x), r(d.pos.y), r(d.pos.z), r(d.vel.x), r(d.vel.y), r(d.vel.z), d.faction, d.state === 'fall' || d.dark ? 1 : 0]); // (side and fallen/dark: the guest's fog of war sees through its own side's drones)
   }
 
   /** A guest: the host's drones (gone ones low over the ground went off there). */
   apply(list) {
     const seen = new Set();
-    for (const [id, kind, x, y, z, vx, vy, vz] of list ?? []) {
+    for (const [id, kind, x, y, z, vx, vy, vz, faction, off] of list ?? []) {
       seen.add(id);
       let d = this.list.find((o) => o.id === id);
       if (!d) {
@@ -532,6 +532,8 @@ export class Drones {
       }
       d.to = new THREE.Vector3(x, y, z);
       d.vel.set(vx, vy, vz);
+      d.faction = faction;
+      d.dark = !!off;
       if (Math.hypot(vx, vz) > 0.5) d.yaw = Math.atan2(vx, vz);
       d.sound?.setPos?.(d.pos);
     }
