@@ -47,6 +47,10 @@ import augustowCanal from './augustowCanal.ts';
 import eastShield from './eastShield.ts';
 import biebrzaMarshes from './biebrzaMarshes.ts';
 import orzyszBase from './orzyszBase.ts';
+import gotlandGap from './gotlandGap.ts';
+import gulfOfFinland from './gulfOfFinland.ts';
+import gdanskBay from './gdanskBay.ts';
+import bornholmStrait from './bornholmStrait.ts';
 
 import eylau from './eylau.ts';
 import friedland from './friedland.ts';
@@ -114,6 +118,10 @@ export const MAPS = {
   [eastShield.id]: eastShield,
   [biebrzaMarshes.id]: biebrzaMarshes,
   [orzyszBase.id]: orzyszBase,
+  [gotlandGap.id]: gotlandGap,
+  [gulfOfFinland.id]: gulfOfFinland,
+  [gdanskBay.id]: gdanskBay,
+  [bornholmStrait.id]: bornholmStrait,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
@@ -220,7 +228,8 @@ let regionNow = 'europe';
 export const region = () => regionNow;
 export function setRegion(id) { regionNow = REGIONS.some((r) => r.id === id) ? id : 'europe'; }
 /** The regions year `ep` has maps in, in theatre `th` (one: no row to choose from). */
-export const regionsFor = (ep, th) => REGIONS.map((r) => ({ ...r, name: EPOCHS[ep]?.regions?.[r.id]?.[th]?.name ?? EPOCHS[ep]?.regions?.[r.id]?.name ?? r.name })) // (a region's name at sea may be its own: 1806's Germany is European waters).filter((r) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && regionOf(m) === r.id && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))));
+// (a region's name at sea may be its own: 1806's Germany is European waters)
+export const regionsFor = (ep, th) => REGIONS.map((r) => ({ ...r, name: EPOCHS[ep]?.regions?.[r.id]?.[th]?.name ?? EPOCHS[ep]?.regions?.[r.id]?.name ?? r.name })).filter((r) => Object.values(MAPS).some((m) => !m.wip && tabOf(m) === th && regionOf(m) === r.id && (m.epochs ? m.epochs.includes(ep) : !OWN_MAPS.has(ep))));
 /** The region in force for year `ep` in theatre `th`: the one picked, if that theatre has maps there, else its first. */
 export const regionIn = (ep, th) => { const rs = regionsFor(ep, th); return rs.some((r) => r.id === regionNow) ? regionNow : rs[0]?.id ?? 'europe'; };
 let theatreNow = 'land';

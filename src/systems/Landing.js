@@ -293,32 +293,8 @@ export class Landing {
     }
   }
 
-  /**
-   * The defence's anti-ship missile batteries (a unit with `stats.antiShip`: 1985, Hohwacht): hidden inland, halted, they
-   * fire a missile at a ship of the landing in reach (the biggest first), then drive off to another hide before the
-   * ships' guns come looking (the launch gives a bearing: systems/Sensors.js) — shoot and scoot.
-   */
-  batteries(dt) {
-    const g = this.game, ms = g.missiles;
-    if (!ms) return;
-    for (const s of g.world.stacks) {
-      const A = s.stats.antiShip;
-      if (!A || !s.alive || this.lands(s.faction)) continue;
-      const m = (s.ssm ??= { ...A, left: A.load, cd: 20 + Math.random() * 20 });
-      if ((m.cd -= dt) > 0 || m.left <= 0 || s.moveTarget) continue;
-      const u = s.units.find((q) => q.alive);
-      if (!u) continue;
-      const ships = g.world.stacks.filter((o) => o.alive && o.stats.naval && o.faction !== s.faction && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < m.range);
-      const t = ships.sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0)).map((o) => o.units.find((q) => q.alive)).find((q) => q && ms.inbound(q) < 2);
-      if (!t) { m.cd = 3; continue; }
-      const d = Math.hypot(t.pos.x - u.pos.x, t.pos.z - u.pos.z), flight = d / m.speed;
-      ms.launch(s, u, { x: u.pos.x, y: u.pos.y + 3, z: u.pos.z }, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
-      m.cd = m.reload;
-      // and away: a new hide a couple of hundred metres off, further from the sea
-      const sea = Math.sign(g.map.bases[enemyOf(s.faction)]?.z ?? -1) || -1, a = Math.random() * Math.PI * 2, r = 150 + Math.random() * 120;
-      s.ai.moveTo({ x: Math.max(-g.world.bounds.x + 40, Math.min(g.world.bounds.x - 40, u.pos.x + Math.cos(a) * r)), z: u.pos.z - sea * Math.abs(Math.sin(a)) * r * 0.5 }, { ordered: false });
-    }
-  }
+  /** The defence's anti-ship missile batteries (1985, Hohwacht): systems/Missiles.js batteries — the side that lands has none. */
+  batteries(dt) { this.game.missiles?.batteries(dt, (f) => this.lands(f)); }
 
   blast(s, u, at, damage, size) {
     const g = this.game, pos = { x: at.x, y: g.world.river.level, z: at.z };

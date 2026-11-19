@@ -104,6 +104,7 @@ const SUPPORT = [
   ['air:seaCap', 'fighter', 'cap', 'Fighter cover', 'Fighters circle the spot and shoot down enemy aircraft before they fire'],
   ['air:asw', 'torpBomb', 'heli', 'Sub hunt', 'A patrol aircraft searches along a line: submarines it finds show on your map, and it drops a torpedo on one'],
   ['air:aew', 'recon', 'recon', 'Radar picture', 'A radar aircraft circles the spot: every enemy ship within 3 km shows on your map — and can be fired at'],
+  ['air:seaDrone', 'recon', 'none', 'Sea drone', 'A long-endurance drone circles the spot for minutes: every enemy ship within 2 km of it shows on your map — and can be fired at (2027)'],
   ...Object.entries(POWERS_1806).map(([k, p]) => [`power:${k}`, p.icon, p.key, p.label, p.tip]), // 1806 (systems/Powers1806.js)
 ];
 

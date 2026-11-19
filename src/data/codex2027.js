@@ -102,3 +102,95 @@ export const CODEX2027 = {
     pl: 'The Territorial Defence Force (WOT), formed in 2017, trains part-time soldiers to defend their own home region.',
   },
 };
+
+// ---- at sea: the Baltic (data/units2027/ships.js, data/air27sea.js) — `nato` the US Navy, `pl` the Polish Navy, `pact` the Baltic Fleet
+Object.assign(CODEX2027, {
+  frigate: {
+    use: 'The escort and the picket: send it ahead, radar off until the fight starts, and let it fire its anti-ship missiles at what the drones and aircraft find. Its own air defence covers itself and the ship beside it.',
+    strong: 'Missile boats and drone boats, single ships', weak: 'A big missile salvo, submarines, being alone',
+    counter: 'Swamp its defences with more missiles than it can shoot down at once, and send a submarine.',
+    nato: 'The Constellation class (FFG-62), built at Marinette on the Italian FREMM design, is the US Navy’s first new frigate in decades: sixteen NSMs, 32 VLS cells and the SPY-6 radar.',
+    pl: 'Miecznik (“Swordfish”) is the Polish Navy’s new frigate, built at Gdańsk on the British Type 31 design — the first of three is due by the end of the decade.',
+    pact: 'The Steregushchiy-class corvettes are the backbone of the Baltic Fleet: stealthy hulls, eight Kh-35 Uran missiles and the Redut air-defence system.',
+  },
+  destroyer: {
+    use: 'The fleet’s air-defence ship and its heaviest hitter. Keep it in the middle of the fleet: its long-range missiles shoot down what flies at the others, and it fires the longest-range anti-ship missiles.',
+    strong: 'Missile raids, aircraft, everything at long range', weak: 'Very fast missiles fired in numbers, submarines, sea drones close in',
+    counter: 'Fast missiles (Zircon, Oniks) in a salvo from several directions at once; a submarine under it; drone boats at night.',
+    nato: 'The Arleigh Burke Flight III carries the SPY-6 radar, with 96 VLS cells for SM-6, ESSM and Tomahawk. Ships of the class have shot down drones and missiles over the Red Sea since 2023.',
+    pl: 'Poland has no destroyers: an American Burke is the Polish task group’s air-defence ship.',
+    pact: 'The Admiral Gorshkov frigate (Project 22350), Russia’s newest major warship, was the first to carry the Zircon hypersonic missile, from 2023.',
+  },
+  ptBoat: {
+    use: 'Fast and small: dash in, fire the missiles, get out. It can’t take a hit, so fire from behind an island or at what someone else has found.',
+    strong: 'Big ships that haven’t seen it, ambushes among the islands', weak: 'Aircraft, helicopters, guns at close range',
+    counter: 'Helicopters and aircraft, guns and drones close in; keep a picket out on the side it can come from.',
+    nato: 'The US Navy has no small combatants in the Baltic: the Polish Orkans sail with its ships.',
+    pl: 'The Orkan class, three fast attack boats of the Polish Navy, carry the Swedish RBS15 missile and a 76 mm gun.',
+    pact: 'The Karakurt (Project 22800) is a small missile ship with eight Kalibr or Oniks missiles and the Pantsir-M air defence — a heavy punch on a 67 m hull.',
+  },
+  corvette: {
+    use: 'A missile carrier for the long shot: Kalibr reaches across the map and sprints at the end. Keep it behind the fleet’s air defence — it has little of its own.',
+    strong: 'Ships at long range', weak: 'Aircraft, submarines, anything up close',
+    counter: 'Find it with drones and aircraft and hit it before it fires.',
+    pact: 'The Buyan-M (Project 21631) is a river-going corvette built to carry eight Kalibr missiles; ships of the class fired them from the Caspian Sea into Syria in 2015.',
+  },
+  submarine: {
+    use: 'Unseen until it fires: get it in front of the enemy fleet’s way, wait, and torpedo the biggest ship. Keep it away from enemy helicopters and patrol aircraft.',
+    strong: 'Big ships, anything that doesn’t hunt it', weak: 'Helicopters, patrol aircraft, frigates hunting with sonar',
+    counter: 'Sub-hunting aircraft (P-8, Il-38), ship helicopters, frigates with sonar — and keep moving.',
+    nato: 'The Virginia Block V attack submarine adds a long hull section with 28 more Tomahawk tubes; Virginias have patrolled the Baltic and the Norwegian Sea.',
+    pact: 'The Improved Kilo (Project 636.3) is a quiet diesel-electric boat that can fire Kalibr from its torpedo tubes; the Baltic Fleet keeps its boats at Kronstadt and Baltiysk.',
+  },
+  escortCarrier: {
+    use: 'A floating airfield: its F-35Bs fly fighter cover and missile strikes from the fleet itself. It is the biggest target there is — keep it behind the destroyers and away from the enemy’s missiles.',
+    strong: 'Everything its aircraft can reach', weak: 'Missiles and drones that get through, submarines',
+    counter: 'Everything you have at once: a missile salvo, drones, a submarine.',
+    nato: 'The America-class amphibious assault ships carry up to twenty F-35B jump jets as a “lightning carrier”; USS America and USS Tripoli have sailed in that role.',
+  },
+  droneBoat: {
+    use: 'A tender for explosive drone boats: keep it in the middle of the fleet, and it sends them off in threes at any enemy ship that has been seen within 5 km. Several at once swamp a ship’s guns.',
+    strong: 'Big ships, ships alone, ships at night', weak: 'Guns and close-in defences, jammers; the tender itself is easy to sink',
+    counter: 'Jam them (a ship’s jammer), keep the guns manned, and sink the tender.',
+    nato: 'Explosive drone boats like the Ukrainian Magura V5 sank or damaged a third of Russia’s Black Sea Fleet in 2022–24; the US Navy is now fielding its own.',
+    pact: 'Russia has answered with its own drone boats and with guns, helicopters and booms against them — the Baltic Fleet guards Baltiysk with all three.',
+    pl: 'Poland is buying uncrewed boats for its Navy and the Baltic coast after watching the Black Sea.',
+  },
+  'air:seaStrike': {
+    use: 'Anti-ship missiles from the air: send them at ships your drones or radar planes have found, from a direction the fleet isn’t watching.',
+    strong: 'Ships that have been found', weak: 'A fleet’s long-range air defence', counter: 'Fighter cover and long-range missiles; turn the radar on when they come.',
+    nato: 'The F-35C, the Navy’s stealthy carrier jet, carries the LRASM anti-ship missile; air defences see it late and lock onto it badly.',
+    pact: 'The Su-30SM of Russian naval aviation carries the Kh-35U and the fast Kh-31A against ships.',
+  },
+  'air:seaCap': {
+    use: 'Fighters over the fleet: they shoot down enemy strike aircraft, patrol planes and drones before they launch.',
+    strong: 'Aircraft and drones', weak: 'Ships’ air defence', counter: 'Keep your own aircraft back until their cover goes home.',
+    nato: 'The F-35B, the jump-jet version, flies from the America-class ships as well as from land.', pl: 'Polish F-16C Jastrząb fighters from Łask and Krzesiny cover the coast.',
+    pact: 'The Su-35S, Russia’s best fighter in service, flies from Chkalovsk near Kaliningrad.',
+  },
+  'air:asw': {
+    use: 'Submarine hunting from the air: it sweeps for enemy submarines and attacks them with torpedoes.',
+    strong: 'Submarines', weak: 'Fighters and ships’ air defence', counter: 'Fighter cover over your submarines’ area.',
+    nato: 'The P-8A Poseidon, on the Boeing 737, hunts submarines with sonobuoys and Mk 54 torpedoes; patrols over the Baltic have flown from Germany and Sicily.',
+    pact: 'The Il-38N, the modernised May, flies Russian naval aviation’s submarine patrols over the Baltic.',
+  },
+  'air:aew': {
+    use: 'The radar picture: a plane far behind your fleet sees the enemy’s ships for your missiles — without your ships switching on their own radar.',
+    strong: 'Finding the enemy', weak: 'Fighters', counter: 'Fighter cover forward; shoot it down if you can reach it.',
+    nato: 'The E-7A Wedgetail, on the Boeing 737, carries a fixed electronically scanned radar; it is replacing the old AWACS.',
+    pact: 'The Tu-214R is Russia’s electronic and radar reconnaissance plane, often seen off the Baltic coast.',
+  },
+  'air:seaDrone': {
+    use: 'A drone over the sea: slow and fragile, but it circles for a long time and marks every enemy ship it sees — your missiles can then fire at them without your own radar on.',
+    strong: 'Finding ships beyond the horizon', weak: 'Anything that shoots at it', counter: 'Shoot it down, or keep out of its circle.',
+    nato: 'The MQ-9B SeaGuardian, the maritime Reaper, patrols for a day and more; US Reapers have flown from Mirosławiec in Poland since 2018.',
+    pact: 'The Orion (Inokhodets) is Russia’s long-endurance drone, armed in Ukraine and used for reconnaissance over the sea.',
+  },
+  'air:helo': {
+    use: 'The ship’s helicopter: it hunts submarines and drone boats near the fleet and spots beyond the radar’s horizon.',
+    strong: 'Submarines and small boats near the fleet', weak: 'Ships’ air defence, fighters', counter: 'Shoot it down when it comes close.',
+    nato: 'The MH-60R Seahawk hunts submarines with dipping sonar and torpedoes and carries Hellfires against small boats.',
+    pl: 'Poland bought AW101 Merlins for submarine hunting and search and rescue in 2019.',
+    pact: 'The Ka-27M, the coaxial-rotor Helix, is the Russian Navy’s ship helicopter, modernised with a new radar and sonar.',
+  },
+});

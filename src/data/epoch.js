@@ -171,10 +171,10 @@ export const EPOCHS = {
     blurb: '2027, a war that has not happened: Russia strikes for the Suwałki Gap, the narrow land bridge between Poland and Lithuania. Drones overhead, jammers in every wood, and rockets that hit what they can find.',
     sides: { nato: 'NATO', pact: 'Russia' },
     armies: {
-      us: { id: 'us', faction: 'nato', name: 'US Army' },
-      pl: { id: 'pl', faction: 'nato', name: 'Polish Army' },
-      ru: { id: 'ru', faction: 'pact', name: 'Russian Army' },
-      by: { id: 'by', faction: 'pact', name: 'Belarus' },
+      us: { id: 'us', faction: 'nato', name: 'US Army', navy: 'US Navy' },
+      pl: { id: 'pl', faction: 'nato', name: 'Polish Army', navy: 'Polish Navy' },
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', navy: 'Russian Baltic Fleet' },
+      by: { id: 'by', faction: 'pact', name: 'Belarus' }, // (no navy: not offered at sea)
     },
     defaults: { nato: 'us', pact: 'ru' },
     types: TYPES_2027, alias: ALIAS_2027, air: { ...AIR_2027, ...BOMBERS[2027] },
@@ -290,7 +290,7 @@ export function setEpoch(id) {
     k.label0 ??= k.label;
     k.label = (e.id === '1945' && { lift: 'Paradrop', jet: 'Strike run' }[kind]) || (e.id === '1918' && { jet: 'Ground attack', recon: 'Spotter flight', navScout: 'Air scouting', torpBomb: 'Torpedo seaplanes' }[kind]) || k.label0;
     if (!('deck0' in k)) k.deck0 = k.deck;
-    k.deck = e.id === '1918' && k.sea && k.deck0 !== 'ship' ? 'optional' : k.deck0; // (1918: the seaplanes from their shore stations — off HMS Furious if she has them aboard)
+    k.deck = (e.id === '1918' || e.id === '2027') && k.sea && k.deck0 !== 'ship' ? 'optional' : k.deck0; // (1918: the seaplanes from their shore stations — off HMS Furious if she has them aboard; 2027: the jets from the shore, off the America if she has them)
     if (aircraft) k.aircraft = aircraft;
   }
   return e;

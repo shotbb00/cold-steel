@@ -5,6 +5,7 @@
 // The gunships carry anti-tank missiles in place of most of the rockets.
 import { AIRCRAFT, JETS, FIGHTERS, RECON, LIFT } from './air.ts';
 import { buildApache, buildMi28, buildF16, buildFA50, buildSu35, buildSu24 } from './models/aircraft2027.js';
+import { AIR_2027_SEA } from './air27sea.js';
 const flanker = { colors: [0x5f6f7a, 0x7a8a96, 0x4a5862, 0x6c7c88], scale: 1.2 };
 
 const grey = { colors: [0x6e7479, 0x5f656a, 0x7a8085, 0x666c71], scale: 0.9 };
@@ -48,4 +49,4 @@ const lift = {
   by: { ...LIFT.pact, name: 'Mi-8MTV-5', weapon: 'PKT · rockets · 8 men', text: 'The Belarusian Hip: rockets on the landing zone, then the squad.' },
 };
 
-export const AIR_2027 = { heli, jet, lift, cap, recon };
+export const AIR_2027 = { heli, jet, lift, cap, recon, ...AIR_2027_SEA }; // (at sea: ./air27sea.js)

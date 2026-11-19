@@ -22,10 +22,11 @@ import { windFrom } from '../entities/sailing.js';
 
 const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
-const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer']; // (missileSub: 1985 only — the others skip what their year doesn't have)
+const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'corvette', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'droneBoat', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'droneBoat']; // (missileSub: 1985 only, droneBoat 2027 — the others skip what their year doesn't have)
 const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
 const ORDER_1918 = ['destroyer', 'lightCruiser', 'frigate', 'destroyer', 'cruiser', 'minesweeper', 'ptBoat', 'submarine', 'destroyer', 'minelayer', 'battleship', 'carrier', 'lightCruiser', 'transport', 'destroyer', 'minesweeper', 'cruiser', 'submarine', 'frigate']; // (the North Sea: the sweepers and layers among them)
-const order = () => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : ORDER);
+const ORDER_2027 = ['destroyer', 'frigate', 'ptBoat', 'droneBoat', 'corvette', 'submarine', 'frigate', 'destroyer', 'ptBoat', 'escortCarrier', 'droneBoat', 'corvette', 'destroyer', 'submarine']; // (the Baltic, 2027: no cruisers or battleships left — the drone tender early)
+const order = () => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : ORDER);
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
@@ -68,7 +69,7 @@ export class SeaDirector {
     const mine = this.ships();
     if (mine.length >= this.state.maxStacks) return;
     const army = this.game.armyOf(this.faction);
-    const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(getUnitType(id)));
+    const allowed = (id) => !!UNIT_TYPES[id] && (!getUnitType(id).armies || getUnitType(id).armies.includes(army)) && (!this.state.allow || this.state.allow(getUnitType(id))); // (a type its own navy fields: no Buyan-M for the US Navy)
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
     for (let tries = 0; tries < order().length; tries++) {
       const list = order();
@@ -191,6 +192,13 @@ export class SeaDirector {
         if (m) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - m.x, s.moveTarget.z - m.z) > 60) this.move(s, m.x, m.z); continue; }
       }
       if (s.stats.minelayer && !s.laying && (s.minesLeft ?? s.stats.minelayer.count) > 0 && d(home) > 1400) g.orders.run(this.faction, { t: 'layMines', s: [s.id], on: 1 }, 'ai'); // (a minelayer: lays once well out, across the way to the objective)
+      if (s.stats.drone) { // 2027's sea-drone tender: back in the fleet's middle — her swarms go out on their own (systems/Drones.js)
+        const rest = fleet.filter((o) => o !== s && !o.stats.submarine);
+        const mid = rest.length ? { x: rest.reduce((a, o) => a + o.centroid.x, 0) / rest.length, z: rest.reduce((a, o) => a + o.centroid.z, 0) / rest.length } : home;
+        const want = this.seaRoom({ x: mid.x + (home.x - mid.x) * 0.15, z: mid.z + (home.z - mid.z) * 0.15 }, 300);
+        if (d(want) > 300 && (!s.moveTarget || Math.hypot(s.moveTarget.x - want.x, s.moveTarget.z - want.z) > 200)) this.move(s, want.x, want.z);
+        continue;
+      }
       if (s.stats.smallCraft) { // a PT boat: a torpedo run at the biggest enemy ship within reach (at night from anywhere), else with the fleet
         const prey = this.foes().filter((f) => f.units[0]?.spotted && (VALUE[f.type.id] ?? 0) >= 2 && (night || d(f.centroid) < 1400)).sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0) || d(a.centroid) - d(b.centroid))[0];
         if (prey) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - prey.centroid.x, s.moveTarget.z - prey.centroid.z) > 150) this.move(s, prey.centroid.x, prey.centroid.z); continue; }
@@ -291,7 +299,7 @@ export class SeaDirector {
     const g = this.game;
     const f = this.faction;
     const fleet = this.ships();
-    if (year() < 1900 || (year() > 1930 && !fleet.some((s) => s.stats.carrier && s.units[0]?.alive))) return; // (1918: the seaplanes and the Zeppelins from the shore, carrier or none)
+    if (year() < 1900 || (year() > 1930 && year() < 2000 && !fleet.some((s) => s.stats.carrier && s.units[0]?.alive))) return; // (1918: the seaplanes and the Zeppelins from the shore, carrier or none; 2027 too: every sea power flies from the shore)
     const support = this.state.support?.[f] ?? this.state.cp?.[f] ?? 0;
     const seen = this.foes().filter((s) => s.units.some((u) => u.alive && u.spotted && (u.depth ?? 0) < 1));
     const best = seen.sort((a, b) => (VALUE[b.type.id] ?? 0) - (VALUE[a.type.id] ?? 0))[0];
@@ -311,6 +319,6 @@ export class SeaDirector {
     const foeHome = g.world.bases[enemyOf(f)];
     const ahead = { x: (mid.x + foeHome.x) / 2, z: (mid.z + foeHome.z) / 2 };
     if (this.foes().some((s) => s.stats.submarine && !s.units.some((u) => u.alive && u.spotted)) && Math.random() < 0.3 && search('asw', (mid.x + ahead.x) / 2, (mid.z + ahead.z) / 2)) return; // (1985: a patrol plane ahead of the fleet)
-    if (!seen.length) search('aew', ahead.x, ahead.z) || search('navScout', ahead.x, ahead.z);
+    if (!seen.length) search('seaDrone', ahead.x, ahead.z) || search('aew', ahead.x, ahead.z) || search('navScout', ahead.x, ahead.z); // (2027: the drone first — cheap, long on station)
   }
 }

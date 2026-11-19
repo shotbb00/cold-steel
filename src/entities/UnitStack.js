@@ -144,7 +144,7 @@ function shipName(type, faction, world) {
   used.set(key, i + 1);
   const n = list[i % list.length] + (i >= list.length ? ` ${Math.floor(i / list.length) + 1}` : '');
   if (n.startsWith('SS ') || list === own) return n; // (a merchantman is SS already)
-  if (/^[A-Z]{1,3} \d/.test(n)) return n; // (a numbered boat — S 53, UB 88, CMB 4 — goes by her number)
+  if (/^[A-Z]{1,3} \d/.test(n) || n.startsWith('ORP ')) return n; // (a numbered boat — S 53, UB 88, CMB 4 — goes by her number; 2027: a Polish ship with the US Navy keeps her ORP)
   const pre = year() < 1900 ? { pact: 'HMS' }[faction] : year() < 1930 ? { nato: 'HMS', pact: 'SMS' }[faction] : { nato: 'USS' }[faction]; // (1806: the Royal Navy's HMS, the French none; 1918 HMS and SMS; later the US Navy's USS)
   return pre ? `${pre} ${n}` : n;
 }

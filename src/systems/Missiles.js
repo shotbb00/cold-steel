@@ -26,6 +26,10 @@ const CHAFF_FOOLS = 0.35;   // the chance a seeker switching on near a cloud tak
 // the Chaff order: a cloud before the seeker has her), and her magazines filled again near the fleet's home
 const ECM_REACH = 2200;     // m: how far a ship's jammer covers the ships round her (a missile's seeker inside it)
 const REARM = { radius: 900, every: 20 }; // near her side's home point: a SAM / point missile / chaff round back every 20 s
+// 2027 (data/units2027/ships.js): a low-observable missile (`stealth`: NSM) is seen only that share of the usual
+// range; a fast one gives the SAMs less of a shot (FAST: their pk falls off above this speed — Zircon); a
+// sprinter (`sprint`: Kalibr) goes supersonic once its seeker has something
+const FAST = 300;
 const _p = new THREE.Vector3();
 const _d = new THREE.Vector3();
 
@@ -84,12 +88,42 @@ export class Missiles {
         aim: { x: x + (Math.random() - 0.5) * 40, z: z + (Math.random() - 0.5) * 40 }, meant: t, target: null, decoy: null,
         speed: m.speed, left: m.range * 1.15, damage: m.damage, pierce: m.pierce ?? 0.6, seeker: m.seeker, skim: !!m.skim,
         cruise: level + (m.skim ? 5 : m.alt ?? 40), level, age: -i * 0.6, faction: src.faction, source: src, name: m.name, engaged: 0, fx: 0, id: this.nextId++,
+        stealth: m.stealth ?? 1, sprint: m.sprint ?? 0,
       });
     }
     g.netEvent('msl', this.list.slice(first).map((s) => [s.id, Math.round(s.pos.x), Math.round(s.pos.y), Math.round(s.pos.z), Math.round(s.aim.x), Math.round(s.aim.z), s.speed, Math.round(s.cruise), s.skim ? 1 : 0, s.faction, s.seeker, Math.round(s.left)]));
     g.sensors?.launch(src.faction, from.x, from.z); // the launch: a flash and a booster — a bearing for the other side (systems/Sensors.js), not a position
     g.audio?.play('nato.mlrs', from, { volume: 1, rate: m.speed > 150 ? 0.8 : 1, throttle: 0.25 }); // (the booster's roar — a big supersonic one deeper)
     g.tell(src.faction, `${src.name}: ${m.name ?? 'missiles'} away`);
+  }
+
+  /**
+   * The shore's anti-ship missile batteries (a unit with `stats.antiShip`: 1985's Hohwacht, 2027's NSM, Bastion, Bal):
+   * hidden ashore, halted, they fire at a ship in reach (the biggest first), then drive off to another hide before
+   * the ships come looking (the launch gives a bearing: systems/Sensors.js) — shoot and scoot. `lands(f)`: side f
+   * comes from the sea (systems/Landing.js) — its batteries, if any, hold their fire.
+   */
+  batteries(dt, lands = () => false) {
+    const g = this.game, level = g.world.river?.level ?? 0;
+    for (const s of g.world.stacks) {
+      const A = s.stats.antiShip;
+      if (!A || !s.alive || lands(s.faction)) continue;
+      s.autonomous = true; // (its own hides: not the admiral's, nor yours to order)
+      const m = (s.ssm ??= { ...A, left: A.load, cd: 20 + Math.random() * 20 });
+      if ((m.cd -= dt) > 0 || m.left <= 0 || s.moveTarget) continue;
+      const u = s.units.find((q) => q.alive);
+      if (!u) continue;
+      const ships = g.world.stacks.filter((o) => o.alive && o.stats.naval && o.faction !== s.faction && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < m.range);
+      const t = ships.sort((a, b) => (b.type.hull?.length ?? 0) - (a.type.hull?.length ?? 0)).map((o) => o.units.find((q) => q.alive && (q.depth ?? 0) < 1)).find((q) => q && this.inbound(q) < 2);
+      if (!t) { m.cd = 3; continue; }
+      const d = Math.hypot(t.pos.x - u.pos.x, t.pos.z - u.pos.z), flight = d / m.speed;
+      this.launch(s, u, { x: u.pos.x, y: u.pos.y + 3, z: u.pos.z }, t.pos.x + (t.vel?.x ?? 0) * flight, t.pos.z + (t.vel?.z ?? 0) * flight, m, t);
+      m.cd = m.reload;
+      // and away: a new hide a couple of hundred metres off, further from the sea (the enemy's side) — on dry land
+      const sea = Math.sign(g.map.bases[enemyOf(s.faction)]?.z ?? -1) || -1, a = Math.random() * Math.PI * 2, r = 150 + Math.random() * 120;
+      const x = Math.max(-g.world.bounds.x + 40, Math.min(g.world.bounds.x - 40, u.pos.x + Math.cos(a) * r)), z = u.pos.z - sea * Math.abs(Math.sin(a)) * r * 0.5;
+      if (g.terrain.heightAt(x, z) > level + 1) s.ai.moveTo({ x, z }, { ordered: false });
+    }
   }
 
   /** Missiles in flight meant for unit `t` (so a ship doesn't throw her whole load at one target). */
@@ -101,6 +135,7 @@ export class Missiles {
 
   update(dt) {
     if (this.game.net?.isClient) { this.flyMissiles(dt); this.flyInterceptors(dt); this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; } // (a guest: the host's, to watch)
+    if (!this.game.landing) this.batteries(dt); // (at sea; on a coast systems/Landing.js runs them, for the side that holds it)
     if (!this.list.length && !this.interceptors.length && !this.game.air?.sorties.some((a) => a.airborne)) { if (this.chaff.length) this.chaff = this.chaff.filter((c) => c.until > this.game.time); return; }
     this.flyMissiles(dt);
     this.defend(dt);
@@ -117,6 +152,7 @@ export class Missiles {
       // the seeker: on near the aim point, after a chaff cloud blooms, or when it has lost its ship
       const toAim = Math.hypot(s.aim.x - s.pos.x, s.aim.z - s.pos.z);
       if ((!s.target && !s.decoy && toAim < s.seeker) || (s.target && !s.target.alive)) this.seek(s);
+      if (s.sprint > s.speed && (s.target || s.decoy)) s.speed = s.sprint; // (the Kalibr's last run in)
       const goal = s.target?.pos ?? s.decoy ?? s.aim;
       // where to: the goal ahead (a ship: led a little), at cruise height — the last run low
       const gx = goal.x + (s.target?.vel?.x ?? 0) * 0.8, gz = goal.z + (s.target?.vel?.z ?? 0) * 0.8;
@@ -134,7 +170,7 @@ export class Missiles {
         g.effects.smoke.spawn(s.pos.x - s.dir.x * 3, s.pos.y, s.pos.z - s.dir.z * 3, { vx: 0, vy: 0.2, vz: 0, size: 1.4, grow: 1.6, life: s.skim ? 2.5 : 4, alpha: 0.55, color: 0xe8eaec, drag: 1, wind: 0.6 });
       }
       // the hit: inside her hull (length × beam, up to her upperworks)
-      const h = s.target && this.hits(s, s.target);
+      const h = s.target && (this.hits(s, s.target) || (step > 8 && this.hits(s, s.target, step / 2))); // (a fast one: the half step too, or it flies through her between frames)
       if (s.remote) { if (h || s.left <= -200) this.list.splice(i, 1); continue; } // (a guest: the host says when it ends — 'mslx'; a hit it shows then)
       if (h) { this.impact(s, s.target); this.gone(s, 1); this.list.splice(i, 1); continue; }
       if (s.decoy && Math.hypot(s.decoy.x - s.pos.x, s.decoy.z - s.pos.z) < 15) { this.splash(s); this.gone(s, 0); this.list.splice(i, 1); continue; } // into the chaff: the sea
@@ -216,9 +252,9 @@ export class Missiles {
     if (D.chaff && (u.chaffLeft ?? D.chaff.count) < D.chaff.count) u.chaffLeft = (u.chaffLeft ?? D.chaff.count) + 1;
   }
 
-  hits(s, u) {
+  hits(s, u, back = 0) {
     const hull = u.stack.type.hull;
-    const dx = s.pos.x - u.pos.x, dz = s.pos.z - u.pos.z;
+    const dx = s.pos.x - s.dir.x * back - u.pos.x, dz = s.pos.z - s.dir.z * back - u.pos.z;
     const along = dx * Math.sin(u.yaw) + dz * Math.cos(u.yaw), across = dx * Math.cos(u.yaw) - dz * Math.sin(u.yaw);
     return Math.abs(along) < (hull?.length ?? 60) / 2 + 2 && Math.abs(across) < (hull?.beam ?? 10) / 2 + 3 && s.pos.y < u.pos.y + (u.stack.stats.height ?? 10) + 2;
   }
@@ -262,7 +298,7 @@ export class Missiles {
         for (const s of this.list) {
           if (s.faction === st.faction || s.age < 0) continue;
           const d = Math.hypot(s.pos.x - u.pos.x, s.pos.z - u.pos.z);
-          const seen = d < EYES || (radar && d < (s.skim || s.pos.y - s.level < 12 ? SKIM_HORIZON : radar.range));
+          const seen = d < EYES * (s.stealth ?? 1) || (radar && d < (s.skim || s.pos.y - s.level < 12 ? SKIM_HORIZON : radar.range) * (s.stealth ?? 1));
           if (!seen) continue;
           const mine = s.target === u || (!s.target && Math.hypot(s.aim.x - u.pos.x, s.aim.z - u.pos.z) < 600); // (coming for her)
           if (mine && !s.warned?.has(st.faction)) this.warn(st, u, s);
@@ -275,7 +311,7 @@ export class Missiles {
         if (D.sam && radar) for (const a of g.air?.sorties ?? []) {
           if (a.faction === st.faction || !a.airborne) continue;
           const d = Math.hypot(a.pos.x - u.pos.x, a.pos.z - u.pos.z);
-          if (d < D.sam.range) this.layer(st, u, D.sam, 'sam', a, d, now, true, true);
+          if (d < D.sam.range * (a.type?.stealth ?? 1)) this.layer(st, u, D.sam, 'sam', a, d, now, true, true); // (2027's F-35: found late)
         }
         // chaff: a seeker on her, close — a cloud off her beam, and every seeker near it may take it instead
         if (D.chaff && nearest?.target === u && nearestD < 1600 && (u.chaffLeft ?? D.chaff.count) > 0 && !(u.chaffAt > now - D.chaff.cooldown)) {
@@ -314,7 +350,7 @@ export class Missiles {
     s.engaged++;
     _p.set(u.pos.x, u.pos.y + (st.stats.height ?? 10) * 0.8, u.pos.z);
     if (!air && s.id) this.game.netEvent('mslsam', Math.round(_p.x), Math.round(_p.y), Math.round(_p.z), s.id, L.speed);
-    this.interceptors.push({ pos: _p.clone(), dir: new THREE.Vector3(0, 1, 0), target: s, air, from: u, layer: key, speed: L.speed, pk: L.pk * (s.skim ? 0.75 : 1) * (air ? 0.8 : 1), age: 0 }); // (a sea-skimmer: low in the clutter, a harder shot; an aircraft jinks and jams)
+    this.interceptors.push({ pos: _p.clone(), dir: new THREE.Vector3(0, 1, 0), target: s, air, from: u, layer: key, speed: L.speed, pk: L.pk * (s.skim ? 0.75 : 1) * (air ? 0.8 * (s.type?.stealth ?? 1) : Math.min(1, FAST / s.speed)), age: 0 }); // (a sea-skimmer: low in the clutter, a harder shot; an aircraft jinks and jams)
     this.game.audio?.play(`${st.faction}.sam`, _p, { volume: 0.7, throttle: 0.2 });
   }
 
