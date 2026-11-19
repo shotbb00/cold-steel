@@ -177,9 +177,23 @@ export class Drones {
     if (s.restockT >= D.every * RESTOCK.field) { s.restockT = 0; s.dronesLeft++; }
   }
 
-  /** Over the enemy nearest the team that we know of, or straight out toward the enemy's base. */
+  /** The player's order (Orders 'drone'): the team's recon drone to circle over (x, z), within its reach — the one up now, else the next at once; later ones go there too. */
+  sendRecon(s, x, z) {
+    const D = s.stats.drone, op = s.units.find((u) => u.alive);
+    if (D?.kind !== 'recon' || !op) return;
+    const dx = x - op.pos.x, dz = z - op.pos.z, L = Math.hypot(dx, dz), k = L > D.range ? D.range / L : 1;
+    s.reconAt = { x: op.pos.x + dx * k, z: op.pos.z + dz * k };
+    const up = this.list.find((d) => d.owner === s && d.kind === 'recon' && d.state !== 'fall');
+    if (up && up.age < up.P.station) { up.spot = { ...s.reconAt }; return; }
+    if (up) this.remove(up); // (on its way home: the next one goes up instead)
+    this.launch(s, op, 'recon', null, { ...s.reconAt });
+    s.droneAt = this.game.time + D.every;
+  }
+
+  /** Where you sent it, else over the enemy nearest the team that we know of, or straight out toward the enemy's base. */
   reconSpot(s, op, range) {
     const g = this.game;
+    if (s.reconAt) return { ...s.reconAt };
     let best = null, bd = range * range;
     for (const e of g.world.stacks) {
       if (e.faction === s.faction || !e.alive) continue;
