@@ -100,7 +100,7 @@ const SUPPORT = [
   ['air:navCap', 'fighter', 'cap', 'Fighter cover', 'From the carrier: fighters circle the spot and go for enemy aircraft'],
   ['air:navScout', 'recon', 'recon', 'Scout flight', 'From the carrier: a long search leg — every ship it sees shows on your map'],
   ['air:seaStrike', 'jet', 'jet', 'Missile strike', 'Bombers fire their anti-ship missiles at the spot from beyond the defences (off a carrier, or from the shore)'],
-  ['air:coastStrike', 'jet', 'none', 'Anti-ship strike', 'Tornados fire sea-skimming missiles at the landing ship nearest the spot, from beyond its guns (the defence of the coast)'],
+  ['air:coastStrike', 'jet', 'none', 'Anti-ship strike', 'Jets fire sea-skimming missiles at the landing ship nearest the spot, from beyond its guns (the defence of the coast)'],
   ['air:seaCap', 'fighter', 'cap', 'Fighter cover', 'Fighters circle the spot and shoot down enemy aircraft before they fire'],
   ['air:asw', 'torpBomb', 'heli', 'Sub hunt', 'A patrol aircraft searches along a line: submarines it finds show on your map, and it drops a torpedo on one'],
   ['air:aew', 'recon', 'recon', 'Radar picture', 'A radar aircraft circles the spot: every enemy ship within 3 km shows on your map — and can be fired at'],

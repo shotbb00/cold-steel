@@ -18,11 +18,18 @@ const PROP = { engineSound: 'prop', gun: NOGUN };
 
 // the missiles (systems/Missiles.js, the ships' scale: a third of the real speed)
 const LRASM = { name: 'LRASMs', speed: 160, range: 5200, seeker: 1400, skim: true, stealth: 0.5, damage: 2600, pierce: 0.65 }; // (AGM-158C: stealthy, picks its ship out of the group)
+const JSM = { name: 'JSMs', speed: 160, range: 4000, seeker: 1200, skim: true, stealth: 0.6, damage: 1800, pierce: 0.6 }; // (Joint Strike Missile: the NSM made to fit an F-35's bay)
 const KH35 = { name: 'Kh-35Us', speed: 160, range: 4400, seeker: 1100, skim: true, damage: 1700, pierce: 0.6 };
 
 const seaStrike = {
   nato: { ...JET, name: 'F-35C Lightning II', weapon: '2 AGM-158C LRASM each', text: 'Carrier jets from beyond the Danish straits (the America\'s own are F-35Bs): hard to see on any radar, they fire four stealthy LRASMs from far out and are gone before the SAMs find them.', model: buildF35C, paint: GREY, hp: 8, stealth: 0.5, asm: { ...LRASM, perPlane: 2 } },
   pact: { ...JET, name: 'Su-30SM', weapon: '3 Kh-35U each', text: 'The Baltic Fleet\'s naval strike fighters from Chernyakhovsk: a pair low over the sea, six Kh-35Us fired from beyond the defences.', model: buildSu35, paint: FLANKER, hp: 9, asm: { ...KH35, perPlane: 3 } },
+};
+// the coast's own strike (KINDS.coastStrike: a coastal map's defence, from the shore — Gotland): F-35As with JSMs
+const coastStrike = {
+  nato: { ...JET, name: 'F-35A Lightning II', weapon: '2 JSM each', text: 'USAF F-35As from the mainland: two come in unseen, fire four Joint Strike Missiles at the landing ships from beyond their defences and turn for home.', model: buildF35B, paint: GREY, hp: 8, stealth: 0.5, asm: { ...JSM, perPlane: 2 } },
+  pl: { ...JET, name: 'F-35A Husarz', weapon: '2 JSM each', text: 'Poland’s new F-35As from Łask: a pair low over the Baltic, four JSMs at the landing ships from beyond their guns.', model: buildF35B, paint: GREY, hp: 8, stealth: 0.5, asm: { ...JSM, perPlane: 2 } },
+  pact: { ...JET, name: 'Su-30SM', weapon: '3 Kh-35U each', text: 'Naval strike fighters against ships off the coast.', model: buildSu35, paint: FLANKER, hp: 9, asm: { ...KH35, perPlane: 3 } }, // (never flown: the side that lands has no coast to defend)
 };
 const seaCap = {
   nato: { ...JET, name: 'F-35B Lightning II', weapon: 'AIM-120D, AIM-9X', text: 'Marine F-35Bs (off the America when she sails, else from ashore): over the fleet, unseen, the strike aircraft shot down before they fire.', model: buildF35B, paint: GREY, hp: 8, stealth: 0.5 },
@@ -48,4 +55,4 @@ const helo = {
   pact: { name: 'Ka-27M Helix', weapon: 'dipping sonar, torpedo, FH-A radar', text: 'The modernised Helix: a new radar that passes the ships it finds to the missile launchers, sonar for the submarines.', model: buildKa27, paint: RU, rotorSound: 'rotor.mi8', rotorSpeed: 22, gun: NOGUN, hp: 7, torpedo: { count: 1, radius: 70, damage: 2400 }, picture: 2400 },
 };
 
-export const AIR_2027_SEA = { seaStrike, seaCap, asw, aew, seaDrone, helo };
+export const AIR_2027_SEA = { seaStrike, coastStrike, seaCap, asw, aew, seaDrone, helo };

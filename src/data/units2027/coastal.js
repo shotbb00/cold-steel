@@ -1,8 +1,8 @@
 // 2027 on the coast (Gotland: the Baltic Fleet lands, US and Polish troops hold): the Russian landing ships and the
 // naval infantry's swimmers, on the 1985 landing machinery (units/baltic85.js, systems/Landing.js). Never bought:
 // what Russia buys for the land comes ashore in one (the map's `landing.craft` / `landing.swim`).
-import { craftType, swimmer, AA, gun } from '../units/baltic85.js';
-import { buildRopuchaL, buildZubr } from '../models/baltic85.js';
+import { craftType, swimmer, AA, gun, natya } from '../units/baltic85.js';
+import { buildRopuchaL, buildZubr, buildAlexandrit } from '../models/baltic85.js';
 
 const G30 = { range: 900, reload: 0.5, damage: 40, splash: 1.2, size: 0.8 };   // (AK-630M)
 const G57 = { range: 1300, reload: 1.2, damage: 110, splash: 2.5, size: 1.2 }; // (twin AK-725)
@@ -31,5 +31,19 @@ export const zubr = craftType({
   variants: { pact: { name: 'Zubr-class assault hovercraft', weapon: '2 × AK-630M', text: 'The biggest hovercraft in the world, both of hers in the Baltic Fleet: 60 knots over the mines and straight up the sand, three tanks or 500 men aboard — and the loudest thing on the sea.' }, nato: { name: 'Hovercraft', weapon: '—', text: 'A hovercraft.' } },
 });
 
+/** The minesweeper (bought: map `landing.navy`): where she steams the moored mines are cut — a new lane, or a wider one (systems/Landing.js `sweeper`). */
+export const alexandrit = {
+  ...natya, id: 'alexandrit', name: 'Minesweeper (Alexandrit)', shortName: 'Minesweeper',
+  names: { pact: ['Aleksandr Obukhov', 'Ivan Antonov', 'Vladimir Yemelyanov', 'Georgiy Kurbatov'], nato: ['M-1'] },
+  hull: { length: 62, beam: 10.2 },
+  stats: { ...natya.stats, hp: 1200, speed: 7.5 },
+  mounts: { pact: [gun([0, 4, 22], FWD, G30)], nato: [gun([0, 4, 22], FWD, G30)] },
+  models: { pact: buildAlexandrit, nato: buildAlexandrit },
+  variants: {
+    pact: { name: 'Alexandrit-class minesweeper', weapon: 'AK-306 30 mm, the sweep, mine-hunting drones', text: 'A fibreglass hull the magnetic mines can’t feel: where she steams the mines are cut — a new lane for the landing ships, or a wider one. Slow, and she has nothing against aircraft.' },
+    nato: { name: 'Minesweeper', weapon: '30 mm', text: 'A minesweeper.' },
+  },
+};
+
 /** The 2027 swimmers: each army's own vehicle (BTR-82A, BMP-2M…) afloat — they replace 1985's in this war's list. */
-export const coastal2027 = (T) => ({ ropucha, zubr, swimIfv: swimmer('swimIfv', T.ifv, 1.25), swimRecon: swimmer('swimRecon', T.reconVehicle, 1.2) });
+export const coastal2027 = (T) => ({ ropucha, zubr, alexandrit, swimIfv: swimmer('swimIfv', T.ifv, 1.25), swimRecon: swimmer('swimRecon', T.reconVehicle, 1.2) });

@@ -143,8 +143,8 @@ export default {
   landing: {
     // what the naval infantry come in (systems/Landing.js): the men by Zubr or Ropucha, the armour by Ropucha or Zubr
     craft: { infantry: ['zubr', 'zubr', 'ropucha'], vehicle: ['ropucha', 'zubr'] },
-    // what the landing may call in at sea: the Baltic Fleet's corvettes and Karakurts over the beach
-    navy: ['frigate', 'corvette', 'ptBoat'],
+    // what the landing may call in at sea: the Baltic Fleet's corvettes and Karakurts over the beach, a minesweeper to widen the lanes
+    navy: ['frigate', 'corvette', 'ptBoat', 'alexandrit'],
     // the mines laid off the island since the crisis began, a lane left off each sector
     seaMines: { z: [520, 580], count: 60, lanes: [-320, 40, 370], lane: 80, seed: 2027 },
     // the Polish Navy's NSM battery, flown in: two launcher trucks inland that fire on the ships, then move

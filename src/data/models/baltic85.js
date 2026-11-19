@@ -276,3 +276,22 @@ export const buildZubr = craft(() => {
   const ramp = merge([box(11, 3.2, 0.25, { y: 1.6, color: STEEL, surf: 'metal' })]);
   return { fixed, ramp, hinge: [h + 0.9, L / 2 - 0.5], gunAt: [h + 6.4, 6] };
 });
+
+/** Alexandrit (Project 12700): 62 × 10 m minesweeper with a fibreglass hull — the long high superstructure forward with the
+ *  enclosed mast on it, the 30 mm on the bow, the open quarterdeck aft with the sweep gear and the crane for the mine drones. */
+export const buildAlexandrit = craft(() => {
+  const L = 62, B = 10.2, fb = 3.6;
+  const fixed = merge([
+    ...hull(L, B, fb, 2.6),
+    box(B * 0.86, 3, 26, { y: fb + 1.5, z: 5, color: GREY }),                      // the superstructure, a deck high
+    ...bridge(fb + 3, 13, 7.4, 3, 7),
+    box(2.6, 6, 2.6, { y: fb + 9, z: 8, color: GREY }), ...mast(0, fb + 12, 8, 5, 3), // the enclosed mast, a pole on it
+    cyl(0.9, 1.1, 2.4, { y: fb + 4.2, z: -4, color: DARK }),                       // the funnel
+    ...twin(0, fb, 22, 0.8, 2),                                                    // the AK-306 on the bow
+    box(3, 1.4, 2.4, { y: fb + 0.7, z: -L / 2 + 9, color: DARK }),                  // the sweep winch
+    box(0.4, 5, 0.4, { x: 3.2, y: fb + 2.5, z: -L / 2 + 13, color: STEEL }), box(0.3, 0.3, 6, { x: 3.2, y: fb + 5, z: -L / 2 + 10.5, rx: 0.4, color: STEEL }), // the crane
+    box(1.2, 0.9, 3.4, { x: -2.6, y: fb + 0.45, z: -L / 2 + 12, color: 0xe0a020 }),  // a mine-hunting drone in its cradle
+    ...[-1, 1].map((s) => cyl(0.4, 0.4, 2.6, { x: s * 2.6, y: fb + 0.5, z: -L / 2 + 3, rx: Math.PI / 2, color: 0xb84a2a }, 8)), // the floats
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 1, 22] };
+});
