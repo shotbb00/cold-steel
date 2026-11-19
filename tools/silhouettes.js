@@ -3,7 +3,7 @@
 // shape. window.silhouettes() → { 'tank-nato': dataURL, … }; tools/render_silhouettes.py saves them.
 import * as THREE from 'three';
 import { UNIT_TYPES } from '../src/data/units/index.js';
-import { setEpoch } from '../src/data/epoch.js';
+import { setEpoch, EPOCHS } from '../src/data/epoch.js';
 import { KINDS } from '../src/systems/AirStrike.js';
 import { UnitPreview } from '../src/ui/UnitPreview.js';
 
@@ -44,14 +44,9 @@ function trim(canvas) {
   return out.toDataURL('image/png');
 }
 
-// each war's armies (data/epoch.js): [side, army, the army's own key or null for the side's]
-const ARMIES = {
-  1985: [['nato', 'us', null], ['pact', 'sov', null], ['nato', 'bw', 'bw'], ['pact', 'nva', 'nva']],
-  1945: [['nato', 'us', null], ['pact', 'wh', null], ['nato', 'sov', 'sov'], ['pact', 'fj', 'fj'], ['nato', 'usmc', 'usmc'], ['pact', 'jp', 'jp'], ['nato', 'brit', 'brit']],
-  1918: [['nato', 'uk', null], ['pact', 'de', null], ['nato', 'fr', 'fr'], ['pact', 'st', 'st']],
-  2027: [['nato', 'us', null], ['pact', 'ru', null], ['nato', 'pl', 'pl'], ['pact', 'by', 'by']],
-  1806: [['nato', 'fr', null], ['pact', 'pr', null], ['nato', 'by', 'by'], ['pact', 'sx', 'sx'], ['pact', 'gb', 'gb']],
-};
+// each war's armies (data/epoch.js): [side, army, the army's own key or null for the side's] — read from the war's own
+// list, so an army added later gets its icons too (the regions batch's armies were missed while this was written out)
+const ARMIES = Object.fromEntries(Object.entries(EPOCHS).map(([y, e]) => [y, Object.values(e.armies).map((a) => [a.faction, a.id, a.id === e.defaults?.[a.faction] ? null : a.id])]));
 
 window.silhouettes = (year = '1985') => {
   setEpoch(year);
