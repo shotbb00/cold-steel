@@ -16,7 +16,7 @@ import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
-import { CampaignPanel } from './CampaignPanel.js';
+import { WarRoomPanel, openWarRoom } from './WarRoom.js';
 import { takeMenuTab } from '../core/replay.js';
 import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
@@ -475,10 +475,8 @@ export class MainMenu {
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
-      this.panel.append(new CampaignPanel({
-        onBattle: (choice) => this.deploy(choice),
-        onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? MAPS[mapsFor(epoch())[0].id], side, true, 'menu'); },
-      }).root);
+      this.sheet?.hide();
+      this.panel.append(new WarRoomPanel({ onOpen: (c) => openWarRoom(c, { onClose: () => this.open('campaign') }) }).root); // (the world campaign: ui/WarRoom.js)
     } else if (id === 'multi') {
       this.lobby ??= new Lobby({
         onStart: (choice) => this.deploy(choice),
