@@ -84,8 +84,9 @@ export class CoverMap {
 
   /** A sight block: an oriented box from the ground to `top` (absolute height). Returns it (its `top` can drop later: a collapse). */
   addOccluder({ x, z, yaw = 0, hx, hz, y, top, building = null }) {
-    const o = { x, z, cos: Math.cos(yaw), sin: Math.sin(yaw), hx, hz, y, top, building, stamp: 0 };
+    const o = { x, z, cos: Math.cos(yaw), sin: Math.sin(yaw), hx, hz, y, top, building, stamp: 0, occ: true };
     this.occluders.push(o);
+    this.track?.push(o);
     const r = Math.hypot(hx, hz);
     for (let cx = Math.floor((x - r) / OCC_CELL); cx <= Math.floor((x + r) / OCC_CELL); cx++) for (let cz = Math.floor((z - r) / OCC_CELL); cz <= Math.floor((z + r) / OCC_CELL); cz++) {
       const k = cx * 100003 + cz;
@@ -94,6 +95,13 @@ export class CoverMap {
       list.push(o);
     }
     return o;
+  }
+
+  /** Take a sight block away (a building that had to go: world/Props.js endBuilding). */
+  removeOccluder(o) {
+    const i = this.occluders.indexOf(o);
+    if (i >= 0) this.occluders.splice(i, 1);
+    for (const list of this.occGrid.values()) { const j = list.indexOf(o); if (j >= 0) list.splice(j, 1); }
   }
 
   /** Is (x, z) inside occluder o's footprint (a man in that building)? */
@@ -183,6 +191,7 @@ export class CoverMap {
     this.colliders.push(c);
     this._insert(this.colGrid, c, x, z, c.r);
     this.onAdd?.(c); // (the nav grid, once there is one)
+    this.track?.push(c); // (a building being built: all its cover, should it have to go — world/Props.js endBuilding)
     if (height >= 3 && !drive) this.addOccluder({ x, z, yaw, hx, hz, y: c.y, top: c.top }); // (taller than a man looks over: it blocks sight)
     if (spots) {
       const n = Math.max(1, Math.floor(length / SPOT_SPACING));
