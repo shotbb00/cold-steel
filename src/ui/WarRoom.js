@@ -204,13 +204,16 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     const link = (a, b, cls) => { const A = nodeOf[a], B = nodeOf[b]; if (!A || !B || A === B) return; const key = [nodes.indexOf(A), nodes.indexOf(B), cls].sort().join(); if (seenLinks.has(key)) return; seenLinks.add(key); s += `<line class="${cls}" x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>`; };
     for (const [id, z] of Object.entries(war.seas)) { for (const n of z.seas) link(id, n, 'wc-lane'); for (const n of z.coasts) link(id, n, 'wc-coast'); }
     for (const [id, p] of Object.entries(war.provinces)) for (const n of p.land) link(id, n, 'wc-road');
+    let arrows = '';
     for (const [fid, o] of Object.entries(c.orders[me])) {
       const f = forceById(c, +fid), A = nodeOf[f?.at], B = nodeOf[o.to];
       if (!A || !B || A === B) continue;
-      const d = Math.hypot(B.x - A.x, B.y - A.y), cut = Math.max(0, (d - 14) / d);
+      const d = Math.hypot(B.x - A.x, B.y - A.y), cut = Math.max(0, (d - 16) / d), ex = A.x + (B.x - A.x) * cut, ey = A.y + (B.y - A.y) * cut;
+      const bow = Math.min(40, d * 0.14), cx = (A.x + ex) / 2 - ((B.y - A.y) / d) * bow, cy = (A.y + ey) / 2 + ((B.x - A.x) / d) * bow; // (drawn by hand: bowed)
       const attack = war.provinces[o.to] && c.provinces[o.to].owner !== me;
-      s += `<line class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" x1="${A.x}" y1="${A.y}" x2="${A.x + (B.x - A.x) * cut}" y2="${A.y + (B.y - A.y) * cut}" marker-end="url(#wm-arrow)"/>`;
+      arrows += `<path class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)}Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" marker-end="url(#wm-arrow)"/>`;
     }
+    s += `<g filter="url(#wm-pencil)">${arrows}</g>`;
     const boxes = [], vw = map.w ?? 2000, vh = map.h ?? 2000;
     /** A label where it fits: none over another (the ones that matter first — nodes come in rank order), a forced one always. */
     const label = (text, y, cls, x0, y0, force) => {
@@ -229,12 +232,15 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
       if (one && n.sea) g += `<circle class="hit" r="16"/><circle class="anchor" r="3"/>${label(nameOf(one), -9, ' sea', n.x, n.y, reach)}`;
       else if (one) {
         const P = c.provinces[one];
-        g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}${P.contested ? ' contested' : ''}"><circle class="hit" r="14"/>${P.fort ? `<circle class="fort" r="${P.depot ? 12 : 10}"/>` : ''}<circle class="pin" r="${P.depot ? 8 : 6}"/>${war.provinces[one].airfield ? '<path class="field" d="M10 -11h8"/>' : ''}</g>`;
-        if (k >= 2.5 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one), -13, '', n.x, n.y, reach || st.place === one || sf?.at === one);
+        const head = P.depot ? 7 : 5.5, hy = P.depot ? -24 : -20;
+        g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><circle class="hit" r="15" cy="-8"/>${P.fort ? '<circle class="fort" r="10"/>' : ''}<circle class="town" r="2.2"/>${war.provinces[one].airfield ? '<path class="field" d="M8,8h10M13,4v8"/>' : ''}
+          <path class="pshadow" d="M0,0L${-hy * 0.5},${hy * 0.2}"/><circle class="pshadow" cx="${-hy * 0.55}" cy="${hy * 0.2}" r="${head}"/>
+          <path class="needle" d="M0,0L-3,${hy + 2}"/><circle class="head" cx="-3" cy="${hy}" r="${head}" fill="url(#wm-ph-${P.contested ? 'gold' : P.owner})"/></g>`;
+        if (k >= 2.5 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one), hy - head - 5, '', n.x, n.y, reach || st.place === one || sf?.at === one);
       } else {
         const provs = ids.filter((id) => !PL[id].sea), nato = provs.filter((id) => c.provinces[id].owner === 'nato').length;
         const lead = ids.find((id) => c.provinces[id]?.depot) ?? ids[0];
-        g += `<g class="wc-pin cluster ${n.sea ? 'sea' : nato * 2 >= provs.length ? 'nato' : 'pact'}"><circle class="hit" r="16"/><circle class="pin" r="11"/><text class="count" y="4" text-anchor="middle">${ids.length}</text></g>${label(`${nameOf(lead)} +${ids.length - 1}`, -16, n.sea ? ' sea' : '', n.x, n.y, false)}`;
+        g += `<g class="wc-pin cluster ${n.sea ? 'sea' : nato * 2 >= provs.length ? 'nato' : 'pact'}"><circle class="hit" r="16"/><circle class="disc" r="11" filter="url(#wm-shadow)"/><circle class="edge" r="9"/><text class="count" y="4.5" text-anchor="middle">${ids.length}</text></g>${label(`${nameOf(lead)} +${ids.length - 1}`, -16, n.sea ? ' sea' : '', n.x, n.y, false)}`;
       }
       g += pile(own, 16, 'own') + pile(theirs, -16, 'foe');
       s += `${g}</g>`;
@@ -244,11 +250,11 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
   /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
   function pile(fs, dx, kind) {
     if (!fs.length) return '';
-    const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 6 : -6);
-    let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 20)">`;
-    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += `<rect class="face under ${top.side}" x="${-13 + i * 3}" y="${-10 - i * 3}" width="26" height="20" rx="2"/>`;
-    s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><rect class="face" x="-13" y="-10" width="26" height="20" rx="2"/><g class="sym">${glyph(top)}</g><rect class="str" x="-11" y="7" width="${(22 * strength(top)).toFixed(1)}" height="2"/></g>`;
-    if (n > 1) s += `<g class="wc-badge"><circle cx="14" cy="-11" r="7"/><text x="14" y="-8" text-anchor="middle">${n}</text></g>`;
+    const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
+    let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})">`;
+    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += `<rect class="face under ${top.side}" x="${-15 + i * 3}" y="${-11 - i * 3}" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>`;
+    s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><rect class="face" x="-15" y="-11" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>${top.kind === 'army' ? '<rect class="frame" x="-11" y="-7" width="22" height="13"/>' : ''}<g class="sym" transform="translate(0 -0.5) scale(0.95)">${glyph(top)}</g><rect class="str" x="-12" y="8" width="${(24 * strength(top)).toFixed(1)}" height="1.8"/></g>`;
+    if (n > 1) s += `<g class="wc-badge"><rect x="9" y="-19" width="13" height="12" rx="1" filter="url(#wm-shadow)"/><text x="15.5" y="-10" text-anchor="middle">${n}</text></g>`;
     return `${s}</g>`;
   }
 
