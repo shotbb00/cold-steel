@@ -3,7 +3,7 @@
 // the battle board after each turn, the dispatches, and the save that goes to another device.
 //   new WarRoomPanel({ onOpen })   the menu's Campaign tab: start a war, continue the last, load a code or a file
 //   openWarRoom(campaign)          the full-screen war room over the menu
-// Look: the map sheet's (ui/MapSheet.js) — cream ink on the dark table, blue and red pins — with paper counters.
+// Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
 import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK } from '../wcampaign/engine.js';
 import { aiTurn } from '../wcampaign/ai.js';
@@ -12,6 +12,7 @@ import { UNIT_TYPES } from '../data/units/index.js';
 import { MAPS } from '../maps/index.js';
 import { ARMIES } from '../data/factions.js';
 import { epoch } from '../data/epoch.js';
+import { WorldMap } from './WorldMap.js';
 
 const WARS = { 1945: WW2 }; // (the wars with a world campaign: one at a time, 1945 first)
 export const warFor = (ep = epoch()) => WARS[ep] ?? null;
@@ -22,7 +23,6 @@ const btn = (label, cls, fn) => { const b = el('button', cls, label); b.type = '
 const SIDE = { nato: 'Allies', pact: 'Axis' };
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const longDate = (iso) => `${Number(iso.slice(8))} ${MONTHS.at(Number(iso.slice(5, 7)) - 1)} ${iso.slice(0, 4)}`;
-const W = 1000, H = 640;
 
 /** The unit types' costs as the campaign's power table (the engine has no game imports; set before it runs). */
 function arm(c) { c.power ??= Object.fromEntries(Object.values(UNIT_TYPES).map((t) => [t.id, t.cost ?? 120])); return c; }
@@ -84,31 +84,6 @@ export class WarRoomPanel {
 
 // ---------------------------------------------------------------- the war room
 
-/** Map coordinates for every province and sea zone of a theatre (or of all): the real places, spread so pins never pile up. */
-function layout(war, theatre) {
-  const items = [
-    ...Object.entries(war.provinces).filter(([, p]) => !theatre || p.theatre === theatre).map(([id, p]) => ({ id, kind: 'prov', p })),
-    ...Object.entries(war.seas).filter(([, s]) => !theatre || s.theatre === theatre).map(([id, s]) => ({ id, kind: 'sea', p: s })),
-  ];
-  const lonOf = (q) => (theatre === 'pacific' && q.lon < 0 ? q.lon + 360 : q.lon); // (the Pacific across the date line)
-  const lats = items.map((i) => i.p.lat), lons = items.map((i) => lonOf(i.p));
-  const lat0 = Math.min(...lats), lat1 = Math.max(...lats), lon0 = Math.min(...lons), lon1 = Math.max(...lons);
-  const k = Math.cos(((lat0 + lat1) / 2) * Math.PI / 180);
-  const sx = (W - 160) / Math.max(1, (lon1 - lon0) * k), sy = (H - 140) / Math.max(1, lat1 - lat0), s = Math.min(sx, sy);
-  const ox = (W - (lon1 - lon0) * k * s) / 2, oy = (H - (lat1 - lat0) * s) / 2;
-  for (const i of items) { i.x = ox + (lonOf(i.p) - lon0) * k * s; i.y = oy + (lat1 - i.p.lat) * s; i.x0 = i.x; i.y0 = i.y; }
-  // spread: pins push apart (at least 92 px), each pulled back toward its true place; kept on the sheet
-  for (let it = 0; it < 160; it++) {
-    for (const a of items) for (const b of items) {
-      if (a === b) continue;
-      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, min = a.kind === 'sea' || b.kind === 'sea' ? 110 : 96;
-      if (d < min) { const push = (min - d) / 2 / d; a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push; }
-    }
-    for (const a of items) { a.x += (a.x0 - a.x) * 0.02; a.y += (a.y0 - a.y) * 0.02; a.x = Math.max(70, Math.min(W - 70, a.x)); a.y = Math.max(60, Math.min(H - 70, a.y)); }
-  }
-  return Object.fromEntries(items.map((i) => [i.id, i]));
-}
-
 /** A counter's symbol (NATO style): infantry ✕, armour an oval, both for mixed; a ship; an aircraft. */
 function glyph(f) {
   if (f.kind === 'fleet') return '<path d="M-10 2h20l-3 4h-14z M-6 2v-4h9v4 M-1 -2v-3h2v3"/>';
@@ -122,16 +97,32 @@ function strength(f) {
   const us = f.kind === 'army' ? f.battalions.flatMap((b) => b.units) : f.ships;
   return us.reduce((a, u) => a + u.hp, 0) / (us.length || 1);
 }
+const CLUSTER = 30; // px: places closer than this on screen share one pin (click it: the map zooms in)
 
 export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
   const room = el('div', 'wc-room');
   document.body.append(room);
-  const st = { theatre: null, sel: null, place: null, msg: '' };
+  const st = { theatre: null, sel: null, place: null, msg: '', reach: new Map() };
   const me = c.side, foe = enemy(me);
-  const close = () => { room.remove(); onClose(); };
+  let top = el('div'), tabBar = el('div'), side = el('div');
+  const body = el('div', 'wc-body'), mapBox = el('div', 'wc-map');
+  body.append(mapBox, side);
+  room.append(top, tabBar, body);
+  const map = new WorldMap(mapBox, { onView: () => drawOverlay() });
+  const tools = el('div', 'wc-zoom');
+  tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
+  tools.lastChild.title = 'Back to the whole theatre';
+  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">${SIDE[me]}</span><span class="theirs">${SIDE[foe]}</span><span class="obj">Fort</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
+  map.load().catch(() => { st.msg = 'The coastlines could not be loaded.'; render(); });
+  const close = () => { map.dispose(); room.remove(); onClose(); };
 
   const nameOf = (id) => war.provinces[id]?.name ?? war.seas[id]?.name ?? id;
   const mapName = (id) => (id && MAPS[id] ? MAPS[id].name : null);
+  const theatreOf = (id) => war.provinces[id]?.theatre ?? war.seas[id]?.theatre;
+  // every place on the real map (world units)
+  const PL = {};
+  for (const [id, p] of [...Object.entries(war.provinces), ...Object.entries(war.seas)]) { const [x, y] = map.xy(p.lon, p.lat); PL[id] = { id, sea: !!war.seas[id], x, y }; }
+  const frame = (theatre, ms = 650) => { const ids = Object.keys(PL).filter((id) => !theatre || theatreOf(id) === theatre); map.flyTo(ids.map((id) => [PL[id].x, PL[id].y]), theatre ? 40 : 1, ms); };
 
   /** Where force `f` may go this turn: { to: { land? } } — the engine's own rules (order() tried on a copy would cost a deep clone: these mirror it). */
   function targets(f) {
@@ -148,9 +139,15 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     }
     return out;
   }
+  const selected = () => (st.sel != null ? forceById(c, st.sel) : null);
 
   function render() {
-    room.replaceChildren(topBar(), tabs(), body());
+    st.reach = targets(selected());
+    const t2 = topBar(), b2 = tabs(), d2 = drawer();
+    top.replaceWith(t2); tabBar.replaceWith(b2); side.replaceWith(d2);
+    top = t2; tabBar = b2; side = d2;
+    map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner })));
+    drawOverlay();
   }
 
   function topBar() {
@@ -165,41 +162,12 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     return bar;
   }
 
+  function goTheatre(id) { st.theatre = id; st.place = null; st.sel = null; st.msg = ''; render(); frame(id); }
   function tabs() {
     const t = el('div', 'seg wc-tabs');
-    const tab = (id, label) => { const b = btn(label, st.theatre === id ? 'on' : '', () => { st.theatre = id; st.place = null; render(); }); t.append(b); };
-    tab(null, 'The war');
-    for (const [id, th] of Object.entries(war.theatres)) tab(id, th.name);
+    t.append(btn('The world', st.theatre == null ? 'on' : '', () => goTheatre(null)));
+    for (const [id, th] of Object.entries(war.theatres)) t.append(btn(th.name, st.theatre === id ? 'on' : '', () => goTheatre(id)));
     return t;
-  }
-
-  function body() {
-    const b = el('div', 'wc-body');
-    b.append(st.theatre ? theatreMap() : situationBoard(), drawer());
-    return b;
-  }
-
-  /** The war at a glance: each theatre's ground held, its forces, a click into it. */
-  function situationBoard() {
-    const board = el('div', 'wc-board');
-    for (const [id, th] of Object.entries(war.theatres)) {
-      const provs = Object.keys(war.provinces).filter((k) => war.provinces[k].theatre === id);
-      const held = (s) => provs.filter((k) => c.provinces[k].owner === s).length;
-      const forces = (s) => c.forces.filter((f) => f.side === s && ((war.provinces[f.at]?.theatre ?? war.seas[f.at]?.theatre) === id));
-      const n = held('nato'), p = held('pact');
-      const card = btn(`<span class="wc-kicker">${esc(th.name)}</span>
-        <span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${p || 0.001}"></i></span>
-        <span class="wc-line">${provs.length ? `${n} of ${provs.length} provinces Allied` : 'the sea lanes'}</span>
-        <span class="wc-line">Allies: ${forces('nato').length} forces · Axis: ${forces('pact').length} forces</span>`, 'wc-card', () => { st.theatre = id; render(); });
-      board.append(card);
-    }
-    const log = el('div', 'wc-dispatches');
-    log.append(el('h3', 'menu-sub', 'Dispatches'));
-    const news = c.log.slice(-12).reverse().map(dispatch).filter(Boolean);
-    for (const n of news) log.append(el('p', '', esc(n)));
-    if (!news.length) log.append(el('p', 'cp-hint', 'Nothing yet: the war’s first turn.'));
-    board.append(log);
-    return board;
   }
 
   function dispatch(l) {
@@ -211,68 +179,111 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     return '';
   }
 
-  /** One theatre on paper: provinces and sea zones, roads and sea lanes, counters, orders. */
-  function theatreMap() {
-    const L = layout(war, st.theatre);
-    const sel = st.sel != null ? forceById(c, st.sel) : null;
-    const reach = targets(sel);
-    const ok = supplied(c, war, me);
-    let svg = '<defs><filter id="wc-paper"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0.81  0 0 0 0 0.79  0 0 0 0 0.68  0 0 0 0.05 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>'
-      + '<marker id="wc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>'
-      + `<rect width="${W}" height="${H}" class="wc-sheet"/><rect width="${W}" height="${H}" filter="url(#wc-paper)"/>`;
-    // sea zones: water washes, their lanes to each other and the coasts they touch
-    for (const [id, s] of Object.entries(war.seas)) {
-      const a = L[id];
-      if (!a) continue;
-      svg += `<ellipse class="wc-water" cx="${a.x}" cy="${a.y}" rx="80" ry="46"/>`;
-      for (const k of s.coasts) if (L[k]) svg += `<line class="wc-coast" x1="${a.x}" y1="${a.y}" x2="${L[k].x}" y2="${L[k].y}"/>`;
-      for (const z of s.seas) if (L[z] && z > id) svg += `<line class="wc-lane" x1="${a.x}" y1="${a.y}" x2="${L[z].x}" y2="${L[z].y}"/>`;
-    }
-    // roads between provinces
-    for (const [id, p] of Object.entries(war.provinces)) for (const n of p.land) if (L[id] && L[n] && n > id) svg += `<line class="wc-road" x1="${L[id].x}" y1="${L[id].y}" x2="${L[n].x}" y2="${L[n].y}"/>`;
-    // orders: an ink arrow from the force's place most of the way to the target (blue our moves, red attacks, dashed landings)
-    for (const [fid, o] of Object.entries(c.orders[me])) {
-      const f = forceById(c, +fid), A = L[f?.at], B = L[o.to];
-      if (!A || !B) continue;
-      const attack = war.provinces[o.to] && c.provinces[o.to].owner !== me;
-      const x = A.x + (B.x - A.x) * 0.82, y = A.y + (B.y - A.y) * 0.82;
-      svg += `<line class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" x1="${A.x}" y1="${A.y}" x2="${x}" y2="${y}" marker-end="url(#wc-arrow)"/>`;
-    }
-    // pins and counters
-    for (const [id, a] of Object.entries(L)) {
-      const isSea = a.kind === 'sea', P = c.provinces[id];
-      const owner = isSea ? null : P.owner;
-      const cls = ['wc-place', isSea ? 'sea' : owner, !isSea && P.depot ? 'depot' : '', reach.has(id) ? (reach.get(id).land ? 'reach landing' : 'reach') : '', st.place === id ? 'sel' : '', !isSea && owner === me && !ok.has(id) ? 'cut' : '', !isSea && P.contested ? 'contested' : ''].filter(Boolean).join(' ');
-      let g = `<g class="${cls}" data-id="${id}">`;
-      if (isSea) g += `<rect class="hit" x="${a.x - 70}" y="${a.y - 36}" width="140" height="72" rx="30"/>`;
-      else g += `<circle class="pin" cx="${a.x}" cy="${a.y}" r="${P.depot ? 9 : 7}"/>${P.fort ? `<circle class="fort" cx="${a.x}" cy="${a.y}" r="${P.depot ? 13 : 11}"/>` : ''}${war.provinces[id].airfield ? `<path class="field" d="M${a.x + 11} ${a.y - 12}h8"/>` : ''}`;
-      g += `<text class="name" x="${a.x}" y="${a.y - (isSea ? 20 : 14)}" text-anchor="middle">${esc(nameOf(id))}</text>`;
-      const here = c.forces.filter((f) => f.at === id && (f.side === me || isSea || seen(id)));
-      here.forEach((f, j) => {
-        const cx = a.x - ((Math.min(here.length, 4) - 1) * 30) / 2 + (j % 4) * 30, cy = a.y + 20 + Math.floor(j / 4) * 26;
-        g += `<g class="wc-counter ${f.side}${f.id === st.sel ? ' sel' : ''}${c.orders[me][f.id] ? ' ordered' : ''}" data-f="${f.id}" transform="translate(${cx} ${cy})"><title>${esc(f.name)}</title><rect class="face" x="-13" y="-10" width="26" height="20" rx="2"/><g class="sym">${glyph(f)}</g><rect class="str" x="-11" y="7" width="${22 * strength(f)}" height="2"/></g>`;
-      });
-      svg += `${g}</g>`;
-    }
-    const wrap = el('div', 'wc-map');
-    wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(war.theatres[st.theatre].name)}">${svg}</svg>
-      <div class="cp-legend"><span class="ours">${SIDE[me]}</span><span class="theirs">${SIDE[foe]}</span><span class="obj">Fort</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span></div>`;
-    wrap.querySelector('svg').addEventListener('click', (ev) => {
-      const counter = ev.target.closest('.wc-counter'), place = ev.target.closest('.wc-place')?.dataset.id;
-      const sf = st.sel != null ? forceById(c, st.sel) : null;
-      if (sf && place && (reach.has(place) || place === sf.at) && !(counter && +counter.dataset.f !== sf.id && place === sf.at)) {
-        const why = order(c, war, me, sf.id, place, reach.get(place) ?? {});
-        st.msg = why ? `Not possible: ${why}.` : '';
-        return render();
-      }
-      if (counter) { const f = forceById(c, +counter.dataset.f); if (f?.side === me) { st.sel = f.id; st.place = f.at; st.msg = ''; return render(); } }
-      if (place) { st.place = place; st.sel = null; st.msg = ''; render(); }
-    });
-    return wrap;
-  }
   function seen(id) { // (enemy counters: where we stand or next door, or a sea zone we hold)
     if (war.seas[id]) return forcesAt(c, id, me).length > 0 || war.seas[id].coasts.some((k) => c.provinces[k].owner === me);
     return c.provinces[id].owner === me || war.provinces[id].land.some((n) => c.provinces[n].owner === me);
+  }
+
+  /** The screen layer over the map: pins (near ones as one), roads, sea lanes, order arrows, counters — redrawn on every pan and zoom. */
+  let nodeOf = {};
+  function drawOverlay() {
+    const t = map.t, k = t.k / (map.kMin || t.k), sf = selected(), ok = supplied(c, war, me);
+    const rank = (id) => (sf?.at === id ? 0 : st.reach.has(id) ? 1 : c.provinces[id]?.depot ? 2 : PL[id].sea ? 4 : 3);
+    const nodes = [];
+    nodeOf = {};
+    for (const id of Object.keys(PL).sort((a, b) => rank(a) - rank(b))) {
+      const x = t.applyX(PL[id].x), y = t.applyY(PL[id].y);
+      let n = nodes.find((m) => m.sea === PL[id].sea && Math.hypot(m.x - x, m.y - y) < CLUSTER);
+      if (!n) nodes.push((n = { ids: [], sea: PL[id].sea, x, y }));
+      n.ids.push(id);
+      nodeOf[id] = n;
+    }
+    let s = '';
+    if (k < 2.2) for (const th of Object.values(war.theatres)) { const [x, y] = map.xy(th.lon, th.lat); s += `<text class="wc-theatre" x="${t.applyX(x)}" y="${t.applyY(y)}" text-anchor="middle">${esc(th.name)}</text>`; }
+    const seenLinks = new Set();
+    const link = (a, b, cls) => { const A = nodeOf[a], B = nodeOf[b]; if (!A || !B || A === B) return; const key = [nodes.indexOf(A), nodes.indexOf(B), cls].sort().join(); if (seenLinks.has(key)) return; seenLinks.add(key); s += `<line class="${cls}" x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>`; };
+    for (const [id, z] of Object.entries(war.seas)) { for (const n of z.seas) link(id, n, 'wc-lane'); for (const n of z.coasts) link(id, n, 'wc-coast'); }
+    for (const [id, p] of Object.entries(war.provinces)) for (const n of p.land) link(id, n, 'wc-road');
+    for (const [fid, o] of Object.entries(c.orders[me])) {
+      const f = forceById(c, +fid), A = nodeOf[f?.at], B = nodeOf[o.to];
+      if (!A || !B || A === B) continue;
+      const d = Math.hypot(B.x - A.x, B.y - A.y), cut = Math.max(0, (d - 14) / d);
+      const attack = war.provinces[o.to] && c.provinces[o.to].owner !== me;
+      s += `<line class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" x1="${A.x}" y1="${A.y}" x2="${A.x + (B.x - A.x) * cut}" y2="${A.y + (B.y - A.y) * cut}" marker-end="url(#wm-arrow)"/>`;
+    }
+    const boxes = [], vw = map.w ?? 2000, vh = map.h ?? 2000;
+    /** A label where it fits: none over another (the ones that matter first — nodes come in rank order), a forced one always. */
+    const label = (text, y, cls, x0, y0, force) => {
+      const w = text.length * 6.6 + 6, b = [x0 - w / 2, y0 + y - 12, x0 + w / 2, y0 + y + 3];
+      if (!force && boxes.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1])) return '';
+      boxes.push(b);
+      return `<text class="name${cls}" y="${y}" text-anchor="middle">${esc(text)}</text>`;
+    };
+    for (const n of nodes) {
+      if (n.x < -80 || n.y < -80 || n.x > vw + 80 || n.y > vh + 80) continue; // (off the screen: not drawn)
+      const ids = n.ids, one = ids.length === 1 ? ids[0] : null;
+      const reach = ids.some((id) => st.reach.has(id)), land = one && st.reach.get(one)?.land;
+      const own = c.forces.filter((f) => f.side === me && ids.includes(f.at));
+      const theirs = c.forces.filter((f) => f.side === foe && ids.includes(f.at) && seen(f.at));
+      let g = `<g class="wc-node${reach ? ` reach${land ? ' landing' : ''}` : ''}${ids.includes(st.place) ? ' sel' : ''}" data-ids="${ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">`;
+      if (one && n.sea) g += `<circle class="hit" r="16"/><circle class="anchor" r="3"/>${label(nameOf(one), -9, ' sea', n.x, n.y, reach)}`;
+      else if (one) {
+        const P = c.provinces[one];
+        g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}${P.contested ? ' contested' : ''}"><circle class="hit" r="14"/>${P.fort ? `<circle class="fort" r="${P.depot ? 12 : 10}"/>` : ''}<circle class="pin" r="${P.depot ? 8 : 6}"/>${war.provinces[one].airfield ? '<path class="field" d="M10 -11h8"/>' : ''}</g>`;
+        if (k >= 2.5 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one), -13, '', n.x, n.y, reach || st.place === one || sf?.at === one);
+      } else {
+        const provs = ids.filter((id) => !PL[id].sea), nato = provs.filter((id) => c.provinces[id].owner === 'nato').length;
+        const lead = ids.find((id) => c.provinces[id]?.depot) ?? ids[0];
+        g += `<g class="wc-pin cluster ${n.sea ? 'sea' : nato * 2 >= provs.length ? 'nato' : 'pact'}"><circle class="hit" r="16"/><circle class="pin" r="11"/><text class="count" y="4" text-anchor="middle">${ids.length}</text></g>${label(`${nameOf(lead)} +${ids.length - 1}`, -16, n.sea ? ' sea' : '', n.x, n.y, false)}`;
+      }
+      g += pile(own, 16, 'own') + pile(theirs, -16, 'foe');
+      s += `${g}</g>`;
+    }
+    map.over.innerHTML = s;
+  }
+  /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
+  function pile(fs, dx, kind) {
+    if (!fs.length) return '';
+    const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 6 : -6);
+    let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 20)">`;
+    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += `<rect class="face under ${top.side}" x="${-13 + i * 3}" y="${-10 - i * 3}" width="26" height="20" rx="2"/>`;
+    s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><rect class="face" x="-13" y="-10" width="26" height="20" rx="2"/><g class="sym">${glyph(top)}</g><rect class="str" x="-11" y="7" width="${(22 * strength(top)).toFixed(1)}" height="2"/></g>`;
+    if (n > 1) s += `<g class="wc-badge"><circle cx="14" cy="-11" r="7"/><text x="14" y="-8" text-anchor="middle">${n}</text></g>`;
+    return `${s}</g>`;
+  }
+
+  /** Select a force: its place and where it can go must be on screen, each on a pin of its own — else the map moves there. */
+  function choose(f) {
+    st.sel = f.id; st.place = f.at; st.msg = ''; render();
+    const ids = [f.at, ...st.reach.keys()];
+    const r = map.svg.getBoundingClientRect();
+    if (ids.some((id) => !nodeOf[id] || nodeOf[id].ids.length > 1 || nodeOf[id].x < 0 || nodeOf[id].y < 0 || nodeOf[id].x > r.width || nodeOf[id].y > r.height)) map.flyTo(ids.map((id) => [PL[id].x, PL[id].y]), 120);
+  }
+  map.svg.addEventListener('click', (ev) => {
+    const node = ev.target.closest('[data-ids]');
+    if (!node) return;
+    const ids = node.dataset.ids.split(','), pileKind = ev.target.closest('[data-pile]')?.dataset.pile, sf = selected();
+    if (ids.length > 1) return map.flyTo(ids.map((id) => [PL[id].x, PL[id].y]), 120); // (a cluster: closer)
+    const id = ids[0];
+    if (sf && pileKind !== 'own' && (st.reach.has(id) || id === sf.at)) {
+      const why = order(c, war, me, sf.id, id, st.reach.get(id) ?? {});
+      st.msg = why ? `Not possible: ${why}.` : '';
+      return render();
+    }
+    if (pileKind === 'own') { const mine = c.forces.filter((f) => f.side === me && f.at === id); return choose(mine[(mine.findIndex((f) => f.id === st.sel) + 1) % mine.length]); }
+    st.place = id; st.sel = null; st.msg = ''; render();
+  });
+
+  /** The forces at a place in the drawer: ours to pick, theirs where we can see them. */
+  function forcesHere(d, id) {
+    const fs = c.forces.filter((f) => f.at === id && (f.side === me || seen(id)));
+    if (!fs.length) return;
+    d.append(el('h4', 'wc-th', 'Here'));
+    for (const f of fs) {
+      const b = btn(`<b>${esc(f.name)}</b><small>${Math.round(strength(f) * 100)} %${c.orders[me][f.id] ? ` · to ${esc(nameOf(c.orders[me][f.id].to))}` : ''}</small>`, `wc-force ${f.side}`, () => { if (f.side === me) choose(f); });
+      b.disabled = f.side !== me;
+      d.append(b);
+    }
   }
 
   /** The drawer: the selected force, or the selected place, or how to play. */
@@ -304,6 +315,7 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
       const maps = [mapName(P.map) ? `Battles here: <b>${esc(mapName(P.map))}</b>` : 'No battle map here yet: battles are resolved', ...P.coastal.map((m) => `Landings: <b>${esc(mapName(m) ?? m)}</b>`)];
       d.append(el('p', 'cp-hint', maps.join('<br>')));
       d.append(el('p', 'cp-hint', `Production ${p.prod ?? 0}${P.fort ? ` · fortified (${P.fort})` : ''}${p.port ? ' · port' : ''}${p.airfield ? ' · airfield' : ''}`));
+      forcesHere(d, id);
       if (P.depot === me && P.owner === me) {
         const armies = [...new Set(c.forces.filter((x) => x.side === me && x.kind === 'army' && war.provinces[x.at]?.theatre === p.theatre).map((x) => x.army))];
         const army = armies[0] ?? (me === 'nato' ? 'us' : 'wh');
@@ -317,12 +329,24 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     if (id && war.seas[id]) {
       d.append(el('span', 'cp-kicker', 'Sea zone'), el('h3', '', esc(war.seas[id].name)));
       d.append(el('p', 'cp-hint', mapName(c.seas[id].map) ? `Battles here: <b>${esc(mapName(c.seas[id].map))}</b>` : 'No sea map here yet: battles are resolved'));
+      forcesHere(d, id);
       return d;
     }
     d.append(el('span', 'cp-kicker', 'Orders'), el('h3', '', st.theatre ? esc(war.theatres[st.theatre].name) : 'The war'));
-    d.append(el('p', 'cp-hint', st.theatre ? 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land (a fleet of yours must hold the sea off it). End the turn when every front has its orders — the enemy moves at the same time.' : 'Pick a theatre above to give orders there. Every front fights every turn, whether you look at it or not.'));
+    d.append(el('p', 'cp-hint', 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land (a fleet of yours must hold the sea off it). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
     const ordered = Object.keys(c.orders[me]).length;
     d.append(el('p', 'cp-hint', `${ordered} order${ordered === 1 ? '' : 's'} given this turn · morale can reach ${Math.round(moraleCap(c, me))} at most with the ground you hold`));
+    for (const [tid, th] of Object.entries(war.theatres)) {
+      if (st.theatre && st.theatre !== tid) continue;
+      const provs = Object.keys(war.provinces).filter((k) => war.provinces[k].theatre === tid);
+      const n = provs.filter((k) => c.provinces[k].owner === 'nato').length, q = provs.length - n;
+      const forces = (sd) => c.forces.filter((f) => f.side === sd && theatreOf(f.at) === tid).length;
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>`, 'wc-card', () => goTheatre(tid)));
+    }
+    d.append(el('h3', 'menu-sub', 'Dispatches'));
+    const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);
+    for (const n of news) d.append(el('p', 'wc-news', esc(n)));
+    if (!news.length) d.append(el('p', 'cp-hint', 'Nothing yet: the war’s first turn.'));
     return d;
   }
 
@@ -415,5 +439,6 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
   }
 
   render();
+  frame(null, 0);
   return { close };
 }
