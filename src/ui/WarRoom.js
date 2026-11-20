@@ -231,8 +231,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   function render() {
     st.reach = targets(selected());
     const t2 = topBar(), b2 = tabs(), d2 = drawer();
+    const view = `${st.theatre}|${st.sel}|${st.place}`, keep = view === side.dataset.view ? side.scrollTop : 0; // (same view: same scroll)
+    d2.dataset.view = view;
     top.replaceWith(t2); tabBar.replaceWith(b2); side.replaceWith(d2);
     top = t2; tabBar = b2; side = d2;
+    side.scrollTop = keep;
     map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner, lon: war.provinces[id].lon, lat: war.provinces[id].lat })), areas);
     drawOverlay();
   }
