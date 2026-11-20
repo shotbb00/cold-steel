@@ -784,10 +784,10 @@ export class CommandSystem {
       if (t.kind === 'engineer' && t.layer) {
         const river = this.game.world.river;
         if (!river) return;
-        const z = river.path(p.x, p.z);
-        const ch = river.channelAt(p.x, p.z);
-        const ok = Math.abs(p.z - z) <= river.halfWidth + 25 && !river.crossings.some((c) => !c.blown && c.channel === ch && Math.abs(c.x - p.x) < 14);
-        t.ghost.position.set(p.x, river.deck + 0.2, z);
+        const at = river.project(p.x, p.z); // (the nearest place on the water, and which way is across)
+        const ok = at.d <= river.halfWidth + 25 && !river.crossings.some((c) => !c.blown && c.channel === at.ci && Math.hypot(c.x - at.px, c.z - at.pz) < 14);
+        t.ghost.position.set(at.px, river.deck + 0.2, at.pz);
+        t.ghost.rotation.y = Math.atan2(at.nx, at.nz);
         t.ghost.material.color.set(ok ? 0x8fe9ff : 0xff6a55);
         return;
       }

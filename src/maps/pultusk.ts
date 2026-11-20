@@ -7,8 +7,10 @@
 // town and the river (−z). Fair, not mirrored: the town and its castle on the Russians' left are traded for
 // Kleszewo's walled manor and the hamlet beside it on the French left; the big Mosin wood on the Russian right for
 // the Popławy wood on the French right — the woods sit on opposite flanks, each before the other side's town;
-// the low rise by Szyszki for the one by Strzegocin. The Narew runs only behind the Russian base (its bridges are
-// their way in); no one fights across it. No `climate`: wet ground and sleet, not a snowfield.
+// the low rise by Szyszki for the one by Strzegocin. The Narew runs down the east flank past the town and the castle
+// (a course river: world/River.js), from the Russian end of the field to the French — the same water on both sides'
+// flank, the town bridge to the Popławy bank by the Russian end, a ford by the French. No `climate`: wet ground and
+// sleet, not a snowfield.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -33,26 +35,25 @@ const POINTS: ControlPointDef[] = [
   { id: 'G', name: 'Białowieża', x: 300, z: -45, owner: null, sector: 'east' },
   { id: 'H', name: 'Mosin wood', x: -260, z: -290, owner: null, sector: 'west' },
   { id: 'I', name: 'Szyszki', x: 120, z: -260, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Pułtusk', x: 380, z: -340, owner: null, sector: 'east', radius: 30 },
+  { id: 'J', name: 'Pułtusk', x: 330, z: -330, owner: null, sector: 'east', radius: 30 },
   { id: 'K', name: 'Narew road', x: 0, z: -420, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
-// the Narew behind the Russians, its bridge at the town road and the two pontoon bridges the Russians threw over
-const narewZ = (x) => -535 + 0.06 * x + 10 * Math.sin(x * 0.006 + 1);
+// the Narew down the east flank, past the castle and the town: the town bridge over to the Popławy bank, a ford below
+const NAREW = [[455, -640], [432, -500], [408, -360], [412, -210], [440, -50], [428, 110], [404, 270], [418, 430], [452, 640]];
 const river = createRiver({
-  path: narewZ,
+  paths: [NAREW],
   halfWidth: 15,
   level: 0,
   depth: 2.8,
   valley: 60,
   crossings: [
-    { name: 'Pontoon bridge', x: -300, kind: 'bridge', width: 6 },
-    { name: 'Pontoon bridge', x: 0, kind: 'bridge', width: 6 },
-    { name: 'Pułtusk bridge', x: 300, kind: 'bridge', width: 8 },
+    { name: 'Pułtusk bridge', x: 408, z: -330, kind: 'bridge', width: 8 },
+    { name: 'Ford by Kacice', x: 410, z: 300, kind: 'ford', width: 12 },
   ],
 });
-const CASTLE = { x: 420, z: -470 };
+const CASTLE = { x: 362, z: -425 };
 /** 1 in the town, 0 outside it: the long market running down to the castle and the river. */
 const town = (x, z) => smoothstep(1.1, 0.85, Math.hypot((x - P.J.x - 15) / 55, (z - P.J.z + 50) / 110));
 /** The woods (0..1): the Mosin wood, the Popławy wood, copses of birch and pine, alders along the Narew. */
@@ -69,7 +70,7 @@ function height(x, z) {
   let h = fbm(noise, x * 0.0025, z * 0.0025, 3) * 4.5 + fbm(noise, x * 0.02 + 7, z * 0.02, 3) * 0.4 + 6;
   h += hill(x, z, P.I.x - 30, P.I.z - 20, 120, 7) + hill(x, z, P.I.x - 160, P.I.z + 10, 90, 4);   // the low rise by Szyszki, where the Russian batteries stood
   h += hill(x, z, P.C.x + 20, P.C.z + 20, 115, 7) + hill(x, z, P.C.x + 150, P.C.z + 40, 90, 4);   // the rise by Strzegocin
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 22 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, z) * 18;
+  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 22 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 18;
   h += (2.4 - h) * town(x, z) * 0.6;                                                                // the town on the low ground by the river
   for (const p of POINTS) if (p.id !== 'J') h += (h * 0.6 + 2.4 - h) * smoothstep(42, 20, Math.hypot(x - p.x, z - p.z)) * 0.5;
   for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
@@ -154,7 +155,7 @@ export default {
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
     const nearPoint = (x, z, r) => POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < r);
-    const nearWater = (x, z, r) => Math.abs(z - narewZ(x)) < river.halfWidth + r;
+    const nearWater = (x, z, r) => river.project(x, z).d < river.halfWidth + r;
 
     // ---- Pułtusk: town houses round the long market, the collegiate church, the bishops' castle on the river bank
     const rr = mulberry32(1806_1226);

@@ -432,12 +432,15 @@ export class GameEngine {
     if (!river || c.blown) return;
     const pos = { x: c.x, y: river.level + 1.5, z: c.z };
     for (let i = 0; i < 4; i++) {
-      this.effects.explosion({ x: c.x + (Math.random() - 0.5) * c.width, y: pos.y, z: c.z + (i - 1.5) * river.halfWidth * 0.5 }, 1.6, { ground: false, fire: 0.4 });
+      const at = river.at(c, (Math.random() - 0.5) * c.width, (i - 1.5) * river.halfWidth * 0.5); // (along the deck, whichever way the river runs)
+      this.effects.explosion({ x: at.x, y: pos.y, z: at.z }, 1.6, { ground: false, fire: 0.4 });
     }
     this.audio.play('explosion.big', pos, { volume: 1 });
     for (const s of this.world.stacks) {
       for (const u of s.units) {
-        if (u.alive && Math.abs(u.pos.x - c.x) < c.width / 2 + 2 && Math.abs(u.pos.z - c.z) < river.halfWidth + 2) u.receiveDamage(600, null, 0.6);
+        if (!u.alive) continue;
+        const L = river.local(c, u.pos.x, u.pos.z);
+        if (Math.abs(L.u) < c.width / 2 + 2 && Math.abs(L.v) < river.halfWidth + 2) u.receiveDamage(600, null, 0.6);
       }
     }
     this.quietly(() => river.blow(c, this.terrain, this.scene));

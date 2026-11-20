@@ -499,10 +499,14 @@ export class UnitStack {
     const river = this.world.river;
     if (!river || this.usesCover && !body && !this.column) return;
     const c = river.bridgeAt(p.x, p.z); // whichever deck it is on or beside
-    if (!c || c.blown || Math.abs(p.z - c.z) > river.halfWidth + (body ? 1 : 6)) return;
-    if (Math.abs(p.x - c.x) > c.width / 2 + 4) return; // only beside the deck: never a jump
+    if (!c || c.blown) return;
+    const L = river.local(c, p.x, p.z); // (u across the deck, v along it: the bridge's own frame, whichever way the river runs)
+    if (Math.abs(L.v) > river.halfWidth + (body ? 1 : 6)) return;
+    if (Math.abs(L.u) > c.width / 2 + 4) return; // only beside the deck: never a jump
     const room = Math.max(0, c.width / 2 - this.stats.radius * 0.8);
-    p.x = c.x + Math.max(-room, Math.min(room, p.x - c.x));
+    const q = river.at(c, Math.max(-room, Math.min(room, L.u)), L.v);
+    p.x = q.x;
+    p.z = q.z;
   }
 
   /** Shift the whole area (used by world separation). */

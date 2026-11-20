@@ -7,8 +7,10 @@
 // (−z). Fair, not mirrored: the two Russian redoubts are traded for Soult's grand battery in its epaulement on the
 // Bewernick heights and the walled churchyard at Altkirch, each as far from its own base; the Russians' low ridge
 // for the Bewernick heights, as high; the Konegen wood on the Russian left for the Altkirch wood on the French
-// right — opposite flanks again. Lawden and the villages between are open to both. The Alle runs only behind the
-// Russian base (its bridges are their way in): no one fights across it.
+// right — opposite flanks again. Lawden and the villages between are open to both. The Alle runs the length of the
+// field west of the middle (a course river: world/River.js), as it did through Bennigsen's camp — a west bank lane
+// (Launau, Grossendorf, the first redoubt) and the main field, a bridge by each base and a ford halfway: the same
+// river for both.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -38,18 +40,18 @@ const POINTS: ControlPointDef[] = [
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
-// the Alle behind the Russian camp: the town bridge and the two bridges Bennigsen threw across for the camp
-const alleZ = (x) => -530 - 0.05 * x + 14 * Math.sin(x * 0.005 + 2);
+// the Alle down the field, west of the middle: the Heilsberg bridge by the town, a camp bridge by the French end, a ford halfway
+const ALLE = [[-200, 660], [-186, 450], [-196, 250], [-160, 100], [-176, -60], [-150, -200], [-166, -330], [-132, -470], [-122, 660 * -1]];
 const river = createRiver({
-  path: alleZ,
+  paths: [ALLE],
   halfWidth: 13,
   level: 0,
   depth: 2.6,
   valley: 50,
   crossings: [
-    { name: 'Camp bridge', x: -300, kind: 'bridge', width: 6 },
-    { name: 'Heilsberg bridge', x: 0, kind: 'bridge', width: 8 },
-    { name: 'Camp bridge', x: 300, kind: 'bridge', width: 6 },
+    { name: 'Heilsberg bridge', x: -150, z: -410, kind: 'bridge', width: 8 },
+    { name: 'Lawden ford', x: -170, z: -40, kind: 'ford', width: 12 },
+    { name: 'Camp bridge', x: -190, z: 360, kind: 'bridge', width: 6 },
   ],
 });
 const CASTLE = { x: -70, z: -468 };
@@ -68,7 +70,7 @@ function height(x, z) {
   h += hill(x, z, P.H.x, P.H.z, 70, 4) + hill(x, z, P.I.x, P.I.z, 70, 4);
   h += hill(x, z, P.C.x, P.C.z, 120, 11) + 5 * Math.exp(-(((z - 270) / 80) ** 2)) * smoothstep(-520, -400, x) * smoothstep(220, 80, x); // the Bewernick heights, and the rise along the French front
   h += hill(x, z, P.D.x - 20, P.D.z + 40, 90, 4);
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 24 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, z) * 20;
+  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 24 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 20;
   for (const p of POINTS) if (!'CHI'.includes(p.id)) h += (h * 0.6 + 2.4 - h) * smoothstep(42, 20, Math.hypot(x - p.x, z - p.z)) * 0.5;
   for (const bz of [BASE_Z, -BASE_Z]) h += (6 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
   return river.carve(x, z, Math.max(1.6, h));
@@ -148,7 +150,7 @@ export default {
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
     const nearPoint = (x, z, r) => POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < r);
-    const nearWater = (x, z, r) => Math.abs(z - alleZ(x)) < river.halfWidth + r;
+    const nearWater = (x, z, r) => river.project(x, z).d < river.halfWidth + r;
 
     // ---- Heilsberg: town houses round the base and down to the bridge, the church, the castle of the bishops of Ermland
     const rr = mulberry32(1807_0610);

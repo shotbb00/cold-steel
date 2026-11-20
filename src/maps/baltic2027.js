@@ -4,6 +4,8 @@
 /**
  * A curtain wall round the closed polygon `corners` ([x, z] …), `h` m high, in short pieces that follow the
  * ground, a square tower at each corner; left open for `gate` m round each of `gates` ([x, z]).
+ * @param {any} props @param {any} cover @param {any} terrain @param {number[][]} corners
+ * @param {{ h?: number, t?: number, gates?: number[][], gate?: number, tower?: number, towerH?: number, color?: number }} [o]
  */
 export function curtainWall(props, cover, terrain, corners, { h = 7, t = 2.4, gates = [], gate = 8, tower = 7, towerH = 11, color = 0xb8b2a2 } = {}) {
   const shut = (x, z) => !gates.some(([gx, gz]) => Math.hypot(x - gx, z - gz) < gate);

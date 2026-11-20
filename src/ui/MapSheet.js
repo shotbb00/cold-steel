@@ -165,16 +165,18 @@ export class MapSheet {
 
     // the river
     const river = map.river;
-    for (const path of river?.channels ?? []) {
+    for (const [ci, path] of (river?.channels ?? []).entries()) {
       g.strokeStyle = WATER;
       g.lineWidth = Math.max(3, (river.halfWidth * 2 / (2 * bx)) * size);
       g.lineCap = 'round';
       g.beginPath();
-      for (let x = -bx; x <= bx; x += bx / 60) {
-        const px = sx(x);
-        const pz = sz(path(x));
-        if (x === -bx) g.moveTo(px, pz); else g.lineTo(px, pz);
-      }
+      if (typeof path === 'function') {
+        for (let x = -bx; x <= bx; x += bx / 60) {
+          const px = sx(x);
+          const pz = sz(path(x));
+          if (x === -bx) g.moveTo(px, pz); else g.lineTo(px, pz);
+        }
+      } else river.course(ci, 10).forEach(([x, z], i) => (i ? g.lineTo(sx(x), sz(z)) : g.moveTo(sx(x), sz(z)))); // (a course: any way across the sheet)
       g.stroke();
     }
 
