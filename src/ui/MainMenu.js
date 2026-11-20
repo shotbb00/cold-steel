@@ -464,6 +464,7 @@ export class MainMenu {
 
   open(id) {
     for (const [k, b] of Object.entries(this.tabs)) b.classList.toggle('on', k === id);
+    this.root.querySelector('.wc-backdrop')?.remove(); // (the Campaign tab's world map: only behind that tab — ui/WarRoom.js backdrop)
     if (id !== 'units' && this.preview) { this.preview.dispose(); this.preview = null; }
     this.panel.replaceChildren();
     this.panel.dataset.panel = id;

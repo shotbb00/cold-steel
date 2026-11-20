@@ -337,7 +337,7 @@
 .title-screen { background: var(--table); }
 .map-sheet[hidden] { display: none; }
 .map-sheet { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
-.title-screen.menu-open > :not(.map-sheet), .title-screen.loading-open > :not(.map-sheet) { position: relative; z-index: 1; }
+.title-screen.menu-open > :not(.map-sheet):not(.wc-backdrop), .title-screen.loading-open > :not(.map-sheet):not(.wc-backdrop) { position: relative; z-index: 1; }
 
 /* the mark (public/brand/mark.svg) and its tagline */
 .logo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -674,3 +674,10 @@
 .wc-buy-top span { color: var(--gold); font-weight: 700; }
 .wc-buy-what { color: var(--text); opacity: 0.85; line-height: 1.35; }
 .wc-buy-where { color: var(--muted); font-size: 12px; }
+
+/* the Campaign tab's backdrop (ui/WarRoom.js WarRoomPanel.backdrop): the world map, still, faded toward the menu */
+.wc-backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.55; }
+.wc-backdrop .wm { cursor: default; }
+.wc-backdrop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--table) 0%, var(--table) 22%, rgba(21, 25, 18, 0.55) 48%, rgba(21, 25, 18, 0.1) 75%); }
+.wc-bd-pin { stroke: #0c0f0a; stroke-width: 1.2; }
+.wc-bd-pin.nato { fill: #2a5bd0; } .wc-bd-pin.pact { fill: #d0302a; }

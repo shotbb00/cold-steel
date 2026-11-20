@@ -95,7 +95,7 @@ export class WorldMap {
     this.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     this.kMin = Math.max(w / W, h / this.H);
     this.zoom.extent([[0, 0], [w, h]]).scaleExtent([this.kMin, this.kMin * 120]).translateExtent([[0, 0], [W, this.H]]);
-    if (first && this.pending) { const p = this.pending; this.pending = null; this.flyTo(...p, 0); } else this.sel.call(this.zoom.transform, this.t.k < this.kMin ? zoomIdentity.scale(this.kMin) : this.t);
+    if (first && this.pending) { const [pts, maxK, anchor] = this.pending; this.pending = null; this.flyTo(pts, maxK, 0, anchor); } else this.sel.call(this.zoom.transform, this.t.k < this.kMin ? zoomIdentity.scale(this.kMin) : this.t);
   }
 
   async load() {
@@ -152,13 +152,16 @@ export class WorldMap {
     this.front.innerHTML = `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
   }
 
-  /** Frame these world points (padding round them, no closer than maxK × the whole sheet). */
-  flyTo(pts, maxK = 14, ms = 650) {
-    if (!this.w) { this.pending = [pts, maxK]; return; }
+  /**
+   * Frame these world points (padding round them, no closer than maxK × the whole sheet), their middle at `anchor` (shares
+   * of the frame: [0.5, 0.5] its centre) — kept on the sheet, as a drag or a wheel would be.
+   */
+  flyTo(pts, maxK = 14, ms = 650, anchor = [0.5, 0.5]) {
+    if (!this.w) { this.pending = [pts, maxK, anchor]; return; }
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const k = Math.min(this.kMin * maxK, Math.max(this.kMin, Math.min((this.w * 0.8) / Math.max(1, x1 - x0), (this.h * 0.75) / Math.max(1, y1 - y0))));
-    const t = zoomIdentity.translate(this.w / 2, this.h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    const t = this.zoom.constrain()(zoomIdentity.translate(this.w * anchor[0], this.h * anchor[1]).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2), [[0, 0], [this.w, this.h]], [[0, 0], [W, this.H]]);
     (ms ? this.sel.transition().duration(ms) : this.sel).call(this.zoom.transform, t);
   }
   zoomBy(f) { this.sel.transition().duration(250).call(this.zoom.scaleBy, f); }

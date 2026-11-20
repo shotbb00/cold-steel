@@ -43,6 +43,32 @@ export class WarRoomPanel {
     this.render();
   }
 
+  /**
+   * Behind the Campaign tab: the world map on its paper (ui/WorldMap.js), still — no zoom, no clicks — with the ground each
+   * side holds, the front and a pin for every province: from the last autosave, or as the war begins.
+   */
+  async backdrop(war, save) {
+    const host = el('div', 'wc-backdrop');
+    host.setAttribute('aria-hidden', 'true');
+    const table = this.root.closest('.title-screen') ?? document.body; // (on the menu's table, as its map sheet: ui/MapSheet.js)
+    table.querySelector('.wc-backdrop')?.remove();
+    if (!this.root.isConnected) return;
+    table.prepend(host);
+    const c = (save && await loadSave(save.key).catch(() => null)) ?? newCampaign(war, { side: 'nato', maps: mapsHere() });
+    const map = new WorldMap(host);
+    map.sel.on('.zoom', null); // (a picture: nothing to drag or wheel)
+    const pts = Object.entries(war.provinces).map(([id, p]) => { const [x, y] = map.xy(p.lon, p.lat); return { id, x, y, side: c.provinces[id].owner, depot: !!c.provinces[id].depot }; });
+    map.onView = (t) => {
+      map.over.innerHTML = pts.map((p) => `<circle class="wc-bd-pin ${p.side}" cx="${t.applyX(p.x).toFixed(1)}" cy="${t.applyY(p.y).toFixed(1)}" r="${p.depot ? 5 : 3.2}"/>`).join('')
+        + Object.values(war.theatres).map((th) => { const [x, y] = map.xy(th.lon, th.lat); return `<text class="wc-theatre" x="${t.applyX(x)}" y="${t.applyY(y)}" text-anchor="middle">${esc(th.name)}</text>`; }).join('');
+    };
+    map.territory(pts);
+    // the European fronts in the open part of the table (right of the menu on a wide screen; under the panel on a phone)
+    const europe = pts.filter((p) => ['west', 'east', 'med'].includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
+    map.flyTo(europe, 6, 0, innerWidth > 900 ? [0.74, 0.5] : [0.5, 0.62]);
+    map.load().catch(() => {});
+  }
+
   /** The last campaign battle's result (wcampaign/battle.js), settled into the autosaved campaign it came from. */
   async applyResult() {
     const r = takeResult(), war = warFor();
@@ -65,6 +91,7 @@ export class WarRoomPanel {
     if (!war) { r.append(el('p', 'mp-lead', `The world campaign starts with the Second World War: switch to 1945 to play it. ${esc(epoch())} follows.`)); return; }
     r.append(el('p', 'mp-lead', 'The whole war on one map: Western Europe, the Eastern Front, North Africa and the Mediterranean, the Pacific and the Atlantic. Move army groups, fleets and air wings in turns of half a week; every clash becomes a battle that turn. The war runs for as long as it lasts — and goes the way you fight it.'));
     const saves = (await listSaves()).filter((s) => s.war === war.id);
+    this.backdrop(war, saves[0]); // (the war's map behind the tab: the last save's front, or where it begins)
     if (saves.length) {
       const last = saves[0];
       const row = el('div', 'deploy-row');
