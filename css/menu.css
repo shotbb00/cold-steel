@@ -681,3 +681,4 @@
 .wc-backdrop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--table) 0%, var(--table) 22%, rgba(21, 25, 18, 0.55) 48%, rgba(21, 25, 18, 0.1) 75%); }
 .wc-bd-pin { stroke: #0c0f0a; stroke-width: 1.2; }
 .wc-bd-pin.nato { fill: #2a5bd0; } .wc-bd-pin.pact { fill: #d0302a; }
+@media (max-width: 900px) { .wc-backdrop { display: none; } } /* (a phone: no map behind the Campaign tab) */

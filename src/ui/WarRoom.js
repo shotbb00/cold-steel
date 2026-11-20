@@ -52,7 +52,7 @@ export class WarRoomPanel {
     host.setAttribute('aria-hidden', 'true');
     const table = this.root.closest('.title-screen') ?? document.body; // (on the menu's table, as its map sheet: ui/MapSheet.js)
     table.querySelector('.wc-backdrop')?.remove();
-    if (!this.root.isConnected) return;
+    if (!this.root.isConnected || !matchMedia('(min-width: 901px)').matches) return; // (a phone: the panel fills the screen — no map behind it)
     table.prepend(host);
     const c = (save && await loadSave(save.key).catch(() => null)) ?? newCampaign(war, { side: 'nato', maps: mapsHere() });
     const map = new WorldMap(host);
@@ -63,9 +63,9 @@ export class WarRoomPanel {
         + Object.values(war.theatres).map((th) => { const [x, y] = map.xy(th.lon, th.lat); return `<text class="wc-theatre" x="${t.applyX(x)}" y="${t.applyY(y)}" text-anchor="middle">${esc(th.name)}</text>`; }).join('');
     };
     map.territory(pts);
-    // the European fronts in the open part of the table (right of the menu on a wide screen; under the panel on a phone)
+    // the European fronts in the open part of the table, right of the menu
     const europe = pts.filter((p) => ['west', 'east', 'med'].includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
-    map.flyTo(europe, 6, 0, innerWidth > 900 ? [0.74, 0.5] : [0.5, 0.62]);
+    map.flyTo(europe, 6, 0, [0.74, 0.5]);
     map.load().catch(() => {});
   }
 
