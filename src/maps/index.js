@@ -34,6 +34,8 @@ import elGuettar from './elGuettar.ts';
 import kasserinePass from './kasserinePass.ts';
 import bobruisk from './bobruisk.ts';
 import berlin from './berlin.ts';
+import gazala from './gazala.ts';
+import seelowHeights from './seelowHeights.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import gotlandLanding from './gotlandLanding.ts';
@@ -48,19 +50,36 @@ import augustowCanal from './augustowCanal.ts';
 import eastShield from './eastShield.ts';
 import biebrzaMarshes from './biebrzaMarshes.ts';
 import orzyszBase from './orzyszBase.ts';
+import narvaRiver from './narvaRiver.ts';
+import tapaJunction from './tapaJunction.ts';
+import valgaValka from './valgaValka.ts';
+import daugavpils from './daugavpils.ts';
 import gotlandGap from './gotlandGap.ts';
 import gulfOfFinland from './gulfOfFinland.ts';
 import gdanskBay from './gdanskBay.ts';
 import bornholmStrait from './bornholmStrait.ts';
+import salla from './salla.ts';
+import kuusamo from './kuusamo.ts';
+import ivalo from './ivalo.ts';
+import pasvikValley from './pasvikValley.ts';
 
 import eylau from './eylau.ts';
 import friedland from './friedland.ts';
 import vimeiro from './vimeiro.ts';
 import talavera from './talavera.ts';
+import bussaco from './bussaco.ts';
+import fuentesDeOnoro from './fuentesDeOnoro.ts';
+import pultusk from './pultusk.ts';
+import heilsberg from './heilsberg.ts';
 import copenhagen from './copenhagen.ts';
 import riga from './riga.ts';
+import tannenberg from './tannenberg.ts';
+import gorlice from './gorlice.ts';
+import lutsk from './lutsk.ts';
 import caporetto from './caporetto.ts';
 import piave from './piave.ts';
+import asiago from './asiago.ts';
+import vittorioVeneto from './vittorioVeneto.ts';
 import megiddo from './megiddo.ts';
 import gallipoli from './gallipoli.ts';
 import otranto from './otranto.ts';
@@ -74,12 +93,22 @@ import goldBeach from './goldBeach.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
 import narvik from './narvik.ts';
+import malselv from './malselv.ts';
+import lyngen from './lyngen.ts';
 import korea from './korea.ts';
+import chorwonValley from './chorwonValley.ts';
+import imjinRiver from './imjinRiver.ts';
+import uijeongbu from './uijeongbu.ts';
 import andoya from './andoya.ts';
 export const MAPS = {
   [andoya.id]: andoya,
   [korea.id]: korea,
+  [chorwonValley.id]: chorwonValley,
+  [imjinRiver.id]: imjinRiver,
+  [uijeongbu.id]: uijeongbu,
   [narvik.id]: narvik,
+  [malselv.id]: malselv,
+  [lyngen.id]: lyngen,
   [finnmark.id]: finnmark,
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
@@ -93,10 +122,19 @@ export const MAPS = {
   [gallipoli.id]: gallipoli,
   [megiddo.id]: megiddo,
   [piave.id]: piave,
+  [asiago.id]: asiago,
+  [vittorioVeneto.id]: vittorioVeneto,
   [caporetto.id]: caporetto,
   [riga.id]: riga,
+  [tannenberg.id]: tannenberg,
+  [gorlice.id]: gorlice,
+  [lutsk.id]: lutsk,
   [copenhagen.id]: copenhagen,
   [talavera.id]: talavera,
+  [bussaco.id]: bussaco,
+  [fuentesDeOnoro.id]: fuentesDeOnoro,
+  [pultusk.id]: pultusk,
+  [heilsberg.id]: heilsberg,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
@@ -106,6 +144,8 @@ export const MAPS = {
   [kasserinePass.id]: kasserinePass,
   [bobruisk.id]: bobruisk,
   [berlin.id]: berlin,
+  [gazala.id]: gazala,
+  [seelowHeights.id]: seelowHeights,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [gotlandLanding.id]: gotlandLanding,
@@ -120,10 +160,18 @@ export const MAPS = {
   [eastShield.id]: eastShield,
   [biebrzaMarshes.id]: biebrzaMarshes,
   [orzyszBase.id]: orzyszBase,
+  [narvaRiver.id]: narvaRiver,
+  [tapaJunction.id]: tapaJunction,
+  [valgaValka.id]: valgaValka,
+  [daugavpils.id]: daugavpils,
   [gotlandGap.id]: gotlandGap,
   [gulfOfFinland.id]: gulfOfFinland,
   [gdanskBay.id]: gdanskBay,
   [bornholmStrait.id]: bornholmStrait,
+  [salla.id]: salla,
+  [kuusamo.id]: kuusamo,
+  [ivalo.id]: ivalo,
+  [pasvikValley.id]: pasvikValley,
   [fuldaGap.id]: fuldaGap,
   [werraValley.id]: werraValley,
   [hauneFulda.id]: hauneFulda,
@@ -217,7 +265,7 @@ const tabOf = (m) => m.theatre ?? 'land';
  * Pacific (Iwo Jima, Midway — where Japan and the Marines fight: data/factions.js armiesFrom).
  */
 export const REGIONS = [
-  { id: 'europe', name: 'Western Europe' }, { id: 'north', name: 'Northern Flank' }, { id: 'east', name: 'Eastern Front' }, { id: 'iberia', name: 'Iberia' },
+  { id: 'europe', name: 'Western Europe' }, { id: 'baltic', name: 'Baltic States' }, { id: 'north', name: 'Northern Flank' }, { id: 'east', name: 'Eastern Front' }, { id: 'iberia', name: 'Iberia' },
   { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' },
   { id: 'caribbean', name: 'Caribbean' }, { id: 'pacific', name: 'Asia & Pacific' }, { id: 'korea', name: 'Korea' },
 ];

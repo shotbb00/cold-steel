@@ -111,13 +111,14 @@ export class Construction {
     if (kind === 'demolish' && (!bridge || bridge.blown)) return null;
     const river = this.game.world.river;
     if (kind === 'span') {
-      if (!river || Math.abs(z - river.path(x, z)) > river.halfWidth + 25) return null; // not at the river
+      const at = river?.project(x, z);
+      if (!river || at.d > river.halfWidth + 25) return null; // not at the river
       const sid = stack?.id ?? stackId;
       for (const old of this.sites.filter((s) => s.kind === 'span' && s.stackId === sid)) this.cancel(old); // only the last order counts
-      const channel = river.channelAt(x, z);
-      if (river.crossings.some((c) => !c.blown && c.channel === channel && Math.abs(c.x - x) < 14)) return null;   // a crossing already there
-      z = river.path(x, z);
-      yaw = 0;
+      if (river.crossings.some((c) => !c.blown && c.channel === at.ci && Math.hypot(c.x - at.px, c.z - at.pz) < 14)) return null;   // a crossing already there
+      x = at.px;
+      z = at.pz;
+      yaw = Math.atan2(at.nx, at.nz); // (square across the flow: 0 on a river along x)
     }
     const ghost = new THREE.Mesh(new THREE.BoxGeometry(def.length, def.action ? 0.25 : 1, def.width), ghostMat);
     ghost.position.set(x, this.game.terrain.heightAt(x, z) + 0.5, z);
@@ -136,7 +137,7 @@ export class Construction {
       // (a clearing or demolition job covers a wide patch but is worked from its middle: close in)
       const back = def.dozer ? 0 : def.action ? 3 : def.width / 2 + 2; // a dozer works the pit from inside it
       const to = def.layer // a bridge layer pulls up at the near bank, facing across
-        ? { x, z: z + river.side(stack.anchor.x, stack.anchor.z) * (river.halfWidth + 9) }
+        ? (() => { const s = river.side(stack.anchor.x, stack.anchor.z) * (river.halfWidth + 9); return { x: x + Math.sin(yaw) * s, z: z + Math.cos(yaw) * s }; })()
         : { x: x - Math.sin(yaw) * back, z: z - Math.cos(yaw) * back };
       stack.ai.moveTo(to, { hold: true, ordered: this.game.isHuman(stack.faction) });
       stack.fortifications = (stack.fortifications ?? 0) + 1;
@@ -338,12 +339,13 @@ export class Construction {
     if (!c) return [];
     const river = this.game.world.river;
     const parts = [];
+    const ry = river.yawOf(c); // (the packs along the deck, whichever way the river runs)
     for (let i = 0; i < 8; i++) {
-      const z = c.z + (i - 3.5) * (river.halfWidth / 4.5);
+      const v = (i - 3.5) * (river.halfWidth / 4.5);
       for (const side of [-1, 1]) {
-        const x = c.x + side * (c.width / 2 - 0.5);
-        parts.push(P.box(0.35, 0.22, 0.25, { x, y: river.deck + 0.13, z, color: 0x4a4a32 }));
-        parts.push(P.box(0.05, 0.05, 0.8, { x: x - side * 0.25, y: river.deck + 0.05, z, color: 0x8a2a1a }));   // the det cord
+        const a = river.at(c, side * (c.width / 2 - 0.5), v), b = river.at(c, side * (c.width / 2 - 0.75), v);
+        parts.push(P.box(0.35, 0.22, 0.25, { x: a.x, y: river.deck + 0.13, z: a.z, ry, color: 0x4a4a32 }));
+        parts.push(P.box(0.05, 0.05, 0.8, { x: b.x, y: river.deck + 0.05, z: b.z, ry, color: 0x8a2a1a }));   // the det cord
       }
     }
     return parts;
@@ -400,7 +402,8 @@ export class Construction {
       far.position.set(0, 0, -side * L / 4);
       hinge.add(far);
       pivot.add(near, hinge);
-      pivot.position.set(site.x, river.deck, site.z + side * L / 2);
+      pivot.position.set(site.x + Math.sin(site.yaw ?? 0) * side * L / 2, river.deck, site.z + Math.cos(site.yaw ?? 0) * side * L / 2);
+      pivot.rotation.y = site.yaw ?? 0; // (the span's z square across the flow)
       this.game.scene.add(pivot);
       site.anim = { pivot, hinge };
     }
@@ -516,7 +519,7 @@ export class Construction {
       const river = game.world.river;
       const s = site.stack;
       const side = site.home ?? (s?.alive ? river.side(s.centroid.x, s.centroid.z) : 1); // back the way they came
-      if (s?.alive) s.ai.moveTo({ x: c.x, z: c.z + side * (river.halfWidth + 22) }, { hold: true, ordered: game.isHuman(s.faction) });
+      if (s?.alive) s.ai.moveTo(river.at(c, 0, side * (river.halfWidth + 22)), { hold: true, ordered: game.isHuman(s.faction) });
       this.fuses.push({ bridge: c, at: game.time + FUSE, charges: site.charges });
       game.tell(site.faction, `Charges set on the ${c.name} — clear the bridge, ${FUSE} seconds!`);
     } else if (site.kind === 'span') {
