@@ -213,11 +213,9 @@ export function order(c, war, side, forceId, to, { land = false } = {}) {
     c.orders[side][forceId] = { to };
     return '';
   }
-  // an air wing: to an own airfield within two land steps
-  const near = new Set([f.at, ...landNeighbours(war, f.at)]);
-  for (const n of [...near]) for (const m of landNeighbours(war, n)) near.add(m);
+  // an air wing: to an own airfield within its reach (airReach: over land or sea)
   if (!war.provinces[to]?.airfield || c.provinces[to].owner !== side) return 'an own airfield';
-  if (!near.has(to)) return 'too far';
+  if (!airReach(war, f.at).has(to)) return 'too far';
   c.orders[side][forceId] = { to };
   return '';
 }
@@ -288,11 +286,22 @@ function addBattle(c, war, b) {
 }
 
 /** Where an air wing based at `base` can fly: within two land steps, and the sea zones off those coasts. */
-export function airReach(war, base) {
-  const near = new Set([base, ...landNeighbours(war, base)]);
-  for (const n of [...near]) for (const m of landNeighbours(war, n)) near.add(m);
-  for (const k of [...near]) for (const z of war.provinces[k]?.seas ?? []) near.add(z);
-  return near;
+export function airReach(war, base, hops = 2) {
+  // steps: a road between provinces or a crossing between sea zones is one; out over a coast onto its sea zone, or in from
+  // it, is free (an island's planes fly as far over the sea as a mainland's over the land)
+  const dist = new Map([[base, 0]]), queue = [base];
+  const edges = (n) => (war.provinces[n] ? [...(war.provinces[n].land ?? []).map((m) => [m, 1]), ...(war.provinces[n].seas ?? []).map((z) => [z, 0])]
+    : [...(war.seas[n]?.seas ?? []).map((z) => [z, 1]), ...(war.seas[n]?.coasts ?? []).map((k) => [k, 0])]);
+  while (queue.length) {
+    const n = queue.shift(), d = dist.get(n);
+    for (const [m, w] of edges(n)) {
+      const nd = d + w;
+      if (nd > hops || (dist.has(m) && dist.get(m) <= nd)) continue;
+      dist.set(m, nd);
+      if (w === 0) queue.unshift(m); else queue.push(m);
+    }
+  }
+  return new Set(dist.keys());
 }
 
 /** Give air wing `wingId` a mission (MISSIONS) over `at`. Returns '' or why not. */

@@ -651,3 +651,6 @@
 .wc-letter-greet { font-weight: 700; }
 .wc-letter-sign { text-align: right; margin: 6px 0 0 !important; }
 .wc-legend .star::before { content: "★"; background: none; color: #8a6a1a; width: auto; height: auto; }
+
+.wc-node.needs .hit { stroke: #4a4438; stroke-width: 2.2; stroke-dasharray: 4 3; fill: rgba(74, 68, 56, 0.08); }
+.wc-node.needs .name { fill: #6a6458; }

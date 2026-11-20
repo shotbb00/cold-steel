@@ -163,7 +163,16 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (!f || f.side !== me || c.over) return out;
     if (f.kind === 'army') {
       for (const n of war.provinces[f.at].land) out.set(n, {});
-      if (war.provinces[f.at].port) for (const k of Object.keys(war.provinces)) if (k !== f.at && !out.has(k) && (war.provinces[k].seas ?? []).length && landingZone(c, war, me, f.at, k)) out.set(k, { land: true });
+      if (war.provinces[f.at].port) {
+        const near = new Set(war.provinces[f.at].seas ?? []);
+        for (let i = 0; i < 2; i++) for (const z of [...near]) for (const n of war.seas[z].seas) near.add(n); // (within two sea zones of the port: engine.js landingZone)
+        for (const k of Object.keys(war.provinces)) {
+          const zs = war.provinces[k].seas ?? [];
+          if (k === f.at || out.has(k) || !zs.length || !zs.some((z) => near.has(z))) continue;
+          if (landingZone(c, war, me, f.at, k)) out.set(k, { land: true });
+          else out.set(k, { needs: zs.filter((z) => near.has(z)) }); // (no fleet of ours off it yet: shown, not orderable)
+        }
+      }
     } else if (f.kind === 'fleet') for (const z of war.seas[f.at].seas) out.set(z, {});
     else if (st.airMode && st.airMode !== 'rebase') {
       for (const k of airReach(war, f.at)) {
@@ -172,9 +181,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         out.set(k, { mission: st.airMode });
       }
     } else {
-      const near = new Set([f.at, ...war.provinces[f.at].land]);
-      for (const n of [...near]) for (const m of war.provinces[n].land) near.add(m);
-      for (const k of near) if (k !== f.at && war.provinces[k].airfield && c.provinces[k].owner === me) out.set(k, {});
+      for (const k of airReach(war, f.at)) if (k !== f.at && war.provinces[k]?.airfield && c.provinces[k].owner === me) out.set(k, {}); // (rebase: over land or sea)
     }
     return out;
   }
@@ -275,10 +282,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     for (const n of nodes) {
       if (n.x < -80 || n.y < -80 || n.x > vw + 80 || n.y > vh + 80) continue; // (off the screen: not drawn)
       const ids = n.ids, one = ids.length === 1 ? ids[0] : null;
-      const reach = ids.some((id) => st.reach.has(id)), land = one && st.reach.get(one)?.land;
+      const reach = ids.some((id) => st.reach.has(id) && !st.reach.get(id).needs), land = one && st.reach.get(one)?.land, needs = one && st.reach.get(one)?.needs;
       const own = c.forces.filter((f) => f.side === me && ids.includes(f.at));
       const theirs = c.forces.filter((f) => f.side === foe && ids.includes(f.at) && seen(f.at));
-      let g = `<g class="wc-node${reach ? ` reach${land ? ' landing' : ''}` : ''}${ids.includes(st.place) ? ' sel' : ''}" data-ids="${ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">`;
+      let g = `<g class="wc-node${reach ? ` reach${land ? ' landing' : ''}` : needs ? ' needs' : ''}${ids.includes(st.place) ? ' sel' : ''}" data-ids="${ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">`;
       if (one && n.sea) g += `<circle class="hit" r="16"/><circle class="anchor" r="3"/>${label(nameOf(one), -9, ' sea', n.x, n.y, reach)}`;
       else if (one) {
         const P = c.provinces[one];
@@ -324,6 +331,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const id = ids[0];
     if (sf && pileKind !== 'own' && (st.reach.has(id) || id === sf.at)) {
       const r = st.reach.get(id);
+      if (r?.needs) { st.msg = `To land on ${nameOf(id)}, a fleet of yours must first hold ${r.needs.map(nameOf).join(' or ')} (no enemy fleet there). Move one in this turn — the landing can go next turn.`; return render(); }
       const why = r?.mission ? mission(c, war, me, sf.id, r.mission, id) : order(c, war, me, sf.id, id, r ?? {});
       st.msg = why ? `Not possible: ${why}.` : '';
       return render();
@@ -355,7 +363,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       d.append(el('p', 'cp-hint', `At ${esc(nameOf(f.at))}${f.cut ? ` · <em>cut off for ${f.cut} turns</em>` : ''} · strength ${Math.round(strength(f) * 100)} % · power ${Math.round(power(c, f)).toLocaleString('en')}`));
       d.append(el('p', 'cp-hint', `${esc(f.commander.name)}: ${esc(f.commander.trait)}`));
       const o = c.orders[me][f.id];
-      if (f.kind !== 'air') d.append(el('p', 'wc-order-line', o ? `${o.land ? 'Lands on' : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>` : 'Holds its ground. Click a highlighted place to move, attack or land; click its own place to hold.'));
+      if (f.kind !== 'air') d.append(el('p', 'wc-order-line', o ? `${o.land ? (c.provinces[o.to].owner === me ? 'Ships to' : 'Lands on') : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>` : 'Holds its ground. Click a highlighted place to move, attack or land; click its own place to hold.'));
+      if (f.kind === 'army' && war.provinces[f.at]?.port) d.append(el('p', 'cp-hint', 'In a port: it can land on an enemy coast or ship to one of ours across the sea. Red rings: possible now. Grey rings: a fleet of yours must first hold a sea zone off that coast (within two zones of this port) — click one to see which.'));
       if (f.kind === 'army') {
         for (const b of f.battalions) {
           const hp = b.units.reduce((a, u) => a + u.hp, 0) / b.units.length;
@@ -402,7 +411,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       return d;
     }
     d.append(el('span', 'cp-kicker', 'Orders'), el('h3', '', st.theatre ? esc(war.theatres[st.theatre].name) : 'The war'));
-    d.append(el('p', 'cp-hint', 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land (a fleet of yours must hold the sea off it). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
+    d.append(el('p', 'cp-hint', 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land or ship to (a fleet of yours must hold a sea zone off it — grey rings are coasts waiting for one). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
     const ordered = Object.keys(c.orders[me]).length;
     d.append(el('p', 'cp-hint', `${ordered} order${ordered === 1 ? '' : 's'} given this turn · morale can reach ${Math.round(moraleCap(c, me))} at most with the ground you hold`));
     for (const [tid, th] of Object.entries(war.theatres)) {
