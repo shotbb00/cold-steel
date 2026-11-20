@@ -205,22 +205,24 @@ export const EPOCHS = {
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
     // the menu's regions (maps/index.js REGIONS): each its own title and line
     regions: {
-      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad on the Volga, Bobruisk in the marshes, the Seelow Heights over the Oder and the last battle in Berlin.' },
-      africa: { title: 'North Africa', blurb: 'The desert war: the boxes and the Cauldron at Gazala, the minefields of El Alamein, the passes of Tunisia — open sand where armour fights at long range.' },
-      pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
+      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad on the Volga, the night landing at Novorossiysk, Bobruisk in the marshes, the Seelow Heights over the Oder and the last battle in Berlin.' },
+      africa: { title: 'North Africa', blurb: 'The desert war and the Mediterranean: the boxes at Gazala, the minefields of El Alamein, the passes of Tunisia, the landing at Gela in Sicily and the Malta convoys.' },
+      pacific: { title: 'The Pacific War', blurb: 'From Midway and Guadalcanal to Saipan, Iwo Jima and Okinawa, and Kohima on the Burma front: the Marines, the Army and the US Navy against an Imperial Army and Navy that will not surrender.' },
+      europe: { sea: { name: 'North Atlantic', title: 'The Battle of the Atlantic', blurb: 'The convoys from Halifax and New York to Britain, and the U-boat packs waiting for them in the air gap of mid-ocean: Royal Navy escorts against the Kriegsmarine.' } },
+      med: { sea: { title: 'The Mediterranean, 1942', blurb: 'Malta, besieged in the middle of the sea: the convoys fight through the Sicilian narrows past U-boats, E-boats and the German cruisers.' } },
     },
     sides: { nato: 'Allies', pact: 'Germany' },
     armies: {
-      us: { id: 'us', faction: 'nato', name: 'US Army' },
+      us: { id: 'us', faction: 'nato', name: 'US Army', pacific: 'both' }, // (Europe and the Pacific: the Army fought on Saipan and Okinawa beside the Marines)
       sov: { id: 'sov', faction: 'nato', name: 'Red Army' },
-      wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht' },
+      wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht', navy: 'Kriegsmarine' },
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
       // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
       usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
-      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true, regions: ['africa'] },
-      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
-      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
-      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
+      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', navy: 'Royal Navy', own: true, regions: ['africa'] },
+      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', navy: 'Royal Navy', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
+      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', navy: 'Royal Navy', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
+      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', navy: 'Imperial Navy', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
     types: TYPES_1945, alias: ALIAS_1945, air: { ...AIR_1945, ...BOMBERS[1945] },

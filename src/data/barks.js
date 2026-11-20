@@ -167,6 +167,19 @@ LINES.km = {
   shipBad: ['Wassereinbruch vorn!', 'Das Schiff krängt!', 'Die Pumpen schaffen es nicht!', 'Alle Mann an die Lenzpumpen!'],
   shipContact: ['Feind in Sicht!', 'Rauchwolken am Horizont!', 'Feindliche Schlachtkreuzer, Backbord voraus!', 'Unterseeboot, Steuerbord!'],
 };
+// 1945 at sea in European waters: the Royal Navy, the Kriegsmarine
+LINES.rn45 = {
+  straddle: ['Straddle!', 'Straddling — rapid broadsides!', 'Hitting now, sir!', 'Down two hundred, shoot!'],
+  shipHit: ['We’re hit!', 'Hit aft, sir!', 'Hit on Y turret!', 'Fire in the hangar!', 'Flood the magazine!'],
+  shipBad: ['She’s taking water forward!', 'We’re listing, sir!', 'Pumps can’t hold it!', 'Damage control party aft!'],
+  shipContact: ['Enemy in sight!', 'Masts on the horizon, sir!', 'Asdic contact, bearing green four-five!', 'Aircraft, red nine-oh!', 'Periscope, fine on the bow!'],
+};
+LINES.km45 = {
+  straddle: ['Deckend!', 'Gabel — Wirkung!', 'Salve deckend, Schnellfeuer!', 'Zweihundert kürzer, Feuer!'],
+  shipHit: ['Treffer!', 'Treffer achtern!', 'Treffer im Turm Bruno!', 'Feuer im Zwischendeck!', 'Munitionskammer fluten!'],
+  shipBad: ['Wassereinbruch vorn!', 'Das Schiff krängt!', 'Die Lenzpumpen schaffen es nicht!', 'Ruder klemmt!'],
+  shipContact: ['Feind in Sicht!', 'Mastspitzen am Horizont!', 'Zerstörer, Steuerbord voraus!', 'Geleitzug in Sicht!', 'Flugzeug, Backbord!'],
+};
 LINES.uk18 = {
   contact: ['Jerry! Over there!', 'Enemy front!', 'Huns in the wood!', 'Here they come!', 'Movement by the wire!'],
   cover: ['Get down!', 'Into the shell hole!', 'Keep your heads down!', 'Down in the trench!'],
@@ -241,6 +254,6 @@ const LANG = { us: 'nato', sov: 'pact', bw: 'de', nva: 'de', wh: 'de', fj: 'de',
 /** A random line for this army (else faction) and situation, or null. */
 export function barkLine(faction, kind, army = null) {
   const lang = LANG_WAR[epoch()]?.[army] ?? LANG[army] ?? faction;
-  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'jpa' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'raid18' || lang === 'pl' || lang === 'dk' || lang === 'ru1806' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
+  const list = LINES[lang]?.[kind] ?? (lang === 'ja' || lang === 'jpa' || lang === 'fr' || lang === 'de' || lang === 'de1806' || lang === 'gb' || lang === 'uk18' || lang === 'km' || lang === 'km45' || lang === 'raid18' || lang === 'pl' || lang === 'dk' || lang === 'ru1806' ? null : LINES.nato[kind]); // (the Japanese, the French and the Germans say only what they have lines for: no English)
   return list ? list[Math.floor(Math.random() * list.length)] : null;
 }

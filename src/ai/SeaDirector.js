@@ -26,7 +26,12 @@ const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'corvette', 'destroy
 const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
 const ORDER_1918 = ['destroyer', 'lightCruiser', 'frigate', 'destroyer', 'cruiser', 'minesweeper', 'ptBoat', 'submarine', 'destroyer', 'minelayer', 'battleship', 'carrier', 'lightCruiser', 'transport', 'destroyer', 'minesweeper', 'cruiser', 'submarine', 'frigate']; // (the North Sea: the sweepers and layers among them)
 const ORDER_2027 = ['destroyer', 'frigate', 'ptBoat', 'droneBoat', 'corvette', 'submarine', 'frigate', 'destroyer', 'ptBoat', 'escortCarrier', 'droneBoat', 'corvette', 'destroyer', 'submarine']; // (the Baltic, 2027: no cruisers or battleships left — the drone tender early)
-const order = () => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : ORDER);
+// 1945's two European navies (data/units45/ships.js): the Kriegsmarine's U-boats and destroyers first (the Atlantic's threat; no carrier),
+// the Royal Navy's escorts and destroyers to hunt them, then the cruisers and the line
+const ORDER_KM = ['submarine', 'destroyer', 'ptBoat', 'destroyer', 'submarine', 'cruiser', 'ptBoat', 'destroyer', 'battleship', 'submarine', 'destroyer', 'cruiser', 'ptBoat'];
+const ORDER_RN = ['destroyer', 'frigate', 'frigate', 'lightCruiser', 'destroyer', 'submarine', 'cruiser', 'transport', 'carrier', 'frigate', 'destroyer', 'battleship', 'ptBoat', 'lightCruiser', 'frigate'];
+const NAVY_ORDER = { wh: ORDER_KM, brit: ORDER_RN, brit21: ORDER_RN, brit14: ORDER_RN };
+const order = (army) => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : NAVY_ORDER[army] ?? ORDER);
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
 const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
 
@@ -71,8 +76,8 @@ export class SeaDirector {
     const army = this.game.armyOf(this.faction);
     const allowed = (id) => !!UNIT_TYPES[id] && (!getUnitType(id).armies || getUnitType(id).armies.includes(army)) && (!this.state.allow || this.state.allow(getUnitType(id))); // (a type its own navy fields: no Buyan-M for the US Navy)
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
-    for (let tries = 0; tries < order().length; tries++) {
-      const list = order();
+    for (let tries = 0; tries < order(army).length; tries++) {
+      const list = order(army);
       const id = list[this.buyIndex % list.length];
       if (!allowed(id) || capped(id)) { this.buyIndex++; continue; }
       if (this.state.cp[this.faction] >= unitCost(getUnitType(id), army)) {

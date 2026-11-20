@@ -46,10 +46,10 @@ export const DEFAULT_ARMY = { nato: 'us', pact: 'sov' };
  * fits it (the Pacific's armies on its land maps, `map.pacific`, and only there; at sea each side's navy).
  */
 /** Does army `a` (ARMIES entry) fight in region `reg` when the maps there don't name their armies: its `regions`, else the Pacific's only there and the rest everywhere else. */
-export const armyIn = (a, reg) => !a.coastal && (a.regions ? a.regions.includes(reg) : !!a.pacific === (reg === 'pacific'));
+export const armyIn = (a, reg) => !a.coastal && (a.regions ? a.regions.includes(reg) : a.pacific === 'both' || !!a.pacific === (reg === 'pacific'));
 
 export function armiesFrom(o, map = null) {
-  const fits = (a) => !map || map.theatre === 'sea' || (ARMIES[a]?.regions ? ARMIES[a].regions.includes(map.region ?? 'europe') : !!ARMIES[a]?.pacific === !!map.pacific);
+  const fits = (a) => !map || map.theatre === 'sea' || (ARMIES[a]?.regions ? ARMIES[a].regions.includes(map.region ?? 'europe') : ARMIES[a]?.pacific === 'both' || !!ARMIES[a]?.pacific === !!map.pacific);
   const out = {};
   for (const f of Object.keys(DEFAULT_ARMY)) {
     const want = ARMIES[o?.[f]]?.faction === f ? o[f] : DEFAULT_ARMY[f];

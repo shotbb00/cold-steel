@@ -11,11 +11,14 @@ import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
 import stalingrad from './stalingrad.ts';
+import novorossiysk from './novorossiysk.ts';
 import elAlamein from './elAlamein.ts';
 import midway from './midway.ts';
 import savoSound from './savoSound.ts';
 import surigaoStrait from './surigaoStrait.ts';
 import philippineSea from './philippineSea.ts';
+import atlanticConvoy from './atlanticConvoy.ts';
+import maltaConvoy from './maltaConvoy.ts';
 import norwegianSea from './norwegianSea.ts';
 import northCape from './northCape.ts';
 import ionianSea from './ionianSea.ts';
@@ -88,8 +91,11 @@ import bocage from './bocage.ts';
 import remagen from './remagen.ts';
 import arnhem from './arnhem.ts';
 import kohima from './kohima.ts';
+import guadalcanal from './guadalcanal.ts';
+import saipan from './saipan.ts';
 import okinawa from './okinawa.ts';
 import goldBeach from './goldBeach.ts';
+import gela from './gela.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
 import narvik from './narvik.ts';
@@ -112,8 +118,11 @@ export const MAPS = {
   [finnmark.id]: finnmark,
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
+  [gela.id]: gela,
   [okinawa.id]: okinawa,
   [kohima.id]: kohima,
+  [guadalcanal.id]: guadalcanal,
+  [saipan.id]: saipan,
   [arnhem.id]: arnhem,
   [remagen.id]: remagen,
   [bocage.id]: bocage,
@@ -182,6 +191,7 @@ export const MAPS = {
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
   [stalingrad.id]: stalingrad,
+  [novorossiysk.id]: novorossiysk,
   [elAlamein.id]: elAlamein,
   [midway.id]: midway,
   [savoSound.id]: savoSound,
@@ -199,6 +209,8 @@ export const MAPS = {
   [zeebrugge.id]: zeebrugge,
   [balticSea.id]: balticSea,
   [philippineSea.id]: philippineSea,
+  [atlanticConvoy.id]: atlanticConvoy,
+  [maltaConvoy.id]: maltaConvoy,
 };
 
 /**

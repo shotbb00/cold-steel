@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import { SEA_STATE } from '../world/Sea.js';
 
 const PER_WEATHER = { clear: 1, overcast: 3, rain: 5, fog: 0 };
+/** Squalls for this battle's weather: on a coastal map none in clear weather (a landing in July sun, not under a lone rain cloud). */
+const perWeather = (game) => (game.world?.coastal && game.conditions?.weather === 'clear' ? 0 : PER_WEATHER[game.conditions?.weather] ?? 0);
 const WIND = { x: 3.2, z: 1.4 };       // m/s, the way they drift
 const R = [320, 620];                  // their radius, m
 const HEIGHT = 340;
@@ -46,7 +48,7 @@ export class Squalls {
     this.mat = this.mats[game.conditions?.night ? 'night' : 'day'];
     this.half = Math.max(game.world.bounds.x, game.world.bounds.z);
     SEA_STATE.value = SEA_BY_WEATHER[game.conditions?.weather] ?? 1;
-    const n = PER_WEATHER[game.conditions?.weather] ?? 0;
+    const n = perWeather(game);
     for (let i = 0; i < n; i++) this.spawn((Math.random() * 2 - 1) * this.half, (Math.random() * 2 - 1) * this.half);
   }
 
@@ -79,7 +81,7 @@ export class Squalls {
   update(dt) {
     const target = SEA_BY_WEATHER[this.game.conditions?.weather] ?? 1;
     SEA_STATE.value += (target - SEA_STATE.value) * Math.min(1, dt * 0.05); // (the sea gets up, or goes down, over a minute or two)
-    const want = PER_WEATHER[this.game.conditions?.weather] ?? 0;
+    const want = perWeather(this.game);
     const night = !!this.game.conditions?.night; // (billboards aren't lit: dark grey at night)
     if (this.night !== night) { // (dusk to night: the curtains go dark)
       this.night = night;

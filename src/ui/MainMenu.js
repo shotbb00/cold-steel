@@ -851,7 +851,7 @@ export class MainMenu {
       row.lastChild.textContent = text(body);
       box.append(row);
     }
-    const history = ww2 && !own ? null : army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
+    const history = ww2 && !own ? null : c[army] ?? (army === DEFAULT_ARMY[faction] ? c[faction] : null); // (an army's own line first: the Kriegsmarine's, though the Wehrmacht is its side's default) // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
     if (history) {
       const h = el('div', 'codex-row codex-history');
       h.append(el('h4', '', 'History'), el('p', '', ''));

@@ -24,7 +24,7 @@ export const WW2 = {
     pacific: { name: 'The Pacific', lat: 15, lon: 145 },
     atlantic: { name: 'The Atlantic', lat: 50, lon: -30, sea: true },
   },
-  planned: ['sicily', 'novorossiysk', 'guadalcanal', 'saipan', 'north-atlantic-convoy', 'malta-convoy'], // (the gap maps: their final ids may differ — the engine skips a map that doesn't exist yet)
+  planned: ['gela', 'novorossiysk', 'guadalcanal', 'saipan', 'atlanticConvoy', 'maltaConvoy'], // (the gap maps: their final ids may differ — the engine skips a map that doesn't exist yet)
 
   // The powers on each side: a power whose capitals are all lost surrenders, its forces leave the war (engine surrenders()).
   powers: {
@@ -67,7 +67,7 @@ export const WW2 = {
     tunisiaSouth: { name: 'El Guettar', theatre: 'med', map: 'el-guettar', prod: 1, land: ['gazala', 'kasserine'], lat: 34.3, lon: 8.9 },
     kasserine: { name: 'The Kasserine Pass', theatre: 'med', map: 'kasserine-pass', prod: 1, land: ['tunisiaSouth', 'algeria'], lat: 35.3, lon: 8.7 },
     algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
-    sicily: { name: 'Sicily', theatre: 'med', map: null, coastal: ['sicily'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
+    sicily: { name: 'Sicily', theatre: 'med', map: null, coastal: ['gela'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
     italy: { name: 'Italy', theatre: 'med', depot: 'pact', port: true, airfield: true, prod: 5, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
 
     // ---- The Pacific: islands, Burma
@@ -83,10 +83,10 @@ export const WW2 = {
   },
 
   seas: {
-    'north-atlantic': { name: 'The North Atlantic', theatre: 'atlantic', map: 'north-atlantic-convoy', seas: ['channel'], coasts: ['england'], lat: 52, lon: -25 },
+    'north-atlantic': { name: 'The North Atlantic', theatre: 'atlantic', map: 'atlanticConvoy', seas: ['channel'], coasts: ['england'], lat: 52, lon: -25 },
     channel: { name: 'The Channel', theatre: 'west', map: null, seas: ['north-atlantic'], coasts: ['england', 'normandy'], lat: 50.3, lon: -1 },
     blackSea: { name: 'The Black Sea', theatre: 'east', map: null, seas: [], coasts: ['kuban'], lat: 43.5, lon: 34 },
-    westernMed: { name: 'The western Mediterranean', theatre: 'med', map: 'malta-convoy', seas: ['easternMed'], coasts: ['algeria', 'sicily', 'italy'], lat: 38, lon: 9 },
+    westernMed: { name: 'The western Mediterranean', theatre: 'med', map: 'maltaConvoy', seas: ['easternMed'], coasts: ['algeria', 'sicily', 'italy'], lat: 38, lon: 9 },
     easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: null, seas: ['westernMed'], coasts: ['alexandria', 'gazala', 'sicily'], lat: 34, lon: 22 },
     centralPacific: { name: 'The central Pacific', theatre: 'pacific', map: 'midway', seas: ['solomons', 'philippineSea'], coasts: ['hawaii'], lat: 25, lon: -175 },
     solomons: { name: 'The Solomons', theatre: 'pacific', map: 'savoSound', seas: ['centralPacific', 'philippineSea'], coasts: ['guadalcanal'], lat: -8, lon: 158 },

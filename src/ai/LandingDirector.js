@@ -9,7 +9,7 @@
 import { FrontlineDirector } from './FrontlineDirector.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
-import { enemyOf } from '../data/factions.js';
+import { enemyOf, armyHas } from '../data/factions.js';
 import { KINDS } from '../systems/AirStrike.js';
 
 const ORDER = ['rifles', 'rifles', 'engineers', 'ddTank', 'rifles', 'mgTeam', 'tank', 'rifles', 'engineers', 'mortar', 'rifles', 'tank', 'atTeam'];
@@ -91,7 +91,7 @@ export class LandingDirector extends FrontlineDirector {
     if (!this.lands) return super.buy();
     const f = this.faction, army = this.game.armyOf(f), cp = this.state.cp[f];
     const cost = (id) => unitCost(getUnitType(id), army);
-    const allowed = (id) => !!UNIT_TYPES[id] && (!this.state.allow || this.state.allow(UNIT_TYPES[id], f)); // (not in this war: skipped — 1985 has no DD tank)
+    const allowed = (id) => !!UNIT_TYPES[id] && armyHas(UNIT_TYPES[id], army) && (!this.state.allow || this.state.allow(UNIT_TYPES[id], f)); // (and what this army can buy: no waiting on a ship it has none of) // (not in this war: skipped — 1985 has no DD tank)
     const ships = this.fleet;
     const road = () => (this.focus && Math.random() < 0.75 ? this.focus.road : null);
     // the ships first, when there's room: two destroyers inshore, the battleship once

@@ -77,7 +77,7 @@ export function makeBuyer(game, state) {
     if (landing) { // in to the beach sector of the road it was sent on (Dog, Easy, Fox), not at the base out at sea
       const craft = game.landing.launch(faction, { typeId, name, kit: kitted, owner: game.currentOwner ?? null }, roads[road] + (Math.random() - 0.5) * 50); // (owner: co-op — it lands as the buyer's)
       game.bus.emit('wave', { faction, units: [typeId], bought: true });
-      game.tell(faction, `${type.shortName} called in: an ${craft.type.shortName} is taking ${name} in`);
+      game.tell(faction, `${type.shortName} called in: ${/^[aeiou]/i.test(craft.type.shortName) ? 'an' : 'a'} ${craft.type.shortName} is taking ${name} in`);
       return craft;
     }
     const facing = type.stats.naval && game.world.coastal ? (pos.x > 0 ? -Math.PI / 2 : Math.PI / 2) : toward > 0 ? 0 : Math.PI; // (a coastal map: along the coast, toward the middle)

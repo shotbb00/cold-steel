@@ -13,6 +13,7 @@
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
 import { buildLCVP, buildLCT, buildYMS, buildDD, buildLSMR } from '../models/landingCraft45.js';
+import * as S from '../models/ships1945eu.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
 const FWD = 0;
@@ -373,4 +374,99 @@ export const oldBattleship = ship({
   },
 });
 
+// ---------------------------------------------------------------- the Atlantic and the Mediterranean
+// The Royal Navy (the British armies `brit`, `brit21`, `brit14`: `own`, so at sea each fields only the classes given
+// it here) and the Kriegsmarine (the Wehrmacht `wh`). Each class in a navy's slot: her names, model, variant, the
+// mounts and the stats over her side's (as 1918's navy(): data/units1918/ships.js). Models: models/ships1945eu.js.
+
+/** Ship type `t` in the navy of `armies`: her names, model, variant, mounts, stats (on the sea scale) and price. */
+const navy = (t, armies, { names, model, variant, stats, mounts, cost }) => {
+  for (const army of [].concat(armies)) {
+    t.names = { ...t.names, [army]: names };
+    t.models = { ...t.models, [army]: model };
+    t.variants = { ...t.variants, [army]: variant };
+    if (stats) t.factionStats = { ...t.factionStats, [army]: near(stats) };
+    if (mounts) t.mounts = { ...t.mounts, [army]: mounts.map(near) };
+    if (cost) t.armyCost = { ...t.armyCost, [army]: cost };
+  }
+};
+const RN = ['brit', 'brit21', 'brit14'];
+const RN_SHIPS = ['HMS Afridi', 'HMS Cossack', 'HMS Ashanti', 'HMS Bedouin', 'HMS Eskimo', 'HMS Somali', 'HMS Tartar', 'HMS Nubian', 'HMS Sikh', 'HMS Zulu', 'HMS Maori', 'HMS Punjabi', 'HMS Matabele', 'HMS Mashona', 'HMS Gurkha', 'HMS Mohawk'];
+const TWIN_47 = { range: 2300, reload: 4.5, damage: 360, splash: 4, pierce: 0.3 };      // (4.7-inch twin: both shells in one salvo)
+const TWIN_525 = { range: 2500, reload: 5, damage: 340, splash: 4.5, pierce: 0.4, shell: 920, size: 2, spread: 0.01 };
+const EIGHT_RN = { range: 3000, reload: 10, damage: 620, splash: 7, pierce: 0.5, shell: 950, size: 2.6, spread: 0.009 };
+const FOURTEEN_Q = { range: 3900, reload: 30, damage: 2600, splash: 12, pierce: 0.75, shell: 1000, size: 3.6, spread: 0.008 }; // (a quadruple turret: four shells)
+const FOUR_FIVE = { range: 2200, reload: 4, damage: 300, splash: 4, pierce: 0.3, arc: 4 };
+
+navy(frigate, RN, { names: ['HMS Rother', 'HMS Spey', 'HMS Exe', 'HMS Jed', 'HMS Tay', 'HMS Swale', 'HMS Itchen', 'HMS Lagan', 'HMS Mourne', 'HMS Ness', 'HMS Test', 'HMS Nadder'], model: S.buildRiver,
+  stats: { hp: 2700, armor: 0.1, speed: 11, sonar: 1100, depthCharges: DC({ count: 8, reload: 12, radius: 45, damage: 1200 }), range: 1700, aggroRange: 1700, preferredRange: 1200, damage: 150 },
+  mounts: [gun([0, 7, 36], FWD, { range: 1700, reload: 3, damage: 150 }), gun([0, 5, -30], AFT, { range: 1700, reload: 3, damage: 150 })],
+  variant: { name: 'River-class frigate', weapon: '2 × 4-inch, Hedgehog, depth charges', text: 'The Atlantic escort: twice a corvette\'s range and speed, the Type 271 radar in its lantern and the Hedgehog that throws its bombs ahead while the asdic still holds the U-boat. Built in dozens to close the gap in mid-ocean.' } });
+navy(destroyer, RN, { names: RN_SHIPS, model: S.buildTribal,
+  stats: { hp: 4000, armor: 0.2, speed: 16, sonar: 850, range: 2300, aggroRange: 2300, preferredRange: 1600, damage: 360, fireCooldown: 4.5 },
+  mounts: [gun([0, 7, 44], FWD, TWIN_47), gun([0, 10, 37], FWD, TWIN_47), gun([0, 10, -21], AFT, TWIN_47), gun([0, 7, -34], AFT, TWIN_47), torps([0, 6, -13], { count: 4, range: 1400, speed: 22 })],
+  variant: { name: 'Tribal-class destroyer', weapon: '8 × 4.7-inch in twins, 4 torpedo tubes', text: 'Built for a gun fight: eight 4.7-inch guns in four twin gunhouses, more than any British destroyer before them. Cossack took the Altmark\'s prisoners off in a Norwegian fjord; Tribals finished the Bismarck off with torpedoes in the night.' } });
+navy(lightCruiser, RN, { names: ['HMS Dido', 'HMS Euryalus', 'HMS Naiad', 'HMS Phoebe', 'HMS Sirius', 'HMS Charybdis', 'HMS Cleopatra', 'HMS Hermione', 'HMS Argonaut', 'HMS Scylla'], model: S.buildDido,
+  stats: { hp: 7400, armor: 0.3, speed: 16.5, ...AA(950, 0.32, 0.07), range: 2500, aggroRange: 2500, preferredRange: 1800, damage: 340, fireCooldown: 5 },
+  mounts: [gun([0, 9, 58], FWD, TWIN_525), gun([0, 11.5, 50], FWD, TWIN_525), gun([0, 14, 41], FWD, TWIN_525), gun([0, 11.5, -45], AFT, TWIN_525), gun([0, 9, -55], AFT, TWIN_525),
+    torps([5.4, 7, -26], { count: 3 }), torps([-5.4, 7, -26], { count: 3 })],
+  variant: { name: 'Dido-class light cruiser', weapon: '10 × 5.25-inch in twins, 6 torpedo tubes', text: 'An anti-aircraft cruiser: dual-purpose 5.25-inch turrets, three stepped up forward, that fire at ships and aircraft alike. Didos fought the Malta convoys through — Charybdis and Sirius sailed with Pedestal.' } });
+navy(cruiser, RN, { names: ['HMS Kent', 'HMS Berwick', 'HMS Cumberland', 'HMS Suffolk', 'HMS Norfolk', 'HMS Dorsetshire', 'HMS London', 'HMS Devonshire', 'HMS Sussex', 'HMS Shropshire'], model: S.buildCounty,
+  stats: { hp: 10500, armor: 0.35, speed: 15.5, range: 3000, aggroRange: 3000, preferredRange: 2200, damage: 620, fireCooldown: 10 },
+  mounts: [gun([0, 11, 72], FWD, EIGHT_RN), gun([0, 14, 60], FWD, EIGHT_RN), gun([0, 14, -62], AFT, EIGHT_RN), gun([0, 11, -74], AFT, EIGHT_RN), torps([7, 10, -40], { count: 4 }), torps([-7, 10, -40], { count: 4 })],
+  variant: { name: 'County-class heavy cruiser', weapon: '8 × 8-inch, 8 × 4-inch, torpedoes', text: 'A treaty cruiser: high-sided for the oceans of the Empire, three tall funnels, and the armour of a light cruiser. Norfolk and Suffolk shadowed Bismarck through the Denmark Strait on their radar; Dorsetshire torpedoed her.' } });
+navy(battleship, RN, { names: ['HMS King George V', 'HMS Prince of Wales', 'HMS Duke of York', 'HMS Anson', 'HMS Howe'], model: S.buildKGV,
+  stats: { hp: 25000, armor: 0.72, speed: 14.5, range: 3900, aggroRange: 3900, preferredRange: 3000, damage: 2600, fireCooldown: 30 },
+  mounts: [gun([0, 14, 76], FWD, FOURTEEN_Q), gun([0, 18, 60], FWD, { ...FOURTEEN_Q, damage: 1300 }), gun([0, 14, -76], AFT, FOURTEEN_Q),
+    SECONDARY([11, 15, 24], Math.PI / 2), SECONDARY([-11, 15, 24], -Math.PI / 2), SECONDARY([11, 15, -36], Math.PI / 2), SECONDARY([-11, 15, -36], -Math.PI / 2)],
+  variant: { name: 'King George V-class battleship', weapon: '10 × 14-inch, 16 × 5.25-inch', text: 'Ten 14-inch guns in two quadruple turrets and a twin, the heaviest armour belt of any British battleship. King George V shot Bismarck to a wreck on 27 May 1941; Duke of York sank Scharnhorst off the North Cape at night, by radar.' } });
+navy(carrier, RN, { names: ['HMS Illustrious', 'HMS Victorious', 'HMS Formidable', 'HMS Indomitable'], model: S.buildIllustrious,
+  stats: { carrier: { deck: 15.6, deckLen: 215, airGroup: { navCap: 3, diveBomb: 2, torpBomb: 3, navScout: 1 } }, hp: 21000, armor: 0.5, speed: 15, range: 2200, aggroRange: 2200, preferredRange: 2600, damage: 300, fireCooldown: 4 }, // (an armoured box: a smaller air group than an Essex, but bombs that would sink a US carrier bounce off her deck)
+  mounts: [gun([19, 14, 72], FWD, FOUR_FIVE), gun([-19, 14, 72], FWD, FOUR_FIVE), gun([19, 14, -80], AFT, FOUR_FIVE), gun([-19, 14, -80], AFT, FOUR_FIVE)],
+  variant: { name: 'Illustrious-class armoured carrier', weapon: 'Sea Hurricanes, Albacores, Swordfish', text: 'A carrier built for the narrow seas, within reach of land-based bombers: her hangar an armoured box. Illustrious\'s Swordfish crippled the Italian fleet at Taranto; Victorious\'s torpedoed Bismarck; Indomitable and Victorious covered Pedestal.' } });
+navy(submarine, RN, { names: ['HMS Triton', 'HMS Thunderbolt', 'HMS Torbay', 'HMS Truant', 'HMS Turbulent', 'HMS Taku', 'HMS Tally-Ho', 'HMS Trenchant', 'HMS Tigris', 'HMS Thrasher'], model: S.buildTClass,
+  stats: { submarine: { submerged: 4, dive: 1.4, periscope: 6, deep: 40 }, hp: 2200, speed: 9.5, radius: 4.5, height: 5.5, range: 1600, aggroRange: 1600, preferredRange: 1100, damage: 160 },
+  mounts: [TUBES([0, -1, 40], 0, { count: 6, range: 1500, speed: 22, damage: 2600, reload: 60 }), TUBES([0, -1, -40], Math.PI, { count: 1, range: 1500, speed: 22, damage: 2600, reload: 70 }), gun([0, 4.5, 12], 0, { range: 1200, reload: 5, damage: 160, splash: 3, surfaced: true, arc: 5.2 })],
+  variant: { name: 'T-class submarine', weapon: '11 torpedo tubes, 4-inch', text: 'Ten tubes forward — the heaviest bow salvo of any submarine of the war — and one aft. Out of Malta and Alexandria the T-boats sank the convoys to Rommel\'s army.' } });
+navy(ptBoat, RN, { names: ['MTB 102', 'MTB 74', 'MTB 34', 'MTB 218', 'MTB 237', 'MTB 241', 'MTB 260', 'MTB 266'], model: S.buildVosperMTB,
+  stats: { hp: 380, speed: 20 },
+  mounts: [torps([0, 2, 1], { facing: FWD, arc: 0.7, count: 2, range: 1100, speed: 18, damage: 2400, reload: 9999 }), gun([0, 3, -6], AFT, { range: 1000, reload: 1.2, damage: 55, splash: 1, shell: 800, size: 0.8, arc: 5 })],
+  variant: { name: 'Vosper motor torpedo boat', weapon: '2 torpedoes, twin .5s', text: 'Coastal Forces\' plywood boats: in at 39 knots on three Packard engines, two torpedoes, out again. They fought the S-boats in the Channel by night and ran the narrows of the Mediterranean.' } });
+const MERCHANT = { model: S.buildMerchantRN, variant: { name: 'Merchantman', weapon: 'one 4-inch gun, 20 mm', text: 'A cargo ship of the convoy, a Merchant Navy crew and a few naval gunners: slow and soft. While she lies in a zone of yours her cargo brings in command points — lose her and the convoy has failed.' } };
+navy(transport, 'brit', { ...MERCHANT, names: ['MV Melbourne Star', 'MV Brisbane Star', 'MV Rochester Castle', 'MV Port Chalmers', 'SS Ohio', 'MV Dorset', 'MV Waimarama', 'MV Deucalion', 'MV Glenorchy', 'MV Wairangi'] }); // (Pedestal's)
+navy(transport, ['brit21', 'brit14'], { ...MERCHANT, names: ['SS Assyrian', 'SS Empire Miniver', 'SS Beatus', 'SS Fiscus', 'SS Creekirk', 'SS Scoresby', 'SS Empire Brigade', 'SS Sedgepool', 'SS Clintonia', 'SS Shirak', 'SS Wandby', 'SS Ruperra'] }); // (the North Atlantic's: SC 7 and HX 79, October 1940)
+
+// the Kriegsmarine: no carrier — Graf Zeppelin was launched in 1938 and never commissioned; no cruisers of the light
+// class, escorts or transports either (the slots below `armies` keep the Wehrmacht out of: no Japanese ship in a German's slot)
+const NOT_KM = ['us', 'sov', 'usmc', 'brit', 'brit21', 'brit14', 'jp', 'fj'];
+for (const t of [frigate, lightCruiser, carrier, escortCarrier, transport]) t.armies = NOT_KM;
+const FIFTEEN_DD = { range: 2500, reload: 7.5, damage: 440, splash: 5, pierce: 0.4, shell: 920, size: 2, spread: 0.01 };   // (the twin turret: both shells)
+const TWENTY_KM = { range: 3100, reload: 9, damage: 640, splash: 7, pierce: 0.55, shell: 950, size: 2.6, spread: 0.0085 }; // (German rangefinders: the tightest salvoes)
+const THIRTY_EIGHT = { range: 4000, reload: 26, damage: 1500, splash: 11, pierce: 0.75, shell: 1000, size: 3.8, spread: 0.0075 };
+navy(destroyer, 'wh', { names: ['Z 23', 'Z 24', 'Z 25', 'Z 26', 'Z 27', 'Z 28', 'Z 29', 'Z 30', 'Z 31', 'Z 32', 'Z 33', 'Z 34', 'Z 37', 'Z 38', 'Z 39'], model: S.buildNarvik, cost: 480,
+  stats: { hp: 4400, armor: 0.2, speed: 16, sonar: 700, range: 2500, aggroRange: 2500, preferredRange: 1800, damage: 440, fireCooldown: 7.5 }, // (balance, AI soaks 2026-11-20: the heavy guns slow and wet — they lost the Biscay fight)
+  mounts: [gun([0, 8, 48], FWD, FIFTEEN_DD), gun([0, 10.5, -24], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }), gun([0, 8, -38], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }), gun([0, 8, -48], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }),
+    torps([0, 8, 5], { count: 4, range: 1500, reload: 110 }), torps([0, 6, -16], { count: 4, range: 1500, reload: 110 })],
+  variant: { name: 'Zerstörer 1936A (Narvik)', weapon: '5 × 15 cm (twin forward), 8 torpedo tubes', text: 'The Narvik class: a light cruiser\'s 15 cm guns on a destroyer — heavy shells that outranged any British destroyer, but a wet, slow-firing gun in a seaway. Numbered, not named: Z 23 to Z 39.' } });
+navy(cruiser, 'wh', { names: ['Admiral Hipper', 'Prinz Eugen', 'Blücher'], model: S.buildHipper,
+  stats: { hp: 11500, armor: 0.45, speed: 16, range: 3100, aggroRange: 3100, preferredRange: 2300, damage: 640, fireCooldown: 9 },
+  mounts: [gun([0, 10, 74], FWD, TWENTY_KM), gun([0, 13, 62], FWD, TWENTY_KM), gun([0, 13, -58], AFT, TWENTY_KM), gun([0, 10, -70], AFT, TWENTY_KM),
+    torps([8.6, 8, -36], { count: 6, range: 1500, reload: 140 }), torps([-8.6, 8, -36], { count: 6, range: 1500, reload: 140 })],
+  variant: { name: 'Admiral Hipper-class heavy cruiser', weapon: '8 × 20.3 cm, 12 × 10.5 cm, 12 torpedo tubes', text: 'Big, fast and well armed, the Atlantic bow and the tower bridge of the big ships. Prinz Eugen sailed with Bismarck and fired the first hits on Hood; Hipper fell on the Arctic convoys.' } });
+navy(battleship, 'wh', { names: ['Bismarck', 'Tirpitz'], model: S.buildBismarck,
+  stats: { hp: 27000, armor: 0.72, speed: 15, range: 4000, aggroRange: 4000, preferredRange: 3000, damage: 3000, fireCooldown: 26 },
+  mounts: [gun([0, 15, 90], FWD, THIRTY_EIGHT), gun([0, 19, 74], FWD, THIRTY_EIGHT), gun([0, 19, -70], AFT, THIRTY_EIGHT), gun([0, 15, -86], AFT, THIRTY_EIGHT),
+    SECONDARY([11.5, 11, 30], Math.PI / 2), SECONDARY([-11.5, 11, 30], -Math.PI / 2), SECONDARY([11.5, 11, -46], Math.PI / 2), SECONDARY([-11.5, 11, -46], -Math.PI / 2)],
+  variant: { name: 'Bismarck-class battleship', weapon: '8 × 38 cm, 12 × 15 cm, 16 × 10.5 cm', text: 'Anton, Bruno, Caesar, Dora: four twin 38 cm turrets and a wide, steady hull. Bismarck sank Hood in the Denmark Strait with her fifth salvo; three days later a Swordfish\'s torpedo jammed her rudders and the Home Fleet caught her. Tirpitz lay in the Norwegian fjords and held half the Home Fleet in Scapa Flow.' } });
+navy(submarine, 'wh', { names: ['U 47', 'U 99', 'U 100', 'U 96', 'U 552', 'U 201', 'U 556', 'U 73', 'U 81', 'U 331', 'U 557', 'U 559', 'U 371', 'U 205'], model: S.buildTypeVII, cost: 380,
+  stats: { submarine: { submerged: 3.8, dive: 1.8, periscope: 6, deep: 40 }, hp: 1700, armor: 0.08, speed: 9, radius: 3.5, height: 5, eyeHeight: 7, hearing: 2600, range: 1600, aggroRange: 1600, preferredRange: 1100, damage: 200 }, // (she dived in under 30 s; the GHG hydrophones heard a convoy far beyond sight)
+  mounts: [TUBES([0, -1, 30], 0, { count: 4, range: 1500, speed: 22, damage: 2600, reload: 45 }), TUBES([0, -1, -32], Math.PI, { count: 1, range: 1500, speed: 22, damage: 2600, reload: 60 }), gun([0, 4, 9], 0, { range: 1300, reload: 4, damage: 200, splash: 3, surfaced: true, arc: 5.2 })],
+  variant: { name: 'Type VIIC U-boat', weapon: '5 torpedo tubes, 8.8 cm, 2 cm', text: 'The Atlantic\'s wolf: some 570 of them were built, more than any other submarine. They hunted in packs, closed the convoys on the surface at night, fired, dived. Cheap and quick to bring in — and in 1943 the escorts\' radar, Hedgehogs and aircraft turned the hunters into the hunted.' } });
+navy(ptBoat, 'wh', { names: ['S 30', 'S 36', 'S 58', 'S 59', 'S 38', 'S 100', 'S 54', 'S 61'], model: S.buildSBoot,
+  stats: { hp: 620, speed: 21, radius: 3.5, height: 3.5, eyeHeight: 4.5, range: 1100, aggroRange: 1200, preferredRange: 800 },
+  mounts: [torps([0, 2, 12], { facing: FWD, arc: 0.7, count: 2, range: 1400, speed: 22, damage: 2600, reload: 120 }), gun([0, 3, -12], AFT, { range: 1000, reload: 1, damage: 55, splash: 1, shell: 800, size: 0.8, arc: 5 })],
+  variant: { name: 'Schnellboot (S 38 class)', weapon: '2 torpedo tubes and 2 reloads, 2 cm', text: 'The E-boat: a round-bilged diesel boat, bigger and more seaworthy than any British MTB, at 40 knots. S 30, S 36, S 58 and S 59 tore into Pedestal\'s merchantmen off Cape Bon in the night of 13 August 1942.' } });
+
 export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft, lsmr };
+// (the Imperial Navy's ships under the Imperial Japanese Army's name too: the Pacific's sea maps field `jp`, which is `own`)
+for (const t of Object.values(SHIPS_1945)) if (t.variants?.pact) t.variants.jp ??= t.variants.pact;

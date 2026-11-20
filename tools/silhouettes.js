@@ -69,9 +69,10 @@ window.silhouettes = (year = '1985') => {
   for (const type of Object.values(UNIT_TYPES)) {
     if (!type.models || type.stats?.structure) continue; // bunkers and the HQ are never on a card
     // each side's, and each army's own where it has a model of its own (Icons.js artKey)
-    for (const [faction, army, own] of ARMIES[year]) {
-      const key = own ?? faction;
-      if (own && !type.models[army]) continue;
+    // (a side's default army with a model of its own — the Wehrmacht's Kriegsmarine ships — gets its own icon too, and the
+    // side's icon keeps the side's model: artKey asks for the army's own key whenever the army has a model)
+    const jobs = ARMIES[year].flatMap(([faction, army, own]) => (own ? (type.models[army] ? [[faction, army, own]] : []) : type.models[army] && army !== faction ? [[faction, army, army], [faction, faction, faction]] : [[faction, army, faction]]));
+    for (const [faction, army, key] of jobs) {
       preview.show(type.id, faction, army);
       preview.hold = false; // (draw now: the menu's background compile would leave the frame empty)
       preview.sea.visible = preview.ground.visible = false; // (a ship: no water disc — overrideMaterial would draw it white round her)

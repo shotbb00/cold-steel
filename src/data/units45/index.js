@@ -18,6 +18,7 @@ import { buildJpChiNu, buildJpHoI, buildJpHoHa, buildJpHaTo, buildJpLorryAA, bui
 import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell, buildBrCrusaderCS, buildBrBishop, buildBrScorpion, buildBrBoforsPortee, buildBrGL, buildBr37AA } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
+import { SOV_CRAFT_1945 } from './sovietCraft.js';
 import brit21 from './brit21.js';
 import brit14 from './brit14.js';
 
@@ -680,6 +681,7 @@ export const TYPES_1945 = {
   bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
   ...SHIPS_1945,   // the open-sea maps' warships (./ships.js)
   ...ATLANTIC_WALL, // the coastal maps' fixed defences (./atlanticWall.js)
+  ...SOV_CRAFT_1945, // the Black Sea Fleet's landing craft (./sovietCraft.js: Novorossiysk)
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */
