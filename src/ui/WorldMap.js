@@ -6,7 +6,7 @@
 //   const m = new WorldMap(host, { onView })   onView(t): the view changed (redraw the overlay; t: d3-zoom's transform)
 //   await m.load()                             the coastlines
 //   m.xy(lon, lat) → [x, y]                    world units (W × H)
-//   m.territory(points)                        [{ x, y, side }]: each side's ground (a faint wash) and the front between
+//   m.territory(points, areas)                 [{ x, y, side, theatre }], { theatre: [[x, y] …] }: each side's ground and the front
 //   m.flyTo(xys, maxK)                         frame these world points
 import { geoMercator, geoPath, geoGraticule10 } from 'd3-geo';
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom';
@@ -16,7 +16,6 @@ import { Delaunay } from 'd3-delaunay';
 import { feature, mesh } from 'topojson-client';
 
 export const W = 2000;
-const R = 60; // a province's ground reaches this far (world units: ~11° of longitude) — beyond it, no wash and no front
 const NS = 'http://www.w3.org/2000/svg';
 const LAT = [-58, 80];
 
@@ -33,8 +32,9 @@ function grainTile() {
 }
 
 export class WorldMap {
-  constructor(host, { onView = () => {} } = {}) {
+  constructor(host, { onView = () => {}, neutral = [] } = {}) {
     this.onView = onView;
+    this.neutral = new Set(neutral); // (the war's neutral countries: never coloured, hatched)
     const s = W / (2 * Math.PI), merc = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
     this.H = Math.round(s * (merc(LAT[1]) - merc(LAT[0])));
     this.proj = geoMercator().rotate([-40, 0]).scale(s).translate([W / 2, s * merc(LAT[1])]).clipExtent([[0, 0], [W, this.H]]);
@@ -43,8 +43,7 @@ export class WorldMap {
     this.svg = document.createElementNS(NS, 'svg');
     this.svg.classList.add('wm');
     this.svg.innerHTML = `<defs>
-        <radialGradient id="wm-nato"><stop offset="0" stop-color="#2a5bd0" stop-opacity="0.05"/><stop offset="0.75" stop-color="#2a5bd0" stop-opacity="0.08"/><stop offset="1" stop-color="#2a5bd0" stop-opacity="0"/></radialGradient>
-        <radialGradient id="wm-pact"><stop offset="0" stop-color="#d0302a" stop-opacity="0.05"/><stop offset="0.75" stop-color="#d0302a" stop-opacity="0.08"/><stop offset="1" stop-color="#d0302a" stop-opacity="0"/></radialGradient>
+        <pattern id="wm-neutral" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V7" stroke="#6a5a3a" stroke-opacity="0.35" stroke-width="0.9"/></pattern>
         <pattern id="wm-grain" width="140" height="140" patternUnits="userSpaceOnUse"><image href="${grainTile()}" width="140" height="140"/></pattern>
         <linearGradient id="wm-foldv" x1="0" x2="1"><stop offset="0" stop-color="#5a4320" stop-opacity="0"/><stop offset="0.45" stop-color="#5a4320" stop-opacity="0.14"/><stop offset="0.5" stop-color="#fff8e0" stop-opacity="0.3"/><stop offset="0.58" stop-color="#5a4320" stop-opacity="0"/></linearGradient>
         <linearGradient id="wm-foldh" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5a4320" stop-opacity="0"/><stop offset="0.45" stop-color="#5a4320" stop-opacity="0.12"/><stop offset="0.5" stop-color="#fff8e0" stop-opacity="0.28"/><stop offset="0.58" stop-color="#5a4320" stop-opacity="0"/></linearGradient>
@@ -63,6 +62,7 @@ export class WorldMap {
         <rect class="wm-sea" width="${W}" height="${H}"/>
         <path class="wm-grat"/>
         <path class="wm-land"/>
+        <path class="wm-neutral"/>
         <g class="wm-terr" clip-path="url(#wm-landclip)"></g>
         <path class="wm-border"/>
         <path class="wm-coast"/>
@@ -101,8 +101,11 @@ export class WorldMap {
   async load() {
     const topo = (await import('world-atlas/countries-50m.json')).default;
     const path = geoPath(this.proj).digits(1);
-    const land = path(feature(topo, topo.objects.countries));
-    for (const p of this.svg.querySelectorAll('.wm-land, .wm-landshape')) p.setAttribute('d', land);
+    const all = feature(topo, topo.objects.countries), land = path(all);
+    const fighting = { ...all, features: all.features.filter((f) => !this.neutral.has(String(f.id))) }, neutral = { ...all, features: all.features.filter((f) => this.neutral.has(String(f.id))) };
+    this.svg.querySelector('.wm-land').setAttribute('d', land);
+    for (const p of this.svg.querySelectorAll('.wm-landshape')) p.setAttribute('d', path(fighting)); // (ground and front: only the belligerents' land)
+    this.svg.querySelector('.wm-neutral').setAttribute('d', neutral.features.length ? path(neutral) : '');
     this.svg.querySelector('.wm-coast').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a === b)));
     this.svg.querySelector('.wm-border').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a !== b))); // (today's borders, faint: only to find one's way)
   }
@@ -110,10 +113,11 @@ export class WorldMap {
   xy(lon, lat) { return this.proj([lon, lat]); }
 
   /**
-   * Each side's ground: a faint wash of its colour over its provinces' Voronoi cells (out to R, on land); and the front —
-   * the cell edges between provinces of different sides, out to R from them — for drawFront to put down in grease pencil.
+   * Each side's ground: its colour, flat, over each province's Voronoi cell within its theatre's area (`areas`: world-unit
+   * polygons), on the belligerents' land — so it ends at a coast, a neutral border or the theatre's edge (drawn in ink); and
+   * the front: the cell edges between provinces of different sides, within both their areas, for drawFront in grease pencil.
    */
-  territory(points) {
+  territory(points, areas = {}) {
     const key = points.map((p) => `${p.x | 0},${p.y | 0}`).join(';');
     if (key !== this.cellsKey) {
       this.cellsKey = key;
@@ -122,16 +126,26 @@ export class WorldMap {
       this.polys = points.map((_, i) => v.cellPolygon(i));
       this.cells = this.polys.map((c) => `M${c.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`);
     }
-    this.svg.querySelector('.wm-terr').innerHTML = points.map((p, i) => `<clipPath id="wm-cell${i}"><path d="${this.cells[i]}"/></clipPath><circle clip-path="url(#wm-cell${i})" cx="${p.x}" cy="${p.y}" r="${R}" fill="url(#wm-${p.side})"/>`).join('');
-    // the front: the shared edge of each pair of neighbouring cells held by different sides, cut to R from the two provinces
+    const poly = (A) => `M${A.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`;
+    this.svg.querySelector('.wm-terr').innerHTML = points.map((p, i) => (areas[p.theatre] ? `<clipPath id="wm-cell${i}"><path d="${this.cells[i]}"/></clipPath><path class="wm-wash ${p.side}" clip-path="url(#wm-cell${i})" d="${poly(areas[p.theatre])}"/>` : '')).join('')
+      + Object.values(areas).map((A) => `<path class="wm-area" d="${poly(A)}"/>`).join('');
+    // the front: the shared edge of each pair of neighbouring cells held by different sides, within both their theatres' areas
     this.segs = [];
     const same = (a, b) => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
     for (let i = 0; i < points.length; i++) for (const j of this.delaunay.neighbors(i)) {
       if (j < i || points[i].side === points[j].side) continue;
       const shared = this.polys[i].filter((a) => this.polys[j].some((b) => same(a, b)));
       if (shared.length < 2) continue;
-      const seg = clipToCircle(shared[0], shared[1], points[i], R);
-      if (seg) this.segs.push({ a: seg[0], b: seg[1], nato: points[i].side === 'nato' ? points[i] : points[j] });
+      const Ai = areas[points[i].theatre], Aj = areas[points[j].theatre];
+      if (!Ai || !Aj) continue;
+      const nato = points[i].side === 'nato' ? points[i] : points[j];
+      // the wiggling edge, in runs of points inside both areas: where it leaves them it stops (at the area's ink edge)
+      let run = [];
+      for (const q of [...wiggle(shared[0], shared[1]), null]) {
+        if (q && inside(q, Ai) && inside(q, Aj)) { run.push(q); continue; }
+        if (run.length > 1) this.segs.push({ a: run[0], b: run.at(-1), nato, pts: run });
+        run = [];
+      }
     }
     this.drawFront();
   }
@@ -144,10 +158,22 @@ export class WorldMap {
     for (const s of this.segs) {
       const A = ap(s.a), B = ap(s.b), N = ap([s.nato.x, s.nato.y]);
       const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1;
-      let nx = -dy / l, ny = dx / l;
-      if ((N[0] - A[0]) * nx + (N[1] - A[1]) * ny < 0) { nx = -nx; ny = -ny; } // (the normal toward the Allied province)
-      const o = 3.2, seg = (k) => `M${(A[0] + nx * k).toFixed(1)},${(A[1] + ny * k).toFixed(1)}L${(B[0] + nx * k).toFixed(1)},${(B[1] + ny * k).toFixed(1)}`;
-      blue += seg(o); red += seg(-o);
+      const side = (N[0] - A[0]) * (-dy / l) + (N[1] - A[1]) * (dx / l) < 0 ? -1 : 1; // (which way is the Allied side of it)
+      // the wiggling line in screen space, each point pushed off along its own normal: blue toward the Allies, red away
+      // its points at least 7 px apart on the screen: from afar the line keeps its course without the scribble, close up every bend
+      const all = s.pts.map(ap), P = [all[0]];
+      for (let i = 1; i < all.length; i++) if (i === all.length - 1 || Math.hypot(all[i][0] - P.at(-1)[0], all[i][1] - P.at(-1)[1]) >= 7) P.push(all[i]);
+      const o = 3.2;
+      const line = (k) => {
+        let d = '';
+        for (let i = 0; i < P.length; i++) {
+          const p0 = P[Math.max(0, i - 1)], p1 = P[Math.min(P.length - 1, i + 1)], tx = p1[0] - p0[0], ty = p1[1] - p0[1], tl = Math.hypot(tx, ty) || 1;
+          const x = P[i][0] + (-ty / tl) * side * k, y = P[i][1] + (tx / tl) * side * k;
+          d += `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+        }
+        return d;
+      };
+      blue += line(o); red += line(-o);
     }
     this.front.innerHTML = `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
   }
@@ -168,12 +194,29 @@ export class WorldMap {
   dispose() { this.ro.disconnect(); }
 }
 
-/** The part of segment a–b within r of point c (both ends of a Voronoi edge are as far from either province): null if none. */
-function clipToCircle(a, b, c, r) {
-  const dx = b[0] - a[0], dy = b[1] - a[1], fx = a[0] - c.x, fy = a[1] - c.y;
-  const A = dx * dx + dy * dy, B = 2 * (fx * dx + fy * dy), C = fx * fx + fy * fy - r * r, D = B * B - 4 * A * C;
-  if (D <= 0 || !A) return null;
-  const s = Math.sqrt(D), t0 = Math.max(0, (-B - s) / (2 * A)), t1 = Math.min(1, (-B + s) / (2 * A));
-  if (t0 >= t1) return null;
-  return [[a[0] + dx * t0, a[1] + dy * t0], [a[0] + dx * t1, a[1] + dy * t1]];
+/**
+ * A stretch of front between two points, as a front is on a real map: bulges and salients, kinks, back and forth — the ends
+ * fixed (the stretches meet), the same every time (its shape from the points), in world units (it zooms with the map).
+ */
+function wiggle(a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+  if (L < 1) return [a, b];
+  const nx = -dy / L, ny = dx / L, n = Math.max(6, Math.min(48, Math.round(L / 1.5)));
+  let h = Math.abs(Math.sin(a[0] * 12.9898 + a[1] * 78.233 + b[0] * 37.719 + b[1] * 4.581) * 43758.5453); // (a seed from the ends: the same front every time)
+  const r = () => { h = (h * 9301 + 49297) % 233280; return h / 233280; };
+  const waves = [[1 + Math.floor(r() * 2), 0.11], [2 + Math.floor(r() * 3), 0.05], [6 + Math.floor(r() * 5), 0.018]].map(([k, amp]) => ({ k, amp: amp * L * (0.6 + r() * 0.8), ph: r() * Math.PI * 2 }));
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, env = Math.sin(Math.PI * t); // (nothing at the ends: the stretches join)
+    const off = env * waves.reduce((s, w) => s + w.amp * Math.sin(2 * Math.PI * w.k * t + w.ph), 0);
+    out.push([a[0] + dx * t + nx * off, a[1] + dy * t + ny * off]);
+  }
+  return out;
+}
+
+/** Is point q inside polygon A (even-odd)? */
+function inside(q, A) {
+  let c = false;
+  for (let i = 0, j = A.length - 1; i < A.length; j = i++) if ((A[i][1] > q[1]) !== (A[j][1] > q[1]) && q[0] < ((A[j][0] - A[i][0]) * (q[1] - A[i][1])) / (A[j][1] - A[i][1]) + A[i][0]) c = !c;
+  return c;
 }

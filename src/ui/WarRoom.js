@@ -31,6 +31,8 @@ const longDate = (iso) => `${Number(iso.slice(8))} ${MONTHS.at(Number(iso.slice(
 /** The unit types' costs as the campaign's power table (the engine has no game imports; set before it runs). */
 function arm(c) { c.power ??= Object.fromEntries(Object.values(UNIT_TYPES).map((t) => [t.id, t.cost ?? 120])); return c; }
 const mapsHere = () => new Set(Object.keys(MAPS));
+/** Each theatre's area (war.theatres[].area, lon/lat) in the map's world units: where its ground is coloured. */
+const areasOf = (map, war) => Object.fromEntries(Object.entries(war.theatres).filter(([, t]) => t.area).map(([id, t]) => [id, t.area.map(([lon, lat]) => map.xy(lon, lat))]));
 
 // ---------------------------------------------------------------- the menu's Campaign tab
 
@@ -55,14 +57,14 @@ export class WarRoomPanel {
     if (!this.root.isConnected || !matchMedia('(min-width: 901px)').matches) return; // (a phone: the panel fills the screen — no map behind it)
     table.prepend(host);
     const c = (save && await loadSave(save.key).catch(() => null)) ?? newCampaign(war, { side: 'nato', maps: mapsHere() });
-    const map = new WorldMap(host);
+    const map = new WorldMap(host, { neutral: war.neutral });
     map.sel.on('.zoom', null); // (a picture: nothing to drag or wheel)
     const pts = Object.entries(war.provinces).map(([id, p]) => { const [x, y] = map.xy(p.lon, p.lat); return { id, x, y, side: c.provinces[id].owner, depot: !!c.provinces[id].depot }; });
     map.onView = (t) => {
       map.over.innerHTML = pts.map((p) => `<circle class="wc-bd-pin ${p.side}" cx="${t.applyX(p.x).toFixed(1)}" cy="${t.applyY(p.y).toFixed(1)}" r="${p.depot ? 5 : 3.2}"/>`).join('')
         + Object.values(war.theatres).map((th) => { const [x, y] = map.xy(th.lon, th.lat); return `<text class="wc-theatre" x="${t.applyX(x)}" y="${t.applyY(y)}" text-anchor="middle">${esc(th.name)}</text>`; }).join('');
     };
-    map.territory(pts);
+    map.territory(pts.map((p) => ({ ...p, theatre: war.provinces[p.id].theatre })), areasOf(map, war));
     // the European fronts in the open part of the table, right of the menu
     const europe = pts.filter((p) => ['west', 'east', 'med'].includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
     map.flyTo(europe, 6, 0, [0.74, 0.5]);
@@ -157,6 +159,7 @@ function strength(f) {
 const CLUSTER = 30; // px: places closer than this on screen share one pin (click it: the map zooms in)
 
 export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = WW2 } = {}) {
+  document.querySelector('.wc-backdrop')?.remove(); // (the Campaign tab's map: one WorldMap at a time — their svg ids would clash; the tab draws it again on return)
   const room = el('div', 'wc-room');
   document.body.append(room);
   let qTimer = 0; // (the next delegated battle's countdown)
@@ -166,7 +169,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const body = el('div', 'wc-body'), mapBox = el('div', 'wc-map');
   body.append(mapBox, side);
   room.append(top, tabBar, body);
-  const map = new WorldMap(mapBox, { onView: () => drawOverlay() });
+  const map = new WorldMap(mapBox, { onView: () => drawOverlay(), neutral: war.neutral });
+  const areas = areasOf(map, war);
   const tools = el('div', 'wc-zoom');
   tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
   tools.lastChild.title = 'Back to the whole theatre';
@@ -229,7 +233,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const t2 = topBar(), b2 = tabs(), d2 = drawer();
     top.replaceWith(t2); tabBar.replaceWith(b2); side.replaceWith(d2);
     top = t2; tabBar = b2; side = d2;
-    map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner })));
+    map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner, theatre: war.provinces[id].theatre })), areas);
     drawOverlay();
   }
 

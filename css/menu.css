@@ -682,3 +682,8 @@
 .wc-bd-pin { stroke: #0c0f0a; stroke-width: 1.2; }
 .wc-bd-pin.nato { fill: #2a5bd0; } .wc-bd-pin.pact { fill: #d0302a; }
 @media (max-width: 900px) { .wc-backdrop { display: none; } } /* (a phone: no map behind the Campaign tab) */
+
+/* the ground each side holds (ui/WorldMap.js territory): flat colour inside its theatre's area; the area's edge in ink; neutral ground hatched */
+.wm-wash.nato { fill: rgba(42, 91, 208, 0.13); } .wm-wash.pact { fill: rgba(208, 48, 42, 0.13); }
+.wm-area { fill: none; stroke: rgba(61, 47, 30, 0.55); stroke-width: 1.1; stroke-dasharray: 7 3 1.5 3; vector-effect: non-scaling-stroke; }
+.wm-neutral { fill: url(#wm-neutral); }

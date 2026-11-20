@@ -17,11 +17,13 @@ export const WW2 = {
   epoch: '1945',
   name: 'The Second World War',
   sides: { nato: 'Allies', pact: 'Axis' },
+  // `area`: the ground a theatre's provinces colour on the map (lon, lat corners): its ground ends at a coast, a neutral
+  // border or this edge (ui/WorldMap.js territory) — never in the open
   theatres: {
-    west: { name: 'Western Europe', lat: 50, lon: 6 },
-    east: { name: 'Eastern Front', lat: 52, lon: 27 },
-    med: { name: 'North Africa and the Mediterranean', lat: 34, lon: 14 },
-    pacific: { name: 'The Pacific', lat: 15, lon: 145 },
+    west: { name: 'Western Europe', lat: 50, lon: 6, area: [[-11, 44], [12.5, 44], [12.5, 58], [-11, 58]] },
+    east: { name: 'Eastern Front', lat: 52, lon: 27, area: [[12.5, 44], [50, 44], [50, 61], [12.5, 61]] },
+    med: { name: 'North Africa and the Mediterranean', lat: 34, lon: 14, area: [[-12, 27], [36, 27], [36, 44], [-12, 44]] },
+    pacific: { name: 'The Pacific', lat: 15, lon: 145, area: [[85, -15], [215, -15], [215, 46], [145, 46], [132, 42], [110, 40], [85, 30]] },
     atlantic: { name: 'The Atlantic', lat: 50, lon: -30, sea: true },
   },
   planned: ['gela', 'novorossiysk', 'guadalcanal', 'saipan', 'atlanticConvoy', 'maltaConvoy'], // (the gap maps: their final ids may differ — the engine skips a map that doesn't exist yet)
@@ -115,6 +117,8 @@ export const WW2 = {
    * Theatre objectives: a place to hold `hold` turns in a row (a sea zone: with only your fleets in it); the first side to
    * do it gains `morale` for good. Lost before then, the count starts again.
    */
+  /** Countries neutral in this war (world-atlas ids): never coloured, hatched as neutral ground. */
+  neutral: ['724', '620', '756', '752', '372', '792', '682', '496'], // Spain, Portugal, Switzerland, Sweden, Ireland, Turkey, Saudi Arabia, Mongolia
   objectives: [
     { id: 'normandy', theatre: 'west', at: 'normandy', name: 'A foothold in France', hold: 6, morale: 4 },
     { id: 'rhine', theatre: 'west', at: 'remagen', name: 'The Rhine at Remagen', hold: 4, morale: 4 },
