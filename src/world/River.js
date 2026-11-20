@@ -200,6 +200,7 @@ export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, d
     build(scene, terrain) {
       // the water: a flat sheet along each channel (the banks cover it everywhere else)
       const waterMat = new THREE.MeshStandardMaterial({ color: 0x3e4f52, roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.88 });
+      waterMat.userData.waterSurface = true; // (drawn first among the see-through, as the sea: smoke over the river covers it — render/babylon/BabylonView.js)
       chans.forEach((ch) => {
         let water;
         if (ch.fn) {
