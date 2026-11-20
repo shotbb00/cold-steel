@@ -477,7 +477,7 @@ export class BabylonView {
     mesh.hasVertexAlpha = false;
     mesh.receiveShadows = !!o.receiveShadow;
     mesh.applyFog = tm.fog !== false;
-    if (tm.userData?.water) mesh.alphaIndex = 0; // the sea first among the see-through: splashes, smoke and decals above it are drawn over it, not under
+    if (tm.userData?.water || tm.userData?.waterSurface) mesh.alphaIndex = 0; // the sea first among the see-through: splashes, smoke and decals above it are drawn over it, not under
     if (o.castShadow && this.shadowGen) this.shadowGen.addShadowCaster(mesh, false);
     if (o.frustumCulled === false || o.isInstancedMesh) mesh.alwaysSelectAsActiveMesh = true;
     if (o.isInstancedMesh) mesh.doNotSyncBoundingInfo = true; // (always drawn: no per-instance bounding boxes to build — memory and a pass over every instance on each update)
