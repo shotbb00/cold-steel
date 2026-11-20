@@ -30,8 +30,8 @@ export const EPOCHS = {
     regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
       europe: { name: 'Germany', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
         sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
-      east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Winter and spring 1807: the Grande Armée against the Russian army — snow at Eylau, the river at Friedland.' },
-      iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–09: Wellington’s redcoats in their line against the French columns.' },
+      east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Poland and East Prussia, 1806–07: the Grande Armée against the Russian army — the mud at Pułtusk, snow at Eylau, the redoubts of Heilsberg, the river at Friedland.' },
+      iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–11: Wellington’s redcoats in their line against the French columns — Vimeiro, Talavera, the ridge of Bussaco, the village of Fuentes de Oñoro.' },
       africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
       caribbean: { title: 'The West Indies', blurb: 'Frigates and ships of the line among the sugar islands.' },
     },
@@ -85,8 +85,8 @@ export const EPOCHS = {
     regions: {
       europe: { name: 'Western Front',
         sea: { name: 'North Sea', title: 'The North Sea, 1914–18', blurb: 'Dogger Bank, the Heligoland Bight and the Dover Strait: the Grand Fleet against the High Seas Fleet.' } },
-      east: { title: 'The Eastern Front, 1917', blurb: 'Riga, September 1917: the German storm troops’ first great attack — a short hurricane bombardment, then infiltration across the Dvina.' },
-      italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy against Austria-Hungary and Germany in the mountains and along the rivers.' },
+      east: { title: 'The Eastern Front, 1914–17', blurb: 'Russia against Germany and Austria-Hungary: the lakes of Tannenberg, the breakthrough at Gorlice, Brusilov’s offensive at Lutsk, and Riga, where the storm troops first crossed the Dvina.' },
+      italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy, with British divisions, against Austria-Hungary and Germany — Caporetto, the Asiago plateau, the Piave and the last crossing at Vittorio Veneto.' },
       middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },
       med: { title: 'The Mediterranean', blurb: 'The Otranto Barrage, 1917: Austro-Hungarian cruisers against the drifters and destroyers closing the Adriatic.' },
     },
@@ -149,8 +149,8 @@ export const EPOCHS = {
     id: '1985', name: '1985', title: 'World War III, 1985',
     sides: { nato: 'NATO', pact: 'Warsaw Pact' },
     regions: {
-      north: { title: 'The Northern Flank, 1985', blurb: 'Norway: the Soviet army comes over the Finnmark tundra and down the fjords toward Narvik, against the Norwegians and the US Marines.' },
-      korea: { title: 'Korea, 1985', blurb: 'The second Korean War: the North’s army pours through the DMZ against South Korea and the US 2nd Infantry Division.' },
+      north: { title: 'The Northern Flank, 1985', blurb: 'Norway: the Soviet army comes over the Finnmark tundra, against the Lyngen line, into the Målselv valley and down the fjords toward Narvik — the Norwegians and the US Marines hold.' },
+      korea: { title: 'Korea, 1985', blurb: 'The second Korean War: the North’s army pours through the DMZ — down the Chorwon valley, over the Imjin, toward Uijeongbu and Seoul — against South Korea and the US 2nd Infantry Division.' },
     },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army', regions: ['europe', 'korea'] },
@@ -205,8 +205,8 @@ export const EPOCHS = {
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
     // the menu's regions (maps/index.js REGIONS): each its own title and line
     regions: {
-      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad, the ruined city on the Volga, fought house by house and floor by floor.' },
-      africa: { title: 'North Africa', blurb: 'The Western Desert: El Alamein, minefields and open sand between the sea and the Qattara Depression, where armour fights at long range.' },
+      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad on the Volga, Bobruisk in the marshes, the Seelow Heights over the Oder and the last battle in Berlin.' },
+      africa: { title: 'North Africa', blurb: 'The desert war: the boxes and the Cauldron at Gazala, the minefields of El Alamein, the passes of Tunisia — open sand where armour fights at long range.' },
       pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
     },
     sides: { nato: 'Allies', pact: 'Germany' },

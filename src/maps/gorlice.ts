@@ -184,7 +184,7 @@ export default {
       const r = mulberry32(Math.round(wx * 7 + wz * 3) + 77);
       for (let k = 0, n = 0; n < (many ? 6 : 2) && k < 60; k++) {
         const x = wx + (r() - 0.5) * 90, z = wz + (r() - 0.5) * 70;
-        if (skip(x, z) || Math.hypot(x - wx, z - wz) < 14) continue;
+        if (skip(x, z) || Math.hypot(x - wx, z - wz) < 14 || [[34, mid(34) + 52], [102, 262], [-134, -262]].some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 30)) continue; // (never in a church)
         derrick(props, x, z, 0); n++;   // (yaw 0: the legs' lean is set in world axes)
       }
       props.tanks({ x: wx + 30, z: wz + (wz > 0 ? 24 : -24), yaw: 0.3, count: 2, radius: 3, height: 5, color: 0x5a564e });

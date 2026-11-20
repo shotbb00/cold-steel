@@ -95,6 +95,8 @@ function height(x: number, z: number) {
   if (mk > 0) h += mk * (32 + ridged(noise, x * 0.007 + 9, z * 0.007, 4) * 66) * ridgeAmp(x, z);
   const pk = paddyK(x, z);
   if (pk > 0) h += (PLAIN + Math.round(n * 5) * 0.3 - h) * pk;                                  // terraced paddies
+  // Hoeryong spur: a granite knob before the ROK's base, as high as the spur of Suraksan before the KPA's (fair high ground, off the roads; after the paddies, which would flatten it)
+  h += 25 * Math.exp(-(((x - 130) ** 2 + (z - 370) ** 2) / (42 * 42))) * smoothstep(8, 60, lowD(x, z));
   h += smoothstep(BOUNDS.x - 20, BOUNDS.x + 120, Math.abs(x)) * (30 + ridged(noise, x * 0.01, z * 0.01, 3) * 30);
   h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 110, Math.abs(z)) * 16;
   for (const bz of [BASE_Z, -BASE_Z]) h += (PLAIN - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
