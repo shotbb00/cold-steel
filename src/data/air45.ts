@@ -98,7 +98,11 @@ const FAA_PLANES: Record<string, Record<string, Aircraft>> = {
   torpBomb: { rn: { name: 'Fairey Swordfish', weapon: '18-inch Mark XII torpedo', text: 'The “Stringbag”: a fabric biplane at ninety knots, too slow for the gunners’ sights. Swordfish sank three battleships at Taranto and jammed Bismarck’s rudders.', model: buildSwordfish, paint: FAA, engineSound: 'prop', gun: MG50, hp: 6, torpedo: { count: 1, speed: 18, range: 1200, damage: 2400 } } },
   navScout: { rn: { name: 'Fairey Swordfish (ASV)', weapon: 'ASV radar', text: 'A Swordfish with the air-to-surface radar under her: the convoy’s eyes, and the U-boat on the surface found at night.', model: buildSwordfish, paint: FAA, engineSound: 'prop', gun: NOGUN, hp: 6 } },
 };
-for (const [kind, t] of Object.entries({ navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT })) t.brit = t.brit21 = FAA_PLANES[kind].rn; // (the 14th Army's ocean, the British Pacific Fleet: American aircraft, as theirs were)
+for (const [kind, t] of Object.entries({ navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT })) t.brit = t.brit21 = FAA_PLANES[kind].rn;
+// the Luftwaffe over the Mediterranean, from Sicily's airfields (maltaConvoy): Messerschmitts over the convoy, Stukas on it
+NAV_FIGHTER.wh = { name: 'Bf 109 F-4', weapon: '20 mm MG 151 · 2 × 7.92 mm', text: 'Messerschmitts from Sicily over the convoy: they came for the Sea Hurricanes first, then cleared the way for the bombers.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true };
+DIVE.wh = { name: 'Ju 87 D Stuka', weapon: 'SC 500 bomb', text: 'The Stuka on ships: a near-vertical dive onto the deck. Stukas from Sicily hit Indomitable and set the merchantmen burning off Pantelleria.', model: buildFjJu87, paint: GREY, engineSound: 'prop', gun: MG50, rockets: { count: 1, damage: 1600, ...BOMB }, hp: 5 };
+NAV_SCOUT.wh = { name: 'Bf 109 (reconnaissance)', weapon: 'cameras', text: 'A Messerschmitt with a camera, out to find the convoy and report its course.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 5 }; // (the 14th Army's ocean, the British Pacific Fleet: American aircraft, as theirs were)
 
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (sov, fj). */
 export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP, recon: RECON, navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT };

@@ -163,6 +163,7 @@ export default {
     // the coast defences (data/units45/atlanticWall.js): one pillbox nest on a flank of each beach in the dunes (the Italian
     // coast line was thin), two coast batteries inland
     forts: FORTS,
+    names: { wn: 'Caposaldo', battery: 'Batteria costiera' }, // (the Italian XVIII Coastal Brigade's strongpoints and batteries: Italian names, the Germans standing in for their crews)
     // wire along the top of the beach, mines in the dunes before each exit, tank traps across each exit road
     works: [
       ...Array.from({ length: 86 }, (_, i) => { const x = -470 + i * 11; return { kind: 'wire', x, z: shoreZ(x) - 40, yaw: 0 }; }),

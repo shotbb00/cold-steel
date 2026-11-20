@@ -79,8 +79,10 @@ export default {
     const hold = map.landing?.hold ?? map.points.filter((p) => p.owner !== att);
     deploy(game, def, map.landing?.defence ?? DEFENCE_FORCE, hold, { back: 6, spread: 16, names: map.landing?.names ?? {} });
     // the Atlantic Wall: the map's resistance nests and batteries, its wire, mines and tank traps
+    const fortNo = {}, fortNames = map.landing?.names ?? {}; // (a map's own names for its forts: Gela's Italian strongpoints)
     for (const f of map.landing?.forts ?? []) {
-      const s = game.spawnStack(f.unit, def, f, f.facing ?? 0);
+      const own = f.name ?? (fortNames[f.unit] ? `${fortNames[f.unit]} ${(fortNo[f.unit] = (fortNo[f.unit] ?? 0) + 1)}` : undefined);
+      const s = game.spawnStack(f.unit, def, f, f.facing ?? 0, own);
       if (s.stats.antiShip) s.autonomous = true; // (a missile battery: its own hides — systems/Landing.js batteries)
     }
     for (const w of map.landing?.works ?? []) {

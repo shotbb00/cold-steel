@@ -105,6 +105,12 @@ export default {
   },
 
   bases: { nato: { x: 0, z: -4300, entries: [-800, 0, 800] }, pact: { x: 1000, z: 4300, entries: [-800, 0, 800] } },
+  // the airfields round the narrows (systems/Airfields.js): Luqa on Malta for the British, a Sicilian field for the Luftwaffe — the
+  // Germans' carriers were their airfields; no torpedo bombers there (no German model yet: never a Japanese one in their slot)
+  airfields: [
+    { faction: 'nato', x: -3000, z: 2840, yaw: 0, name: 'Luqa airfield', group: { torpBomb: 0 } },
+    { faction: 'pact', x: 3060, z: 4080, yaw: 0, name: 'Castelvetrano airfield', group: { torpBomb: 0 } },
+  ],
   maxStacks: 14,
   cameraStart: { nato: { x: 0, z: -3900 }, pact: { x: 1000, z: 3900 } },
   points,

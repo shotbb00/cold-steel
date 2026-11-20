@@ -293,7 +293,23 @@ export class SeaDirector {
       g.orders.run(this.faction, { t: 'subDepth', s: [s.id], d: 'periscope' }, 'ai');
       g.orders.run(this.faction, { t: 'silent', s: [s.id], on: 0 }, 'ai');
     }
-    if (u.target || s.moveTarget) return;
+    if (u.target) return;
+    // the wolf pack: U-boat command vectors the boats onto the convoy (its codebreakers read the convoy cyphers) — steer to
+    // cut across a merchantman's course ahead of her, whether the boat has seen her or not
+    const prey = this.foes().filter((f) => f.stats.landing || f.type.id === 'transport').flatMap((f) => f.units)
+      .filter((v) => v.alive)
+      .sort((a, b) => Math.hypot(a.pos.x - u.pos.x, a.pos.z - u.pos.z) - Math.hypot(b.pos.x - u.pos.x, b.pos.z - u.pos.z))[0];
+    if (prey) {
+      // the run in surfaced at full speed (a boat under water crawls), down to periscope depth for the attack
+      const far = Math.hypot(prey.pos.x - u.pos.x, prey.pos.z - u.pos.z) > 2500;
+      const want = far ? 'surface' : 'periscope';
+      if (u.depthMode !== want && !(want === 'surface' && u.spotted)) g.orders.run(this.faction, { t: 'subDepth', s: [s.id], d: want }, 'ai');
+      const lead = Math.min(60, Math.hypot(prey.pos.x - u.pos.x, prey.pos.z - u.pos.z) / Math.max(1, s.stats.speed ?? 8)); // (where she'll be when the boat gets there)
+      const at = { x: prey.pos.x + (prey.vel?.x ?? 0) * lead, z: prey.pos.z + (prey.vel?.z ?? 0) * lead };
+      if (!s.moveTarget || Math.hypot(s.moveTarget.x - at.x, s.moveTarget.z - at.z) > 150) this.move(s, at.x, at.z);
+      return;
+    }
+    if (s.moveTarget) return;
     // lie in wait beyond the zone, on the enemy's side of it
     const foeHome = g.world.bases[enemyOf(this.faction)];
     this.move(s, target.x + (foeHome.x - target.x) * 0.25, target.z + (foeHome.z - target.z) * 0.25);
