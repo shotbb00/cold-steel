@@ -3,7 +3,7 @@
 // fight for the sea before a landing, land where an enemy coast is weak, spend the pool on refits first, then new
 // battalions where the front needs them. It knows only what its side has seen (`seen`: its provinces and those next
 // to them), so a surprise landing is a surprise.
-import { forcesAt, enemy, power, order, refit, raise, raiseFleet, raiseAir, airShare, supplied, reserves, landingZone, fleetCost, airCost, PRIORITY } from './engine.js';
+import { forcesAt, enemy, power, order, refit, raise, raiseFleet, raiseAir, airShare, mission, airReach, supplied, reserves, landingZone, fleetCost, airCost, PRIORITY } from './engine.js';
 
 const ATTACK_ODDS = 1.15;   // its power (and the reserves its pool can send) against the defence it can see, before it attacks
 const LAND_ODDS = 1.6;      // a landing wants more
@@ -119,6 +119,18 @@ export function aiTurn(c, war, side) {
       const steps = P.land.filter((n) => c.provinces[n].owner === side && stepsTo(war, n, front) < stepsTo(war, f.at, front)).sort((x, y) => stepsTo(war, x, front) - stepsTo(war, y, front));
       for (const n of steps) if (!order(c, war, side, f.id, n)) { did.push(`${f.name} → ${n}`); break; }
     }
+  }
+  // ---- air wings: fighters over the attack, strike aircraft in support of it; else at enemy fleets in reach, the enemy's
+  // nearest base, and cover over the most threatened front province
+  for (const w of mine.filter((x) => x.kind === 'air')) {
+    const reach = airReach(war, w.at), fighters = w.squadrons.some((q) => q.k === 'fighter'), strikers = w.squadrons.some((q) => q.k !== 'fighter' && q.k !== 'recon');
+    const attack = [...taken].find((k) => reach.has(k));
+    const fleetZone = [...reach].find((z) => war.seas[z] && forcesAt(c, z, foe, 'fleet').length);
+    const base = [...reach].find((k) => war.provinces[k] && c.provinces[k].owner === foe && c.provinces[k].depot === foe);
+    const threatened = [...reach].filter((k) => war.provinces[k] && c.provinces[k].owner === side && front(k)).sort((a, b) => defenceAt(c, war, foe, b, seen) - defenceAt(c, war, foe, a, seen))[0];
+    const plan = attack ? ['support', attack] : strikers && fleetZone ? ['naval', fleetZone] : strikers && base ? ['strike', base] : threatened ? ['cover', threatened] : null;
+    if (plan && !mission(c, war, side, w.id, ...plan)) did.push(`${w.name}: ${plan[0]} over ${plan[1]}`);
+    else if (fighters && threatened) mission(c, war, side, w.id, 'cover', threatened);
   }
   // ---- spending: refits first, then a battalion at the depot of the theatre with the most front and the least army
   for (const f of mine.filter((x) => x.kind === 'army')) refit(c, war, f);

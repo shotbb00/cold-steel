@@ -51,7 +51,9 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
     mode: b.kind === 'sea' ? (map.modes?.[0] ?? 'frontline') : b.kind === 'coastal' ? 'landing' : 'breakthrough',
     map: b.map, side: c.side, time: hourOf(c) === 'night' ? 'night' : hourOf(c), weather: ['clear', 'clear', 'overcast', 'overcast', 'rain'][(c.turn * 7 + b.id.length) % 5],
     armies: { nato: armyOf(s.nato), pact: armyOf(s.pact) },
-    campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale },
+    campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
+      // air support: a call for every 6 aircraft over it this turn (close support and the fighters' cover; none: none)
+      air: Object.fromEntries(['nato', 'pact'].map((f) => [f, Math.floor(((c.support?.[f]?.[b.at] ?? 0) + (c.sky?.[b.at]?.[f] ?? 0)) / 6)])) },
   };
 }
 

@@ -779,6 +779,7 @@ export class GameEngine {
     if (st?.strength && camp.scale) st.maxStrength = Math.max(st.strength.nato ?? 0, st.strength.pact ?? 0, st.maxStrength ?? 0);
     watchBattle(this);
     if (camp.delegate) delegateBar(this, () => { this.systems = this.systems.filter((s) => s !== this.delegated); });
+    for (const [f, n] of Object.entries(camp.air ?? {})) this.air.limit[f] = n; // (the campaign's aircraft over the battle: so many calls, none without)
   }
 
   /** Advance the simulation by dt seconds. Callable on its own for headless tests or replays. */

@@ -5,7 +5,7 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income } from '../wcampaign/engine.js';
 import { aiTurn } from '../wcampaign/ai.js';
 import { fightable, battleChoice, takeResult, clearResult, outcomeOf } from '../wcampaign/battle.js';
 import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } from '../wcampaign/save.js';
@@ -151,7 +151,13 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       for (const n of war.provinces[f.at].land) out.set(n, {});
       if (war.provinces[f.at].port) for (const k of Object.keys(war.provinces)) if (k !== f.at && !out.has(k) && (war.provinces[k].seas ?? []).length && landingZone(c, war, me, f.at, k)) out.set(k, { land: true });
     } else if (f.kind === 'fleet') for (const z of war.seas[f.at].seas) out.set(z, {});
-    else {
+    else if (st.airMode && st.airMode !== 'rebase') {
+      for (const k of airReach(war, f.at)) {
+        const sea = !!war.seas[k];
+        if ((st.airMode === 'naval') !== sea || (st.airMode === 'strike' && c.provinces[k].owner === me)) continue;
+        out.set(k, { mission: st.airMode });
+      }
+    } else {
       const near = new Set([f.at, ...war.provinces[f.at].land]);
       for (const n of [...near]) for (const m of war.provinces[n].land) near.add(m);
       for (const k of near) if (k !== f.at && war.provinces[k].airfield && c.provinces[k].owner === me) out.set(k, {});
@@ -174,7 +180,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const mor = (s) => `<span class="wc-morale ${s}"><i style="--m:${Math.max(0, Math.round(c.morale[s]))}%"></i>${SIDE[s]} ${Math.max(0, Math.round(c.morale[s]))}</span>`;
     bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}</small>`),
       el('div', 'wc-morales', `${mor('nato')}${mor('pact')}`),
-      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${(c.income?.[me] ?? 0) >= 0 ? '+' : ''}${Math.round(c.income?.[me] ?? 0).toLocaleString('en')} a turn · upkeep ${Math.round(upkeep(c, me)).toLocaleString('en')}</small>`));
+      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${income(c, war, me).net >= 0 ? '+' : ''}${income(c, war, me).net.toLocaleString('en')} a turn · upkeep ${upkeep(c, me).toLocaleString('en')}</small>`));
     const right = el('div', 'wc-actions');
     right.append(btn('Save / move', 'mp-btn', saveDialog), c.over ? el('span', 'wc-over', 'The war is over') : btn('End turn', 'deploy', endOfTurn), btn('×', 'wc-close', close));
     bar.append(right);
@@ -198,7 +204,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     return '';
   }
 
-  function seen(id) { // (enemy counters: where we stand or next door, or a sea zone we hold)
+  function seen(id) { // (enemy counters: where we stand or next door, or a sea zone we hold, or where our recon flew)
+    if (c.seenBy?.[me]?.includes(id)) return true;
     if (war.seas[id]) return forcesAt(c, id, me).length > 0 || war.seas[id].coasts.some((k) => c.provinces[k].owner === me);
     return c.provinces[id].owner === me || war.provinces[id].land.some((n) => c.provinces[n].owner === me);
   }
@@ -233,6 +240,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       arrows += `<path class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)}Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" marker-end="url(#wm-arrow)"/>`;
     }
     s += `<g filter="url(#wm-pencil)">${arrows}</g>`;
+    for (const [fid, m] of Object.entries(c.missions?.[me] ?? {})) {
+      const f = forceById(c, +fid), A = nodeOf[f?.at], B = nodeOf[m.at];
+      if (!A || !B) continue;
+      s += `<g class="wc-mission ${m.kind}">${A !== B ? `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>` : ''}<circle cx="${B.x}" cy="${B.y}" r="19"/><text x="${B.x + 22}" y="${B.y - 18}">${esc(MISSIONS[m.kind].name)}</text></g>`;
+    }
     const boxes = [], vw = map.w ?? 2000, vh = map.h ?? 2000;
     /** A label where it fits: none over another (the ones that matter first — nodes come in rank order), a forced one always. */
     const label = (text, y, cls, x0, y0, force) => {
@@ -279,6 +291,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
 
   /** Select a force: its place and where it can go must be on screen, each on a pin of its own — else the map moves there. */
   function choose(f) {
+    if (st.sel !== f.id) st.airMode = null;
     st.sel = f.id; st.place = f.at; st.msg = ''; render();
     const ids = [f.at, ...st.reach.keys()];
     const r = map.svg.getBoundingClientRect();
@@ -291,7 +304,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (ids.length > 1) return map.flyTo(ids.map((id) => [PL[id].x, PL[id].y]), 120); // (a cluster: closer)
     const id = ids[0];
     if (sf && pileKind !== 'own' && (st.reach.has(id) || id === sf.at)) {
-      const why = order(c, war, me, sf.id, id, st.reach.get(id) ?? {});
+      const r = st.reach.get(id);
+      const why = r?.mission ? mission(c, war, me, sf.id, r.mission, id) : order(c, war, me, sf.id, id, r ?? {});
       st.msg = why ? `Not possible: ${why}.` : '';
       return render();
     }
@@ -322,7 +336,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       d.append(el('p', 'cp-hint', `At ${esc(nameOf(f.at))}${f.cut ? ` · <em>cut off for ${f.cut} turns</em>` : ''} · strength ${Math.round(strength(f) * 100)} % · power ${Math.round(power(c, f)).toLocaleString('en')}`));
       d.append(el('p', 'cp-hint', `${esc(f.commander.name)}: ${esc(f.commander.trait)}`));
       const o = c.orders[me][f.id];
-      d.append(el('p', 'wc-order-line', o ? `${o.land ? 'Lands on' : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>` : 'Holds its ground. Click a highlighted place to move, attack or land; click its own place to hold.'));
+      if (f.kind !== 'air') d.append(el('p', 'wc-order-line', o ? `${o.land ? 'Lands on' : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>` : 'Holds its ground. Click a highlighted place to move, attack or land; click its own place to hold.'));
       if (f.kind === 'army') {
         for (const b of f.battalions) {
           const hp = b.units.reduce((a, u) => a + u.hp, 0) / b.units.length;
@@ -330,7 +344,14 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         }
         d.append(btn('Refit (production)', 'mp-btn', () => { const spent = refit(c, war, f); st.msg = spent ? `Refitted for ${spent} production.` : 'Nothing to refit, cut off, or not enough production.'; render(); }));
       } else if (f.kind === 'fleet') d.append(el('p', 'cp-hint', esc(f.ships.map((s) => s.t).join(', '))));
-      else d.append(el('p', 'cp-hint', esc(f.squadrons.map((s) => `${s.k} ${s.planes}`).join(' · '))));
+      else {
+        d.append(el('p', 'cp-hint', esc(f.squadrons.map((s) => `${s.planes} ${s.k}${s.k === 'fighter' || s.k === 'bomber' ? 's' : ''}`).join(' · '))));
+        const m = c.missions?.[me]?.[f.id];
+        d.append(el('p', 'wc-order-line', m ? `Mission: <b>${MISSIONS[m.kind].name}</b> over ${esc(nameOf(m.at))} — ${MISSIONS[m.kind].text}` : 'No mission: air cover over its base. Pick a mission, then a highlighted place.'));
+        const seg = el('div', 'seg wc-air');
+        for (const [k, label] of [['rebase', 'Rebase'], ...Object.entries(MISSIONS).map(([k2, v]) => [k2, v.name])]) seg.append(btn(label, (st.airMode ?? 'rebase') === k ? 'on' : '', () => { st.airMode = k; render(); }));
+        d.append(seg);
+      }
       return d;
     }
     const id = st.place;

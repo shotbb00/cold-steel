@@ -31,6 +31,18 @@ export const STACK = { army: 3, fleet: 3, battalions: 6 }; // army groups a prov
 export const ECON = { stockTurns: 6, stockFloor: 4000, upkeep: { battalion: 8, ship: 6, squadron: 4 } };
 /** A theatre's priority (c.priority[side][theatre]): its battles' share of the reserves, where new units are raised first. */
 export const PRIORITY = { low: 0.5, normal: 1, high: 1.6 };
+/**
+ * An air wing's mission for the turn (c.missions[side][wingId] = { kind, at }), anywhere in its reach (airReach): no
+ * mission is air cover over its own base. Fighters fly cover and escort; strike squadrons support, strike or hit ships.
+ */
+export const MISSIONS = {
+  cover: { name: 'Air cover', text: 'fighters hold the sky over it' },
+  support: { name: 'Close support', text: 'strike aircraft join the battle there' },
+  strike: { name: 'Strike', text: 'bomb it: a quarter of its production lost for two turns' },
+  recon: { name: 'Reconnaissance', text: 'see the enemy in it and round it' },
+  naval: { name: 'Naval strike', text: 'attack the enemy fleets in a sea zone' },
+};
+const STRIKERS = ['strike', 'bomber'];
 /** What new forces cost beyond their units: a fleet is built in a port, an air wing formed at an airfield. */
 export const AIR_WING = { fighter: 1, strike: 1 };
 const TRAITS = ['aggressive', 'careful', 'logistician', 'tenacious', 'night', 'artillerist'];
@@ -229,6 +241,7 @@ export function resolveTurn(c, war) {
   }
   // air wings rebase
   for (const side of ['nato', 'pact']) for (const [id, o] of Object.entries(c.orders[side])) { const f = forceById(c, +id); if (f?.kind === 'air') f.at = o.to; }
+  resolveAir(c, war);
   // armies: where each is going
   const moves = [];
   for (const side of ['nato', 'pact']) for (const [id, o] of Object.entries(c.orders[side])) { const f = forceById(c, +id); if (f?.kind === 'army') moves.push({ f, ...o, from: f.at }); }
@@ -263,8 +276,80 @@ function addBattle(c, war, b) {
   c.board.push({ id: `${c.turn}-${c.board.length + 1}`, theatre: t, done: false, ...b });
 }
 
+/** Where an air wing based at `base` can fly: within two land steps, and the sea zones off those coasts. */
+export function airReach(war, base) {
+  const near = new Set([base, ...landNeighbours(war, base)]);
+  for (const n of [...near]) for (const m of landNeighbours(war, n)) near.add(m);
+  for (const k of [...near]) for (const z of war.provinces[k]?.seas ?? []) near.add(z);
+  return near;
+}
+
+/** Give air wing `wingId` a mission (MISSIONS) over `at`. Returns '' or why not. */
+export function mission(c, war, side, wingId, kind, at) {
+  const f = forceById(c, wingId);
+  if (!f || f.side !== side || f.kind !== 'air') return 'not an air wing of yours';
+  if (!MISSIONS[kind]) return 'no such mission';
+  if (!airReach(war, f.at).has(at)) return 'out of its reach';
+  if ((kind === 'naval') !== !!war.seas[at]) return kind === 'naval' ? 'a naval strike is flown over a sea zone' : 'over a province';
+  if (kind === 'strike' && c.provinces[at].owner === side) return 'strike the enemy’s ground';
+  ((c.missions ??= { nato: {}, pact: {} })[side] ??= {})[wingId] = { kind, at };
+  return '';
+}
+
+/**
+ * This turn's air war, flown by every wing on its mission (out of reach after a rebase: cover over its base). Over each
+ * place the two sides' fighters fight it out (both lose aircraft, the outnumbered more); strikes and naval strikes run
+ * the gauntlet of the enemy's fighters there (escorts help) and then hit; recon shows what is there. Leaves c.sky (the
+ * fighters over each place, for airShare), c.support (strike aircraft over a battle), c.seenBy (recon) and the damage.
+ */
+export function resolveAir(c, war) {
+  c.sky = {}; c.support = { nato: {}, pact: {} }; c.seenBy = { nato: [], pact: [] };
+  const planes = (f, kinds) => f.squadrons.filter((q) => kinds.includes(q.k)).reduce((a, q) => a + q.planes, 0);
+  const lose = (f, kinds, n) => { const total = planes(f, kinds); if (!total) return; for (const q of f.squadrons) if (kinds.includes(q.k)) q.planes = Math.max(0, Math.round(q.planes - n * q.planes / total)); };
+  const flying = c.forces.filter((f) => f.kind === 'air').map((f) => {
+    const m = c.missions?.[f.side]?.[f.id];
+    return { f, m: m && airReach(war, f.at).has(m.at) ? m : { kind: 'cover', at: f.at } };
+  });
+  const places = [...new Set(flying.map((w) => w.m.at))];
+  for (const at of places) {
+    const here = flying.filter((w) => w.m.at === at), side = (s) => here.filter((w) => w.f.side === s);
+    const fighters = (s) => side(s).reduce((a, w) => a + planes(w.f, ['fighter']), 0);
+    const fN = fighters('nato'), fP = fighters('pact');
+    if (fN && fP) { // the dogfight: each side loses in proportion to the other's numbers
+      for (const [s, mine, theirs] of [['nato', fN, fP], ['pact', fP, fN]]) {
+        const loss = theirs * 0.12 * (theirs / (mine + theirs)) * (0.7 + rand(c) * 0.6);
+        for (const w of side(s)) lose(w.f, ['fighter'], loss * planes(w.f, ['fighter']) / mine);
+      }
+    }
+    c.sky[at] = { nato: fighters('nato'), pact: fighters('pact') };
+    for (const s of ['nato', 'pact']) {
+      const foe = enemy(s), escort = c.sky[at][s], enemyF = c.sky[at][foe];
+      for (const w of side(s)) {
+        const { kind } = w.m;
+        if (kind === 'recon') { c.seenBy[s].push(at, ...landNeighbours(war, at)); continue; }
+        const n = planes(w.f, STRIKERS);
+        if (!n || kind === 'cover') continue;
+        const shotDown = n * 0.2 * (enemyF / (enemyF + escort + n || 1)); // (intercepted: escorts draw them off)
+        lose(w.f, STRIKERS, shotDown);
+        const through = planes(w.f, STRIKERS);
+        if (kind === 'support') c.support[s][at] = (c.support[s][at] ?? 0) + through;
+        else if (kind === 'strike' && war.provinces[at] && c.provinces[at].owner === foe && through > 4) {
+          c.provinces[at].bombed = 2; // (two turns of reduced production)
+          if (through > 20 && c.provinces[at].fort > 0 && rand(c) < 0.25) c.provinces[at].fort--;
+        } else if (kind === 'naval' && war.seas[at]) {
+          for (const fl of forcesAt(c, at, foe, 'fleet')) { wound(c, fl, Math.min(0.35, through / 160)); prune(c, fl); }
+        }
+      }
+    }
+  }
+  for (const f of c.forces.filter((x) => x.kind === 'air')) prune(c, f);
+  c.missions = { nato: {}, pact: {} }; // (given again each turn; none: cover over the base)
+}
+
 /** Air superiority over a province for `side`: its fighters within reach (a wing's base or next to it) against the enemy's, 0..1. */
 export function airShare(c, war, at, side) {
+  const sky = c.sky?.[at];
+  if (sky && sky.nato + sky.pact > 0) return sky[side] / (sky.nato + sky.pact); // (this turn's air war over it)
   const reach = (f) => f.at === at || landNeighbours(war, f.at).includes(at) || (war.seas[at] && (war.seas[at].coasts ?? []).includes(f.at));
   const fighters = (s) => c.forces.filter((f) => f.kind === 'air' && f.side === s && reach(f)).reduce((a, f) => a + f.squadrons.filter((q) => q.k === 'fighter').reduce((x, q) => x + q.planes, 0), 0);
   const a = fighters(side), b = fighters(enemy(side));
@@ -288,6 +373,7 @@ export function autoResolve(c, war, battleId) {
     if (b.kind === 'coastal') pd *= 1.3;                                 // landing under fire
     const air = airShare(c, war, b.at, side);
     pa *= 0.85 + 0.3 * air; pd *= 0.85 + 0.3 * (1 - air);               // whoever owns the sky
+    pa += (c.support?.[side]?.[b.at] ?? 0) * 22; pd += (c.support?.[other]?.[b.at] ?? 0) * 22; // close support: the strike aircraft over it
   }
   if (side !== c.side) pa *= c.difficulty; else pd *= c.difficulty;      // (harder: the AI's side stronger)
   if (!D.length) pd = Math.max(pd, 150 * (1 + (c.provinces[b.at]?.fort ?? 0))); // (an empty province still has its garrison and its mines)
@@ -370,10 +456,8 @@ export function endTurn(c, war) {
       prune(c, f);
       if (c.forces.includes(f) && f.cut >= CUT_SURRENDER) { c.forces.splice(c.forces.indexOf(f), 1); c.morale[side] -= MORALE.surrender; c.log.push({ turn: c.turn, surrendered: f.name, side }); }
     }
-    // production: every supplied province's yield, split by the theatres' priority into the side's pool
-    let prod = 0;
-    for (const id of ok) prod += war.provinces[id].prod ?? 0;
-    const gross = Math.round(prod * 40 * (c.industry?.[side] ?? 1)), keep = upkeep(c, side);
+    // production: every supplied province's yield into the side's pool, less its forces' upkeep
+    const { gross, keep } = income(c, war, side, ok);
     c.pool[side] = Math.min(c.pool[side] + gross - keep, Math.max(ECON.stockFloor, gross * ECON.stockTurns)); // (the rest is lost: unspent)
     c.pool[side] = Math.max(0, c.pool[side]);
     (c.income ??= {})[side] = gross - keep;
@@ -385,8 +469,16 @@ export function endTurn(c, war) {
   for (const [id, p] of Object.entries(c.provinces)) {
     const n = forcesAt(c, id, 'nato', 'army').length, q = forcesAt(c, id, 'pact', 'army').length;
     p.contested = n > 0 && q > 0; // (still both there: still contested)
-    if (!p.contested && (n || q) && !p.depot) { const holder = n ? 'nato' : 'pact'; if (p.owner !== holder) { p.owner = holder; c.morale[holder] += MORALE.gain; c.morale[enemy(holder)] -= MORALE.province; } } // (held by one side alone: theirs)
+    if (!p.contested && (n || q)) { // (held by one side alone: theirs — a base too, its stores and rail yards with it)
+      const holder = n ? 'nato' : 'pact';
+      if (p.owner !== holder) {
+        const base = p.depot === enemy(holder);
+        p.owner = holder; c.morale[holder] += MORALE.gain; c.morale[enemy(holder)] -= base ? MORALE.depot : MORALE.province;
+        if (base) { p.depot = holder; c.log.push({ turn: c.turn, depotLost: id, side: enemy(holder) }); }
+      }
+    }
   }
+  for (const p of Object.values(c.provinces)) if (p.bombed) p.bombed--;
   c.board = [];
   c.turn++;
   for (const side of ['nato', 'pact']) c.morale[side] = Math.min(moraleCap(c, side), c.morale[side] + MORALE.recover); // (a quiet half-week: the country takes heart a little)
@@ -438,6 +530,14 @@ export function refit(c, war, f) {
     if (need > 0.05 && cost <= c.pool[f.side]) { c.pool[f.side] -= cost; spent += cost; u.hp = 1; u.vet = Math.max(0, u.vet - (need > 0.5 ? 1 : 0)); }
   }
   return spent;
+}
+
+/** A turn's production for `side`: every supplied province's yield (a bombed one less) × its industry, and the upkeep. */
+export function income(c, war, side, ok = supplied(c, war, side)) {
+  let prod = 0;
+  for (const id of ok) prod += (war.provinces[id].prod ?? 0) * (c.provinces[id].bombed ? 0.75 : 1);
+  const gross = Math.round(prod * 40 * (c.industry?.[side] ?? 1)), keep = upkeep(c, side);
+  return { gross, keep, net: gross - keep };
 }
 
 /** What a side's forces cost each turn to keep (ECON.upkeep). */
