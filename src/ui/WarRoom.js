@@ -39,7 +39,7 @@ export class WarRoomPanel {
     this.onOpen = onOpen;
     this.back = this.applyResult(); // (a battle just fought: its result into the campaign, then straight back to the war room)
     this.root = el('div', 'campaign wc-start');
-    this.choice = { scenario: '1942', side: 'nato', difficulty: 1, battles: 'normal' };
+    this.choice = { side: 'nato', difficulty: 1, battles: 'normal' };
     this.render();
   }
 
@@ -72,11 +72,8 @@ export class WarRoomPanel {
       r.append(row);
     }
     r.append(el('h3', 'menu-sub', 'A new war'));
-    const sc = el('div', 'cards sides');
-    for (const [id, s] of Object.entries(war.scenarios)) {
-      const card = btn(`<b>${esc(s.name)}</b><span>Starts ${esc(longDate(s.start))}.</span>`, `card${this.choice.scenario === id ? ' on' : ''}`, () => { this.choice.scenario = id; for (const o of sc.children) o.classList.toggle('on', o === card); });
-      sc.append(card);
-    }
+    const start = Object.values(war.scenarios)[0];
+    r.append(el('p', 'cp-hint', `The war begins on ${esc(longDate(start.start))} — ${esc(start.name.replace(/^[^:]*:\s*/, ''))}.`));
     const sides = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {
       const card = btn(`<b>${SIDE[f]}</b><span>${f === 'nato' ? 'Britain, the Soviet Union and the United States' : 'Germany and Japan'}</span>`, `card ${f}${this.choice.side === f ? ' on' : ''}`, () => { this.choice.side = f; for (const o of sides.children) o.classList.toggle('on', o === card); });
@@ -94,9 +91,9 @@ export class WarRoomPanel {
       const b = btn(label, this.choice.battles === k ? 'on' : '', () => { this.choice.battles = k; for (const o of count.children) o.classList.toggle('on', o === b); });
       count.append(b);
     }
-    r.append(sc, sides, el('h3', 'menu-sub', 'Difficulty'), diff, el('h3', 'menu-sub', 'Battles'), count);
+    r.append(sides, el('h3', 'menu-sub', 'Difficulty'), diff, el('h3', 'menu-sub', 'Battles'), count);
     const go = el('div', 'deploy-row');
-    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { scenario: this.choice.scenario, side: this.choice.side, difficulty: this.choice.difficulty, battles: this.choice.battles, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
+    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { side: this.choice.side, difficulty: this.choice.difficulty, battles: this.choice.battles, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
     r.append(go);
     // from another device: the code, or the file
     r.append(el('h3', 'menu-sub', 'Continue from another device'));

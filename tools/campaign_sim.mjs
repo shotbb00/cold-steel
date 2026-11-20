@@ -1,7 +1,7 @@
 // Headless world campaign: both sides played by the strategic AI, every battle auto-resolved, the state checked
 // every turn; then a save code round trip — and the loaded save must play on exactly as the original.
 //
-//   node tools/campaign_sim.mjs [scenario=1942] [turns=200] [seed=7]
+//   node tools/campaign_sim.mjs [scenario=1942] [turns=200] [seed=7]   (1942: the war's one start)
 import { newCampaign, resolveTurn, autoResolve, settle, endTurn, dateOf, forcesAt } from '../src/wcampaign/engine.js';
 import { aiTurn } from '../src/wcampaign/ai.js';
 import { encode, decode, toPieces, fromPieces } from '../src/wcampaign/save.js';
