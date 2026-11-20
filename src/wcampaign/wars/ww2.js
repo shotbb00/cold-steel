@@ -111,6 +111,24 @@ export const WW2 = {
   },
 
   // The calendar runs on for as long as the war does (campaigns are endless): what happened on its real day, once.
+  /**
+   * Theatre objectives: a place to hold `hold` turns in a row (a sea zone: with only your fleets in it); the first side to
+   * do it gains `morale` for good. Lost before then, the count starts again.
+   */
+  objectives: [
+    { id: 'normandy', theatre: 'west', at: 'normandy', name: 'A foothold in France', hold: 6, morale: 4 },
+    { id: 'rhine', theatre: 'west', at: 'remagen', name: 'The Rhine at Remagen', hold: 4, morale: 4 },
+    { id: 'stalingrad', theatre: 'east', at: 'stalingrad', name: 'Stalingrad on the Volga', hold: 6, morale: 8 },
+    { id: 'berlin', theatre: 'east', at: 'berlin', name: 'Berlin', hold: 4, morale: 6 },
+    { id: 'canal', theatre: 'med', at: 'alexandria', name: 'Alexandria and the Canal', hold: 6, morale: 8 },
+    { id: 'tunisia', theatre: 'med', at: 'kasserine', name: 'The passes of Tunisia', hold: 4, morale: 3 },
+    { id: 'okinawa', theatre: 'pacific', at: 'okinawa', name: 'Okinawa', hold: 4, morale: 5 },
+    { id: 'hawaii', theatre: 'pacific', at: 'hawaii', name: 'Pearl Harbor', hold: 6, morale: 8 },
+    { id: 'convoys', theatre: 'atlantic', at: 'north-atlantic', name: 'The convoy routes', hold: 8, morale: 6 },
+  ],
+  /** Winter (months 0–11): where it bites, whom (the side without winter clothing: attrition a turn), whom it helps attack. */
+  winter: { theatre: 'east', months: [11, 0, 1], freezes: 'pact', attrition: 0.02, attacks: 'nato', bonus: 1.1,
+    text: { start: 'Winter on the Eastern Front: the cold is an enemy of its own for the men without winter clothing.', end: 'The thaw on the Eastern Front: the roads turn to mud, then dry.' } },
   events: [
     { id: 'us-in-britain', date: '1942-08-17', text: 'The Eighth Air Force flies its first raid from England.', forces: [{ kind: 'air', side: 'nato', army: 'us', at: 'england', name: 'Eighth Air Force', squadrons: { fighter: 3, bomber: 4, recon: 1 } }] },
     { id: 'torch', date: '1942-11-08', text: 'Operation Torch: the Americans land in Algeria and Morocco, a new Allied base in North Africa.', owner: { algeria: 'nato' }, depot: { algeria: 'nato' },

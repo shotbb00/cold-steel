@@ -638,3 +638,13 @@
 .wc-delegate span { margin-right: 6px; color: var(--gold); }
 .wc-delegate button { background: none; border: 1px solid var(--line); color: var(--text); padding: 4px 9px; font: inherit; cursor: pointer; }
 .wc-delegate button.on { background: rgba(224, 180, 90, 0.2); border-color: var(--gold); }
+/* objectives, winter, the letter home (ui/WarRoom.js) */
+.wc-obj { color: #c9b98a; }
+.wc-star { font: 15px sans-serif; fill: #8a6a1a; paint-order: stroke; stroke: rgba(233, 219, 180, 0.95); stroke-width: 3px; pointer-events: none; }
+.wc-star.nato { fill: #2a5bd0; } .wc-star.pact { fill: #b3261e; }
+.wc-winter { color: #9cc8e8; }
+.wc-letter { background: #f4ecd4; color: #2b2418; padding: 14px 16px; font: 14px/1.55 'Special Elite', monospace; box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.4); transform: rotate(-0.4deg); }
+.wc-letter p { margin: 0 0 8px; color: #2b2418; }
+.wc-letter-greet { font-weight: 700; }
+.wc-letter-sign { text-align: right; margin: 6px 0 0 !important; }
+.wc-legend .star::before { content: "★"; background: none; color: #8a6a1a; width: auto; height: auto; }

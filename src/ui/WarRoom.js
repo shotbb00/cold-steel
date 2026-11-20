@@ -5,7 +5,8 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf } from '../wcampaign/engine.js';
+import { writeLetter } from '../campaign/Letters.js';
 import { aiTurn } from '../wcampaign/ai.js';
 import { fightable, battleChoice, takeResult, clearResult, outcomeOf } from '../wcampaign/battle.js';
 import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } from '../wcampaign/save.js';
@@ -131,7 +132,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const tools = el('div', 'wc-zoom');
   tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
   tools.lastChild.title = 'Back to the whole theatre';
-  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">${SIDE[me]}</span><span class="theirs">${SIDE[foe]}</span><span class="obj">Fort</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
+  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">Allies</span><span class="theirs">Axis</span><span class="obj">Fort</span><span class="star">Objective</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
   map.load().catch(() => { st.msg = 'The coastlines could not be loaded.'; render(); });
   const close = () => { map.dispose(); room.remove(); onClose(); };
 
@@ -178,7 +179,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   function topBar() {
     const bar = el('div', 'wc-top');
     const mor = (s) => `<span class="wc-morale ${s}"><i style="--m:${Math.max(0, Math.round(c.morale[s]))}%"></i>${SIDE[s]} ${Math.max(0, Math.round(c.morale[s]))}</span>`;
-    bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}</small>`),
+    bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}${winterNow(c, war) ? ` · <span class="wc-winter" title="${esc(war.winter.text.start)}">❄ winter in the ${esc(war.theatres[war.winter.theatre].name.replace(/^The /, ''))}</span>` : ''}</small>`),
       el('div', 'wc-morales', `${mor('nato')}${mor('pact')}`),
       el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${income(c, war, me).net >= 0 ? '+' : ''}${income(c, war, me).net.toLocaleString('en')} a turn · upkeep ${upkeep(c, me).toLocaleString('en')}</small>`));
     const right = el('div', 'wc-actions');
@@ -240,6 +241,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       arrows += `<path class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)}Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" marker-end="url(#wm-arrow)"/>`;
     }
     s += `<g filter="url(#wm-pencil)">${arrows}</g>`;
+    for (const o of war.objectives ?? []) {
+      const N = nodeOf[o.at], ob = c.objectives?.[o.id];
+      if (!N || ob?.won) continue;
+      s += `<text class="wc-star${ob?.holder ? ` ${ob.holder}` : ''}" x="${N.x - 17}" y="${N.y - 4}" text-anchor="middle"><title>${esc(o.name)}</title>★</text>`;
+    }
     for (const [fid, m] of Object.entries(c.missions?.[me] ?? {})) {
       const f = forceById(c, +fid), A = nodeOf[f?.at], B = nodeOf[m.at];
       if (!A || !B) continue;
@@ -394,7 +400,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const prio = el('div', 'seg wc-prio');
       prio.title = 'Priority: how much of your reserves this theatre’s battles draw (the AI sets its own)';
       for (const [name, k] of Object.entries(PRIORITY)) prio.append(btn(name, (c.priority[me][tid] ?? 1) === k ? 'on' : '', () => { c.priority[me][tid] = k; render(); }));
-      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>`, 'wc-card', () => goTheatre(tid)), prio);
+      const obj = (war.objectives ?? []).filter((o) => o.theatre === tid).map((o) => {
+        const s = c.objectives?.[o.id] ?? {}, who = (x) => (x === 'nato' ? 'Allies' : 'Axis');
+        return `<span class="wc-line wc-obj">★ ${esc(o.name)} — ${s.won ? `secured by the ${who(s.won)}` : s.holder ? `${who(s.holder)} ${s.turns}/${o.hold} turns` : `${s.start ? `the ${who(s.start)}’ to lose` : 'open'} · hold ${o.hold} turns: +${o.morale} morale`}</span>`;
+      }).join('');
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(tid)), prio);
     }
     d.append(el('h3', 'menu-sub', 'Dispatches'));
     const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);
@@ -472,18 +482,44 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     onBattle(battleChoice(c, war, b, { delegate }));
   }
 
+  /** A letter home from a man of one of our army groups in this turn's battles (the one fought on its map first, else the hardest). */
+  function letterHome() {
+    const VOICE = { us: 'us', usmc: 'us', sov: 'sov', wh: 'wh', fj: 'fj' }; // (the armies with letters of their own: campaign/Letters45.js)
+    const ours = c.board.filter((b) => b.done).map((b) => ({ b, f: [...b.attackers, ...b.defenders, ...(b.support ?? [])].map((i) => forceById(c, i)).find((x) => x?.side === me && x.kind === 'army' && VOICE[x.army]) })).filter((x) => x.f);
+    const pickB = ours.find((x) => x.b.how === 'fought') ?? ours.sort((x, y) => (y.b.lost?.[me] ?? 0) - (x.b.lost?.[me] ?? 0))[0];
+    if (!pickB) return null;
+    const { b, f } = pickB, army = VOICE[f.army];
+    const shim = { side: me, army, battalion: f.battalions.flatMap((bn) => bn.units).map((u, i) => ({ cid: `${f.id}:${i}`, name: f.name, type: u.t })),
+      writer: c.writers?.[army], letterUsed: c.letterUsed, turn: c.turn, day: c.turn, cut: f.cut };
+    const lost = b.lost?.[me] ?? 0;
+    const letter = writeLetter(shim, { name: nameOf(b.at), attacker: b.attackerSide, time: hourOf(c) }, { attackerWon: b.margin >= 0.6, lost, wounded: Math.round(lost * 1.5) });
+    (c.writers ??= {})[army] = shim.writer;
+    c.letterUsed = shim.letterUsed;
+    c.letters = [...(c.letters ?? []), { ...letter, date: dateOf(c) }].slice(-12);
+    return letter;
+  }
+
   async function finish() {
     const before = c.log.length;
+    let letter = null;
+    try { letter = letterHome(); } catch (e) { console.warn('letter home', e); } // (a letter is a grace note: never in the way of the turn)
     endTurn(c, war);
     st.sel = null;
     await autosave(c);
     render();
     const news = c.log.slice(before).map(dispatch).filter(Boolean);
-    if (news.length || c.over) {
+    if (news.length || c.over || letter) {
       const modal = el('div', 'wc-modal');
       const box = el('div', 'wc-modal-box wc-paper');
       box.append(el('span', 'cp-kicker', 'Dispatches'), el('h3', '', esc(longDate(dateOf(c)))));
       for (const n of news) box.append(el('p', '', esc(n)));
+      if (letter) {
+        const L = el('div', 'wc-letter');
+        L.append(el('p', 'wc-letter-greet', esc(letter.greet)));
+        for (const line of [letter.body.join(' ')]) L.append(el('p', '', esc(line)));
+        L.append(el('p', 'wc-letter-sign', `${esc(letter.sign)}<br>${esc(letter.from)}${letter.unit ? `, ${esc(letter.unit)}` : ''}`));
+        box.append(el('h4', 'wc-th', 'A letter home'), L);
+      }
       if (c.over) box.append(el('p', 'wc-over', `${SIDE[c.over.winner]} have won the war: ${esc(c.over.why)}.`));
       box.append(btn('To the map', 'deploy', () => modal.remove()));
       modal.append(box);

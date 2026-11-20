@@ -86,6 +86,7 @@ export function newCampaign(war, o = {}) {
   for (const f of sc.forces) spawnForce(c, war, f);
   applyEvents(c, war); // (what had already happened by the start date)
   c.held = Object.fromEntries(['nato', 'pact'].map((side) => [side, Object.values(c.provinces).filter((p) => p.owner === side).reduce((a, p) => a + (p.depot === side ? 3 : 1), 0)])); // (the ground morale is measured against)
+  c.objectives = Object.fromEntries((war.objectives ?? []).map((o) => [o.id, { holder: null, turns: 0, won: null, start: holderOf(c, war, o) }])); // (who holds each when the war begins)
   return c;
 }
 
@@ -375,6 +376,7 @@ export function autoResolve(c, war, battleId) {
     pa *= 0.85 + 0.3 * air; pd *= 0.85 + 0.3 * (1 - air);               // whoever owns the sky
     pa += (c.support?.[side]?.[b.at] ?? 0) * 22; pd += (c.support?.[other]?.[b.at] ?? 0) * 22; // close support: the strike aircraft over it
   }
+  if (winterNow(c, war) && b.theatre === war.winter.theatre) { if (side === war.winter.attacks) pa *= war.winter.bonus; } // (winter: the side at home in it attacks harder)
   if (side !== c.side) pa *= c.difficulty; else pd *= c.difficulty;      // (harder: the AI's side stronger)
   if (!D.length) pd = Math.max(pd, 150 * (1 + (c.provinces[b.at]?.fort ?? 0))); // (an empty province still has its garrison and its mines)
   const ra = reserves(c, side, b.theatre), rd = reserves(c, other, b.theatre); // (each side throws in what its pool can send there: the theatre's priority)
@@ -400,10 +402,13 @@ export function settle(c, war, battleId, outcome) {
   b.margin = outcome.margin;
   for (const [s2, r] of Object.entries(b.reserves ?? {})) c.pool[s2] = Math.max(0, c.pool[s2] - Math.round(r * 0.6)); // (the reserves: spent, most of them)
   const A = b.attackers.map((id) => forceById(c, id)).filter(Boolean), D = [...b.defenders, ...(b.support ?? [])].map((id) => forceById(c, id)).filter(Boolean);
+  const alive = (fs) => fs.reduce((a, f) => a + (f.kind === 'air' ? 0 : units(f).filter((u) => u.hp > 0.05).length), 0), before = { A: alive(A), D: alive(D) };
   if (outcome.survivors) for (const [id, us] of Object.entries(outcome.survivors)) { const f = forceById(c, +id); if (f) setUnits(f, us); }
   else { for (const f of A) wound(c, f, outcome.losses.attackers); for (const f of D) wound(c, f, outcome.losses.defenders); }
   for (const f of [...A, ...D]) { for (const u of units(f)) if (u.hp > 0) u.vet = Math.min(3, u.vet + (rand(c) < 0.3 ? 1 : 0)); prune(c, f); }
   const side = b.attackerSide, live = (fs) => fs.filter((f) => c.forces.includes(f));
+  b.lost = { [side]: before.A - alive(live(A)), [enemy(side)]: before.D - alive(live(D)) }; // (units gone: the letters count them)
+  b.how = outcome.how ?? 'auto';
   const won = outcome.margin >= 0.6, held = outcome.margin >= 0.45;
   if (b.kind === 'sea') {
     if (won) for (const f of live(D)) retreatFleet(c, war, f);
@@ -479,8 +484,13 @@ export function endTurn(c, war) {
     }
   }
   for (const p of Object.values(c.provinces)) if (p.bombed) p.bombed--;
+  // winter: the side without winter clothing loses men to the cold in its theatre
+  if (winterNow(c, war)) for (const f of c.forces.filter((x) => x.kind === 'army' && x.side === war.winter.freezes && war.provinces[x.at]?.theatre === war.winter.theatre)) { for (const u of units(f)) u.hp = Math.max(0, u.hp - war.winter.attrition); prune(c, f); }
+  objectives(c, war);
   c.board = [];
+  const wasWinter = winterNow(c, war);
   c.turn++;
+  if (war.winter && winterNow(c, war) !== wasWinter) c.log.push({ turn: c.turn, date: dateOf(c), text: war.winter.text[wasWinter ? 'end' : 'start'] });
   for (const side of ['nato', 'pact']) c.morale[side] = Math.min(moraleCap(c, side), c.morale[side] + MORALE.recover); // (a quiet half-week: the country takes heart a little)
   applyEvents(c, war);
   surrenders(c, war);
@@ -507,11 +517,36 @@ export function surrenders(c, war) {
   }
 }
 
+/** Is it winter in the war's winter theatre on this turn's date? */
+export const winterNow = (c, war) => !!war.winter && war.winter.months.includes(Number(dateOf(c).slice(5, 7)) - 1);
+
+/** Who holds an objective now: a province's owner (not while contested), a sea zone's only fleets' side; else nobody. */
+export function holderOf(c, war, o) {
+  if (war.seas[o.at]) { const n = forcesAt(c, o.at, 'nato', 'fleet').length, q = forcesAt(c, o.at, 'pact', 'fleet').length; return n && !q ? 'nato' : q && !n ? 'pact' : null; }
+  return c.provinces[o.at].contested ? null : c.provinces[o.at].owner;
+}
+
+/** The objectives' count of turns held (c.objectives[id] = { holder, turns, won, start }): the first to take one and hold it long enough wins it. */
+function objectives(c, war) {
+  for (const o of war.objectives ?? []) {
+    const s = (c.objectives ??= {})[o.id] ??= { holder: null, turns: 0, won: null, start: holderOf(c, war, o) }; // (start: who held it when the war began — taking it is the objective, not sitting in it)
+    if (s.won) continue;
+    const h0 = holderOf(c, war, o), h = h0 && h0 !== s.start ? h0 : null;
+    s.turns = h && h === s.holder ? s.turns + 1 : h ? 1 : 0;
+    s.holder = h;
+    if (h && s.turns >= o.hold) {
+      s.won = h;
+      (c.moraleBonus ??= {})[h] = (c.moraleBonus[h] ?? 0) + o.morale / 2; c.morale[h] = Math.min(moraleCap(c, h), c.morale[h] + o.morale); // (for good: the morale it can reach rises too)
+      c.log.push({ turn: c.turn, date: dateOf(c), text: `${h === 'nato' ? 'The Allies' : 'The Axis'} have secured ${o.name}.` });
+    }
+  }
+}
+
 /** How high a side's morale can climb: MORALE.floor plus the rest in the share of its starting ground it still holds (a depot counts three). */
 export function moraleCap(c, side) {
   const weight = (p) => (p.depot === side ? 3 : 1);
   const now = Object.values(c.provinces).filter((p) => p.owner === side).reduce((a, p) => a + weight(p), 0);
-  return Math.min(100, MORALE.floor + (100 - MORALE.floor) * now / (c.held?.[side] || now || 1));
+  return Math.min(100, MORALE.floor + (100 - MORALE.floor) * now / (c.held?.[side] || now || 1) + (c.moraleBonus?.[side] ?? 0)); // (+ the objectives won)
 }
 
 /** The date of turn `t` (half a week each): ISO yyyy-mm-dd. */
