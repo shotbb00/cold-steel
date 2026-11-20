@@ -147,7 +147,19 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   tools.lastChild.title = 'Back to the whole theatre';
   mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">Allies</span><span class="theirs">Axis</span><span class="obj">Fort</span><span class="star">Objective</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
   map.load().catch(() => { st.msg = 'The coastlines could not be loaded.'; render(); });
-  const close = () => { map.dispose(); room.remove(); onClose(); };
+  const close = () => { map.dispose(); room.remove(); onClose(); document.removeEventListener('keydown', keys); };
+  /** What an order does, in words: "Attacks Bobruisk", "Ships to Okinawa", "Rebases to Saipan". */
+  const orderText = (f, o) => `${f.kind === 'air' ? 'Rebases to' : o.land ? (c.provinces[o.to]?.owner === me ? 'Ships to' : 'Lands on') : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>`;
+  /** Take back a force's order (and an air wing's mission). */
+  const cancel = (id, what = 'order') => { if (what === 'mission') delete c.missions?.[me]?.[id]; else delete c.orders[me][id]; st.msg = ''; render(); };
+  // keys: Delete / Backspace takes back the chosen force's order (or its mission), Escape lets go of it
+  const keys = (e) => {
+    if (!room.isConnected || e.target.closest?.('input, textarea') || room.querySelector('.wc-modal')) return;
+    const f = st.sel != null ? forceById(c, st.sel) : null;
+    if ((e.key === 'Delete' || e.key === 'Backspace') && f) { e.preventDefault(); cancel(f.id, c.orders[me][f.id] ? 'order' : 'mission'); }
+    else if (e.key === 'Escape' && (st.sel != null || st.place)) { e.preventDefault(); st.sel = null; st.place = null; st.airMode = null; st.msg = ''; render(); }
+  };
+  document.addEventListener('keydown', keys);
 
   const nameOf = (id) => war.provinces[id]?.name ?? war.seas[id]?.name ?? id;
   const mapName = (id) => (id && MAPS[id] ? MAPS[id].name : null);
@@ -363,7 +375,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       d.append(el('p', 'cp-hint', `At ${esc(nameOf(f.at))}${f.cut ? ` · <em>cut off for ${f.cut} turns</em>` : ''} · strength ${Math.round(strength(f) * 100)} % · power ${Math.round(power(c, f)).toLocaleString('en')}`));
       d.append(el('p', 'cp-hint', `${esc(f.commander.name)}: ${esc(f.commander.trait)}`));
       const o = c.orders[me][f.id];
-      if (f.kind !== 'air') d.append(el('p', 'wc-order-line', o ? `${o.land ? (c.provinces[o.to].owner === me ? 'Ships to' : 'Lands on') : war.provinces[o.to] && c.provinces[o.to].owner !== me ? 'Attacks' : 'Moves to'} <b>${esc(nameOf(o.to))}</b>` : 'Holds its ground. Click a highlighted place to move, attack or land; click its own place to hold.'));
+      if (f.kind !== 'air' || o) d.append(el('p', 'wc-order-line', o ? orderText(f, o) : 'Holds its ground. Click a highlighted place to move, attack or land.'));
+      if (o) d.append(btn('Cancel order <small>(Delete)</small>', 'mp-btn wc-cancel', () => cancel(f.id)));
       if (f.kind === 'army' && war.provinces[f.at]?.port) d.append(el('p', 'cp-hint', 'In a port: it can land on an enemy coast or ship to one of ours across the sea. Red rings: possible now. Grey rings: a fleet of yours must first hold a sea zone off that coast (within two zones of this port) — click one to see which.'));
       if (f.kind === 'army') {
         for (const b of f.battalions) {
@@ -376,6 +389,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         d.append(el('p', 'cp-hint', esc(f.squadrons.map((s) => `${s.planes} ${s.k}${s.k === 'fighter' || s.k === 'bomber' ? 's' : ''}`).join(' · '))));
         const m = c.missions?.[me]?.[f.id];
         d.append(el('p', 'wc-order-line', m ? `Mission: <b>${MISSIONS[m.kind].name}</b> over ${esc(nameOf(m.at))} — ${MISSIONS[m.kind].text}` : 'No mission: air cover over its base. Pick a mission, then a highlighted place.'));
+        if (m) d.append(btn('Cancel mission', 'mp-btn wc-cancel', () => cancel(f.id, 'mission')));
         const seg = el('div', 'seg wc-air');
         for (const [k, label] of [['rebase', 'Rebase'], ...Object.entries(MISSIONS).map(([k2, v]) => [k2, v.name])]) seg.append(btn(label, (st.airMode ?? 'rebase') === k ? 'on' : '', () => { st.airMode = k; render(); }));
         d.append(seg);
@@ -412,8 +426,21 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     }
     d.append(el('span', 'cp-kicker', 'Orders'), el('h3', '', st.theatre ? esc(war.theatres[st.theatre].name) : 'The war'));
     d.append(el('p', 'cp-hint', 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land or ship to (a fleet of yours must hold a sea zone off it — grey rings are coasts waiting for one). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
-    const ordered = Object.keys(c.orders[me]).length;
-    d.append(el('p', 'cp-hint', `${ordered} order${ordered === 1 ? '' : 's'} given this turn · morale can reach ${Math.round(moraleCap(c, me))} at most with the ground you hold`));
+    const given = [...Object.entries(c.orders[me]).map(([id, o]) => ['order', +id, o]), ...Object.entries(c.missions?.[me] ?? {}).map(([id, m]) => ['mission', +id, m])]
+      .map(([what, id, o]) => ({ what, f: forceById(c, id), o })).filter((x) => x.f && (!st.theatre || theatreOf(x.f.at) === st.theatre));
+    d.append(el('p', 'cp-hint', `${given.length} order${given.length === 1 ? '' : 's'} given this turn${st.theatre ? ' here' : ''} · morale can reach ${Math.round(moraleCap(c, me))} at most with the ground you hold`));
+    if (given.length) {
+      const list = el('div', 'wc-orders');
+      for (const { what, f, o } of given) {
+        const row = el('div', 'wc-order-row');
+        const name = btn(`<b>${esc(f.name)}</b> <span>${what === 'mission' ? `${MISSIONS[o.kind].name} over ${esc(nameOf(o.at))}` : orderText(f, o)}</span>`, 'wc-order-go', () => choose(f));
+        const x = btn('✕', 'wc-order-x', () => cancel(f.id, what));
+        x.title = what === 'mission' ? 'Cancel this mission' : 'Cancel this order';
+        row.append(name, x);
+        list.append(row);
+      }
+      d.append(el('h4', 'wc-th', 'Orders this turn'), list);
+    }
     for (const [tid, th] of Object.entries(war.theatres)) {
       if (st.theatre && st.theatre !== tid) continue;
       const provs = Object.keys(war.provinces).filter((k) => war.provinces[k].theatre === tid);

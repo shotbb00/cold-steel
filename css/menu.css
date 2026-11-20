@@ -654,3 +654,13 @@
 
 .wc-node.needs .hit { stroke: #4a4438; stroke-width: 2.2; stroke-dasharray: 4 3; fill: rgba(74, 68, 56, 0.08); }
 .wc-node.needs .name { fill: #6a6458; }
+
+/* taking orders back (ui/WarRoom.js) */
+.wc-cancel small { opacity: 0.6; font-size: 11px; }
+.wc-orders { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.wc-order-row { display: flex; gap: 4px; }
+.wc-order-go { flex: 1; text-align: left; background: rgba(207, 201, 173, 0.05); border: 1px solid var(--line); color: var(--text); font: 13px var(--font-ui); padding: 5px 8px; cursor: pointer; }
+.wc-order-go span { color: var(--muted); }
+.wc-order-go:hover { border-color: var(--gold); }
+.wc-order-x { width: 32px; background: none; border: 1px solid var(--line); color: var(--enemy); font-size: 14px; cursor: pointer; }
+.wc-order-x:hover { background: rgba(255, 90, 72, 0.15); }
