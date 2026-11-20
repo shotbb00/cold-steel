@@ -39,7 +39,7 @@ export class WorldMap {
     this.H = Math.round(s * (merc(LAT[1]) - merc(LAT[0])));
     this.proj = geoMercator().rotate([-40, 0]).scale(s).translate([W / 2, s * merc(LAT[1])]).clipExtent([[0, 0], [W, this.H]]);
     const H = this.H, fold = (x, y, w, h, id) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${id})"/>`;
-    const ring = (lon, lat, r) => { const [x, y] = this.proj([lon, lat]); return `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#wm-ring)"/>`; };
+    const ring = (lon, lat, r, seed, o = {}) => { const [x, y] = this.proj([lon, lat]); return coffeeStain(x, y, r, seed, o); };
     this.svg = document.createElementNS(NS, 'svg');
     this.svg.classList.add('wm');
     this.svg.innerHTML = `<defs>
@@ -47,6 +47,8 @@ export class WorldMap {
         <pattern id="wm-grain" width="140" height="140" patternUnits="userSpaceOnUse"><image href="${grainTile()}" width="140" height="140"/></pattern>
         <linearGradient id="wm-foldv" x1="0" x2="1"><stop offset="0" stop-color="#5a4320" stop-opacity="0"/><stop offset="0.45" stop-color="#5a4320" stop-opacity="0.14"/><stop offset="0.5" stop-color="#fff8e0" stop-opacity="0.3"/><stop offset="0.58" stop-color="#5a4320" stop-opacity="0"/></linearGradient>
         <linearGradient id="wm-foldh" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5a4320" stop-opacity="0"/><stop offset="0.45" stop-color="#5a4320" stop-opacity="0.12"/><stop offset="0.5" stop-color="#fff8e0" stop-opacity="0.28"/><stop offset="0.58" stop-color="#5a4320" stop-opacity="0"/></linearGradient>
+        <filter id="wm-stain" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation="0.25"/></filter>
+        <filter id="wm-soak" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
         <radialGradient id="wm-ring"><stop offset="0.8" stop-color="#7a5020" stop-opacity="0"/><stop offset="0.88" stop-color="#7a5020" stop-opacity="0.24"/><stop offset="0.94" stop-color="#7a5020" stop-opacity="0.08"/><stop offset="1" stop-color="#7a5020" stop-opacity="0"/></radialGradient>
         <radialGradient id="wm-age" r="0.75"><stop offset="0.55" stop-color="#5a4020" stop-opacity="0"/><stop offset="1" stop-color="#5a4020" stop-opacity="0.35"/></radialGradient>
         <clipPath id="wm-landclip"><path class="wm-landshape"/></clipPath>
@@ -69,7 +71,7 @@ export class WorldMap {
         <path class="wm-coast"/>
         <g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)"/>
           ${fold(W / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(W / 2 - 5, 0, 10, H, 'wm-foldv')}${fold((3 * W) / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(0, H / 2 - 5, W, 10, 'wm-foldh')}
-          ${ring(-30, -38, 46)}${ring(102, 63, 38)}${ring(-12, 8, 30)}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>
+          ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>
       </g>
       <g class="wm-front" clip-path="url(#wm-frontclip)" filter="url(#wm-pencil)"></g>
       <g class="wm-over"></g>`;
@@ -246,6 +248,40 @@ function wiggle(a, b) {
     out.push([a[0] + dx * t + nx * off, a[1] + dy * t + ny * off]);
   }
   return out;
+}
+
+/**
+ * A coffee stain where a mug stood on the map: the faint soaked-in tint inside, and the ring — darkest at the rim where the
+ * coffee dried, uneven in width, never quite round, broken where the cup lifted, its edge frayed by the paper (wm-stain).
+ * `twice`: the mug set down again a little off (a fainter partial ring); `drip`: a drop beside it.
+ */
+function coffeeStain(cx, cy, r, seed, { twice = false, drip = false } = {}) {
+  let h = seed * 9973 + 17;
+  const rnd = () => { h = (h * 9301 + 49297) % 233280; return h / 233280; };
+  const shape = (rr, k = 1) => { // a wobbly closed ring of radius rr
+    const ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28], n = 72, pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, w = 1 + k * (0.035 * Math.sin(2 * a + ph[0]) + 0.02 * Math.sin(5 * a + ph[1]) + 0.012 * Math.sin(11 * a + ph[2]));
+      pts.push([cx + Math.cos(a) * rr * w, cy + Math.sin(a) * rr * w]);
+    }
+    return pts;
+  };
+  const d = (pts, close = true) => `M${pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('L')}${close ? 'Z' : ''}`;
+  const rim = shape(r), circ = 2 * Math.PI * r, gapAt = rnd(), gap = circ * (0.06 + rnd() * 0.08);
+  let s = `<g class="wm-coffee">`;
+  s += `<path d="${d(rim)}" fill="#8a5a22" fill-opacity="0.07" filter="url(#wm-soak)"/>`;                                            // the soaked-in tint
+  s += `<path d="${d(rim)}" fill="none" stroke="#6b4316" stroke-opacity="0.32" stroke-width="${(r * 0.055).toFixed(1)}" stroke-dasharray="${(circ - gap).toFixed(1)} ${gap.toFixed(1)}" stroke-dashoffset="${(circ * gapAt).toFixed(1)}" filter="url(#wm-stain)"/>`; // the dried rim
+  s += `<path d="${d(rim)}" fill="none" stroke="#4a2c0c" stroke-opacity="0.28" stroke-width="${(r * 0.012).toFixed(2)}" transform="translate(${cx} ${cy}) scale(1.026) translate(${-cx} ${-cy})" stroke-dasharray="${(circ - gap).toFixed(1)} ${gap.toFixed(1)}" stroke-dashoffset="${(circ * gapAt).toFixed(1)}" filter="url(#wm-stain)"/>`; // its crisp outer edge, where the coffee dried darkest
+  s += `<path d="${d(shape(r * 0.955, 1.4))}" fill="none" stroke="#7a5020" stroke-opacity="0.13" stroke-width="${(r * 0.03).toFixed(1)}" filter="url(#wm-stain)"/>`; // the second, inner tide line
+  if (twice) { // set down again: a fainter part of another ring
+    const ox = (rnd() - 0.5) * r * 0.5, oy = (rnd() - 0.5) * r * 0.5, part = shape(r * (0.97 + rnd() * 0.06)).map(([x, y]) => [x + ox, y + oy]), from = Math.floor(rnd() * 72);
+    s += `<path d="${d([...part.slice(from), ...part.slice(0, from)].slice(0, 30 + Math.floor(rnd() * 20)), false)}" fill="none" stroke="#6b4316" stroke-opacity="0.17" stroke-width="${(r * 0.04).toFixed(1)}" stroke-linecap="round" filter="url(#wm-stain)"/>`;
+  }
+  if (drip) { // a drop that ran down the mug's side
+    const a = rnd() * Math.PI * 2, dr = r * (1.15 + rnd() * 0.15), rr = r * (0.06 + rnd() * 0.05);
+    s += `<ellipse cx="${(cx + Math.cos(a) * dr).toFixed(1)}" cy="${(cy + Math.sin(a) * dr).toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * 0.8).toFixed(1)}" fill="#7a5020" fill-opacity="0.12" stroke="#6b4316" stroke-opacity="0.3" stroke-width="${(rr * 0.25).toFixed(1)}" filter="url(#wm-stain)"/>`;
+  }
+  return `${s}</g>`;
 }
 
 /** wiggle(), the same line whichever end it is walked from (two cells share each edge). */
