@@ -476,7 +476,7 @@ export class MainMenu {
     else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
       this.sheet?.hide();
-      this.panel.append(new WarRoomPanel({ onOpen: (c) => openWarRoom(c, { onClose: () => this.open('campaign') }) }).root); // (the world campaign: ui/WarRoom.js)
+      this.panel.append(new WarRoomPanel({ onOpen: (c) => openWarRoom(c, { onClose: () => this.open('campaign'), onBattle: (choice) => this.deploy(choice) }) }).root); // (the world campaign: ui/WarRoom.js)
     } else if (id === 'multi') {
       this.lobby ??= new Lobby({
         onStart: (choice) => this.deploy(choice),

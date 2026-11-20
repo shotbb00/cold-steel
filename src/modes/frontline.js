@@ -71,6 +71,7 @@ export default {
     game.systems.push(points, new Economy(game, state)); // the building and support budgets, the side objectives
     const Director = game.world.openSea ? SeaDirector : FrontlineDirector; // (at sea: the admiral, ai/SeaDirector.js)
     if (!game.net || game.coop) game.systems.push(new Director(game, foe, state, { tempo: DIFFICULTY[R.difficulty]?.tempo ?? 1 })); // versus: a person plays it
+    if (game.campaign?.delegate) game.systems.push(game.delegated = new Director(game, game.playerFaction, state, {})); // (the world campaign, delegated: the AI has your side too)
     game.frontlineHud = new FrontlineHUD(game, state);
 
     game.bus.on('unit:death', ({ stack }) => {

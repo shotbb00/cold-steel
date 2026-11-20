@@ -7,6 +7,7 @@
 import { WW2 } from '../wcampaign/wars/ww2.js';
 import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK } from '../wcampaign/engine.js';
 import { aiTurn } from '../wcampaign/ai.js';
+import { fightable, battleChoice, takeResult, clearResult, outcomeOf } from '../wcampaign/battle.js';
 import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } from '../wcampaign/save.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { MAPS } from '../maps/index.js';
@@ -33,12 +34,29 @@ const mapsHere = () => new Set(Object.keys(MAPS));
 export class WarRoomPanel {
   constructor({ onOpen }) {
     this.onOpen = onOpen;
+    this.back = this.applyResult(); // (a battle just fought: its result into the campaign, then straight back to the war room)
     this.root = el('div', 'campaign wc-start');
     this.choice = { scenario: '1942', side: 'nato' };
     this.render();
   }
 
+  /** The last campaign battle's result (wcampaign/battle.js), settled into the autosaved campaign it came from. */
+  async applyResult() {
+    const r = takeResult(), war = warFor();
+    if (!r || !war || r.war !== war.id) return;
+    const save = (await listSaves()).find((s) => s.war === war.id);
+    const c = save && arm(await loadSave(save.key));
+    const b = c?.board.find((x) => x.id === r.battle && !x.done);
+    clearResult(); // (this war's: used now, or stale — its battle settled already)
+    if (!b) return;
+    settle(c, war, b.id, outcomeOf(c, b, r));
+    c.queue = (c.queue ?? []).filter((id) => id !== b.id);
+    await autosave(c);
+    this.onOpen(c);
+  }
+
   async render() {
+    await this.back;
     const r = this.root, war = warFor();
     r.replaceChildren(el('h2', '', 'Campaign'));
     if (!war) { r.append(el('p', 'mp-lead', `The world campaign starts with the Second World War: switch to 1945 to play it. ${esc(epoch())} follows.`)); return; }
@@ -99,9 +117,10 @@ function strength(f) {
 }
 const CLUSTER = 30; // px: places closer than this on screen share one pin (click it: the map zooms in)
 
-export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
+export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = WW2 } = {}) {
   const room = el('div', 'wc-room');
   document.body.append(room);
+  let qTimer = 0; // (the next delegated battle's countdown)
   const st = { theatre: null, sel: null, place: null, msg: '', reach: new Map() };
   const me = c.side, foe = enemy(me);
   let top = el('div'), tabBar = el('div'), side = el('div');
@@ -370,7 +389,17 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
     const box = el('div', 'wc-modal-box');
     const draw = () => {
       box.replaceChildren(el('span', 'cp-kicker', `Turn ${c.turn} · ${esc(longDate(dateOf(c)))}`), el('h3', '', 'The battle board'));
-      box.append(el('p', 'cp-hint', 'Every clash on every front this turn. Fight it on its map, have the AI fight it for you, or resolve it at once. (Fighting and delegating come next: for now every battle is resolved.)'));
+      box.append(el('p', 'cp-hint', 'Every clash on every front this turn. Fight it on its map, have the AI fight it on its map for you (fast-forward, one after another), or resolve it at once.'));
+      if (c.queue?.length) {
+        const next = c.board.find((x) => x.id === c.queue[0] && !x.done);
+        const bar = el('div', 'wc-queue', `<b>Delegated battles:</b> ${c.queue.length} to go — next: ${esc(next ? nameOf(next.at) : '')}`);
+        const stop = btn('Stop delegating', 'mp-btn', () => { clearTimeout(qTimer); c.queue = []; autosave(c); draw(); });
+        bar.append(stop);
+        box.append(bar);
+        clearTimeout(qTimer);
+        qTimer = next ? setTimeout(() => { if (modal.isConnected && c.queue?.length) launch(next, true); }, 2500) : 0;
+        if (!next) c.queue = [];
+      }
       const byTheatre = {};
       for (const b of c.board) (byTheatre[b.theatre] ??= []).push(b);
       for (const [t, list] of Object.entries(byTheatre)) {
@@ -385,8 +414,10 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
             <small>${Math.round(pa).toLocaleString('en')} : ${Math.round(pd).toLocaleString('en')}${b.done ? ` · ${b.note ?? (b.margin >= 0.6 ? `${SIDE[b.attackerSide]} win` : b.margin >= 0.45 ? 'undecided — the fight goes on' : `${SIDE[b.attackerSide]} thrown back`)}` : ''}</small>`));
           if (!b.done) {
             const acts = el('div', 'wc-battle-acts');
-            const fight = btn('Fight', 'mp-btn', () => {}); fight.disabled = true; fight.title = 'Coming next: fight it on its map';
-            const del = btn('Delegate', 'mp-btn', () => {}); del.disabled = true; del.title = 'Coming next: the AI fights it for you';
+            const why = fightable(c, war, b);
+            const fight = btn('Fight', 'mp-btn', () => launch(b, false)), del = btn('Delegate', 'mp-btn', () => launch(b, true));
+            fight.disabled = del.disabled = !!why;
+            fight.title = del.title = why ? `Resolved only: ${why}` : '';
             acts.append(fight, del, btn('Resolve', 'mp-btn', () => { settle(c, war, b.id, { ...autoResolve(c, war, b.id), how: 'auto' }); draw(); }));
             row.append(acts);
           }
@@ -395,13 +426,22 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
       }
       const open = c.board.filter((b) => !b.done).length;
       const row = el('div', 'deploy-row');
-      if (open) row.append(btn(`Resolve the rest (${open})`, 'mp-btn', () => { for (const b of c.board) if (!b.done) settle(c, war, b.id, { ...autoResolve(c, war, b.id), how: 'auto' }); draw(); }));
+      const canFight = c.board.filter((b) => !b.done && !fightable(c, war, b));
+      if (canFight.length && !c.queue?.length) row.append(btn(`Delegate all on their maps (${canFight.length})`, 'mp-btn', () => { c.queue = canFight.map((b) => b.id); launch(canFight[0], true); }));
+      if (open) row.append(btn(`Resolve the rest (${open})`, 'mp-btn', () => { c.queue = []; for (const b of c.board) if (!b.done) settle(c, war, b.id, { ...autoResolve(c, war, b.id), how: 'auto' }); draw(); }));
       else row.append(btn('Continue', 'deploy', () => { modal.remove(); finish(); }));
       box.append(row);
     };
     draw();
     modal.append(box);
     room.append(modal);
+  }
+
+  /** Off to the battle: the campaign saved as it stands (the board half done), the war room closed, the battle started. */
+  async function launch(b, delegate) {
+    await autosave(c);
+    room.remove();
+    onBattle(battleChoice(c, war, b, { delegate }));
   }
 
   async function finish() {
@@ -446,5 +486,6 @@ export function openWarRoom(c, { onClose = () => {}, war = WW2 } = {}) {
 
   render();
   frame(null, 0);
+  if (c.board.length) battleBoard(); // (back from a battle in the middle of a turn: the board, as it was left)
   return { close };
 }

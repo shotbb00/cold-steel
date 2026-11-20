@@ -92,12 +92,11 @@ export default {
     state.strength[def] = fieldStrength(game, def);
     state.maxStrength = Math.max(state.strength[def], economy(map).reserves) * 1.2;
     game.systems.push(points);
-    const ai = enemyOf(game.playerFaction);
-    if (!game.net || game.coop) {
-      game.systems.push(new LandingDirector(game, ai, state, ai === def
-        ? { attack: false, expand: false }
-        : { expand: false, firstAssault: 30, targetable: (p) => !p.locked })); // (ai/LandingDirector.js: the landing's AI, or the defence's)
-    }
+    const make = (ai) => new LandingDirector(game, ai, state, ai === def
+      ? { attack: false, expand: false }
+      : { expand: false, firstAssault: 30, targetable: (p) => !p.locked }); // (ai/LandingDirector.js: the landing's AI, or the defence's)
+    if (!game.net || game.coop) game.systems.push(make(enemyOf(game.playerFaction)));
+    if (game.campaign?.delegate) game.systems.push(game.delegated = make(game.playerFaction)); // (the world campaign, delegated: the AI has your side too)
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     game.bus.emit('toast', game.playerFaction === att

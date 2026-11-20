@@ -105,13 +105,11 @@ export default {
     if (camp?.event === 'airCover') game.air.limit[enemyOf(game.playerFaction)] = 0;
     if (camp?.event === 'enemyAir') game.air.limit[game.playerFaction] = 0;
     game.systems.push(points);
-    const ai = enemyOf(game.playerFaction);
-    if (!game.net || game.coop) {
-      const defending = ai === def;
-      game.systems.push(new FrontlineDirector(game, ai, state, defending
-        ? { attack: false, expand: false }
-        : { expand: false, firstAssault: SETUP + 20, targetable: (p) => ls[state.line]?.includes(p.id) }));
-    }
+    const make = (ai) => new FrontlineDirector(game, ai, state, ai === def
+      ? { attack: false, expand: false }
+      : { expand: false, firstAssault: SETUP + 20, targetable: (p) => ls[state.line]?.includes(p.id) });
+    if (!game.net || game.coop) game.systems.push(make(enemyOf(game.playerFaction)));
+    if (camp?.delegate) game.systems.push(game.delegated = make(game.playerFaction)); // (the world campaign, delegated: the AI has your side too)
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     if (camp) game.tell(game.playerFaction, `Campaign: ${camp.sector}`);
@@ -165,7 +163,7 @@ export default {
       : { victory: true, title: 'Victory', subtitle: `${why} ${beaten(FACTIONS[loser].name)}` });
     game.net?.sendEnd(result(game.net.remoteFaction));
     const mine = result(game.playerFaction);
-    if (game.campaign) {
+    if (game.campaign && !game.campaign.wc) { // (the world campaign reads its result itself: wcampaign/battle.js)
       // survivors go home with what they have; the campaign moves the front
       const survivors = game.world.stacksOf(game.playerFaction).map((s) => ({
         cid: s.cid ?? null, type: s.type.id, name: s.name, men: s.aliveCount, xp: s.xp, rank: s.rank,

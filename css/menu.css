@@ -625,4 +625,9 @@
 .wc-pile { cursor: pointer; }
 .wc-badge rect { fill: #f4ecd4; stroke: rgba(42, 36, 24, 0.5); stroke-width: 0.6; }
 .wc-badge text { fill: #2b2418; font: 10px 'Special Elite', monospace; }
-.wc-legend { background: rgba(244, 236, 212, 0.88); color: #3d2f1e; }
+.wc-legend { background: rgba(244, 236, 212, 0.88); color: #3d2f1e; }/* the world campaign's delegated battles (wcampaign/battle.js): the queue on the board, the bar in the battle */
+.wc-queue { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--gold); background: rgba(224, 180, 90, 0.08); font-size: 14px; }
+.wc-delegate { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; gap: 6px; align-items: center; padding: 6px 10px; background: rgba(16, 18, 14, 0.88); border: 1px solid var(--gold); color: var(--text); font: 600 14px var(--font-ui); }
+.wc-delegate span { margin-right: 6px; color: var(--gold); }
+.wc-delegate button { background: none; border: 1px solid var(--line); color: var(--text); padding: 4px 9px; font: inherit; cursor: pointer; }
+.wc-delegate button.on { background: rgba(224, 180, 90, 0.2); border-color: var(--gold); }
