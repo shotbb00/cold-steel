@@ -17,13 +17,18 @@ export const WW2 = {
   epoch: '1945',
   name: 'The Second World War',
   sides: { nato: 'Allies', pact: 'Axis' },
-  // `area`: the ground a theatre's provinces colour on the map (lon, lat corners): its ground ends at a coast, a neutral
-  // border or this edge (ui/WorldMap.js territory) — never in the open
+  // where the war is fought on the map (lon, lat corners): the ground is coloured inside these and nowhere else — it ends
+  // at a coast, a neutral border or this edge, drawn in ink (ui/WorldMap.js territory). One for Europe and the
+  // Mediterranean together (no seam between their theatres), one for the Pacific.
+  areas: [
+    [[-12, 27], [36, 27], [36, 44], [50, 44], [50, 61], [-12, 61]],
+    [[85, -15], [215, -15], [215, 46], [145, 46], [132, 42], [110, 40], [85, 30]],
+  ],
   theatres: {
-    west: { name: 'Western Europe', lat: 50, lon: 6, area: [[-11, 44], [12.5, 44], [12.5, 58], [-11, 58]] },
-    east: { name: 'Eastern Front', lat: 52, lon: 27, area: [[12.5, 44], [50, 44], [50, 61], [12.5, 61]] },
-    med: { name: 'North Africa and the Mediterranean', lat: 34, lon: 14, area: [[-12, 27], [36, 27], [36, 44], [-12, 44]] },
-    pacific: { name: 'The Pacific', lat: 15, lon: 145, area: [[85, -15], [215, -15], [215, 46], [145, 46], [132, 42], [110, 40], [85, 30]] },
+    west: { name: 'Western Europe', lat: 50, lon: 6 },
+    east: { name: 'Eastern Front', lat: 52, lon: 27 },
+    med: { name: 'North Africa and the Mediterranean', lat: 34, lon: 14 },
+    pacific: { name: 'The Pacific', lat: 15, lon: 145 },
     atlantic: { name: 'The Atlantic', lat: 50, lon: -30, sea: true },
   },
   planned: ['gela', 'novorossiysk', 'guadalcanal', 'saipan', 'atlanticConvoy', 'maltaConvoy'], // (the gap maps: their final ids may differ — the engine skips a map that doesn't exist yet)

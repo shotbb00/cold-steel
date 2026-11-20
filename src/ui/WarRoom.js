@@ -31,8 +31,8 @@ const longDate = (iso) => `${Number(iso.slice(8))} ${MONTHS.at(Number(iso.slice(
 /** The unit types' costs as the campaign's power table (the engine has no game imports; set before it runs). */
 function arm(c) { c.power ??= Object.fromEntries(Object.values(UNIT_TYPES).map((t) => [t.id, t.cost ?? 120])); return c; }
 const mapsHere = () => new Set(Object.keys(MAPS));
-/** Each theatre's area (war.theatres[].area, lon/lat) in the map's world units: where its ground is coloured. */
-const areasOf = (map, war) => Object.fromEntries(Object.entries(war.theatres).filter(([, t]) => t.area).map(([id, t]) => [id, t.area.map(([lon, lat]) => map.xy(lon, lat))]));
+/** The war's areas (war.areas, lon/lat) in the map's world units: where its ground is coloured. */
+const areasOf = (map, war) => (war.areas ?? []).map((A) => A.map(([lon, lat]) => map.xy(lon, lat)));
 
 // ---------------------------------------------------------------- the menu's Campaign tab
 
@@ -64,7 +64,7 @@ export class WarRoomPanel {
       map.over.innerHTML = pts.map((p) => `<circle class="wc-bd-pin ${p.side}" cx="${t.applyX(p.x).toFixed(1)}" cy="${t.applyY(p.y).toFixed(1)}" r="${p.depot ? 5 : 3.2}"/>`).join('')
         + Object.values(war.theatres).map((th) => { const [x, y] = map.xy(th.lon, th.lat); return `<text class="wc-theatre" x="${t.applyX(x)}" y="${t.applyY(y)}" text-anchor="middle">${esc(th.name)}</text>`; }).join('');
     };
-    map.territory(pts.map((p) => ({ ...p, theatre: war.provinces[p.id].theatre })), areasOf(map, war));
+    map.territory(pts.map((p) => ({ ...p, lon: war.provinces[p.id].lon, lat: war.provinces[p.id].lat })), areasOf(map, war));
     // the European fronts in the open part of the table, right of the menu
     const europe = pts.filter((p) => ['west', 'east', 'med'].includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
     map.flyTo(europe, 6, 0, [0.74, 0.5]);
@@ -233,7 +233,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const t2 = topBar(), b2 = tabs(), d2 = drawer();
     top.replaceWith(t2); tabBar.replaceWith(b2); side.replaceWith(d2);
     top = t2; tabBar = b2; side = d2;
-    map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner, theatre: war.provinces[id].theatre })), areas);
+    map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner, lon: war.provinces[id].lon, lat: war.provinces[id].lat })), areas);
     drawOverlay();
   }
 

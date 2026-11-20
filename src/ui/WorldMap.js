@@ -6,14 +6,14 @@
 //   const m = new WorldMap(host, { onView })   onView(t): the view changed (redraw the overlay; t: d3-zoom's transform)
 //   await m.load()                             the coastlines
 //   m.xy(lon, lat) → [x, y]                    world units (W × H)
-//   m.territory(points, areas)                 [{ x, y, side, theatre }], { theatre: [[x, y] …] }: each side's ground and the front
+//   m.territory(points, areas)                 [{ x, y, side }], [[[x, y] …] …]: each side's ground and the front, inside the war's areas
 //   m.flyTo(xys, maxK)                         frame these world points
-import { geoMercator, geoPath, geoGraticule10 } from 'd3-geo';
+import { geoMercator, geoPath, geoGraticule10, geoContains, geoBounds } from 'd3-geo';
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom';
 import { select } from 'd3-selection';
 import 'd3-transition';
 import { Delaunay } from 'd3-delaunay';
-import { feature, mesh } from 'topojson-client';
+import { feature, mesh, merge } from 'topojson-client';
 
 export const W = 2000;
 const NS = 'http://www.w3.org/2000/svg';
@@ -50,6 +50,7 @@ export class WorldMap {
         <radialGradient id="wm-ring"><stop offset="0.8" stop-color="#7a5020" stop-opacity="0"/><stop offset="0.88" stop-color="#7a5020" stop-opacity="0.24"/><stop offset="0.94" stop-color="#7a5020" stop-opacity="0.08"/><stop offset="1" stop-color="#7a5020" stop-opacity="0"/></radialGradient>
         <radialGradient id="wm-age" r="0.75"><stop offset="0.55" stop-color="#5a4020" stop-opacity="0"/><stop offset="1" stop-color="#5a4020" stop-opacity="0.35"/></radialGradient>
         <clipPath id="wm-landclip"><path class="wm-landshape"/></clipPath>
+        <clipPath id="wm-warclip"><path class="wm-warshape"/></clipPath>
         <clipPath id="wm-frontclip"><path class="wm-landshape wm-frontland"/></clipPath>
         <filter id="wm-pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="2" seed="5" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
         <filter id="wm-shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="1.5" dy="2.5" stdDeviation="1.5" flood-color="#2a1c08" flood-opacity="0.45"/></filter>
@@ -106,6 +107,13 @@ export class WorldMap {
     this.svg.querySelector('.wm-land').setAttribute('d', land);
     for (const p of this.svg.querySelectorAll('.wm-landshape')) p.setAttribute('d', path(fighting)); // (ground and front: only the belligerents' land)
     this.svg.querySelector('.wm-neutral').setAttribute('d', neutral.features.length ? path(neutral) : '');
+    // the landmasses (every country merged: continents and islands), each with its bounds for a quick test
+    this.lands = merge(topo, topo.objects.countries.geometries).coordinates.map((rings) => {
+      const geo = { type: 'Polygon', coordinates: rings };
+      const bounds = geoBounds(geo);
+      return { geo, bounds, path: path(geo), mid: [bounds[0][0] <= bounds[1][0] ? (bounds[0][0] + bounds[1][0]) / 2 : ((bounds[0][0] + bounds[1][0] + 360) / 2 + 180) % 360 - 180, (bounds[0][1] + bounds[1][1]) / 2] };
+    });
+    if (this.terrArgs) this.territory(...this.terrArgs);
     this.svg.querySelector('.wm-coast').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a === b)));
     this.svg.querySelector('.wm-border').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a !== b))); // (today's borders, faint: only to find one's way)
   }
@@ -113,36 +121,62 @@ export class WorldMap {
   xy(lon, lat) { return this.proj([lon, lat]); }
 
   /**
-   * Each side's ground: its colour, flat, over each province's Voronoi cell within its theatre's area (`areas`: world-unit
-   * polygons), on the belligerents' land — so it ends at a coast, a neutral border or the theatre's edge (drawn in ink); and
-   * the front: the cell edges between provinces of different sides, within both their areas, for drawFront in grease pencil.
+   * Each side's ground: its colour, flat, over each province's Voronoi cell inside the war's areas (`areas`: world-unit
+   * polygons), on the belligerents' land — so it ends at a coast, a neutral border or an area's edge (drawn in ink); and the
+   * front: the cell edges between provinces of different sides, inside the areas, for drawFront in grease pencil.
    */
-  territory(points, areas = {}) {
+  territory(points, areas = []) {
+    this.terrArgs = [points, areas];
+    if (!this.lands) return; // (drawn once the coastlines are in: load)
+    const poly = (A) => `M${A.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`, ring = (pts) => `M${pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`;
+    // the shapes (by where the provinces are, not who holds them): each province on its landmass — Great Britain is England's
+    // alone, the Japanese islands Japan's — and the landmasses with several split among them, every edge wiggled once
     const key = points.map((p) => `${p.x | 0},${p.y | 0}`).join(';');
-    if (key !== this.cellsKey) {
-      this.cellsKey = key;
-      this.delaunay = Delaunay.from(points, (p) => p.x, (p) => p.y);
-      const v = this.delaunay.voronoi([0, 0, W, this.H]);
-      this.polys = points.map((_, i) => v.cellPolygon(i));
-      this.cells = this.polys.map((c) => `M${c.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`);
+    if (key !== this.shapeKey) {
+      this.shapeKey = key;
+      const landOf = (p) => this.lands.findIndex((l) => { const [[x0, y0], [x1, y1]] = l.bounds, lon = ((p.lon + 540) % 360) - 180; return (x0 <= x1 ? lon >= x0 && lon <= x1 : lon >= x0 || lon <= x1) && p.lat >= y0 && p.lat <= y1 && geoContains(l.geo, [lon, p.lat]); });
+      const groups = new Map();
+      points.forEach((p, i) => { const k = landOf(p); if (k >= 0) (groups.get(k) ?? groups.set(k, []).get(k)).push(i); });
+      // islands without a province of their own go to the nearest one within 4.5° (Japan's home islands, Sardinia to Italy)
+      const near = (a, b) => { const dl = Math.abs(((a[0] - b[0] + 540) % 360) - 180); return Math.hypot(dl * Math.cos((a[1] * Math.PI) / 180), a[1] - b[1]); };
+      const extra = [];
+      this.lands.forEach((l, k) => {
+        if (groups.has(k)) return;
+        let best = -1, bd = 4.5;
+        points.forEach((p, i) => { const dd = near(l.mid, [p.lon, p.lat]); if (dd < bd) { bd = dd; best = i; } });
+        if (best >= 0) extra.push({ k, cells: { [best]: null }, edges: [] });
+      });
+      this.shape = [...extra, ...[...groups].map(([k, members]) => {
+        if (members.length === 1) return { k, cells: { [members[0]]: null }, edges: [] }; // (alone on it: the whole landmass)
+        const pts = members.map((i) => points[i]), d = Delaunay.from(pts, (p) => p.x, (p) => p.y), v = d.voronoi([-W, -this.H, 2 * W, 2 * this.H]);
+        const polys = pts.map((_, n) => v.cellPolygon(n)), cells = {}, edges = [];
+        members.forEach((i, n) => {
+          const c = polys[n], out = [];
+          for (let e = 0; e < c.length - 1; e++) out.push(...wiggleC(c[e], c[e + 1]).slice(0, -1)); // (each edge as its neighbour draws it)
+          cells[i] = ring(out);
+        });
+        const same = (a, b) => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
+        members.forEach((i, n) => { for (const m of d.neighbors(n)) if (m > n) { const sh = polys[n].filter((a) => polys[m].some((b) => same(a, b))); if (sh.length >= 2) edges.push({ i, j: members[m], pts: wiggleC(sh[0], sh[1]) }); } });
+        return { k, cells, edges };
+      })];
     }
-    const poly = (A) => `M${A.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('L')}Z`;
-    this.svg.querySelector('.wm-terr').innerHTML = points.map((p, i) => (areas[p.theatre] ? `<clipPath id="wm-cell${i}"><path d="${this.cells[i]}"/></clipPath><path class="wm-wash ${p.side}" clip-path="url(#wm-cell${i})" d="${poly(areas[p.theatre])}"/>` : '')).join('')
-      + Object.values(areas).map((A) => `<path class="wm-area" d="${poly(A)}"/>`).join('');
-    // the front: the shared edge of each pair of neighbouring cells held by different sides, within both their theatres' areas
+    this.svg.querySelector('.wm-warshape').setAttribute('d', areas.map(poly).join(''));
+    let fills = '', clips = '';
+    for (const g of this.shape) {
+      clips += `<clipPath id="wm-land${g.k}"><path d="${this.lands[g.k].path}"/></clipPath>`;
+      fills += `<g clip-path="url(#wm-land${g.k})">${Object.entries(g.cells).map(([i, d]) => `<path class="wm-wash ${points[i].side}" d="${d ?? this.lands[g.k].path}"/>`).join('')}</g>`;
+    }
+    this.svg.querySelector('.wm-terr').innerHTML = `${clips}<g clip-path="url(#wm-warclip)">${fills}</g>` + areas.map((A) => `<path class="wm-area" d="${poly(A)}"/>`).join('');
+    // the front: the edges between neighbours on a landmass held by different sides, in runs inside the areas (where it
+    // leaves one it stops, at its ink edge) — the very edges the colours meet on
+    const inArea = (q) => areas.some((A) => inside(q, A));
     this.segs = [];
-    const same = (a, b) => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
-    for (let i = 0; i < points.length; i++) for (const j of this.delaunay.neighbors(i)) {
-      if (j < i || points[i].side === points[j].side) continue;
-      const shared = this.polys[i].filter((a) => this.polys[j].some((b) => same(a, b)));
-      if (shared.length < 2) continue;
-      const Ai = areas[points[i].theatre], Aj = areas[points[j].theatre];
-      if (!Ai || !Aj) continue;
-      const nato = points[i].side === 'nato' ? points[i] : points[j];
-      // the wiggling edge, in runs of points inside both areas: where it leaves them it stops (at the area's ink edge)
+    for (const g of this.shape) for (const e of g.edges) {
+      if (points[e.i].side === points[e.j].side) continue;
+      const nato = points[e.i].side === 'nato' ? points[e.i] : points[e.j];
       let run = [];
-      for (const q of [...wiggle(shared[0], shared[1]), null]) {
-        if (q && inside(q, Ai) && inside(q, Aj)) { run.push(q); continue; }
+      for (const q of [...e.pts, null]) {
+        if (q && inArea(q)) { run.push(q); continue; }
         if (run.length > 1) this.segs.push({ a: run[0], b: run.at(-1), nato, pts: run });
         run = [];
       }
@@ -212,6 +246,11 @@ function wiggle(a, b) {
     out.push([a[0] + dx * t + nx * off, a[1] + dy * t + ny * off]);
   }
   return out;
+}
+
+/** wiggle(), the same line whichever end it is walked from (two cells share each edge). */
+function wiggleC(a, b) {
+  return a[0] < b[0] || (a[0] === b[0] && a[1] <= b[1]) ? wiggle(a, b) : wiggle(b, a).reverse();
 }
 
 /** Is point q inside polygon A (even-odd)? */
