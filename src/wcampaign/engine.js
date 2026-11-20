@@ -40,7 +40,7 @@ export const PRIORITY = { low: 0.5, normal: 1, high: 1.6 };
 export const MISSIONS = {
   cover: { name: 'Air cover', text: 'fighters hold the sky over it' },
   support: { name: 'Close support', text: 'strike aircraft join the battle there' },
-  strike: { name: 'Strike', text: 'bomb it: a quarter of its production lost for two turns' },
+  strike: { name: 'Strike', text: 'bomb it: the enemy troops there hit, a quarter of its production lost for two turns' },
   recon: { name: 'Reconnaissance', text: 'see the enemy in it and round it' },
   naval: { name: 'Naval strike', text: 'attack the enemy fleets in a sea zone' },
 };
@@ -138,6 +138,8 @@ export const forceById = (c, id) => c.forces.find((f) => f.id === id);
 export const forcesAt = (c, at, side = null, kind = null) => c.forces.filter((f) => f.at === at && (!side || f.side === side) && (!kind || f.kind === kind));
 export const enemy = (side) => (side === 'nato' ? 'pact' : 'nato');
 const units = (f) => (f.kind === 'army' ? f.battalions.flatMap((b) => b.units) : f.ships ?? []);
+/** A force's strength 0..1: its units' average hp. */
+const strengthOf = (f) => { const us = units(f); return us.length ? us.reduce((a, u) => a + Math.max(0, u.hp), 0) / us.length : 0; };
 
 /** A force's fighting power: its units' power × strength × veterancy (an air wing: its planes). */
 export function power(c, f) {
@@ -355,9 +357,14 @@ export function resolveAir(c, war) {
         if (kind === 'support') c.support[s][at] = (c.support[s][at] ?? 0) + through;
         else if (kind === 'strike' && war.provinces[at] && c.provinces[at].owner === foe && through > 4) {
           c.provinces[at].bombed = 2; // (two turns of reduced production)
-          if (through > 20 && c.provinces[at].fort > 0 && rand(c) < 0.25) c.provinces[at].fort--;
+          const fortHit = through > 20 && c.provinces[at].fort > 0 && rand(c) < 0.25;
+          if (fortHit) c.provinces[at].fort--;
+          // the troops there: bombed and strafed (a full wing of strike aircraft through: about a tenth of their strength)
+          const hit = forcesAt(c, at, foe, 'army').map((f) => { const was = strengthOf(f); wound(c, f, Math.min(0.12, through / 260)); prune(c, f); return `${f.name} ${c.forces.includes(f) ? `−${Math.max(1, Math.round((was - strengthOf(f)) * 100))} %` : 'destroyed'}`; });
+          c.log.push({ turn: c.turn, date: dateOf(c), side: s, text: `${w.f.name} struck ${war.provinces[at].name}: ${hit.length ? `${hit.join(', ')}; ` : 'no troops there; '}its production cut for two turns${fortHit ? ', its defences damaged' : ''}${shotDown >= 1 ? ` — ${Math.round(shotDown)} aircraft lost` : ''}.` });
         } else if (kind === 'naval' && war.seas[at]) {
-          for (const fl of forcesAt(c, at, foe, 'fleet')) { wound(c, fl, Math.min(0.35, through / 160)); prune(c, fl); }
+          const hit = forcesAt(c, at, foe, 'fleet').map((fl) => { const was = strengthOf(fl); wound(c, fl, Math.min(0.35, through / 160)); prune(c, fl); return `${fl.name} ${c.forces.includes(fl) ? `−${Math.max(1, Math.round((was - strengthOf(fl)) * 100))} %` : 'sunk'}`; });
+          c.log.push({ turn: c.turn, date: dateOf(c), side: s, text: `${w.f.name} struck at sea in ${war.seas[at].name}: ${hit.length ? hit.join(', ') : 'no enemy ships found'}${shotDown >= 1 ? ` — ${Math.round(shotDown)} aircraft lost` : ''}.` });
         }
       }
     }
