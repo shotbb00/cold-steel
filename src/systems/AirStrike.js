@@ -829,6 +829,7 @@ class Sortie {
       this.game.effects.explosion(w.root.position, 0.6, { ground: false, fire: 1.2 });
       this.game.effects.trail?.(w.root.position, this.dir);
       w.root.removeFromParent();
+      if (this.hp > 0) this.game.bus.emit('air:lost', { faction: this.faction, n: 1 }); // (one of the flight: the campaign counts aircraft)
       if (this.hp > 0 && this.faction === this.game.playerFaction) this.game.tell(this.faction, `${this.type.name}: one of the flight shot down`); // (the whole flight down: shotDown says it)
     }
     const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
@@ -1081,6 +1082,7 @@ class Sortie {
     if (ditch) this.game.tell(this.faction, `${this.type.name} ditched in the sea`);
     else this.game.tellBoth(this.faction, `${this.type.name} shot down!${lost}`, `Enemy ${this.type.name} shot down!`);
     this.game.bus.emit('heli:down', { faction: this.faction, name: this.type.name });
+    this.game.bus.emit('air:lost', { faction: this.faction, n: 1 + (this.wing?.length ?? 0) }); // (the aircraft still in the flight go down with it)
   }
 
   updateCrash(dt) {

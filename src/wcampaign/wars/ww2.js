@@ -133,8 +133,8 @@ export const WW2 = {
     { id: 'us-in-britain', date: '1942-08-17', text: 'The Eighth Air Force flies its first raid from England.', forces: [{ kind: 'air', side: 'nato', army: 'us', at: 'england', name: 'Eighth Air Force', squadrons: { fighter: 3, bomber: 4, recon: 1 } }] },
     { id: 'torch', date: '1942-11-08', text: 'Operation Torch: the Americans land in Algeria and Morocco, a new Allied base in North Africa.', owner: { algeria: 'nato' }, depot: { algeria: 'nato' },
       forces: [{ kind: 'army', side: 'nato', army: 'us', at: 'algeria', name: 'II Corps', battalions: ['infantry', 'armour'] }, { kind: 'fleet', side: 'nato', army: 'us', at: 'westernMed', name: 'Western Task Force', ships: 'amphibious' }] },
-    { id: 'arsenal-1943', date: '1943-01-01', text: 'American war production reaches full stride: the arsenal of democracy.', industry: { nato: 1.6 } },
-    { id: 'arsenal-1944', date: '1944-01-01', text: 'The Allies now outbuild the Axis several times over; the bombing begins to bite into German industry.', industry: { nato: 2.1, pact: 0.85 } },
+    { id: 'arsenal-1943', date: '1943-01-01', text: 'American war production reaches full stride: the arsenal of democracy.', industry: { nato: 1.4 } },
+    { id: 'arsenal-1944', date: '1944-01-01', text: 'The Allies now outbuild the Axis several times over; the bombing begins to bite into German industry.', industry: { nato: 1.8, pact: 0.85 } },
     { id: 'italy-armistice', date: '1943-09-08', text: 'Italy signs an armistice; the Germans disarm their former ally and fight on in Italy alone.', morale: { pact: -10, nato: 5 } },
     { id: 'first-army', date: '1943-10-20', text: 'The First US Army sets up in England for the invasion of France.', forces: [{ kind: 'army', side: 'nato', army: 'us', at: 'england', name: 'First US Army', battalions: ['infantry', 'infantry', 'armour', 'artillery'] }, { kind: 'fleet', side: 'nato', army: 'us', at: 'channel', name: 'Western Naval Task Force', ships: 'amphibious' }] },
     { id: 'fast-carriers', date: '1943-11-01', text: 'The new Essex-class carriers join the Pacific Fleet.', forces: [{ kind: 'fleet', side: 'nato', army: 'us', at: 'centralPacific', name: 'Fast Carrier Task Force', ships: 'carrier' }] },
@@ -147,7 +147,7 @@ export const WW2 = {
       start: '1942-06-01',
       owners: { nato: ['england', 'moscow', 'stalingrad', 'kuban', 'alexandria', 'alamein', 'gazala', 'hawaii', 'imphal', 'kohima'] },
       depots: { algeria: null }, // (Vichy French until Torch: the event makes it an Allied base)
-      industry: { nato: 1.2, pact: 1 },
+      industry: { nato: 1, pact: 1 },
       forces: [
         { kind: 'army', side: 'nato', army: 'brit', at: 'gazala', name: 'Eighth Army', battalions: ['infantry', 'armour', 'artillery'] },
         { kind: 'army', side: 'nato', army: 'brit', at: 'alamein', name: 'XXX Corps', battalions: ['infantry'] },

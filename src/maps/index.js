@@ -261,6 +261,27 @@ export function forEpoch(year) {
   }
 }
 
+/**
+ * A map in winter (a campaign battle on the Eastern Front in December–February): its ground under snow — grass and fields
+ * most, earth and rock less — a grey winter sky, and the winter climate (whitewash and snow smocks: render/paint.js).
+ * A map that is already a winter map (or a desert) stays as it is.
+ */
+export function winterOf(map) {
+  if (map.climate) return map;
+  const mix = (c, to, k) => {
+    const n = typeof c === 'string' ? parseInt(c.replace('#', ''), 16) : c;
+    if (!Number.isFinite(n)) return c;
+    const ch = (v, s) => Math.round(((v >> s) & 255) * (1 - k) + ((to >> s) & 255) * k);
+    const out = (ch(n, 16) << 16) | (ch(n, 8) << 8) | ch(n, 0);
+    return typeof c === 'string' ? `#${out.toString(16).padStart(6, '0')}` : out;
+  };
+  const SNOW = 0xeef0f0, HOW = { grass: 0.82, grassAlt: 0.8, dryGrass: 0.78, pasture: 0.82, meadow: 0.8, stubble: 0.75, ploughed: 0.6, dirt: 0.55, rock: 0.45, strip: 0.6 };
+  const t = map.theme ?? {}, terrain = Object.fromEntries(Object.entries(t.terrain ?? {}).map(([k, v]) => [k, HOW[k] ? mix(v, SNOW, HOW[k]) : v]));
+  const sky = { fogColor: 0xb6bac0, skyTop: 0x7a828c, skyHorizon: 0xc4c8cc, skyBottom: 0x80848a, hemiGround: 0x8a8c90, cloudLight: 0xcfd2d6, cloudDark: 0x7c8086 };
+  const theme = { ...t, terrain, ...Object.fromEntries(Object.entries(sky).map(([k, v]) => [k, t[k] != null ? mix(t[k], v, 0.7) : t[k]])), sunIntensity: (t.sunIntensity ?? 1.6) * 0.85, clouds: Math.max(t.clouds ?? 0.5, 0.8) };
+  return { ...map, climate: 'winter', theme };
+}
+
 export function getMap(id) {
   return MAPS[id] ?? MAPS[DEFAULT_MAP];
 }

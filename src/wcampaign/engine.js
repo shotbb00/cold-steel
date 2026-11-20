@@ -23,6 +23,8 @@ const DEFAULT_POWER = { rifles: 150, mgTeam: 140, atTeam: 150, mortar: 140, engi
 const SQUADRON = { fighter: 220, strike: 240, bomber: 300, recon: 80, transport: 60 };
 /** A battle draws reserves from its side's pool (replacements, shells, fuel): this share of the pool, at most RESERVE.max power. */
 export const RESERVE = { share: 0.15 }; // (the side that produces more has more to throw in: production decides the long war)
+/** How many of a turn's battles go on the board to be fought or delegated (c.battles); the smaller rest are settled at once. */
+export const BATTLE_COUNT = { small: 4, normal: 8, grand: Infinity };
 export const STACK = { army: 3, fleet: 3, battalions: 6 }; // army groups a province, fleets a sea zone (the front must be held, not piled up)
 /**
  * The war economy: a stockpile holds at most `stockTurns` turns of income (what isn't spent is lost — production is for
@@ -269,6 +271,14 @@ export function resolveTurn(c, war) {
   // a defender in a province next to the battle may hold its ground as a reserve: neighbours named on the battle
   for (const b of c.board) if (b.kind === 'land') b.support = (war.provinces[b.at].land ?? []).flatMap((n) => forcesAt(c, n, enemy(b.attackerSide), 'army').map((f) => f.id)).slice(0, 1);
   c.orders = { nato: {}, pact: {} };
+  // the battle count: the biggest battles stay on the board; the rest (the smallest first, the sea before the land: a landing
+  // may wait on it) are settled at once
+  const cap = BATTLE_COUNT[c.battles] ?? BATTLE_COUNT.normal;
+  if (c.board.length > cap) {
+    const size = (b) => [...b.attackers, ...b.defenders, ...(b.support ?? [])].map((id) => forceById(c, id)).filter(Boolean).reduce((a, f) => a + power(c, f), 0);
+    const small = [...c.board].sort((x, y) => size(y) - size(x)).slice(cap).sort((x, y) => Number(y.kind === 'sea') - Number(x.kind === 'sea'));
+    for (const b of small) if (!b.done) { settle(c, war, b.id, { ...autoResolve(c, war, b.id), how: 'auto' }); b.note ??= 'settled at once (battle count)'; }
+  }
   return c.board;
 }
 
@@ -406,6 +416,12 @@ export function settle(c, war, battleId, outcome) {
   if (outcome.survivors) for (const [id, us] of Object.entries(outcome.survivors)) { const f = forceById(c, +id); if (f) setUnits(f, us); }
   else { for (const f of A) wound(c, f, outcome.losses.attackers); for (const f of D) wound(c, f, outcome.losses.defenders); }
   for (const f of [...A, ...D]) { for (const u of units(f)) if (u.hp > 0) u.vet = Math.min(3, u.vet + (rand(c) < 0.3 ? 1 : 0)); prune(c, f); }
+  // aircraft lost over a battle fought on its map: off the side's air wings that could reach it, in proportion to their planes
+  for (const [s2, n] of Object.entries(outcome.airLost ?? {})) {
+    const wings = c.forces.filter((f) => f.kind === 'air' && f.side === s2 && airReach(war, f.at).has(b.at)), total = wings.reduce((a, f) => a + f.squadrons.reduce((x, q) => x + q.planes, 0), 0);
+    if (!n || !total) continue;
+    for (const f of wings) { for (const q of f.squadrons) q.planes = Math.max(0, Math.round(q.planes - n * q.planes / total)); prune(c, f); }
+  }
   const side = b.attackerSide, live = (fs) => fs.filter((f) => c.forces.includes(f));
   b.lost = { [side]: before.A - alive(live(A)), [enemy(side)]: before.D - alive(live(D)) }; // (units gone: the letters count them)
   b.how = outcome.how ?? 'auto';

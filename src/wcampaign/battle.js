@@ -7,7 +7,7 @@
 //   watchBattle(game)           (GameEngine) counts what each side fields and loses; at the end stores the result
 //   takeResult() / outcomeOf()  the menu's Campaign tab reads it back and settles the battle (engine.js settle)
 // The result rides in localStorage across the page load that a return to the menu is (core/replay.js toMenu).
-import { forceById, power, enemy, hourOf } from './engine.js';
+import { forceById, power, enemy, hourOf, winterNow } from './engine.js';
 import { MAPS } from '../maps/index.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { RANKS } from '../entities/UnitStack.js';
@@ -52,6 +52,7 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
     map: b.map, side: c.side, time: hourOf(c) === 'night' ? 'night' : hourOf(c), weather: ['clear', 'clear', 'overcast', 'overcast', 'rain'][(c.turn * 7 + b.id.length) % 5],
     armies: { nato: armyOf(s.nato), pact: armyOf(s.pact) },
     campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
+      snow: winterNow(c, war) && b.theatre === war.winter?.theatre && b.kind !== 'sea', // (winter where it bites: the map under snow)
       // air support: a call for every 6 aircraft over it this turn (close support and the fighters' cover; none: none)
       air: Object.fromEntries(['nato', 'pact'].map((f) => [f, Math.floor(((c.support?.[f]?.[b.at] ?? 0) + (c.sky?.[b.at]?.[f] ?? 0)) / 6)])) },
   };
@@ -65,13 +66,15 @@ export function watchBattle(game) {
   const count = (s) => { if (seen.has(s)) return; seen.add(s); fielded[s.faction] = (fielded[s.faction] ?? 0) + (s.type.cost ?? 150); };
   for (const s of game.world.stacks) count(s);
   game.bus.on('stack:spawned', count);
+  const airLost = { nato: 0, pact: 0 };
+  game.bus.on('air:lost', ({ faction, n }) => { airLost[faction] = (airLost[faction] ?? 0) + n; }); // (aircraft shot down: off the campaign's air wings)
   game.bus.on('game:end', (r) => {
     const alive = (f) => game.world.stacksOf(f).reduce((a, s) => a + s.hpRatio * (s.type.cost ?? 150), 0);
     const loss = (f) => (fielded[f] ? Math.max(0, Math.min(1, 1 - alive(f) / fielded[f])) : 0);
     const winner = r.victory ? game.playerFaction : enemy(game.playerFaction);
     const survivors = {};
     for (const s of game.world.stacks) if (s.cid && s.alive) survivors[s.cid] = { hp: s.aliveCount / (s.type.formation?.count ?? s.units.length ?? 1), rank: s.rank ?? 0 };
-    try { localStorage.setItem(KEY, JSON.stringify({ war: camp.war, battle: camp.battle, how: camp.delegate && !camp.tookCommand ? 'delegated' : 'fought', winner, loss: { nato: loss('nato'), pact: loss('pact') }, survivors, cids: camp.forces ? Object.values(camp.forces).flat().map((u) => u.cid) : [] })); } catch { /* storage blocked: the battle is resolved instead */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ war: camp.war, battle: camp.battle, how: camp.delegate && !camp.tookCommand ? 'delegated' : 'fought', winner, loss: { nato: loss('nato'), pact: loss('pact') }, survivors, airLost, cids: camp.forces ? Object.values(camp.forces).flat().map((u) => u.cid) : [] })); } catch { /* storage blocked: the battle is resolved instead */ }
   });
 }
 
@@ -107,7 +110,7 @@ export function clearResult() { try { localStorage.removeItem(KEY); } catch { /*
 export function outcomeOf(c, b, r) {
   const att = b.attackerSide, def = enemy(att), la = r.loss[att], ld = r.loss[def];
   const margin = r.winner === att ? Math.min(0.95, 0.62 + 0.3 * (1 - la)) : la < ld ? 0.5 : Math.max(0.05, 0.35 - 0.3 * ld);
-  const out = { margin, losses: { attackers: la, defenders: ld }, how: r.how };
+  const out = { margin, losses: { attackers: la, defenders: ld }, how: r.how, airLost: r.airLost ?? null };
   if (r.cids?.length) {
     const fielded = new Set(r.cids), survivors = {};
     for (const id of [...b.attackers, ...b.defenders, ...(b.support ?? [])]) {
