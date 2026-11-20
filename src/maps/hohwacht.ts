@@ -169,7 +169,7 @@ export default {
     // the armoured counter-attack: the division's reserve, down from inland after four and a half minutes
     counter: { t: 270, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv', 'heavyTank'], say: 'The division\'s reserve is coming up: Leopards and Marders, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Leopard 2s and Marders' },
     // the landing's AI (ai/LandingDirector.js): the naval infantry's buying order, two Parchims inshore off the focus sector
-    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'pt76', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'parchim', gunships: 1, heavy: null, inshore: 380 },
+    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'pt76', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'parchim', gunships: 1, sweeper: 'natya', heavy: null, inshore: 380 },
     // no concrete to hold the beach: a poorer landing, a richer defence than Omaha's (modes/landing.js economy)
     economy: { reserves: 1800, perSector: 500, beachIncome: 0.6, defenceCp: 1000, defenceIncome: 2 },
     // the amphibious vehicles swim in on their own, put in off the beach: BMPs, BTRs and BRDMs, the PT-76s

@@ -21,7 +21,7 @@ export const ropucha = craftType({
 });
 
 export const zubr = craftType({
-  id: 'zubr', name: 'Hovercraft (Zubr)', shortName: 'Zubr', engine: 'engine.hover',
+  id: 'zubr', name: 'Hovercraft (Zubr)', shortName: 'Zubr', engine: 'engine.hoverBig', // (audio/SoundBank.js: deeper and heavier than the Aist)
   names: { pact: ['Mordoviya', 'Yevgeny Kocheshkov'], nato: ['H-1'] },
   hull: { length: 57, beam: 25.6 },
   stats: { hover: true, draft: -1, hp: 1800, armor: 0.02, speed: 18, accel: 0.5, turnRate: 0.2, turretRate: 1, radius: 10, height: 13, sight: 1400, ...AA(500, 0.15, 0.03), damage: 40 },
