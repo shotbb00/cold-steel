@@ -99,7 +99,7 @@ export const EPOCHS = {
       ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'] },
       anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'] },
       it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
-      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy'] },
+      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'] },
       ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'] },
     },
     defaults: { nato: 'uk', pact: 'de' },
@@ -171,10 +171,12 @@ export const EPOCHS = {
     blurb: '2027, a war that has not happened: Russia strikes for the Suwałki Gap, the narrow land bridge between Poland and Lithuania. Drones overhead, jammers in every wood, and rockets that hit what they can find.',
     // the menu's regions (maps/index.js REGIONS): the land is the Gap (the war's own title), the sea and the coast their own
     regions: {
-      europe: {
+      europe: { name: 'Suwałki Gap',
         sea: { title: 'The Baltic, 2027', blurb: '2027 at sea: the US and Polish navies against the Russian Baltic Fleet — stealthy missiles, sea drones and drones over the horizon, from the Gotland Gap to the Gulf of Finland.' },
         coastal: { title: 'Gotland, 2027', blurb: 'The island in the middle of the Baltic: whoever holds it can cover the whole sea with air defence. The Baltic Fleet lands at dawn on Gotland’s west coast; US and Polish troops hold the beaches.' },
       },
+      baltic: { title: 'The Baltic States, 2027', blurb: 'Estonia and Latvia: Narva on the border river, the tank country round Tapa, the twin town of Valga and Valka, Latgale’s lakes — NATO’s forward battlegroups against a Russian thrust from Pskov and Ivangorod.' },
+      north: { title: 'The Northern Flank, 2027', blurb: 'Finnish Lapland and the Norwegian Arctic, NATO’s newest border with Russia: Salla, Kuusamo and Ivalo in the forests and fells, Kirkenes on the Pasvik — roads few, rivers many, winter long.' },
     },
     sides: { nato: 'NATO', pact: 'Russia' },
     armies: {
