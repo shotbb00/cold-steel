@@ -62,7 +62,9 @@ const STYLES = {
       const ink = '#3b2e1f', sea = '#e3dcc0', blue = '#4f6fae', red = '#b5523f';
       let water = ''; for (const w of [34, 26, 19, 13, 8, 4]) water += `<path d="${COAST}" fill="none" stroke="${ink}" stroke-width="${w}" opacity="0.45"/><path d="${COAST}" fill="none" stroke="${sea}" stroke-width="${w - 1.1}"/>`;
       return {
-        defs: `${seaClip}${arrowHead('ah-b', blue)}${arrowHead('ah-r', red)}<filter id="wash"><feGaussianBlur stdDeviation="9"/></filter><filter id="pp" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" seed="2"/><feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.12  0 0 0 0.09 0"/></filter><radialGradient id="vig" r="0.75"><stop offset="0.6" stop-color="#7a5a2a" stop-opacity="0"/><stop offset="1" stop-color="#7a5a2a" stop-opacity="0.35"/></radialGradient>`,
+        defs: `${seaClip}${arrowHead('ah-b', blue)}${arrowHead('ah-r', red)}<filter id="bshadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.6"/></filter>
+          <linearGradient id="side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b48a55"/><stop offset="1" stop-color="#7a5430"/></linearGradient>
+          <pattern id="grain" width="60" height="7" patternUnits="userSpaceOnUse"><path d="M0,1.5q15,-1 30,0t30,0M0,4.2q15,1.2 30,0t30,0M0,6.2q20,-0.8 40,0t20,0" fill="none" stroke="#1a0f04" stroke-opacity="0.22" stroke-width="0.5"/></pattern><filter id="wash"><feGaussianBlur stdDeviation="9"/></filter><filter id="pp" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" seed="2"/><feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.12  0 0 0 0.09 0"/></filter><radialGradient id="vig" r="0.75"><stop offset="0.6" stop-color="#7a5a2a" stop-opacity="0"/><stop offset="1" stop-color="#7a5a2a" stop-opacity="0.35"/></radialGradient>`,
         under: `<rect width="${VW}" height="${VH}" fill="#ecdfbf"/>`,
         world: `<rect x="-300" y="-300" width="${VW + 600}" height="${VH + 600}" fill="${sea}"/><g clip-path="url(#sea)">${water}</g>
           <path d="${LAND}" fill="#eee2c3"/>
@@ -73,8 +75,15 @@ const STYLES = {
           <path d="${COAST}" fill="none" stroke="${ink}" stroke-width="1.3"/>
           ${CITIES.map((c) => `<g transform="translate(${f1(c.xy[0])} ${f1(c.xy[1])})"><circle r="3.2" fill="none" stroke="${ink}"/><circle r="1.2" fill="${ink}"/><text x="6" y="-4" font-family="IM Fell English" font-style="italic" font-size="15" fill="${ink}">${c.fr}</text></g>`).join('')}
           ${['blue', 'red'].map((s) => `<path d="${curve(arrowPts(s))}" fill="none" stroke="${s === 'blue' ? blue : red}" stroke-width="2.4" stroke-dasharray="1 5" stroke-linecap="round" marker-end="url(#ah-${s[0]})"/>`).join('')}
-          ${units.map((u) => `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])})"><path d="M-12,-9V-30" stroke="${ink}" stroke-width="1"/><path d="M-12,-30h14v9h-14z" fill="${u.side === 'blue' ? blue : red}" stroke="${ink}" stroke-width="0.6"/>${u.side === 'blue' ? '<path d="M-7.3,-30v9M-2.6,-30v9" stroke="#fff" stroke-width="4.5" opacity="0.85"/><path d="M-2.6,-30v9" stroke="#b5523f" stroke-width="4.5"/>' : '<path d="M-12,-25.5h14" stroke="#fff" stroke-width="2"/>'}
-            <rect x="-17" y="-9" width="34" height="17" rx="1.5" fill="${u.side === 'blue' ? '#5d79b4' : '#a8573f'}" stroke="${ink}"/><rect x="-17" y="-9" width="34" height="4" fill="#fff" opacity="0.18"/><text y="24" text-anchor="middle" font-family="IM Fell English" font-style="italic" font-size="14" fill="${ink}">${u.name}</text></g>`).join('')}
+          ${units.map((u, n) => { const face = u.side === 'blue' ? '#3f5f9e' : '#9c3f2c', mark = n % 3 === 1 ? '<path d="M-6,-4L6,4" stroke="#f3ead2" stroke-width="1.6"/>' : '<path d="M-6,-4L6,4M-6,4L6,-4" stroke="#f3ead2" stroke-width="1.4"/>';
+            return `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])}) rotate(${[-6, 4, -2, 7, -4, 3][n]})">
+              <rect x="-17" y="-6" width="40" height="22" rx="2" fill="#2a1a08" opacity="0.4" filter="url(#bshadow)"/>
+              <path d="M18,-10L22,-6V12H-15L-19,8H18Z" fill="url(#side)"/><path d="M18,8L22,12" stroke="#4a2f14" stroke-width="0.6"/>
+              <rect x="-19" y="-10" width="37" height="18" rx="1" fill="${face}"/><rect x="-19" y="-10" width="37" height="18" rx="1" fill="url(#grain)"/>
+              <path d="M-18.5,-9.4H17.5" stroke="#fff" stroke-opacity="0.35" stroke-width="0.8"/><rect x="-19" y="-10" width="37" height="18" rx="1" fill="none" stroke="#2a1a08" stroke-width="0.7"/>
+              <rect x="-8" y="-6" width="16" height="10" fill="none" stroke="#f3ead2" stroke-width="1.1" transform="translate(-1 1)"/><g transform="translate(-1 1)">${mark}</g>
+              <text x="13" y="3.5" text-anchor="middle" font-family="IM Fell English" font-size="9" fill="#f3ead2">${['I', 'R', 'III', 'H', 'B', 'R'][n]}</text>
+              <text y="27" text-anchor="middle" font-family="IM Fell English" font-style="italic" font-size="14" fill="${ink}">${u.name}</text></g>`; }).join('')}
           <text x="${P(4.2, 53.9)[0]}" y="${P(4.2, 53.9)[1]}" font-family="IM Fell English SC" font-size="22" letter-spacing="10" fill="${ink}" opacity="0.8">Mer du Nord</text>
           <text x="${P(9.3, 49.3)[0]}" y="${P(9.3, 49.3)[1]}" font-family="IM Fell English SC" font-size="26" letter-spacing="14" fill="${ink}" opacity="0.5" transform="rotate(-12 ${P(9.3, 49.3)[0]} ${P(9.3, 49.3)[1]})">Allemagne</text>`,
         over: `<rect width="${VW}" height="${VH}" filter="url(#pp)" pointer-events="none"/><rect width="${VW}" height="${VH}" fill="url(#vig)" pointer-events="none"/>
@@ -96,7 +105,8 @@ const STYLES = {
       for (let i = 0; i < VW / g; i++) for (let j = 0; j < VH / g; j++) grid += `<text x="${i * g + 50}" y="${j * g + 62}" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="34" fill="${ink}" opacity="0.07">${L[i]}${j + 1}</text>`;
       const nml = [...offset(FRONT, 7), ...offset(FRONT, -7).reverse()];
       return {
-        defs: `${seaClip}${arrowHead('ah-b', blue, 5)}${arrowHead('ah-r', red, 5)}<pattern id="wire" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M1,1L7,7M7,1L1,7" stroke="${ink}" stroke-width="0.7"/></pattern><filter id="pp" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="9"/><feColorMatrix values="0 0 0 0 0.3  0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0.05 0"/></filter>`,
+        defs: `${seaClip}${arrowHead('ah-b', blue, 5)}${arrowHead('ah-r', red, 5)}<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.2"/></filter>
+          ${['blue', 'red'].map((sd) => `<radialGradient id="ph-${sd}" cx="0.5" cy="0.5" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.18" stop-color="${sd === 'blue' ? '#5f8fe8' : '#f05a48'}"/><stop offset="0.75" stop-color="${sd === 'blue' ? '#1c3f9a' : '#9a1a12'}"/><stop offset="1" stop-color="${sd === 'blue' ? '#0c1f55' : '#4a0806'}"/></radialGradient>`).join('')}<pattern id="wire" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M1,1L7,7M7,1L1,7" stroke="${ink}" stroke-width="0.7"/></pattern><filter id="pp" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="9"/><feColorMatrix values="0 0 0 0 0.3  0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0.05 0"/></filter>`,
         under: `<rect width="${VW}" height="${VH}" fill="#f2efe4"/>`,
         world: `<rect x="-300" y="-300" width="${VW + 600}" height="${VH + 600}" fill="#dfe6e3"/><path d="${LAND}" fill="#f2efe4"/>
           <path d="${BORDERS}" fill="none" stroke="${ink}" stroke-width="1" stroke-dasharray="1 3 6 3" opacity="0.6"/>
@@ -110,7 +120,13 @@ const STYLES = {
           <path d="${poly(trench(offset(FRONT, 26), 9, 2))}" fill="none" stroke="${blue}" stroke-width="1.3"/>
           ${CITIES.map((c) => `<g transform="translate(${f1(c.xy[0])} ${f1(c.xy[1])})"><rect x="-3" y="-3" width="6" height="6" fill="${ink}"/><text x="7" y="-5" font-family="Georgia, serif" font-size="13" letter-spacing="1" fill="${ink}">${c.en.toUpperCase()}</text></g>`).join('')}
           ${['blue', 'red'].map((s) => `<path d="${curve(arrowPts(s))}" fill="none" stroke="${s === 'blue' ? blue : red}" stroke-width="1.6" marker-end="url(#ah-${s[0]})"/>`).join('')}
-          ${units.map((u) => `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])})"><path d="M0,0V-30" stroke="${ink}" stroke-width="1.2"/><circle r="2.5" fill="${ink}"/><path d="M0,-30h22l-5,6l5,6h-22z" fill="${u.side === 'blue' ? blue : red}"/><text x="4" y="14" font-family="Special Elite" font-size="13" fill="${ink}">${u.name}</text></g>`).join('')}`,
+          ${units.map((u) => { const w = u.name.length * 6.6 + 12; return `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])})">
+              <path d="M0,0L13,-6" stroke="#000" stroke-opacity="0.22" stroke-width="1.6" filter="url(#soft)"/><circle cx="15" cy="-7" r="5.5" fill="#000" opacity="0.2" filter="url(#soft)"/>
+              <path d="M-2,-21h${w}v14h-${w}z" fill="#000" opacity="0.12" transform="translate(5 3)" filter="url(#soft)"/>
+              <path d="M-2,-21h${w}v14h-${w}z" fill="#fbf8ee" stroke="#6b665a" stroke-width="0.5"/><path d="M${w - 6},-21h4v14h-4z" fill="${u.side === 'blue' ? blue : red}"/>
+              <text x="3" y="-10.5" font-family="Special Elite" font-size="11.5" fill="${ink}">${u.name}</text>
+              <path d="M0,0L-3,-28" stroke="#8d8d88" stroke-width="1.4"/><path d="M-0.5,-2L-3.2,-26" stroke="#e8e8e2" stroke-width="0.4"/>
+              <circle cx="-3" cy="-30" r="6" fill="url(#ph-${u.side})"/><circle cx="-3" cy="-30" r="6" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="0.5"/></g>`; }).join('')}`,
         over: `<rect width="${VW}" height="${VH}" filter="url(#pp)" pointer-events="none"/>
           <g transform="translate(${VW - 330} ${VH - 92})"><rect width="310" height="72" fill="#f2efe4" stroke="${ink}"/><text x="12" y="24" font-family="Georgia, serif" font-weight="700" font-size="16" fill="${ink}">SHEET 51 B · EDITION 4 A</text><text x="12" y="44" font-family="Special Elite" font-size="13" fill="${ink}">Trenches corrected to 1-6-18.</text><text x="12" y="62" font-family="Special Elite" font-size="13" fill="${red}">German trenches in red. Wire shown thus: ✕✕</text></g>`,
       };
@@ -154,7 +170,7 @@ const STYLES = {
       const blue = '#1f4fe0', red = '#e0261f', mk = '#151515';
       let grid = ''; for (let x = 0; x <= VW; x += 60) grid += `<path d="M${x},-300V${VH + 300}" stroke="#3b6aa0" stroke-width="0.5" opacity="0.5"/><text x="${x + 2}" y="12" font-family="Arial" font-size="8" fill="#3b6aa0">${String(x / 6 % 100).padStart(2, '0')}</text>`;
       for (let y = 0; y <= VH; y += 60) grid += `<path d="M-300,${y}H${VW + 300}" stroke="#3b6aa0" stroke-width="0.5" opacity="0.5"/><text x="2" y="${y - 2}" font-family="Arial" font-size="8" fill="#3b6aa0">${String(y / 6 % 100).padStart(2, '0')}</text>`;
-      const pl = (d, name, at) => { const pts = offset(FRONT, d); const m = pts[at]; return `<path d="${curve(pts)}" fill="none" stroke="${mk}" stroke-width="2.4" stroke-dasharray="22 10" filter="url(#rough)"/><text x="${f1(m[0] - 30)}" y="${f1(m[1])}" font-family="Permanent Marker" font-size="15" fill="${mk}">PL ${name}</text>`; };
+      const pl = (d, name, at) => { const pts = offset(FRONT, d); const m = pts[at]; return `<path d="${curve(pts)}" fill="none" stroke="${mk}" stroke-width="2.4" stroke-dasharray="22 10" filter="url(#rough)"/><text x="${f1(m[0] - 30)}" y="${f1(m[1])}" font-family="Architects Daughter" font-size="17" stroke="${mk}" stroke-width="0.5" fill="${mk}">PL ${name}</text>`; };
       return {
         defs: `${seaClip}${arrowHead('ah-r', red, 4)}${rough('rough', 2.5, 0.12)}<linearGradient id="glare" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.35" stop-color="#fff" stop-opacity="0.02"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.14"/><stop offset="0.56" stop-color="#fff" stop-opacity="0.02"/><stop offset="1" stop-color="#fff" stop-opacity="0.08"/></linearGradient><filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>`,
         under: `<rect width="${VW}" height="${VH}" fill="#ece9d6"/>`,
@@ -165,15 +181,16 @@ const STYLES = {
           <path d="${COAST}" fill="none" stroke="#2b5f86" stroke-width="1"/>${grid}
           ${CITIES.map((c) => `<g transform="translate(${f1(c.xy[0])} ${f1(c.xy[1])})"><path d="M-4,-4h8v8h-8z" fill="#d23a2a" opacity="0.75"/><text x="7" y="-5" font-family="Arial Narrow, Arial" font-weight="700" font-size="12" fill="#2a2a2a">${c.en.toUpperCase()}</text></g>`).join('')}
           <g filter="url(#rough)"><path d="${flot(offset(FRONT, 4), 14)}" fill="none" stroke="${blue}" stroke-width="3"/></g>
-          ${pl(48, 'GOLD', 6)}${pl(-60, 'DOG', 2)}
+          ${pl(48, 'GOLD', 4)}${pl(-60, 'DOG', 2)}
           <g filter="url(#rough)" stroke-linejoin="round">${(() => { const a = arrowPts('red'), l = offset(a, 9), r = offset(a, -9), tip = a.at(-1), n = normals(a).at(-1), dir = [n[1], -n[0]]; const hw = (s) => [tip[0] - dir[0] * 18 + n[0] * s, tip[1] - dir[1] * 18 + n[1] * s]; return `<path d="${poly([...l.slice(0, -1), hw(9), hw(20), [tip[0] + dir[0] * 6, tip[1] + dir[1] * 6], hw(-20), hw(-9), ...r.slice(0, -1).reverse()])}Z" fill="${red}" fill-opacity="0.12" stroke="${red}" stroke-width="2.6"/>`; })()}</g>
-          ${units.map((u) => `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])})" filter="url(#rough)" stroke="${u.side === 'blue' ? blue : red}" stroke-width="2.4" fill="none">${u.side === 'blue' ? '<rect x="-18" y="-11" width="36" height="22"/>' : '<path d="M0,-18L18,0L0,18L-18,0Z"/>'}<g stroke-width="2">${nato(u, u.side === 'blue' ? 36 : 22, u.side === 'blue' ? 22 : 14)}</g><text y="${u.side === 'blue' ? -15 : -22}" text-anchor="middle" font-family="Permanent Marker" font-size="11" stroke="none" fill="${u.side === 'blue' ? blue : red}">XXX</text><text y="${u.side === 'blue' ? 28 : 33}" text-anchor="middle" font-family="Permanent Marker" font-size="13" stroke="none" fill="${u.side === 'blue' ? blue : red}">${u.name}</text></g>`).join('')}`,
+          ${units.map((u) => `<g transform="translate(${f1(u.xy[0])} ${f1(u.xy[1])})" stroke="${u.side === 'blue' ? blue : red}" stroke-width="2.4" fill="none"><g filter="url(#rough)">${u.side === 'blue' ? '<rect x="-18" y="-11" width="36" height="22"/>' : '<path d="M0,-18L18,0L0,18L-18,0Z"/>'}<g stroke-width="2">${nato(u, u.side === 'blue' ? 36 : 22, u.side === 'blue' ? 22 : 14)}</g></g><text y="${u.side === 'blue' ? -15 : -22}" text-anchor="middle" font-family="Architects Daughter" font-size="12" stroke-width="0.4" fill="${u.side === 'blue' ? blue : red}">XXX</text><text y="${u.side === 'blue' ? 28 : 33}" text-anchor="middle" font-family="Architects Daughter" font-size="15" stroke-width="0.5" fill="${u.side === 'blue' ? blue : red}">${u.name}</text></g>`).join('')}`,
         over: `<g pointer-events="none"><ellipse cx="${VW * 0.3}" cy="${VH * 0.7}" rx="70" ry="22" fill="#5a6a8a" opacity="0.07" filter="url(#blur6)"/><ellipse cx="${VW * 0.62}" cy="${VH * 0.2}" rx="50" ry="16" fill="#8a3a3a" opacity="0.06" filter="url(#blur6)"/><rect width="${VW}" height="${VH}" fill="url(#glare)"/><rect x="4" y="4" width="${VW - 8}" height="${VH - 8}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="2"/></g>
-          <g transform="translate(${VW - 250} 30)"><rect width="220" height="64" fill="#fff" fill-opacity="0.85" stroke="#222"/><text x="10" y="22" font-family="Arial" font-weight="700" font-size="12" fill="#222">SERIES M745 · SHEET NB 4-7</text><text x="10" y="44" font-family="Permanent Marker" font-size="14" fill="#222">OPORD 3-85 · H-HOUR 0430</text></g>`,
+          <g transform="translate(${VW - 250} 30)"><rect width="220" height="64" fill="#fff" fill-opacity="0.85" stroke="#222"/><text x="10" y="22" font-family="Arial" font-weight="700" font-size="12" fill="#222">SERIES M745 · SHEET NB 4-7</text><text x="10" y="44" font-family="Architects Daughter" font-weight="700" font-size="14" fill="#222">OPORD 3-85 · H-HOUR 0430</text></g>`,
       };
     },
   },
   2027: {
+    screen: true, // (a screen: its HUD stays where it is; everything else is paper or plastic on the map)
     about: 'A digital command display: dark vector map with glowing coastline, hostile frames as diamonds, air-defence and drone rings, animated axes, a HUD.',
     draw() {
       const units = UNITS({ blue: ['MND-NE', 'V CORPS', '1 PL DIV'], red: ['6 CAA', '1 GTA', '11 AC'] });
@@ -211,7 +228,7 @@ let current = new URLSearchParams(location.search).get('style') ?? '1945', t = '
 function show(id) {
   current = id;
   const s = STYLES[id].draw();
-  svg.innerHTML = `<defs>${s.defs}</defs>${s.under}<g id="world" transform="${t}">${s.world}</g>${s.over}`;
+  svg.innerHTML = STYLES[id].screen ? `<defs>${s.defs}</defs>${s.under}<g id="world" transform="${t}">${s.world}</g>${s.over}` : `<defs>${s.defs}</defs><g id="world" transform="${t}">${s.under}${s.world}${s.over}</g>`;
   document.getElementById('about').textContent = STYLES[id].about;
   for (const b of tabs.children) b.classList.toggle('on', b.dataset.id === id);
 }
