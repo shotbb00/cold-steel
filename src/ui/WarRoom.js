@@ -174,7 +174,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const tools = el('div', 'wc-zoom');
   tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
   tools.lastChild.title = 'Back to the whole theatre';
-  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">Allies</span><span class="theirs">Axis</span><span class="obj">Fort</span><span class="star">Objective</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
+  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">Allies</span><span class="theirs">Axis</span><span class="obj">Fort</span><span class="star">Objective</span><span class="sym">⚑︎ Base · ⚓︎ Harbour · ✈︎ Airfield</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
   map.load().catch(() => { st.msg = 'The coastlines could not be loaded.'; render(); });
   const close = () => { map.dispose(); room.remove(); onClose(); document.removeEventListener('keydown', keys); };
   /** What an order does, in words: "Attacks Bobruisk", "Ships to Okinawa", "Rebases to Saipan". */
@@ -331,7 +331,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       else if (one) {
         const P = c.provinces[one];
         const head = P.depot ? 7 : 5.5, hy = P.depot ? -24 : -20;
-        g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><circle class="hit" r="15" cy="-8"/>${P.fort ? '<circle class="fort" r="10"/>' : ''}<circle class="town" r="2.2"/>${war.provinces[one].airfield ? '<path class="field" d="M8,8h10M13,4v8"/>' : ''}
+        g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><circle class="hit" r="15" cy="-8"/>${P.fort ? '<circle class="fort" r="10"/>' : ''}<circle class="town" r="2.2"/>${P.depot && P.depot === P.owner ? `<text class="wc-ico base ${P.owner}" x="6" y="${hy - 2}">⚑︎</text>` : ''}${war.provinces[one].port ? '<text class="wc-ico" x="-19" y="-1">⚓︎</text>' : ''}${war.provinces[one].airfield ? '<text class="wc-ico" x="-19" y="-13">✈︎</text>' : ''}
           <path class="pshadow" d="M0,0L${-hy * 0.5},${hy * 0.2}"/><circle class="pshadow" cx="${-hy * 0.55}" cy="${hy * 0.2}" r="${head}"/>
           <path class="needle" d="M0,0L-3,${hy + 2}"/><circle class="head" cx="-3" cy="${hy}" r="${head}" fill="url(#wm-ph-${P.contested ? 'gold' : P.owner})"/></g>`;
         if (k >= 2.5 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one), hy - head - 5, '', n.x, n.y, reach || st.place === one || sf?.at === one);
@@ -366,20 +366,42 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   }
   map.svg.addEventListener('click', (ev) => {
     const node = ev.target.closest('[data-ids]');
-    if (!node) return;
-    const ids = node.dataset.ids.split(','), pileKind = ev.target.closest('[data-pile]')?.dataset.pile, sf = selected();
+    if (!node) { if (st.sel != null || st.place) { st.sel = null; st.place = null; st.airMode = null; st.msg = ''; render(); } return; } // (the bare map: let go)
+    const ids = node.dataset.ids.split(','), sf = selected();
     if (ids.length > 1) return map.flyTo(ids.map((id) => [PL[id].x, PL[id].y]), 120); // (a cluster: closer)
-    const id = ids[0];
-    if (sf && pileKind !== 'own' && (st.reach.has(id) || id === sf.at)) {
-      const r = st.reach.get(id);
-      if (r?.needs) { st.msg = `To land on ${nameOf(id)}, a fleet of yours must first hold ${r.needs.map(nameOf).join(' or ')} (no enemy fleet there). Move one in this turn — the landing can go next turn.`; return render(); }
-      const why = r?.mission ? mission(c, war, me, sf.id, r.mission, id) : order(c, war, me, sf.id, id, r ?? {});
+    const id = ids[0], r = st.reach.get(id);
+    // a force chosen and a lit place clicked: the order (or the mission)
+    if (sf && id !== sf.at && r) {
+      if (r.needs) { st.msg = `To land on ${nameOf(id)}, a fleet of yours must first hold ${r.needs.map(nameOf).join(' or ')} (no enemy fleet there). Move one in this turn — the landing can go next turn.`; return render(); }
+      const why = r.mission ? mission(c, war, me, sf.id, r.mission, id) : order(c, war, me, sf.id, id, r);
       st.msg = why ? `Not possible: ${why}.` : '';
       return render();
     }
-    if (pileKind === 'own') { const mine = c.forces.filter((f) => f.side === me && f.at === id); return choose(mine[(mine.findIndex((f) => f.id === st.sel) + 1) % mine.length]); }
-    st.place = id; st.sel = null; st.msg = ''; render();
+    // else the place itself, pin or counters alike: our first force there is chosen (clicked again: the next)
+    const mine = c.forces.filter((f) => f.side === me && f.at === id);
+    if (mine.length) return choose(mine[(mine.findIndex((f) => f.id === st.sel) + 1) % mine.length]);
+    st.place = id; st.sel = null; st.airMode = null; st.msg = ''; render();
   });
+
+  /** What a place is, in words and symbols: a base of yours (where you build), a harbour, an airfield. */
+  function placeFacts(id) {
+    const p = war.provinces[id], P = c.provinces[id];
+    if (!p) return 'sea zone';
+    return [P.depot && P.depot === P.owner ? `⚑︎ ${P.owner === me ? 'your base' : 'enemy base'}` : '', p.port ? '⚓︎ harbour' : '', p.airfield ? '✈︎ airfield' : ''].filter(Boolean).join(' · ') || (P.owner === me ? 'held by you' : 'held by the enemy');
+  }
+  /** Above a chosen force: the place it is at, every force of ours there to switch to, and building there if it is a base. */
+  function placeStrip(d, id, f) {
+    const strip = el('div', 'wc-strip');
+    strip.append(el('div', 'wc-strip-top', `<b>${esc(nameOf(id))}</b><span>${esc(placeFacts(id))}</span>`));
+    const mine = c.forces.filter((x) => x.side === me && x.at === id);
+    if (mine.length > 1) {
+      const row = el('div', 'wc-chips');
+      for (const x of mine) row.append(btn(`${{ army: '⚔︎', fleet: '⚓︎', air: '✈︎' }[x.kind]} ${esc(x.name)}`, `wc-chip${x.id === f.id ? ' on' : ''}`, () => choose(x)));
+      strip.append(row);
+    }
+    if (war.provinces[id] && c.provinces[id].depot === me && c.provinces[id].owner === me) strip.append(btn('Build here ›', 'mp-btn wc-build', () => { st.sel = null; st.place = id; st.airMode = null; render(); }));
+    d.append(strip);
+  }
 
   /** The forces at a place in the drawer: ours to pick, theirs where we can see them. */
   function forcesHere(d, id) {
@@ -399,6 +421,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (st.msg) d.append(el('p', 'wc-msg', esc(st.msg)));
     const f = st.sel != null ? forceById(c, st.sel) : null;
     if (f) {
+      placeStrip(d, f.at, f);
       const kind = { army: 'Army group', fleet: 'Fleet', air: 'Air wing' }[f.kind];
       d.append(el('span', 'cp-kicker', `${kind} · ${esc(ARMIES[f.army]?.name ?? f.army)}`), el('h3', '', esc(f.name)));
       d.append(el('p', 'cp-hint', `At ${esc(nameOf(f.at))}${f.cut ? ` · <em>cut off for ${f.cut} turns</em>` : ''} · strength ${Math.round(strength(f) * 100)} % · power ${Math.round(power(c, f)).toLocaleString('en')}`));
@@ -431,7 +454,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       d.append(el('span', 'cp-kicker', `${esc(war.theatres[p.theatre].name)} · ${SIDE[P.owner]}${P.depot ? ' base' : ''}`), el('h3', '', esc(p.name)));
       const maps = [mapName(P.map) ? `Battles here: <b>${esc(mapName(P.map))}</b>` : 'No battle map here yet: battles are resolved', ...P.coastal.map((m) => `Landings: <b>${esc(mapName(m) ?? m)}</b>`)];
       d.append(el('p', 'cp-hint', maps.join('<br>')));
-      d.append(el('p', 'cp-hint', `Production ${p.prod ?? 0}${P.fort ? ` · fortified (${P.fort})` : ''}${p.port ? ' · port' : ''}${p.airfield ? ' · airfield' : ''}`));
+      d.append(el('p', 'cp-hint', `${esc(placeFacts(id))} · production ${p.prod ?? 0}${P.fort ? ` · fortified (${P.fort})` : ''}`));
       forcesHere(d, id);
       if (P.depot === me && P.owner === me) {
         const armies = [...new Set(c.forces.filter((x) => x.side === me && x.kind === 'army' && war.provinces[x.at]?.theatre === p.theatre).map((x) => x.army))];
@@ -476,7 +499,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       return d;
     }
     d.append(el('span', 'cp-kicker', 'Orders'), el('h3', '', st.theatre ? esc(war.theatres[st.theatre].name) : 'The war'));
-    d.append(el('p', 'cp-hint', 'Click one of your counters, then a highlighted place: a road next door to move or attack, a coast across the water to land or ship to (a fleet of yours must hold a sea zone off it — grey rings are coasts waiting for one). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
+    d.append(el('p', 'cp-hint', 'Click a place to see what is there (your first force there is chosen; click again for the next), then a highlighted place to move it: a road next door to move or attack, a coast across the water to land or ship to (a fleet of yours must hold a sea zone off it — grey rings are coasts waiting for one). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
     const given = [...Object.entries(c.orders[me]).map(([id, o]) => ['order', +id, o]), ...Object.entries(c.missions?.[me] ?? {}).map(([id, m]) => ['mission', +id, m])]
       .map(([what, id, o]) => ({ what, f: forceById(c, id), o })).filter((x) => x.f && (!st.theatre || theatreOf(x.f.at) === st.theatre));
     d.append(el('p', 'cp-hint', `${given.length} order${given.length === 1 ? '' : 's'} given this turn${st.theatre ? ' here' : ''} · morale can reach ${Math.round(moraleCap(c, me))} at most with the ground you hold`));
@@ -491,6 +514,13 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         list.append(row);
       }
       d.append(el('h4', 'wc-th', 'Orders this turn'), list);
+    }
+    const bases = Object.keys(war.provinces).filter((k) => c.provinces[k].depot === me && c.provinces[k].owner === me && (!st.theatre || war.provinces[k].theatre === st.theatre));
+    if (bases.length) {
+      d.append(el('h4', 'wc-th', 'Your bases — where you build'));
+      const list = el('div', 'wc-orders');
+      for (const k of bases) list.append(btn(`<b>⚑︎ ${esc(nameOf(k))}</b> <span>battalions${war.provinces[k].port ? ' · ⚓︎ fleets' : ''}${war.provinces[k].airfield ? ' · ✈︎ air wings' : ''}</span>`, 'wc-order-go', () => { st.place = k; st.sel = null; render(); map.flyTo([[PL[k].x, PL[k].y]], 40); }));
+      d.append(list);
     }
     for (const [tid, th] of Object.entries(war.theatres)) {
       if (st.theatre && st.theatre !== tid) continue;

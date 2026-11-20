@@ -687,3 +687,15 @@
 .wm-wash.nato { fill: rgba(42, 91, 208, 0.13); } .wm-wash.pact { fill: rgba(208, 48, 42, 0.13); }
 .wm-area { fill: none; stroke: rgba(61, 47, 30, 0.55); stroke-width: 1.1; stroke-dasharray: 7 3 1.5 3; vector-effect: non-scaling-stroke; }
 .wm-neutral { fill: url(#wm-neutral); }
+
+/* the map's place symbols and the place strip (ui/WarRoom.js) */
+.wc-ico { font: 12px 'Segoe UI Symbol', 'DejaVu Sans', sans-serif; font-variant-emoji: text; fill: #3d2f1e; paint-order: stroke; stroke: rgba(233, 219, 180, 0.9); stroke-width: 3px; pointer-events: none; }
+.wc-ico.base { font-size: 15px; } .wc-ico.base.nato { fill: #2a5bd0; } .wc-ico.base.pact { fill: #b3261e; }
+.wc-legend .sym::before { display: none; }
+.wc-strip { width: 100%; border: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: rgba(207, 201, 173, 0.04); }
+.wc-strip-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.wc-strip-top span { color: var(--muted); font-size: 12.5px; }
+.wc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.wc-chip { background: none; border: 1px solid var(--line); color: var(--muted); font: 12.5px var(--font-ui); padding: 3px 8px; cursor: pointer; }
+.wc-chip.on { color: var(--text); border-color: var(--gold); background: rgba(224, 180, 90, 0.12); }
+.wc-build { align-self: flex-start; padding: 4px 10px; }
