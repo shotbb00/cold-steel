@@ -128,9 +128,9 @@ export function aiTurn(c, war, side) {
     const fleetZone = [...reach].find((z) => war.seas[z] && forcesAt(c, z, foe, 'fleet').length);
     const base = [...reach].find((k) => war.provinces[k] && c.provinces[k].owner === foe && c.provinces[k].depot === foe);
     const threatened = [...reach].filter((k) => war.provinces[k] && c.provinces[k].owner === side && front(k)).sort((a, b) => defenceAt(c, war, foe, b, seen) - defenceAt(c, war, foe, a, seen))[0];
-    const plan = attack ? ['support', attack] : strikers && fleetZone ? ['naval', fleetZone] : strikers && base ? ['strike', base] : threatened ? ['cover', threatened] : null;
+    const plan = attack ? ['support', attack] : strikers && fleetZone ? ['attack', fleetZone] : strikers && base ? ['attack', base] : threatened ? ['support', threatened] : null;
     if (plan && !mission(c, war, side, w.id, ...plan)) did.push(`${w.name}: ${plan[0]} over ${plan[1]}`);
-    else if (fighters && threatened) mission(c, war, side, w.id, 'cover', threatened);
+    else if (fighters && threatened) mission(c, war, side, w.id, 'support', threatened);
   }
   // ---- spending: refits first, then a battalion at the depot of the theatre with the most front and the least army
   for (const f of mine.filter((x) => x.kind === 'army')) refit(c, war, f);

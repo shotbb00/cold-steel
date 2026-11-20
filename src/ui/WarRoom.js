@@ -218,7 +218,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     else if (st.airMode && st.airMode !== 'rebase') {
       for (const k of airReach(war, f.at)) {
         const sea = !!war.seas[k];
-        if ((st.airMode === 'naval') !== sea || (st.airMode === 'strike' && c.provinces[k].owner === me)) continue;
+        if ((st.airMode === 'support' && sea) || (st.airMode === 'attack' && !sea && c.provinces[k].owner === me)) continue; // (support over land; attack the enemy's ground or any sea)
         out.set(k, { mission: st.airMode });
       }
     } else {
@@ -310,7 +310,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     for (const [fid, m] of Object.entries(c.missions?.[me] ?? {})) {
       const f = forceById(c, +fid), A = nodeOf[f?.at], B = nodeOf[m.at];
       if (!A || !B) continue;
-      s += `<g class="wc-mission ${m.kind}">${A !== B ? `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>` : ''}<circle cx="${B.x}" cy="${B.y}" r="19"/><text x="${B.x + 22}" y="${B.y - 18}">${esc(MISSIONS[m.kind].name)}</text></g>`;
+      s += `<g class="wc-mission ${m.kind}">${A !== B ? `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>` : ''}<circle cx="${B.x}" cy="${B.y}" r="19"/><text x="${B.x + 22}" y="${B.y - 18}">${esc(MISSIONS[m.kind]?.name ?? m.kind)}</text></g>`;
     }
     const boxes = [], vw = map.w ?? 2000, vh = map.h ?? 2000;
     /** A label where it fits: none over another (the ones that matter first — nodes come in rank order), a forced one always. */
@@ -417,10 +417,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       else {
         d.append(el('p', 'cp-hint', esc(f.squadrons.map((s) => `${s.planes} ${s.k}${s.k === 'fighter' || s.k === 'bomber' ? 's' : ''}`).join(' · '))));
         const m = c.missions?.[me]?.[f.id];
-        d.append(el('p', 'wc-order-line', m ? `Mission: <b>${MISSIONS[m.kind].name}</b> over ${esc(nameOf(m.at))} — ${MISSIONS[m.kind].text}` : 'No mission: air cover over its base. Pick a mission, then a highlighted place.'));
+        d.append(el('p', 'wc-order-line', m ? `Mission: <b>${MISSIONS[m.kind]?.name ?? m.kind}</b> over ${esc(nameOf(m.at))} — ${MISSIONS[m.kind]?.text ?? ''}` : 'No mission: air cover over its base. Pick a mission, then a highlighted place.'));
         if (m) d.append(btn('Cancel mission', 'mp-btn wc-cancel', () => cancel(f.id, 'mission')));
         const seg = el('div', 'seg wc-air');
-        for (const [k, label] of [['rebase', 'Rebase'], ...Object.entries(MISSIONS).map(([k2, v]) => [k2, v.name])]) seg.append(btn(label, (st.airMode ?? 'rebase') === k ? 'on' : '', () => { st.airMode = k; render(); }));
+        for (const [k, label] of [['rebase', 'Move'], ...Object.entries(MISSIONS).map(([k2, v]) => [k2, v.name])]) seg.append(btn(label, (st.airMode ?? 'rebase') === k ? 'on' : '', () => { st.airMode = k; render(); }));
         d.append(seg);
       }
       return d;
@@ -463,7 +463,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         if (p.airfield) {
           const plane = (k) => { try { return airType(k, me, army)?.name; } catch { return null; } };
           const fighters = plane('cap'), strikers = plane('jet'), n = (k) => (AIR_WING[k] ?? 0) * 12;
-          card('Air wing', airCost(), `${n('fighter')} ${fighters ?? 'fighters'}${fighters ? ' fighters' : ''} and ${n('strike')} ${strikers ?? 'strike aircraft'}${strikers ? ' fighter-bombers' : ''} — air cover, close support, strikes and naval strikes within two steps`, `formed at ${nameOf(id)}`, ECON.upkeep.squadron * Object.keys(AIR_WING).length,
+          card('Air wing', airCost(), `${n('fighter')} ${fighters ?? 'fighters'}${fighters ? ' fighters' : ''} and ${n('strike')} ${strikers ?? 'strike aircraft'}${strikers ? ' fighter-bombers' : ''} — close support, reconnaissance and attacks on land or sea within two steps`, `formed at ${nameOf(id)}`, ECON.upkeep.squadron * Object.keys(AIR_WING).length,
             () => { const r = raiseAir(c, war, me, army, id); st.msg = r ? `${r.name} is formed at ${nameOf(id)}.` : 'Not possible.'; render(); });
         }
       }
@@ -484,7 +484,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const list = el('div', 'wc-orders');
       for (const { what, f, o } of given) {
         const row = el('div', 'wc-order-row');
-        const name = btn(`<b>${esc(f.name)}</b> <span>${what === 'mission' ? `${MISSIONS[o.kind].name} over ${esc(nameOf(o.at))}` : orderText(f, o)}</span>`, 'wc-order-go', () => choose(f));
+        const name = btn(`<b>${esc(f.name)}</b> <span>${what === 'mission' ? `${MISSIONS[o.kind]?.name ?? o.kind} over ${esc(nameOf(o.at))}` : orderText(f, o)}</span>`, 'wc-order-go', () => choose(f));
         const x = btn('✕', 'wc-order-x', () => cancel(f.id, what));
         x.title = what === 'mission' ? 'Cancel this mission' : 'Cancel this order';
         row.append(name, x);

@@ -38,12 +38,12 @@ export const PRIORITY = { low: 0.5, normal: 1, high: 1.6 };
  * mission is air cover over its own base. Fighters fly cover and escort; strike squadrons support, strike or hit ships.
  */
 export const MISSIONS = {
-  cover: { name: 'Air cover', text: 'fighters hold the sky over it' },
-  support: { name: 'Close support', text: 'strike aircraft join the battle there' },
-  strike: { name: 'Strike', text: 'bomb it: the enemy troops there hit, a quarter of its production lost for two turns' },
+  support: { name: 'Close support', text: 'its strike aircraft join the battle there, its fighters hold that sky' },
   recon: { name: 'Reconnaissance', text: 'see the enemy in it and round it' },
-  naval: { name: 'Naval strike', text: 'attack the enemy fleets in a sea zone' },
+  attack: { name: 'Attack', text: 'bomb the enemy there: on land its troops and production, at sea its ships' },
 };
+/** Old saves' mission names → today's (a wing's mission is given again each turn: only one in hand when saved). */
+const MISSION_WAS = { strike: 'attack', naval: 'attack', cover: 'support' };
 const STRIKERS = ['strike', 'bomber'];
 /** What new forces cost beyond their units: a fleet is built in a port, an air wing formed at an airfield. */
 export const AIR_WING = { fighter: 1, strike: 1 };
@@ -312,8 +312,8 @@ export function mission(c, war, side, wingId, kind, at) {
   if (!f || f.side !== side || f.kind !== 'air') return 'not an air wing of yours';
   if (!MISSIONS[kind]) return 'no such mission';
   if (!airReach(war, f.at).has(at)) return 'out of its reach';
-  if ((kind === 'naval') !== !!war.seas[at]) return kind === 'naval' ? 'a naval strike is flown over a sea zone' : 'over a province';
-  if (kind === 'strike' && c.provinces[at].owner === side) return 'strike the enemy’s ground';
+  if (kind === 'support' && war.seas[at]) return 'close support is flown over a province';
+  if (kind === 'attack' && war.provinces[at] && c.provinces[at].owner === side) return 'attack the enemy’s ground, or a sea zone';
   ((c.missions ??= { nato: {}, pact: {} })[side] ??= {})[wingId] = { kind, at };
   return '';
 }
@@ -330,7 +330,8 @@ export function resolveAir(c, war) {
   const lose = (f, kinds, n) => { const total = planes(f, kinds); if (!total) return; for (const q of f.squadrons) if (kinds.includes(q.k)) q.planes = Math.max(0, Math.round(q.planes - n * q.planes / total)); };
   const flying = c.forces.filter((f) => f.kind === 'air').map((f) => {
     const m = c.missions?.[f.side]?.[f.id];
-    return { f, m: m && airReach(war, f.at).has(m.at) ? m : { kind: 'cover', at: f.at } };
+    const kind = MISSION_WAS[m?.kind] ?? m?.kind;
+    return { f, m: m && MISSIONS[kind] && airReach(war, f.at).has(m.at) ? { ...m, kind } : { kind: 'cover', at: f.at } }; // (none: its fighters over its own base)
   });
   const places = [...new Set(flying.map((w) => w.m.at))];
   for (const at of places) {
@@ -355,14 +356,14 @@ export function resolveAir(c, war) {
         lose(w.f, STRIKERS, shotDown);
         const through = planes(w.f, STRIKERS);
         if (kind === 'support') c.support[s][at] = (c.support[s][at] ?? 0) + through;
-        else if (kind === 'strike' && war.provinces[at] && c.provinces[at].owner === foe && through > 4) {
+        else if (kind === 'attack' && war.provinces[at] && c.provinces[at].owner === foe && through > 4) {
           c.provinces[at].bombed = 2; // (two turns of reduced production)
           const fortHit = through > 20 && c.provinces[at].fort > 0 && rand(c) < 0.25;
           if (fortHit) c.provinces[at].fort--;
           // the troops there: bombed and strafed (a full wing of strike aircraft through: about a tenth of their strength)
           const hit = forcesAt(c, at, foe, 'army').map((f) => { const was = strengthOf(f); wound(c, f, Math.min(0.12, through / 260)); prune(c, f); return `${f.name} ${c.forces.includes(f) ? `−${Math.max(1, Math.round((was - strengthOf(f)) * 100))} %` : 'destroyed'}`; });
           c.log.push({ turn: c.turn, date: dateOf(c), side: s, text: `${w.f.name} struck ${war.provinces[at].name}: ${hit.length ? `${hit.join(', ')}; ` : 'no troops there; '}its production cut for two turns${fortHit ? ', its defences damaged' : ''}${shotDown >= 1 ? ` — ${Math.round(shotDown)} aircraft lost` : ''}.` });
-        } else if (kind === 'naval' && war.seas[at]) {
+        } else if (kind === 'attack' && war.seas[at]) {
           const hit = forcesAt(c, at, foe, 'fleet').map((fl) => { const was = strengthOf(fl); wound(c, fl, Math.min(0.35, through / 160)); prune(c, fl); return `${fl.name} ${c.forces.includes(fl) ? `−${Math.max(1, Math.round((was - strengthOf(fl)) * 100))} %` : 'sunk'}`; });
           c.log.push({ turn: c.turn, date: dateOf(c), side: s, text: `${w.f.name} struck at sea in ${war.seas[at].name}: ${hit.length ? hit.join(', ') : 'no enemy ships found'}${shotDown >= 1 ? ` — ${Math.round(shotDown)} aircraft lost` : ''}.` });
         }
