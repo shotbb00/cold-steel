@@ -664,3 +664,13 @@
 .wc-order-go:hover { border-color: var(--gold); }
 .wc-order-x { width: 32px; background: none; border: 1px solid var(--line); color: var(--enemy); font-size: 14px; cursor: pointer; }
 .wc-order-x:hover { background: rgba(255, 90, 72, 0.15); }
+
+/* what a base can build (ui/WarRoom.js): a card per thing — what is in it, where it goes, cost and upkeep */
+.wc-buy { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 8px 10px; background: rgba(207, 201, 173, 0.05); border: 1px solid var(--line); color: var(--text); font: 13px var(--font-ui); cursor: pointer; }
+.wc-buy:hover:not(:disabled) { border-color: var(--gold); background: rgba(224, 180, 90, 0.08); }
+.wc-buy:disabled { opacity: 0.45; cursor: default; }
+.wc-buy-top { display: flex; justify-content: space-between; gap: 8px; }
+.wc-buy-top b { font-size: 14px; }
+.wc-buy-top span { color: var(--gold); font-weight: 700; }
+.wc-buy-what { color: var(--text); opacity: 0.85; line-height: 1.35; }
+.wc-buy-where { color: var(--muted); font-size: 12px; }

@@ -5,7 +5,7 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
 import { showQR, scanQR } from './SaveQR.js';
 import { aiTurn } from '../wcampaign/ai.js';
@@ -14,6 +14,7 @@ import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } fro
 import { UNIT_TYPES } from '../data/units/index.js';
 import { MAPS } from '../maps/index.js';
 import { ARMIES } from '../data/factions.js';
+import { airType } from '../systems/AirStrike.js';
 import { epoch } from '../data/epoch.js';
 import { WorldMap } from './WorldMap.js';
 
@@ -407,14 +408,36 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       if (P.depot === me && P.owner === me) {
         const armies = [...new Set(c.forces.filter((x) => x.side === me && x.kind === 'army' && war.provinces[x.at]?.theatre === p.theatre).map((x) => x.army))];
         const army = armies[0] ?? (me === 'nato' ? 'us' : 'wh');
+        const sideName = ARMIES[army]?.name ?? army, have = Math.round(c.pool[me]);
+        d.append(el('h4', 'wc-th', `Build here · ${sideName} · ${have.toLocaleString('en')} production`));
+        // what each thing is, by this army's own names: its units, where it goes, what it costs and costs to keep
+        const unitName = (t) => { const T = UNIT_TYPES[t]; return T?.variants?.[army]?.name ?? T?.variants?.[me]?.name ?? T?.shortName ?? T?.name ?? t; };
+        const list = (types) => { const n = new Map(); for (const t of types) n.set(unitName(t), (n.get(unitName(t)) ?? 0) + 1); return [...n].map(([k, v]) => (v > 1 ? `${v} × ${k}` : k)).join(', '); };
+        const card = (title, cost, what, where, keep, go) => {
+          const b = btn(`<span class="wc-buy-top"><b>${esc(title)}</b><span>${cost.toLocaleString('en')}</span></span><span class="wc-buy-what">${esc(what)}</span><span class="wc-buy-where">${esc(where)} · upkeep ${keep} a turn</span>`, 'wc-buy', go);
+          b.disabled = c.pool[me] < cost;
+          if (b.disabled) b.title = `Not enough production: ${have.toLocaleString('en')} of ${cost.toLocaleString('en')}`;
+          d.append(b);
+        };
+        const ROLE = { infantry: 'Infantry battalion', armour: 'Armoured battalion', artillery: 'Artillery battalion' };
         for (const kind of Object.keys(war.battalions)) {
-          const cost = war.battalions[kind].reduce((a, t) => a + (c.power[t] ?? 120), 0);
-          d.append(btn(`Raise ${kind} battalion · ${cost}`, 'mp-btn', () => { const r = raise(c, war, me, army, id, kind); st.msg = r ? `A ${kind} battalion joins ${r.name}.` : `Not possible: not enough production, or no room here (at most ${STACK.army} army groups).`; render(); }));
+          const types = war.battalions[kind], cost = types.reduce((a, t) => a + (c.power[t] ?? 120), 0);
+          card(ROLE[kind] ?? `${kind} battalion`, cost, `${types.length} stacks: ${list(types)}`, `joins an army group of yours here (or one at the front with room), else a new group here`, ECON.upkeep.battalion,
+            () => { const r = raise(c, war, me, army, id, kind); st.msg = r ? `A ${kind} battalion joins ${r.name}.` : `Not possible: no room here (at most ${STACK.army} army groups, ${STACK.battalions} battalions each).`; render(); });
         }
+        const FLEET = { battle: 'Battle fleet', carrier: 'Carrier task force', escort: 'Escort group', amphibious: 'Landing fleet', submarines: 'Submarine flotilla' };
+        const FLEET_FOR = { battle: 'fights other fleets', carrier: 'fights other fleets, its aircraft strike far', escort: 'guards convoys and landings, hunts submarines', amphibious: 'carries landings: a fleet of yours off a coast lets armies land', submarines: 'raids shipping, hard to find' };
         if (p.port) for (const kind of Object.keys(war.fleets)) {
-          d.append(btn(`Build ${kind} fleet · ${fleetCost(c, war, kind)}`, 'mp-btn', () => { const r = raiseFleet(c, war, me, army, id, kind); st.msg = r ? `${r.name} puts to sea in ${nameOf(r.at)}.` : `Not possible: not enough production, or no room off this port (at most ${STACK.fleet} fleets a sea zone).`; render(); }));
+          const types = war.fleets[kind];
+          card(FLEET[kind] ?? `${kind} fleet`, fleetCost(c, war, kind), `${list(types)} — ${FLEET_FOR[kind] ?? ''}`, `puts to sea off ${nameOf(id)}`, ECON.upkeep.ship * types.length,
+            () => { const r = raiseFleet(c, war, me, army, id, kind); st.msg = r ? `${r.name} puts to sea in ${nameOf(r.at)}.` : `Not possible: no room off this port (at most ${STACK.fleet} fleets a sea zone).`; render(); });
         }
-        if (p.airfield) d.append(btn(`Form air wing · ${airCost()}`, 'mp-btn', () => { const r = raiseAir(c, war, me, army, id); st.msg = r ? `${r.name} is formed at ${nameOf(id)}.` : 'Not possible: not enough production.'; render(); }));
+        if (p.airfield) {
+          const plane = (k) => { try { return airType(k, me, army)?.name; } catch { return null; } };
+          const fighters = plane('cap'), strikers = plane('jet'), n = (k) => (AIR_WING[k] ?? 0) * 12;
+          card('Air wing', airCost(), `${n('fighter')} ${fighters ?? 'fighters'}${fighters ? ' fighters' : ''} and ${n('strike')} ${strikers ?? 'strike aircraft'}${strikers ? ' fighter-bombers' : ''} — air cover, close support, strikes and naval strikes within two steps`, `formed at ${nameOf(id)}`, ECON.upkeep.squadron * Object.keys(AIR_WING).length,
+            () => { const r = raiseAir(c, war, me, army, id); st.msg = r ? `${r.name} is formed at ${nameOf(id)}.` : 'Not possible.'; render(); });
+        }
       }
       return d;
     }
