@@ -186,7 +186,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (!room.isConnected || e.target.closest?.('input, textarea') || room.querySelector('.wc-modal')) return;
     const f = st.sel != null ? forceById(c, st.sel) : null;
     if ((e.key === 'Delete' || e.key === 'Backspace') && f) { e.preventDefault(); cancel(f.id, c.orders[me][f.id] ? 'order' : 'mission'); }
-    else if (e.key === 'Escape' && (st.sel != null || st.place)) { e.preventDefault(); st.sel = null; st.place = null; st.airMode = null; st.msg = ''; render(); }
+    else if (e.key === 'Escape' && (st.sel != null || st.place || st.theatre)) { e.preventDefault(); if (st.sel == null && !st.place) return goTheatre(null); st.sel = null; st.place = null; st.airMode = null; st.msg = ''; render(); }
   };
   document.addEventListener('keydown', keys);
 
@@ -501,6 +501,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       forcesHere(d, id);
       return d;
     }
+    if (st.theatre) d.append(btn('‹ All fronts', 'wc-back', () => goTheatre(null)));
     d.append(el('span', 'cp-kicker', 'Orders'), el('h3', '', st.theatre ? esc(war.theatres[st.theatre].name) : 'The war'));
     d.append(el('p', 'cp-hint', 'Click a place to see what is there (your first force there is chosen; click again for the next), then a highlighted place to move it: a road next door to move or attack, a coast across the water to land or ship to (a fleet of yours must hold a sea zone off it — grey rings are coasts waiting for one). Scroll or pinch to zoom, drag to pan; a numbered pin is several places — click it to zoom in.'));
     const given = [...Object.entries(c.orders[me]).map(([id, o]) => ['order', +id, o]), ...Object.entries(c.missions?.[me] ?? {}).map(([id, m]) => ['mission', +id, m])]
@@ -547,7 +548,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         return `<span class="wc-line wc-obj">★ <b>${esc(o.name)}</b>: ${what}</span>`;
       });
       const obj = objLines.length ? `<span class="wc-line wc-obj-head">Objectives — places worth morale. A side at 0 morale sues for peace.</span>${objLines.join('')}` : '';
-      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(tid)), prioBox);
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(st.theatre === tid ? null : tid)), prioBox);
     }
     d.append(el('h3', 'menu-sub', 'Dispatches'));
     const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);
