@@ -5,11 +5,14 @@
 //   buildBrPack37     the 3.7-inch mountain howitzer: split trail, small wheels, the short barrel; jeep-towed here (mules in the hills)
 //   buildBr25pdrJG    the 25-pounder on its platform, towed by a Morris Quad, in jungle green
 //   buildBrRecoveryJG a Matador-sized recovery lorry with its jib, in jungle green
+//   buildBrRadarJG    the RAF light warning radar lorry · buildBr37AAJG the 3.7-inch AA gun · buildBrBaileyJG a Bailey bridge lorry
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { trackedHull, castTurret, runningGear, roadWheelGeometry } from './vehicleCommon.js';
 import { rig, crane } from './ww2Armour.js';
 import { vehicle, wheeled, towTruck } from './support.js';
 import { truckUnit } from './truck.js';
+import { heavyAA } from './ww2AirDefence.js';
+import { radarLorry } from './brit45.js';
 
 const JG = 0x46503a, JG_DK = 0x343b2a, STEEL = 0x2b2d28, RUBBER = 0x1f201c, CANVAS = 0x5a5c42, RED = 0xb8231e, WHITE = 0xe6e2d6, GLASS = 0x1a1d1c;
 const C = { camo: 1 };
@@ -117,4 +120,26 @@ export const buildBrRecoveryJG = vehicle(() => {
   const t = truckUnit({ color: JG, dark: JG_DK, camo: 0, ...o, body: 'flat', bodyH: 1.7 });
   const L = t.layout;
   return { wheels: wheeled(L.axles, t.track, o.r), hull: grime(merge([...t.parts, ...crane(0, L.deck, L.deck + 2.2, L.rear + 0.4, -1.9, 0.7, JG_DK)]), 1, 0.4), muzzle: [0, 2.5, 0] };
+});
+
+// ---------------------------------------------------------------- air defence, the bridge
+
+/** The RAF’s light warning radar on its lorry, the beam on its mast (models/brit45.js radarLorry). */
+export const buildBrRadarJG = radarLorry(JG, JG_DK, 'yagi');
+export const buildBr37AAJG = heavyAA(JG, 4.7, JG_DK, 'square');
+/** A Bailey bridge lorry: the panels and the deck stacked on its bed (dropped: the bridge is built across the gap). */
+export const buildBrBaileyJG = vehicle(() => {
+  const o = { length: 6.8, width: 2.4, bonnet: 'square', r: 0.5, axles: [5.4, 1.4] };
+  const t = truckUnit({ color: JG, dark: JG_DK, camo: 0, ...o, body: 'flat', bodyH: 1.7 });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, o.r),
+    hull: grime(merge(t.parts), 1, 0.4),
+    load: merge([
+      ...pair((s) => P.box(0.15, 1.5, 4.4, { x: s * 0.95, y: L.deck + 0.75, z: L.rear + 2.2, color: STEEL })),   // the panels on edge…
+      ...pair((s) => Array.from({ length: 5 }, (_, k) => P.box(0.17, 0.06, 1.9, { x: s * 0.95, y: L.deck + 0.75, z: L.rear + 0.5 + k * 0.85, rx: 0.65, color: JG_DK }))).flat(), // …their lattice
+      P.box(1.7, 0.4, 4.4, { y: L.deck + 0.2, z: L.rear + 2.2, color: 0x5a4632 }),                                // the timber decking
+    ]),
+    muzzle: [0, 2.5, 0],
+  };
 });

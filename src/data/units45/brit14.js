@@ -6,7 +6,7 @@
 // Its vehicles not in models/brit45.js are in models/brit14.js.
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildBrGrant, buildBrCarrier } from '../models/brit45.js';
-import { buildBrStuart, buildBrJeepCP, buildBrJeepAmb, buildBrPack37, buildBr25pdrJG, buildBrRecoveryJG } from '../models/brit14.js';
+import { buildBrStuart, buildBrJeepCP, buildBrJeepAmb, buildBrPack37, buildBr25pdrJG, buildBrRecoveryJG, buildBrRadarJG, buildBr37AAJG, buildBrBaileyJG } from '../models/brit14.js';
 
 const man = (o = {}) => () => buildWw2Soldier({ army: 'brit14', ...o });
 
@@ -58,4 +58,15 @@ export default function brit14(T) {
   set(T.ambulance, { model: buildBrJeepAmb, variant: { name: 'Jeep Ambulance', weapon: 'unarmed', text: 'A jeep with stretchers across its back: the only thing that got the wounded down the jungle tracks. Patches up the wounded nearby.' } });
   set(T.commandPost, { model: buildBrJeepCP, variant: { name: 'Brigade Command Jeep', weapon: 'No. 22 wireless set', text: 'Brigade headquarters in a jeep and a dugout: nearby squads hold longer and react faster.' } });
   set(T.recovery, { model: buildBrRecoveryJG, variant: { name: 'Recovery Lorry', weapon: 'crane, winch', text: 'The REME’s breakdown lorry with its jib: it gets knocked-out tanks moving again behind the line.' } });
+  set(T.bridgeLayer, { model: buildBrBaileyJG, variant: { name: 'Bailey Bridge Lorry', weapon: 'Bailey bridge', text: 'The sappers’ lorry stacked with Bailey panels: bolted together across the chaung, it takes a Lee — the bridges that carried the army back across the Chindwin.' } });
+
+  // ---- air defence: guns round the airfields the army lived from
+  set(T.sam, { model: buildBr37AAJG, variant: { name: '3.7-inch AA Gun', weapon: 'QF 3.7-inch AA', text: 'The heavy AA gun round the Imphal airfields, where the Dakotas landed everything the besieged army ate and fired: it reaches the bombers — and its shells go through a tank too.' } });
+  set(T.manpads, { variant: { name: 'AA Bren Team', weapon: 'Bren gun on its AA tripod', text: 'The Bren on its tall anti-aircraft tripod: a stream of .303 across the Oscars’ strafing run.' } });
+  set(T.airRadar, { model: buildBrRadarJG, variant: { name: 'Light Warning Set', weapon: 'unarmed', text: 'The RAF’s portable early-warning radar, its beam turning on a mast in the hills: no Japanese raid reaches the airfields unannounced.' } });
+
+  // (nothing in the other slots: in the hills of 1944 the reconnaissance regiments fought on foot and the armoured cars stayed on the
+  //  plain; no tank destroyers, flail or assault tanks went to Burma — the Lees did the bunker-busting and the sappers lifted mines by
+  //  hand; no rocket launchers, no self-propelled AA, no smoke companies; and no sound ranging in the jungle: guns there were found
+  //  by patrols and the air observation posts)
 }

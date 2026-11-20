@@ -15,7 +15,7 @@ import { buildUsPershing, buildSovIS2, buildWhPanther, buildFjTiger, buildUsM8, 
 
 import { SHIPS_1945 } from './ships.js';
 import { buildJpChiNu, buildJpHoI, buildJpHoHa, buildJpHaTo, buildJpLorryAA, buildJpLorry25, buildJpTachi6, buildJpSmoke, buildJpType88, buildJpSeri, buildJpBridge, buildJpSsKi } from '../models/jp45.js';
-import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell } from '../models/brit45.js';
+import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell, buildBrCrusaderCS, buildBrBishop, buildBrScorpion, buildBrBoforsPortee, buildBrGL, buildBr37AA } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
 import { ATLANTIC_WALL } from './atlanticWall.js';
 import brit21 from './brit21.js';
@@ -655,6 +655,21 @@ brit(recovery, { model: buildBrScammell, variant: { name: 'Scammell Pioneer', we
 brit(towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun of every British army: clips of heavy shells against the Stukas.' } });
 brit(ambulance, { model: buildBrAustinAmb, variant: { name: 'Austin K2 Ambulance', weapon: 'unarmed', text: 'The “Katy”: the field ambulance of the desert — patches up the wounded nearby.' } });
 brit(commandPost, { model: buildBrDorchester, variant: { name: 'Dorchester Command Vehicle', weapon: 'wireless sets', text: 'The armoured command vehicle — “Dorchester” after the hotel: brigade headquarters on wheels. Nearby squads hold longer and react faster.' } });
+brit(cev, { model: buildBrCrusaderCS, stats: { dozer: false, armor: 0.45, hp: 950, speed: 6.2, damage: 650, vsStructure: 1.8, splash: 4, fireCooldown: 5 }, cost: 0.75,
+  variant: { name: 'Crusader II CS', weapon: '3-inch howitzer', text: 'The close-support Crusader in the squadron headquarters: a short howitzer in place of the gun, for high explosive onto the anti-tank screen and smoke to cover the squadron. Stops to fire.' } });
+brit(spMortar, { model: buildBrBishop, stats: { armor: 0.4, hp: 900, speed: 3.4, damage: 230, splash: 6, range: 270, fireCooldown: 4, muzzleKind: 'artillery', traverse: 0.07 }, cost: 1.0,
+  variant: { name: 'Bishop', weapon: 'Ordnance QF 25-pdr', text: 'A 25-pounder in a tall steel box on a Valentine, rushed out for Second Alamein: slow and clumsy, but a field gun that keeps up with the infantry. It turns its hull to lay the gun.' } });
+brit(cbRadar, { variant: { name: 'Sound Ranging Troop', weapon: 'microphones, plotting board', text: 'The Royal Artillery’s survey gunners: a line of microphones across the desert times every enemy gun’s bang, and the gun is plotted for the 25-pounders. Needs 25 s to lay out.' } });
+brit(sam, { model: buildBr37AA, variant: { name: '3.7-inch AA Gun', weapon: 'QF 3.7-inch AA', text: 'The heavy AA gun of the base areas and the ports, brought up to cover the Alamein line: it reaches far up — and its shells go through a tank too.' } });
+brit(manpads, { variant: { name: 'AA Bren Team', weapon: 'Bren gun on its AA tripod', text: 'The section’s Bren on its tall anti-aircraft tripod: every company had them up against the Stukas and the strafing 109s.' } });
+brit(airRadar, { model: buildBrGL, variant: { name: 'GL Mk II', weapon: 'unarmed', text: 'The gun-laying radar with the heavy AA, its aerials turning on the cabin roof: it finds the raiders and puts the 3.7s onto them.' } });
+brit(gunMissile, { model: buildBrBoforsPortee, stats: { armor: 0.05, hp: 400 }, cost: 0.8,
+  variant: { name: 'Bofors Portée', weapon: '40 mm Bofors', text: 'The Bofors carried on a lorry bed and fired from it: no unhitching, it keeps up with the column across the desert. Unarmoured.' } });
+brit(mineClear, { model: buildBrScorpion, stats: { armor: 0.72, hp: 1300, speed: 2.6, damage: 180, range: 160, fireCooldown: 3 }, cost: 0.85,
+  variant: { name: 'Matilda Scorpion', weapon: 'flail, 2-pdr', text: 'An old Matilda with chains on a spinning drum out in front: on the first night of Alamein the Scorpions beat lanes through the Devil’s Gardens — slowly, in their own dust.' } });
+// (nothing in the other slots: no airborne at Alamein — the SAS raided by lorry and jeep after its one parachute drop failed in 1941;
+//  no rocket launchers, no self-propelled AA mount yet (the Crusader AA came in 1943), no rivers to bridge on the Alamein line (the Bailey
+//  bridge was first used in Tunisia), and the smoke came from the 25-pounders’ and the mortars’ smoke shells)
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,

@@ -5,16 +5,18 @@
 //            M113 with the Hägglunds 20 mm turret)
 //   USMC     M60A1 (the long needle-nose turret, the big M19 cupola) · AAV7A1 (the 26-tonne amphibious tractor,
 //            the .50 cal turret at the right front) · LAV-25 (the 8×8 with the 25 mm turret) · M198 155 mm on its
-//            split trail behind a 5-ton truck · the M151A2 jeep with a TOW
+//            split trail behind a 5-ton truck · the M151A2 jeep with a TOW · the M718A1 jeep ambulance
+//   Norway   (air defence) the 40 mm Bofors L/70 on its carriage behind a truck
 //   Korea    M48A5K (the turtle-shell M48 turret with the 105 mm and the low cupola) · KIFV (the aluminium
 //            carrier with its armoured .50 cal) · the jeep with the M40 106 mm recoilless rifle
 //   KPA      T-55 (plain, as the KPA has them) · Chonma-ho (the North's T-62: longer, the flatter dome, the
 //            115 mm with its fume extractor out along the barrel) · VTT-323 (the M1973 carrier with the
-//            14.5 mm turret) · Koksan M1978 (the 170 mm gun on an open mount at the back of a T-54 hull)
+//            14.5 mm turret) · Koksan M1978 (the 170 mm gun on an open mount at the back of a T-54 hull) · the
+//            S-125's 5P73 launcher (SA-3: four missiles on their beam, towed in)
 // NATO hulls are painted in parts with camo 1: each army's paint (RigRenderer ARMY_CAMO).
 import { P, merge, pair, grime } from '../units/geometry.js';
 import { planProfile, trackedHull, castTurret } from './vehicleCommon.js';
-import { vehicle, tracked, wheeled, towTruck, m113Hull } from './support.js';
+import { vehicle, tracked, wheeled, towTruck, m113Hull, cross } from './support.js';
 
 const OD = 0x4a5236;
 const OD_DK = 0x353b28;
@@ -331,6 +333,21 @@ export const buildRokJeep106 = vehicle(() => jeep([
   P.cyl(0.025, 0.025, 1.6, { y: 0.32, z: 0.6, rx: Math.PI / 2, color: STEEL }, 8),                            // the M8C spotting rifle
 ], [0, 0.15, 0], [0, 0.2, 2.2]));
 
+/** The M718A1 front-line ambulance: the M151 with its tail stretched for two litters under a canvas top, red crosses. */
+export const buildUsM718 = vehicle(() => {
+  const j = jeep([P.box(0.01, 0.01, 0.01)], [0, 0, 0], [0, 1.6, 0]);
+  return {
+    wheels: j.wheels,
+    hull: merge([
+      j.hull,
+      grime(merge([P.box(1.5, 0.9, 1.9, { y: 1.45, z: -0.7, color: OD_DK })]), 1.2, 1.9, 0.3),             // the canvas over the litters
+      ...cross({ x: 0.76, y: 1.45, z: -0.7 }),
+      ...cross({ x: -0.76, y: 1.45, z: -0.7 }),
+    ]),
+    muzzle: [0, 1.6, 0],
+  };
+});
+
 // ---------------------------------------------------------------- Korea
 
 /** M48A5K: the M48's boat-shaped cast hull, six road wheels and five return rollers, the big rounded
@@ -534,3 +551,58 @@ export const buildKpaKoksan = vehicle(() => ({
   marks: merge([...pair((s) => P.box(0.02, 0.22, 0.55, { x: s * 1.64, y: 1.2, z: 0.6 }))]),
 }));
 
+
+/** The 40 mm Bofors L/70 on its four-wheeled carriage, jacked down: the gun in its box of a shield, behind an OD truck. */
+export const buildNoBofors = vehicle(() => ({
+  hull: grime(merge([
+    P.box(1.6, 0.3, 3.0, { y: 0.55, color: OD, ...C }),
+    ...[-1.0, 1.0].flatMap((z) => pair((s) => tyre(s * 0.85, 0.42, z, 0.4, 0.25))),
+    ...[[-1, -1.4], [1, -1.4], [-1, 1.4], [1, 1.4]].map(([x, z]) => P.box(0.1, 0.4, 0.1, { x: x * 1.0, y: 0.25, z, color: STEEL })), // the outriggers' jacks
+  ]), 1, 0.3),
+  turret: {
+    geo: grime(merge([
+      P.cyl(0.7, 0.7, 0.15, { color: OD_DK }, 16),
+      P.box(1.4, 0.9, 1.3, { y: 0.55, z: -0.1, color: OD, ...C }),                                        // the shield box round the mount
+    ]), 0.8, 0, 0.3),
+    at: [0, 0.75, 0],
+  },
+  gun: {
+    geo: merge([
+      P.box(0.45, 0.45, 1.0, { color: OD_DK }),
+      P.cyl(0.05, 0.06, 3.0, { z: 1.9, rx: Math.PI / 2, color: STEEL }, 10),                                // 40 mm, L/70
+      P.cyl(0.08, 0.07, 0.3, { z: 3.45, rx: Math.PI / 2, color: STEEL }, 10),                               // flash hider
+      P.box(0.3, 0.35, 0.4, { y: 0.4, z: -0.2, color: OD }),                                               // the clip feed on top
+    ]),
+    at: [0, 1.0, 0.2],
+  },
+  muzzle: [0, 0, 3.6],
+  recoil: 0.15,
+  tow: { geo: grime(merge(towTruck({ color: OD, dark: OD_DK, length: 6.4, width: 2.4 })), 1, 0.3), hitch: 2.2 },
+  marks: merge([P.box(0.02, 0.2, 0.4, { x: 0.81, y: 0.65, z: 0.4 })]),
+}));
+
+/** The S-125's 5P73 launcher (SA-3): four missiles, two on each side of the beam, the boosters' big fins at the back. */
+export const buildKpaS125 = vehicle(() => ({
+  hull: grime(merge([
+    P.box(2.2, 0.35, 2.2, { y: 0.35, color: KPA }),                                                         // the launcher's base, set down
+    ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z]) => P.box(0.12, 0.45, 0.12, { x: x * 1.15, y: 0.22, z: z * 1.15, color: STEEL })),
+  ]), 1, 0.3),
+  turret: { geo: grime(merge([P.cyl(0.55, 0.6, 0.5, { y: 0.25, color: KPA_DK }, 14)]), 0.6, 0, 0.3), at: [0, 0.55, 0] },
+  gun: {
+    geo: merge([
+      P.box(2.4, 0.2, 0.5, { color: STEEL }),
+      ...[[-0.85, -0.2], [-0.85, 0.45], [0.85, -0.2], [0.85, 0.45]].flatMap(([x, y]) => [
+        P.cyl(0.15, 0.15, 3.4, { x, y, z: 0.9, rx: Math.PI / 2, color: 0xb8b8a8 }, 10),                    // the sustainer
+        P.cone(0.15, 0.5, { x, y, z: 2.85, rx: Math.PI / 2, color: 0xb8b8a8 }, 10),
+        P.cyl(0.2, 0.2, 1.1, { x, y, z: -1.3, rx: Math.PI / 2, color: 0x9a9a8a }, 10),                     // the booster
+        ...[0, 1, 2, 3].map((k) => P.box(0.02, 0.6, 0.55, { x: x + Math.sin(k * 1.57) * 0.25, y: y + Math.cos(k * 1.57) * 0.25, z: -1.7, rz: k * 1.57, color: 0x9a9a8a })),
+      ]),
+    ]),
+    at: [0, 0.75, 0],
+    pitch: 0.5,
+  },
+  muzzle: [0, 0.45, 3.1],
+  recoil: 0,
+  tow: { geo: grime(merge(towTruck({ color: KPA, dark: KPA_DK, length: 7.0, width: 2.5, bonnet: 'round' })), 1, 0.4), hitch: 1.9 },
+  marks: merge([P.box(0.02, 0.25, 0.4, { x: 1.11, y: 0.4, z: 0.4 })]),
+}));

@@ -422,7 +422,7 @@ const commandPost = derive(T.commandPost, {
 
 mineClear.specialist = undefined;      // (the wire cutters: no flamethrower among them)
 mineClear.specialistModels = undefined;
-const FRONTS = fronts({ rifles, mgTeam, artillery, spMortar, rockets, mortar, observers, ifv, looseHorse, dismounted, reconVehicle, crew, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, commandPost }); // Italy, the east, the Middle East (./fronts.js)
+const FRONTS = fronts({ rifles, mgTeam, tank, heavyTank, artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar, ifv, looseHorse, dismounted, reconVehicle, crew, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost }); // Italy, the east, the Middle East (./fronts.js)
 
 export const TYPES_1918 = {
   rifles, mgTeam, marines, sailors, tank, heavyTank, reconVehicle, crew,

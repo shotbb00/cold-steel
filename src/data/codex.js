@@ -325,6 +325,8 @@ const HISTORY85 = {
     'air:heli': 'Norway had no attack helicopters. In war the US Marines’ 4th Marine Amphibious Brigade, whose heavy equipment was to be stored in Trøndelag under a 1981 agreement, would bring its own.',
     'air:jet': 'Norway’s first F-16s arrived in 1980, replacing the Starfighters and F-5s of the fighter-bomber squadrons.',
     'air:lift': 'The UH-1B served the Norwegian Air Force from the 1960s until the Bell 412 replaced it from 1987.',
+    towedAA: 'The Army’s own air defence in the north moved to the RBS 70 at the end of the 1970s; the Air Force’s 40 mm L/70 batteries, bought from 1966, kept guarding the airfields.',
+    spMortar: 'In the 1980s Norway rebuilt 28 of its M106 4.2-inch carriers to take the 81 mm mortar as the NM95, and bought a dozen M125s.',
   },
   usmc: {
     rifles: 'The 4th Marine Amphibious Brigade was earmarked to reinforce Norway; from the late 1970s its battalions trained there every winter, learning to live and fight in the cold.',
@@ -347,6 +349,10 @@ const HISTORY85 = {
     'air:heli': 'The AH-1T SeaCobra, the Marines’ stretched and more powerful Cobra, was delivered from 1977 and made TOW-capable; the AH-1W SuperCobra followed in 1986.',
     'air:jet': 'The AV-8B Harrier II, a McDonnell Douglas and British Aerospace redesign with a bigger composite wing, entered Marine service in 1985.',
     'air:lift': 'The CH-46 Sea Knight flew the Marines from Vietnam until 2015; the E model of the late 1970s had more powerful engines and crash-resistant seats.',
+    sam: 'The Marines’ Light Anti-Aircraft Missile battalions flew the Improved HAWK; a battery went with each amphibious brigade.',
+    airRadar: 'The AN/MPQ-50 pulse acquisition radar was the HAWK battery’s search radar.',
+    cbRadar: 'The AN/TPQ-36 Firefinder, built for the Army and the Marines, reached the Marines’ artillery regiments in the early 1980s.',
+    ambulance: 'The M718A1, the M151 jeep lengthened to carry litters, was the front-line ambulance of the Army and the Marines until the Humvee.',
   },
   rok: {
     rifles: 'South Korea kept some 520,000 men in its army in 1985, conscripts serving about two and a half years, most of them facing north.',
@@ -372,6 +378,10 @@ const HISTORY85 = {
     'air:heli': 'Korean Air built the 500MD under licence from 1976; the TOW version gave the ROK Army a tank-killing helicopter that could hide among the hills.',
     'air:jet': 'Korean Air built the F-5E/F from 1982 as the Jegongho — “air supremacy”.',
     'air:lift': 'The UH-1H was the ROK Army’s transport helicopter; the Korean divisions in Vietnam had known it well.',
+    manpads: 'The FIM-43 Redeye reached South Korea in the mid-1970s; the British Javelin followed after 1986.',
+    heavyTank: 'The K1, designed with General Dynamics on the lines of the Abrams, came off Hyundai’s line from 1985 and reached the units in 1986–87 as the “88 Tank”, after the Seoul Olympics.',
+    sam: 'Until July 1991 the ROK Army, not the Air Force, manned South Korea’s HAWK and Nike Hercules batteries.',
+    airRadar: 'The pulse acquisition radar of the ROK Army’s HAWK batteries.',
   },
   kpa: {
     rifles: 'The Korean People’s Army was among the largest in the world in 1985, some 750,000 men or more, most of them deployed close to the DMZ.',
@@ -397,6 +407,11 @@ const HISTORY85 = {
     'air:heli': 'The North’s Mi-24D Hinds came from the Soviet Union in the 1980s.',
     'air:jet': 'The Su-7BMK came to the North in the 1970s: an old fighter-bomber, but heavily armed.',
     'air:lift': 'The Mi-8 was the KPA’s transport helicopter. In 1985 the North also smuggled in 87 American Hughes 500s through a West German dealer.',
+    airRadar: 'The P-15 Flat Face, the Soviet low-level search radar on a truck, was the eyes of the North’s air defence.',
+    sam: 'The Soviet Union began delivering the S-125 (SA-3) to the North in 1985, with the MiG-23: a dated design, but a real step up over the old S-75s.',
+    spMortar: 'The 120 mm M1943 mortar, copied from the Soviet weapon, was the heavy mortar of the KPA’s regiments.',
+    recovery: 'The North rebuilt its obsolete T-34s and then T-54/55s as recovery tanks, bridge layers and mine clearers.',
+    mineClear: 'Mine rollers on T-54/55s, after the Soviet KMT pattern: the DMZ is one of the most heavily mined strips of ground in the world.',
   },
 };
 for (const [army, lines] of Object.entries(HISTORY85)) for (const [id, line] of Object.entries(lines)) CODEX[id][army] = line;
@@ -681,6 +696,7 @@ export const CODEX45 = {
     nato: 'US chemical smoke generator companies screened river crossings, bridges and ports from 1943 with M1 and M2 fog-oil generators.',
     sov: 'The Red Army screened its river crossings, the Dnieper among them, with smoke generators and smoke pots.',
     pact: 'The Wehrmacht\'s Nebeltruppen — the smoke troops — laid screens over crossings and positions as well as firing the Nebelwerfer.',
+    brit21: 'The Pioneer Corps’ smoke companies screened bridges and river crossings; before the Rhine crossing in March 1945 they kept a screen tens of miles long standing for days along the west bank.',
     armies: {
       fj: {
         use: 'A supply point on wheels. Set it up (four seconds) behind your line: squads within 60 m can take in new men there (Refill) and get their grenades and Panzerfausts back four times faster. Keep it near the fighting but out of the enemy\'s sight.',
