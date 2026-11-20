@@ -5,7 +5,7 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
 import { showQR, scanQR } from './SaveQR.js';
 import { aiTurn } from '../wcampaign/ai.js';
@@ -527,14 +527,24 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const provs = Object.keys(war.provinces).filter((k) => war.provinces[k].theatre === tid);
       const n = provs.filter((k) => c.provinces[k].owner === 'nato').length, q = provs.length - n;
       const forces = (sd) => c.forces.filter((f) => f.side === sd && theatreOf(f.at) === tid).length;
+      // reserves for this front: the battles here draw on your production stockpile; the priority sets how much
+      const prioBox = el('div', 'wc-prio-box');
       const prio = el('div', 'seg wc-prio');
-      prio.title = 'Priority: how much of your reserves this theatre’s battles draw (the AI sets its own)';
       for (const [name, k] of Object.entries(PRIORITY)) prio.append(btn(name, (c.priority[me][tid] ?? 1) === k ? 'on' : '', () => { c.priority[me][tid] = k; render(); }));
-      const obj = (war.objectives ?? []).filter((o) => o.theatre === tid).map((o) => {
-        const s = c.objectives?.[o.id] ?? {}, who = (x) => (x === 'nato' ? 'Allies' : 'Axis');
-        return `<span class="wc-line wc-obj">★ ${esc(o.name)} — ${s.won ? `secured by the ${who(s.won)}` : s.holder ? `${who(s.holder)} ${s.turns}/${o.hold} turns` : `${s.start ? `the ${who(s.start)}’ to lose` : 'open'} · hold ${o.hold} turns: +${o.morale} morale`}</span>`;
-      }).join('');
-      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(tid)), prio);
+      prioBox.append(el('span', 'wc-prio-label', 'Reserves for this front'), prio,
+        el('small', 'wc-prio-what', `Each battle here can draw about <b>${Math.round(reserves(c, me, tid)).toLocaleString('en')}</b> power from your production stockpile as reinforcements. High: more here (it costs the stockpile more); Low: save it for other fronts.`));
+      // the objectives, from your side: what is happening, and what to do about it
+      const mine = (x) => x === me, them = enemy(me) === 'pact' ? 'the Axis' : 'the Allies';
+      const objLines = (war.objectives ?? []).filter((o) => o.theatre === tid).map((o) => {
+        const st2 = c.objectives?.[o.id] ?? {}, left = o.hold - (st2.turns ?? 0);
+        const what = st2.won ? (mine(st2.won) ? `✓ secured by you — +${o.morale} morale for good` : `✗ secured by ${them} — they gained +${o.morale} morale`)
+          : st2.holder ? (mine(st2.holder) ? `yours — hold ${left} more turn${left === 1 ? '' : 's'} (${st2.turns} of ${o.hold}) for +${o.morale} morale` : `${them} took it — ${left} more turn${left === 1 ? '' : 's'} and they gain +${o.morale} morale: take it back`)
+          : mine(st2.start) ? `yours from the start — if ${them} take it and hold it ${o.hold} turns, they gain +${o.morale} morale`
+          : `held by ${them} — take it and hold it ${o.hold} turns in a row: +${o.morale} morale for you`;
+        return `<span class="wc-line wc-obj">★ <b>${esc(o.name)}</b>: ${what}</span>`;
+      });
+      const obj = objLines.length ? `<span class="wc-line wc-obj-head">Objectives — places worth morale. A side at 0 morale sues for peace.</span>${objLines.join('')}` : '';
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(tid)), prioBox);
     }
     d.append(el('h3', 'menu-sub', 'Dispatches'));
     const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);

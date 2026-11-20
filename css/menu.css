@@ -699,3 +699,11 @@
 .wc-chip { background: none; border: 1px solid var(--line); color: var(--muted); font: 12.5px var(--font-ui); padding: 3px 8px; cursor: pointer; }
 .wc-chip.on { color: var(--text); border-color: var(--gold); background: rgba(224, 180, 90, 0.12); }
 .wc-build { align-self: flex-start; padding: 4px 10px; }
+
+/* the theatre card's objectives and reserves, explained (ui/WarRoom.js) */
+.wc-obj-head { color: var(--gold); font-size: 12px; margin-top: 4px; }
+.wc-obj b { color: var(--text); font-weight: 600; }
+.wc-prio-box { display: flex; flex-direction: column; gap: 4px; margin: -4px 0 8px; width: 100%; }
+.wc-prio-label { font-size: 12px; color: var(--gold); letter-spacing: 0.04em; }
+.wc-prio-what { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.wc-prio-what b { color: var(--text); }
