@@ -11,7 +11,7 @@
 import { VERSION } from './engine.js';
 
 const PREFIX = 'CS1';
-export const QR_PIECE = 1800;     // characters a QR code (version ~30, error level L) holds comfortably
+export const QR_PIECE = 900;      // characters a QR code holds while a phone camera still reads it off another screen (version ~22, error level L)
 const AUTOSAVES = 3;
 
 /** FNV-1a over the JSON: 8 hex digits. */

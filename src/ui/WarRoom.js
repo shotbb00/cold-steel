@@ -7,6 +7,7 @@
 import { WW2 } from '../wcampaign/wars/ww2.js';
 import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
+import { showQR, scanQR } from './SaveQR.js';
 import { aiTurn } from '../wcampaign/ai.js';
 import { fightable, battleChoice, takeResult, clearResult, outcomeOf } from '../wcampaign/battle.js';
 import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } from '../wcampaign/save.js';
@@ -37,7 +38,7 @@ export class WarRoomPanel {
     this.onOpen = onOpen;
     this.back = this.applyResult(); // (a battle just fought: its result into the campaign, then straight back to the war room)
     this.root = el('div', 'campaign wc-start');
-    this.choice = { scenario: '1942', side: 'nato' };
+    this.choice = { scenario: '1942', side: 'nato', difficulty: 1 };
     this.render();
   }
 
@@ -80,9 +81,15 @@ export class WarRoomPanel {
       const card = btn(`<b>${SIDE[f]}</b><span>${f === 'nato' ? 'Britain, the Soviet Union and the United States' : 'Germany and Japan'}</span>`, `card ${f}${this.choice.side === f ? ' on' : ''}`, () => { this.choice.side = f; for (const o of sides.children) o.classList.toggle('on', o === card); });
       sides.append(card);
     }
-    r.append(sc, sides);
+    const diff = el('div', 'seg');
+    diff.title = 'The enemy’s edge in every battle’s result';
+    for (const [label, k] of [['Easy', 0.85], ['Normal', 1], ['Hard', 1.2]]) {
+      const b = btn(label, this.choice.difficulty === k ? 'on' : '', () => { this.choice.difficulty = k; for (const o of diff.children) o.classList.toggle('on', o === b); });
+      diff.append(b);
+    }
+    r.append(sc, sides, el('h3', 'menu-sub', 'Difficulty'), diff);
     const go = el('div', 'deploy-row');
-    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { scenario: this.choice.scenario, side: this.choice.side, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
+    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { scenario: this.choice.scenario, side: this.choice.side, difficulty: this.choice.difficulty, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
     r.append(go);
     // from another device: the code, or the file
     r.append(el('h3', 'menu-sub', 'Continue from another device'));
@@ -96,7 +103,7 @@ export class WarRoomPanel {
     const load = async (text) => { try { this.onOpen(arm(await decode(text))); } catch (e) { msg.textContent = e.message; } };
     file.addEventListener('change', async () => { if (file.files[0]) load(await file.files[0].text()); });
     const row = el('div', 'deploy-row');
-    row.append(btn('Load the code', 'mp-btn', () => load(area.value)), btn('Open a save file', 'mp-btn', () => file.click()), file);
+    row.append(btn('Load the code', 'mp-btn', () => load(area.value)), btn('Open a save file', 'mp-btn', () => file.click()), btn('Scan QR codes', 'mp-btn', () => scanQR((code) => load(code))), file);
     r.append(area, row, msg);
   }
 }
@@ -535,7 +542,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const code = await encode(c);
     const pieces = toPieces(code);
     box.append(el('span', 'cp-kicker', 'Save'), el('h3', '', 'Continue on another device'));
-    box.append(el('p', 'cp-hint', `The war is saved in this browser after every turn. To go on elsewhere, take it along as a code (${(code.length / 1024).toFixed(1)} KB) or a file, and load it in the Campaign tab there. (QR codes: ${pieces.length} of them — showing them comes next.)`));
+    box.append(el('p', 'cp-hint', `The war is saved in this browser after every turn. To go on elsewhere, take it along as a code (${(code.length / 1024).toFixed(1)} KB) or a file, and load it in the Campaign tab there — or show the ${pieces.length} QR code${pieces.length === 1 ? '' : 's'} below to the other device’s camera (Campaign tab: Scan QR codes).`));
     const area = el('textarea', 'wc-code');
     area.value = code;
     area.readOnly = true;
@@ -544,6 +551,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     row.append(btn('Copy the code', 'mp-btn', async () => { try { await navigator.clipboard.writeText(code); msg.textContent = 'Copied.'; } catch { area.select(); msg.textContent = 'Select and copy it.'; } }),
       btn('Save as a file', 'mp-btn', () => saveFile(c)), btn('Close', 'deploy', () => modal.remove()));
     box.append(area, row, msg);
+    showQR(box, code);
     modal.append(box);
     room.append(modal);
   }
