@@ -35,7 +35,7 @@ export class LandingDirector extends FrontlineDirector {
     if (due && !this.lands) this.strikeShips(); // (before the buying spends it all: the landing ships are the defence's best target)
     super.update(dt);
     if (!due) return;
-    if (this.lands) { this.pickFocus(); this.ships(); this.engineers(); this.stayInshore(); } else this.reserves();
+    if (this.lands) { this.pickFocus(); this.ships(); this.sweep(); this.engineers(); this.stayInshore(); } else this.reserves();
   }
 
   /** The destroyers stay on their stations until they sink (pulled out to mend, they'd go back out through the mines). */
@@ -43,6 +43,7 @@ export class LandingDirector extends FrontlineDirector {
     const sign = Math.sign(this.game.map.bases[this.faction].z) || 1, band = this.game.map.landing?.seaMines?.z;
     if (!band) return;
     for (const s of this.fleet) {
+      if (s.stats.sweeper) continue; // (the minesweeper's own course: sweep())
       if (!s.inshoreAt && s.type.id !== this.ai.heavy && !s.owner) { s.offing ??= { x: s.centroid.x, z: s.centroid.z }; if (s.moveTarget && Math.hypot(s.moveTarget.x - s.offing.x, s.moveTarget.z - s.offing.z) > 40) s.ai.halt(); continue; } // (waiting in the offing: there, not wandering)
       if (s.type.id === this.ai.heavy && !s.owner) { // (the old battleship: out in the transport area, her guns reach the bluffs from there)
         const off = { x: 0, z: sign * (band[1] + 230) };
@@ -96,6 +97,8 @@ export class LandingDirector extends FrontlineDirector {
     // the ships first, when there's room: two destroyers inshore, the battleship once
     const { gunship, heavy, order } = this.ai;
     if (ships.filter((s) => s.type.id === gunship).length < this.ai.gunships && allowed(gunship) && cp >= cost(gunship) + 250) { this.state.buy(f, gunship); return; }
+    const sw = this.ai.sweeper; // (a map's minesweeper: one at a time, once the gunships are bought — she widens the focus sector's lane)
+    if (sw && this.game.map.landing?.seaMines && !ships.some((s) => s.type.id === sw) && ships.some((s) => s.type.id === gunship) && allowed(sw) && cp >= cost(sw) + 250) { this.state.buy(f, sw); return; }
     if (heavy && this.now > 300 && !ships.some((s) => s.type.id === heavy) && allowed(heavy) && cp >= cost(heavy) + 800) { this.state.buy(f, heavy); return; } // (once the troops are ashore and there's CP to spare)
     for (let tries = 0; tries < order.length; tries++) {
       const id = order[this.orderIndex % order.length];
@@ -121,6 +124,28 @@ export class LandingDirector extends FrontlineDirector {
       s.inshoreAt = { x: lane + off, z: sign * inshore }; // (not s.station: that's a ship's place in a formation)
       s.ai.moveTo(s.inshoreAt, { hold: true, ordered: false }); // (systems/Landing.js pilot: by the lane through the mines)
     });
+  }
+
+  /**
+   * The minesweeper: up and down beside the focus sector's lane, one side then the other — her sweep cuts the mines
+   * either side of it (systems/Landing.js), so the lane grows wide enough for the ships to manoeuvre in.
+   */
+  sweep() {
+    const band = this.game.map.landing?.seaMines?.z;
+    if (!this.focus || !band) return;
+    const sign = Math.sign(this.game.map.bases[this.faction].z) || 1;
+    const lanes = this.game.map.landing.seaMines.lanes ?? [this.focus.p.x], half = (this.game.map.landing.seaMines.lane ?? 80) / 2;
+    const lane = lanes.reduce((a, x) => (Math.abs(x - this.focus.p.x) < Math.abs(a - this.focus.p.x) ? x : a), lanes[0]);
+    for (const s of this.fleet) {
+      if (!s.stats.sweeper || s.owner) continue;
+      this.roles.delete(s);
+      const leg = (n) => ({ x: lane + (n % 4 < 2 ? -1 : 1) * (half + s.stats.sweeper * 0.55), z: sign * (n % 2 === 0 ? band[0] - 30 : band[1] + 60) }); // (in on the left, out, in on the right, out)
+      if (s.sweepLane !== lane) { s.sweepLane = lane; s.sweepLeg = 0; }
+      const at = leg(s.sweepLeg);
+      if (Math.hypot(s.centroid.x - at.x, s.centroid.z - at.z) < 40) s.sweepLeg++;
+      const to = leg(s.sweepLeg);
+      if (!s.moveTarget || Math.hypot(s.moveTarget.x - to.x, s.moveTarget.z - to.z) > 20) s.ai.moveTo(to, { hold: true, ordered: false });
+    }
   }
 
   /** Engineers ashore: the tank traps on the shingle and across the draw of the focus sector (then the next sector's). */

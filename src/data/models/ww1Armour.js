@@ -485,3 +485,41 @@ export const buildFordPatrol = car('fordPatrol', {
   gun: [P.cyl(0.045, 0.04, 0.7, { z: 0.35, rx: Math.PI / 2, color: 0x2f3128 }, 8), P.cyl(0.1, 0.1, 0.03, { y: 0.07, z: 0.05, color: STEEL }, 12)], // the Lewis, its pan
   turretAt: [0, 1.75, -0.45], gunAt: [0, 0.05, 0.1], muzzle: 0.72,
 });
+
+/** Fiat 2000: 7.4 m, 40 t — a riveted casemate over its tracks, the 65 mm in a domed turret on top, machine guns in ball mounts all round. */
+export const buildFiat2000 = (mats) => rig(once('fiat2000', () => {
+  const gear = runningGear({ halfWidth: 1.15, length: 6.2, wheels: 10, wheelR: 0.2, sprocket: 1, rollers: 0, trackWidth: 0.5, wheelColor: IT_DK });
+  return {
+    gear, wheel: roadWheelGeometry(0.2, 0.3, IT_DK),
+    hull: grime(merge([
+      ...gear.parts,
+      plated([[-3.7, 0.55, 1.45, 1.55, 1.2, 1.5, 2.6], [3.2, 0.55, 1.45, 1.55, 1.2, 1.5, 2.6], [3.7, 0.9, 1.35, 1.45, 1.4, 1.35, 2.35]], { color: IT, ...C }), // the casemate, skirted to the tracks
+      plated([[2.4, 2.55, 0.7, 0.7, 2.75, 0.6, 3.0], [3.4, 2.4, 0.7, 0.7, 2.6, 0.55, 2.85]], { color: IT, ...C }),                                    // the driver's cab at the front
+      slit(0, 2.75, 3.42, 0.6),
+      ...pair((sd) => [[0.9, 1.55], [2.0, 1.55]].flatMap(([y, x]) => rivets(sd * x, y, -3.5, 3.1, IT_DK, 0.3))).flat(),
+      ...pair((sd) => [-2.2, -0.6, 1.2].flatMap((z) => [P.sphere(0.14, { x: sd * 1.55, y: 1.7, z, sx: 0.6, color: IT_DK }, 8, 6), P.cyl(0.035, 0.04, 0.4, { x: sd * 1.75, y: 1.7, z, rz: Math.PI / 2 * sd, color: STEEL }, 8)])).flat(), // six MGs in the sides
+      P.sphere(0.14, { y: 1.7, z: -3.72, sz: 0.6, color: IT_DK }, 8, 6),                                                                                 // the seventh, in the tail
+      ...pair((sd) => door(sd * 1.55, 1.3, 0.3, 0.8, 1.0, IT_DK)).flat(),
+    ]), 1.3, 0.3),
+    turret: grime(merge([
+      P.cyl(0.95, 1.0, 0.35, { y: 0.17, color: IT, ...C }, 16),
+      P.sphere(0.95, { y: 0.35, sy: 0.7, color: IT, ...C }, 16, 8),                                     // the dome
+    ]), 0.6, 0.0, 0.3),
+    gun: merge([P.cyl(0.06, 0.07, 1.1, { z: 0.55, rx: Math.PI / 2, color: STEEL }, 10)]),            // the 65/17
+  };
+}), mats, { turretAt: [0, 2.6, 0.2], gunAt: [0, 0.55, 0.75], muzzle: 1.12, recoil: 0.1 });
+
+/** Garford-Putilov: 5.7 m, 11 t on a Garford lorry chassis — a high armoured body, a Maxim in each side, the 76 mm in a turret at the back (270°). */
+export const buildGarfordPutilov = car('garford', {
+  color: RU, dark: RU_DK, length: 5.7, width: 2.3, wheelR: 0.5, track: 0.95, base: [1.9, -1.6],
+  body: [
+    plated([[0.8, 0.8, 0.5, 0.5, 1.25, 0.4, 1.5], [2.5, 0.8, 0.48, 0.48, 1.2, 0.34, 1.38], [2.8, 0.8, 0.46, 0.46, 1.12, 0.3, 1.28]], { color: RU, ...C }), // the bonnet
+    plated([[-2.8, 0.8, 1.05, 1.1, 1.6, 0.95, 2.2], [0.8, 0.8, 1.08, 1.12, 1.65, 0.98, 2.35]], { color: RU, ...C }),       // the body
+    P.box(1.6, 0.32, 0.05, { y: 2.15, z: 0.82, rx: -0.3, color: RU_DK }), slit(0, 2.15, 0.83, 0.6),
+    ...pair((s) => [P.box(0.3, 0.5, 0.6, { x: s * 1.18, y: 1.75, z: -0.2, color: RU, ...C }), P.cyl(0.05, 0.05, 0.5, { x: s * 1.45, y: 1.8, z: -0.2, rz: Math.PI / 2, color: STEEL }, 8)]).flat(), // the side Maxims in their sponsons
+    ...pair((sd) => door(sd * 1.1, 1.3, 0.2, 0.6, 0.7, RU_DK)).flat(),
+  ],
+  turret: [P.cyl(0.8, 0.85, 0.75, { y: 0.37, color: RU, ...C }, 14)],
+  gun: [P.cyl(0.065, 0.07, 1.0, { z: 0.5, rx: Math.PI / 2, color: STEEL }, 10)],                                          // the short 76 mm
+  turretAt: [0, 2.35, -1.6], gunAt: [0, 0.4, 0.8], muzzle: 1.0, arc: 2.35,
+});

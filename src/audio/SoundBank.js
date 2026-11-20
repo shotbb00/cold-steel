@@ -525,15 +525,19 @@ function shipEngine(ctx) {
   });
 }
 
-/** A hovercraft (loop, the Aist): her four big air propellers' thrum, the gas turbines' whine over it, the rush of the cushion under her. */
-function hoverEngine(ctx) {
+/**
+ * A hovercraft (loop): her big air propellers' thrum, the gas turbines' whine over it, the rush of the cushion under her.
+ * The Aist (default): four propellers, fourteen beats a second. The Zubr (`big`): three huge ducted propellers turning
+ * slower — a deeper, heavier beat — five gas turbines screaming lower and louder, and a far bigger cushion roaring under her.
+ */
+function hoverEngine(ctx, { prop = 55, beats = 7, whine = 1450, whineGain = 0.06, cushion = 600, cushionGain = 1.6 } = {}) {
   let ph = 0, wph = 0, lp = 0;
   return seamless(ctx, 2, (t, sr) => {
-    ph += (TAU * 55) / sr;                                     // the propellers
-    wph += (TAU * 1450) / sr;                                  // the turbines
-    const beat = 0.6 + 0.4 * Math.abs(Math.sin(TAU * 7 * t)); // the blades going round: fourteen beats a second
-    lp += lpCoef(600, sr) * (Math.random() * 2 - 1 - lp);     // the air blasting out under the skirt
-    return (Math.sin(ph) * 0.45 + Math.sin(ph * 2) * 0.25) * beat + Math.sin(wph) * 0.06 + lp * 1.6;
+    ph += (TAU * prop) / sr;                                       // the propellers
+    wph += (TAU * whine) / sr;                                     // the turbines
+    const beat = 0.6 + 0.4 * Math.abs(Math.sin(TAU * beats * t)); // the blades going round
+    lp += lpCoef(cushion, sr) * (Math.random() * 2 - 1 - lp);     // the air blasting out under the skirt
+    return (Math.sin(ph) * 0.45 + Math.sin(ph * 2) * 0.25) * beat + Math.sin(wph) * whineGain + lp * cushionGain;
   });
 }
 
@@ -980,6 +984,7 @@ export function soundDefinitions(ctx) {
     klaxon: () => klaxon(ctx),
     'engine.ship': () => shipEngine(ctx),
     'engine.hover': () => hoverEngine(ctx),
+    'engine.hoverBig': () => hoverEngine(ctx, { prop: 38, beats: 4, whine: 1100, whineGain: 0.09, cushion: 420, cushionGain: 2.1 }), // (the Zubr)
     'engine.oars': () => oars(ctx),
     'bosun.pipe': () => bosunPipe(ctx),
     'whistle': () => trenchWhistle(ctx),

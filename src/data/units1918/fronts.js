@@ -10,7 +10,8 @@
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildAmbulanceUK, buildAmbulanceOT, buildAmbulanceIT, buildAmbulanceAH, buildAmbulanceRU, buildStaffCarOT, buildStaffCarAU, buildStaffCarIT, buildStaffCarAH, buildStaffCarRU,
-  buildAALorryIT, buildAALorryRU, buildLanciaAC, buildAustinAC, buildFordPatrol } from '../models/ww1Armour.js';
+  buildAALorryIT, buildAALorryRU, buildLanciaAC, buildAustinAC, buildFordPatrol,
+  buildAALorryDE, buildBalloonFR, buildBalloonDE, buildSupplyLorryFR, buildRenaultFT, buildEhrhardtAC, buildFiat2000, buildGarfordPutilov } from '../models/ww1Armour.js';
 
 const SIDE = { ot: 'pact', anzac: 'nato', it: 'nato', ah: 'pact', ru: 'nato' };
 const man = (army, o = {}) => () => buildWw1Soldier({ army, ...o });
@@ -25,7 +26,10 @@ const give = (t, army, { variant, model, special, stats, cost }) => {
 };
 
 export default function fronts(T) {
-  const { rifles, mgTeam, artillery, spMortar, rockets, mortar, observers, ifv, looseHorse, dismounted, reconVehicle, crew, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, commandPost } = T;
+  const { rifles, mgTeam, tank, heavyTank, artillery, spMortar, rockets, mortar, observers, cbRadar, airRadar, ifv, looseHorse, dismounted, reconVehicle, crew, atTeam, sniper, scouts, engineers, mineClear, aa, manpads, ambulance, recovery, commandPost } = T;
+  const MEDIUM_MW = rockets.factionStats.st;   // (the medium trench mortar: the Sturmtruppen's 17 cm numbers)
+  const LORRY = { armor: 0.05, hp: 360, speed: 5.5, breakdown: undefined, ditch: undefined };   // (a workshop lorry, not Britain's supply tank)
+  const CANNON = { weapon: 'cannon', weaponSound: undefined, antiArmor: true, vsArmor: 1, magSize: 40, boltSize: 1.4 };
 
   // ---------------------------------------------------------------- the two types of the other fronts
   const stormTroops = {
@@ -66,6 +70,12 @@ export default function fronts(T) {
   give(scouts, 'ot', { model: man('ot', { scout: true, hat: 'kalpak' }), variant: { name: 'Keşif Kolu', weapon: 'carbines, binoculars', text: 'The scouts: they know the wadis and the hills, and see the enemy coming long before he sees them.' } });
   give(engineers, 'ot', { special: man('ot'), variant: { name: 'İstihkam', weapon: 'Mauser, picks, wire', text: 'The Ottoman sappers: trenches, wire and the redoubts of the Gaza–Beersheba line.' } });
   give(ambulance, 'ot', { model: buildAmbulanceOT, variant: { name: 'Hilal-i Ahmer Ambulance', weapon: 'unarmed', text: 'The Red Crescent\'s motor ambulance: wounded men near it are patched up and go back to the line.' } });
+  give(rockets, 'ot', { stats: MEDIUM_MW, variant: { name: 'Mittlerer Minenwerfer', weapon: '17 cm medium trench mortar (German crew)', text: 'The German Minenwerfer companies sent east, to Gallipoli and with Pasha I to the Gaza line: a heavy bomb lobbed short into the enemy trench.' } });
+  give(mineClear, 'ot', { variant: { name: 'Tel Kesme Kolu', weapon: 'explosive charges, wire cutters', text: 'Sappers with long charges and wire cutters, German-trained: a lane through the enemy wire for the assault (X). Three charges.' } });
+  give(aa, 'ot', { model: buildAALorryDE, variant: { name: 'K-Flak', weapon: '7.7 cm K-Flak on a lorry (German crew)', text: 'A German anti-aircraft gun on a lorry, sent with the Yıldırım army group to keep the British aircraft off the Gaza line.' } });
+  give(manpads, 'ot', { variant: { name: 'Uçaksavar Takımı', weapon: 'MG 08 on an AA mount', text: 'A machine gun on a high mount, pointed at the sky: keeps the British reconnaissance aircraft high.' } });
+  // left empty: tank, heavyTank, reconVehicle and recovery — the Ottoman Army had no tanks or armoured cars, so nothing to mend either;
+  // cbRadar, airRadar — no sound ranging or kite balloons on its fronts (its eyes were the German aircraft of Pasha); atTeam — no anti-tank weapon reached Palestine
   give(commandPost, 'ot', { model: buildStaffCarOT, variant: { name: 'Karargâh', weapon: 'staff car, field telephones', text: 'The division\'s headquarters: the reinforcements come forward to it.' } });
 
   // ---------------------------------------------------------------- the ANZACs
@@ -86,6 +96,11 @@ export default function fronts(T) {
   give(engineers, 'anzac', { variant: { name: 'Field Company', weapon: 'SMLE, picks, wire', text: 'The engineers: they dig, put up wire and clear it, and find water in the desert.' } });
   give(manpads, 'anzac', { variant: { name: 'Lewis AA Team', weapon: 'Lewis gun on a post mount', text: 'A Lewis gun on a post, pointed at the sky: keeps the German Taubes off the trench.' } });
   give(ambulance, 'anzac', { model: buildAmbulanceUK, variant: { name: 'Field Ambulance', weapon: 'unarmed', text: 'A motor ambulance of the field ambulance: wounded men near it are patched up and go back to the line.' } });
+  give(rockets, 'anzac', { variant: { name: '9.45-inch Mortar', weapon: '9.45 in trench mortar', text: 'Each Australian division had its heavy trench mortar battery: the "Flying Pig", a huge bomb that flattens wire and dugouts at short reach.' } });
+  give(cbRadar, 'anzac', { variant: { name: 'Sound Ranging Section', weapon: 'Tucker microphones, plotting board', text: 'Sound ranging was an Adelaide man’s work: Lawrence Bragg’s microphones time the bang of each enemy gun, and the plot puts your guns on it. Needs 25 s to lay out.' } });
+  give(mineClear, 'anzac', { variant: { name: 'Bangalore Team', weapon: 'Bangalore torpedoes, wire cutters', text: 'Sappers of the field company with lengths of pipe packed with explosive: pushed under the wire and fired, a lane for the assault (X). Three charges.' } });
+  // left empty: tank, heavyTank — the tanks the Australians fought beside (Gaza, Hamel, Amiens) were the British Tank Corps’, never their own; recovery — nothing of theirs to mend;
+  // airRadar — the Australian Flying Corps flew aeroplanes, the balloons were the RFC’s; aa — the AIF had no anti-aircraft artillery of its own
   give(commandPost, 'anzac', { model: buildStaffCarAU, variant: { name: 'Brigade Headquarters', weapon: 'staff car, field telephones', text: 'The brigade\'s headquarters: where it stops, the telephone lines run out and the reinforcements report there.' } });
 
   // ---------------------------------------------------------------- the Italian Army
@@ -106,6 +121,17 @@ export default function fronts(T) {
   give(mineClear, 'it', { variant: { name: 'Tubi di gelatina', weapon: 'gelatine tubes, wire cutters', text: 'Sappers with long tubes of explosive pushed under the enemy wire: a lane for the assault (X). Three charges.' } });
   give(aa, 'it', { model: buildAALorryIT, variant: { name: 'Autocannone da 75 CK', weapon: '75 mm AA gun on a Lancia', text: 'A 75 mm gun on a high mount on a Lancia lorry: the first Italian anti-aircraft guns, quick to wherever the enemy\'s aircraft are.' } });
   give(ambulance, 'it', { model: buildAmbulanceIT, variant: { name: 'Autoambulanza', weapon: 'unarmed', text: 'The Italian motor ambulance (Hemingway drove one on the Piave): wounded men near it are patched up and go back to the line.' } });
+  give(tank, 'it', { model: buildRenaultFT, stats: tank.factionStats.fr, cost: tank.armyCost.fr / tank.cost,
+    variant: { name: 'Renault FT', weapon: 'Puteaux 37 mm', text: 'A handful of French FTs came to Italy in 1918, and the first Italian tank unit formed round them: small, a turret that turns all the way round. Big shell holes swallow it.' } });
+  give(heavyTank, 'it', { model: buildFiat2000, cost: 1.3,
+    stats: { ...CANNON, damage: 220, pierce: 0.35, splash: 3, fireCooldown: 5, reloadTime: 6, range: 160, playerFireInterval: 5, hp: 1400, armor: 0.45, speed: 1.4, crew: 10, height: 3.6, radius: 3.0, breakdown: 1 / 200, ditch: 0.06, traverse: undefined,
+      sideGuns: [Math.PI / 2, Math.PI / 2, -Math.PI / 2, -Math.PI / 2, Math.PI].map((at) => ({ at, arc: 0.9, range: 140, damage: 60, rate: 8, burst: 10 })) },
+    variant: { name: 'Fiat 2000', weapon: '65 mm gun in a turret, seven Fiat-Revelli MGs', text: 'Italy’s own heavy tank: forty tonnes, ten men, a turret on top that turns all the way round. Two were built, too late for the war — here it goes up to the Piave. Slow as a walk.' } });
+  give(cbRadar, 'it', { variant: { name: 'Sezione fonotelemetrica', weapon: 'microphones, plotting board', text: 'Sound ranging: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' } });
+  give(airRadar, 'it', { model: buildBalloonFR, variant: { name: 'Pallone frenato', weapon: 'telephone, binoculars', text: 'The observation balloon of the Italian aerostieri: from its basket the Carso and the Piave lie open to the guns.' } });
+  give(manpads, 'it', { variant: { name: 'Mitragliatrice contraerea', weapon: 'Fiat-Revelli on an AA mount', text: 'The Fiat-Revelli on a high mount, pointed at the sky: keeps the Austrian aircraft off the trench.' } });
+  give(recovery, 'it', { model: buildSupplyLorryFR, stats: LORRY, variant: { name: 'Fiat 18 BL', weapon: 'unarmed', text: 'The Fiat lorry that carried the Italian army up the mountain roads, here with stores and a workshop: tanks near it are mended and got going again.' } });
+  // left empty: atTeam — the Austrians had no tanks to stop
   give(commandPost, 'it', { model: buildStaffCarIT, variant: { name: 'Comando di brigata', weapon: 'staff car, field telephones', text: 'The brigade\'s command post: the reinforcements come forward to it.' } });
 
   // ---------------------------------------------------------------- the Austro-Hungarian Army
@@ -121,6 +147,14 @@ export default function fronts(T) {
   give(scouts, 'ah', { variant: { name: 'Patrouille', weapon: 'Repetierstutzen, Handgranaten', text: 'The night patrol: two men who crawl to the enemy wire and come back with what they saw.' } });
   give(engineers, 'ah', { special: man('ah', { weapon: 'flame' }), variant: { name: 'Sappeure', weapon: 'Mannlicher, Flammenwerfer', text: 'The k.u.k. sappers with the flamethrower: a jet of burning oil into the dugout ends the fight for a trench.' } });
   give(ambulance, 'ah', { model: buildAmbulanceAH, variant: { name: 'Sanitätsautomobil', weapon: 'unarmed', text: 'The motor ambulance: wounded men near it are patched up and go back to the line.' } });
+  give(reconVehicle, 'ah', { model: buildEhrhardtAC, stats: { hp: 280, sideGuns: undefined },
+    variant: { name: 'Romfell', weapon: 'Schwarzlose M07/12 in a turret', text: 'Built in the Budapest arsenal in 1915 by two officers, Romanić and Fellner, whose names it bears: armour all round, one machine gun in a turret. Only a couple were made. It needs the roads.' } });
+  give(cbRadar, 'ah', { variant: { name: 'Schallmesstrupp', weapon: 'microphones, plotting board', text: 'The sound-ranging troop: every enemy gun that fires within reach is plotted for your artillery. Needs 25 s to lay out.' } });
+  give(airRadar, 'ah', { model: buildBalloonDE, variant: { name: 'Feldballon', weapon: 'Feldtelefon, Fernglas', text: 'The balloon company’s tethered balloon over the Isonzo: its observers direct the guns onto everything that moves.' } });
+  give(mineClear, 'ah', { variant: { name: 'Drahtschneider', weapon: 'gestreckte Ladungen, Drahtscheren', text: 'Sappers with long charges and wire cutters, ahead of the Sturmbataillon: a lane through the enemy wire (X). Three charges.' } });
+  give(aa, 'ah', { model: buildAALorryDE, variant: { name: '8 cm Luftfahrzeugabwehrkanone', weapon: '8 cm M.5/8 on a lorry', text: 'The field gun on a high anti-aircraft pedestal, carried on a lorry to wherever the Italian Capronis come over.' } });
+  give(manpads, 'ah', { variant: { name: 'Fliegerabwehr-MG', weapon: 'Schwarzlose on an AA mount', text: 'The Schwarzlose on its anti-aircraft mount: keeps the enemy aircraft off the trench.' } });
+  // left empty: tank, heavyTank — Austria-Hungary built none (Burstyn’s 1911 design stayed on paper); atTeam — the Italians had no tanks in the line; recovery — a couple of armoured cars, nothing to mend
   give(commandPost, 'ah', { model: buildStaffCarAH, variant: { name: 'Gefechtsstand', weapon: 'Stabswagen, Feldtelefon', text: 'The brigade\'s battle headquarters: the reinforcements come forward to it.' } });
 
   // ---------------------------------------------------------------- the Russian Army of 1917
@@ -139,6 +173,16 @@ export default function fronts(T) {
   give(engineers, 'ru', { special: man('ru'), variant: { name: 'Sappers', weapon: 'Mosin, picks, wire', text: 'The Russian sappers: trenches, wire, and the bridges over the Dvina.' } });
   give(aa, 'ru', { model: buildAALorryRU, variant: { name: '76 mm AA Lorry', weapon: 'Lender 76 mm on a Russo-Balt', text: 'The first Russian anti-aircraft gun, the Lender 3-inch, on a lorry: shrapnel bursts round the enemy aircraft.' } });
   give(ambulance, 'ru', { model: buildAmbulanceRU, variant: { name: 'Motor Ambulance', weapon: 'unarmed', text: 'A motor ambulance of the Red Cross: wounded men near it are patched up and go back to the line.' } });
+  give(heavyTank, 'ru', { model: buildGarfordPutilov,
+    stats: { ...CANNON, damage: 230, pierce: 0.3, splash: 3, fireCooldown: 4, reloadTime: 6, range: 170, playerFireInterval: 4, hp: 600, armor: 0.15, speed: 3.2, crew: 9, height: 2.9, radius: 2.4, breakdown: 1 / 300, ditch: 0.35, traverse: 2.35,
+      sideGuns: [{ at: Math.PI / 2, arc: 1.2, range: 140, damage: 60, rate: 8, burst: 10, y: 1.8 }, { at: -Math.PI / 2, arc: 1.2, range: 140, damage: 60, rate: 8, burst: 10, y: 1.8 }] },
+    variant: { name: 'Garford-Putilov', weapon: '76 mm gun in a turret, three Maxims', text: 'An American Garford lorry armoured at the Putilov works: eleven tonnes, the three-inch in a turret at the back and a Maxim in each side. Slow, heavy, it needs a good road — and it out-guns any armoured car.' } });
+  give(rockets, 'ru', { stats: MEDIUM_MW, variant: { name: 'Heavy Bombomyot', weapon: '58 mm No. 2 trench mortar (French-supplied)', text: 'A French trench mortar firing a big winged bomb from the end of its tube: the heavy bomb-throwers of the 1916 offensive, to blast the wire short.' } });
+  give(airRadar, 'ru', { model: buildBalloonFR, variant: { name: 'Aerostat', weapon: 'telephone, binoculars', text: 'The kite balloon of a Russian balloon detachment: two observers in the basket, the whole sector laid out for the guns.' } });
+  give(mineClear, 'ru', { variant: { name: 'Sapper Wire Party', weapon: 'explosive charges, wire cutters', text: 'Sappers who crawl out at night and blow lanes in the enemy wire, as before Brusilov’s attack of 1916 (X). Three charges.' } });
+  give(manpads, 'ru', { variant: { name: 'Maxim AA Team', weapon: 'Maxim on an AA mount', text: 'The Maxim lifted off its wheels onto a high mount, pointed at the sky: keeps the German aircraft high.' } });
+  give(recovery, 'ru', { model: buildSupplyLorryFR, stats: LORRY, variant: { name: 'Workshop Lorry', weapon: 'unarmed', text: 'The armoured-car division’s workshop and stores lorry: armoured cars near it are mended and got going again.' } });
+  // left empty: tank — Russia had none (Lebedenko’s Tsar Tank stuck in the mud on its first trial); cbRadar — no sound ranging we can name at the Russian front; atTeam — the Germans sent no tanks east
   give(commandPost, 'ru', { model: buildStaffCarRU, variant: { name: 'Regimental Staff', weapon: 'staff car, field telephones', text: 'The regiment\'s headquarters — and its soldiers\' committee, in 1917: the reinforcements come forward to it.' } });
 
   // the riderless horse and the men who lost theirs, for every army with horses

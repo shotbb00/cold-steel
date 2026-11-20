@@ -33,6 +33,7 @@ export const CODEX1918 = {
     fr: 'The Renault FT, small and cheap, was built by the thousand: French tactics sent swarms of them forward with the infantry. Its fully rotating turret became the pattern of every tank since.',
     pact: 'The A7V: twenty were built. Eighteen men crewed it; its armour was thick, but its low belly and short tracks made it hopeless over broken ground. On 24 April 1918 at Villers-Bretonneux three of them met three British Mark IVs — the first tank-against-tank battle.',
     st: 'Germany had more captured British tanks in service than tanks of its own: Mark IVs recovered from the battlefield at Cambrai, repaired and painted with the iron cross.',
+    it: 'Italy bought a few Renault FTs and a Schneider from France in 1918 to study; the first Italian tank unit formed round them, and the Fiat 3000 that followed was the FT built in Italy.',
   },
   heavyTank: {
     use: 'The fast tank: through the gap and on into the rear — guns, headquarters, reserves on the march. It is not built to break the line itself.',
@@ -43,6 +44,8 @@ export const CODEX1918 = {
     fr: 'The Schneider CA1, France\'s first tank, was a box on a tractor chassis with a short 75 mm. Its long overhang made it belly in trenches, and its fuel tanks made it burn.',
     pact: 'The A7V-U, a German rhomboid with sponson guns, was built in June 1918 as a prototype; here the tank they would have built in numbers.',
     st: 'A captured Whippet, turned round against its makers.',
+    it: 'The Fiat 2000: two were built in 1917–18, forty tonnes with a 65 mm gun in a turret and machine guns all round. They came too late for the war and went to Libya in 1919.',
+    ru: 'The Garford-Putilov: some forty-eight American Garford lorries armoured at the Putilov works from 1915, a three-inch gun in a turret at the back. Too heavy for most roads, but the hardest-hitting armoured car of the war; some fought on in the Civil War.',
   },
   reconVehicle: {
     use: 'Fast on roads and open ground behind the lines: scouting, raids, exploiting a breakthrough. In the crater field it gets stuck — keep it out of no man\'s land.',
@@ -53,6 +56,10 @@ export const CODEX1918 = {
     fr: 'The Peugeot armoured cars with their 37 mm guns fought in the open warfare of 1914 and again in 1918.',
     pact: 'The Ehrhardt E-V/4 was a big four-wheel-drive armoured car built for the east and for street fighting in the revolution that followed the war.',
     st: 'The Ehrhardt E-V/4 was a big four-wheel-drive armoured car built for the east and for street fighting in the revolution that followed the war.',
+    it: 'The Lancia 1Z and 1ZM were Italy’s armoured cars, used most in the pursuit after Vittorio Veneto in November 1918.',
+    ah: 'Austria-Hungary built only a handful of armoured cars: the Romfell of 1915 and the Junovicz of 1916.',
+    ru: 'Russia fielded more armoured cars than any other army: Austins rebuilt at Putilov, Garfords, Fiats — organised in armoured-car divisions that fought from Galicia to the Baltic.',
+    anzac: 'The Light Car Patrols drove Ford Model Ts with Lewis guns across the Libyan and Sinai deserts, scouting far out on the flanks.',
   },
   crew: {
     use: 'The crew of a knocked-out tank: get them back behind the line.',

@@ -6,7 +6,26 @@
 import { buildBwMinenpflug, buildNvaKMT5 } from '../models/armySupport.js';
 import tank from './tank.ts';
 import { buildNatoPlough, buildPactUR77 } from '../models/support.js';
-import type { UnitType } from '../../types.ts';
+import type { UnitType, UnitStats } from '../../types.ts';
+
+/** The plough tank (M60A3, the Bundeswehr's Leopard 1 with a plough, the NVA's T-55 with rollers). */
+const BASE = {
+  ...tank.stats,
+  hp: 1250,
+  armor: 0.62,
+  speed: 4.2,
+  damage: 380,
+  range: 180,
+  minePlough: true,
+  smoke: { charges: 2 },
+  crew: 4,
+};
+/** The Soviet UR-77: a launcher, not a tank. */
+const PACT = { // a 2S1 hull with a launcher box and a PKT
+  minePlough: false, lineCharge: { count: 2, range: 110 }, hp: 650, armor: 0.25, speed: 5, range: 110, gunRange: 110,
+  weapon: 'rifle', weaponSound: 'mg', fireCooldown: 0.12, damage: 85, splash: 0, pierce: 0.05, vsArmor: 0.08, boltSpeed: 450, boltSize: 0.7,
+  tracer: 0.35, spread: 0.02, magSize: 25, reloadTime: 4, antiArmor: false, crew: 2,
+} satisfies Partial<UnitStats>;
 
 export default {
   id: 'mineClear',
@@ -19,23 +38,11 @@ export default {
 
   formation: { count: 1, columns: 1, spacing: 10 },
 
-  stats: {
-    ...tank.stats,
-    hp: 1250,
-    armor: 0.62,
-    speed: 4.2,
-    damage: 380,
-    range: 180,
-    minePlough: true,
-    smoke: { charges: 2 },
-    crew: 4,
-  },
+  stats: BASE,
   factionStats: {
-    pact: { // a 2S1 hull with a launcher box and a PKT
-      minePlough: false, lineCharge: { count: 2, range: 110 }, hp: 650, armor: 0.25, speed: 5, range: 110, gunRange: 110,
-      weapon: 'rifle', weaponSound: 'mg', fireCooldown: 0.12, damage: 85, splash: 0, pierce: 0.05, vsArmor: 0.08, boltSpeed: 450, boltSize: 0.7,
-      tracer: 0.35, spread: 0.02, magSize: 25, reloadTime: 4, antiArmor: false, crew: 2,
-    },
+    pact: PACT,
+    // the NVA's T-55 KMT-5 is a roller tank, not the UR-77: the Pact's launcher stats undone (army stats go over the side's), a T-55's numbers
+    nva: { ...Object.fromEntries(Object.keys(PACT).map((k) => [k, (BASE as Record<string, unknown>)[k]])), armor: 0.5, hp: 1150, damage: 320 },
   },
 
   camera: { distance: 13, height: 5.5, shoulder: 2.4 },

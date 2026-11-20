@@ -163,7 +163,7 @@ export default {
     // the armoured counter-attack: the battlegroup's tanks from Visby, after four and a half minutes
     counter: { t: 270, units: ['heavyTank', 'ifv', 'heavyTank', 'ifv', 'heavyTank'], say: 'The battlegroup is coming down from Visby: tanks and IFVs, straight for the beachhead', sayOther: 'Enemy armour coming down from inland: Abrams and their IFVs' },
     // the landing's AI (ai/LandingDirector.js): the naval infantry's buying order, one Steregushchiy inshore off the focus sector
-    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'fpvTeam', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'manpads', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 380 },
+    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'fpvTeam', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'manpads', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, sweeper: 'alexandrit', heavy: null, inshore: 380 },
     economy: { reserves: 2100, perSector: 575, beachIncome: 0.78, defenceCp: 975, defenceIncome: 1.8 }, // (richer than Hohwacht's: the 2027 garrison's drones and Javelins hold harder — AI vs AI 2026-11-19)
     // the BTR-82As and BMPs swim in on their own, put in off the beach
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon' },

@@ -8,7 +8,8 @@
 //   kpa   Korean People's Army — T-55 and Chonma-ho, VTT-323, the Koksan gun, Grads, AA guns and masses of infantry
 import { buildSoldier85 } from '../models/soldier85.js';
 import { buildNoLeopard1, buildNoNM116, buildNoNM135, buildUsM60A1, buildUsAAV7, buildUsLAV25, buildUsM198, buildUsJeepTOW,
-  buildRokJeep106, buildRokM48, buildRokKIFV, buildKpaT55, buildKpaChonma, buildKpaVTT323, buildKpaKoksan } from '../models/armour85.js';
+  buildRokJeep106, buildRokM48, buildRokKIFV, buildKpaT55, buildKpaChonma, buildKpaVTT323, buildKpaKoksan, buildNoBofors, buildUsM718,
+  buildKpaS125 } from '../models/armour85.js';
 
 const SIDE = { no: 'nato', usmc: 'nato', rok: 'nato', kpa: 'pact' };
 // each infantry type's men: [their models' options, the specialists' (the gunner, the launcher)]
@@ -67,6 +68,14 @@ export default function armies85(T) {
   no('ambulance', { name: 'M113 Ambulance', weapon: 'Unarmed · red cross', text: 'Wounded men near it are patched up and kept warm: in the Arctic winter that saves as many as the dressings.' });
   no('airAssault', { name: 'Heliborne Infantry Section', weapon: 'AG3, MG3 · by UH-1B (P)', text: 'Brigade Nord’s infantry flown up the valley by the Air Force’s Hueys: onto the ridge before the enemy column reaches it, or behind it to close the road.' });
   no('commandPost', { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion’s headquarters in a tall M113: nearby squads hold longer and react faster.' });
+  no('towedAA', { name: 'Bofors L/70', weapon: '40 mm L/70', text: 'The Air Force’s 40 mm guns round Bardufoss, Andøya and Evenes: slower than a 20 mm, but each shell bursts big enough to bring down a helicopter or a Frogfoot.' },
+    { model: buildNoBofors, stats: { fireCooldown: 0.25, damage: 170, splash: 1.5, vsArmor: 0.3, range: 160, aggroRange: 140, magSize: 16,
+      antiAir: { ...T.towedAA.stats.antiAir, range: 380, rate: 4, hitNear: 0.12, hitFar: 0.02 } }, cost: 1.1 });
+  no('spMortar', { name: 'NM95 Mortar Carrier', weapon: '81 mm mortar on M113', text: 'An M106 rebuilt in Norway to take the infantry’s 81 mm: it fires through the open roof and is gone up the valley before the reply.' },
+    { stats: { damage: 120, splash: 4 } });
+  // left empty — none in Norway in 1985: aa, gunMissile (no SP guns or missiles), heavyTank, rockets, sam (the Air Force’s
+  // NOAH Hawks only from 1988), airRadar, cbRadar (ARTHUR came in the late 1990s), cev, bridgeLayer, mineClear (the Leopard
+  // engineer and bridge tanks came in the 1990s), jammer
 
   // ---------------------------------------------------------------- US Marine Corps
   const mc = (id, v, o) => give('usmc', id, v, o);
@@ -95,6 +104,15 @@ export default function armies85(T) {
   mc('airAssault', { name: 'Heliborne Rifle Squad', weapon: 'M16A2, M203 · by CH-46E (P)', text: 'Vertical envelopment: a Sea Knight puts a Marine squad down wherever you point (P) — on the objective, behind the enemy, on the pass. Lose the helicopter before it lands and you lose them too.' });
   mc('commandPost', { name: 'AAVC7A1 command vehicle', weapon: 'radios', text: 'The amphibious tractor fitted out as a command post: the battalion’s staff and its radios. Nearby squads hold longer and react faster.' },
     { model: buildUsAAV7 });
+  mc('sam', { name: 'Improved HAWK', weapon: '3 × MIM-23B missiles', text: 'The brigade’s Light Anti-Aircraft Missile battery: three big radar-guided missiles on a towed launcher that reach further than anything else over the fjord. Slow to set up, slow to move.' },
+    { model: T.sam.models.bw, stats: T.sam.factionStats.bw });
+  mc('airRadar', { name: 'AN/MPQ-50 PAR', weapon: 'pulse acquisition radar', text: 'The HAWK battery’s search radar on its trailer: every air defence unit near it sees and reaches further.' },
+    { model: T.airRadar.models.bw });
+  mc('cbRadar', { name: 'AN/TPQ-36 Firefinder', weapon: 'unarmed', text: 'The Marines’ mortar- and gun-locating radar: park it facing the enemy and every battery that fires in its sector is handed to the M198s.' });
+  mc('ambulance', { name: 'M718A1 Ambulance', weapon: 'Unarmed · red cross', text: 'The jeep with its tail stretched for two litters: it gets to the wounded where an amtrac can’t, and patches them up nearby.' },
+    { model: buildUsM718, stats: { armor: 0.02, hp: 220, speed: 8.5, radius: 1.4, height: 2.0 }, cost: 0.7 });
+  // left empty — the Marines had none in 1985: aa, towedAA (low-level air defence was the Stinger teams), gunMissile,
+  // heavyTank (the M1A1 only in 1990–91), rockets, spMortar (the 81s went on foot), cev, mineClear, jammer
 
   // ---------------------------------------------------------------- ROK Army
   const rok = (id, v, o) => give('rok', id, v, o);
@@ -124,6 +142,15 @@ export default function armies85(T) {
   rok('ambulance', { name: 'M113 Ambulance', weapon: 'Unarmed · red cross', text: 'Wounded men near it are patched up.' });
   rok('airAssault', { name: 'Airmobile Rifle Squad', weapon: 'M16A1, M60 · by UH-1H (P)', text: 'ROK infantry landed by Huey on the hill the North’s infiltrators are making for, or behind the column on the valley road.' });
   rok('commandPost', { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion’s command post: nearby squads hold longer and react faster.' });
+  rok('manpads', { name: 'Redeye Team', weapon: 'FIM-43 Redeye', text: 'The first shoulder-fired heat-seeker: it has to chase a helicopter’s exhaust from behind, but on the hills over the valleys that is often enough.' });
+  rok('heavyTank', { name: 'K1', weapon: '105 mm KM68A1', text: 'Korea’s own tank, the first of them off Hyundai’s line in 1985: low, with composite armour, thermal sights and a hydropneumatic suspension that lets it dip its gun over a ridge.' },
+    { stats: { armor: 0.72, damage: 400, nightSight: 0.85 }, cost: 0.9 });
+  rok('sam', { name: 'Improved HAWK', weapon: '3 × MIM-23B missiles', text: 'The Army’s air defence artillery: three big radar-guided missiles over the corps’ rear, against the North’s MiGs and helicopters. Towed — slow to set up, slow to move.' },
+    { model: T.sam.models.bw, stats: T.sam.factionStats.bw });
+  rok('airRadar', { name: 'HAWK PAR', weapon: 'pulse acquisition radar', text: 'The HAWK battery’s search radar on its trailer: every air defence unit near it sees and reaches further.' },
+    { model: T.airRadar.models.bw });
+  // left empty: reconVehicle (the recon battalions rode M113s and jeeps), gunMissile (Chun-ma and Biho came in the 1990s),
+  // cev, cbRadar, bridgeLayer, mineClear (none found in ROK service by 1985 — the K1 bridge layer came in 1992), jammer
 
   // ---------------------------------------------------------------- Korean People's Army
   const kpa = (id, v, o) => give('kpa', id, v, o);
@@ -157,4 +184,16 @@ export default function armies85(T) {
     { cost: 0.8 });
   kpa('airAssault', { name: 'Light Infantry Squad', weapon: 'Type 58, RPG-7 · by Mi-8 (P)', text: 'The KPA’s light infantry, the special forces trained to fight behind the line: a Hip drops them on a bridge, a pass or a gun line in the South’s rear.' });
   kpa('commandPost', { name: 'BTR-60PU', weapon: 'unarmed', text: 'The regiment’s command post on wheels: nearby squads hold longer and react faster.' });
+  kpa('airRadar', { name: 'P-15 Flat Face', weapon: 'unarmed', text: 'The search radar on its truck: it sees the South’s helicopters coming over the hills and wakes every gun and missile near it.' });
+  kpa('sam', { name: 'S-125 Pechora', weapon: '4 × V-601 missiles', text: 'New from the Soviet Union in 1985: four radar-guided missiles on a launcher towed in and set down. Nothing over the North’s rear flies low and safe. Slow to set up, slow to move.' },
+    { model: buildKpaS125, stats: { towed: { deploy: 25 }, antiAir: { missile: true, range: 800, count: 4, reload: 34, pk: 0.6, hits: 6, speed: 400, sound: 'sam' } }, cost: 1.1 });
+  kpa('spMortar', { name: '120 mm Mortar', weapon: 'M1943 120 mm mortar, towed', text: 'The regiment’s heavy mortar behind a truck: unhitched in moments, big bombs on anything in the next valley.' },
+    { model: T.spMortar.models.nva, stats: T.spMortar.factionStats.nva });
+  kpa('recovery', { name: 'T-55 Recovery Tank', weapon: 'crane · winch · PKT', text: 'A turretless T-55 with a jib: the tanks that break down on the mountain roads are towed back and running again.' },
+    { model: T.recovery.models.nva });
+  kpa('bridgeLayer', { name: 'MTU-20', weapon: 'Unarmed · 20 m bridge', text: 'The bridge on a T-55 hull: across the Imjin’s side streams before the South can blow the next one.' });
+  kpa('mineClear', { name: 'T-55 with mine rollers', weapon: '100 mm D-10T · KMT mine rollers', text: 'A T-55 pushing heavy rollers through the minefields south of the DMZ: they set the mines off before the tank reaches them — and it still fights.' },
+    { model: T.mineClear.models.nva, stats: { ...Object.fromEntries(Object.keys(T.mineClear.factionStats.pact).map((k) => [k, T.mineClear.stats[k]])), armor: 0.5, hp: 1150, damage: 320 }, cost: 0.85 });
+  // left empty: gunMissile (no Osa or Tunguska in the North in 1985), cev, cbRadar, jammer (none known), ambulance (the
+  // KPA’s were trucks: no model for them yet)
 }

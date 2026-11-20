@@ -4,7 +4,8 @@
 // Montgomery's British and Canadian divisions: Shermans (one in four a Firefly), the Bren carriers, the 25-pounders —
 // and where Britain had no hull of its own the American one stands in (the Sherman, the M10, the dozer).
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
-import { buildBrDaimler, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell } from '../models/brit45.js';
+import { buildBrDaimler, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell, buildBrChurchill21, buildBrChurchillSBG21, buildBrCrusaderAA21,
+  buildBrMorrisBofors21, buildBrGL21, buildBr37AA21, buildBrLandMattress21, buildBr42Mortar21, buildBrSmoke21 } from '../models/brit45.js';
 
 const man = (o = {}) => () => buildWw2Soldier({ army: 'brit21', ...o });
 
@@ -57,4 +58,25 @@ export default function brit21(T) {
   set(T.ambulance, { model: buildBrAustinAmb, variant: { name: 'Austin K2 Ambulance', weapon: 'unarmed', text: 'The “Katy”: the field ambulance — patches up the wounded nearby.' } });
   set(T.commandPost, { model: buildBrDorchester, variant: { name: 'AEC Dorchester', weapon: 'wireless sets', text: 'The armoured command vehicle: brigade headquarters on wheels. Nearby squads hold longer and react faster.' } });
   set(T.recovery, { model: buildBrScammell, variant: { name: 'Scammell Pioneer', weapon: 'crane, winch', text: 'The heavy recovery lorry: it gets knocked-out tanks moving again behind the line.' } });
+  set(T.bridgeLayer, { model: buildBrChurchillSBG21, stats: { armor: 0.78, hp: 1600, speed: 3.6 },
+    variant: { name: 'Churchill AVRE (SBG)', weapon: 'Small Box Girder bridge', text: 'A Churchill of the 79th Armoured Division with a 30-foot box girder bridge held up in front: it drives to the ditch or the sea wall, drops the bridge across and backs off.' } });
+  set(T.jammer, { model: buildBrSmoke21, variant: { name: 'Pioneer Smoke Company', weapon: 'smoke generators', text: 'Set up, it keeps a smoke screen standing 20 m in front of it for as long as it stays: the Pioneers hid the Rhine crossing behind miles of it. Turn it toward the enemy.' } });
+
+  // ---- more armour and guns
+  set(T.heavyTank, { model: buildBrChurchill21, stats: { armor: 0.82, hp: 1800, speed: 3.6, damage: 330, range: 190, fireCooldown: 6 }, cost: 0.9,
+    variant: { name: 'Churchill VII', weapon: 'OQF 75 mm', text: 'The infantry tank with six inches of armour on its nose: slow, but it climbs slopes nothing else can, and it takes hits that would burn a Sherman. Stops to fire.' } });
+  set(T.rockets, { model: buildBrLandMattress21, stats: { towed: { deploy: 12 }, armor: 0, hp: 250, magSize: 30, damage: 70, splash: 5, fireCooldown: 0.25, scatter: 18, weaponSound: 'katyusha' }, cost: 0.85,
+    variant: { name: 'Land Mattress', weapon: '30 × 3-inch rockets, towed', text: 'Thirty rocket tubes on a light trailer: the 1st Canadian Rocket Battery fired them first at Flushing in November 1944, then over the Rhine. A whole field at once, then a long reload.' } });
+  set(T.spMortar, { model: buildBr42Mortar21, stats: { towed: { deploy: 10 }, damage: 185, splash: 5.8, range: 250, armor: 0.05, hp: 380 }, cost: 0.9,
+    variant: { name: '4.2-inch Mortar', weapon: 'ML 4.2-inch mortar, towed', text: 'The heavy mortar of the support battalions: towed up on its wheels, unhitched in moments, a 20-pound bomb onto the next hedgerow.' } });
+  set(T.cbRadar, { variant: { name: 'Sound Ranging Troop', weapon: 'microphones, plotting board', text: 'The survey regiments’ listening posts: every German gun and Nebelwerfer that fires within reach is plotted for the counter-battery fire. Needs 25 s to lay out.' } });
+
+  // ---- air defence
+  set(T.aa, { model: buildBrCrusaderAA21, stats: { armor: 0.45, hp: 950, speed: 6.2, antiAir: { ...T.aa.stats.antiAir, rate: 8, burst: 1.5 } }, cost: 1.0,
+    variant: { name: 'Crusader AA Mk III', weapon: '2 × 20 mm Oerlikon', text: 'An old Crusader with a small turret and two Oerlikons, with the armoured regiments in Normandy: keeps the Jabos off the column. So few German aircraft came that most were sent home by the autumn.' } });
+  set(T.gunMissile, { model: buildBrMorrisBofors21, stats: { armor: 0.05, hp: 400 }, cost: 0.8,
+    variant: { name: 'Morris Bofors SP', weapon: '40 mm Bofors', text: 'The Bofors on a Morris C9/B: no unhitching, it fires from the back of the lorry — at aircraft, and often at the hedges. Unarmoured.' } });
+  set(T.sam, { model: buildBr37AA21, variant: { name: '3.7-inch AA Gun', weapon: 'QF 3.7-inch AA', text: 'The heavy AA gun over the beaches and the bridges — and with the Luftwaffe gone, laid on the ground as medium artillery.' } });
+  set(T.manpads, { variant: { name: 'AA Bren Team', weapon: 'Bren gun on its AA tripod', text: 'The Bren on its tall anti-aircraft tripod: a stream of .303 across the strafing run.' } });
+  set(T.airRadar, { model: buildBrGL21, variant: { name: 'GL Mk III', weapon: 'unarmed', text: 'The gun-laying radar of the heavy AA, its aerials on the cabin roof: it finds the raiders by night and puts the 3.7s onto them.' } });
 }
