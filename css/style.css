@@ -976,3 +976,33 @@ body.binoculars::after { content: ""; position: fixed; inset: 0; pointer-events:
 .sel-weapons { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; margin-top: 3px; }
 .sel-weapons b { font-weight: 600; }
 .sel-weapons small { opacity: 0.7; }
+
+/* reinforcement window on a phone held sideways (short screens): pinned top and bottom, not sized from vh (that
+   changes as the browser bar slides in and out: the window jumped while you scrolled), Arrive and Rifle kit on one
+   compact row, the tabs one row you swipe, smaller cards — the units get the room */
+@media (max-height: 520px) {
+  #reinforce-window { top: 6px; bottom: 6px; height: auto; max-height: none; left: auto; transform: none; right: calc(min(300px, 46vw) + 12px); width: min(560px, calc(100vw - min(300px, 46vw) - 24px)); padding: 8px 10px; }
+  #reinforce-window:not([hidden]) { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); column-gap: 12px; }
+  .rw-head { grid-column: 1 / -1; margin-bottom: 4px; gap: 10px; }
+  .rw-head b { font-size: 11px; letter-spacing: 0.12em; }
+  .rw-cp, .rw-stacks { font-size: 12px; }
+  .rw-entry, .rw-kit { margin: 0 0 4px; gap: 6px; font-size: 10px; letter-spacing: 0.08em; }
+  .rw-entry .seg button, .rw-kit .seg button { padding: 3px 8px; font-size: 12px; min-height: 28px; }
+  .rw-kit { grid-column: 2; }
+  .rw-tabs { grid-column: 1 / -1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; }
+  .rw-tabs::-webkit-scrollbar { display: none; }
+  .rw-tabs button { flex: none; padding: 4px 9px; font-size: 11px; }
+  .rw-body { grid-column: 1 / -1; }
+  .rw-cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 5px; }
+  .rw-card { padding: 6px 8px; }
+  .rw-sil { height: 20px; margin-bottom: 2px; }
+  .rw-name { font-size: 12.5px; }
+  .rw-text { -webkit-line-clamp: 1; font-size: 11px; }
+}
+@media (max-height: 520px) {
+  .rw-entry .seg, .rw-kit .seg { flex-wrap: nowrap; }
+}
+@media (max-height: 520px) and (max-width: 800px) {
+  .rw-entry > span, .rw-kit > span { display: none; } /* (the buttons say what they are: Auto/Left/Centre/Right, Standard/Anti-tank/Assault) */
+  .rw-entry .seg button, .rw-kit .seg button { padding: 3px 7px; }
+}
