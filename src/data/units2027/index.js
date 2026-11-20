@@ -349,7 +349,7 @@ const recovery = restyle('recovery', { nato: R(m85('recovery').nato), pl: R(m85(
   pl: { name: 'WZT-3M', weapon: 'unarmed', text: 'The Polish T-72-based recovery tank: repairs the PT-91s and drags the wrecks away.' },
   pact: { name: 'BREM-1M', weapon: 'unarmed', text: 'The recovery vehicle on the T-72 hull: mends tracks and engines close behind the tanks.' },
   by: { name: 'BREM-1', weapon: 'unarmed', text: 'The Belarusian T-72 recovery vehicle.' },
-});
+}, { stats: { damage: 0, range: 0 } }); // (unarmed, as its texts say: not the 1985 M88A1's machine gun)
 
 const bridgeLayer = restyle('bridgeLayer', { nato: R(m85('bridgeLayer').nato), pl: R(m85('bridgeLayer').nva), pact: R(m85('bridgeLayer').pact), by: R(m85('bridgeLayer').pact) }, {
   nato: { name: 'M1074 Joint Assault Bridge', weapon: 'scissors bridge', text: 'A scissors bridge laid from an armoured hull in minutes across a river or a gap — the way over for the tanks.' },
