@@ -297,6 +297,21 @@ export class CoverMap {
     return this.spots.length - start;
   }
 
+  /**
+   * Rubble positions over a collapsed building (systems/Buildings.js): shelter from every side, `top` metres of masonry
+   * round them, at `points` [[x, z], …]. Returns how many it added.
+   */
+  addRubbleSpots(points, top) {
+    const start = this.spots.length;
+    for (const [x, z] of points) {
+      const g = this.terrain.heightAt(x, z), heap = { x, z, y: g - 0.6, top: g + top, spots: 0, rubble: true };
+      const a = Math.random() * Math.PI * 2;
+      this._addSpot(x, z, Math.cos(a), Math.sin(a), heap, true);
+    }
+    this.finalizeFrom(start);
+    return this.spots.length - start;
+  }
+
   /** A wall-like structure built during the battle (sandbags). */
   addStructureBox(opts) {
     const start = this.spots.length;
