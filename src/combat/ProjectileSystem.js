@@ -65,6 +65,7 @@ export class ProjectileSystem {
     b.gravity = gravity;
     b.vel.copy(dir).multiplyScalar(speed);
     if (target) b.target.copy(target);
+    b.aimed = !!target; // (a stale target from the pool must not excuse a building: occluderHit)
     b.whistleAt = whistleAt; // seconds after launch to play the incoming whistle at the target
     b.crater = crater;       // crater depth on ground impact
     b.ignite = ignite;       // chance it sets what it lands on burning (a flamethrower's fuel), else the blast's own
@@ -141,7 +142,10 @@ export class ProjectileSystem {
         }
       } else if (!dead) {
         const unitT = this.collideUnits(b);
-        const coverT = cover.segmentHit(b.prev, b.pos, b.ignore);
+        const wallT = cover.segmentHit(b.prev, b.pos, b.ignore);
+        // a building in the way (world/Cover.js occluders) — not the one the shot came from or is aimed into: windows
+        const houseT = cover.occluderHit(b.prev.x, b.prev.y, b.prev.z, b.pos.x, b.pos.y, b.pos.z, b.origin?.x ?? b.prev.x, b.origin?.z ?? b.prev.z, b.aimed ? b.target.x : NaN, b.aimed ? b.target.z : NaN);
+        const coverT = wallT < 0 ? houseT : houseT < 0 ? wallT : Math.min(wallT, houseT);
         if (unitT >= 0 && (coverT < 0 || unitT <= coverT)) {
           const target = this._target;
           if (!this.cosmetic) {

@@ -187,6 +187,7 @@ export class GameEngine {
     this.terrain = new Terrain({ size: map.size, segments: map.segments, height: map.height, palette: map.theme.terrain, fields: map.fields ?? null });
     this.scene.add(this.terrain.mesh);
     this.cover = new CoverMap(this.terrain);
+    this.terrain.occluders = this.cover; // (sight stops at buildings: Terrain.lineOfSight → Cover.sightBlocked)
     this.decor = map.decorate?.({
       scene: this.scene, terrain: this.terrain, cover: this.cover, bounds: map.bounds, rand: mulberry32(map.seed ?? 1),
     }) ?? null;

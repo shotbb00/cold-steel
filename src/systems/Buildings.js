@@ -287,6 +287,7 @@ export class Buildings {
       p.needsUpdate = true;
     }
     for (const c of b.colliders) c.top = Math.min(c.top, c.y + 0.6 + 0.85);
+    if (b.occluder) b.occluder.top = Math.min(b.occluder.top, b.ground + 1.4); // (a rubble heap: looked and shot over)
     for (const s of game.cover.spots) if (s.collider.building === b) { s.height = s.collider.top - s.y; s.interior = null; }
     if (quiet) return; // (a ruin from before the battle: no dust, no bang)
     // dust and debris
