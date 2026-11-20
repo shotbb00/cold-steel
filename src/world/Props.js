@@ -501,7 +501,9 @@ export class PropBuilder {
   }
 
   endBuilding() {
+    const b = this.group;
     this.group = null;
+    if (b?.h > 2) b.occluder = this.cover.addOccluder({ x: b.x, z: b.z, yaw: b.yaw, hx: b.w / 2, hz: b.d / 2, y: b.ground - 0.5, top: b.ground + Math.max(2.4, b.h * (1 - 0.45 * (b.ruin ?? 0))), building: b });
   }
 
   /** A box in a building's frame, on its floor level (not following the terrain). */
@@ -524,6 +526,7 @@ export class PropBuilder {
     sill = 0.95, head = 2.25, frame = 0xd8d0bc, shutters = 0, profile = null, upper = false,
   }) {
     const r = this.rand;
+    b.h = Math.max(b.h ?? 0, height); b.ruin = Math.max(b.ruin ?? 0, ruin); // (its sight block: endBuilding)
     const sh = height / storeys;
     const n = Math.max(1, Math.round(len / bay));
     const bw = len / n;
