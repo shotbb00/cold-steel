@@ -49,7 +49,7 @@ export const WW2 = {
     kaliwerk: { name: 'Kaliwerk Hattorf', theatre: 'west', map: 'monte-kali', prod: 3, land: ['hersfeld', 'werra'], lat: 50.86, lon: 9.95 },
     werra: { name: 'The Werra valley', theatre: 'west', map: 'werra-valley', prod: 1, land: ['huenfeld', 'kaliwerk', 'thuringia'], lat: 50.9, lon: 10.1 },
     thuringia: { name: 'The Thuringian Forest', theatre: 'west', map: 'thuringian-forest', prod: 2, fort: 1, land: ['werra', 'reichWest'], lat: 50.7, lon: 10.8 },
-    reichWest: { name: 'The Reich (west)', theatre: 'west', depot: 'pact', airfield: true, prod: 6, land: ['thuringia'], lat: 51.3, lon: 11.5 },
+    reichWest: { name: 'The Reich (west)', theatre: 'west', depot: 'pact', airfield: true, prod: 6, land: ['thuringia', 'reichEast'], /* (the Reich one country: the fronts meet here) */ lat: 51.3, lon: 11.5 },
 
     // ---- Eastern Front: from the Volga to Berlin
     moscow: { name: 'Moscow', theatre: 'east', depot: 'nato', airfield: true, prod: 7, land: ['stalingrad', 'bobruisk'], lat: 55.7, lon: 37.6 },
@@ -58,7 +58,7 @@ export const WW2 = {
     bobruisk: { name: 'Bobruisk', theatre: 'east', map: 'bobruisk', prod: 1, land: ['moscow', 'stalingrad', 'oder'], lat: 53.1, lon: 29.2 },
     oder: { name: 'The Seelow Heights', theatre: 'east', map: 'seelow-heights', prod: 1, fort: 2, land: ['bobruisk', 'berlin'], lat: 52.5, lon: 14.4 },
     berlin: { name: 'Berlin', theatre: 'east', map: 'berlin', prod: 4, fort: 2, land: ['oder', 'reichEast'], lat: 52.5, lon: 13.4 },
-    reichEast: { name: 'The Reich (east)', theatre: 'east', depot: 'pact', airfield: true, prod: 5, land: ['berlin'], lat: 52.0, lon: 12.0 },
+    reichEast: { name: 'The Reich (east)', theatre: 'east', depot: 'pact', airfield: true, prod: 5, land: ['berlin', 'reichWest'], lat: 52.0, lon: 12.0 },
 
     // ---- North Africa and the Mediterranean
     alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
@@ -79,7 +79,7 @@ export const WW2 = {
     japan: { name: 'Japan', theatre: 'pacific', depot: 'pact', port: true, airfield: true, prod: 7, seas: ['japanSeas'], land: [], lat: 35.0, lon: 135.0 },
     imphal: { name: 'Imphal', theatre: 'pacific', depot: 'nato', airfield: true, prod: 2, land: ['kohima'], lat: 24.8, lon: 93.9 },
     kohima: { name: 'Kohima', theatre: 'pacific', map: 'kohima', prod: 1, fort: 1, land: ['imphal', 'burma'], lat: 25.7, lon: 94.1 },
-    burma: { name: 'Burma', theatre: 'pacific', depot: 'pact', airfield: true, prod: 3, land: ['kohima'], lat: 21.9, lon: 96.0 },
+    burma: { name: 'Burma', theatre: 'pacific', depot: 'pact', port: true, airfield: true, prod: 3, seas: ['bayOfBengal'], land: ['kohima'], lat: 21.9, lon: 96.0 },
   },
 
   seas: {
@@ -90,7 +90,8 @@ export const WW2 = {
     easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: null, seas: ['westernMed'], coasts: ['alexandria', 'gazala', 'sicily'], lat: 34, lon: 22 },
     centralPacific: { name: 'The central Pacific', theatre: 'pacific', map: 'midway', seas: ['solomons', 'philippineSea'], coasts: ['hawaii'], lat: 25, lon: -175 },
     solomons: { name: 'The Solomons', theatre: 'pacific', map: 'savoSound', seas: ['centralPacific', 'philippineSea'], coasts: ['guadalcanal'], lat: -8, lon: 158 },
-    philippineSea: { name: 'The Philippine Sea', theatre: 'pacific', map: 'philippineSea', seas: ['centralPacific', 'solomons', 'japanSeas'], coasts: ['saipan', 'iwoJima', 'okinawa'], lat: 18, lon: 135 },
+    philippineSea: { name: 'The Philippine Sea', theatre: 'pacific', map: 'philippineSea', seas: ['centralPacific', 'solomons', 'japanSeas', 'bayOfBengal'], coasts: ['saipan', 'iwoJima', 'okinawa'], lat: 18, lon: 135 },
+    bayOfBengal: { name: 'The Bay of Bengal', theatre: 'pacific', map: null, seas: ['philippineSea'], coasts: ['burma'], lat: 14, lon: 90 }, /* (Rangoon's sea: through the Malacca Strait to the Pacific) */
     japanSeas: { name: 'The seas off Japan', theatre: 'pacific', map: 'surigaoStrait', seas: ['philippineSea'], coasts: ['okinawa', 'japan'], lat: 30, lon: 132 },
   },
 

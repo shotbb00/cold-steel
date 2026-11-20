@@ -24,6 +24,15 @@ const SQUADRON = { fighter: 220, strike: 240, bomber: 300, recon: 80, transport:
 /** A battle draws reserves from its side's pool (replacements, shells, fuel): this share of the pool, at most RESERVE.max power. */
 export const RESERVE = { share: 0.15 }; // (the side that produces more has more to throw in: production decides the long war)
 export const STACK = { army: 3, fleet: 3, battalions: 6 }; // army groups a province, fleets a sea zone (the front must be held, not piled up)
+/**
+ * The war economy: a stockpile holds at most `stockTurns` turns of income (what isn't spent is lost — production is for
+ * using), and every force costs its upkeep each turn (a battalion, a ship, a squadron of aircraft).
+ */
+export const ECON = { stockTurns: 6, stockFloor: 4000, upkeep: { battalion: 8, ship: 6, squadron: 4 } };
+/** A theatre's priority (c.priority[side][theatre]): its battles' share of the reserves, where new units are raised first. */
+export const PRIORITY = { low: 0.5, normal: 1, high: 1.6 };
+/** What new forces cost beyond their units: a fleet is built in a port, an air wing formed at an airfield. */
+export const AIR_WING = { fighter: 1, strike: 1 };
 const TRAITS = ['aggressive', 'careful', 'logistician', 'tenacious', 'night', 'artillerist'];
 
 // ---------------------------------------------------------------- randomness (stored, so a save replays)
@@ -80,7 +89,17 @@ export function applyEvents(c, war) {
     c.eventsDone.push(e.id);
     for (const [id, side] of Object.entries(e.owner ?? {})) c.provinces[id].owner = side;
     for (const [id, side] of Object.entries(e.depot ?? {})) c.provinces[id].depot = side;
-    for (const f of e.forces ?? []) spawnForce(c, war, f);
+    for (const f of e.forces ?? []) {
+      // (the war has gone its own way: a power that has surrendered sends nothing; a force due somewhere the enemy holds
+      // arrives at a base of its side in the same theatre instead — or not at all)
+      if (Object.entries(war.powers ?? {}).some(([id, pw]) => c.surrendered?.includes(id) && pw.armies.includes(f.army))) continue;
+      let at = f.at;
+      if (war.provinces[at] && c.provinces[at].owner !== f.side) {
+        const t = war.provinces[at].theatre;
+        at = Object.keys(war.provinces).find((k) => war.provinces[k].theatre === t && c.provinces[k].depot === f.side && c.provinces[k].owner === f.side) ?? null;
+      }
+      if (at) spawnForce(c, war, { ...f, at });
+    }
     for (const [side, n] of Object.entries(e.morale ?? {})) c.morale[side] += n;
     for (const [side, k] of Object.entries(e.industry ?? {})) c.industry[side] = k; // (war production from now on: the US arsenal, the bombing of the Reich)
     c.log.push({ turn: c.turn, date: today, event: e.id, text: e.text });
@@ -272,7 +291,7 @@ export function autoResolve(c, war, battleId) {
   }
   if (side !== c.side) pa *= c.difficulty; else pd *= c.difficulty;      // (harder: the AI's side stronger)
   if (!D.length) pd = Math.max(pd, 150 * (1 + (c.provinces[b.at]?.fort ?? 0))); // (an empty province still has its garrison and its mines)
-  const ra = reserves(c, side), rd = reserves(c, other); // (each side throws in what its pool can send)
+  const ra = reserves(c, side, b.theatre), rd = reserves(c, other, b.theatre); // (each side throws in what its pool can send there: the theatre's priority)
   pa += ra; pd += rd;
   b.reserves = { [side]: ra, [other]: rd };
   const luck = 0.8 + rand(c) * 0.4;
@@ -281,7 +300,7 @@ export function autoResolve(c, war, battleId) {
 }
 
 /** The reserves `side` can throw into one battle: a share of its pool, capped (paid when the battle is settled). */
-export const reserves = (c, side) => Math.max(0, c.pool[side]) * RESERVE.share;
+export const reserves = (c, side, theatre = null) => Math.max(0, c.pool[side]) * RESERVE.share * (theatre ? c.priority?.[side]?.[theatre] ?? 1 : 1);
 
 /**
  * A battle's result onto the map. `outcome`: { margin (0..1 for the attacker), losses: { attackers, defenders } as
@@ -309,7 +328,7 @@ export function settle(c, war, battleId, outcome) {
     const p = c.provinces[b.at];
     if (won) {
       for (const f of live(D)) if (f.at === b.at) retreat(c, war, f);
-      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); } for (const f of live(A)) f.at = b.at; }
+      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; if (lost) p.depot = side; /* (a base taken: the captor’s now — its rail yards and stores) */ c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); } for (const f of live(A)) f.at = b.at; }
       p.fort = Math.max(0, p.fort - 1);
     } else if (held) { for (const f of live(A)) f.at = b.at; p.contested = true; }
     // a failed attack stays where it came from (a failed landing: back on its ships, at the port it left)
@@ -354,9 +373,14 @@ export function endTurn(c, war) {
     // production: every supplied province's yield, split by the theatres' priority into the side's pool
     let prod = 0;
     for (const id of ok) prod += war.provinces[id].prod ?? 0;
-    const inc = Math.round(prod * 40 * (c.industry?.[side] ?? 1));
-    c.pool[side] += inc;
-    (c.income ??= {})[side] = inc;
+    const gross = Math.round(prod * 40 * (c.industry?.[side] ?? 1)), keep = upkeep(c, side);
+    c.pool[side] = Math.min(c.pool[side] + gross - keep, Math.max(ECON.stockFloor, gross * ECON.stockTurns)); // (the rest is lost: unspent)
+    c.pool[side] = Math.max(0, c.pool[side]);
+    (c.income ??= {})[side] = gross - keep;
+    (c.upkeep ??= {})[side] = keep;
+    // how long each theatre has been quiet for this side (no attack of its own there): the AI's patience runs out (ai.js)
+    const q = ((c.quiet ??= {})[side] ??= {});
+    for (const t of Object.keys(war.theatres)) q[t] = c.board.some((b) => b.theatre === t && b.attackerSide === side && b.kind !== 'sea') ? 0 : (q[t] ?? 0) + 1;
   }
   for (const [id, p] of Object.entries(c.provinces)) {
     const n = forcesAt(c, id, 'nato', 'army').length, q = forcesAt(c, id, 'pact', 'army').length;
@@ -414,6 +438,35 @@ export function refit(c, war, f) {
     if (need > 0.05 && cost <= c.pool[f.side]) { c.pool[f.side] -= cost; spent += cost; u.hp = 1; u.vet = Math.max(0, u.vet - (need > 0.5 ? 1 : 0)); }
   }
   return spent;
+}
+
+/** What a side's forces cost each turn to keep (ECON.upkeep). */
+export function upkeep(c, side) {
+  const u = ECON.upkeep;
+  return c.forces.filter((f) => f.side === side).reduce((a, f) => a + (f.battalions?.length ?? 0) * u.battalion + (f.ships?.length ?? 0) * u.ship + (f.squadrons?.length ?? 0) * u.squadron, 0);
+}
+
+/** The cost of a new fleet of `kind` (war.fleets) or a new air wing. */
+export const fleetCost = (c, war, kind) => war.fleets[kind].reduce((a, t) => a + ((c.power ?? DEFAULT_POWER)[t] ?? 120), 0);
+export const airCost = () => Object.entries(AIR_WING).reduce((a, [k, n]) => a + (SQUADRON[k] ?? 100) * n * 3, 0);
+
+/** A new fleet built at a depot port, put to sea in the zone off it (room for it there: STACK.fleet). */
+export function raiseFleet(c, war, side, army, port, kind = 'escort') {
+  const P = war.provinces[port], cost = fleetCost(c, war, kind);
+  if (!P?.port || c.provinces[port].depot !== side || c.provinces[port].owner !== side || c.pool[side] < cost) return null;
+  const room = (P.seas ?? []).filter((z) => forcesAt(c, z, side, 'fleet').length < STACK.fleet);
+  const zone = room.find((z) => !forcesAt(c, z, enemy(side), 'fleet').length) ?? room[0]; // (blockaded: it sails out to fight)
+  if (!zone) return null;
+  c.pool[side] -= cost;
+  return spawnForce(c, war, { kind: 'fleet', side, army, at: zone, name: `New ${kind} group`, ships: kind });
+}
+
+/** A new air wing formed at a depot with an airfield. */
+export function raiseAir(c, war, side, army, base) {
+  const cost = airCost();
+  if (!war.provinces[base]?.airfield || c.provinces[base].depot !== side || c.provinces[base].owner !== side || c.pool[side] < cost) return null;
+  c.pool[side] -= cost;
+  return spawnForce(c, war, { kind: 'air', side, army, at: base, name: 'New air wing', squadrons: { ...AIR_WING } });
 }
 
 /** A new battalion for an army at a depot (or a new army there), from the pool. */

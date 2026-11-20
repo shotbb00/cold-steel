@@ -5,7 +5,7 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON } from '../wcampaign/engine.js';
 import { aiTurn } from '../wcampaign/ai.js';
 import { fightable, battleChoice, takeResult, clearResult, outcomeOf } from '../wcampaign/battle.js';
 import { encode, decode, saveFile, autosave, listSaves, loadSave, toPieces } from '../wcampaign/save.js';
@@ -174,7 +174,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const mor = (s) => `<span class="wc-morale ${s}"><i style="--m:${Math.max(0, Math.round(c.morale[s]))}%"></i>${SIDE[s]} ${Math.max(0, Math.round(c.morale[s]))}</span>`;
     bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}</small>`),
       el('div', 'wc-morales', `${mor('nato')}${mor('pact')}`),
-      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b>`));
+      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${(c.income?.[me] ?? 0) >= 0 ? '+' : ''}${Math.round(c.income?.[me] ?? 0).toLocaleString('en')} a turn · upkeep ${Math.round(upkeep(c, me)).toLocaleString('en')}</small>`));
     const right = el('div', 'wc-actions');
     right.append(btn('Save / move', 'mp-btn', saveDialog), c.over ? el('span', 'wc-over', 'The war is over') : btn('End turn', 'deploy', endOfTurn), btn('×', 'wc-close', close));
     bar.append(right);
@@ -348,6 +348,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
           const cost = war.battalions[kind].reduce((a, t) => a + (c.power[t] ?? 120), 0);
           d.append(btn(`Raise ${kind} battalion · ${cost}`, 'mp-btn', () => { const r = raise(c, war, me, army, id, kind); st.msg = r ? `A ${kind} battalion joins ${r.name}.` : `Not possible: not enough production, or no room here (at most ${STACK.army} army groups).`; render(); }));
         }
+        if (p.port) for (const kind of Object.keys(war.fleets)) {
+          d.append(btn(`Build ${kind} fleet · ${fleetCost(c, war, kind)}`, 'mp-btn', () => { const r = raiseFleet(c, war, me, army, id, kind); st.msg = r ? `${r.name} puts to sea in ${nameOf(r.at)}.` : `Not possible: not enough production, or no room off this port (at most ${STACK.fleet} fleets a sea zone).`; render(); }));
+        }
+        if (p.airfield) d.append(btn(`Form air wing · ${airCost()}`, 'mp-btn', () => { const r = raiseAir(c, war, me, army, id); st.msg = r ? `${r.name} is formed at ${nameOf(id)}.` : 'Not possible: not enough production.'; render(); }));
       }
       return d;
     }
@@ -366,7 +370,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const provs = Object.keys(war.provinces).filter((k) => war.provinces[k].theatre === tid);
       const n = provs.filter((k) => c.provinces[k].owner === 'nato').length, q = provs.length - n;
       const forces = (sd) => c.forces.filter((f) => f.side === sd && theatreOf(f.at) === tid).length;
-      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>`, 'wc-card', () => goTheatre(tid)));
+      const prio = el('div', 'seg wc-prio');
+      prio.title = 'Priority: how much of your reserves this theatre’s battles draw (the AI sets its own)';
+      for (const [name, k] of Object.entries(PRIORITY)) prio.append(btn(name, (c.priority[me][tid] ?? 1) === k ? 'on' : '', () => { c.priority[me][tid] = k; render(); }));
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>`, 'wc-card', () => goTheatre(tid)), prio);
     }
     d.append(el('h3', 'menu-sub', 'Dispatches'));
     const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);
