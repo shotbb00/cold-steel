@@ -1,7 +1,7 @@
 // Letters home between campaign battles: after each battle one soldier of the brigade writes to
 // his family about it — where they fought, whether they held or broke through, who didn't come
 // back. The same man writes while his unit lives; if it's lost, a comrade takes over and says so.
-// Built from the battle's real outcome (campaign/Campaign.js recordBattle) and voiced by army: an
+// Built from the battle's real outcome (ui/WarRoom.js letterHome: the world campaign's battle) and voiced by army: an
 // American GI, a West German conscript, a Soviet soldier and an East German one (the last three in
 // translation). Each letter draws a few topics from a dozen (food, sleep, the land, the enemy, his
 // own weapon, rumours, home, being cut off…) and its lines from big pools, and no line comes back

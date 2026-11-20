@@ -146,7 +146,7 @@ export class GameEngine {
     this.view = { w: container.clientWidth || innerWidth, h: container.clientHeight || innerHeight };
     this.playerFaction = playerFaction;
     this.coop = !!(net && coop);
-    this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
+    this.campaign = campaign; // a world-campaign battle (wcampaign/battle.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.armies = armiesFrom(armies, map); // which army each side fields (data/factions.js ARMIES; the Pacific's on its maps only)
     const only = armiesOn(map); // (a map fought by particular armies only, in this war: Omaha, Stalingrad, the Hesse maps in 1945 — maps/index.js)
@@ -465,7 +465,7 @@ export class GameEngine {
   }
 
   /**
-   * The campaign's memory of a sector (campaign/Campaign.js scars): what this battle leaves behind —
+   * A campaign's memory of a battlefield (its scars): what this battle leaves behind —
    * its craters (with the ones from before), the defences still standing, the collapsed houses,
    * the blown bridges and the ones laid.
    */
