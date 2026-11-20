@@ -61,6 +61,7 @@ export function createLakes({ lakes, level = 0 }) {
 
     build(scene) {
       const mat = new THREE.MeshStandardMaterial({ color: 0x3a4c52, roughness: 0.24, metalness: 0.3, transparent: true, opacity: 0.9 });
+      mat.userData.waterSurface = true; // (drawn first among the see-through: smoke over a lake covers it)
       for (const L of lakes) {
         const r = Math.max(L.rx, L.rz) * 1.3 + 10; // the shore ground covers the sheet's corners
         const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), mat);

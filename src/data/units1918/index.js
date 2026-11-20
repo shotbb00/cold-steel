@@ -397,7 +397,7 @@ const ambulance = derive(T.ambulance, {
 });
 /** The supply tank (Britain) and the ammunition lorries: they mend tanks near them, and a broken-down or ditched tank close by gets going three times sooner (systems/Breakdowns.js). */
 const recovery = derive(T.recovery, {
-  stats: { ...LORRY_18 },
+  stats: { ...LORRY_18, damage: 0, range: 0 }, // (unarmed: not the 1985 M88's machine gun)
   factionStats: { nato: { armor: 0.4, hp: 850, speed: 1.9, breakdown: 1 / 300, ditch: 0.02 } },
   models: { nato: buildSupplyTank, fr: buildSupplyLorryFR, pact: buildSupplyLorryDE, st: buildSupplyLorryDE },
   engine: 'engine.diesel',

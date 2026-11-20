@@ -100,7 +100,7 @@ export class Terrain {
       const z = az + (bz - az) * k;
       if (ay + (by - ay) * k < this.heightAt(x, z) + lift) return false;
     }
-    return true;
+    return !this.occluders?.sightBlocked(ax, ay, az, bx, by, bz); // the buildings (world/Cover.js: set by the game)
   }
 
   /**

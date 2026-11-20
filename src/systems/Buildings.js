@@ -8,6 +8,7 @@
 // (ProjectileSystem.detonate calls blast) — until it collapses: the walls come down to a low
 // rubble pile (still low cover), and whoever was inside is likely hurt or killed.
 import { P } from '../data/units/geometry.js';
+import * as THREE from 'three';
 // House upgrades, paid from the building budget (core/Orders.js 'houseUpgrade', systems/Economy.js):
 //   sandbag – bags along the walls: the men at its windows take 40 % less (UnitStack.receiveDamage)
 //   aid     – an aid station: a medic jeep (an ambulance: systems/Support.js drives it to the wounded)
@@ -15,6 +16,10 @@ import { P } from '../data/units/geometry.js';
 export const HOUSE_UPGRADES = { sandbag: { cost: 40, label: 'sandbagged' }, aid: { cost: 60, label: 'an aid station' } };
 const AID_EVERY = 90;
 const BURN = { time: 150, smoke: 0.8 }; // s a collapsed house burns; its smoke cloud × the house's size
+const FALL = 2.2;     // s the walls take to come down
+const RUBBLE = 0.9;   // m: the heap's walls — lower than infantry climbs (world/Nav.js CLIMB), higher than a tank drives over
+/** 0..1 from a position: vertices that share a corner move together (a box's faces don't tear apart). */
+const hash = (x, y, z) => { const v = Math.sin(Math.round(x * 4) * 12.9898 + Math.round(y * 4) * 78.233 + Math.round(z * 4) * 37.719) * 43758.5453; return v - Math.floor(v); };
 
 export class Buildings {
   constructor(game, list = []) {
@@ -165,6 +170,8 @@ export class Buildings {
   /** Stacks on their way in go in once they're at the door. */
   update() {
     this.updateAid();
+    for (const b of this.falling ?? []) this.fall(b);
+    if (this.falling?.some((b) => b.fallen)) this.falling = this.falling.filter((b) => !b.fallen);
     for (const s of this.game.world.stacks) {
       if (!s.alive) continue;
       // a new order (moveTo clears garrison) brings them out first
@@ -275,25 +282,97 @@ export class Buildings {
     game.announce(`The ${b.name} collapses!`);
   }
 
-  /** The walls coming down: rubble, lower cover, dust and noise (no casualties — that's collapse()). */
+  /**
+   * The walls coming down (no casualties — that's collapse()): over FALL seconds every part of the building falls into a
+   * rubble heap — highest in the middle, the upper walls spilling outward, the roof onto the top — under a rolling cloud of
+   * dust; then broken masonry and beams lie strewn over it. The heap: infantry climbs onto it and finds cover all round
+   * (rubble spots), vehicles go round it, sight and fire pass over it (its sight block drops to 1.4 m).
+   */
   collapseVisual(b, quiet = false) {
     if (b.collapsed) return;
     const game = this.game;
     b.collapsed = true;
-    // walls slump into a rubble pile: squash its vertices toward the ground (its range of the tile's shared mesh: world/Props.js finish)
-    for (const { mesh, start, count } of b.meshes) {
-      const p = mesh.geometry.attributes.position;
-      for (let i = start; i < start + count; i++) p.setY(i, p.getY(i) * 0.3 + b.ground * 0.7);
-      p.needsUpdate = true;
-    }
-    for (const c of b.colliders) c.top = Math.min(c.top, c.y + 0.6 + 0.85);
-    for (const s of game.cover.spots) if (s.collider.building === b) { s.height = s.collider.top - s.y; s.interior = null; }
-    if (quiet) return; // (a ruin from before the battle: no dust, no bang)
-    // dust and debris
-    for (let i = 0; i < 5; i++) {
-      const p = { x: b.x + (Math.random() - 0.5) * b.w, y: b.ground + 1, z: b.z + (Math.random() - 0.5) * b.d };
-      game.effects.explosion(p, 0.9, { ground: true, fire: 0.3 });
-    }
+    // where every vertex of it ends up (its range of the tile's shared mesh: world/Props.js finish)
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), hw = b.w / 2, hd = b.d / 2;
+    const heap = Math.min(3.4, 1.0 + (b.h ?? 4) * 0.22);
+    b.fallMoves = b.meshes.map(({ mesh, start, count }) => {
+      const p = mesh.geometry.attributes.position, from = new Float32Array(count * 3), to = new Float32Array(count * 3), delay = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const x = p.getX(start + i), y = p.getY(start + i), z = p.getZ(start + i);
+        const dx = x - b.x, dz = z - b.z, lx = dx * c - dz * s, lz = dx * s + dz * c;
+        const u = Math.min(1.4, Math.max(Math.abs(lx) / hw, Math.abs(lz) / hd)), n = hash(x, y, z), h = y - b.ground;
+        const top = heap * Math.max(0.12, 1 - 0.75 * u * u) * (0.65 + 0.7 * n);
+        const spill = Math.min(3, Math.max(0, h - top) * 0.3) * (0.5 + n);
+        const r = Math.hypot(dx, dz) || 1;
+        from[i * 3] = x; from[i * 3 + 1] = y; from[i * 3 + 2] = z;
+        to[i * 3] = x + (dx / r) * spill; to[i * 3 + 1] = b.ground + Math.min(h, top); to[i * 3 + 2] = z + (dz / r) * spill;
+        delay[i] = 0.35 * (1 - Math.min(1, h / ((b.h ?? 4) + 1))) + 0.15 * n; // (the top goes first, the ground floor last)
+      }
+      return { mesh, p, start, count, from, to, delay };
+    });
+    b.fallT0 = game.time;
+    b.fallen = false;
+    b.heap = heap;
+    // the cover: low walls men climb over anywhere, a heap the tanks go round, positions all over it; the sight block a rubble pile's
+    for (const col of b.colliders) col.top = Math.min(col.top, col.y + 0.6 + RUBBLE);
+    if (b.occluder) b.occluder.top = Math.min(b.occluder.top, b.ground + 1.4);
+    for (const sp of game.cover.spots) if (sp.collider.building === b) { sp.height = sp.collider.top - sp.y; sp.interior = null; }
+    game.cover.addBox({ x: b.x, z: b.z, yaw: b.yaw, length: b.w * 0.9, thickness: b.d * 0.9, height: RUBBLE, spots: false });
+    const pts = [];
+    for (let ix = -hw + 1.5; ix < hw - 1; ix += 2.6) for (let iz = -hd + 1.5; iz < hd - 1; iz += 2.6) pts.push([b.x + ix * c + iz * s, b.z - ix * s + iz * c]);
+    game.cover.addRubbleSpots(pts, Math.min(1.6, heap * 0.6));
+    if (quiet) { this.fall(b, true); return; } // (a ruin from before the battle: lying there already, no dust, no bang)
+    (this.falling ??= []).push(b);
+    this.dustBurst(b, 1.3);
     game.audio.play('explosion.big', { x: b.x, y: b.ground, z: b.z }, { volume: 1 });
+  }
+
+  /** A falling building's frame: each vertex on its way down (accelerating, as things fall); at the end the debris on top. */
+  fall(b, now = false) {
+    const k = now ? 1 : Math.min(1, (this.game.time - b.fallT0) / FALL);
+    for (const m of b.fallMoves) {
+      for (let i = 0; i < m.count; i++) {
+        const t = Math.max(0, Math.min(1, (k - m.delay[i]) / (1 - m.delay[i]))), e = t * t;
+        const j = i * 3;
+        m.p.setXYZ(m.start + i, m.from[j] + (m.to[j] - m.from[j]) * e, m.from[j + 1] + (m.to[j + 1] - m.from[j + 1]) * e, m.from[j + 2] + (m.to[j + 2] - m.from[j + 2]) * e);
+      }
+      m.p.needsUpdate = true;
+    }
+    if (!now && !b.dust2 && k > 0.45) { b.dust2 = true; this.dustBurst(b, 1.8); }
+    if (k < 1) return;
+    b.fallen = true;
+    for (const m of b.fallMoves) m.mesh.geometry.computeBoundingSphere();
+    b.fallMoves = null;
+    this.debris(b);
+    if (!now) this.dustBurst(b, 0.9);
+  }
+
+  /** Dust rolling out of a building coming down. */
+  dustBurst(b, size) {
+    const fx = this.game.effects;
+    const n = Math.min(10, 3 + Math.round((b.w * b.d) / 40));
+    for (let i = 0; i < n; i++) {
+      const p = { x: b.x + (Math.random() - 0.5) * b.w * 1.2, y: b.ground + 0.5 + Math.random() * 2, z: b.z + (Math.random() - 0.5) * b.d * 1.2 };
+      fx.dust(p, size * (3 + Math.random() * 3));
+    }
+    if (size > 1.5) fx.explosion({ x: b.x, y: b.ground + 1, z: b.z }, 0.7, { ground: true, fire: 0.2 });
+  }
+
+  /** Broken masonry, bricks and charred beams strewn over the heap. */
+  debris(b) {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), parts = [];
+    const wall = b.plaster ?? 0x9a8f7c, n = Math.max(10, Math.min(70, Math.round((b.w * b.d) / 4)));
+    const shade = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      const lx = (Math.random() - 0.5) * b.w * 1.15, lz = (Math.random() - 0.5) * b.d * 1.15;
+      const u = Math.min(1.3, Math.max(Math.abs(lx) / (b.w / 2), Math.abs(lz) / (b.d / 2)));
+      const x = b.x + lx * c + lz * s, z = b.z - lx * s + lz * c;
+      const y = b.ground + b.heap * Math.max(0.1, 1 - 0.75 * u * u) * 0.8;
+      const beam = Math.random() < 0.18;
+      const col = beam ? 0x2a1f18 : shade.set(Math.random() < 0.5 ? wall : 0x7a6a58).multiplyScalar(0.7 + Math.random() * 0.4).getHex();
+      const sz = beam ? [0.2, 0.2, 2 + Math.random() * 3] : [0.4 + Math.random() * 1.1, 0.3 + Math.random() * 0.6, 0.4 + Math.random() * 1.1];
+      parts.push(P.box(...sz, { x, y, z, rx: (Math.random() - 0.5) * 1.2, ry: Math.random() * Math.PI, rz: (Math.random() - 0.5) * (beam ? 0.9 : 1.2), color: col }));
+    }
+    b.rubble = this.game.construction.addMesh(parts);
   }
 }

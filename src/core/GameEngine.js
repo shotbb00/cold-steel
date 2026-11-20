@@ -187,6 +187,7 @@ export class GameEngine {
     this.terrain = new Terrain({ size: map.size, segments: map.segments, height: map.height, palette: map.theme.terrain, fields: map.fields ?? null });
     this.scene.add(this.terrain.mesh);
     this.cover = new CoverMap(this.terrain);
+    this.terrain.occluders = this.cover; // (sight stops at buildings: Terrain.lineOfSight → Cover.sightBlocked)
     this.decor = map.decorate?.({
       scene: this.scene, terrain: this.terrain, cover: this.cover, bounds: map.bounds, rand: mulberry32(map.seed ?? 1),
     }) ?? null;
@@ -246,7 +247,7 @@ export class GameEngine {
     this.construction = new Construction(this);
     this.crews = new CrewBailout(this);
     this.transport = new Transport(this);
-    this.buildings = new Buildings(this, this.decor?.buildings ?? []);
+    this.buildings = new Buildings(this, (this.decor?.buildings ?? []).filter((b) => !b.removed)); // (one that stood in a bigger one was taken out: world/Props.js clearOverlaps)
     this.projectiles.buildings = this.buildings;
     this.air = new AirStrike(this);
     this.support = new Support(this);

@@ -2,6 +2,9 @@
 //   * blocks laser bolts (segmentHit),
 //   * blocks movement (resolveCircle), and
 //   * owns "cover spots": places to crouch, each protecting against threats from one direction.
+// Buildings (and tall solid props) are also sight blocks — an occluder: the footprint to the full height (a ruin: lower). Sight
+// and direct fire stop at them (sightBlocked, used by Terrain.lineOfSight; occluderHit, by the projectiles) — except the
+// building a unit stands in: a garrison sees and shoots out of its windows, and is seen and shot at through them.
 // Soldiers claim spots so two never squeeze into the same one. A spatial grid keeps
 // queries cheap as maps grow.
 const SPOT_OFFSET = 0.8;   // metres from the cover surface
@@ -57,6 +60,11 @@ function segCyl(c, p0, p1) {
   return y < c.y || y > c.top ? -1 : t;
 }
 
+const OCC_CELL = 24;
+const _o0 = { x: 0, y: 0, z: 0 }, _o1 = { x: 0, y: 0, z: 0 };
+/** An occluder as segBox's box (the same fields: x, z, cos, sin, hx, hz, y, top). */
+const _occBox = (o) => o;
+
 export class CoverMap {
   constructor(terrain, cellSize = 8) {
     this.terrain = terrain;
@@ -69,7 +77,69 @@ export class CoverMap {
     this._stamp = 1;
     this._colList = [];
     this._spotList = [];
+    this.occluders = [];
+    this.occGrid = new Map(); // (cells of OCC_CELL m: a segment walks them in order)
+    this._occStamp = 1;
   }
+
+  /** A sight block: an oriented box from the ground to `top` (absolute height). Returns it (its `top` can drop later: a collapse). */
+  addOccluder({ x, z, yaw = 0, hx, hz, y, top, building = null }) {
+    const o = { x, z, cos: Math.cos(yaw), sin: Math.sin(yaw), hx, hz, y, top, building, stamp: 0, occ: true };
+    this.occluders.push(o);
+    this.track?.push(o);
+    const r = Math.hypot(hx, hz);
+    for (let cx = Math.floor((x - r) / OCC_CELL); cx <= Math.floor((x + r) / OCC_CELL); cx++) for (let cz = Math.floor((z - r) / OCC_CELL); cz <= Math.floor((z + r) / OCC_CELL); cz++) {
+      const k = cx * 100003 + cz;
+      let list = this.occGrid.get(k);
+      if (!list) this.occGrid.set(k, (list = []));
+      list.push(o);
+    }
+    return o;
+  }
+
+  /** Take a sight block away (a building that had to go: world/Props.js endBuilding). */
+  removeOccluder(o) {
+    const i = this.occluders.indexOf(o);
+    if (i >= 0) this.occluders.splice(i, 1);
+    for (const list of this.occGrid.values()) { const j = list.indexOf(o); if (j >= 0) list.splice(j, 1); }
+  }
+
+  /** Is (x, z) inside occluder o's footprint (a man in that building)? */
+  static inside(o, x, z, pad = 0.6) {
+    const dx = x - o.x, dz = z - o.z;
+    return Math.abs(dx * o.cos - dz * o.sin) <= o.hx + pad && Math.abs(dx * o.sin + dz * o.cos) <= o.hz + pad;
+  }
+
+  /**
+   * First sight block along a→b: entry t (0..1) or -1. Blocks holding `a` or `b` (or `skipA` / `skipB`) don't count: from
+   * inside a building one looks out through its windows. The segment walks the grid cell by cell and stops at the first hit.
+   */
+  occluderHit(ax, ay, az, bx, by, bz, ex = ax, ez = az, fx = bx, fz = bz) {
+    if (!this.occluders.length) return -1;
+    const stamp = ++this._occStamp, len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(len / (OCC_CELL * 0.5)));
+    const p0 = _o0, p1 = _o1;
+    p0.x = ax; p0.y = ay; p0.z = az; p1.x = bx; p1.y = by; p1.z = bz;
+    let best = Infinity, lastKey = null;
+    for (let i = 0; i <= n; i++) {
+      const k = i / n, key = Math.floor((ax + (bx - ax) * k) / OCC_CELL) * 100003 + Math.floor((az + (bz - az) * k) / OCC_CELL);
+      if (key === lastKey) continue;
+      lastKey = key;
+      const list = this.occGrid.get(key);
+      if (!list) continue;
+      for (const o of list) {
+        if (o.stamp === stamp) continue;
+        o.stamp = stamp;
+        if (CoverMap.inside(o, ex, ez) || CoverMap.inside(o, fx, fz)) continue;
+        const t = segBox(_occBox(o), p0, p1);
+        if (t >= 0 && t < best) best = t;
+      }
+      if (best < Infinity && best <= (i + 1) / n) return best; // (nothing nearer can come in a later cell)
+    }
+    return best < Infinity ? best : -1;
+  }
+
+  /** True when a building (or a tall solid prop) stands between a and b (Terrain.lineOfSight). */
+  sightBlocked(ax, ay, az, bx, by, bz) { return this.occluderHit(ax, ay, az, bx, by, bz) >= 0; }
 
   // ---------------------------------------------------------------- spatial grid
 
@@ -121,6 +191,8 @@ export class CoverMap {
     this.colliders.push(c);
     this._insert(this.colGrid, c, x, z, c.r);
     this.onAdd?.(c); // (the nav grid, once there is one)
+    this.track?.push(c); // (a building being built: all its cover, should it have to go — world/Props.js endBuilding)
+    if (height >= 3 && !drive) this.addOccluder({ x, z, yaw, hx, hz, y: c.y, top: c.top }); // (taller than a man looks over: it blocks sight)
     if (spots) {
       const n = Math.max(1, Math.floor(length / SPOT_SPACING));
       for (let i = 0; i < n; i++) {
@@ -220,6 +292,21 @@ export class CoverMap {
     for (let k = 0; k < 3; k++) {
       const a = (k / 3) * Math.PI * 2 + Math.random();
       this._addSpot(x + Math.cos(a) * radius * 0.45, z + Math.sin(a) * radius * 0.45, -Math.cos(a), -Math.sin(a), lip, true);
+    }
+    this.finalizeFrom(start);
+    return this.spots.length - start;
+  }
+
+  /**
+   * Rubble positions over a collapsed building (systems/Buildings.js): shelter from every side, `top` metres of masonry
+   * round them, at `points` [[x, z], …]. Returns how many it added.
+   */
+  addRubbleSpots(points, top) {
+    const start = this.spots.length;
+    for (const [x, z] of points) {
+      const g = this.terrain.heightAt(x, z), heap = { x, z, y: g - 0.6, top: g + top, spots: 0, rubble: true };
+      const a = Math.random() * Math.PI * 2;
+      this._addSpot(x, z, Math.cos(a), Math.sin(a), heap, true);
     }
     this.finalizeFrom(start);
     return this.spots.length - start;

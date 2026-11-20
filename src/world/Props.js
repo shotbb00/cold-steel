@@ -37,6 +37,7 @@ function sizedBox(sx, sy, sz) {
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
+const _eb = new THREE.Euler(0, 0, 0, 'YXZ'); // (box(): heading, then pitch and roll in the piece's frame)
 const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _c = new THREE.Color();
@@ -187,7 +188,7 @@ export class PropBuilder {
   }
 
   box(key, x, y, z, sx, sy, sz, yaw = 0, color = 0xffffff, rx = 0, rz = 0) {
-    _m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, yaw, rz)), _s.set(sx, sy, sz));
+    _m.compose(_p.set(x, y, z), _q.setFromEuler(_eb.set(rx, yaw, rz)), _s.set(sx, sy, sz)); // (yaw first: rx/rz tilt about the piece's own axes — a roof slope on a turned building)
     this.push(key, TILED.has(key) ? sizedBox(sx, sy, sz) : UNIT_BOX, _m, color);
   }
 
@@ -497,11 +498,45 @@ export class PropBuilder {
     const b = { id: this.buildings.length, name, x, z, yaw, w, d, ground: this.terrain.heightAt(x, z), colliders: [], meshes: [] };
     this.buildings.push(b);
     this.group = b;
+    this.cover.track = []; // (everything it puts in the cover map: endBuilding may have to take it out again)
     return b;
   }
 
+  /**
+   * No building inside another: the maps scatter their houses at random, and a church or a hall can land on one. When `b`
+   * stands in buildings already there, the bigger keeps its place — the church over the cottage, whichever came first —
+   * and the others go: their parts, their cover and their sight blocks (they stay in the list as `removed`: ids are indices).
+   */
+  clearOverlaps(b) {
+    const foot = (o) => ({ o, c: Math.cos(o.yaw), s: Math.sin(o.yaw), hw: o.w / 2 - 0.3, hd: o.d / 2 - 0.3 });
+    const A = foot(b), axes = (f) => [[f.c, -f.s], [f.s, f.c]];
+    const half = (f, ax) => Math.abs(f.hw * (f.c * ax[0] - f.s * ax[1])) + Math.abs(f.hd * (f.s * ax[0] + f.c * ax[1]));
+    const hit = this.buildings.filter((o) => {
+      if (o === b || o.removed) return false;
+      const B = foot(o), dx = o.x - b.x, dz = o.z - b.z;
+      if (Math.hypot(dx, dz) > Math.hypot(A.hw, A.hd) + Math.hypot(B.hw, B.hd)) return false;
+      return [...axes(A), ...axes(B)].every((ax) => Math.abs(dx * ax[0] + dz * ax[1]) < half(A, ax) + half(B, ax));
+    });
+    if (!hit.length) return;
+    const area = (o) => o.w * o.d;
+    for (const o of area(b) >= Math.max(...hit.map(area)) ? hit : [b]) this.removeBuilding(o);
+  }
+
+  removeBuilding(o) {
+    o.removed = true;
+    for (const k of [...this.batches.keys()]) if (k.endsWith(`#${o.id}`)) this.batches.delete(k);
+    for (const c of o.parts ?? []) if (c.occ) this.cover.removeOccluder(c); else this.cover.remove(c);
+    if (o.occluder) this.cover.removeOccluder(o.occluder);
+    o.colliders = [];
+  }
+
   endBuilding() {
+    const b = this.group;
     this.group = null;
+    if (b) { b.parts = this.cover.track ?? []; this.cover.track = null; }
+    if (b) this.clearOverlaps(b);
+    if (b?.removed) return;
+    if (b?.h > 2) b.occluder = this.cover.addOccluder({ x: b.x, z: b.z, yaw: b.yaw, hx: b.w / 2, hz: b.d / 2, y: b.ground - 0.5, top: b.ground + Math.max(2.4, b.h * (1 - 0.45 * (b.ruin ?? 0))), building: b });
   }
 
   /** A box in a building's frame, on its floor level (not following the terrain). */
@@ -524,6 +559,7 @@ export class PropBuilder {
     sill = 0.95, head = 2.25, frame = 0xd8d0bc, shutters = 0, profile = null, upper = false,
   }) {
     const r = this.rand;
+    b.h = Math.max(b.h ?? 0, height); b.ruin = Math.max(b.ruin ?? 0, ruin); // (its sight block: endBuilding)
     const sh = height / storeys;
     const n = Math.max(1, Math.round(len / bay));
     const bw = len / n;
@@ -1134,6 +1170,7 @@ export class PropBuilder {
       const [key, group] = k.split('#');
       if (group === undefined) { add(mergeGeometries(geos, false), key, true); continue; }
       const b = this.buildings[+group];
+      if (b.removed) continue;
       const ck = `${key}@${Math.floor(b.x / BUILDING_CELL)},${Math.floor(b.z / BUILDING_CELL)}`;
       if (!cells.has(ck)) cells.set(ck, []);
       cells.get(ck).push({ geo: mergeGeometries(geos, false), b });
