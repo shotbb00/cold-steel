@@ -102,33 +102,47 @@ import gela from './gela.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
 import schwerin from './schwerin.ts';
+import magdeburg from './magdeburg.ts';
+import rheinMain from './rheinMain.ts';
 import narvik from './narvik.ts';
 import malselv from './malselv.ts';
 import lyngen from './lyngen.ts';
 import pechenga from './pechenga.ts';
+import bodo from './bodo.ts';
+import murmansk from './murmansk.ts';
 import ratzeburgLakes from './ratzeburgLakes.ts';
+import wesel from './wesel.ts';
 import korea from './korea.ts';
 import chorwonValley from './chorwonValley.ts';
 import imjinRiver from './imjinRiver.ts';
 import uijeongbu from './uijeongbu.ts';
 import kaesong from './kaesong.ts';
+import pyongyang from './pyongyang.ts';
+import seoul from './seoul.ts';
 import andoya from './andoya.ts';
 import keflavik from './keflavik.ts';
 export const MAPS = {
   [andoya.id]: andoya,
   [keflavik.id]: keflavik,
   [ratzeburgLakes.id]: ratzeburgLakes,
+  [wesel.id]: wesel,
   [korea.id]: korea,
   [chorwonValley.id]: chorwonValley,
   [imjinRiver.id]: imjinRiver,
   [uijeongbu.id]: uijeongbu,
   [kaesong.id]: kaesong,
+  [pyongyang.id]: pyongyang,
+  [seoul.id]: seoul,
   [narvik.id]: narvik,
   [malselv.id]: malselv,
   [lyngen.id]: lyngen,
   [finnmark.id]: finnmark,
   [schwerin.id]: schwerin,
+  [magdeburg.id]: magdeburg,
+  [rheinMain.id]: rheinMain,
   [pechenga.id]: pechenga,
+  [bodo.id]: bodo,
+  [murmansk.id]: murmansk,
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
   [gela.id]: gela,

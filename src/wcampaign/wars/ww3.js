@@ -37,8 +37,8 @@ export const WW3 = {
 
   provinces: {
     // ---- the Central Front: from the Rhine to the inner-German border in Hesse, and the Baltic coast
-    rhine: { name: 'The Rhine and the Low Countries', theatre: 'central', depot: 'nato', port: true, airfield: true, prod: 7, seas: ['northSea'], land: ['frankfurt', 'schleswig'], lat: 51.0, lon: 6.0 },
-    frankfurt: { name: 'Frankfurt and the Rhine-Main', theatre: 'central', airfield: true, prod: 4, land: ['rhine', 'hersfeld', 'haune', 'fulda'], lat: 50.1, lon: 8.7 },
+    rhine: { name: 'The Rhine and the Low Countries', theatre: 'central', depot: 'nato', map: 'wesel', port: true, airfield: true, prod: 7, seas: ['northSea'], land: ['frankfurt', 'schleswig'], lat: 51.0, lon: 6.0 },
+    frankfurt: { name: 'Frankfurt and the Rhine-Main', theatre: 'central', map: 'rhein-main', airfield: true, prod: 4, land: ['rhine', 'hersfeld', 'haune', 'fulda'], lat: 50.1, lon: 8.7 },
     hersfeld: { name: 'Bad Hersfeld', theatre: 'central', map: 'hersfeld-airbase', airfield: true, prod: 1, land: ['frankfurt', 'haune', 'kaliwerk'], lat: 50.87, lon: 9.71 },
     haune: { name: 'The Haune and the Fulda', theatre: 'central', map: 'haune-fulda', prod: 1, land: ['frankfurt', 'hersfeld', 'fulda'], lat: 50.68, lon: 9.62 },
     fulda: { name: 'The Fulda Gap', theatre: 'central', map: 'fulda-gap', prod: 2, fort: 1, land: ['frankfurt', 'haune', 'huenfeld'], lat: 50.55, lon: 9.68 },
@@ -46,30 +46,30 @@ export const WW3 = {
     kaliwerk: { name: 'Kaliwerk Hattorf', theatre: 'central', map: 'monte-kali', prod: 2, fort: 1, land: ['hersfeld', 'werra'], lat: 50.86, lon: 9.95 },
     werra: { name: 'The Werra valley', theatre: 'central', map: 'werra-valley', prod: 1, land: ['huenfeld', 'kaliwerk', 'thuringia'], lat: 50.92, lon: 10.12 },
     thuringia: { name: 'The Thuringian Forest', theatre: 'central', map: 'thuringian-forest', prod: 2, fort: 1, land: ['huenfeld', 'werra', 'eastGermany'], lat: 50.7, lon: 10.7 },
-    eastGermany: { name: 'East Germany', theatre: 'central', depot: 'pact', airfield: true, prod: 11, fort: 1, land: ['thuringia', 'mecklenburg'], lat: 52.1, lon: 12.9 },
+    eastGermany: { name: 'East Germany', theatre: 'central', depot: 'pact', map: 'magdeburg', airfield: true, prod: 11, fort: 1, land: ['thuringia', 'mecklenburg'], lat: 52.1, lon: 12.9 },
     mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: 'schwerin', seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
     schleswig: { name: 'Schleswig-Holstein', theatre: 'central', map: 'ratzeburg-lakes', coastal: ['hohwacht'], seas: ['baltic', 'northSea'], port: true, airfield: true, prod: 2, fort: 1, land: ['rhine', 'mecklenburg'], lat: 54.2, lon: 10.2 },
     britain: { name: 'Britain', theatre: 'central', depot: 'nato', port: true, airfield: true, prod: 5, seas: ['northSea', 'eastAtlantic'], land: [], lat: 52.5, lon: -1.5 },
 
     // ---- the Northern Flank: from the Kola Peninsula over Finnmark down the fjords to Narvik
-    kola: { name: 'The Kola Peninsula', theatre: 'north', depot: 'pact', port: true, airfield: true, prod: 6, fort: 2, seas: ['barents'], land: ['pechenga'], lat: 68.9, lon: 33.1 },
+    kola: { name: 'The Kola Peninsula', theatre: 'north', depot: 'pact', map: 'murmansk', port: true, airfield: true, prod: 6, fort: 2, seas: ['barents'], land: ['pechenga'], lat: 68.9, lon: 33.1 },
     pechenga: { name: 'Pechenga', theatre: 'north', map: 'pechenga', prod: 1, fort: 1, seas: ['barents'], land: ['kola', 'finnmark'], lat: 69.5, lon: 31.2 },
     finnmark: { name: 'Finnmark', theatre: 'north', map: 'finnmark', prod: 1, seas: ['barents'], land: ['pechenga', 'lyngen'], lat: 70.0, lon: 25.0 },
     lyngen: { name: 'The Lyngen line', theatre: 'north', map: 'lyngen', prod: 1, fort: 2, land: ['finnmark', 'malselv'], lat: 69.6, lon: 20.2 },
     malselv: { name: 'Målselv and Bardufoss', theatre: 'north', map: 'malselv', airfield: true, prod: 1, land: ['lyngen', 'narvik'], lat: 69.06, lon: 18.5 },
     narvik: { name: 'Narvik', theatre: 'north', map: 'narvik', port: true, prod: 2, seas: ['norwegianSea'], land: ['malselv', 'bodo'], lat: 68.44, lon: 17.43 },
     andoya: { name: 'Andøya', theatre: 'north', map: null, coastal: ['andoya'], seas: ['norwegianSea'], port: true, airfield: true, prod: 1, land: [], lat: 69.3, lon: 16.1 },
-    bodo: { name: 'Bodø and the south', theatre: 'north', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['norwegianSea'], land: ['narvik'], lat: 67.28, lon: 14.4 },
+    bodo: { name: 'Bodø and the south', theatre: 'north', depot: 'nato', map: 'bodo', port: true, airfield: true, prod: 4, seas: ['norwegianSea'], land: ['narvik'], lat: 67.28, lon: 14.4 },
     iceland: { name: 'Iceland and Keflavík', theatre: 'atlantic', map: null, coastal: ['keflavik'], seas: ['eastAtlantic', 'norwegianSea'], port: true, airfield: true, prod: 1, land: [], lat: 64.0, lon: -22.6 },
 
     // ---- Korea: across the DMZ toward Seoul
-    pyongyang: { name: 'North Korea', theatre: 'korea', depot: 'pact', port: true, airfield: true, prod: 6, fort: 2, seas: ['yellowSea'], land: ['kaesong'], lat: 39.0, lon: 125.75 },
+    pyongyang: { name: 'North Korea', theatre: 'korea', depot: 'pact', map: 'pyongyang', port: true, airfield: true, prod: 6, fort: 2, seas: ['yellowSea'], land: ['kaesong'], lat: 39.0, lon: 125.75 },
     kaesong: { name: 'Kaesong', theatre: 'korea', map: 'kaesong', prod: 1, fort: 2, land: ['pyongyang', 'dmz', 'chorwon'], lat: 38.2, lon: 126.55 },
     dmz: { name: 'The DMZ at Panmunjom', theatre: 'korea', map: 'korea', prod: 1, fort: 2, land: ['kaesong', 'chorwon', 'imjin'], lat: 37.96, lon: 126.68 },
     chorwon: { name: 'The Chorwon valley', theatre: 'korea', map: 'chorwon-valley', prod: 1, fort: 1, land: ['kaesong', 'dmz', 'uijeongbu'], lat: 38.25, lon: 127.21 },
     imjin: { name: 'The Imjin River', theatre: 'korea', map: 'imjin-river', prod: 1, fort: 1, land: ['dmz', 'uijeongbu'], lat: 37.89, lon: 126.95 },
     uijeongbu: { name: 'Uijeongbu', theatre: 'korea', map: 'uijeongbu', prod: 2, land: ['chorwon', 'imjin', 'seoul'], lat: 37.74, lon: 127.05 },
-    seoul: { name: 'Seoul', theatre: 'korea', depot: 'nato', port: true, airfield: true, prod: 6, seas: ['yellowSea'], land: ['uijeongbu'], lat: 37.55, lon: 126.98 },
+    seoul: { name: 'Seoul', theatre: 'korea', depot: 'nato', map: 'seoul', port: true, airfield: true, prod: 6, seas: ['yellowSea'], land: ['uijeongbu'], lat: 37.55, lon: 126.98 },
     japan: { name: 'Japan', theatre: 'korea', depot: 'nato', port: true, airfield: true, prod: 4, fort: 2, seas: ['seaOfJapan'], land: [], lat: 35.4, lon: 139.6 },
     vladivostok: { name: 'Vladivostok', theatre: 'korea', depot: 'pact', port: true, airfield: true, prod: 5, fort: 1, seas: ['seaOfJapan'], land: [], lat: 43.1, lon: 131.9 },
 
