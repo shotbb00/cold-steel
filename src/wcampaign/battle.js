@@ -44,13 +44,16 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
   const pw = (fs) => fs.reduce((a, f) => a + power(c, f), 0), P = { nato: pw(s.nato), pact: pw(s.pact) }, mean = (P.nato + P.pact) / 2 || 1;
   const scale = Object.fromEntries(['nato', 'pact'].map((f) => [f, Math.max(0.4, Math.min(1.8, P[f] / mean))]));
   const land = b.kind === 'land';
-  const forces = land ? Object.fromEntries(['nato', 'pact'].map((f) => [f, s[f].flatMap(stacksOf).sort((x, y) => y.hp - x.hp).slice(0, MAX_STACKS)])) : null;
   const armyOf = (fs) => fs.find((f) => f.kind !== 'air')?.army ?? null;
+  const armies = { nato: armyOf(s.nato), pact: armyOf(s.pact) };
+  // the battle is fought by one army a side: a type its roster lacks is fielded as its stand-in (war.swap, 1985's own armies)
+  const swap = (f, st) => ({ ...st, type: war.swap?.[armies[f]]?.[st.type] ?? st.type });
+  const forces = land ? Object.fromEntries(['nato', 'pact'].map((f) => [f, s[f].flatMap(stacksOf).sort((x, y) => y.hp - x.hp).slice(0, MAX_STACKS).map((st) => swap(f, st))])) : null;
   const name = war.provinces[b.at]?.name ?? war.seas[b.at]?.name ?? b.at;
   return {
     mode: b.kind === 'sea' ? (map.modes?.[0] ?? 'frontline') : b.kind === 'coastal' ? 'landing' : 'breakthrough',
     map: b.map, side: c.side, time: hourOf(c) === 'night' ? 'night' : hourOf(c), weather: ['clear', 'clear', 'overcast', 'overcast', 'rain'][(c.turn * 7 + b.id.length) % 5],
-    armies: { nato: armyOf(s.nato), pact: armyOf(s.pact) },
+    armies,
     campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
       snow: winterNow(c, war) && b.theatre === war.winter?.theatre && b.kind !== 'sea', // (winter where it bites: the map under snow)
       // air support: a call for every 6 aircraft over it this turn (close support and the fighters' cover; none: none)

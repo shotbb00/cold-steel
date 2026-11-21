@@ -597,6 +597,7 @@ function objectives(c, war) {
     if (h && s.turns >= o.hold) {
       s.won = h;
       (c.moraleBonus ??= {})[h] = (c.moraleBonus[h] ?? 0) + o.morale / 2; c.morale[h] = Math.min(moraleCap(c, h), c.morale[h] + o.morale); // (for good: the morale it can reach rises too)
+      c.morale[enemy(h)] -= o.morale / 2; // (and the side that lost it feels it: half as much)
       c.log.push({ turn: c.turn, date: dateOf(c), text: `${sideName(war, h, true).replace(/^t/, 'T')} ${/s$/.test(sideName(war, h)) ? 'have' : 'has'} secured ${o.name}.` });
     }
   }
