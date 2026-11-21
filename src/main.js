@@ -20,6 +20,15 @@ import { trackViewport } from './core/viewport.js';
 
 document.title = GAME.title;
 trackViewport(); // (phones: the game fits what the browser really shows)
+// A page from before the last deploy asks for code files that build no longer has ("Importing a module script failed",
+// Safari): reload into the new build — once a minute at most, so a real outage can't loop
+window.addEventListener('vite:preloadError', (e) => {
+  let last = 0;
+  try { last = Number(sessionStorage.getItem('cs.staleReload')) || 0; sessionStorage.setItem('cs.staleReload', String(Date.now())); } catch { /* storage blocked */ }
+  if (Date.now() - last < 60000) return; // (just reloaded and still failing: show the error)
+  e.preventDefault();
+  location.reload();
+});
 const screen = document.getElementById('loading');
 
 function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null, armies = null, epoch: year = null }) {
