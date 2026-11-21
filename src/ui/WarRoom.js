@@ -6,7 +6,7 @@
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
 import { WW3 } from '../wcampaign/wars/ww3.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves } from '../wcampaign/engine.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves , refreshMaps } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
 import { showQR, scanQR } from './SaveQR.js';
 import { aiTurn } from '../wcampaign/ai.js';
@@ -156,6 +156,7 @@ const CLUSTER = 30; // px: places closer than this on screen share one pin (clic
 
 export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = Object.values(WARS).find((w) => w.id === c.war) ?? WW2 } = {}) {
   const SIDE = war.sides ?? { nato: 'Allies', pact: 'Axis' }; // (this war's names for its sides)
+  refreshMaps(c, war, mapsHere()); // (a war begun before some of its maps were built: they are fought on now)
   document.querySelector('.wc-backdrop')?.remove(); // (the Campaign tab's map: one WorldMap at a time — their svg ids would clash; the tab draws it again on return)
   const room = el('div', 'wc-room');
   document.body.append(room);

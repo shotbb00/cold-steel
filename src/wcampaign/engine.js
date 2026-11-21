@@ -64,6 +64,17 @@ const pick = (c, list) => list[Math.floor(rand(c) * list.length)];
  * @param {{ scenario?: string, side?: 'nato'|'pact', battles?: 'small'|'normal'|'grand', difficulty?: number, seed?: number, maps?: Set<string> }} o
  *   `maps`: the map ids that exist (a planned map not built yet is dropped: its battles are resolved)
  */
+/**
+ * The battle maps from the war as it is now (`maps`: the ids that exist): a campaign begun before a map was built finds it
+ * there when it is opened again (newCampaign wrote them in at the start).
+ */
+export function refreshMaps(c, war, maps) {
+  const has = (id) => id && (!maps || maps.has(id));
+  for (const [id, p] of Object.entries(war.provinces)) if (c.provinces[id]) { c.provinces[id].map = has(p.map) ? p.map : null; c.provinces[id].coastal = (p.coastal ?? []).filter(has); }
+  for (const [id, s] of Object.entries(war.seas)) if (c.seas[id]) c.seas[id].map = has(s.map) ? s.map : null;
+  return c;
+}
+
 export function newCampaign(war, o = {}) {
   const sc = war.scenarios[o.scenario ?? Object.keys(war.scenarios)[0]];
   const has = (id) => id && (!o.maps || o.maps.has(id));
