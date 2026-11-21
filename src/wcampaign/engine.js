@@ -89,7 +89,30 @@ export function newCampaign(war, o = {}) {
   applyEvents(c, war); // (what had already happened by the start date)
   c.held = Object.fromEntries(['nato', 'pact'].map((side) => [side, Object.values(c.provinces).filter((p) => p.owner === side).reduce((a, p) => a + (p.depot === side ? 3 : 1), 0)])); // (the ground morale is measured against)
   c.objectives = Object.fromEntries((war.objectives ?? []).map((o) => [o.id, { holder: null, turns: 0, won: null, start: holderOf(c, war, o) }])); // (who holds each when the war begins)
+  if (war.escalation) c.escalation = war.escalation.start ?? 0;
   return c;
+}
+
+/** A side's name in this war (war.sides: the Allies, NATO …), `the` in front when asked. */
+export const sideName = (war, side, the = false) => { const n = war.sides?.[side] ?? side; return the && !/^the /i.test(n) ? `the ${n}` : n; };
+
+/**
+ * The nuclear shadow (war.escalation, 1985): `by` nearer the brink (a base taken: E.depot; a base bombed: E.strike). Each
+ * level crossed on the way up is told once and costs both sides E.level.morale; the last ends the war — a ceasefire on
+ * the lines held, won by the side in better heart. Quiet turns let it ebb (endTurn: E.decay).
+ */
+export function escalate(c, war, by) {
+  const E = war.escalation;
+  if (!E || c.over) return;
+  const was = c.escalation ?? E.start ?? 0;
+  c.escalation = Math.max(0, Math.min(100, was + by));
+  c.escalatedAt = c.turn;
+  for (const L of E.levels) {
+    if (!(was < L.at && c.escalation >= L.at)) continue;
+    c.log.push({ turn: c.turn, date: dateOf(c), text: L.text ?? L.end, brink: L.at });
+    if (L.morale) for (const side of ['nato', 'pact']) c.morale[side] -= L.morale;
+    if (L.end) c.over = { winner: c.morale.nato >= c.morale.pact ? 'nato' : 'pact', why: L.end, ceasefire: true };
+  }
 }
 
 /**
@@ -197,8 +220,10 @@ export function order(c, war, side, forceId, to, { land = false } = {}) {
   if (f.kind === 'army') {
     const from = war.provinces[f.at], dest = war.provinces[to];
     if (!dest) return 'no such province';
+    if (dest.safe && c.provinces[to].owner !== side) return `${dest.name} is out of the war’s reach`; // (a homeland across an ocean: the United States in 1985)
     if (land) {
       if (!from.port) return 'embark from a port';
+      if (c.provinces[to].owner === side && incoming(c, side, to, 'army') >= STACK.army) return `no room: ${STACK.army} army groups there already`; // (by sea as by land)
       const zone = landingZone(c, war, side, f.at, to);
       if (!zone) return 'no fleet of yours off that coast within two sea zones of the port';
       c.orders[side][forceId] = { to, land: true, zone };
@@ -358,6 +383,7 @@ export function resolveAir(c, war) {
         if (kind === 'support') c.support[s][at] = (c.support[s][at] ?? 0) + through;
         else if (kind === 'attack' && war.provinces[at] && c.provinces[at].owner === foe && through > 4) {
           c.provinces[at].bombed = 2; // (two turns of reduced production)
+          if (c.provinces[at].depot === foe) escalate(c, war, war.escalation?.strike ?? 0); // (a strike deep in the enemy's homeland: nearer the brink)
           const fortHit = through > 20 && c.provinces[at].fort > 0 && rand(c) < 0.25;
           if (fortHit) c.provinces[at].fort--;
           // the troops there: bombed and strafed (a full wing of strike aircraft through: about a tenth of their strength)
@@ -452,7 +478,7 @@ export function settle(c, war, battleId, outcome) {
     const p = c.provinces[b.at];
     if (won) {
       for (const f of live(D)) if (f.at === b.at) retreat(c, war, f);
-      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; if (lost) p.depot = side; /* (a base taken: the captor’s now — its rail yards and stores) */ c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); } for (const f of live(A)) f.at = b.at; }
+      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; if (lost) p.depot = side; /* (a base taken: the captor’s now — its rail yards and stores) */ c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) { c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); escalate(c, war, war.escalation?.depot ?? 0); } } for (const f of live(A)) f.at = b.at; }
       p.fort = Math.max(0, p.fort - 1);
     } else if (held) { for (const f of live(A)) f.at = b.at; p.contested = true; }
     // a failed attack stays where it came from (a failed landing: back on its ships, at the port it left)
@@ -512,7 +538,7 @@ export function endTurn(c, war) {
       if (p.owner !== holder) {
         const base = p.depot === enemy(holder);
         p.owner = holder; c.morale[holder] += MORALE.gain; c.morale[enemy(holder)] -= base ? MORALE.depot : MORALE.province;
-        if (base) { p.depot = holder; c.log.push({ turn: c.turn, depotLost: id, side: enemy(holder) }); }
+        if (base) { p.depot = holder; c.log.push({ turn: c.turn, depotLost: id, side: enemy(holder) }); escalate(c, war, war.escalation?.depot ?? 0); }
       }
     }
   }
@@ -527,7 +553,8 @@ export function endTurn(c, war) {
   for (const side of ['nato', 'pact']) c.morale[side] = Math.min(moraleCap(c, side), c.morale[side] + MORALE.recover); // (a quiet half-week: the country takes heart a little)
   applyEvents(c, war);
   surrenders(c, war);
-  for (const side of ['nato', 'pact']) if (c.morale[side] <= 0) c.over = { winner: enemy(side), why: `${side === 'nato' ? 'the Allies' : 'the Axis'} sued for peace` }; // (the only end: no turn limit)
+  for (const side of ['nato', 'pact']) if (c.morale[side] <= 0 && !c.over) c.over = { winner: enemy(side), why: `${sideName(war, side, true)} sued for peace` }; // (the end: no turn limit — or the nuclear brink, escalate())
+  if (war.escalation && c.escalatedAt !== c.turn - 1) c.escalation = Math.max(0, (c.escalation ?? 0) - (war.escalation.decay ?? 0)); // (a turn with no base taken or bombed: the fear ebbs a little)
 }
 
 /**
@@ -570,7 +597,7 @@ function objectives(c, war) {
     if (h && s.turns >= o.hold) {
       s.won = h;
       (c.moraleBonus ??= {})[h] = (c.moraleBonus[h] ?? 0) + o.morale / 2; c.morale[h] = Math.min(moraleCap(c, h), c.morale[h] + o.morale); // (for good: the morale it can reach rises too)
-      c.log.push({ turn: c.turn, date: dateOf(c), text: `${h === 'nato' ? 'The Allies' : 'The Axis'} have secured ${o.name}.` });
+      c.log.push({ turn: c.turn, date: dateOf(c), text: `${sideName(war, h, true).replace(/^t/, 'T')} ${/s$/.test(sideName(war, h)) ? 'have' : 'has'} secured ${o.name}.` });
     }
   }
 }

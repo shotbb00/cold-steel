@@ -1,14 +1,15 @@
 // Headless world campaign: both sides played by the strategic AI, every battle auto-resolved, the state checked
 // every turn; then a save code round trip — and the loaded save must play on exactly as the original.
 //
-//   node tools/campaign_sim.mjs [scenario=1942] [turns=200] [seed=7]   (1942: the war's one start)
+//   node tools/campaign_sim.mjs [scenario=1942|1985] [turns=200] [seed=7]   (1942: the Second World War's one start, 1985: World War III's)
 import { newCampaign, resolveTurn, autoResolve, settle, endTurn, dateOf, forcesAt } from '../src/wcampaign/engine.js';
 import { aiTurn } from '../src/wcampaign/ai.js';
 import { encode, decode, toPieces, fromPieces } from '../src/wcampaign/save.js';
 import { WW2 } from '../src/wcampaign/wars/ww2.js';
+import { WW3 } from '../src/wcampaign/wars/ww3.js';
 
 const [scenario = '1942', TURNS = 200, SEED = 7] = process.argv.slice(2);
-const war = WW2;
+const war = scenario === '1985' ? WW3 : WW2; // (the war of that start: 1942 → 1945's, 1985 → World War III)
 
 function check(c) {
   const bad = [];

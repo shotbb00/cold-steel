@@ -710,3 +710,7 @@
 /* the way back from a front (ui/WarRoom.js) */
 .wc-back { background: none; border: 0; color: var(--gold); font: 13px var(--font-ui); padding: 0; cursor: pointer; }
 .wc-back:hover { text-decoration: underline; }
+
+/* 1985's nuclear shadow in the war room's top bar (ui/WarRoom.js, engine escalate()) */
+.wc-esc i { background: rgba(224, 180, 90, 0.35); }
+.wc-esc.hot i { background: rgba(214, 60, 40, 0.55); }

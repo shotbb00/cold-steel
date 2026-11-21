@@ -5,6 +5,7 @@
 //   openWarRoom(campaign)          the full-screen war room over the menu
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
+import { WW3 } from '../wcampaign/wars/ww3.js';
 import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
 import { showQR, scanQR } from './SaveQR.js';
@@ -18,13 +19,14 @@ import { airType } from '../systems/AirStrike.js';
 import { epoch } from '../data/epoch.js';
 import { WorldMap } from './WorldMap.js';
 
-const WARS = { 1945: WW2 }; // (the wars with a world campaign: one at a time, 1945 first)
+const WARS = { 1945: WW2, 1985: WW3 }; // (the wars with a world campaign: each in its own year)
 export const warFor = (ep = epoch()) => WARS[ep] ?? null;
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const btn = (label, cls, fn) => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
-const SIDE = { nato: 'Allies', pact: 'Axis' };
+const SIDE = { nato: 'Allies', pact: 'Axis' }; // (1945's; a war names its own sides: war.sides)
+const has = (name) => (/s$/.test(name) ? 'have' : 'has'); // (the Allies have, NATO has)
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const longDate = (iso) => `${Number(iso.slice(8))} ${MONTHS.at(Number(iso.slice(5, 7)) - 1)} ${iso.slice(0, 4)}`;
 
@@ -66,7 +68,7 @@ export class WarRoomPanel {
     };
     map.territory(pts.map((p) => ({ ...p, lon: war.provinces[p.id].lon, lat: war.provinces[p.id].lat })), areasOf(map, war));
     // the European fronts in the open part of the table, right of the menu
-    const europe = pts.filter((p) => ['west', 'east', 'med'].includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
+    const europe = pts.filter((p) => (war.home ?? ['west', 'east', 'med']).includes(war.provinces[p.id].theatre)).map((p) => [p.x, p.y]);
     map.flyTo(europe, 6, 0, [0.74, 0.5]);
     map.load().catch(() => {});
   }
@@ -90,8 +92,8 @@ export class WarRoomPanel {
     await this.back;
     const r = this.root, war = warFor();
     r.replaceChildren(el('h2', '', 'Campaign'));
-    if (!war) { r.append(el('p', 'mp-lead', `The world campaign starts with the Second World War: switch to 1945 to play it. ${esc(epoch())} follows.`)); return; }
-    r.append(el('p', 'mp-lead', 'The whole war on one map: Western Europe, the Eastern Front, North Africa and the Mediterranean, the Pacific and the Atlantic. Move army groups, fleets and air wings in turns of half a week; every clash becomes a battle that turn. The war runs for as long as it lasts — and goes the way you fight it.'));
+    if (!war) { r.append(el('p', 'mp-lead', `The world campaign is played in 1945 and 1985 so far: switch to one of them to play it. ${esc(epoch())} follows.`)); return; }
+    r.append(el('p', 'mp-lead', war.blurb ?? 'The whole war on one map: Western Europe, the Eastern Front, North Africa and the Mediterranean, the Pacific and the Atlantic. Move army groups, fleets and air wings in turns of half a week; every clash becomes a battle that turn. The war runs for as long as it lasts — and goes the way you fight it.'));
     const saves = (await listSaves()).filter((s) => s.war === war.id);
     this.backdrop(war, saves[0]); // (the war's map behind the tab: the last save's front, or where it begins)
     if (saves.length) {
@@ -105,7 +107,7 @@ export class WarRoomPanel {
     r.append(el('p', 'cp-hint', `The war begins on ${esc(longDate(start.start))} — ${esc(start.name.replace(/^[^:]*:\s*/, ''))}.`));
     const sides = el('div', 'cards sides');
     for (const f of ['nato', 'pact']) {
-      const card = btn(`<b>${SIDE[f]}</b><span>${f === 'nato' ? 'Britain, the Soviet Union and the United States' : 'Germany and Japan'}</span>`, `card ${f}${this.choice.side === f ? ' on' : ''}`, () => { this.choice.side = f; for (const o of sides.children) o.classList.toggle('on', o === card); });
+      const card = btn(`<b>${(war.sides ?? SIDE)[f]}</b><span>${war.sideText?.[f] ?? (f === 'nato' ? 'Britain, the Soviet Union and the United States' : 'Germany and Japan')}</span>`, `card ${f}${this.choice.side === f ? ' on' : ''}`, () => { this.choice.side = f; for (const o of sides.children) o.classList.toggle('on', o === card); });
       sides.append(card);
     }
     const diff = el('div', 'seg');
@@ -158,7 +160,8 @@ function strength(f) {
 }
 const CLUSTER = 30; // px: places closer than this on screen share one pin (click it: the map zooms in)
 
-export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = WW2 } = {}) {
+export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = Object.values(WARS).find((w) => w.id === c.war) ?? WW2 } = {}) {
+  const SIDE = war.sides ?? { nato: 'Allies', pact: 'Axis' }; // (this war's names for its sides)
   document.querySelector('.wc-backdrop')?.remove(); // (the Campaign tab's map: one WorldMap at a time — their svg ids would clash; the tab draws it again on return)
   const room = el('div', 'wc-room');
   document.body.append(room);
@@ -174,7 +177,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const tools = el('div', 'wc-zoom');
   tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
   tools.lastChild.title = 'Back to the whole theatre';
-  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">Allies</span><span class="theirs">Axis</span><span class="obj">Fort</span><span class="star">Objective</span><span class="sym">⚑︎ Base · ⚓︎ Harbour · ✈︎ Airfield</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
+  mapBox.append(tools, el('div', 'cp-legend wc-legend', `<span class="ours">${esc(SIDE.nato)}</span><span class="theirs">${esc(SIDE.pact)}</span><span class="obj">Fort</span><span class="star">Objective</span><span class="sym">⚑︎ Base · ⚓︎ Harbour · ✈︎ Airfield</span><span class="cut">Cut off</span><span class="foe">Order: move · attack · landing</span>`));
   map.load().catch(() => { st.msg = 'The coastlines could not be loaded.'; render(); });
   const close = () => { map.dispose(); room.remove(); onClose(); document.removeEventListener('keydown', keys); };
   /** What an order does, in words: "Attacks Bobruisk", "Ships to Okinawa", "Rebases to Saipan". */
@@ -244,7 +247,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const bar = el('div', 'wc-top');
     const mor = (s) => `<span class="wc-morale ${s}"><i style="--m:${Math.max(0, Math.round(c.morale[s]))}%"></i>${SIDE[s]} ${Math.max(0, Math.round(c.morale[s]))}</span>`;
     bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}${winterNow(c, war) ? ` · <span class="wc-winter" title="${esc(war.winter.text.start)}">❄ winter in the ${esc(war.theatres[war.winter.theatre].name.replace(/^The /, ''))}</span>` : ''}</small>`),
-      el('div', 'wc-morales', `${mor('nato')}${mor('pact')}`),
+      el('div', 'wc-morales', `${mor('nato')}${mor('pact')}${war.escalation ? (() => { const e = Math.round(c.escalation ?? 0), next = war.escalation.levels.find((L) => L.at > e); return `<span class="wc-morale wc-esc${e >= 60 ? ' hot' : ''}" title="The nuclear shadow: taking or bombing a base in the enemy’s homeland raises it, quiet turns let it ebb. ${next ? `At ${next.at}: ${esc(next.text ?? next.end)}` : ''}"><i style="--m:${e}%"></i>☢︎ Escalation ${e}</span>`; })() : ''}`),
       el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${income(c, war, me).net >= 0 ? '+' : ''}${income(c, war, me).net.toLocaleString('en')} a turn · upkeep ${upkeep(c, me).toLocaleString('en')}</small>`));
     const right = el('div', 'wc-actions');
     right.append(btn('Save / move', 'mp-btn', saveDialog), c.over ? el('span', 'wc-over', 'The war is over') : btn('End turn', 'deploy', endOfTurn), btn('×', 'wc-close', close));
@@ -538,7 +541,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       prioBox.append(el('span', 'wc-prio-label', 'Reserves for this front'), prio,
         el('small', 'wc-prio-what', `Each battle here can draw about <b>${Math.round(reserves(c, me, tid)).toLocaleString('en')}</b> power from your production stockpile as reinforcements. High: more here (it costs the stockpile more); Low: save it for other fronts.`));
       // the objectives, from your side: what is happening, and what to do about it
-      const mine = (x) => x === me, them = enemy(me) === 'pact' ? 'the Axis' : 'the Allies';
+      const mine = (x) => x === me, them = /^the /i.test(SIDE[enemy(me)]) ? SIDE[enemy(me)] : SIDE[enemy(me)] === 'NATO' ? 'NATO' : `the ${SIDE[enemy(me)]}`;
       const objLines = (war.objectives ?? []).filter((o) => o.theatre === tid).map((o) => {
         const st2 = c.objectives?.[o.id] ?? {}, left = o.hold - (st2.turns ?? 0);
         const what = st2.won ? (mine(st2.won) ? `✓ secured by you — +${o.morale} morale for good` : `✗ secured by ${them} — they gained +${o.morale} morale`)
@@ -548,7 +551,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         return `<span class="wc-line wc-obj">★ <b>${esc(o.name)}</b>: ${what}</span>`;
       });
       const obj = objLines.length ? `<span class="wc-line wc-obj-head">Objectives — places worth morale. A side at 0 morale sues for peace.</span>${objLines.join('')}` : '';
-      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces Allied</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">Allies ${forces('nato')} forces · Axis ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(st.theatre === tid ? null : tid)), prioBox);
+      d.append(btn(`<span class="wc-kicker">${esc(th.name)}</span>${provs.length ? `<span class="wc-bar"><i class="nato" style="flex:${n || 0.001}"></i><i class="pact" style="flex:${q || 0.001}"></i></span><span class="wc-line">${n} of ${provs.length} provinces held by ${esc(SIDE.nato)}</span>` : '<span class="wc-line">the sea lanes</span>'}<span class="wc-line">${esc(SIDE.nato)} ${forces('nato')} forces · ${esc(SIDE.pact)} ${forces('pact')} forces</span>${obj}`, 'wc-card', () => goTheatre(st.theatre === tid ? null : tid)), prioBox);
     }
     d.append(el('h3', 'menu-sub', 'Dispatches'));
     const news = c.log.slice(-10).reverse().map(dispatch).filter(Boolean);
@@ -628,7 +631,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
 
   /** A letter home from a man of one of our army groups in this turn's battles (the one fought on its map first, else the hardest). */
   function letterHome() {
-    const VOICE = { us: 'us', usmc: 'us', sov: 'sov', wh: 'wh', fj: 'fj' }; // (the armies with letters of their own: campaign/Letters45.js)
+    const VOICE = war.id === 'ww2' ? { us: 'us', usmc: 'us', sov: 'sov', wh: 'wh', fj: 'fj' } : new Proxy({}, { get: (_, a) => a }); // (1945: the armies with letters of their own, campaign/Letters45.js; 1985: every army, Letters.js voices it by side)
     const ours = c.board.filter((b) => b.done).map((b) => ({ b, f: [...b.attackers, ...b.defenders, ...(b.support ?? [])].map((i) => forceById(c, i)).find((x) => x?.side === me && x.kind === 'army' && VOICE[x.army]) })).filter((x) => x.f);
     const pickB = ours.find((x) => x.b.how === 'fought') ?? ours.sort((x, y) => (y.b.lost?.[me] ?? 0) - (x.b.lost?.[me] ?? 0))[0];
     if (!pickB) return null;
@@ -664,7 +667,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         L.append(el('p', 'wc-letter-sign', `${esc(letter.sign)}<br>${esc(letter.from)}${letter.unit ? `, ${esc(letter.unit)}` : ''}`));
         box.append(el('h4', 'wc-th', 'A letter home'), L);
       }
-      if (c.over) box.append(el('p', 'wc-over', `${SIDE[c.over.winner]} have won the war: ${esc(c.over.why)}.`));
+      if (c.over) box.append(el('p', 'wc-over', `${SIDE[c.over.winner]} ${has(SIDE[c.over.winner])} won the war: ${esc(c.over.why)}.`));
       box.append(btn('To the map', 'deploy', () => modal.remove()));
       modal.append(box);
       room.append(modal);

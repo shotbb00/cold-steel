@@ -41,6 +41,11 @@ export function aiTurn(c, war, side) {
   const did = [], foe = enemy(side), seen = seenBy(c, war, side);
   const mine = c.forces.filter((f) => f.side === side);
   const front = (id) => war.provinces[id].land.some((n) => c.provinces[n].owner === foe);
+  // 1985: no step that could reach the nuclear brink — counting what both sides already planned this turn (c.brinkPlan)
+  if (c.brinkPlan?.turn !== c.turn) c.brinkPlan = { turn: c.turn, add: 0 };
+  const E = war.escalation, DEPOT = E?.depot ?? 0, STRIKE = E?.strike ?? 0;
+  const brink = (id, by, at = 100) => !!E && c.provinces[id]?.depot === foe && (c.escalation ?? 0) + c.brinkPlan.add + by >= at; // (bombing bases: not past the last warning, 85 — only taking one is worth that)
+  const risk = (id, by) => { if (E && c.provinces[id]?.depot === foe) c.brinkPlan.add += by; };
   // ---- fleets: together into a zone where their combined strength beats the enemy's; else toward an enemy coast
   const fleets = mine.filter((x) => x.kind === 'fleet'), sailing = new Set();
   const zones = [...new Set(fleets.flatMap((f) => war.seas[f.at].seas))].filter((z) => forcesAt(c, z, foe, 'fleet').length)
@@ -76,6 +81,13 @@ export function aiTurn(c, war, side) {
     if (out && !order(c, war, side, f.id, out)) did.push(`${f.name} breaks out → ${out}`);
     busy.add(f);
   }
+  // a base the enemy could reach in two moves keeps its strongest army home (taking a base costs its side dearly: MORALE.depot)
+  const enemyGround = (k) => c.provinces[k].owner === foe;
+  for (const id of Object.keys(war.provinces)) {
+    if (c.provinces[id].depot !== side || c.provinces[id].owner !== side || stepsTo(war, id, enemyGround) > 2) continue;
+    const keep = armies.filter((f) => f.at === id && !busy.has(f)).sort((x, y) => power(c, y) - power(c, x))[0];
+    if (keep) busy.add(keep);
+  }
   // every enemy province next to one of ours: who could go in, and against what
   const targets = [...new Set(armies.filter((f) => !busy.has(f)).flatMap((f) => war.provinces[f.at].land))]
     .filter((n) => c.provinces[n].owner === foe)
@@ -86,7 +98,8 @@ export function aiTurn(c, war, side) {
     const th = war.provinces[t.n].theatre, need = ATTACK_ODDS * Math.max(0.55, 1 - 0.02 * (c.quiet?.[side]?.[th] ?? 0)); // (a quiet front: the staff’s patience runs out — a long stalemate is broken by attacks at poor odds, and production pays for them)
     let sum = reserves(c, side, th);
     for (const f of t.by) { if (busy.has(f) || go.length >= 3) continue; go.push(f); sum += power(c, f); if (sum >= t.def * need * 1.15) break; } // (enough, with a margin: the rest hold the line)
-    if (sum < t.def * need) continue;
+    if (sum < t.def * need || brink(t.n, DEPOT)) continue;
+    risk(t.n, DEPOT);
     for (const f of go) if (!order(c, war, side, f.id, t.n)) { busy.add(f); taken.add(t.n); }
     did.push(`${go.map((f) => f.name).join(' + ')} attack ${t.n} (${(sum / t.def).toFixed(1)}:1)`);
   }
@@ -96,11 +109,12 @@ export function aiTurn(c, war, side) {
     // a landing: every free army in this port together, across a sea zone it holds, onto a weak enemy coast
     if (P.port) {
       const party = armies.filter((x) => x.at === f.at && !busy.has(x)).slice(0, 3), sum = party.reduce((a2, x) => a2 + power(c, x), 0) + reserves(c, side, P.theatre);
-      const coasts = Object.keys(war.provinces).filter((k) => c.provinces[k].owner === foe && !taken.has(k) && (war.provinces[k].seas ?? []).length && landingZone(c, war, side, f.at, k))
+      const coasts = Object.keys(war.provinces).filter((k) => c.provinces[k].owner === foe && !war.provinces[k].safe && !taken.has(k) && !brink(k, DEPOT) && (war.provinces[k].seas ?? []).length && landingZone(c, war, side, f.at, k))
         .map((k) => ({ k, odds: sum / (defenceAt(c, war, side, k, seen) * 1.3) })).sort((x, y) => y.odds - x.odds);
       if (coasts[0] && coasts[0].odds >= LAND_ODDS) {
         for (const x of party) if (!order(c, war, side, x.id, coasts[0].k, { land: true })) busy.add(x);
         taken.add(coasts[0].k);
+        risk(coasts[0].k, DEPOT);
         did.push(`${party.map((x) => x.name).join(' + ')} land on ${coasts[0].k} (${coasts[0].odds.toFixed(1)}:1)`);
         continue;
       }
@@ -126,10 +140,10 @@ export function aiTurn(c, war, side) {
     const reach = airReach(war, w.at), fighters = w.squadrons.some((q) => q.k === 'fighter'), strikers = w.squadrons.some((q) => q.k !== 'fighter' && q.k !== 'recon');
     const attack = [...taken].find((k) => reach.has(k));
     const fleetZone = [...reach].find((z) => war.seas[z] && forcesAt(c, z, foe, 'fleet').length);
-    const base = [...reach].find((k) => war.provinces[k] && c.provinces[k].owner === foe && c.provinces[k].depot === foe);
+    const base = [...reach].find((k) => war.provinces[k] && c.provinces[k].owner === foe && c.provinces[k].depot === foe && !brink(k, STRIKE, 85));
     const threatened = [...reach].filter((k) => war.provinces[k] && c.provinces[k].owner === side && front(k)).sort((a, b) => defenceAt(c, war, foe, b, seen) - defenceAt(c, war, foe, a, seen))[0];
     const plan = attack ? ['support', attack] : strikers && fleetZone ? ['attack', fleetZone] : strikers && base ? ['attack', base] : threatened ? ['support', threatened] : null;
-    if (plan && !mission(c, war, side, w.id, ...plan)) did.push(`${w.name}: ${plan[0]} over ${plan[1]}`);
+    if (plan && !mission(c, war, side, w.id, ...plan)) { did.push(`${w.name}: ${plan[0]} over ${plan[1]}`); if (plan[0] === 'attack') risk(plan[1], STRIKE); }
     else if (fighters && threatened) mission(c, war, side, w.id, 'support', threatened);
   }
   // ---- spending: refits first, then a battalion at the depot of the theatre with the most front and the least army
