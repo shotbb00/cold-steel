@@ -30,7 +30,7 @@ export const DRONE = {
   lancet: { speed: 44, alt: 75, damage: 1500, pierce: 0.95, splash: 3.5, life: 100, search: 240, mesh: 'wing', scale: 1, sound: ['drone.lancet', 1, 0.24] },
 };
 const TICK = 0.25;
-const RESTOCK = { field: 5, base: 4, radius: 200 }; // a drone back every 5 × `every` s in the field (FPV: a minute), four times as fast near the base
+const RESTOCK = { field: 2, base: 4, radius: 200 }; // a drone back every 2 × `every` s in the field (FPV: 24 s), four times as fast near the base
 const MAX = 96;
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -173,7 +173,9 @@ export class Drones {
     if (!Number.isFinite(D.count) || s.dronesLeft >= D.count) { s.restockT = 0; return; }
     const base = this.game.world.bases?.[s.faction], c = s.centroid;
     const home = base && Math.hypot(base.x - c.x, base.z - c.z) < RESTOCK.radius;
-    s.restockT = (s.restockT ?? 0) + step * (home ? RESTOCK.base : 1);
+    s.restockRate = home ? RESTOCK.base : 1;
+    s.restockT = (s.restockT ?? 0) + step * s.restockRate;
+    s.restockNext = (D.every * RESTOCK.field - s.restockT) / s.restockRate; // (s until the next one: its tag's countdown, systems/Stocks.js stockChips)
     if (s.restockT >= D.every * RESTOCK.field) { s.restockT = 0; s.dronesLeft++; }
   }
 
