@@ -117,7 +117,7 @@
 .stats dd { margin: 0; font-variant-numeric: tabular-nums; }
 
 /* pause */
-#pause { position: fixed; inset: 0; z-index: 12; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(8, 9, 6, 0.72); }
+#pause { position: fixed; inset: 0; z-index: 12; display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal)); background: rgba(8, 9, 6, 0.72); }
 #pause[hidden] { display: none; }
 .pause-box {
   width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 26px 28px;
@@ -501,7 +501,7 @@
 .wc-start .cards.sides { margin-bottom: 12px; }
 .wc-code { width: 100%; max-width: 540px; min-height: 70px; background: rgba(0, 0, 0, 0.3); color: var(--text); border: 1px solid var(--line); font: 12px/1.4 ui-monospace, Consolas, monospace; padding: 8px; box-sizing: border-box; word-break: break-all; }
 .wc-start .deploy-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.wc-room { position: fixed; inset: 0; z-index: 60; background: var(--table); color: var(--text); font-family: var(--font-ui); display: flex; flex-direction: column; }
+.wc-room { position: fixed; inset: 0; z-index: 60; background: var(--table); color: var(--text); font-family: var(--font-ui); display: flex; flex-direction: column; padding: var(--sat) var(--sar) var(--sab) var(--sal); }
 .wc-top { display: flex; align-items: center; gap: 24px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .wc-date b { display: block; font: 700 20px/1.1 var(--font-display); letter-spacing: 0.04em; color: var(--ink); }
 .wc-date small, .wc-pool small { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
