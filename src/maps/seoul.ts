@@ -24,7 +24,7 @@ import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
 import { buildVillage, commandPost } from './common.js';
-import { gridCache } from './gridCache.js';
+import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -59,11 +59,13 @@ function segDist(x: number, z: number, a: number[], b: number[]) {
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
   return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
 }
-function roadDist(x: number, z: number) {
+function roadDistExact(x: number, z: number) {
   let d = Infinity;
   for (const l of ROADS) for (let i = 0; i < l.length - 1; i++) d = Math.min(d, segDist(x, z, l[i], l[i + 1]));
   return d;
 }
+/** The road distance, sampled once onto a 2 m grid over the field and a margin (every height sample asked it twice). */
+const roadDist = gridCacheSmooth(roadDistExact, { x: 640, z: 820 }, 2);
 // the Gyeongbu line up from the Han through Seoul station, the Gyeongui line west out of it (decoration: level crossings)
 const RAIL = [[-40, 580], [-35, 400], [-20, 262], [-60, 170], [-150, 140], [-250, 125], [-300, 122]];
 const railDist = (x: number, z: number) => Math.min(...RAIL.slice(1).map((b, i) => segDist(x, z, RAIL[i], b)));
@@ -89,7 +91,7 @@ const HILLS = [[-320, 290, 70, 22], [275, 325, 66, 20], [-295, -335, 72, 22], [3
   [-440, 460, 70, 14], [440, 470, 70, 16], [-450, -460, 70, 15], [450, -450, 66, 15]];
 const BIG_HILLS = { nato: [[-320, 290], [275, 325]], pact: [[-295, -335], [355, -275]] };
 const warp = (x: number, z: number) => 1 + 0.3 * fbm(noise, x * 0.012 + 50, z * 0.012, 2);
-function hillH(x: number, z: number) {
+function hillHExact(x: number, z: number) {
   let h = 0;
   for (const [hx, hz, r, a] of HILLS) {
     const d = (Math.hypot(x - hx, z - hz) / r) * warp(x, z);
@@ -97,6 +99,8 @@ function hillH(x: number, z: number) {
   }
   return h;
 }
+/** The hills' height, sampled once onto a 2 m grid (twelve noisy hills, asked twice a height sample). */
+const hillH = gridCacheSmooth(hillHExact, { x: 640, z: 820 }, 2);
 
 /** Low ground (0): along the roads, round the points and bases. */
 function lowD(x: number, z: number) {
