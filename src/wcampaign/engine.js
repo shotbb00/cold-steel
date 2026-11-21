@@ -23,8 +23,6 @@ const DEFAULT_POWER = { rifles: 150, mgTeam: 140, atTeam: 150, mortar: 140, engi
 const SQUADRON = { fighter: 220, strike: 240, bomber: 300, recon: 80, transport: 60 };
 /** A battle draws reserves from its side's pool (replacements, shells, fuel): this share of the pool, at most RESERVE.max power. */
 export const RESERVE = { share: 0.15 }; // (the side that produces more has more to throw in: production decides the long war)
-/** How many of a turn's battles go on the board to be fought or delegated (c.battles); the smaller rest are settled at once. */
-export const BATTLE_COUNT = { small: 4, normal: 8, grand: Infinity };
 export const STACK = { army: 3, fleet: 3, battalions: 6 }; // army groups a province, fleets a sea zone (the front must be held, not piled up)
 /**
  * The war economy: a stockpile holds at most `stockTurns` turns of income (what isn't spent is lost — production is for
@@ -71,7 +69,7 @@ export function newCampaign(war, o = {}) {
   const has = (id) => id && (!o.maps || o.maps.has(id));
   const c = {
     v: VERSION, war: war.id, scenario: o.scenario ?? Object.keys(war.scenarios)[0], seed: o.seed ?? 1944, rng: o.seed ?? 1944,
-    side: o.side ?? 'nato', battles: o.battles ?? 'normal', difficulty: o.difficulty ?? 1,
+    side: o.side ?? 'nato', difficulty: o.difficulty ?? 1, // (every battle goes on the board: the player resolves what they don't want to fight)
     turn: 1, start: sc.start, over: null, eventsDone: (war.events ?? []).filter((e) => e.date < sc.start).map((e) => e.id), // (a scenario already shows what happened before its start)
     provinces: {}, seas: {}, forces: [], nextId: 1,
     pool: { nato: 0, pact: 0 }, morale: { nato: 100, pact: 100 }, industry: { nato: 1, pact: 1, ...(sc.industry ?? {}) },
@@ -296,14 +294,6 @@ export function resolveTurn(c, war) {
   // a defender in a province next to the battle may hold its ground as a reserve: neighbours named on the battle
   for (const b of c.board) if (b.kind === 'land') b.support = (war.provinces[b.at].land ?? []).flatMap((n) => forcesAt(c, n, enemy(b.attackerSide), 'army').map((f) => f.id)).slice(0, 1);
   c.orders = { nato: {}, pact: {} };
-  // the battle count: the biggest battles stay on the board; the rest (the smallest first, the sea before the land: a landing
-  // may wait on it) are settled at once
-  const cap = BATTLE_COUNT[c.battles] ?? BATTLE_COUNT.normal;
-  if (c.board.length > cap) {
-    const size = (b) => [...b.attackers, ...b.defenders, ...(b.support ?? [])].map((id) => forceById(c, id)).filter(Boolean).reduce((a, f) => a + power(c, f), 0);
-    const small = [...c.board].sort((x, y) => size(y) - size(x)).slice(cap).sort((x, y) => Number(y.kind === 'sea') - Number(x.kind === 'sea'));
-    for (const b of small) if (!b.done) { settle(c, war, b.id, { ...autoResolve(c, war, b.id), how: 'auto' }); b.note ??= 'settled at once (battle count)'; }
-  }
   return c.board;
 }
 

@@ -43,7 +43,7 @@ export class WarRoomPanel {
     this.onOpen = onOpen;
     this.back = this.applyResult(); // (a battle just fought: its result into the campaign, then straight back to the war room)
     this.root = el('div', 'campaign wc-start');
-    this.choice = { side: 'nato', difficulty: 1, battles: 'normal' };
+    this.choice = { side: 'nato', difficulty: 1 };
     this.render();
   }
 
@@ -116,15 +116,9 @@ export class WarRoomPanel {
       const b = btn(label, this.choice.difficulty === k ? 'on' : '', () => { this.choice.difficulty = k; for (const o of diff.children) o.classList.toggle('on', o === b); });
       diff.append(b);
     }
-    const count = el('div', 'seg');
-    count.title = 'How many of a turn’s battles go on the board to fight or delegate; the smaller rest are settled at once';
-    for (const [label, k] of [['Small · 4 a turn', 'small'], ['Normal · 8', 'normal'], ['Grand · all', 'grand']]) {
-      const b = btn(label, this.choice.battles === k ? 'on' : '', () => { this.choice.battles = k; for (const o of count.children) o.classList.toggle('on', o === b); });
-      count.append(b);
-    }
-    r.append(sides, el('h3', 'menu-sub', 'Difficulty'), diff, el('h3', 'menu-sub', 'Battles'), count);
+    r.append(sides, el('h3', 'menu-sub', 'Difficulty'), diff);
     const go = el('div', 'deploy-row');
-    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { side: this.choice.side, difficulty: this.choice.difficulty, battles: this.choice.battles, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
+    go.append(btn('Start the war', 'deploy', () => this.onOpen(arm(newCampaign(war, { side: this.choice.side, difficulty: this.choice.difficulty, seed: Math.floor(Math.random() * 1e9), maps: mapsHere() })))));
     r.append(go);
     // from another device: the code, or the file
     r.append(el('h3', 'menu-sub', 'Continue from another device'));
