@@ -16,8 +16,10 @@ import { FACTIONS, PLAYER_FACTION } from './data/factions.js';
 import { takeReplay, rememberBattle } from './core/replay.js';
 import { registerServiceWorker } from './pwa/register.js';
 import './core/Keys.js';   // fills every key hint in the page (data-key) and keeps them current
+import { trackViewport } from './core/viewport.js';
 
 document.title = GAME.title;
+trackViewport(); // (phones: the game fits what the browser really shows)
 const screen = document.getElementById('loading');
 
 function start({ mode, map, side, time, weather, coop = false, net = null, campaign = null, rules = null, armies = null, epoch: year = null }) {
