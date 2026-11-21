@@ -297,7 +297,7 @@ export function plantTrees({ scene, terrain, cover, rand, area, lane = 48, avoid
       spruceCards.setColorAt(ks, _c);
       spruces.setColorAt(ks++, _c);
     }
-    if (inLane) { tree.collider = cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 }); tree.collider.tree = true; } // (tree: an airfield clears it, systems/Airfields.js)
+    { tree.collider = cover.addCylinder({ x, z, radius: 0.32 * w, height: 4 }); tree.collider.tree = true; } // (every trunk: vehicles go round it, only where they fit — the lane only sets how many trees; an airfield clears them, systems/Airfields.js)
     k++;
   }
   trunks.count = k;
