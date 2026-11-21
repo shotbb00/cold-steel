@@ -94,7 +94,7 @@ export function newCampaign(war, o = {}) {
 }
 
 /** A side's name in this war (war.sides: the Allies, NATO …), `the` in front when asked. */
-export const sideName = (war, side, the = false) => { const n = war.sides?.[side] ?? side; return the && !/^the /i.test(n) ? `the ${n}` : n; };
+export const sideName = (war, side, the = false) => { const n = war.sides?.[side] ?? side; return the && !/^the /i.test(n) && !/^[A-Z]+$/.test(n) ? `the ${n}` : n; }; // (the Allies, the Warsaw Pact — NATO)
 
 /**
  * The nuclear shadow (war.escalation, 1985): `by` nearer the brink (a base taken: E.depot; a base bombed: E.strike). Each

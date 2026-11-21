@@ -47,24 +47,24 @@ export const WW3 = {
     werra: { name: 'The Werra valley', theatre: 'central', map: 'werra-valley', prod: 1, land: ['huenfeld', 'kaliwerk', 'thuringia'], lat: 50.92, lon: 10.12 },
     thuringia: { name: 'The Thuringian Forest', theatre: 'central', map: 'thuringian-forest', prod: 2, fort: 1, land: ['huenfeld', 'werra', 'eastGermany'], lat: 50.7, lon: 10.7 },
     eastGermany: { name: 'East Germany', theatre: 'central', depot: 'pact', airfield: true, prod: 11, fort: 1, land: ['thuringia', 'mecklenburg'], lat: 52.1, lon: 12.9 },
-    mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: null, seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
-    schleswig: { name: 'Schleswig-Holstein', theatre: 'central', map: null, coastal: ['hohwacht'], seas: ['baltic', 'northSea'], port: true, airfield: true, prod: 2, fort: 1, land: ['rhine', 'mecklenburg'], lat: 54.2, lon: 10.2 },
+    mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: 'schwerin', seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
+    schleswig: { name: 'Schleswig-Holstein', theatre: 'central', map: 'ratzeburg-lakes', coastal: ['hohwacht'], seas: ['baltic', 'northSea'], port: true, airfield: true, prod: 2, fort: 1, land: ['rhine', 'mecklenburg'], lat: 54.2, lon: 10.2 },
     britain: { name: 'Britain', theatre: 'central', depot: 'nato', port: true, airfield: true, prod: 5, seas: ['northSea', 'eastAtlantic'], land: [], lat: 52.5, lon: -1.5 },
 
     // ---- the Northern Flank: from the Kola Peninsula over Finnmark down the fjords to Narvik
     kola: { name: 'The Kola Peninsula', theatre: 'north', depot: 'pact', port: true, airfield: true, prod: 6, fort: 2, seas: ['barents'], land: ['pechenga'], lat: 68.9, lon: 33.1 },
-    pechenga: { name: 'Pechenga', theatre: 'north', map: null, prod: 1, fort: 1, seas: ['barents'], land: ['kola', 'finnmark'], lat: 69.5, lon: 31.2 },
+    pechenga: { name: 'Pechenga', theatre: 'north', map: 'pechenga', prod: 1, fort: 1, seas: ['barents'], land: ['kola', 'finnmark'], lat: 69.5, lon: 31.2 },
     finnmark: { name: 'Finnmark', theatre: 'north', map: 'finnmark', prod: 1, seas: ['barents'], land: ['pechenga', 'lyngen'], lat: 70.0, lon: 25.0 },
     lyngen: { name: 'The Lyngen line', theatre: 'north', map: 'lyngen', prod: 1, fort: 2, land: ['finnmark', 'malselv'], lat: 69.6, lon: 20.2 },
     malselv: { name: 'Målselv and Bardufoss', theatre: 'north', map: 'malselv', airfield: true, prod: 1, land: ['lyngen', 'narvik'], lat: 69.06, lon: 18.5 },
     narvik: { name: 'Narvik', theatre: 'north', map: 'narvik', port: true, prod: 2, seas: ['norwegianSea'], land: ['malselv', 'bodo'], lat: 68.44, lon: 17.43 },
     andoya: { name: 'Andøya', theatre: 'north', map: null, coastal: ['andoya'], seas: ['norwegianSea'], port: true, airfield: true, prod: 1, land: [], lat: 69.3, lon: 16.1 },
     bodo: { name: 'Bodø and the south', theatre: 'north', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['norwegianSea'], land: ['narvik'], lat: 67.28, lon: 14.4 },
-    iceland: { name: 'Iceland and Keflavík', theatre: 'atlantic', map: null, seas: ['eastAtlantic', 'norwegianSea'], port: true, airfield: true, prod: 1, land: [], lat: 64.0, lon: -22.6 },
+    iceland: { name: 'Iceland and Keflavík', theatre: 'atlantic', map: null, coastal: ['keflavik'], seas: ['eastAtlantic', 'norwegianSea'], port: true, airfield: true, prod: 1, land: [], lat: 64.0, lon: -22.6 },
 
     // ---- Korea: across the DMZ toward Seoul
     pyongyang: { name: 'North Korea', theatre: 'korea', depot: 'pact', port: true, airfield: true, prod: 6, fort: 2, seas: ['yellowSea'], land: ['kaesong'], lat: 39.0, lon: 125.75 },
-    kaesong: { name: 'Kaesong', theatre: 'korea', map: null, prod: 1, fort: 2, land: ['pyongyang', 'dmz', 'chorwon'], lat: 38.2, lon: 126.55 },
+    kaesong: { name: 'Kaesong', theatre: 'korea', map: 'kaesong', prod: 1, fort: 2, land: ['pyongyang', 'dmz', 'chorwon'], lat: 38.2, lon: 126.55 },
     dmz: { name: 'The DMZ at Panmunjom', theatre: 'korea', map: 'korea', prod: 1, fort: 2, land: ['kaesong', 'chorwon', 'imjin'], lat: 37.96, lon: 126.68 },
     chorwon: { name: 'The Chorwon valley', theatre: 'korea', map: 'chorwon-valley', prod: 1, fort: 1, land: ['kaesong', 'dmz', 'uijeongbu'], lat: 38.25, lon: 127.21 },
     imjin: { name: 'The Imjin River', theatre: 'korea', map: 'imjin-river', prod: 1, fort: 1, land: ['dmz', 'uijeongbu'], lat: 37.89, lon: 126.95 },
@@ -84,12 +84,12 @@ export const WW3 = {
     baltic: { name: 'The Baltic', theatre: 'central', map: 'balticSea', seas: ['northSea'], coasts: ['schleswig', 'mecklenburg'], lat: 55, lon: 14 },
     barents: { name: 'The North Cape and the Barents Sea', theatre: 'north', map: 'northCape', seas: ['norwegianSea'], coasts: ['kola', 'pechenga', 'finnmark'], lat: 71.5, lon: 30 },
     norwegianSea: { name: 'The Norwegian Sea', theatre: 'north', map: 'norwegianSea', seas: ['barents', 'northSea', 'eastAtlantic'], coasts: ['narvik', 'andoya', 'bodo', 'iceland'], lat: 68, lon: 5 },
-    eastAtlantic: { name: 'The GIUK gap and the convoy routes', theatre: 'atlantic', map: null, seas: ['westAtlantic', 'northSea', 'norwegianSea', 'ionian'], coasts: ['britain', 'iceland'], lat: 56, lon: -20 },
+    eastAtlantic: { name: 'The GIUK gap and the convoy routes', theatre: 'atlantic', map: 'giukGap', seas: ['westAtlantic', 'northSea', 'norwegianSea', 'ionian'], coasts: ['britain', 'iceland'], lat: 56, lon: -20 },
     westAtlantic: { name: 'The western Atlantic', theatre: 'atlantic', map: null, seas: ['eastAtlantic'], coasts: ['usa'], lat: 40, lon: -55 },
     ionian: { name: 'The Ionian Sea', theatre: 'med', map: 'ionianSea', seas: ['eastAtlantic', 'easternMed'], coasts: ['italy'], lat: 38, lon: 18 }, /* (round Gibraltar to the Atlantic) */
     easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: null, seas: ['ionian'], coasts: ['syria'], lat: 34, lon: 30 },
     yellowSea: { name: 'The Yellow Sea', theatre: 'korea', map: null, seas: ['seaOfJapan'], coasts: ['seoul', 'pyongyang'], lat: 37, lon: 124.5 },
-    seaOfJapan: { name: 'The Sea of Japan', theatre: 'korea', map: null, seas: ['yellowSea'], coasts: ['japan', 'vladivostok'], lat: 39.5, lon: 134 },
+    seaOfJapan: { name: 'The Sea of Japan', theatre: 'korea', map: 'seaOfJapan', seas: ['yellowSea'], coasts: ['japan', 'vladivostok'], lat: 39.5, lon: 134 },
   },
 
   /** A battalion: the stacks it fields (1985's unit type ids; the army's own roster decides the models). */

@@ -22,6 +22,7 @@ import maltaConvoy from './maltaConvoy.ts';
 import norwegianSea from './norwegianSea.ts';
 import northCape from './northCape.ts';
 import ionianSea from './ionianSea.ts';
+import seaOfJapan from './seaOfJapan.ts';
 import trafalgar from './trafalgar.ts';
 import aboukir from './aboukir.ts';
 import brest from './brest.ts';
@@ -31,6 +32,7 @@ import doggerBank from './doggerBank.ts';
 import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
+import giukGap from './giukGap.ts';
 import omaha from './omaha.ts';
 import iwoJima from './iwoJima.ts';
 import elGuettar from './elGuettar.ts';
@@ -98,24 +100,34 @@ import goldBeach from './goldBeach.ts';
 import gela from './gela.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
+import schwerin from './schwerin.ts';
 import narvik from './narvik.ts';
 import malselv from './malselv.ts';
 import lyngen from './lyngen.ts';
+import pechenga from './pechenga.ts';
+import ratzeburgLakes from './ratzeburgLakes.ts';
 import korea from './korea.ts';
 import chorwonValley from './chorwonValley.ts';
 import imjinRiver from './imjinRiver.ts';
 import uijeongbu from './uijeongbu.ts';
+import kaesong from './kaesong.ts';
 import andoya from './andoya.ts';
+import keflavik from './keflavik.ts';
 export const MAPS = {
   [andoya.id]: andoya,
+  [keflavik.id]: keflavik,
+  [ratzeburgLakes.id]: ratzeburgLakes,
   [korea.id]: korea,
   [chorwonValley.id]: chorwonValley,
   [imjinRiver.id]: imjinRiver,
   [uijeongbu.id]: uijeongbu,
+  [kaesong.id]: kaesong,
   [narvik.id]: narvik,
   [malselv.id]: malselv,
   [lyngen.id]: lyngen,
   [finnmark.id]: finnmark,
+  [schwerin.id]: schwerin,
+  [pechenga.id]: pechenga,
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
   [gela.id]: gela,
@@ -199,6 +211,7 @@ export const MAPS = {
   [norwegianSea.id]: norwegianSea,
   [northCape.id]: northCape,
   [ionianSea.id]: ionianSea,
+  [seaOfJapan.id]: seaOfJapan,
   [trafalgar.id]: trafalgar,
   [aboukir.id]: aboukir,
   [brest.id]: brest,
@@ -208,6 +221,7 @@ export const MAPS = {
   [doverStrait.id]: doverStrait,
   [zeebrugge.id]: zeebrugge,
   [balticSea.id]: balticSea,
+  [giukGap.id]: giukGap,
   [philippineSea.id]: philippineSea,
   [atlanticConvoy.id]: atlanticConvoy,
   [maltaConvoy.id]: maltaConvoy,
