@@ -13,6 +13,7 @@
 // It's a picture of your units' view, not of the rules' exact result (target posture and
 // cover aren't counted): enemies outside it are hidden, enemies inside may still be prone in cover.
 import { airEyes } from '../systems/VisibilitySystem.js';
+import { CoverMap } from '../world/Cover.js';
 import * as THREE from 'three';
 
 const N = 256;
@@ -161,6 +162,10 @@ export class FogOfWar {
     const near = []; // the smoke clouds this view could reach (each step tested against these, not every cloud on the map)
     for (const c of this.game.smoke?.clouds ?? []) if (Math.hypot(c.x - u.pos.x, c.z - u.pos.z) < (u.stats.sight ?? 100) * 1.6 + c.r) near.push(c);
     const ground = this.groundTable();
+    const { top: occTop, ref: occRef } = this.occTable();
+    const hk = Math.floor((u.pos.z + half) / cell) * N + Math.floor((u.pos.x + half) / cell);
+    const home = occRef[hk] && CoverMap.inside(occRef[hk], u.pos.x, u.pos.z) ? occRef[hk] : null; // (a garrison looks out of its own building's windows)
+    const woods = this.game.visibility?.woods;
     const st = u.stats;
     const cond = this.game.conditions;
     const flares = this.game.flares;
@@ -213,7 +218,7 @@ export class FogOfWar {
       const a = facing - fov / 2 + (fov * (i + 0.5)) / rays;
       const sx = Math.sin(a);
       const sz = Math.cos(a);
-      let maxSlope = -Infinity;
+      let maxSlope = -Infinity, woodsSum = 0, n = 0;
       for (let d = step; d <= far; d += step) {
         const x = u.pos.x + sx * d;
         const z = u.pos.z + sz * d;
@@ -222,12 +227,19 @@ export class FogOfWar {
         if (hid) break;
         const gx = Math.floor((x + half) / cell), gz = Math.floor((z + half) / cell);
         if (gx < 0 || gz < 0 || gx >= N || gz >= N) break;
-        const groundH = Math.max(sea, ground[gz * N + gx]);
-        const reach = d <= range ? range : flares.lit(x, z) ? litRange : 0;
-        if (reach && (groundH + TARGET_H - eye) / d >= maxSlope) {
+        const k = gz * N + gx;
+        const groundH = Math.max(sea, ground[k]);
+        let reach = d <= range ? range : flares.lit(x, z) ? litRange : 0;
+        if (woods) { // (through trees the range shortens, as for spotting: VisibilitySystem WOODS_CUT)
+          const wx = Math.min(woods.n - 1, Math.max(0, ((x + woods.half) / 6) | 0)), wz = Math.min(woods.n - 1, Math.max(0, ((z + woods.half) / 6) | 0));
+          woodsSum += woods.grid[wz * woods.n + wx]; n++;
+          reach *= 1 - 0.7 * (woodsSum / n);
+        }
+        if (reach && d <= reach && (groundH + TARGET_H - eye) / d >= maxSlope) {
           if (!mark(x, z, Math.min(1, (reach - d) / 10 + 0.15))) break;
         }
-        const slope = (groundH + 0.2 - eye) / d;
+        const blockH = occRef[k] && occRef[k] !== home ? Math.max(groundH, occTop[k]) : groundH; // (a building: its walls cast a sight shadow like a ridge; you see its near face and roof)
+        const slope = (blockH + 0.2 - eye) / d;
         if (slope > maxSlope) maxSlope = slope;
       }
     }
@@ -244,6 +256,28 @@ export class FogOfWar {
       this.groundT = g.time;
     }
     return this.groundH;
+  }
+
+  /** The sight blocks (world/Cover.js occluders: buildings, tall solid props) per cell: their top and which one; rebuilt at most every GROUND_EVERY s (collapses lower them). */
+  occTable() {
+    const g = this.game, cover = g.cover;
+    if (!this.occ) this.occ = { top: new Float32Array(N * N), ref: new Array(N * N).fill(null), t: -1e9 };
+    if (cover?.occluders && g.time - this.occ.t >= GROUND_EVERY) {
+      const { top, ref } = this.occ, { cell, half } = this;
+      top.fill(0); ref.fill(null);
+      for (const o of cover.occluders) {
+        const r = Math.hypot(o.hx, o.hz);
+        const x0 = Math.max(0, Math.floor((o.x - r + half) / cell)), x1 = Math.min(N - 1, Math.floor((o.x + r + half) / cell));
+        const z0 = Math.max(0, Math.floor((o.z - r + half) / cell)), z1 = Math.min(N - 1, Math.floor((o.z + r + half) / cell));
+        for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) {
+          if (!CoverMap.inside(o, (ix + 0.5) * cell - half, (iz + 0.5) * cell - half, cell * 0.35)) continue; // (a cell the footprint mostly covers)
+          const k = iz * N + ix;
+          if (!ref[k] || o.top > top[k]) { top[k] = o.top; ref[k] = o; }
+        }
+      }
+      this.occ.t = g.time;
+    }
+    return this.occ;
   }
 
   // ---------------------------------------------------------------- shading
