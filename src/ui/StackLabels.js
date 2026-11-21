@@ -10,6 +10,7 @@
 // panel): where her parties go first — the pumps, the fire, the repairs — each showing how bad it is,
 // and counter-flood when she lists. Click the lit one again: all alike.
 import { stockChips } from '../systems/Stocks.js';
+import { refillCost } from '../core/Orders.js';
 import * as THREE from 'three';
 import { RANKS } from '../entities/UnitStack.js';
 import { forArmy } from '../data/factions.js';
@@ -134,7 +135,7 @@ export class StackLabels {
     el.innerHTML = '<div class="sl-row"><span class="sl-sym"><i class="sl-ring"></i><span class="sl-glyph"></span><i class="sl-rank"></i></span>'
       + '<span class="sl-name"></span><span class="sl-count"></span><span class="sl-off" title="Platoon leader"></span><span class="sl-care"></span><span class="sl-chips"></span></div>'
       + '<div class="sl-bar"><i></i></div><div class="sl-sup"><i></i></div>'
-      + (stack.stats.naval && side !== 'enemy' ? '<div class="sl-dc" hidden></div>' : '');
+      + ((stack.stats.naval || stack.usesCover) && side !== 'enemy' ? '<div class="sl-dc" hidden></div>' : ''); // (ships: damage control; squads: Refill)
     el.querySelector('.sl-glyph').innerHTML = symbol(signOf(stack), side === 'enemy');
     el.querySelector('.sl-name').textContent = callsign(stack);
     el.title = stack.name;
@@ -241,7 +242,7 @@ export class StackLabels {
       const flash = item.fired > now;
       this.set(item, 'fire', flash, () => item.sym.classList.toggle('fire', flash));
 
-      if (item.dc) this.drawDamageControl(stack, item);
+      if (item.dc) stack.stats.naval ? this.drawDamageControl(stack, item) : this.drawRefill(stack, item);
 
       this.set(item, 'auto', !!stack.autonomous, () => item.el.classList.toggle('wave', !!stack.autonomous));
       const sel = commands.selected.has(stack);
@@ -309,6 +310,23 @@ export class StackLabels {
       const on = marked.has(stack);
       this.set(item, 'airTarget', on, () => item.el.classList.toggle('air-target', on));
     }
+  }
+
+  /** A squad of yours short of men near supply (the base, a set-up command post, a supply lorry): Refill under its tag (Orders refill, for CP). */
+  drawRefill(stack, item) {
+    const g = this.game, n = g.mine(stack) && g.modeState?.cp && stack.missing && stack.supplied ? stack.missing : 0;
+    const cost = n ? refillCost(stack) : 0;
+    this.set(item, 'dc', `${n}|${cost}`, () => {
+      item.dc.hidden = !n;
+      if (!n) return;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sl-dc-b';
+      b.innerHTML = `Refill<i>+${n} · ${cost} CP</i>`;
+      b.title = `New men fill the squad's ${n} empty place${n > 1 ? 's' : ''} for ${cost} command points`;
+      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); g.orders.issue({ t: 'refill', s: [stack.id] }); });
+      item.dc.replaceChildren(b);
+    });
   }
 
   /** A damaged ship of yours: the damage-control buttons under her tag (Orders damageControl). */
