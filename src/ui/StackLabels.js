@@ -78,7 +78,7 @@ const callsignCache = new Map();
 export function callsign(stack) {
   const name = stack.name;
   if (callsignCache.has(name)) return callsignCache.get(name);
-  const num = name.match(/\s(\d+)$/)?.[1] ?? '';
+  const num = name.match(/\s(\d+|[IVX]+)$/)?.[1] ?? ''; // (a bought one's number is Roman: "9K515 Tornado-S III" — kept, and not counted against the length)
   let base = (num ? name.slice(0, -num.length).trim() : name).replace(/^(USS|HMS|SS) /, ''); // (a ship: her name)
   const cls = base.match(/^(\S+?)-class\b/);
   if (cls) base = cls[1];
