@@ -714,3 +714,37 @@
 /* 1985's nuclear shadow in the war room's top bar (ui/WarRoom.js, engine escalate()) */
 .wc-esc i { background: rgba(224, 180, 90, 0.35); }
 .wc-esc.hot i { background: rgba(214, 60, 40, 0.55); }
+
+/* ---- 1985: the acetate overlay (ui/WorldMap.js style 'acetate'): a printed map — pale land, blue sea and grid, purple
+   borders, bold sans names — under a plastic sheet marked in blue and red marker, labels in a hand (Architects Daughter) */
+.wm-acetate .wm-sea { fill: #b9d3e2; }
+.wm-acetate .wm-land { fill: #eeead6; }
+.wm-acetate .wm-grat { stroke: rgba(59, 106, 160, 0.38); stroke-width: 0.6; }
+.wm-acetate .wm-coast { stroke: #2b5f86; stroke-width: 1; }
+.wm-acetate .wm-border { stroke: rgba(138, 58, 154, 0.55); stroke-width: 1.4; stroke-dasharray: 8 3 2 3; }
+.wm-acetate .wm-area { stroke: rgba(21, 21, 21, 0.6); stroke-dasharray: 14 6; }
+.wm-acetate .wm-wash.nato { fill: rgba(31, 79, 224, 0.2); } .wm-acetate .wm-wash.pact { fill: rgba(224, 38, 31, 0.15); }
+.wm-acetate .wm-neutral { fill: url(#wm-neutral); opacity: 0.6; }
+.wm-acetate .wm-pen { stroke-width: 4; opacity: 0.9; }
+.wm-acetate .wm-pen.nato { stroke: #1f4fe0; } .wm-acetate .wm-pen.pact { stroke: #e0261f; }
+.wm-acetate .wc-theatre { fill: rgba(21, 21, 21, 0.32); font: 30px 'Architects Daughter', cursive; letter-spacing: 0.06em; text-transform: none; }
+.wm-acetate .wc-node .name { fill: #2a2a2a; font: 700 11px 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.02em; text-transform: uppercase; stroke: rgba(238, 234, 214, 0.9); }
+.wm-acetate .wc-node .name.sea { fill: #2b5f86; font: italic 12px Arial, sans-serif; letter-spacing: 0.08em; stroke: rgba(185, 211, 226, 0.9); }
+.wm-acetate .wc-node.reach .name { fill: #e0261f; }
+.wm-acetate .wc-pin .town { fill: #d23a2a; opacity: 0.8; }
+.wm-acetate .wc-pin .head { stroke: #151515; stroke-width: 0.6; }
+.wm-acetate .wc-pin.nato .head { fill: #1f4fe0; } .wm-acetate .wc-pin.pact .head { fill: #e0261f; }
+.wm-acetate .wc-pin.cluster .disc { fill: rgba(255, 255, 255, 0.75); filter: none; }
+.wm-acetate .wc-pin .count, .wm-acetate .wc-badge text { font: 13px 'Architects Daughter', cursive; fill: #151515; }
+.wm-acetate .wc-badge rect { fill: rgba(255, 255, 255, 0.85); stroke: #151515; }
+.wm-acetate .wc-pile .face, .wm-acetate .wc-counter .face { fill: rgba(255, 255, 255, 0.55); stroke-width: 2.2; filter: url(#wm-marker); }
+.wm-acetate .wc-pile .face.nato, .wm-acetate .wc-counter.nato .face { fill: rgba(255, 255, 255, 0.55); stroke: #1f4fe0; }
+.wm-acetate .wc-pile .face.pact, .wm-acetate .wc-counter.pact .face { fill: rgba(255, 255, 255, 0.55); stroke: #e0261f; }
+.wm-acetate .wc-counter.nato .sym, .wm-acetate .wc-counter.nato .frame, .wm-acetate .wc-counter.nato .str { stroke: #1f4fe0; } .wm-acetate .wc-counter.nato .str { fill: #1f4fe0; }
+.wm-acetate .wc-counter.pact .sym, .wm-acetate .wc-counter.pact .frame, .wm-acetate .wc-counter.pact .str { stroke: #e0261f; } .wm-acetate .wc-counter.pact .str { fill: #e0261f; }
+.wm-acetate .wc-counter.ordered .face { stroke-dasharray: 6 3; }
+.wm-acetate .wc-counter.sel .face { stroke: #151515; stroke-width: 3; }
+.wm-acetate .wc-order { stroke: #1f4fe0; stroke-width: 4; } .wm-acetate .wc-order.attack { stroke: #e0261f; }
+.wm-acetate .wc-road { stroke: rgba(120, 90, 40, 0.5); }
+.wm-acetate .wc-lane, .wm-acetate .wc-coast { stroke: #2b5f86; }
+.wm-acetate ~ .wc-legend, .wc-map:has(.wm-acetate) .wc-legend { background: rgba(255, 255, 255, 0.88); color: #2a2a2a; font-family: 'Architects Daughter', cursive; }

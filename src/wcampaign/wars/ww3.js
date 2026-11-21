@@ -6,6 +6,7 @@ export const WW3 = {
   id: 'ww3',
   epoch: '1985',
   name: 'World War III',
+  mapStyle: 'acetate', // (ui/WorldMap.js: a printed map under a plastic sheet, marked in marker pen)
   sides: { nato: 'NATO', pact: 'Warsaw Pact' },
   blurb: 'The war that never was, on one map: the Central Front in Germany, the Northern Flank in Norway, Korea, the Atlantic and the Mediterranean. The Pact strikes first and fast; NATO has to hold until the reinforcements cross the Atlantic. Move army groups, fleets and air wings in turns of half a week — and mind the nuclear shadow: strike too deep and both sides step to the brink.',
   sideText: { nato: 'The United States, West Germany, Norway and South Korea', pact: 'The Soviet Union, East Germany and North Korea' },

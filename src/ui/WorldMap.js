@@ -3,12 +3,14 @@
 // the 1945 staff map on the table (tools/mapstyles.html, the style chosen): yellowed paper with its grain, folds and a
 // coffee ring, sepia coastlines, the front in grease pencil. Zoom and pan (wheel, drag, pinch): the paper moves with it.
 // A screen-space layer on top takes the war room's pins, counters and arrows at a constant size whatever the zoom.
-//   const m = new WorldMap(host, { onView })   onView(t): the view changed (redraw the overlay; t: d3-zoom's transform)
+//   const m = new WorldMap(host, { onView, style })   onView(t): the view changed (redraw the overlay; t: d3-zoom's transform);
+//                                              style 'paper' (1945) or 'acetate' (1985: a printed map under a plastic sheet —
+//                                              blue grid, marker on the plastic, its glare; css .wm-acetate)
 //   await m.load()                             the coastlines
 //   m.xy(lon, lat) → [x, y]                    world units (W × H)
 //   m.territory(points, areas)                 [{ x, y, side }], [[[x, y] …] …]: each side's ground and the front, inside the war's areas
 //   m.flyTo(xys, maxK)                         frame these world points
-import { geoMercator, geoPath, geoGraticule10, geoContains, geoBounds } from 'd3-geo';
+import { geoMercator, geoPath, geoGraticule, geoGraticule10, geoContains, geoBounds } from 'd3-geo';
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom';
 import { select } from 'd3-selection';
 import 'd3-transition';
@@ -32,8 +34,9 @@ function grainTile() {
 }
 
 export class WorldMap {
-  constructor(host, { onView = () => {}, neutral = [] } = {}) {
+  constructor(host, { onView = () => {}, neutral = [], style = 'paper' } = {}) {
     this.onView = onView;
+    this.style = style;
     this.neutral = new Set(neutral); // (the war's neutral countries: never coloured, hatched)
     const s = W / (2 * Math.PI), merc = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
     this.H = Math.round(s * (merc(LAT[1]) - merc(LAT[0])));
@@ -41,7 +44,7 @@ export class WorldMap {
     const H = this.H, fold = (x, y, w, h, id) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${id})"/>`;
     const ring = (lon, lat, r, seed, o = {}) => { const [x, y] = this.proj([lon, lat]); return coffeeStain(x, y, r, seed, o); };
     this.svg = document.createElementNS(NS, 'svg');
-    this.svg.classList.add('wm');
+    this.svg.classList.add('wm', `wm-${style}`);
     this.svg.innerHTML = `<defs>
         <pattern id="wm-neutral" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V7" stroke="#6a5a3a" stroke-opacity="0.35" stroke-width="0.9"/></pattern>
         <pattern id="wm-grain" width="140" height="140" patternUnits="userSpaceOnUse"><image href="${grainTile()}" width="140" height="140"/></pattern>
@@ -55,6 +58,9 @@ export class WorldMap {
         <clipPath id="wm-warclip"><path class="wm-warshape"/></clipPath>
         <clipPath id="wm-frontclip"><path class="wm-landshape wm-frontland"/></clipPath>
         <filter id="wm-pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="2" seed="5" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
+        <filter id="wm-marker" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="turbulence" baseFrequency="0.12" numOctaves="1" seed="3" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.6" xChannelSelector="R" yChannelSelector="G"/></filter>
+        <linearGradient id="wm-glare" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.35" stop-color="#fff" stop-opacity="0.02"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.14"/><stop offset="0.56" stop-color="#fff" stop-opacity="0.02"/><stop offset="1" stop-color="#fff" stop-opacity="0.08"/></linearGradient>
+        <filter id="wm-wipe" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
         <filter id="wm-shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="1.5" dy="2.5" stdDeviation="1.5" flood-color="#2a1c08" flood-opacity="0.45"/></filter>
         <radialGradient id="wm-ph-nato" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#5f8fe8"/><stop offset="0.8" stop-color="#1c3f9a"/><stop offset="1" stop-color="#0c1f55"/></radialGradient>
         <radialGradient id="wm-ph-pact" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#f05a48"/><stop offset="0.8" stop-color="#9a1a12"/><stop offset="1" stop-color="#4a0806"/></radialGradient>
@@ -69,11 +75,12 @@ export class WorldMap {
         <g class="wm-terr" clip-path="url(#wm-landclip)"></g>
         <path class="wm-border"/>
         <path class="wm-coast"/>
-        <g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)"/>
+        ${style === 'acetate' ? `<g class="wm-paper" pointer-events="none">${this.smudges()}<rect width="${W}" height="${H}" fill="url(#wm-glare)"/></g>` /* the plastic: old marker wiped off, its glare */
+    : `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)"/>
           ${fold(W / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(W / 2 - 5, 0, 10, H, 'wm-foldv')}${fold((3 * W) / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(0, H / 2 - 5, W, 10, 'wm-foldh')}
-          ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>
+          ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>`}
       </g>
-      <g class="wm-front" clip-path="url(#wm-frontclip)" filter="url(#wm-pencil)"></g>
+      <g class="wm-front" clip-path="url(#wm-frontclip)" filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"></g>
       <g class="wm-over"></g>`;
     host.append(this.svg);
     this.world = this.svg.querySelector('.wm-world');
@@ -84,7 +91,7 @@ export class WorldMap {
     this.t = zoomIdentity;
     this.zoom = d3zoom().on('zoom', (e) => { this.t = e.transform; this.world.setAttribute('transform', e.transform.toString()); this.drawFront(); this.onView(this.t); });
     this.sel = select(this.svg).call(this.zoom).on('dblclick.zoom', null);
-    this.svg.querySelector('.wm-grat').setAttribute('d', geoPath(this.proj).digits(1)(geoGraticule10()));
+    this.svg.querySelector('.wm-grat').setAttribute('d', geoPath(this.proj).digits(1)(style === 'acetate' ? geoGraticule().step([2, 2])() : geoGraticule10())); // (1985: the printed map's close grid)
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
   }
@@ -121,6 +128,15 @@ export class WorldMap {
   }
 
   xy(lon, lat) { return this.proj([lon, lat]); }
+
+  /** The acetate's ghosts: where marker was wiped off with a sleeve — faint blurred smears, the same every time. */
+  smudges() {
+    let h = 7;
+    const r = () => { h = (h * 9301 + 49297) % 233280; return h / 233280; };
+    let s = '';
+    for (let i = 0; i < 9; i++) { const x = (r() * W).toFixed(0), y = (r() * this.H).toFixed(0); s += `<ellipse cx="${x}" cy="${y}" rx="${(40 + r() * 70).toFixed(0)}" ry="${(10 + r() * 16).toFixed(0)}" transform="rotate(${(r() * 50 - 25).toFixed(0)} ${x} ${y})" fill="${r() < 0.5 ? '#5a6a8a' : '#8a3a3a'}" opacity="${(0.05 + r() * 0.04).toFixed(3)}" filter="url(#wm-wipe)"/>`; }
+    return s;
+  }
 
   /**
    * Each side's ground: its colour, flat, over each province's Voronoi cell inside the war's areas (`areas`: world-unit

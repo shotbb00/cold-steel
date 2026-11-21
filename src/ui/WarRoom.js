@@ -59,7 +59,7 @@ export class WarRoomPanel {
     if (!this.root.isConnected || !matchMedia('(min-width: 901px)').matches) return; // (a phone: the panel fills the screen — no map behind it)
     table.prepend(host);
     const c = (save && await loadSave(save.key).catch(() => null)) ?? newCampaign(war, { side: 'nato', maps: mapsHere() });
-    const map = new WorldMap(host, { neutral: war.neutral });
+    const map = new WorldMap(host, { neutral: war.neutral, style: war.mapStyle });
     map.sel.on('.zoom', null); // (a picture: nothing to drag or wheel)
     const pts = Object.entries(war.provinces).map(([id, p]) => { const [x, y] = map.xy(p.lon, p.lat); return { id, x, y, side: c.provinces[id].owner, depot: !!c.provinces[id].depot }; });
     map.onView = (t) => {
@@ -172,7 +172,9 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const body = el('div', 'wc-body'), mapBox = el('div', 'wc-map');
   body.append(mapBox, side);
   room.append(top, tabBar, body);
-  const map = new WorldMap(mapBox, { onView: () => drawOverlay(), neutral: war.neutral });
+  const map = new WorldMap(mapBox, { onView: () => drawOverlay(), neutral: war.neutral, style: war.mapStyle });
+  const acetate = map.style === 'acetate'; // (1985: hostile counters are diamonds, as marked on a situation map)
+  const faceOf = (side, cls = 'face', dx = 0, dy = 0) => (acetate && side === 'pact' ? `<path class="${cls}" d="M${dx},${dy - 16}L${dx + 19},${dy}L${dx},${dy + 16}L${dx - 19},${dy}Z"/>` : `<rect class="${cls}" x="${dx - 15}" y="${dy - 11}" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>`);
   const areas = areasOf(map, war);
   const tools = el('div', 'wc-zoom');
   tools.append(btn('+', '', () => map.zoomBy(2)), btn('−', '', () => map.zoomBy(0.5)), btn('⤢', '', () => frame(st.theatre)));
@@ -356,8 +358,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (!fs.length) return '';
     const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
     let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})">`;
-    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += `<rect class="face under ${top.side}" x="${-15 + i * 3}" y="${-11 - i * 3}" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>`;
-    s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><rect class="face" x="-15" y="-11" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>${top.kind === 'army' ? '<rect class="frame" x="-11" y="-7" width="22" height="13"/>' : ''}<g class="sym" transform="translate(0 -0.5) scale(0.95)">${glyph(top)}</g><rect class="str" x="-12" y="8" width="${(24 * strength(top)).toFixed(1)}" height="1.8"/></g>`;
+    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += faceOf(top.side, `face under ${top.side}`, i * 3, -i * 3);
+    s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title>${faceOf(top.side)}${top.kind === 'army' ? '<rect class="frame" x="-11" y="-7" width="22" height="13"/>' : ''}<g class="sym" transform="translate(0 -0.5) scale(0.95)">${glyph(top)}</g><rect class="str" x="-12" y="8" width="${(24 * strength(top)).toFixed(1)}" height="1.8"/></g>`;
     if (n > 1) s += `<g class="wc-badge"><rect x="9" y="-19" width="13" height="12" rx="1" filter="url(#wm-shadow)"/><text x="15.5" y="-10" text-anchor="middle">${n}</text></g>`;
     return `${s}</g>`;
   }
@@ -546,7 +548,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         const st2 = c.objectives?.[o.id] ?? {}, left = o.hold - (st2.turns ?? 0);
         const what = st2.won ? (mine(st2.won) ? `✓ secured by you — +${o.morale} morale for good` : `✗ secured by ${them} — they gained +${o.morale} morale`)
           : st2.holder ? (mine(st2.holder) ? `yours — hold ${left} more turn${left === 1 ? '' : 's'} (${st2.turns} of ${o.hold}) for +${o.morale} morale` : `${them} took it — ${left} more turn${left === 1 ? '' : 's'} and they gain +${o.morale} morale: take it back`)
-          : mine(st2.start) ? `yours from the start — if ${them} take it and hold it ${o.hold} turns, they gain +${o.morale} morale`
+          : mine(st2.start) ? `yours from the start — if ${them} ${/s$/.test(them) ? 'take' : 'takes'} it and hold it ${o.hold} turns, they gain +${o.morale} morale`
           : `held by ${them} — take it and hold it ${o.hold} turns in a row: +${o.morale} morale for you`;
         return `<span class="wc-line wc-obj">★ <b>${esc(o.name)}</b>: ${what}</span>`;
       });
