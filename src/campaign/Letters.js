@@ -50,6 +50,28 @@ const PEOPLE = {
     to: [['Mutti', 'Liebe Mutti,'], ['Vati', 'Lieber Vati,'], ['Kerstin', 'Liebe Kerstin,'], ['Anja', 'Meine Anja,'], ['Mutti and Vati', 'Liebe Eltern,'], ['Oma', 'Liebe Oma,'], ['Ines', 'Ines, mein Mädchen,']],
     sign: ['Dein', 'Es grüßt dich herzlich', 'Bis bald,', 'Halt die Ohren steif,', 'In Liebe,', 'Dein Junge,'],
   },
+  // the Northern Flank and Korea (the world campaign's 1985: their own armies write home in their own words)
+  no: {
+    first: ['Ola', 'Kjetil', 'Bjørn', 'Lars', 'Håkon', 'Espen', 'Trond', 'Geir', 'Svein', 'Morten', 'Eirik', 'Rune', 'Stian', 'Arild', 'Tor', 'Jan Erik'],
+    last: ['Hansen', 'Johansen', 'Olsen', 'Larsen', 'Andersen', 'Pedersen', 'Nilsen', 'Berg', 'Haugen', 'Hagen', 'Johnsen', 'Lie', 'Bakken', 'Solberg', 'Strand', 'Eriksen'],
+    rank: ['Menig', 'Menig', 'Visekorporal', 'Korporal', 'Sersjant'],
+    to: [['Mamma', 'Kjære mamma,'], ['Pappa', 'Kjære pappa,'], ['Kari', 'Kjære Kari,'], ['Ingrid', 'Ingrid, vennen min,'], ['Mamma and Pappa', 'Kjære mamma og pappa,'], ['Bestemor', 'Kjære bestemor,'], ['Silje', 'Silje,']],
+    sign: ['Hilsen', 'Glad i deg,', 'Din sønn,', 'Klem fra', 'Snakkes snart,', 'Ha det bra,'],
+  },
+  rok: {
+    first: ['Min-jun', 'Seong-ho', 'Jae-won', 'Dong-hyun', 'Young-soo', 'Sang-woo', 'Ji-hoon', 'Kwang-su', 'Hyun-woo', 'Byung-chul', 'Tae-hoon', 'Chul-soo', 'Jung-ho', 'Kyung-min'],
+    last: ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Jang', 'Lim', 'Han', 'Oh', 'Seo', 'Shin'],
+    rank: ['Pvt.', 'PFC', 'Cpl.', 'Sgt.'],
+    to: [['Mother', 'Dear Mother,'], ['Father', 'Dear Father,'], ['Mother and Father', 'Dear Mother and Father,'], ['Eun-ji', 'Dear Eun-ji,'], ['Mi-young', 'Mi-young,'], ['Grandmother', 'Dear Grandmother,'], ['older brother', 'Hyung,']],
+    sign: ['Your son,', 'Your son, who misses you,', 'Stay well,', 'Until I come home,', 'Do not worry,', 'Yours,'],
+  },
+  kpa: {
+    first: ['Chol-su', 'Kwang-chol', 'Myong-ho', 'Song-il', 'Yong-nam', 'Hyok', 'Un-chol', 'Il-nam', 'Chang-ho', 'Kum-song', 'Jong-hun', 'Ryong-il', 'Su-nam', 'Nam-chol'],
+    last: ['Kim', 'Ri', 'Pak', 'Choe', 'Jong', 'Kang', 'Jo', 'Yun', 'Jang', 'Han', 'O', 'So', 'Ryu', 'Hwang'],
+    rank: ['Pvt.', 'Pvt.', 'Jr. Sgt.', 'Sgt.'],
+    to: [['Mother', 'Dear Mother,'], ['Father', 'Respected Father,'], ['Mother and Father', 'Dear Mother and Father,'], ['Grandmother', 'Dear Grandmother,'], ['Kyong-hui', 'Comrade Kyong-hui,'], ['little sister', 'Dear little sister,']],
+    sign: ['Your son,', 'With a soldier’s greeting,', 'Until we meet,', 'Do not worry about me,', 'Your son at the front,'],
+  },
   ...PEOPLE_1945,
   ...PEOPLE_1806,
   ...PEOPLE_1918,
