@@ -91,14 +91,14 @@ export const WW2 = {
 
   seas: {
     'north-atlantic': { name: 'The North Atlantic', theatre: 'atlantic', map: 'atlanticConvoy', seas: ['channel'], coasts: ['england'], lat: 52, lon: -25 },
-    channel: { name: 'The Channel', theatre: 'west', map: null, seas: ['north-atlantic'], coasts: ['england', 'normandy'], lat: 50.3, lon: -1 },
-    blackSea: { name: 'The Black Sea', theatre: 'east', map: null, seas: [], coasts: ['kuban'], lat: 43.5, lon: 34 },
+    channel: { name: 'The Channel', theatre: 'west', map: 'openSea', seas: ['north-atlantic'], coasts: ['england', 'normandy'], lat: 50.3, lon: -1 },
+    blackSea: { name: 'The Black Sea', theatre: 'east', map: 'openSea', seas: [], coasts: ['kuban'], lat: 43.5, lon: 34 },
     westernMed: { name: 'The western Mediterranean', theatre: 'med', map: 'maltaConvoy', seas: ['easternMed'], coasts: ['algeria', 'sicily', 'italy'], lat: 38, lon: 9 },
-    easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: null, seas: ['westernMed'], coasts: ['alexandria', 'gazala', 'sicily'], lat: 34, lon: 22 },
+    easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: 'openSea', seas: ['westernMed'], coasts: ['alexandria', 'gazala', 'sicily'], lat: 34, lon: 22 },
     centralPacific: { name: 'The central Pacific', theatre: 'pacific', map: 'midway', seas: ['solomons', 'philippineSea'], coasts: ['hawaii'], lat: 25, lon: -175 },
     solomons: { name: 'The Solomons', theatre: 'pacific', map: 'savoSound', seas: ['centralPacific', 'philippineSea'], coasts: ['guadalcanal'], lat: -8, lon: 158 },
     philippineSea: { name: 'The Philippine Sea', theatre: 'pacific', map: 'philippineSea', seas: ['centralPacific', 'solomons', 'japanSeas', 'bayOfBengal'], coasts: ['saipan', 'iwoJima', 'okinawa'], lat: 18, lon: 135 },
-    bayOfBengal: { name: 'The Bay of Bengal', theatre: 'pacific', map: null, seas: ['philippineSea'], coasts: ['burma'], lat: 14, lon: 90 }, /* (Rangoon's sea: through the Malacca Strait to the Pacific) */
+    bayOfBengal: { name: 'The Bay of Bengal', theatre: 'pacific', map: 'openSea', seas: ['philippineSea'], coasts: ['burma'], lat: 14, lon: 90 }, /* (Rangoon's sea: through the Malacca Strait to the Pacific) */
     japanSeas: { name: 'The seas off Japan', theatre: 'pacific', map: 'surigaoStrait', seas: ['philippineSea'], coasts: ['okinawa', 'japan'], lat: 30, lon: 132 },
   },
 

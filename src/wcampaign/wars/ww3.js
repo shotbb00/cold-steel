@@ -80,15 +80,15 @@ export const WW3 = {
   },
 
   seas: {
-    northSea: { name: 'The North Sea', theatre: 'central', map: null, seas: ['baltic', 'eastAtlantic', 'norwegianSea'], coasts: ['britain', 'rhine', 'schleswig'], lat: 56, lon: 3 },
+    northSea: { name: 'The North Sea', theatre: 'central', map: 'openSea', seas: ['baltic', 'eastAtlantic', 'norwegianSea'], coasts: ['britain', 'rhine', 'schleswig'], lat: 56, lon: 3 },
     baltic: { name: 'The Baltic', theatre: 'central', map: 'balticSea', seas: ['northSea'], coasts: ['schleswig', 'mecklenburg'], lat: 55, lon: 14 },
     barents: { name: 'The North Cape and the Barents Sea', theatre: 'north', map: 'northCape', seas: ['norwegianSea'], coasts: ['kola', 'pechenga', 'finnmark'], lat: 71.5, lon: 30 },
     norwegianSea: { name: 'The Norwegian Sea', theatre: 'north', map: 'norwegianSea', seas: ['barents', 'northSea', 'eastAtlantic'], coasts: ['narvik', 'andoya', 'bodo', 'iceland'], lat: 68, lon: 5 },
     eastAtlantic: { name: 'The GIUK gap and the convoy routes', theatre: 'atlantic', map: 'giukGap', seas: ['westAtlantic', 'northSea', 'norwegianSea', 'ionian'], coasts: ['britain', 'iceland'], lat: 56, lon: -20 },
-    westAtlantic: { name: 'The western Atlantic', theatre: 'atlantic', map: null, seas: ['eastAtlantic'], coasts: ['usa'], lat: 40, lon: -55 },
+    westAtlantic: { name: 'The western Atlantic', theatre: 'atlantic', map: 'openSea', seas: ['eastAtlantic'], coasts: ['usa'], lat: 40, lon: -55 },
     ionian: { name: 'The Ionian Sea', theatre: 'med', map: 'ionianSea', seas: ['eastAtlantic', 'easternMed'], coasts: ['italy'], lat: 38, lon: 18 }, /* (round Gibraltar to the Atlantic) */
-    easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: null, seas: ['ionian'], coasts: ['syria'], lat: 34, lon: 30 },
-    yellowSea: { name: 'The Yellow Sea', theatre: 'korea', map: null, seas: ['seaOfJapan'], coasts: ['seoul', 'pyongyang'], lat: 37, lon: 124.5 },
+    easternMed: { name: 'The eastern Mediterranean', theatre: 'med', map: 'openSea', seas: ['ionian'], coasts: ['syria'], lat: 34, lon: 30 },
+    yellowSea: { name: 'The Yellow Sea', theatre: 'korea', map: 'openSea', seas: ['seaOfJapan'], coasts: ['seoul', 'pyongyang'], lat: 37, lon: 124.5 },
     seaOfJapan: { name: 'The Sea of Japan', theatre: 'korea', map: 'seaOfJapan', seas: ['yellowSea'], coasts: ['japan', 'vladivostok'], lat: 39.5, lon: 134 },
   },
 

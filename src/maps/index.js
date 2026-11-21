@@ -33,6 +33,7 @@ import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
 import balticSea from './balticSea.ts';
 import giukGap from './giukGap.ts';
+import openSea from './openSea.ts'; // (the campaign's quiet sea zones: open water, both wars)
 import omaha from './omaha.ts';
 import iwoJima from './iwoJima.ts';
 import elGuettar from './elGuettar.ts';
@@ -222,6 +223,7 @@ export const MAPS = {
   [zeebrugge.id]: zeebrugge,
   [balticSea.id]: balticSea,
   [giukGap.id]: giukGap,
+  [openSea.id]: openSea,
   [philippineSea.id]: philippineSea,
   [atlanticConvoy.id]: atlanticConvoy,
   [maltaConvoy.id]: maltaConvoy,
