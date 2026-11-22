@@ -75,7 +75,7 @@ export const WW2 = {
     kasserine: { name: 'The Kasserine Pass', theatre: 'med', map: 'kasserine-pass', prod: 1, land: ['tunisiaSouth', 'algeria'], lat: 35.3, lon: 8.7 },
     algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', map: 'medjerda', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
     sicily: { name: 'Sicily', theatre: 'med', map: 'primosole', coastal: ['gela'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
-    italy: { name: 'Italy', theatre: 'med', depot: 'pact', map: 'cassino', port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
+    italy: { name: 'Italy', theatre: 'med', depot: 'pact', map: 'cassino', coastal: ['anzio'], port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
 
     // ---- The Pacific: islands, Burma
     hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', map: 'oahu', port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
