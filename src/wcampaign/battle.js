@@ -20,10 +20,14 @@ const sides = (c, b) => {
   return { [b.attackerSide]: A, [enemy(b.attackerSide)]: D };
 };
 
+/** Who lands on a landing map: the side whose base lies out at sea (as systems/Landing.js lands()), or `landing.attacker`. */
+export const landerOf = (map) => map.landing?.attacker
+  ?? ['nato', 'pact'].find((f) => map.bases?.[f] && map.height(map.bases[f].x, map.bases[f].z) < (map.river?.level ?? 0)) ?? 'nato';
+
 /** '' when the battle can be fought on its map; otherwise why not (it is resolved instead). */
 export function fightable(c, war, b) {
   if (!b.map || !MAPS[b.map]) return 'no map for it yet';
-  if (b.kind === 'coastal' && (MAPS[b.map].landing?.attacker ?? 'nato') !== b.attackerSide) return 'its map is a landing by the other side';
+  if (b.kind === 'coastal' && landerOf(MAPS[b.map]) !== b.attackerSide) return 'its map is a landing by the other side';
   const s = sides(c, b);
   if (!s.nato.length || !s.pact.length) return 'one side has no force there';
   return '';
