@@ -110,7 +110,7 @@ export const WW1 = {
     trieste: { name: 'Trieste and the Hermada', theatre: 'italy', map: 'hermada', port: true, prod: 2, fort: 3, seas: ['adriatic'], land: ['isonzo', 'carniola'], lat: 45.65, lon: 13.78 },
     carniola: { name: 'Laibach and Carniola', theatre: 'italy', map: 'tolmein', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
     cattaro: { name: 'Cattaro and Dalmatia', theatre: 'italy', port: true, prod: 1, fort: 2, seas: ['adriatic', 'otranto'], land: ['carniola', 'belgrade'], lat: 43.0, lon: 17.4 }, // (the k.u.k. Kriegsmarine's cruisers and U-boats at Cattaro)
-    carinthia: { name: 'Villach and Carinthia', theatre: 'italy', prod: 1, land: ['trentino', 'carniola', 'vienna'], lat: 46.62, lon: 13.85 },
+    carinthia: { name: 'Villach and Carinthia', theatre: 'italy', map: 'tarvis', prod: 1, land: ['trentino', 'carniola', 'vienna'], lat: 46.62, lon: 13.85 },
     vienna: { name: 'Vienna', theatre: 'italy', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
 
     // ---- the Eastern Front: from the Gulf of Riga to the Carpathians and Romania
@@ -145,7 +145,7 @@ export const WW1 = {
     egypt: { name: 'Egypt and the Canal', theatre: 'mideast', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['sinai'], fort: 3, garrison: 1800, lat: 30.6, lon: 32.3 },
     sinai: { name: 'Sinai and El Arish', theatre: 'mideast', prod: 0, land: ['egypt', 'gaza', 'beersheba'], lat: 31.0, lon: 33.6 },
     gaza: { name: 'Gaza', theatre: 'mideast', map: 'gaza', prod: 1, fort: 2, seas: ['easternMed'], land: ['sinai', 'beersheba', 'jerusalem'], lat: 31.5, lon: 34.45 },
-    beersheba: { name: 'Beersheba and the wells', theatre: 'mideast', prod: 1, land: ['sinai', 'gaza', 'jerusalem'], fort: 1, lat: 31.25, lon: 34.79 },
+    beersheba: { name: 'Beersheba and the wells', theatre: 'mideast', map: 'beersheba', prod: 1, land: ['sinai', 'gaza', 'jerusalem'], fort: 1, lat: 31.25, lon: 34.79 },
     jerusalem: { name: 'Jerusalem and the Judean hills', theatre: 'mideast', prod: 1, fort: 2, land: ['gaza', 'beersheba', 'megiddo', 'damascus'], lat: 31.77, lon: 35.21 },
     megiddo: { name: 'Megiddo and the plain of Sharon', theatre: 'mideast', map: 'megiddo', prod: 1, land: ['jerusalem', 'damascus'], lat: 32.58, lon: 35.18 },
     damascus: { name: 'Damascus', theatre: 'mideast', prod: 1, land: ['jerusalem', 'megiddo', 'aleppo'], lat: 33.51, lon: 36.29 },
