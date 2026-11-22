@@ -226,7 +226,7 @@ export default {
     counter: { t: 360, units: ['tank', 'ifv', 'heavyTank', 'ifv', 'tank'], say: 'The division’s reserve is coming off the Litsa front down the Murmansk road: T-80s and BMPs, straight for the beachhead', sayOther: 'Enemy armour coming down the Murmansk road: T-80s and BMPs' },
     // the landing’s AI (ai/LandingDirector.js): its buying order, a frigate inshore off the focus beach
     ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'tank', 'rifles', 'mgTeam', 'ifv', 'rifles', 'tank', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 380 },
-    economy: { reserves: 3000, perSector: 700, beachIncome: 1.0, defenceCp: 800, defenceIncome: 1.2 }, // (Wismar’s, richer for the landing: the defence held every village but one in all three first runs, 2026-11-22)
+    economy: { reserves: 3000, perSector: 700, beachIncome: 1.0, defenceCp: 800, defenceIncome: 1.2 }, // (Wismar’s, richer for the landing: on Wismar’s own the defence kept two villages of three in three runs; with this, 2026-11-22: 0, 2 and 1 villages of 3 taken, one landing won at 13:30)
     // the AAV7s and the scout vehicles swim in on their own, put in off the beach
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon' },
     // the first wave at dawn, in to all three ways at once
