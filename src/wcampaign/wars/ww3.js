@@ -47,7 +47,7 @@ export const WW3 = {
     werra: { name: 'The Werra valley', theatre: 'central', map: 'werra-valley', prod: 1, land: ['huenfeld', 'kaliwerk', 'thuringia'], lat: 50.92, lon: 10.12 },
     thuringia: { name: 'The Thuringian Forest', theatre: 'central', map: 'thuringian-forest', prod: 2, fort: 1, land: ['huenfeld', 'werra', 'eastGermany'], lat: 50.7, lon: 10.7 },
     eastGermany: { name: 'East Germany', theatre: 'central', depot: 'pact', map: 'magdeburg', airfield: true, prod: 11, fort: 1, land: ['thuringia', 'mecklenburg'], lat: 52.1, lon: 12.9 },
-    mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: 'schwerin', seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
+    mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: 'schwerin', coastal: ['wismar'], seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
     schleswig: { name: 'Schleswig-Holstein', theatre: 'central', map: 'ratzeburg-lakes', coastal: ['hohwacht'], seas: ['baltic', 'northSea'], port: true, airfield: true, prod: 2, fort: 1, land: ['rhine', 'mecklenburg'], lat: 54.2, lon: 10.2 },
     britain: { name: 'Britain', theatre: 'central', depot: 'nato', map: 'east-anglia', port: true, airfield: true, prod: 5, seas: ['northSea', 'eastAtlantic'], land: [], lat: 52.5, lon: -1.5 },
 

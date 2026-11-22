@@ -19,37 +19,9 @@ import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createSea } from '../world/Sea.js';
 import { buildSite, commandPost } from './common.js';
-import { craftType } from '../data/units/baltic85.js';
-import { TYPES_1985, UNIT_TYPES } from '../data/units/index.js';
-import { buildLCT, buildLCVP } from '../data/models/landingCraft45.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
-// ---- NATO's landing craft, 1985 (the roster has only the Pact's: data/units/baltic85.js). Real boats on the 1944
-// frames they grew out of: the Bundesmarine's Type 520 (Barbe class, 22 built for the Baltic: a 40 m ramped LCU, the
-// wheelhouse aft — the LCT's lines) and the US Navy's LCVP Mk 7 (still the Higgins boat's shape, off the amphibious ships).
-const lcu520 = craftType({
-  engine: 'engine.diesel',
-  id: 'lcu520', name: 'Landing Craft (Type 520)', shortName: 'Type 520',
-  names: { nato: ['Barbe', 'Delphin', 'Dorsch', 'Felchen', 'Forelle', 'Hering', 'Karpfen', 'Lachs', 'Renke', 'Salm', 'Stör', 'Zander'], pact: ['L-1'] },
-  hull: { length: 40, beam: 8.8 },
-  stats: { draft: 1.4, hp: 1300, armor: 0.06, speed: 7.5, accel: 0.4, turnRate: 0.17, turretRate: 1, radius: 5, height: 5, eyeHeight: 6, sight: 600, smallCraft: true, range: 0, aggroRange: 0, preferredRange: 0, damage: 0 },
-  mounts: { nato: [], pact: [] },
-  camera: { distance: 60, height: 18, shoulder: 0 },
-  models: { nato: buildLCT, pact: buildLCT },
-  variants: { nato: { name: 'Type 520 landing craft (Barbe class)', weapon: '2 × 20 mm', text: 'The Bundesmarine’s landing craft, built for the Baltic: a Leopard or a company of Panzergrenadiere straight onto the sand through the bow ramp. Slow and big on the run in.' }, pact: { name: 'Landing craft', weapon: '—', text: 'A landing craft.' } },
-});
-const lcvp85 = craftType({
-  engine: 'engine.dieselSmall',
-  id: 'lcvp85', name: 'Landing Craft (LCVP Mk 7)', shortName: 'LCVP',
-  names: { nato: ['LCVP 1', 'LCVP 2', 'LCVP 3', 'LCVP 4', 'LCVP 5', 'LCVP 6', 'LCVP 7', 'LCVP 8'], pact: ['L-2'] },
-  hull: { length: 10.9, beam: 3.3 },
-  stats: { draft: 0.9, hp: 300, armor: 0.04, speed: 9, accel: 0.8, turnRate: 0.45, turretRate: 1, radius: 2.4, height: 2.6, eyeHeight: 3, sight: 400, smallCraft: true, stealth: 0.4, range: 0, aggroRange: 0, preferredRange: 0, damage: 0 },
-  mounts: { nato: [], pact: [] },
-  camera: { distance: 26, height: 9, shoulder: 0 },
-  models: { nato: buildLCVP, pact: buildLCVP },
-  variants: { nato: { name: 'LCVP Mk 7', weapon: '—', text: 'The amphibious ships’ small landing craft: a squad from the ship to the beach, the ramp down, out. Forty years on, still the Higgins boat.' }, pact: { name: 'Landing craft', weapon: '—', text: 'A small landing craft.' } },
-});
-for (const t of [lcu520, lcvp85]) { TYPES_1985[t.id] ??= t; if (UNIT_TYPES.frosch) UNIT_TYPES[t.id] ??= t; } // (1985's roster: data/epoch.js swaps it in)
+// NATO's landing craft (lcu520, lcvp85) are 1985 roster types: data/units/baltic85.js.
 
 const SIZE = 2000;
 const BOUNDS = { x: 500, z: 900 };
