@@ -38,6 +38,7 @@ import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 import { SHIPS_1985 } from './ships85.js';
 import armies85 from './armies85.js';
+import navies85 from './navies85.js';
 import { ARMIES, armyHas } from '../factions.js';
 
 export const UNIT_TYPES = {
@@ -82,6 +83,7 @@ export const UNIT_TYPES = {
 };
 
 armies85(UNIT_TYPES); // the Northern Flank's and Korea's armies: Norway, the Marines, the ROK Army, the KPA (./armies85.js)
+navies85(UNIT_TYPES); // their ships: the Royal Norwegian Navy and the ROK Navy on the shared ship types (./navies85.js)
 
 /** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */
 export const TYPES_1985 = { ...UNIT_TYPES };

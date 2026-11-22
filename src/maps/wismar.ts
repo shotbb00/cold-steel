@@ -177,7 +177,7 @@ export default {
     // what NATO's land troops come in (systems/Landing.js; the craft above): squads by LCVP or Type 520, vehicles by Type 520
     craft: { infantry: ['lcvp85', 'lcvp85', 'lcu520'], vehicle: ['lcu520'] },
     // what the landing may call in at sea: the Bundesmarine's Bremen frigates, its destroyers, the Schnellboote (frames: data/units/ships85.js)
-    navy: ['frigate', 'destroyer', 'ptBoat'],
+    navy: ['frigate', 'destroyer', 'ptBoat', 'natya'], // (natya: the Bundesmarine's Lindau sweeper, data/units/baltic85.js)
     // the Volksmarine's mine barrier across the bay, a lane left off each sector (dan buoys)
     seaMines: { z: [520, 580], count: 60, lanes: [-320, -30, 330], lane: 80, seed: 1985_10 },
     // Küstenraketenregiment 18's Rubezh launchers inland: they fire on the ships, then move (systems/Landing.js batteries)
@@ -197,7 +197,7 @@ export default {
     // the armoured counter-attack: the 8th Motor Rifle Division's reserve, up the Schwerin road and over the Poel dam
     counter: { t: 360, units: ['heavyTank', 'ifv', 'tank', 'ifv', 'heavyTank'], say: 'The 8th Motor Rifle Division is coming up from Schwerin: T-72s and BMPs, straight for the beachhead', sayOther: 'Enemy armour coming up the Schwerin road: T-72s and BMPs' },
     // the landing's AI (ai/LandingDirector.js): the battalions' buying order, a frigate inshore off the focus sector
-    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'reconVehicle', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 380 },
+    ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'reconVehicle', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, sweeper: 'natya', heavy: null, inshore: 380 },
     economy: { reserves: 3000, perSector: 600, beachIncome: 0.8, defenceCp: 800, defenceIncome: 1.5 },
     // the scout vehicles swim in on their own, put in off the beach: the Luchs, the M3 on its screen
     swim: { reconVehicle: 'swimRecon' },

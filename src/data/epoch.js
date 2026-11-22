@@ -160,9 +160,9 @@ export const EPOCHS = {
       nva: { id: 'nva', faction: 'pact', name: 'NVA', regions: ['europe'] },
       // the Northern Flank and Korea: each only the types written for it (data/units/armies85.js)
       // standIn: as 1918's; navyOf: the ships of that army of the same nation (data/factions.js armyHas)
-      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'], standIn: { aa: 'towedAA', sam: 'towedAA', heavyTank: 'tank', rockets: 'artillery' } }, // (Bofors L/70; Leopard 1; M109) (no ships: the Royal Norwegian Navy isn't in the game yet)
+      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'], standIn: { aa: 'towedAA', sam: 'towedAA', heavyTank: 'tank', rockets: 'artillery' } }, // (Bofors L/70; Leopard 1; M109) (the Royal Norwegian Navy: data/units/navies85.js)
       usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'], navyOf: 'us', standIn: { aa: 'sam', heavyTank: 'tank', rockets: 'artillery' } }, // (the US Navy's ships; Improved HAWK; M60A1; M198)
-      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'], standIn: { reconVehicle: 'tankDestroyer' } }, // (the recon battalions' 106 mm RR jeeps)
+      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'] },
       kpa: { id: 'kpa', faction: 'pact', name: 'Korean People’s Army', own: true, regions: ['korea'] },
     },
     defaults: { nato: 'us', pact: 'sov' },

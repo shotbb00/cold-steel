@@ -23,7 +23,7 @@ const relYaw = (u) => Math.atan2(Math.sin((u.turretYaw ?? u.yaw) - u.yaw), Math.
 const clamp = (v, a) => Math.max(-a, Math.min(a, v));
 
 /** A rig from `geoOf()` ({ base, gun } geometry, made on first use): the gun group at `at`, the muzzle at `tip` in it, traversing within `arc` (Infinity: all round). */
-function fortRig(geoOf, { at = [0, 0, 0], tip = [0, 0, 1], arc = Infinity, recoil = 0.3, pitch = true } = {}) {
+export function fortRig(geoOf, { at = [0, 0, 0], tip = [0, 0, 1], arc = Infinity, recoil = 0.3, pitch = true } = {}) {
   return (mats) => {
     const geo = geoOf();
     const root = new THREE.Group();
