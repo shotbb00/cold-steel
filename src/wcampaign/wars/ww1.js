@@ -124,7 +124,7 @@ export const WW1 = {
     romania: { name: 'Moldavia and the Romanian front', theatre: 'east', map: 'marasesti', prod: 1, fort: 1, land: ['kiev', 'tarnopol', 'galicia', 'bucharest'], lat: 46.8, lon: 27.3 },
     courland: { name: 'Courland and Mitau', theatre: 'east', map: 'jakobstadt', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
     eastPrussia: { name: 'East Prussia and the Masurian Lakes', theatre: 'east', map: 'tannenberg', port: true, prod: 2, fort: 1, seas: ['baltic'], land: ['courland', 'warsaw', 'posen'], lat: 54.0, lon: 20.6 },
-    brest: { name: 'Brest-Litovsk and the Pripet', theatre: 'east', prod: 1, land: ['minsk', 'lutsk', 'warsaw'], fort: 1, lat: 52.1, lon: 23.7 },
+    brest: { name: 'Brest-Litovsk and the Pripet', theatre: 'east', map: 'baranovichi', prod: 1, land: ['minsk', 'lutsk', 'warsaw'], fort: 1, lat: 52.1, lon: 23.7 },
     warsaw: { name: 'Warsaw and Poland', theatre: 'east', prod: 3, land: ['brest', 'eastPrussia', 'galicia', 'cracow', 'posen'], lat: 52.23, lon: 21.0 },
     galicia: { name: 'Galicia: Gorlice to Lemberg', theatre: 'east', map: 'gorlice', prod: 2, land: ['lutsk', 'tarnopol', 'romania', 'warsaw', 'cracow'], fort: 1, lat: 49.8, lon: 22.6 },
     cracow: { name: 'Cracow and Silesia', theatre: 'east', prod: 2, land: ['galicia', 'warsaw', 'vienna'], lat: 50.06, lon: 19.94 },
