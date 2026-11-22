@@ -103,7 +103,14 @@ export class LandingDirector extends FrontlineDirector {
     for (let tries = 0; tries < order.length; tries++) {
       const id = order[this.orderIndex % order.length];
       if (!allowed(id)) { this.orderIndex++; continue; }
-      if (cp < cost(id)) return; // (saving up for it)
+      if (cp < cost(id)) { // (saving up for it — but not for ever: wiped off the beach, with no income, she'd wait on a tank till the end)
+        this.savingSince ??= this.now;
+        if (this.now - this.savingSince < 60) return;
+        const cheap = order.filter((i) => allowed(i) && cost(i) <= cp).sort((a, b) => cost(a) - cost(b))[0];
+        if (cheap && this.state.buy(f, cheap, road())) this.savingSince = this.now;
+        return;
+      }
+      this.savingSince = null;
       if (this.state.buy(f, id, road())) this.orderIndex++;
       return;
     }
