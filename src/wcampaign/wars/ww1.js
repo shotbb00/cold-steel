@@ -93,7 +93,7 @@ export const WW1 = {
     argonne: { name: 'The Argonne and Sedan', theatre: 'west', map: 'meuse-argonne', prod: 1, fort: 2, land: ['laon', 'champagne', 'verdun', 'stMihiel', 'ardennes'], lat: 49.45, lon: 4.9 },
     stMihiel: { name: 'The St Mihiel salient', theatre: 'west', map: 'st-mihiel', prod: 1, fort: 2, land: ['argonne', 'verdun', 'nancy', 'metz'], lat: 48.9, lon: 5.55 },
     metz: { name: 'Metz and Lorraine', theatre: 'west', prod: 2, fort: 3, land: ['stMihiel', 'nancy', 'germany'], lat: 49.12, lon: 6.4 },
-    brussels: { name: 'Brussels and occupied Belgium', theatre: 'west', prod: 2, land: ['belgianCoast', 'lille', 'ardennes', 'germany'], lat: 50.85, lon: 4.35 },
+    brussels: { name: 'Brussels and occupied Belgium', theatre: 'west', map: 'courtrai', prod: 2, land: ['belgianCoast', 'lille', 'ardennes', 'germany'], lat: 50.85, lon: 4.35 },
     ardennes: { name: 'The Ardennes and Luxembourg', theatre: 'west', map: 'sedan-1918', prod: 1, land: ['brussels', 'laon', 'argonne', 'germany'], lat: 49.8, lon: 5.6 },
     germany: { name: 'The Rhineland and the Ruhr', theatre: 'west', depot: 'pact', airfield: true, prod: 10, land: ['brussels', 'ardennes', 'metz', 'wilhelmshaven', 'berlin'], fort: 3, garrison: 1800, lat: 50.9, lon: 6.95 },
     wilhelmshaven: { name: 'Wilhelmshaven and the Jade', theatre: 'west', depot: 'pact', safe: true, /* (behind Heligoland's guns and the minefields: no landing) */ port: true, prod: 2, seas: ['heligoland'], land: ['germany', 'berlin'], fort: 3, lat: 53.52, lon: 8.13 },
