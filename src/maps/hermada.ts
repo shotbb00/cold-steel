@@ -24,6 +24,7 @@ import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { commandPost, trenchLine, buildSite, shellField } from './common.js';
 import { farmVillage, evenThreshold } from './greatWarHelpers.ts';
+import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef } from '../types.ts';
 
 const SEED = 1917_0812;
@@ -71,7 +72,7 @@ const ROADS = [
   RAIL,
 ];
 const SEGS = ROADS.flatMap((r) => r.slice(1).map((b, i) => { const a = r[i]; return [a[0], a[1], b[0], b[1], Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[1], b[1])]; }));
-function roadD(x: number, z: number, cap = 30) {
+function roadD0(x: number, z: number, cap = 30) {
   let best = cap;
   for (const [ax, az, bx, bz, x0, x1, z0, z1] of SEGS) {
     if (x < x0 - best || x > x1 + best || z < z0 - best || z > z1 + best) continue;
@@ -80,6 +81,9 @@ function roadD(x: number, z: number, cap = 30) {
   }
   return best;
 }
+const EXT = { x: 520, z: 580 };
+const roadDc = gridCache((x: number, z: number) => roadD0(x, z, 30), EXT, 2); // (sampled once: the ground, the surfaces and the soft ground ask it everywhere)
+const roadD = (x: number, z: number, cap = 30) => Math.min(cap, roadDc(x, z));
 const railD = (x: number, z: number) => { let b = Infinity; for (let i = 0; i < RAIL.length - 1; i++) { const [ax, az] = RAIL[i], [bx, bz] = RAIL[i + 1], dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); b = Math.min(b, Math.hypot(x - ax - dx * t, z - az - dz * t)); } return b; };
 
 /** The reed marsh on both banks of the Timavo’s lower course (the Lisert, the Locavaz): 0..1. */
@@ -101,9 +105,9 @@ for (const s of [1, -1]) {
   }
 }
 
-function height(x: number, z: number) {
+/** The land before the sea and the Timavo are cut into it, sampled once every 2 m (its noise is too dear for every vertex). */
+const land = gridCacheSmooth((x: number, z: number) => {
   const inl = inland(x, z);
-  if (inl < 0) return Math.max(-8, -0.8 + inl * 0.08);                                         // the Adriatic
   const pk = plateauK(x, z);
   let h = 1.2 + Math.min(inl, 200) * 0.012 + fbm(noise, x * 0.01, z * 0.01, 2) * 0.6;
   h += 36 * pk;                                                                               // the karst’s edge and the plateau
@@ -118,6 +122,12 @@ function height(x: number, z: number) {
   for (const [hx, hz, hr, hh] of HILLS) { const d = Math.hypot(x - hx, (z - hz) * 1.15); if (d < hr) h += hh * smoothstep(hr, 0, d) ** 1.4; }
   for (const [dx, dz, dr, dd] of DOLINES) { if (Math.abs(x - dx) > dr || Math.abs(z - dz) > dr) continue; const d = Math.hypot(x - dx, z - dz); if (d < dr) h -= dd * smoothstep(dr, 0, d) ** 1.5; }
   for (const bz of [BASE_Z, -BASE_Z]) { const b = Math.hypot(x, z - bz); if (b < 34) h += (42 - h) * smoothstep(34, 18, b); }
+  return h;
+}, EXT, 2);
+function height(x: number, z: number) {
+  const inl = inland(x, z);
+  if (inl < 0) return Math.max(-8, -0.8 + inl * 0.08);                                         // the Adriatic
+  let h = land(x, z);
   const hw = timHW(x), td = timD(x, z);
   if (hw > 0 && td < hw + 8) h = Math.min(h, -2.2 + (h + 2.2) * smoothstep(hw - 3, hw + 6, td)); // the Timavo
   if (inl > 20) { const rd = roadD(x, z, 8); if (rd < 6) h = Math.max(h, (td < hw + 8 ? 1.3 : 0.9) * smoothstep(6, 4, rd)); } // causeways over the marsh, bridges over the Timavo
