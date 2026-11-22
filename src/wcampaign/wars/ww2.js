@@ -108,6 +108,8 @@ export const WW2 = {
     armour: ['tank', 'tank', 'tank', 'ifv', 'ifv', 'rifles', 'rifles', 'tankDestroyer', 'reconVehicle'],
     artillery: ['artillery', 'artillery', 'observers', 'towedAA', 'rifles', 'mgTeam'],
   },
+  /** The armies with rosters of their own field a stand-in for a type they lack (wcampaign/battle.js): the 14th Army in Burma had no tank destroyers or armoured cars to speak of. */
+  swap: { brit14: { tankDestroyer: 'tank', reconVehicle: 'scouts' } },
   /** Fleets: the ships of a task force, by the war's ship slots. */
   fleets: {
     battle: ['battleship', 'cruiser', 'destroyer', 'destroyer', 'destroyer'],
