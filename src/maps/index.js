@@ -123,24 +123,35 @@ import uijeongbu from './uijeongbu.ts';
 import kaesong from './kaesong.ts';
 import pyongyang from './pyongyang.ts';
 import nampo from './nampo.ts';
+import tartusLanding from './tartusLanding.ts';
+import liinakhamari from './liinakhamari.ts';
+import ussuri from './ussuri.ts';
 import seoul from './seoul.ts';
 import vladivostok from './vladivostok.ts';
 import hokkaido from './hokkaido.ts';
 import andoya from './andoya.ts';
+import motovsky from './motovsky.ts';
 import keflavik from './keflavik.ts';
 import wismar from './wismar.ts';
 import incheon from './incheon.ts';
 import scheveningen from './scheveningen.ts';
+import salerno from './salerno.ts';
+import felixstowe from './felixstowe.ts';
+import ishikari from './ishikari.ts';
 import ofotfjord from './ofotfjord.ts';
 import bodoLanding from './bodoLanding.ts';
 import reykjanes from './reykjanes.ts';
 import varanger from './varanger.ts';
 export const MAPS = {
   [andoya.id]: andoya,
+  [motovsky.id]: motovsky,
   [keflavik.id]: keflavik,
   [wismar.id]: wismar,
   [incheon.id]: incheon,
   [scheveningen.id]: scheveningen,
+  [salerno.id]: salerno,
+  [felixstowe.id]: felixstowe,
+  [ishikari.id]: ishikari,
   [ofotfjord.id]: ofotfjord,
   [bodoLanding.id]: bodoLanding,
   [reykjanes.id]: reykjanes,
@@ -155,6 +166,9 @@ export const MAPS = {
   [kaesong.id]: kaesong,
   [pyongyang.id]: pyongyang,
   [nampo.id]: nampo,
+  [tartusLanding.id]: tartusLanding,
+  [liinakhamari.id]: liinakhamari,
+  [ussuri.id]: ussuri,
   [seoul.id]: seoul,
   [vladivostok.id]: vladivostok,
   [hokkaido.id]: hokkaido,

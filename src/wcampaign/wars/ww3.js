@@ -49,7 +49,7 @@ export const WW3 = {
     eastGermany: { name: 'East Germany', theatre: 'central', depot: 'pact', map: 'magdeburg', airfield: true, prod: 11, fort: 1, land: ['thuringia', 'mecklenburg'], lat: 52.1, lon: 12.9 },
     mecklenburg: { name: 'Mecklenburg and Rostock', theatre: 'central', map: 'schwerin', coastal: ['wismar'], seas: ['baltic'], port: true, airfield: true, prod: 2, fort: 1, land: ['eastGermany', 'schleswig'], lat: 53.8, lon: 11.9 },
     schleswig: { name: 'Schleswig-Holstein', theatre: 'central', map: 'ratzeburg-lakes', coastal: ['hohwacht'], seas: ['baltic', 'northSea'], port: true, airfield: true, prod: 2, fort: 1, land: ['rhine', 'mecklenburg'], lat: 54.2, lon: 10.2 },
-    britain: { name: 'Britain', theatre: 'central', depot: 'nato', map: 'east-anglia', port: true, airfield: true, prod: 5, seas: ['northSea', 'eastAtlantic'], land: [], lat: 52.5, lon: -1.5 },
+    britain: { name: 'Britain', theatre: 'central', depot: 'nato', map: 'east-anglia', coastal: ['felixstowe'], port: true, airfield: true, prod: 5, seas: ['northSea', 'eastAtlantic'], land: [], lat: 52.5, lon: -1.5 },
 
     // ---- the Northern Flank: from the Kola Peninsula over Finnmark down the fjords to Narvik
     kola: { name: 'The Kola Peninsula', theatre: 'north', depot: 'pact', map: 'murmansk', port: true, airfield: true, prod: 6, fort: 2, seas: ['barents'], land: ['pechenga'], lat: 68.9, lon: 33.1 },
@@ -70,12 +70,12 @@ export const WW3 = {
     imjin: { name: 'The Imjin River', theatre: 'korea', map: 'imjin-river', prod: 1, fort: 1, land: ['dmz', 'uijeongbu'], lat: 37.89, lon: 126.95 },
     uijeongbu: { name: 'Uijeongbu', theatre: 'korea', map: 'uijeongbu', prod: 2, land: ['chorwon', 'imjin', 'seoul'], lat: 37.74, lon: 127.05 },
     seoul: { name: 'Seoul', theatre: 'korea', depot: 'nato', map: 'seoul', coastal: ['incheon'], port: true, airfield: true, prod: 6, seas: ['yellowSea'], land: ['uijeongbu'], lat: 37.55, lon: 126.98 },
-    japan: { name: 'Japan', theatre: 'korea', depot: 'nato', map: 'hokkaido', port: true, airfield: true, prod: 4, fort: 2, seas: ['seaOfJapan'], land: [], lat: 35.4, lon: 139.6 },
-    vladivostok: { name: 'Vladivostok', theatre: 'korea', depot: 'pact', map: 'vladivostok', port: true, airfield: true, prod: 5, fort: 1, seas: ['seaOfJapan'], land: [], lat: 43.1, lon: 131.9 },
+    japan: { name: 'Japan', theatre: 'korea', depot: 'nato', map: 'hokkaido', coastal: ['ishikari'], port: true, airfield: true, prod: 4, fort: 2, seas: ['seaOfJapan'], land: [], lat: 35.4, lon: 139.6 },
+    vladivostok: { name: 'Vladivostok', theatre: 'korea', depot: 'pact', map: 'vladivostok', coastal: ['ussuri'], port: true, airfield: true, prod: 5, fort: 1, seas: ['seaOfJapan'], land: [], lat: 43.1, lon: 131.9 },
 
     // ---- across the oceans: the arsenal, and the Mediterranean's two ends
     usa: { name: 'The United States', theatre: 'atlantic', depot: 'nato', safe: true, port: true, airfield: true, prod: 9, seas: ['westAtlantic'], land: [], lat: 39.0, lon: -75.0 },
-    italy: { name: 'Italy and Naples', theatre: 'med', depot: 'nato', map: 'naples', port: true, airfield: true, prod: 3, seas: ['ionian'], land: [], lat: 40.8, lon: 14.3 },
+    italy: { name: 'Italy and Naples', theatre: 'med', depot: 'nato', map: 'naples', coastal: ['salerno'], port: true, airfield: true, prod: 3, seas: ['ionian'], land: [], lat: 40.8, lon: 14.3 },
     syria: { name: 'Tartus', theatre: 'med', depot: 'pact', map: 'tartus', port: true, prod: 1, seas: ['easternMed'], land: [], lat: 34.9, lon: 35.9 },
   },
 

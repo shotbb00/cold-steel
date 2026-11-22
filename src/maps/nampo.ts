@@ -209,16 +209,16 @@ export default {
 
   bases: { nato: { x: 0, z: 830, entries: SECTORS.map((s) => s.x) }, // (the side that lands: its roads are the beach sectors)
            pact: { x: 0, z: -830, entries: [-320, 20, 340] } },
-  maxStacks: 22,
+  maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 330 }, pact: { x: 0, z: -150 } },
   points,
   spawns: { nato: [], pact: [] },
 
   landing: {
-    // what comes in (systems/Landing.js): the men by hovercraft or landing ship, the vehicles by landing ship
-    // (1985 has no US craft of its own in the game: the generic NATO hovercraft and landing ships stand in for LCACs and LCUs)
-    craft: { infantry: ['aist', 'aist', 'polnocny'], vehicle: ['frosch', 'polnocny'] },
+    // what comes in (systems/Landing.js): the men by LCVP or LCU, the vehicles by LCU (NATO’s 1985 craft: data/units/baltic85.js)
+    craft: { infantry: ['lcvp85', 'lcvp85', 'lcu520'], vehicle: ['lcu520'] },
     // what the landing may call in at sea: a Perry frigate or a Spruance inshore, a sweeper, the battleship New Jersey offshore
+    // (the sweeper is the generic NATO minesweeper on the Natya hull: 1985 has no NATO one of its own yet)
     navy: ['frigate', 'destroyer', 'natya', 'battleship'],
     // the KPA navy’s mines across the estuary mouth, a lane left off each beach for the sweepers
     seaMines: { z: [520, 580], count: 60, lanes: SECTORS.map((s) => s.x), lane: 80, seed: 1985_49 },
@@ -235,17 +235,17 @@ export default {
       ...SECTORS.flatMap((s) => [-38, 38].map((dx) => ({ kind: 'mines', x: s.x + dx, z: shoreZ(s.x + dx) - 64 }))),
       ...SECTORS.flatMap((s) => [-45, 0, 45].map((dx) => ({ kind: 'trench', x: s.x + dx, z: shoreZ(s.x + dx) - 54, yaw: 0 }))),
       ...SECTORS.flatMap((s) => [-22, 22].map((dx) => ({ kind: 'mgNest', x: s.x + dx, z: shoreZ(s.x + dx) - 48, yaw: 0 }))),
-      ...SECTORS.flatMap((s) => [-12, 12].map((dx) => ({ kind: 'mines', x: s.x + dx, z: shoreZ(s.x + dx) - 38 }))),
+      ...SECTORS.slice(1).flatMap((s) => [-12, 12].map((dx) => ({ kind: 'mines', x: s.x + dx, z: shoreZ(s.x + dx) - 38 }))), // (none on the salt works’ sand: the sea wall and the open pans behind it hold that beach — AI vs AI 2026-11-22)
     ],
     // the defence at dawn: the coast defence brigade over each beach, the Red Guards in the villages, Malyutkas and mortars behind
     defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'mgTeam', 'atTeam', 'mgTeam', 'atTeam', 'mgTeam', 'rifles', 'tankDestroyer', 'mortar', 'kampfgruppe', 'tankDestroyer', 'mortar', 'kampfgruppe', 'scouts'],
     names: { rifles: 'Coast defence squad' },
     hold: [...SECTORS.flatMap((s) => [-45, -22, 22, 45].map((dx) => ({ x: s.x + dx, z: shoreZ(s.x + dx) - (Math.abs(dx) < 30 ? 48 : 56) }))), ...SECTORS.map((s) => ({ x: s.inland.x, z: s.inland.z }))],
     // the counter-attack: the corps’ armour down the Kangso road from Pyongyang
-    counter: { t: 270, units: ['heavyTank', 'ifv', 'tank', 'ifv', 'heavyTank'], say: 'The corps’ armour is coming down the Kangso road: Chonma-hos and VTT-323s, straight for the beachhead', sayOther: 'Enemy armour coming down the road from Kangso: Chonma-hos and T-55s' },
+    counter: { t: 420, units: ['heavyTank', 'ifv', 'tank', 'ifv', 'heavyTank'], say: 'The corps’ armour is coming down the Kangso road: Chonma-hos and VTT-323s, straight for the beachhead', sayOther: 'Enemy armour coming down the road from Kangso: Chonma-hos and T-55s' },
     // the landing’s AI (ai/LandingDirector.js): its buying order, a frigate inshore off the focus beach, a sweeper for the lane
     ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'tank', 'rifles', 'mgTeam', 'ifv', 'rifles', 'tank', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, sweeper: 'natya', heavy: null, inshore: 380 },
-    economy: { reserves: 1800, perSector: 550, beachIncome: 0.7, defenceCp: 1000, defenceIncome: 2 }, // (a little richer than Andøya’s: Nampo town held in both first AI-vs-AI runs, 2026-11-22)
+    economy: { reserves: 2400, perSector: 700, beachIncome: 0.9, defenceCp: 700, defenceIncome: 1.6 }, // (richer than Andøya’s, the counter later: the LCVPs are slow and the KPA held every AI-vs-AI run at Andøya’s numbers, 2026-11-22)
     // the KIFVs, M113s and Bradleys swim in on their own, put in off the beach
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon' },
     // the first wave at dawn, in to all three beaches at once
