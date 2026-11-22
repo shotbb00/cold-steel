@@ -11,6 +11,7 @@ import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
 import stalingrad from './stalingrad.ts';
+import mozhaisk from './mozhaisk.ts';
 import novorossiysk from './novorossiysk.ts';
 import elAlamein from './elAlamein.ts';
 import midway from './midway.ts';
@@ -40,8 +41,11 @@ import elGuettar from './elGuettar.ts';
 import kasserinePass from './kasserinePass.ts';
 import bobruisk from './bobruisk.ts';
 import berlin from './berlin.ts';
+import amiriya from './amiriya.ts';
 import gazala from './gazala.ts';
 import seelowHeights from './seelowHeights.ts';
+import krymskaya from './krymskaya.ts';
+import halbe from './halbe.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import gotlandLanding from './gotlandLanding.ts';
@@ -92,6 +96,7 @@ import otranto from './otranto.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
+import halle from './halle.ts';
 import arnhem from './arnhem.ts';
 import kohima from './kohima.ts';
 import guadalcanal from './guadalcanal.ts';
@@ -99,6 +104,8 @@ import saipan from './saipan.ts';
 import okinawa from './okinawa.ts';
 import goldBeach from './goldBeach.ts';
 import gela from './gela.ts';
+import cassino from './cassino.ts';
+import primosole from './primosole.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
 import schwerin from './schwerin.ts';
@@ -188,12 +195,15 @@ export const MAPS = {
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
   [gela.id]: gela,
+  [cassino.id]: cassino,
+  [primosole.id]: primosole,
   [okinawa.id]: okinawa,
   [kohima.id]: kohima,
   [guadalcanal.id]: guadalcanal,
   [saipan.id]: saipan,
   [arnhem.id]: arnhem,
   [remagen.id]: remagen,
+  [halle.id]: halle,
   [bocage.id]: bocage,
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
@@ -223,7 +233,10 @@ export const MAPS = {
   [bobruisk.id]: bobruisk,
   [berlin.id]: berlin,
   [gazala.id]: gazala,
+  [amiriya.id]: amiriya,
   [seelowHeights.id]: seelowHeights,
+  [krymskaya.id]: krymskaya,
+  [halbe.id]: halbe,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [gotlandLanding.id]: gotlandLanding,
@@ -260,6 +273,7 @@ export const MAPS = {
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
   [stalingrad.id]: stalingrad,
+  [mozhaisk.id]: mozhaisk,
   [novorossiysk.id]: novorossiysk,
   [elAlamein.id]: elAlamein,
   [midway.id]: midway,

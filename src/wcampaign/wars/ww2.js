@@ -56,26 +56,26 @@ export const WW2 = {
     kaliwerk: { name: 'Kaliwerk Hattorf', theatre: 'west', map: 'monte-kali', prod: 3, land: ['hersfeld', 'werra'], lat: 50.86, lon: 9.95 },
     werra: { name: 'The Werra valley', theatre: 'west', map: 'werra-valley', prod: 1, land: ['huenfeld', 'kaliwerk', 'thuringia'], lat: 50.9, lon: 10.1 },
     thuringia: { name: 'The Thuringian Forest', theatre: 'west', map: 'thuringian-forest', prod: 2, fort: 1, land: ['werra', 'reichWest'], lat: 50.7, lon: 10.8 },
-    reichWest: { name: 'The Reich (west)', theatre: 'west', depot: 'pact', airfield: true, prod: 6, land: ['thuringia', 'reichEast'], /* (the Reich one country: the fronts meet here) */ lat: 51.3, lon: 11.5 },
+    reichWest: { name: 'The Reich (west)', theatre: 'west', depot: 'pact', map: 'halle', airfield: true, prod: 6, land: ['thuringia', 'reichEast'], /* (the Reich one country: the fronts meet here) */ lat: 51.3, lon: 11.5 },
 
     // ---- Eastern Front: from the Volga to Berlin
-    moscow: { name: 'Moscow', theatre: 'east', depot: 'nato', airfield: true, prod: 7, land: ['stalingrad', 'bobruisk'], lat: 55.7, lon: 37.6 },
+    moscow: { name: 'Moscow', theatre: 'east', depot: 'nato', map: 'mozhaisk', airfield: true, prod: 7, land: ['stalingrad', 'bobruisk'], lat: 55.7, lon: 37.6 },
     stalingrad: { name: 'Stalingrad', theatre: 'east', map: 'stalingrad', prod: 3, fort: 1, land: ['moscow', 'kuban', 'bobruisk'], lat: 48.7, lon: 44.5 },
-    kuban: { name: 'Novorossiysk and the Kuban', theatre: 'east', map: null, coastal: ['novorossiysk'], seas: ['blackSea'], port: true, prod: 1, fort: 1, land: ['stalingrad'], lat: 44.7, lon: 37.8 },
+    kuban: { name: 'Novorossiysk and the Kuban', theatre: 'east', map: 'krymskaya', coastal: ['novorossiysk'], seas: ['blackSea'], port: true, prod: 1, fort: 1, land: ['stalingrad'], lat: 44.7, lon: 37.8 },
     bobruisk: { name: 'Bobruisk', theatre: 'east', map: 'bobruisk', prod: 1, land: ['moscow', 'stalingrad', 'oder'], lat: 53.1, lon: 29.2 },
     oder: { name: 'The Seelow Heights', theatre: 'east', map: 'seelow-heights', prod: 1, fort: 2, land: ['bobruisk', 'berlin'], lat: 52.5, lon: 14.4 },
     berlin: { name: 'Berlin', theatre: 'east', map: 'berlin', prod: 4, fort: 2, land: ['oder', 'reichEast'], lat: 52.5, lon: 13.4 },
-    reichEast: { name: 'The Reich (east)', theatre: 'east', depot: 'pact', airfield: true, prod: 5, land: ['berlin', 'reichWest'], lat: 52.0, lon: 12.0 },
+    reichEast: { name: 'The Reich (east)', theatre: 'east', depot: 'pact', map: 'halbe', airfield: true, prod: 5, land: ['berlin', 'reichWest'], lat: 52.0, lon: 12.0 },
 
     // ---- North Africa and the Mediterranean
-    alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
+    alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', map: 'amiriya', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
     alamein: { name: 'El Alamein', theatre: 'med', map: 'el-alamein', prod: 1, fort: 1, land: ['alexandria', 'gazala'], lat: 30.8, lon: 28.9 },
     gazala: { name: 'Gazala and Tobruk', theatre: 'med', map: 'gazala', port: true, seas: ['easternMed'], prod: 2, fort: 1, land: ['alamein', 'tunisiaSouth'], lat: 32.1, lon: 23.4 },
     tunisiaSouth: { name: 'El Guettar', theatre: 'med', map: 'el-guettar', prod: 1, land: ['gazala', 'kasserine'], lat: 34.3, lon: 8.9 },
     kasserine: { name: 'The Kasserine Pass', theatre: 'med', map: 'kasserine-pass', prod: 1, land: ['tunisiaSouth', 'algeria'], lat: 35.3, lon: 8.7 },
     algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
-    sicily: { name: 'Sicily', theatre: 'med', map: null, coastal: ['gela'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
-    italy: { name: 'Italy', theatre: 'med', depot: 'pact', port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
+    sicily: { name: 'Sicily', theatre: 'med', map: 'primosole', coastal: ['gela'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
+    italy: { name: 'Italy', theatre: 'med', depot: 'pact', map: 'cassino', port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
 
     // ---- The Pacific: islands, Burma
     hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
