@@ -123,3 +123,6 @@ export function standInFor(id, army) {
   const pick = t.id in own ? [own[t.id]] : ROLE[t.id] ?? [];
   return pick.find((s) => s && UNIT_TYPES[s] && armyHas(UNIT_TYPES[s], army)) ?? null;
 }
+
+/** Can army `a` field anything yet: an `own` army with no unit written for it (the AEF, Serbians, Bulgarians until their rosters) can't — a map listing it first falls back to the next army it names. */
+export const fieldsUnits = (a) => !ARMIES[a]?.own || Object.values(UNIT_TYPES).some((t) => t?.variants?.[a]);

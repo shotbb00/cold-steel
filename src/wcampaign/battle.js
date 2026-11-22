@@ -11,7 +11,7 @@ import { forceById, power, enemy, hourOf, winterNow } from './engine.js';
 import { MAPS, armiesOn } from '../maps/index.js';
 import { armiesFrom, armyHas } from '../data/factions.js';
 import { epoch } from '../data/epoch.js';
-import { UNIT_TYPES, standInFor } from '../data/units/index.js';
+import { UNIT_TYPES, standInFor, fieldsUnits } from '../data/units/index.js';
 import { RANKS } from '../entities/UnitStack.js';
 
 const KEY = 'cs.wcampaign.result';
@@ -29,7 +29,7 @@ export const landerOf = (map) => map.landing?.attacker
 /** The armies a battle on `map` fields (as GameEngine settles them: the choice, then the map's own armies). */
 function fieldedArmies(map, armies) {
   const a = armiesFrom(armies, map), only = armiesOn(map);
-  for (const f of ['nato', 'pact']) if (only?.[f] && !only[f].includes(a[f])) a[f] = only[f][0];
+  for (const f of ['nato', 'pact']) if (only?.[f] && (!only[f].includes(a[f]) || !fieldsUnits(a[f]))) a[f] = only[f].find(fieldsUnits) ?? only[f][0];
   return a;
 }
 

@@ -54,6 +54,12 @@ import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
 import soissons from './soissons.ts';
+import passchendaele from './passchendaele.ts';
+import belleauWood from './belleauWood.ts';
+import cote304 from './cote304.ts';
+import cheminDesDames from './cheminDesDames.ts';
+import cambrai from './cambrai.ts';
+import vimy from './vimy.ts';
 import suwalkiGap from './suwalkiGap.ts';
 import suwalkiTown from './suwalkiTown.ts';
 import nemanCrossing from './nemanCrossing.ts';
@@ -278,6 +284,12 @@ export const MAPS = {
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
   [soissons.id]: soissons,
+  [passchendaele.id]: passchendaele,
+  [belleauWood.id]: belleauWood,
+  [cote304.id]: cote304,
+  [cheminDesDames.id]: cheminDesDames,
+  [cambrai.id]: cambrai,
+  [vimy.id]: vimy,
   [suwalkiGap.id]: suwalkiGap,
   [suwalkiTown.id]: suwalkiTown,
   [nemanCrossing.id]: nemanCrossing,
