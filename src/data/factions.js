@@ -58,8 +58,15 @@ export function armiesFrom(o, map = null) {
   return out;
 }
 
-/** May `army` field unit type `t`: the type's own army list (the NVA's Kampfgruppe), and an army with only its own roster (Japan) only what was written for it. */
-export const armyHas = (t, army) => (!t.armies || t.armies.includes(army)) && (!ARMIES[army]?.own || !!t.variants?.[army]);
+/**
+ * May `army` field unit type `t`: the type's own army list (the NVA's Kampfgruppe), and an army with only its own roster (Japan) only
+ * what was written for it. An army with `navyOf` (data/epoch.js: the Marines, 'us') sails the ships that army has, as that army's.
+ */
+export const armyHas = (t, army) => {
+  const a = ARMIES[army];
+  if (a?.navyOf && t.stats?.naval && !t.variants?.[army]) return armyHas(t, a.navyOf) && !!forArmy(t.variants, a.navyOf, a.faction);
+  return (!t.armies || t.armies.includes(army)) && (!a?.own || !!t.variants?.[army]);
+};
 
 /** A per-side table's entry for `army` of `faction` (table[army], else table[faction]). */
 export const forArmy = (table, army, faction) => table?.[army] ?? table?.[faction];

@@ -98,12 +98,6 @@ export const WW3 = {
     armour: ['tank', 'tank', 'tank', 'ifv', 'ifv', 'rifles', 'rifles', 'atTeam', 'reconVehicle'],
     artillery: ['artillery', 'artillery', 'rockets', 'observers', 'aa', 'rifles'],
   },
-  /** The armies with rosters of their own (data/units/armies85.js) field a stand-in for a type they lack (wcampaign/battle.js). */
-  swap: {
-    rok: { reconVehicle: 'tankDestroyer' },
-    no: { rockets: 'artillery', aa: 'towedAA' },
-    usmc: { rockets: 'artillery', aa: 'sam' },
-  },
   /** Fleets: the ships of a task force, by 1985's ship slots (data/units/ships85.js). */
   fleets: {
     battle: ['battleship', 'cruiser', 'destroyer', 'destroyer', 'frigate'],

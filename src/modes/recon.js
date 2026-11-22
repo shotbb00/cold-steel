@@ -212,7 +212,7 @@ export default {
     game.bus.emit('wave', { faction: foe, units: ['tank', 'ifv', 'rifles'] });
     const target = game.world.stacksOf(me).find((s) => s.units.some((u) => u.alive && u.spotted)) ?? game.world.stacksOf(me)[0];
     const base = game.map.bases[foe];
-    const qrf = ['tank', 'ifv', 'rifles'].map((id, i) => game.spawnStack(id, foe, { x: base.x + (i - 1) * 14, z: base.z - Math.sign(base.z) * 15 }, 0, `QRF ${i + 1}`));
+    const qrf = ['tank', 'ifv', 'rifles'].map((id, i) => game.spawnStack(id, foe, { x: base.x + (i - 1) * 14, z: base.z - Math.sign(base.z) * 15 }, 0, `QRF ${i + 1}`)).filter(Boolean); // (no tanks in this army: none)
     for (const s of [...qrf, ...state.patrols.filter((p) => p.alive)]) if (target) s.ai.attack(target, { ordered: false });
   },
 

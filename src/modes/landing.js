@@ -159,6 +159,7 @@ export default {
     c.units.forEach((id, i) => {
       const x = roads[i % roads.length] + (Math.random() - 0.5) * 20;
       const s = game.spawnStack(id, def, { x, z: base.z }, base.z > 0 ? Math.PI : 0);
+      if (!s) return; // (nothing of the kind in this army: GameEngine.spawnStack)
       const goal = goals.reduce((a, p) => (Math.abs(p.x - x) < Math.abs(a.x - x) ? p : a), goals[0]);
       if (goal) s.ai.moveTo({ x: goal.x, z: goal.z }, { ordered: false });
     });

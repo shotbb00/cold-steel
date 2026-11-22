@@ -11,7 +11,7 @@ import { forceById, power, enemy, hourOf, winterNow } from './engine.js';
 import { MAPS, armiesOn } from '../maps/index.js';
 import { armiesFrom, armyHas } from '../data/factions.js';
 import { epoch } from '../data/epoch.js';
-import { UNIT_TYPES } from '../data/units/index.js';
+import { UNIT_TYPES, standInFor } from '../data/units/index.js';
 import { RANKS } from '../entities/UnitStack.js';
 
 const KEY = 'cs.wcampaign.result';
@@ -38,26 +38,27 @@ function fieldedArmies(map, armies) {
  * same coast, the sides' places swapped: the bases (the new lander's out at sea, off the same beach sectors), the points'
  * owners, the spawns, the cave and airfield owners, `landing.attacker`. The coast's defences (forts, works, hold, the
  * counter-attack from the inland base) are the new defender's. What only one side has comes from a map of this war where
- * the new lander lands (its army's if one fits): its landing craft, warships, swimmers and AI; the unit types the map
- * gives the defence and the counter-attack are kept where the new side's army fields them (else dropped); in the waves
- * a type the new lander lacks is a rifle squad or a tank. Men the old lander had already put down inland are not carried over.
+ * the new lander lands (its army's if one fits, and craft its army has): its landing craft, warships, swimmers and AI, the
+ * warships as the lander's army fields them (data/units/index.js standInFor: its own stand-in, else none). The unit types of
+ * the defence, the counter-attack and the waves stay: each army fields them as its own when they spawn (GameEngine.spawnStack,
+ * systems/Landing.js waves). Men the old lander had already put down inland are not carried over.
  * The maps' own names for their units (`names`) and the counter-attack's lines are dropped.
  */
 export function flipLanding(map, armies) {
   const sw = (f) => (f === 'nato' ? 'pact' : f === 'pact' ? 'nato' : f);
   const swapKeys = (o) => (o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sw(k), v])) : o);
   const was = landerOf(map), lander = sw(was), def = was, army = fieldedArmies(map, armies);
-  const has = (id, f) => !!UNIT_TYPES[id] && armyHas(UNIT_TYPES[id], army[f]);
   const L = map.landing ?? {};
   // the new lander's kit: a landing by its side in this war — its own army's first
   const donors = Object.values(MAPS).filter((m) => m !== map && m.theatre === 'coastal' && !m.wip && m.landing && m.epochs?.includes(epoch()) && landerOf(m) === lander);
   donors.sort((a, b) => !!armiesOn(b)?.[lander]?.includes(army[lander]) - !!armiesOn(a)?.[lander]?.includes(army[lander]));
   const pick = (ok) => donors.map((m) => m.landing).find(ok) ?? {}; // (each part from the first that has it: not every map writes its craft or its AI)
-  const K = { craft: pick((l) => l.craft).craft, swim: pick((l) => l.swim).swim, ...(({ navy, ai }) => ({ navy, ai }))(pick((l) => l.ai?.gunship && l.navy?.length)) }; // (the warships and the AI that buys them: one map's)
-  const navy = K.navy ?? [];
-  const ai = K.ai ? { ...K.ai, ...(L.ai?.inshore != null ? { inshore: L.ai.inshore } : {}) } : undefined; // (where the gunships lie: this coast's)
-  const ship = (id) => (navy.includes(id) ? id : ai?.gunship ?? null);
-  const land = (list, f) => list?.filter((id) => has(id, f));
+  const ownCraft = (c) => Object.values(c).flat().every((id) => UNIT_TYPES[id] && armyHas(UNIT_TYPES[id], army[lander])); // (Higgins boats for the US, LCAs for the British …)
+  const K = { craft: (pick((l) => l.craft && ownCraft(l.craft)).craft ?? pick((l) => l.craft).craft), swim: pick((l) => l.swim).swim, ...(({ navy, ai }) => ({ navy, ai }))(pick((l) => l.ai?.gunship && l.navy?.length)) }; // (the warships and the AI that buys them: one map's)
+  const own = (id) => (id ? standInFor(id, army[lander]) : null); // (the lander's army's own ships: the Marines sail the US Navy's, an army with none none)
+  const navy = [...new Set((K.navy ?? []).map(own).filter(Boolean))];
+  const ai = K.ai ? { ...K.ai, ...Object.fromEntries(['gunship', 'heavy', 'sweeper'].filter((k) => K.ai[k]).map((k) => [k, own(K.ai[k])])), ...(L.ai?.inshore != null ? { inshore: L.ai.inshore } : {}) } : undefined; // (where the gunships lie: this coast's)
+  const ship = (id) => (navy.includes(own(id)) ? own(id) : ai?.gunship ?? null);
   const out = { ...map, flipped: true };
   for (const [k, v] of Object.entries(map)) if (typeof v === 'function') out[k] = v.bind(map); // (decorate draws the command post at `this.bases`: the map's own)
   out.bases = swapKeys(map.bases);
@@ -65,18 +66,16 @@ export function flipLanding(map, armies) {
   out.points = map.points.map((p) => ({ ...p, owner: sw(p.owner) ?? null }));
   out.spawns = {
     [lander]: (map.spawns?.[was] ?? []).filter((s) => UNIT_TYPES[s.unit]?.stats?.naval).map((s) => ({ ...s, unit: ship(s.unit) })).filter((s) => s.unit), // (its ships off the beach; men put down inland — Hythe's paratroops — were that landing's own)
-    [def]: (map.spawns?.[lander] ?? []).filter((s) => !UNIT_TYPES[s.unit]?.stats?.naval && has(s.unit, def)),
+    [def]: (map.spawns?.[lander] ?? []).filter((s) => !UNIT_TYPES[s.unit]?.stats?.naval),
   };
   out.airLimit = undefined; // (Iwo Jima's "no Japanese aircraft": that landing's history — the campaign's air wings say what flies here)
   if (map.caves) out.caves = { ...map.caves, owner: sw(map.caves.owner) };
   if (map.airfields) out.airfields = map.airfields.map((a) => ({ ...a, faction: sw(a.faction) }));
-  const fill = (id) => (has(id, lander) ? id : UNIT_TYPES[id]?.kind === 'infantry' || !has('tank', lander) ? 'rifles' : 'tank');
   out.landing = {
     ...L, attacker: lander, names: undefined,
     craft: K.craft, navy, swim: K.swim, ai,
-    defence: land(L.defence, def)?.length ? land(L.defence, def) : undefined, // (none left: the mode's own)
-    counter: L.counter && { t: L.counter.t, units: land(L.counter.units, def) },
-    waves: L.waves?.map((w) => ({ ...w, units: w.units.map((o) => ({ ...o, unit: fill(o.unit), craft: undefined })) })),
+    counter: L.counter && { t: L.counter.t, units: L.counter.units },
+    waves: L.waves?.map((w) => ({ ...w, units: w.units.map((o) => ({ ...o, craft: undefined })) })),
   };
   return out;
 }
@@ -106,9 +105,10 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
   const land = b.kind === 'land';
   const armyOf = (fs) => fs.find((f) => f.kind !== 'air')?.army ?? null;
   const armies = { nato: armyOf(s.nato), pact: armyOf(s.pact) };
-  // the battle is fought by one army a side: a type its roster lacks is fielded as its stand-in (war.swap, 1985's own armies)
-  const swap = (f, st) => ({ ...st, type: war.swap?.[armies[f]]?.[st.type] ?? st.type });
-  const forces = land ? Object.fromEntries(['nato', 'pact'].map((f) => [f, s[f].flatMap(stacksOf).sort((x, y) => y.hp - x.hp).slice(0, MAX_STACKS).map((st) => swap(f, st))])) : null;
+  // the battle is fought by one army a side, the one that fights on this map (fieldedArmies): a type its roster lacks comes as its
+  // own stand-in (GameEngine.spawnStack); one it has nothing for stays in reserve, unhurt
+  const fights = fieldedArmies(map, armies);
+  const forces = land ? Object.fromEntries(['nato', 'pact'].map((f) => [f, s[f].flatMap(stacksOf).filter((st) => standInFor(st.type, fights[f])).sort((x, y) => y.hp - x.hp).slice(0, MAX_STACKS)])) : null;
   const name = war.provinces[b.at]?.name ?? war.seas[b.at]?.name ?? b.at;
   return {
     mode: b.kind === 'sea' ? (map.modes?.[0] ?? 'frontline') : b.kind === 'coastal' ? 'landing' : 'breakthrough',

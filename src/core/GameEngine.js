@@ -49,7 +49,7 @@ import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { Drones } from '../systems/Drones.js';
 import { Airfields } from '../systems/Airfields.js';
-import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES, standInFor } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
 import { VehicleDust } from '../render/VehicleDust.js';
@@ -361,9 +361,15 @@ export class GameEngine {
     } else begin();
   }
 
-  /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
+  /**
+   * Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. Every army fields only its own units: a type it lacks
+   * comes as its stand-in (data/units/index.js standInFor), and one it has nothing for not at all — null.
+   */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
-    const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    const typeId = standInFor(unitId, this.armyOf(faction));
+    if (!typeId) return null;
+    if (count && typeId !== unitId) count = Math.max(1, Math.round(count * (getUnitType(typeId).formation?.count ?? 1) / (getUnitType(unitId).formation?.count ?? 1))); // (the same share of its men: a campaign battalion's losses)
+    const stack = this.spawnStackRaw(typeId, faction, position, facing, name, { count, id });
     if (doctrineCovers(stack.army, 'veteran', stack.type, stack.stats) && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // (data/doctrine.js veteran: the ROK's conscripts)
     if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
     if (stack.type.id === 'tank' && stack.stats.cavalry && armyDoctrine(stack.army, 'gardeDuCorps') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // Saxony's Garde du Corps: Veteran

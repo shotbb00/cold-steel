@@ -96,11 +96,12 @@ export const EPOCHS = {
       de: { id: 'de', faction: 'pact', name: 'German Army' },
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
       // the other fronts (own: only the types data/units1918/fronts.js writes for them)
-      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'] },
-      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'] },
+      // standIn: a type the army lacks is fielded as this one of its own (null: not at all); else one of the same role it has (data/units/index.js standInFor)
+      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (no armour at all: the Süvari are its mobile arm)
+      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle', aa: 'manpads' } }, // (the Light Car Patrol; the Lewis AA teams)
       it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
-      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'] },
-      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'] },
+      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (no tanks: the Romfell armoured car)
+      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
     },
     defaults: { nato: 'uk', pact: 'de' },
     types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
@@ -158,9 +159,10 @@ export const EPOCHS = {
       sov: { id: 'sov', faction: 'pact', name: 'Soviet Army', regions: ['europe', 'north'] },
       nva: { id: 'nva', faction: 'pact', name: 'NVA', regions: ['europe'] },
       // the Northern Flank and Korea: each only the types written for it (data/units/armies85.js)
-      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'] },
-      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'] },
-      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'] },
+      // standIn: as 1918's; navyOf: the ships of that army of the same nation (data/factions.js armyHas)
+      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'], standIn: { aa: 'towedAA', sam: 'towedAA', heavyTank: 'tank', rockets: 'artillery' } }, // (Bofors L/70; Leopard 1; M109) (no ships: the Royal Norwegian Navy isn't in the game yet)
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'], navyOf: 'us', standIn: { aa: 'sam', heavyTank: 'tank', rockets: 'artillery' } }, // (the US Navy's ships; Improved HAWK; M60A1; M198)
+      rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'], standIn: { reconVehicle: 'tankDestroyer' } }, // (the recon battalions' 106 mm RR jeeps)
       kpa: { id: 'kpa', faction: 'pact', name: 'Korean People’s Army', own: true, regions: ['korea'] },
     },
     defaults: { nato: 'us', pact: 'sov' },

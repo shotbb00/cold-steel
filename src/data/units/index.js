@@ -38,6 +38,7 @@ import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 import { SHIPS_1985 } from './ships85.js';
 import armies85 from './armies85.js';
+import { ARMIES, armyHas } from '../factions.js';
 
 export const UNIT_TYPES = {
   [rifles.id]: rifles,
@@ -94,4 +95,29 @@ export function getUnitType(id) {
   const type = typeOf(id);
   if (!type) throw new Error(`Unknown unit type "${id}"`);
   return type;
+}
+
+/** The same role, by type id, when an army lacks a type and names no stand-in of its own: the first of these it fields. */
+const ROLE = {
+  tank: ['heavyTank', 'tankDestroyer', 'reconVehicle'], heavyTank: ['tank', 'tankDestroyer'], tankDestroyer: ['tank', 'atTeam'], ddTank: ['tank'], pt76: ['reconVehicle', 'tank'],
+  reconVehicle: ['scouts'], cev: ['engineers'], mineClear: ['engineers'],
+  aa: ['gunMissile', 'towedAA', 'sam', 'manpads'], gunMissile: ['aa', 'towedAA', 'manpads'], towedAA: ['aa', 'gunMissile', 'manpads'], sam: ['aa', 'towedAA', 'manpads'],
+  rockets: ['artillery'], spMortar: ['mortar'], mortar: ['spMortar'],
+  atTeam: ['rifles'], sniper: ['scouts'], observers: ['scouts'], airAssault: ['rifles'], stormTroops: ['rifles'], kampfgruppe: ['rifles'], marines: ['rifles'], sailors: ['rifles'],
+  frigate: ['destroyer', 'ptBoat'], destroyer: ['frigate'], lightCruiser: ['cruiser', 'destroyer'], cruiser: ['lightCruiser', 'destroyer'],
+  battleship: ['oldBattleship', 'cruiser'], oldBattleship: ['battleship', 'cruiser'], carrier: ['escortCarrier'], escortCarrier: ['carrier'], missileSub: ['submarine'],
+};
+
+/**
+ * What `army` puts on the field for type `id` (every spawn goes through here: GameEngine.spawnStack): `id` if the army fields it
+ * (data/factions.js armyHas), else its stand-in from its own roster — the army's (`standIn` on its ARMIES entry, data/epoch.js;
+ * null: none), else the first of ROLE[id] it fields — else null: no such unit. Fortifications and the hidden service types
+ * (crews, landing craft, loose horses) are the map's or the mode's: as they are.
+ */
+export function standInFor(id, army) {
+  const t = typeOf(id);
+  if (!t || !ARMIES[army] || t.hidden || t.stats?.structure || armyHas(t, army)) return t ? id : null;
+  const own = ARMIES[army].standIn ?? {};
+  const pick = t.id in own ? [own[t.id]] : ROLE[t.id] ?? [];
+  return pick.find((s) => s && UNIT_TYPES[s] && armyHas(UNIT_TYPES[s], army)) ?? null;
 }
