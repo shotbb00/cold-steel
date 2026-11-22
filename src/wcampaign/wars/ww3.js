@@ -53,7 +53,7 @@ export const WW3 = {
 
     // ---- the Northern Flank: from the Kola Peninsula over Finnmark down the fjords to Narvik
     kola: { name: 'The Kola Peninsula', theatre: 'north', depot: 'pact', map: 'murmansk', port: true, airfield: true, prod: 6, fort: 2, seas: ['barents'], land: ['pechenga'], lat: 68.9, lon: 33.1 },
-    pechenga: { name: 'Pechenga', theatre: 'north', map: 'pechenga', prod: 1, fort: 1, seas: ['barents'], land: ['kola', 'finnmark'], lat: 69.5, lon: 31.2 },
+    pechenga: { name: 'Pechenga', theatre: 'north', map: 'pechenga', coastal: ['liinakhamari'], prod: 1, fort: 1, seas: ['barents'], land: ['kola', 'finnmark'], lat: 69.5, lon: 31.2 },
     finnmark: { name: 'Finnmark', theatre: 'north', map: 'finnmark', coastal: ['varanger'], prod: 1, seas: ['barents'], land: ['pechenga', 'lyngen'], lat: 70.0, lon: 25.0 },
     lyngen: { name: 'The Lyngen line', theatre: 'north', map: 'lyngen', prod: 1, fort: 2, land: ['finnmark', 'malselv'], lat: 69.6, lon: 20.2 },
     malselv: { name: 'Målselv and Bardufoss', theatre: 'north', map: 'malselv', airfield: true, prod: 1, land: ['lyngen', 'narvik'], lat: 69.06, lon: 18.5 },
