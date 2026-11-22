@@ -134,7 +134,7 @@ export const WW1 = {
     // ---- Salonika and the Balkans: the Macedonian front, occupied Serbia, Bulgaria, occupied Wallachia
     salonika: { name: 'Salonika and the Vardar', theatre: 'balkans', depot: 'nato', port: true, airfield: true, prod: 2, seas: ['aegean'], land: ['monastir', 'doiran'], fort: 3, garrison: 1800, lat: 40.64, lon: 22.94 },
     monastir: { name: 'Monastir and the Crna bend', theatre: 'balkans', prod: 1, land: ['salonika', 'dobroPole', 'skopje'], fort: 1, lat: 40.95, lon: 21.3 },
-    doiran: { name: 'Lake Doiran', theatre: 'balkans', prod: 1, fort: 2, land: ['salonika', 'dobroPole', 'skopje'], lat: 41.2, lon: 22.75 },
+    doiran: { name: 'Lake Doiran', theatre: 'balkans', map: 'doiran', prod: 1, fort: 2, land: ['salonika', 'dobroPole', 'skopje'], lat: 41.2, lon: 22.75 },
     dobroPole: { name: 'Dobro Pole and the Moglena', theatre: 'balkans', map: 'dobro-pole', prod: 1, fort: 3, land: ['monastir', 'doiran', 'skopje'], lat: 41.3, lon: 21.95 },
     skopje: { name: 'Skopje and Macedonia', theatre: 'balkans', prod: 1, land: ['dobroPole', 'monastir', 'doiran', 'sofia', 'belgrade'], fort: 1, lat: 42.0, lon: 21.43 },
     sofia: { name: 'Sofia', theatre: 'balkans', depot: 'pact', airfield: true, prod: 3, land: ['skopje', 'bucharest', 'constantinople', 'belgrade'], fort: 3, garrison: 1800, lat: 42.7, lon: 23.32 },
