@@ -237,8 +237,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const t2 = topBar(), b2 = tabs(), d2 = drawer();
     const view = `${st.theatre}|${st.sel}|${st.place}`, keep = view === side.dataset.view ? side.scrollTop : 0; // (same view: same scroll)
     d2.dataset.view = view;
+    const scrolled = [tabBar.scrollLeft, top.querySelector('.wc-morales')?.scrollLeft ?? 0]; // (a phone: the tabs and the top bar's morale row scroll sideways — kept where they were)
     top.replaceWith(t2); tabBar.replaceWith(b2); side.replaceWith(d2);
     top = t2; tabBar = b2; side = d2;
+    tabBar.scrollLeft = scrolled[0];
+    if (top.querySelector('.wc-morales')) top.querySelector('.wc-morales').scrollLeft = scrolled[1];
     side.scrollTop = keep;
     map.territory(Object.keys(war.provinces).map((id) => ({ x: PL[id].x, y: PL[id].y, side: c.provinces[id].owner, lon: war.provinces[id].lon, lat: war.provinces[id].lat })), areas);
     drawOverlay();
@@ -256,7 +259,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     return bar;
   }
 
-  function goTheatre(id) { st.theatre = id; st.place = null; st.sel = null; st.msg = ''; render(); frame(id); }
+  function goTheatre(id) { st.theatre = id; st.place = null; st.sel = null; st.msg = ''; render(); frame(id); tabBar.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
   function tabs() {
     const t = el('div', 'seg wc-tabs');
     t.append(btn('The world', st.theatre == null ? 'on' : '', () => goTheatre(null)));
@@ -328,12 +331,29 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       boxes.push(b);
       return `<text class="name${cls}" y="${y}" text-anchor="middle">${esc(text)}</text>`;
     };
-    for (const n of nodes) {
-      if (n.x < -80 || n.y < -80 || n.x > vw + 80 || n.y > vh + 80) continue; // (off the screen: not drawn)
+    /** 1918: which way a side's flags fly at this place — away from the enemy's ground in its theatre (the nearest counts most), so they leave the front clear. */
+    const away = (ids, side, def) => {
+      const p = ids.length === 1 && war.provinces[ids[0]], P = PL[ids[0]];
+      let sx = 0;
+      if (p) for (const [k, q] of Object.entries(war.provinces)) if (q.theatre === p.theatre && c.provinces[k].owner !== side) { const dx = PL[k].x - P.x, dy = PL[k].y - P.y; sx += dx / (dx * dx + dy * dy || 1); }
+      return sx > 0 ? -16 : sx < 0 ? 16 : def;
+    };
+    const visible = nodes.filter((n) => !(n.x < -80 || n.y < -80 || n.x > vw + 80 || n.y > vh + 80)); // (off the screen: not drawn)
+    // the piles first (1918's flags take their room before the town names: flagPin)
+    if (trench) for (const n of visible) { // (the names that must show — where the chosen force can go — keep their room from the flags)
+      const one = n.ids.length === 1 && !n.sea ? n.ids[0] : null;
+      if (one && ((st.reach.has(one) && !st.reach.get(one).needs) || st.place === one || sf?.at === one)) { const w = nameOf(one).length * 6.6 + 6; boxes.push([n.x - w / 2, n.y - 24, n.x + w / 2, n.y - 9]); }
+    }
+    for (const n of visible) {
+      const own = c.forces.filter((f) => f.side === me && n.ids.includes(f.at));
+      const theirs = c.forces.filter((f) => f.side === foe && n.ids.includes(f.at) && seen(f.at));
+      let dOwn = 16, dFoe = -16;
+      if (trench) { dOwn = away(n.ids, me, 16); dFoe = own.length ? -dOwn : away(n.ids, foe, -16); }
+      n.pile = pile(own, dOwn, 'own', n, boxes) + pile(theirs, dFoe, 'foe', n, boxes);
+    }
+    for (const n of visible) {
       const ids = n.ids, one = ids.length === 1 ? ids[0] : null;
       const reach = ids.some((id) => st.reach.has(id) && !st.reach.get(id).needs), land = one && st.reach.get(one)?.land, needs = one && st.reach.get(one)?.needs;
-      const own = c.forces.filter((f) => f.side === me && ids.includes(f.at));
-      const theirs = c.forces.filter((f) => f.side === foe && ids.includes(f.at) && seen(f.at));
       let g = `<g class="wc-node${reach ? ` reach${land ? ' landing' : ''}` : needs ? ' needs' : ''}${ids.includes(st.place) ? ' sel' : ''}" data-ids="${ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">`;
       if (one && n.sea) g += `<circle class="hit" r="16"/><circle class="anchor" r="3"/>${label(nameOf(one), -9, ' sea', n.x, n.y, reach)}`;
       else if (one && trench) { // (1918: a town square in its holder's colour, its defences round it; the pins are the forces')
@@ -352,16 +372,16 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         const lead = ids.find((id) => c.provinces[id]?.depot) ?? ids[0];
         g += `<g class="wc-pin cluster ${n.sea ? 'sea' : nato * 2 >= provs.length ? 'nato' : 'pact'}"><circle class="hit" r="16"/><circle class="disc" r="11" filter="url(#wm-shadow)"/><circle class="edge" r="9"/><text class="count" y="4.5" text-anchor="middle">${ids.length}</text></g>${label(`${nameOf(lead)} +${ids.length - 1}`, -16, n.sea ? ' sea' : '', n.x, n.y, false)}`;
       }
-      g += pile(own, 16, 'own') + pile(theirs, -16, 'foe');
-      s += `${g}</g>`;
+      s += `${g}${n.pile}</g>`;
     }
+    for (const n of visible) if (n.flags) s += `<g data-ids="${n.ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">${n.flags}</g>`; // (1918's paper flags over every pin and town: flagPin)
     if (trench && vw > 760) s += `<g class="wc-sheet" transform="translate(${vw - 296} ${vh - 74})"><rect width="282" height="62"/><text x="10" y="20" class="t">SHEET ${esc(war.sheet ?? '51 B')} · EDITION ${Math.min(9, 1 + Math.floor(c.turn / 26))} ${'ABCD'[c.turn % 4]}</text><text x="10" y="38">Trenches corrected to ${Number(dateOf(c).slice(8))}-${Number(dateOf(c).slice(5, 7))}-${dateOf(c).slice(2, 4)}.</text><text x="10" y="54" class="r">Enemy trenches in red. Wire shown thus: ✕✕</text></g>`;
     map.over.innerHTML = s;
   }
   /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
-  function pile(fs, dx, kind) {
+  function pile(fs, dx, kind, node, boxes) {
     if (!fs.length) return '';
-    if (trench) return flagPin(fs, dx, kind);
+    if (trench) return flagPin(fs, dx, kind, node, boxes);
     const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
     let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})">`;
     for (let i = Math.min(n, 3) - 1; i > 0; i--) s += faceOf(top.side, `face under ${top.side}`, i * 3, -i * 3);
@@ -372,23 +392,31 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
 
   /**
    * 1918's counter: a glass-head pin stuck in the map beside the town, a paper flag on its needle with the force's name
-   * typed on it and its side's stripe at the end (ours to the right, theirs to the left); more forces there: more flags
-   * behind it and the count by the head. Its strength: the pencil line under the name.
+   * typed on it and its side's stripe at the end (flying away from the enemy: drawOverlay's away()); more forces there: more flags
+   * behind it and the count by the head. Its strength: the pencil line under the name. Where its flag would cover another
+   * (or a name), it is stuck in higher — a longer needle; still no room: the bare pin with its count (the names on hover).
    */
-  function flagPin(fs, dx, kind) {
+  function flagPin(fs, dx, kind, node, boxes) {
     const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, dir = dx > 0 ? 1 : -1;
-    if (zoomK < 2.5 && top.id !== st.sel) return `<g class="wc-pile wc-flagpin ${top.side}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${dir * 6} 2) scale(0.8)"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><path class="pshadow" d="M0,0L13,-6"/><path class="needle" d="M0,0L-3,-28"/><circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>${n > 1 ? `<text class="count" x="${dir > 0 ? 8 : -14}" y="-27" text-anchor="middle">${n}</text>` : ''}</g>`; // (far out: the pins alone)
     const raw = `${{ fleet: '⚓︎ ', air: '✈︎ ' }[top.kind] ?? ''}${top.name}`, name = raw.length > 17 ? `${raw.slice(0, 16)}…` : raw;
     const w = Math.round(name.length * 6.2 + 14), x0 = dir > 0 ? -2 : -w - 4, stripe = dir > 0 ? x0 + w - 6 : x0 + 2, tx = dir > 0 ? x0 + 4 : x0 + 9;
+    const forced = top.id === st.sel || node.ids.includes(st.place);
+    const box = (l) => [node.x + dir * 9 + x0 - 6, node.y - 33 - l, node.x + dir * 9 + x0 + w + 6, node.y - 1 - l];
+    const free = (b) => !boxes.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]);
+    const l = zoomK < 2.5 && !forced ? null : [0, 14, 28].find((h) => free(box(h))) ?? (forced ? 0 : null);
+    if (l == null) return `<g class="wc-pile wc-flagpin ${top.side}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${dir * 6} 2) scale(0.8)"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><path class="pshadow" d="M0,0L13,-6"/><path class="needle" d="M0,0L-3,-28"/><circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>${n > 1 ? `<text class="count" x="${dir > 0 ? 8 : -14}" y="-27" text-anchor="middle">${n}</text>` : ''}</g>`; // (far out: the pins alone)
+    boxes.push(box(l));
     const flag = (dx2, dy2, cls) => `<path class="${cls}" d="M${x0 + dx2},${-21 + dy2}h${w}v14h${-w}z"/>`;
     let s = `<g class="wc-pile wc-flagpin ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${dir * 9} 3)"><title>${esc(fs.map((f) => f.name).join(' · '))}</title>`;
-    s += `<path class="pshadow" d="M0,0L13,-6"/><circle class="pshadow" cx="15" cy="-7" r="5"/><path class="pshadow" d="M${x0 + 5},-18h${w}v14h${-w}z"/>`;
+    s += `<path class="pshadow" d="M0,0L13,${-6 - l}"/><g transform="translate(0 ${-l})"><circle class="pshadow" cx="15" cy="-7" r="5"/><path class="pshadow" d="M${x0 + 5},-18h${w}v14h${-w}z"/></g>`;
+    s += `<path class="needle" d="M0,0L-3,${-28 - l}"/><path class="shine" d="M-0.5,-2L-3.2,${-26 - l}"/><g transform="translate(0 ${-l})">`; // (stuck in higher: the flag and head up the longer needle)
     for (let i = Math.min(n, 3) - 1; i > 0; i--) s += flag(dir * i * 3, -i * 3, 'paper under');
     s += `${flag(0, 0, 'paper')}<path class="stripe" d="M${stripe},-21h4v14h-4z"/><text class="tag" x="${tx}" y="-10.5">${esc(name)}</text>`;
     s += `<path class="str" d="M${tx},-8.6h${((w - 14) * strength(top)).toFixed(1)}"/>`;
-    s += `<path class="needle" d="M0,0L-3,-28"/><path class="shine" d="M-0.5,-2L-3.2,-26"/><circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>`;
+    s += `<circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>`;
     if (n > 1) s += `<text class="count" x="${dir > 0 ? 5 : -11}" y="-33" text-anchor="middle">${n}</text>`;
-    return `${s}</g>`;
+    node.flags = `${node.flags ?? ''}${s}</g></g>`; // (drawn on top of the pins and towns: drawOverlay)
+    return '';
   }
 
   /** Select a force: its place and where it can go must be on screen, each on a pin of its own — else the map moves there. */

@@ -800,3 +800,24 @@
 .wc-weary i.nato { color: var(--ally); } .wc-weary i.pact { color: var(--enemy); }
 .wc-weary i.hot { color: var(--gold); font-weight: 700; } .wc-weary i.out { opacity: 0.5; text-decoration: line-through; }
 .wc-trade { color: var(--gold); }
+/* a phone: the top bar in short rows — the date and the buttons; morale, escalation and weariness in one row that scrolls
+   sideways; production and the trade cut on one line — and the fronts' tabs in one scrolling row: the map gets the room */
+@media (max-width: 760px) {
+  .wc-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 6px 12px; }
+  .wc-date b { font-size: 17px; }
+  .wc-date small { font-size: 10.5px; }
+  .wc-actions { grid-column: 2; grid-row: 1; width: auto; gap: 6px; }
+  .wc-actions .mp-btn { padding: 7px 9px; font-size: 11.5px; letter-spacing: 0.05em; }
+  .wc-actions .deploy { padding: 8px 12px; font-size: 13px; letter-spacing: 0.12em; }
+  .wc-close { width: 32px; height: 32px; font-size: 18px; }
+  .wc-morales, .wc-pool { grid-column: 1 / -1; }
+  .wc-morales, .wc-pool, .wc-tabs { overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .wc-morales { flex-direction: row; align-items: center; gap: 6px; }
+  .wc-morale, .wc-weary { flex: none; }
+  .wc-weary { flex-wrap: nowrap; max-width: none; }
+  .wc-pool { display: flex; align-items: baseline; gap: 8px; }
+  .wc-pool b { display: inline; font-size: 15px; }
+  .wc-pool small + small { display: inline; }
+  .wc-tabs { flex-wrap: nowrap; max-width: calc(100% - 24px); }
+  .wc-tabs button { flex: none; padding: 6px 12px; font-size: 12.5px; }
+}
