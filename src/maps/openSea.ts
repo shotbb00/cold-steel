@@ -1,8 +1,9 @@
 // Open sea: no coast in sight — the drop-in sea map for the world campaign's quiet sea zones (the North Sea, the
 // western Atlantic, the Yellow Sea, the Channel, the Bay of Bengal …) where a battle has no map of its own. Deep
 // water with a gentle swell of the sea floor and nothing else: no islands, no shoals, nothing to hide behind —
-// the fleets meet on the open sea. Fair as a mirror: the zones are point-symmetric about the centre. Both wars
-// with ships at sea (1945, 1985) use it with their own fleets and side names. Laid out at full size (`widened`).
+// the fleets meet on the open sea. Fair as a mirror: the zones are point-symmetric about the centre. The wars
+// with ships at sea (1918, 1945, 1985) use it with their own fleets and side names (1918: a battlecruiser, a destroyer and an
+// escort a side — the same slots). Laid out at full size (`widened`).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { createSea } from '../world/Sea.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
@@ -27,7 +28,7 @@ export default {
   id: 'openSea',
   name: 'Open Sea',
   description: 'Open water out of sight of land: two fleets meet with nothing between them but the swell. The campaign’s quiet sea zones are fought here.',
-  epochs: ['1945', '1985'],
+  epochs: ['1918', '1945', '1985'],
   theatre: 'sea',
   widened: true,
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],

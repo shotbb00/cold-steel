@@ -6,7 +6,8 @@
 // Look: the real world (ui/WorldMap.js) in the map sheet's ink on the dark table, blue and red ground and pins, paper counters.
 import { WW2 } from '../wcampaign/wars/ww2.js';
 import { WW3 } from '../wcampaign/wars/ww3.js';
-import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves , refreshMaps } from '../wcampaign/engine.js';
+import { WW1 } from '../wcampaign/wars/ww1.js';
+import { newCampaign, order, resolveTurn, autoResolve, settle, endTurn, forcesAt, forceById, power, supplied, dateOf, hourOf, enemy, landingZone, raise, refit, moraleCap, STACK, raiseFleet, raiseAir, fleetCost, airCost, upkeep, PRIORITY, ECON, MISSIONS, mission, airReach, income, winterNow, holderOf, AIR_WING, reserves , refreshMaps, takeAt, tradeLeft } from '../wcampaign/engine.js';
 import { writeLetter } from '../campaign/Letters.js';
 import { showQR, scanQR } from './SaveQR.js';
 import { aiTurn } from '../wcampaign/ai.js';
@@ -19,7 +20,7 @@ import { airType } from '../systems/AirStrike.js';
 import { epoch } from '../data/epoch.js';
 import { WorldMap } from './WorldMap.js';
 
-const WARS = { 1945: WW2, 1985: WW3 }; // (the wars with a world campaign: each in its own year)
+const WARS = { 1918: WW1, 1945: WW2, 1985: WW3 }; // (the wars with a world campaign: each in its own year)
 export const warFor = (ep = epoch()) => WARS[ep] ?? null;
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -92,7 +93,7 @@ export class WarRoomPanel {
     await this.back;
     const r = this.root, war = warFor();
     r.replaceChildren(el('h2', '', 'Campaign'));
-    if (!war) { r.append(el('p', 'mp-lead', `The world campaign is played in 1945 and 1985 so far: switch to one of them to play it. ${esc(epoch())} follows.`)); return; }
+    if (!war) { r.append(el('p', 'mp-lead', `The world campaign is played in 1918, 1945 and 1985 so far: switch to one of them to play it. ${esc(epoch())} follows.`)); return; }
     r.append(el('p', 'mp-lead', war.blurb ?? 'The whole war on one map: Western Europe, the Eastern Front, North Africa and the Mediterranean, the Pacific and the Atlantic. Move army groups, fleets and air wings in turns of half a week; every clash becomes a battle that turn. The war runs for as long as it lasts — and goes the way you fight it.'));
     const saves = (await listSaves()).filter((s) => s.war === war.id);
     this.backdrop(war, saves[0]); // (the war's map behind the tab: the last save's front, or where it begins)
@@ -169,6 +170,9 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   room.append(top, tabBar, body);
   const map = new WorldMap(mapBox, { onView: () => drawOverlay(), neutral: war.neutral, style: war.mapStyle });
   const acetate = map.style === 'acetate'; // (1985: hostile counters are diamonds, as marked on a situation map)
+  const trench = map.style === 'trench'; // (1918: towns as squares, every force a glass-head pin with a paper flag — tools/mapstyles.html)
+  /** A battle's margin to take the ground: a fought one 0.6 (who won it), a resolved one takeAt (war.take on land). */
+  const winAt = (x) => (x.how === 'fought' ? 0.6 : takeAt(war, x));
   const faceOf = (side, cls = 'face', dx = 0, dy = 0) => (acetate && side === 'pact' ? `<path class="${cls}" d="M${dx},${dy - 16}L${dx + 19},${dy}L${dx},${dy + 16}L${dx - 19},${dy}Z"/>` : `<rect class="${cls}" x="${dx - 15}" y="${dy - 11}" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>`);
   const areas = areasOf(map, war);
   const tools = el('div', 'wc-zoom');
@@ -244,8 +248,8 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const bar = el('div', 'wc-top');
     const mor = (s) => `<span class="wc-morale ${s}"><i style="--m:${Math.max(0, Math.round(c.morale[s]))}%"></i>${SIDE[s]} ${Math.max(0, Math.round(c.morale[s]))}</span>`;
     bar.append(el('div', 'wc-date', `<b>${esc(longDate(dateOf(c)))}</b><small>turn ${c.turn} · ${esc(hourOf(c))}${winterNow(c, war) ? ` · <span class="wc-winter" title="${esc(war.winter.text.start)}">❄ winter in the ${esc(war.theatres[war.winter.theatre].name.replace(/^The /, ''))}</span>` : ''}</small>`),
-      el('div', 'wc-morales', `${mor('nato')}${mor('pact')}${war.escalation ? (() => { const e = Math.round(c.escalation ?? 0), next = war.escalation.levels.find((L) => L.at > e); return `<span class="wc-morale wc-esc${e >= 60 ? ' hot' : ''}" title="The nuclear shadow: taking or bombing a base in the enemy’s homeland raises it, quiet turns let it ebb. ${next ? `At ${next.at}: ${esc(next.text ?? next.end)}` : ''}"><i style="--m:${e}%"></i>☢︎ Escalation ${e}</span>`; })() : ''}`),
-      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${income(c, war, me).net >= 0 ? '+' : ''}${income(c, war, me).net.toLocaleString('en')} a turn · upkeep ${upkeep(c, me).toLocaleString('en')}</small>`));
+      el('div', 'wc-morales', `${mor('nato')}${mor('pact')}${war.escalation ? (() => { const e = Math.round(c.escalation ?? 0), next = war.escalation.levels.find((L) => L.at > e); return `<span class="wc-morale wc-esc${e >= 60 ? ' hot' : ''}" title="The nuclear shadow: taking or bombing a base in the enemy’s homeland raises it, quiet turns let it ebb. ${next ? `At ${next.at}: ${esc(next.text ?? next.end)}` : ''}"><i style="--m:${e}%"></i>☢︎ Escalation ${e}</span>`; })() : ''}${c.weary ? `<span class="wc-weary" title="War-weariness: at 100 a nation collapses — a revolution, an armistice. Lost battles, home ground in enemy hands and low morale wear it down; victories lift it. Germany’s or France’s collapse ends the war.">${Object.entries(war.powers).filter(([, pw]) => pw.weary).map(([id, pw]) => { const out = c.surrendered?.includes(id), w = Math.round(c.weary[id] ?? 0); return `<i class="${pw.side}${out ? ' out' : w >= 75 ? ' hot' : ''}">${esc(pw.short ?? pw.name)} ${out ? 'out' : w}</i>`; }).join('')}</span>` : ''}`),
+      el('div', 'wc-pool', `<small>production</small><b>${Math.round(c.pool[me]).toLocaleString('en')}</b><small title="income after upkeep, each turn · what isn't spent beyond ${ECON.stockTurns} turns' income is lost">${income(c, war, me).net >= 0 ? '+' : ''}${income(c, war, me).net.toLocaleString('en')} a turn · upkeep ${upkeep(c, me).toLocaleString('en')}${tradeLeft(c, war, me) < 1 ? ` · <span class="wc-trade" title="${esc((war.trade ?? []).filter((x) => x.side === me).map((x) => x.text).join(', '))}: enemy ships on your sea lanes">⚓︎ −${Math.round((1 - tradeLeft(c, war, me)) * 100)} %</span>` : ''}</small>`));
     const right = el('div', 'wc-actions');
     right.append(btn('Save / move', 'mp-btn', saveDialog), c.over ? el('span', 'wc-over', 'The war is over') : btn('End turn', 'deploy', endOfTurn), btn('×', 'wc-close', close));
     bar.append(right);
@@ -265,7 +269,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (l.destroyed) return `${l.destroyed} has been destroyed.`;
     if (l.surrendered) return `${l.surrendered} has surrendered.`;
     if (l.depotLost) return `${nameOf(l.depotLost)} has fallen.`;
-    if (l.kind) return `Turn ${l.turn}: ${l.kind === 'sea' ? 'battle in' : l.kind === 'coastal' ? 'landing at' : 'battle for'} ${nameOf(l.at)} — ${l.margin >= 0.6 ? `${SIDE[l.side]} victory` : l.margin >= 0.45 ? 'undecided' : `${SIDE[l.side]} thrown back`}.`;
+    if (l.kind) return `Turn ${l.turn}: ${l.kind === 'sea' ? 'battle in' : l.kind === 'coastal' ? 'landing at' : 'battle for'} ${nameOf(l.at)} — ${l.margin >= winAt(l) ? `${SIDE[l.side]} victory` : l.margin >= 0.45 ? 'undecided' : `${SIDE[l.side]} thrown back`}.`;
     return '';
   }
 
@@ -276,9 +280,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   }
 
   /** The screen layer over the map: pins (near ones as one), roads, sea lanes, order arrows, counters — redrawn on every pan and zoom. */
-  let nodeOf = {};
+  let nodeOf = {}, zoomK = 1;
   function drawOverlay() {
     const t = map.t, k = t.k / (map.kMin || t.k), sf = selected(), ok = supplied(c, war, me);
+    zoomK = k; // (1918's flags: only once the map is close enough to read them — flagPin)
     const rank = (id) => (sf?.at === id ? 0 : st.reach.has(id) ? 1 : c.provinces[id]?.depot ? 2 : PL[id].sea ? 4 : 3);
     const nodes = [];
     nodeOf = {};
@@ -331,7 +336,11 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const theirs = c.forces.filter((f) => f.side === foe && ids.includes(f.at) && seen(f.at));
       let g = `<g class="wc-node${reach ? ` reach${land ? ' landing' : ''}` : needs ? ' needs' : ''}${ids.includes(st.place) ? ' sel' : ''}" data-ids="${ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">`;
       if (one && n.sea) g += `<circle class="hit" r="16"/><circle class="anchor" r="3"/>${label(nameOf(one), -9, ' sea', n.x, n.y, reach)}`;
-      else if (one) {
+      else if (one && trench) { // (1918: a town square in its holder's colour, its defences round it; the pins are the forces')
+        const P = c.provinces[one], r = P.depot ? 4.5 : 3.2;
+        g += `<g class="wc-pin wc-town ${P.contested ? 'contested' : P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><title>${esc(nameOf(one))}</title><circle class="hit" r="14"/>${P.fort ? `<rect class="fort" x="-9" y="-9" width="18" height="18"/>` : ''}<rect class="town" x="${-r}" y="${-r}" width="${2 * r}" height="${2 * r}"/>${P.depot && P.depot === P.owner ? `<text class="wc-ico base ${P.owner}" x="6" y="-8">⚑︎</text>` : ''}${war.provinces[one].port ? '<text class="wc-ico" x="-19" y="4">⚓︎</text>' : ''}${war.provinces[one].airfield ? '<text class="wc-ico" x="-19" y="-9">✈︎</text>' : ''}</g>`;
+        if (k >= 60 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one).toUpperCase(), -12, '', n.x, n.y, reach || st.place === one || sf?.at === one); // (the sheet is crowded: a town's name when it matters, or close in)
+      } else if (one) {
         const P = c.provinces[one];
         const head = P.depot ? 7 : 5.5, hy = P.depot ? -24 : -20;
         g += `<g class="wc-pin ${P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><circle class="hit" r="15" cy="-8"/>${P.fort ? '<circle class="fort" r="10"/>' : ''}<circle class="town" r="2.2"/>${P.depot && P.depot === P.owner ? `<text class="wc-ico base ${P.owner}" x="6" y="${hy - 2}">⚑︎</text>` : ''}${war.provinces[one].port ? '<text class="wc-ico" x="-19" y="-1">⚓︎</text>' : ''}${war.provinces[one].airfield ? '<text class="wc-ico" x="-19" y="-13">✈︎</text>' : ''}
@@ -346,16 +355,39 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       g += pile(own, 16, 'own') + pile(theirs, -16, 'foe');
       s += `${g}</g>`;
     }
+    if (trench && vw > 760) s += `<g class="wc-sheet" transform="translate(${vw - 296} ${vh - 74})"><rect width="282" height="62"/><text x="10" y="20" class="t">SHEET ${esc(war.sheet ?? '51 B')} · EDITION ${Math.min(9, 1 + Math.floor(c.turn / 26))} ${'ABCD'[c.turn % 4]}</text><text x="10" y="38">Trenches corrected to ${Number(dateOf(c).slice(8))}-${Number(dateOf(c).slice(5, 7))}-${dateOf(c).slice(2, 4)}.</text><text x="10" y="54" class="r">Enemy trenches in red. Wire shown thus: ✕✕</text></g>`;
     map.over.innerHTML = s;
   }
   /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
   function pile(fs, dx, kind) {
     if (!fs.length) return '';
+    if (trench) return flagPin(fs, dx, kind);
     const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
     let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})">`;
     for (let i = Math.min(n, 3) - 1; i > 0; i--) s += faceOf(top.side, `face under ${top.side}`, i * 3, -i * 3);
     s += `<g class="wc-counter ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}"><title>${esc(fs.map((f) => f.name).join(' · '))}</title>${faceOf(top.side)}${top.kind === 'army' ? '<rect class="frame" x="-11" y="-7" width="22" height="13"/>' : ''}<g class="sym" transform="translate(0 -0.5) scale(0.95)">${glyph(top)}</g><rect class="str" x="-12" y="8" width="${(24 * strength(top)).toFixed(1)}" height="1.8"/></g>`;
     if (n > 1) s += `<g class="wc-badge"><rect x="9" y="-19" width="13" height="12" rx="1" filter="url(#wm-shadow)"/><text x="15.5" y="-10" text-anchor="middle">${n}</text></g>`;
+    return `${s}</g>`;
+  }
+
+  /**
+   * 1918's counter: a glass-head pin stuck in the map beside the town, a paper flag on its needle with the force's name
+   * typed on it and its side's stripe at the end (ours to the right, theirs to the left); more forces there: more flags
+   * behind it and the count by the head. Its strength: the pencil line under the name.
+   */
+  function flagPin(fs, dx, kind) {
+    const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, dir = dx > 0 ? 1 : -1;
+    if (zoomK < 2.5 && top.id !== st.sel) return `<g class="wc-pile wc-flagpin ${top.side}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${dir * 6} 2) scale(0.8)"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><path class="pshadow" d="M0,0L13,-6"/><path class="needle" d="M0,0L-3,-28"/><circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>${n > 1 ? `<text class="count" x="${dir > 0 ? 8 : -14}" y="-27" text-anchor="middle">${n}</text>` : ''}</g>`; // (far out: the pins alone)
+    const raw = `${{ fleet: '⚓︎ ', air: '✈︎ ' }[top.kind] ?? ''}${top.name}`, name = raw.length > 17 ? `${raw.slice(0, 16)}…` : raw;
+    const w = Math.round(name.length * 6.2 + 14), x0 = dir > 0 ? -2 : -w - 4, stripe = dir > 0 ? x0 + w - 6 : x0 + 2, tx = dir > 0 ? x0 + 4 : x0 + 9;
+    const flag = (dx2, dy2, cls) => `<path class="${cls}" d="M${x0 + dx2},${-21 + dy2}h${w}v14h${-w}z"/>`;
+    let s = `<g class="wc-pile wc-flagpin ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${dir * 9} 3)"><title>${esc(fs.map((f) => f.name).join(' · '))}</title>`;
+    s += `<path class="pshadow" d="M0,0L13,-6"/><circle class="pshadow" cx="15" cy="-7" r="5"/><path class="pshadow" d="M${x0 + 5},-18h${w}v14h${-w}z"/>`;
+    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += flag(dir * i * 3, -i * 3, 'paper under');
+    s += `${flag(0, 0, 'paper')}<path class="stripe" d="M${stripe},-21h4v14h-4z"/><text class="tag" x="${tx}" y="-10.5">${esc(name)}</text>`;
+    s += `<path class="str" d="M${tx},-8.6h${((w - 14) * strength(top)).toFixed(1)}"/>`;
+    s += `<path class="needle" d="M0,0L-3,-28"/><path class="shine" d="M-0.5,-2L-3.2,-26"/><circle class="head" cx="-3" cy="-30" r="5.5" fill="url(#wm-ph-${top.side})"/>`;
+    if (n > 1) s += `<text class="count" x="${dir > 0 ? 5 : -11}" y="-33" text-anchor="middle">${n}</text>`;
     return `${s}</g>`;
   }
 
@@ -473,7 +505,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
           if (b.disabled) b.title = `Not enough production: ${have.toLocaleString('en')} of ${cost.toLocaleString('en')}`;
           d.append(b);
         };
-        const ROLE = { infantry: 'Infantry battalion', armour: 'Armoured battalion', artillery: 'Artillery battalion' };
+        const ROLE = { infantry: 'Infantry battalion', armour: 'Armoured battalion', artillery: 'Artillery battalion', cavalry: 'Cavalry battalion' };
         for (const kind of Object.keys(war.battalions)) {
           const types = war.battalions[kind], cost = types.reduce((a, t) => a + (c.power[t] ?? 120), 0);
           card(ROLE[kind] ?? `${kind} battalion`, cost, `${types.length} stacks: ${list(types)}`, `joins an army group of yours here (or one at the front with room), else a new group here`, ECON.upkeep.battalion,
@@ -593,7 +625,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
           const row = el('div', `wc-battle ${b.done ? 'done' : ''}`);
           row.append(el('div', '', `<b>${b.kind === 'sea' ? 'At sea' : b.kind === 'coastal' ? 'Landing' : 'Battle'}: ${esc(nameOf(b.at))}</b><small>${map ? esc(map) : 'no map: resolved'}</small>
             <span class="wc-vs"><span class="${b.attackerSide}">${esc(att.map((f) => f.name).join(', ') || '—')}</span> against <span class="${enemy(b.attackerSide)}">${esc(def.map((f) => f.name).join(', ') || 'the garrison')}</span></span>
-            <small>${Math.round(pa).toLocaleString('en')} : ${Math.round(pd).toLocaleString('en')}${b.done ? ` · ${b.note ?? (b.margin >= 0.6 ? `${SIDE[b.attackerSide]} win` : b.margin >= 0.45 ? 'undecided — the fight goes on' : `${SIDE[b.attackerSide]} thrown back`)}` : ''}</small>`));
+            <small>${Math.round(pa).toLocaleString('en')} : ${Math.round(pd).toLocaleString('en')}${b.done ? ` · ${b.note ?? (b.margin >= winAt(b) ? `${SIDE[b.attackerSide]} win` : b.margin >= 0.45 ? 'undecided — the fight goes on' : `${SIDE[b.attackerSide]} thrown back`)}` : ''}</small>`));
           if (!b.done) {
             const acts = el('div', 'wc-battle-acts');
             const why = fightable(c, war, b);
@@ -636,7 +668,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     const shim = { side: me, army, battalion: f.battalions.flatMap((bn) => bn.units).map((u, i) => ({ cid: `${f.id}:${i}`, name: f.name, type: u.t })),
       writer: c.writers?.[army], letterUsed: c.letterUsed, turn: c.turn, day: c.turn, cut: f.cut };
     const lost = b.lost?.[me] ?? 0;
-    const letter = writeLetter(shim, { name: nameOf(b.at), attacker: b.attackerSide, time: hourOf(c) }, { attackerWon: b.margin >= 0.6, lost, wounded: Math.round(lost * 1.5) });
+    const letter = writeLetter(shim, { name: nameOf(b.at), attacker: b.attackerSide, time: hourOf(c) }, { attackerWon: b.margin >= winAt(b), lost, wounded: Math.round(lost * 1.5) });
     (c.writers ??= {})[army] = shim.writer;
     c.letterUsed = shim.letterUsed;
     c.letters = [...(c.letters ?? []), { ...letter, date: dateOf(c) }].slice(-12);

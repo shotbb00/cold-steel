@@ -19,7 +19,8 @@ const ATTRITION = 0.05;
 /** National morale (0: the side sues for peace): what a loss costs, how fast it comes back in a quiet turn, the most it holds. */
 export const MORALE = { province: 1, gain: 0.6, destroyed: 2, fleet: 2.5, surrender: 4, depot: 15, recover: 0.4, floor: 25 };            // of each unit's strength, a turn cut off
 const DEFAULT_POWER = { rifles: 150, mgTeam: 140, atTeam: 150, mortar: 140, engineers: 130, scouts: 100, tank: 300, ifv: 200, tankDestroyer: 260, reconVehicle: 160, artillery: 260, observers: 90, towedAA: 120,
-  battleship: 1800, cruiser: 900, destroyer: 450, frigate: 280, carrier: 1600, transport: 200, oldBattleship: 1000, submarine: 420, ptBoat: 150 };
+  battleship: 1800, cruiser: 900, destroyer: 450, frigate: 280, carrier: 1600, transport: 200, oldBattleship: 1000, submarine: 420, ptBoat: 150,
+  heavyTank: 380, spMortar: 300, lightCruiser: 550 }; // (the last three: only 1917's war has them)
 const SQUADRON = { fighter: 220, strike: 240, bomber: 300, recon: 80, transport: 60 };
 /** A battle draws reserves from its side's pool (replacements, shells, fuel): this share of the pool, at most RESERVE.max power. */
 export const RESERVE = { share: 0.15 }; // (the side that produces more has more to throw in: production decides the long war)
@@ -99,7 +100,66 @@ export function newCampaign(war, o = {}) {
   c.held = Object.fromEntries(['nato', 'pact'].map((side) => [side, Object.values(c.provinces).filter((p) => p.owner === side).reduce((a, p) => a + (p.depot === side ? 3 : 1), 0)])); // (the ground morale is measured against)
   c.objectives = Object.fromEntries((war.objectives ?? []).map((o) => [o.id, { holder: null, turns: 0, won: null, start: holderOf(c, war, o) }])); // (who holds each when the war begins)
   if (war.escalation) c.escalation = war.escalation.start ?? 0;
+  const tired = Object.entries(war.powers ?? {}).filter(([, pw]) => pw.weary);
+  if (tired.length) c.weary = Object.fromEntries(tired.map(([id, pw]) => [id, pw.weary.start ?? 0]));
   return c;
+}
+
+/**
+ * An event's condition (e.if): every key given must hold — `out` / `in`: powers out of the war or still in it; `weary`:
+ * { power: n } at least that war-weary; `owner`: { province: side }; `open`: { seaZone: side } not held by that side's
+ * enemy alone; `done` / `notDone`: events that have (not) happened.
+ */
+export function eventMet(c, war, q) {
+  const list = (v) => (v == null ? [] : [v].flat()), fired = (id) => c.eventsDone.includes(id) && !c.eventsMissed?.includes(id);
+  return list(q.out).every((p) => c.surrendered?.includes(p)) && list(q.in).every((p) => !c.surrendered?.includes(p))
+    && Object.entries(q.weary ?? {}).every(([p, n]) => (c.weary?.[p] ?? 0) >= n)
+    && Object.entries(q.owner ?? {}).every(([k, s]) => c.provinces[k]?.owner === s)
+    && Object.entries(q.open ?? {}).every(([z, s]) => forcesAt(c, z, s, 'fleet').length > 0 || !forcesAt(c, z, enemy(s), 'fleet').length)
+    && list(q.done).every(fired) && !list(q.notDone).some(fired);
+}
+
+/**
+ * War-weariness, power by power (war.powers[id].weary: { start, base, low, won, lost, ground, at, home, cede, morale,
+ * ends, text }): each turn it rises by `base` (the long war, some weeks more), by `low` while its side's morale is under
+ * half, by `ground` for every province of its `home` the enemy holds; each battle its armies win takes `won` off, each one
+ * they lose adds `lost` (two of each a turn at most: a long fight is one battle). Events add to it (e.weary). At `at` (100)
+ * the power collapses (collapse()).
+ */
+export function weariness(c, war) {
+  for (const [id, pw] of Object.entries(war.powers ?? {})) {
+    const W = pw.weary;
+    if (!W || c.over || c.surrendered?.includes(id)) continue;
+    let w = (c.weary ??= {})[id] ?? W.start ?? 0;
+    w += (W.base ?? 0) * (0.5 + rand(c));
+    if (c.morale[pw.side] < 50) w += (W.low ?? 0) * (50 - c.morale[pw.side]) / 50;
+    w += (W.ground ?? 0) * (W.home ?? []).filter((k) => c.provinces[k].owner !== pw.side).length;
+    const res = c.board.filter((b) => b.powers && id in b.powers).map((b) => b.powers[id]);
+    w += (W.lost ?? 0) * Math.min(2, res.filter((r) => !r).length) - (W.won ?? 0) * Math.min(2, res.filter(Boolean).length);
+    c.weary[id] = Math.max(0, w);
+    if (w >= (W.at ?? 100)) collapse(c, war, id);
+  }
+}
+
+/**
+ * A power leaves the war worn out (weariness() at its limit: a revolution, an armistice): its forces go home, the provinces
+ * in its `cede` list that no other force of its side holds pass to the enemy (its bases there with them: nobody's now),
+ * its side's morale pays `morale`. `ends`: its collapse ends the war.
+ */
+export function collapse(c, war, id) {
+  const pw = war.powers[id], W = pw.weary ?? {};
+  if ((c.surrendered ??= []).includes(id)) return;
+  c.surrendered.push(id);
+  for (const f of c.forces.filter((x) => x.side === pw.side && pw.armies.includes(x.army))) c.forces.splice(c.forces.indexOf(f), 1);
+  for (const k of W.cede ?? []) {
+    const p = c.provinces[k];
+    if (p.owner !== pw.side || forcesAt(c, k, pw.side).length) continue;
+    p.owner = enemy(pw.side); p.contested = false; p.spoil = true; // (ground signed away: it yields nothing to anyone now — income())
+    if (p.depot === pw.side) p.depot = null;
+  }
+  c.morale[pw.side] -= W.morale ?? 20;
+  c.log.push({ turn: c.turn, date: dateOf(c), collapse: id, text: W.text ?? `${pw.name} leaves the war.` });
+  if (W.ends && !c.over) c.over = { winner: enemy(pw.side), why: W.endText ?? `${pw.name} asked for an armistice` };
 }
 
 /** A side's name in this war (war.sides: the Allies, NATO …), `the` in front when asked. */
@@ -133,6 +193,8 @@ export function applyEvents(c, war) {
   const today = dateOf(c);
   for (const e of war.events ?? []) {
     if (c.eventsDone.includes(e.id) || e.date > today) continue;
+    if (e.until && today > e.until) { c.eventsDone.push(e.id); (c.eventsMissed ??= []).push(e.id); continue; } // (its moment passed without it)
+    if (e.if && !eventMet(c, war, e.if)) continue; // (waits for its condition: e.if, eventMet)
     c.eventsDone.push(e.id);
     for (const [id, side] of Object.entries(e.owner ?? {})) c.provinces[id].owner = side;
     for (const [id, side] of Object.entries(e.depot ?? {})) c.provinces[id].depot = side;
@@ -149,6 +211,9 @@ export function applyEvents(c, war) {
     }
     for (const [side, n] of Object.entries(e.morale ?? {})) c.morale[side] += n;
     for (const [side, k] of Object.entries(e.industry ?? {})) c.industry[side] = k; // (war production from now on: the US arsenal, the bombing of the Reich)
+    for (const [side, k] of Object.entries(e.industryBy ?? {})) c.industry[side] *= k; // (or by a factor: a surge, the blockade biting)
+    for (const [p, n] of Object.entries(e.weary ?? {})) if (c.weary && p in c.weary) c.weary[p] = Math.max(0, c.weary[p] + n);
+    for (const [t, k] of Object.entries(e.trade ?? {})) (c.tradeCut ??= {})[t] = k; // (war.trade's cut from now on: the convoys)
     c.log.push({ turn: c.turn, date: today, event: e.id, text: e.text });
   }
 }
@@ -239,6 +304,7 @@ export function order(c, war, side, forceId, to, { land = false } = {}) {
       return '';
     }
     if (!from.land.includes(to)) return 'not next to it by land';
+    if (f.rest > c.turn && c.provinces[to].owner !== side) return `still bringing up its guns after its advance (${f.rest - c.turn} turn${f.rest - c.turn > 1 ? 's' : ''})`; // (war.pause)
     if (c.provinces[to].owner === side && incoming(c, side, to, 'army') >= STACK.army) return `no room: ${STACK.army} army groups there already`;
     c.orders[side][forceId] = { to };
     return '';
@@ -424,7 +490,7 @@ export function autoResolve(c, war, battleId) {
   let pa = A.reduce((a, f) => a + power(c, f), 0) * sup(A) * (1 + 0.1 * trait(A, 'aggressive'));
   let pd = D.reduce((a, f) => a + power(c, f), 0) * sup(D) * (1 + 0.1 * trait(D, 'tenacious'));
   if (b.kind !== 'sea') {
-    pd *= 1 + 0.25 * Math.max(c.provinces[b.at].fort ?? 0, c.provinces[b.at].depot ? 2 : 0); // prepared defences (a depot: a fortress)
+    pd *= 1 + (war.fortWeight ?? 0.25) * Math.max(c.provinces[b.at].fort ?? 0, c.provinces[b.at].depot ? 2 : 0); // prepared defences (a depot: a fortress; war.fortWeight: what a level is worth — 1917’s trenches more)
     if (b.kind === 'coastal') pd *= 1.3;                                 // landing under fire
     const air = airShare(c, war, b.at, side);
     pa *= 0.85 + 0.3 * air; pd *= 0.85 + 0.3 * (1 - air);               // whoever owns the sky
@@ -432,7 +498,7 @@ export function autoResolve(c, war, battleId) {
   }
   if (winterNow(c, war) && b.theatre === war.winter.theatre) { if (side === war.winter.attacks) pa *= war.winter.bonus; } // (winter: the side at home in it attacks harder)
   if (side !== c.side) pa *= c.difficulty; else pd *= c.difficulty;      // (harder: the AI's side stronger)
-  if (!D.length) pd = Math.max(pd, 150 * (1 + (c.provinces[b.at]?.fort ?? 0))); // (an empty province still has its garrison and its mines)
+  if (!D.length || war.garrison) pd = Math.max(pd, (war.provinces[b.at]?.garrison ?? war.garrison ?? 150) * (1 + (c.provinces[b.at]?.fort ?? 0))); // (an empty province still has its garrison and its mines: war.garrison, 1917's trench garrisons)
   const ra = reserves(c, side, b.theatre), rd = reserves(c, other, b.theatre); // (each side throws in what its pool can send there: the theatre's priority)
   pa += ra; pd += rd;
   b.reserves = { [side]: ra, [other]: rd };
@@ -441,6 +507,9 @@ export function autoResolve(c, war, battleId) {
   return { margin, losses: { attackers: 0.12 + (1 - margin) * 0.35, defenders: 0.12 + margin * 0.35 } };
 }
 
+/** The margin a resolved battle needs to take the ground: war.take on land (default 0.6), 0.6 at sea and on a beach. */
+export const takeAt = (war, b) => (b.kind === 'land' ? war.take ?? 0.6 : 0.6);
+
 /** The reserves `side` can throw into one battle: a share of its pool, capped (paid when the battle is settled). */
 export const reserves = (c, side, theatre = null) => Math.max(0, c.pool[side]) * RESERVE.share * (theatre ? c.priority?.[side]?.[theatre] ?? 1 : 1);
 
@@ -448,6 +517,7 @@ export const reserves = (c, side, theatre = null) => Math.max(0, c.pool[side]) *
  * A battle's result onto the map. `outcome`: { margin (0..1 for the attacker), losses: { attackers, defenders } as
  * shares of strength, or survivors: { [forceId]: units } from a fought battle }. ≥ 0.6: the attacker takes the
  * ground (land: the province; sea: the zone, the loser falls back); 0.45–0.6: contested, both stay; below: the attack fails.
+ * A resolved land battle needs takeAt() instead of 0.6 (war.take: 1917's trenches are hard to break; a battle fought on its map: who won it).
  */
 export function settle(c, war, battleId, outcome) {
   const b = c.board.find((x) => x.id === battleId);
@@ -469,7 +539,13 @@ export function settle(c, war, battleId, outcome) {
   const side = b.attackerSide, live = (fs) => fs.filter((f) => c.forces.includes(f));
   b.lost = { [side]: before.A - alive(live(A)), [enemy(side)]: before.D - alive(live(D)) }; // (units gone: the letters count them)
   b.how = outcome.how ?? 'auto';
-  const won = outcome.margin >= 0.6, held = outcome.margin >= 0.45;
+  const won = outcome.margin >= (outcome.survivors || outcome.how === 'fought' ? 0.6 : takeAt(war, b)), held = outcome.margin >= 0.45;
+  if (Object.values(war.powers ?? {}).some((pw) => pw.weary)) { // (war-weariness: which powers won or lost this one — weariness())
+    const pOf = (f) => Object.keys(war.powers).find((k) => war.powers[k].armies.includes(f.army));
+    b.powers = {};
+    for (const f of A) { const p = pOf(f); if (p && (won || !held)) b.powers[p] = won; }
+    for (const f of D) { const p = pOf(f); if (p && (won || !held)) b.powers[p] = !won; }
+  }
   if (b.kind === 'sea') {
     if (won) for (const f of live(D)) retreatFleet(c, war, f);
     else if (!held) for (const f of live(A)) retreatFleet(c, war, f);
@@ -479,9 +555,9 @@ export function settle(c, war, battleId, outcome) {
     const p = c.provinces[b.at];
     if (won) {
       for (const f of live(D)) if (f.at === b.at) retreat(c, war, f);
-      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; if (lost) p.depot = side; /* (a base taken: the captor’s now — its rail yards and stores) */ c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) { c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); escalate(c, war, war.escalation?.depot ?? 0); } } for (const f of live(A)) f.at = b.at; }
+      if (live(D).every((f) => f.at !== b.at)) { if (p.owner !== side) { const lost = p.depot === enemy(side); p.owner = side; if (lost) p.depot = side; /* (a base taken: the captor’s now — its rail yards and stores) */ c.morale[side] += MORALE.gain; c.morale[enemy(side)] -= lost ? MORALE.depot : MORALE.province; if (lost) { c.log.push({ turn: c.turn, depotLost: b.at, side: enemy(side) }); escalate(c, war, war.escalation?.depot ?? 0); } } for (const f of live(A)) { f.at = b.at; if (war.pause) f.rest = c.turn + war.pause; } }
       p.fort = Math.max(0, p.fort - 1);
-    } else if (held) { for (const f of live(A)) f.at = b.at; p.contested = true; }
+    } else if (held && (war.garrison == null || live(D).some((f) => f.at === b.at))) { for (const f of live(A)) f.at = b.at; p.contested = true; } // (war.garrison: an empty stretch of trench held by its garrison — the attack stays out)
     // a failed attack stays where it came from (a failed landing: back on its ships, at the port it left)
     p.scars = Math.min(5, p.scars + 1);
   }
@@ -544,9 +620,11 @@ export function endTurn(c, war) {
     }
   }
   for (const p of Object.values(c.provinces)) if (p.bombed) p.bombed--;
+  if (war.dig) dig(c, war);
   // winter: the side without winter clothing loses men to the cold in its theatre
   if (winterNow(c, war)) for (const f of c.forces.filter((x) => x.kind === 'army' && x.side === war.winter.freezes && war.provinces[x.at]?.theatre === war.winter.theatre)) { for (const u of units(f)) u.hp = Math.max(0, u.hp - war.winter.attrition); prune(c, f); }
   objectives(c, war);
+  weariness(c, war); // (war-weariness, power by power: a collapse — 1917's)
   c.board = [];
   const wasWinter = winterNow(c, war);
   c.turn++;
@@ -571,10 +649,25 @@ export function surrenders(c, war) {
     for (const f of c.forces.filter((x) => x.side === pw.side && pw.armies.includes(x.army))) c.forces.splice(c.forces.indexOf(f), 1);
     c.morale[pw.side] -= 20;
     c.log.push({ turn: c.turn, date: dateOf(c), surrender: id, text: `${pw.name} surrenders.` });
+    if (pw.weary?.ends && !c.over) c.over = { winner: enemy(pw.side), why: `${pw.name} has surrendered` }; // (a power whose collapse ends the war: its surrender too)
   }
   for (const side of ['nato', 'pact']) {
     const mine = Object.entries(war.powers ?? {}).filter(([, pw]) => pw.side === side);
     if (mine.length && mine.every(([id]) => c.surrendered.includes(id)) && !c.over) c.over = { winner: enemy(side), why: `${mine.map(([, pw]) => pw.name).join(' and ')} have surrendered` };
+  }
+}
+
+/**
+ * Digging in (war.dig: { turns, max }, 1917's trenches): a province not fought over for `turns` turns gains a level of
+ * prepared defences, up to its own `fort` or `max`, whichever is more — a line broken is dug again behind the break.
+ */
+function dig(c, war) {
+  const fought = new Set(c.board.filter((b) => b.kind !== 'sea').map((b) => b.at));
+  for (const [id, p] of Object.entries(c.provinces)) {
+    const cap = Math.max(war.provinces[id].fort ?? 0, war.dig.max ?? 0);
+    if (fought.has(id) || p.contested || p.fort >= cap) { p.dug = 0; continue; }
+    p.dug = (p.dug ?? 0) + 1;
+    if (p.dug >= war.dig.turns) { p.fort++; p.dug = 0; }
   }
 }
 
@@ -632,9 +725,24 @@ export function refit(c, war, f) {
 /** A turn's production for `side`: every supplied province's yield (a bombed one less) × its industry, and the upkeep. */
 export function income(c, war, side, ok = supplied(c, war, side)) {
   let prod = 0;
-  for (const id of ok) prod += (war.provinces[id].prod ?? 0) * (c.provinces[id].bombed ? 0.75 : 1);
-  const gross = Math.round(prod * 40 * (c.industry?.[side] ?? 1)), keep = upkeep(c, side);
+  for (const id of ok) prod += c.provinces[id].spoil ? 0 : (war.provinces[id].prod ?? 0) * (c.provinces[id].bombed ? 0.75 : 1);
+  const gross = Math.round(prod * 40 * (c.industry?.[side] ?? 1) * tradeLeft(c, war, side)), keep = upkeep(c, side);
   return { gross, keep, net: gross - keep };
+}
+
+/**
+ * The share of `side`'s production its sea trade lets through (war.trade: [{ id, side, zones, cut, text }] — the U-boats on
+ * the convoy routes, the blockade): each entry cuts `cut` (or c.tradeCut[id], set by an event) while an enemy fleet is in one
+ * of its zones, half that while a fleet of the side's own is there too.
+ */
+export function tradeLeft(c, war, side) {
+  let k = 1;
+  for (const t of war.trade ?? []) {
+    if (t.side !== side) continue;
+    const worst = Math.max(0, ...t.zones.map((z) => (forcesAt(c, z, enemy(side), 'fleet').length ? (forcesAt(c, z, side, 'fleet').length ? 0.5 : 1) : 0)));
+    k *= 1 - (c.tradeCut?.[t.id] ?? t.cut) * worst;
+  }
+  return k;
 }
 
 /** What a side's forces cost each turn to keep (ECON.upkeep). */

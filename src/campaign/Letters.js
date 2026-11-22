@@ -78,7 +78,7 @@ const PEOPLE = {
   ...PEOPLE_2027,
 };
 const ARMY_2027 = { us: 'us27', pl: 'pl27', ru: 'ru27', by: 'by27' }; // 2027's armies' letter voices
-const ARMY_1918 = { uk: 'uk18', fr: 'fr18', de: 'de18', st: 'st18' }; // 1918's armies' letter voices
+const ARMY_1918 = { uk: 'uk18', fr: 'fr18', de: 'de18', st: 'st18', it: 'it18', ah: 'ah18', ot: 'ot18', ru: 'ru18', anzac: 'anzac18', aef: 'aef18', serb: 'serb18', bg: 'bg18' }; // 1918's armies' letter voices
 const DEFAULT = { nato: 'us', pact: 'sov' };
 const DEFAULT_1945 = { nato: 'us45', pact: 'wh' };
 const ARMY_1945 = { us: 'us45', sov: 'sov45', wh: 'wh', fj: 'fj' }; // 1945's armies' letter voices

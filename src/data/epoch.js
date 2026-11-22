@@ -102,6 +102,12 @@ export const EPOCHS = {
       it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
       ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (no tanks: the Romfell armoured car)
       ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
+      // the world campaign's own armies (wcampaign/wars/ww1.js), no roster yet. `own` with no types: they field nothing of
+      // another nation's; no regions: no map picks them, so a campaign battle fights them as the side's army that fits its
+      // map (data/factions.js armiesFrom — the British or French, the Germans). TODO units: their rosters, then their regions.
+      aef: { id: 'aef', faction: 'nato', name: 'American Expeditionary Forces', own: true, regions: [] },
+      serb: { id: 'serb', faction: 'nato', name: 'Serbian Army', own: true, regions: [] },
+      bg: { id: 'bg', faction: 'pact', name: 'Bulgarian Army', own: true, regions: [] },
     },
     defaults: { nato: 'uk', pact: 'de' },
     types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
@@ -143,6 +149,19 @@ export const EPOCHS = {
       ru: [
         { id: 'committees', name: 'The army of 1917', text: 'Rifle squads cost 20 % less but break sooner: after the Revolution the soldiers’ committees voted on orders, and the will to go on drained away.', costs: { rifles: 0.8 }, mods: { rifles: { breakMorale: 1.3 } } },
         { id: 'cossacks', name: 'Cossacks', text: 'Horsemen do double damage to guns, mortars, ambulances, observers and staff: the Cossacks rode for the rear, not for the trenches.', soft: 2 },
+      ],
+      // the world campaign's armies (no roster yet: these take effect when their units are built)
+      aef: [
+        { id: 'doughboys', name: 'Doughboys', text: 'Rifle squads are 15 % tougher but cost 10 % more: big, fresh, well-fed men, two million of them, none worn down by three years in the trenches.', mods: { rifles: { hp: 1.15 } }, costs: { rifles: 1.1 } },
+        { id: 'frenchGuns', name: 'French guns', text: 'Field guns and heavy howitzers cost 20 % less: the AEF went into battle with French 75s and 155s, and France had them by the thousand.', costs: { artillery: 0.8, spMortar: 0.8 } },
+      ],
+      serb: [
+        { id: 'albania', name: 'The retreat through Albania', text: 'Rifle squads and machine-gun teams start as Veterans: the men who survived the winter march over the Albanian mountains in 1915.', veteran: ['rifles', 'mgTeam'] },
+        { id: 'goatTracks', name: 'Goat tracks', text: 'Infantry moves 15 % faster: the Serbs went up the Kajmakčalan and the Dobro Pole by paths no mule could climb.', mods: { infantry: { speed: 1.15 } } },
+      ],
+      bg: [
+        { id: 'mountainWall', name: 'The mountain wall', text: 'Machine-gun teams and mortars take 20 % less damage: for three years the Bulgarians held the crests of Macedonia, a nest on every one.', mods: { mgTeam: { take: 0.8 }, mortar: { take: 0.8 } } },
+        { id: 'smallholders', name: 'A nation in arms', text: 'Rifle squads and cavalry cost 15 % less: a country of smallholders called up one man in four.', costs: { rifles: 0.85, ifv: 0.85 } },
       ],
     },
   },

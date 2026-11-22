@@ -5,7 +5,9 @@
 // A screen-space layer on top takes the war room's pins, counters and arrows at a constant size whatever the zoom.
 //   const m = new WorldMap(host, { onView, style })   onView(t): the view changed (redraw the overlay; t: d3-zoom's transform);
 //                                              style 'paper' (1945) or 'acetate' (1985: a printed map under a plastic sheet —
-//                                              blue grid, marker on the plastic, its glare; css .wm-acetate)
+//                                              blue grid, marker on the plastic, its glare; css .wm-acetate) or 'trench'
+//                                              (1918: the squared trench-map sheet, its big square letters, the front as
+//                                              blue and red trench lines with the wire between; css .wm-trench)
 //   await m.load()                             the coastlines
 //   m.xy(lon, lat) → [x, y]                    world units (W × H)
 //   m.territory(points, areas)                 [{ x, y, side }], [[[x, y] …] …]: each side's ground and the front, inside the war's areas
@@ -18,6 +20,7 @@ import { Delaunay } from 'd3-delaunay';
 import { feature, mesh, merge } from 'topojson-client';
 
 export const W = 2000;
+const SQUARE = 25; // world units: a lettered square of the 1918 trench-map sheet (about 4.5° of longitude)
 const NS = 'http://www.w3.org/2000/svg';
 const LAT = [-58, 80];
 
@@ -65,6 +68,7 @@ export class WorldMap {
         <radialGradient id="wm-ph-nato" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#5f8fe8"/><stop offset="0.8" stop-color="#1c3f9a"/><stop offset="1" stop-color="#0c1f55"/></radialGradient>
         <radialGradient id="wm-ph-pact" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#f05a48"/><stop offset="0.8" stop-color="#9a1a12"/><stop offset="1" stop-color="#4a0806"/></radialGradient>
         <radialGradient id="wm-ph-gold" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#f2c24a"/><stop offset="0.8" stop-color="#a87810"/><stop offset="1" stop-color="#5a3c04"/></radialGradient>
+        <pattern id="wm-wire" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M1,1L6,6M6,1L1,6" stroke="#1d1d1a" stroke-width="0.8"/></pattern>
         <marker id="wm-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
       </defs>
       <g class="wm-world">
@@ -76,11 +80,12 @@ export class WorldMap {
         <path class="wm-border"/>
         <path class="wm-coast"/>
         ${style === 'acetate' ? `<g class="wm-paper" pointer-events="none">${this.smudges()}<rect width="${W}" height="${H}" fill="url(#wm-glare)"/></g>` /* the plastic: old marker wiped off, its glare */
+    : style === 'trench' ? `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)" opacity="0.5"/><path class="wm-sheet minor"/><path class="wm-sheet major"/><g class="wm-squares"></g></g>` /* the squared sheet: its grid and square letters (sheetGrid) */
     : `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)"/>
           ${fold(W / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(W / 2 - 5, 0, 10, H, 'wm-foldv')}${fold((3 * W) / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(0, H / 2 - 5, W, 10, 'wm-foldh')}
           ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>`}
       </g>
-      <g class="wm-front" clip-path="url(#wm-frontclip)" filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"></g>
+      <g class="wm-front" clip-path="url(#wm-frontclip)"${style === 'trench' ? '' : ` filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"`}></g>
       <g class="wm-over"></g>`;
     host.append(this.svg);
     this.world = this.svg.querySelector('.wm-world');
@@ -91,7 +96,8 @@ export class WorldMap {
     this.t = zoomIdentity;
     this.zoom = d3zoom().on('zoom', (e) => { this.t = e.transform; this.world.setAttribute('transform', e.transform.toString()); this.drawFront(); this.onView(this.t); });
     this.sel = select(this.svg).call(this.zoom).on('dblclick.zoom', null);
-    this.svg.querySelector('.wm-grat').setAttribute('d', geoPath(this.proj).digits(1)(style === 'acetate' ? geoGraticule().step([2, 2])() : geoGraticule10())); // (1985: the printed map's close grid)
+    this.svg.querySelector('.wm-grat').setAttribute('d', style === 'trench' ? '' : geoPath(this.proj).digits(1)(style === 'acetate' ? geoGraticule().step([2, 2])() : geoGraticule10())); // (1985: the printed map's close grid; 1918: the sheet's own squares instead)
+    if (style === 'trench') this.sheetGrid();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
   }
@@ -128,6 +134,32 @@ export class WorldMap {
   }
 
   xy(lon, lat) { return this.proj([lon, lat]); }
+
+  /**
+   * The trench map's squares (1918), in world units so they zoom with the map: a fine grid, every fifth line heavier — the
+   * lettered squares of the sheet (their letters drawn once the war's areas are known: sheetLetters).
+   */
+  sheetGrid() {
+    const line = (step) => { let d = ''; for (let x = 0; x <= W; x += step) d += `M${x},0V${this.H}`; for (let y = 0; y <= this.H; y += step) d += `M0,${y}H${W}`; return d; };
+    this.svg.querySelector('.wm-sheet.minor').setAttribute('d', line(SQUARE / 5));
+    this.svg.querySelector('.wm-sheet.major').setAttribute('d', line(SQUARE));
+  }
+  /** A big faint letter and number in every square of the sheet over the war's areas (world-unit polygons). */
+  sheetLetters(areas) {
+    const g = this.svg.querySelector('.wm-squares');
+    if (!g || g.dataset.done || !areas.length) return;
+    g.dataset.done = '1';
+    const ROWS = 'ABCDEFGHJKLMNOPQRSTUVWXYZ';
+    let out = '';
+    for (const A of areas) {
+      const xs = A.map((q) => q[0]), ys = A.map((q) => q[1]);
+      for (let i = Math.floor(Math.min(...xs) / SQUARE); i * SQUARE < Math.max(...xs); i++) for (let j = Math.floor(Math.min(...ys) / SQUARE); j * SQUARE < Math.max(...ys); j++) {
+        const cx = (i + 0.5) * SQUARE, cy = (j + 0.5) * SQUARE;
+        if (inside([cx, cy], A)) out += `<text x="${cx}" y="${cy + SQUARE * 0.12}" text-anchor="middle">${ROWS[j % ROWS.length]}${(i % 60) + 1}</text>`;
+      }
+    }
+    g.innerHTML = out;
+  }
 
   /** The acetate's ghosts: where marker was wiped off with a sleeve — faint blurred smears, the same every time. */
   smudges() {
@@ -174,11 +206,13 @@ export class WorldMap {
           cells[i] = ring(out);
         });
         const same = (a, b) => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
-        members.forEach((i, n) => { for (const m of d.neighbors(n)) if (m > n) { const sh = polys[n].filter((a) => polys[m].some((b) => same(a, b))); if (sh.length >= 2) edges.push({ i, j: members[m], pts: wiggleC(sh[0], sh[1]) }); } });
+        const shape = new Path2D(this.lands[k].path), onLand = (q) => hitCtx().isPointInPath(shape, q[0], q[1], 'evenodd'); // (an edge out over the sea and onto another landmass — Britain, an island — is no front)
+        members.forEach((i, n) => { for (const m of d.neighbors(n)) if (m > n) { const sh = polys[n].filter((a) => polys[m].some((b) => same(a, b))); if (sh.length >= 2) { const pts = wiggleC(sh[0], sh[1]); edges.push({ i, j: members[m], pts, on: pts.map(onLand) }); } } });
         return { k, cells, edges };
       })];
     }
     this.svg.querySelector('.wm-warshape').setAttribute('d', areas.map(poly).join(''));
+    if (this.style === 'trench') this.sheetLetters(areas);
     let fills = '', clips = '';
     for (const g of this.shape) {
       clips += `<clipPath id="wm-land${g.k}"><path d="${this.lands[g.k].path}"/></clipPath>`;
@@ -193,8 +227,8 @@ export class WorldMap {
       if (points[e.i].side === points[e.j].side) continue;
       const nato = points[e.i].side === 'nato' ? points[e.i] : points[e.j];
       let run = [];
-      for (const q of [...e.pts, null]) {
-        if (q && inArea(q)) { run.push(q); continue; }
+      for (const [n, q] of [...e.pts, null].entries()) {
+        if (q && e.on[n] && inArea(q)) { run.push(q); continue; }
         if (run.length > 1) this.segs.push({ a: run[0], b: run.at(-1), nato, pts: run });
         run = [];
       }
@@ -206,7 +240,7 @@ export class WorldMap {
   drawFront() {
     const t = this.t, ap = (p) => [t.applyX(p[0]), t.applyY(p[1])];
     this.frontLand.setAttribute('transform', t.toString());
-    let blue = '', red = '';
+    let blue = '', red = '', blue2 = '', red2 = '', wire = '';
     for (const s of this.segs) {
       const A = ap(s.a), B = ap(s.b), N = ap([s.nato.x, s.nato.y]);
       const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1;
@@ -216,18 +250,22 @@ export class WorldMap {
       const all = s.pts.map(ap), P = [all[0]];
       for (let i = 1; i < all.length; i++) if (i === all.length - 1 || Math.hypot(all[i][0] - P.at(-1)[0], all[i][1] - P.at(-1)[1]) >= 7) P.push(all[i]);
       const o = 3.2;
-      const line = (k) => {
-        let d = '';
-        for (let i = 0; i < P.length; i++) {
-          const p0 = P[Math.max(0, i - 1)], p1 = P[Math.min(P.length - 1, i + 1)], tx = p1[0] - p0[0], ty = p1[1] - p0[1], tl = Math.hypot(tx, ty) || 1;
-          const x = P[i][0] + (-ty / tl) * side * k, y = P[i][1] + (tx / tl) * side * k;
-          d += `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-        }
-        return d;
-      };
-      blue += line(o); red += line(-o);
+      const off = (pts, k) => pts.map((p, i) => {
+        const p0 = pts[Math.max(0, i - 1)], p1 = pts[Math.min(pts.length - 1, i + 1)], tx = p1[0] - p0[0], ty = p1[1] - p0[1], tl = Math.hypot(tx, ty) || 1;
+        return [p[0] + (-ty / tl) * side * k, p[1] + (tx / tl) * side * k];
+      });
+      const d = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('');
+      if (this.style === 'trench') { // (1918: each side's fire trench with its traverses, a support line behind it, the wire between)
+        blue += d(traverses(off(P, 6), 7, 2.2)); red += d(traverses(off(P, -6), 7, 2.2));
+        blue2 += d(traverses(off(P, 14), 9, 1.8)); red2 += d(traverses(off(P, -14), 9, 1.8));
+        wire += `${d([...off(P, 3), ...off(P, -3).reverse()])}Z`;
+        continue;
+      }
+      blue += d(off(P, o)); red += d(off(P, -o));
     }
-    this.front.innerHTML = `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
+    this.front.innerHTML = this.style === 'trench'
+      ? `<path d="${wire}" class="wm-wire"/><path d="${blue2}" class="wm-pen nato second"/><path d="${red2}" class="wm-pen pact second"/><path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`
+      : `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
   }
 
   /**
@@ -299,6 +337,30 @@ function coffeeStain(cx, cy, r, seed, { twice = false, drip = false } = {}) {
   }
   return `${s}</g>`;
 }
+
+/** A trench along a screen line: resampled every `step` px, its traverses squared out to one side and the other by `amp`. */
+function traverses(pts, step, amp) {
+  const r = [pts[0]];
+  let carry = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let t = step - carry;
+    for (; t <= L; t += step) r.push([a[0] + ((b[0] - a[0]) * t) / L, a[1] + ((b[1] - a[1]) * t) / L]);
+    carry = L - (t - step);
+  }
+  if (r.length < 2) return pts;
+  const out = [];
+  r.forEach((p, i) => {
+    const q = r[Math.min(r.length - 1, i + 1)], o = r[Math.max(0, i - 1)], tx = q[0] - o[0], ty = q[1] - o[1], tl = Math.hypot(tx, ty) || 1, nx = -ty / tl, ny = tx / tl, k = i % 2 ? amp : -amp;
+    out.push([p[0] + nx * k, p[1] + ny * k]);
+    if (r[i + 1]) out.push([(p[0] + r[i + 1][0]) / 2 + nx * k, (p[1] + r[i + 1][1]) / 2 + ny * k]);
+  });
+  return out;
+}
+
+/** A 2D context for point-in-path tests (the browser's own, fast: a landmass has thousands of points). */
+let hit = null;
+const hitCtx = () => (hit ??= document.createElement('canvas').getContext('2d'));
 
 /** wiggle(), the same line whichever end it is walked from (two cells share each edge). */
 function wiggleC(a, b) {

@@ -16,12 +16,12 @@ export function seenBy(c, war, side) {
   return seen;
 }
 
-const fort = (c, id) => 1 + 0.25 * Math.max(c.provinces[id].fort ?? 0, c.provinces[id].depot ? 2 : 0);
+const fort = (c, war, id) => 1 + (war.fortWeight ?? 0.25) * Math.max(c.provinces[id].fort ?? 0, c.provinces[id].depot ? 2 : 0);
 /** The defence `side` expects at a province: the forces it can see there and next door, the ground, the garrison. */
 function defenceAt(c, war, side, id, seen) {
   const foe = enemy(side), here = seen.has(id) ? forcesAt(c, id, foe, 'army') : [];
   const near = war.provinces[id].land.filter((n) => seen.has(n)).flatMap((n) => forcesAt(c, n, foe, 'army')).slice(0, 1);
-  return Math.max(150, [...here, ...near].reduce((a, f) => a + power(c, f), 0)) * fort(c, id) + reserves(c, foe, war.provinces[id].theatre);
+  return Math.max(war.provinces[id].garrison ?? war.garrison ?? 150, [...here, ...near].reduce((a, f) => a + power(c, f), 0)) * fort(c, war, id) + reserves(c, foe, war.provinces[id].theatre);
 }
 
 /** Steps by land from province `from` to the nearest province matching `goal` (Infinity: none). */
@@ -95,7 +95,7 @@ export function aiTurn(c, war, side) {
     .sort((x, y) => x.def - y.def);
   for (const t of targets) {
     const go = [];
-    const th = war.provinces[t.n].theatre, need = ATTACK_ODDS * Math.max(0.55, 1 - 0.02 * (c.quiet?.[side]?.[th] ?? 0)); // (a quiet front: the staff’s patience runs out — a long stalemate is broken by attacks at poor odds, and production pays for them)
+    const take = war.take ?? 0.6, th = war.provinces[t.n].theatre, need = ATTACK_ODDS * (war.take ? take / (1 - take) / 1.5 : 1) * Math.max(0.55, 1 - 0.02 * (c.quiet?.[side]?.[th] ?? 0)); // (war.take: harder ground to win, better odds wanted) // (a quiet front: the staff’s patience runs out — a long stalemate is broken by attacks at poor odds, and production pays for them)
     let sum = reserves(c, side, th);
     for (const f of t.by) { if (busy.has(f) || go.length >= 3) continue; go.push(f); sum += power(c, f); if (sum >= t.def * need * 1.15) break; } // (enough, with a margin: the rest hold the line)
     if (sum < t.def * need || brink(t.n, DEPOT)) continue;
