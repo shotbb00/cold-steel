@@ -75,7 +75,7 @@ export const WW1 = {
     // ---- the Western Front: from the Channel coast to the Vosges, the Hindenburg Line behind the German front
     britain: { name: 'Britain', theatre: 'west', depot: 'nato', safe: true, port: true, airfield: true, prod: 9, seas: ['channel', 'northSea', 'westernApproaches'], land: [], lat: 51.6, lon: -1.2 },
     channelPorts: { name: 'Calais, Boulogne and the Channel ports', theatre: 'west', depot: 'nato', port: true, airfield: true, prod: 2, seas: ['channel'], land: ['ypres', 'arras', 'amiens'], fort: 3, garrison: 1800, lat: 50.72, lon: 1.75 },
-    ypres: { name: 'Ypres and Passchendaele', theatre: 'west', prod: 1, fort: 2, land: ['channelPorts', 'belgianCoast', 'lille', 'arras'], lat: 50.85, lon: 2.88 },
+    ypres: { name: 'Ypres and Passchendaele', theatre: 'west', map: 'passchendaele', prod: 1, fort: 2, land: ['channelPorts', 'belgianCoast', 'lille', 'arras'], lat: 50.85, lon: 2.88 },
     arras: { name: 'Arras and Vimy Ridge', theatre: 'west', map: 'vimy', prod: 1, fort: 2, land: ['channelPorts', 'ypres', 'lille', 'cambrai', 'somme'], lat: 50.3, lon: 2.72 },
     somme: { name: 'The Somme and Le Hamel', theatre: 'west', map: 'le-hamel', prod: 1, land: ['arras', 'cambrai', 'stQuentin', 'amiens'], fort: 1, lat: 49.98, lon: 2.75 },
     amiens: { name: 'Amiens and Villers-Bretonneux', theatre: 'west', map: 'villers-bretonneux', airfield: true, prod: 2, land: ['channelPorts', 'somme', 'stQuentin', 'soissons', 'paris'], fort: 1, lat: 49.85, lon: 2.25 },
