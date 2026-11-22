@@ -105,7 +105,7 @@ export const WW1 = {
     vittorio: { name: 'Vittorio Veneto and Monte Grappa', theatre: 'italy', map: 'vittorio-veneto', prod: 1, fort: 1, land: ['lombardy', 'asiago', 'venice', 'caporetto'], lat: 46.0, lon: 12.25 },
     venice: { name: 'Venice and the Piave', theatre: 'italy', map: 'piave', port: true, prod: 2, seas: ['adriatic'], land: ['lombardy', 'vittorio', 'isonzo'], lat: 45.45, lon: 12.4 },
     caporetto: { name: 'Caporetto and the upper Isonzo', theatre: 'italy', map: 'caporetto', prod: 1, fort: 2, land: ['vittorio', 'isonzo', 'carniola'], lat: 46.25, lon: 13.58 },
-    isonzo: { name: 'Gorizia and the Bainsizza', theatre: 'italy', prod: 1, fort: 2, land: ['venice', 'caporetto', 'trieste', 'carniola'], lat: 45.92, lon: 13.55 },
+    isonzo: { name: 'Gorizia and the Bainsizza', theatre: 'italy', map: 'bainsizza', prod: 1, fort: 2, land: ['venice', 'caporetto', 'trieste', 'carniola'], lat: 45.92, lon: 13.55 },
     trentino: { name: 'Trento and the Tyrol', theatre: 'italy', map: 'ortigara', prod: 1, fort: 3, land: ['asiago', 'carinthia'], lat: 46.1, lon: 11.1 },
     trieste: { name: 'Trieste and the Hermada', theatre: 'italy', map: 'hermada', port: true, prod: 2, fort: 3, seas: ['adriatic'], land: ['isonzo', 'carniola'], lat: 45.65, lon: 13.78 },
     carniola: { name: 'Laibach and Carniola', theatre: 'italy', map: 'tolmein', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
