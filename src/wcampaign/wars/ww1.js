@@ -114,7 +114,7 @@ export const WW1 = {
     vienna: { name: 'Vienna', theatre: 'italy', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
 
     // ---- the Eastern Front: from the Gulf of Riga to the Carpathians and Romania
-    petrograd: { name: 'Petrograd', theatre: 'east', depot: 'nato', airfield: true, prod: 6, /* (behind Kronstadt and the minefields: no landing, no port for the campaign) */ land: ['pskov'], fort: 3, garrison: 1800, lat: 59.93, lon: 30.33 },
+    petrograd: { name: 'Petrograd', theatre: 'east', map: 'narva', depot: 'nato', airfield: true, prod: 6, /* (behind Kronstadt and the minefields: no landing, no port for the campaign) */ land: ['pskov'], fort: 3, garrison: 1800, lat: 59.93, lon: 30.33 },
     pskov: { name: 'Pskov and Lake Peipus', theatre: 'east', map: 'pskov', prod: 1, land: ['petrograd', 'riga', 'minsk'], lat: 57.82, lon: 28.33 },
     riga: { name: 'Riga and the Dvina', theatre: 'east', map: 'riga', port: true, prod: 2, seas: ['baltic'], land: ['pskov', 'minsk', 'courland'], fort: 1, lat: 56.95, lon: 24.1 },
     minsk: { name: 'Minsk and the Western Front', theatre: 'east', map: 'krevo', prod: 1, land: ['pskov', 'riga', 'kiev', 'brest', 'courland'], fort: 1, lat: 53.9, lon: 27.56 },
