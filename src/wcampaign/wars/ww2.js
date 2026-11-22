@@ -83,7 +83,7 @@ export const WW2 = {
     saipan: { name: 'Saipan', theatre: 'pacific', map: 'saipan', coastal: ['charan-kanoa'], seas: ['philippineSea'], port: true, airfield: true, prod: 1, fort: 1, land: [], lat: 15.2, lon: 145.7 },
     iwoJima: { name: 'Iwo Jima', theatre: 'pacific', map: 'motoyama', coastal: ['iwoJima'], seas: ['philippineSea'], airfield: true, prod: 1, fort: 2, land: [], lat: 24.8, lon: 141.3 },
     okinawa: { name: 'Okinawa', theatre: 'pacific', map: 'okinawa', coastal: ['okinawaLanding'], seas: ['philippineSea', 'japanSeas'], port: true, airfield: true, prod: 2, fort: 2, land: [], lat: 26.3, lon: 127.8 },
-    japan: { name: 'Japan', theatre: 'pacific', depot: 'pact', map: 'kyushu', port: true, airfield: true, prod: 7, seas: ['japanSeas'], land: [], lat: 35.0, lon: 135.0 },
+    japan: { name: 'Japan', theatre: 'pacific', depot: 'pact', map: 'kyushu', coastal: ['ariake'], port: true, airfield: true, prod: 7, seas: ['japanSeas'], land: [], lat: 35.0, lon: 135.0 },
     imphal: { name: 'Imphal', theatre: 'pacific', depot: 'nato', map: 'imphal', airfield: true, prod: 2, land: ['kohima'], lat: 24.8, lon: 93.9 },
     kohima: { name: 'Kohima', theatre: 'pacific', map: 'kohima', prod: 1, fort: 1, land: ['imphal', 'burma'], lat: 25.7, lon: 94.1 },
     burma: { name: 'Burma', theatre: 'pacific', depot: 'pact', map: 'meiktila', port: true, airfield: true, prod: 3, seas: ['bayOfBengal'], land: ['kohima'], lat: 21.9, lon: 96.0 },
