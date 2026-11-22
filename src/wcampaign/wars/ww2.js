@@ -78,7 +78,7 @@ export const WW2 = {
     italy: { name: 'Italy', theatre: 'med', depot: 'pact', map: 'cassino', coastal: ['anzio'], port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
 
     // ---- The Pacific: islands, Burma
-    hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', map: 'oahu', port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
+    hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', map: 'oahu', coastal: ['haleiwa'], port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
     guadalcanal: { name: 'Guadalcanal', theatre: 'pacific', map: 'guadalcanal', coastal: ['red-beach'], seas: ['solomons'], port: true, airfield: true, prod: 1, land: [], lat: -9.4, lon: 160.0 },
     saipan: { name: 'Saipan', theatre: 'pacific', map: 'saipan', coastal: ['charan-kanoa'], seas: ['philippineSea'], port: true, airfield: true, prod: 1, fort: 1, land: [], lat: 15.2, lon: 145.7 },
     iwoJima: { name: 'Iwo Jima', theatre: 'pacific', map: 'motoyama', coastal: ['iwoJima'], seas: ['philippineSea'], airfield: true, prod: 1, fort: 2, land: [], lat: 24.8, lon: 141.3 },
