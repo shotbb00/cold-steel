@@ -8,7 +8,9 @@
 //   takeResult() / outcomeOf()  the menu's Campaign tab reads it back and settles the battle (engine.js settle)
 // The result rides in localStorage across the page load that a return to the menu is (core/replay.js toMenu).
 import { forceById, power, enemy, hourOf, winterNow } from './engine.js';
-import { MAPS } from '../maps/index.js';
+import { MAPS, armiesOn } from '../maps/index.js';
+import { armiesFrom, armyHas } from '../data/factions.js';
+import { epoch } from '../data/epoch.js';
 import { UNIT_TYPES } from '../data/units/index.js';
 import { RANKS } from '../entities/UnitStack.js';
 
@@ -24,10 +26,64 @@ const sides = (c, b) => {
 export const landerOf = (map) => map.landing?.attacker
   ?? ['nato', 'pact'].find((f) => map.bases?.[f] && map.height(map.bases[f].x, map.bases[f].z) < (map.river?.level ?? 0)) ?? 'nato';
 
-/** '' when the battle can be fought on its map; otherwise why not (it is resolved instead). */
+/** The armies a battle on `map` fields (as GameEngine settles them: the choice, then the map's own armies). */
+function fieldedArmies(map, armies) {
+  const a = armiesFrom(armies, map), only = armiesOn(map);
+  for (const f of ['nato', 'pact']) if (only?.[f] && !only[f].includes(a[f])) a[f] = only[f][0];
+  return a;
+}
+
+/**
+ * A landing map the other way round (the world campaign only: a landing by the side the map was not written for). The
+ * same coast, the sides' places swapped: the bases (the new lander's out at sea, off the same beach sectors), the points'
+ * owners, the spawns, the cave and airfield owners, `landing.attacker`. The coast's defences (forts, works, hold, the
+ * counter-attack from the inland base) are the new defender's. What only one side has comes from a map of this war where
+ * the new lander lands (its army's if one fits): its landing craft, warships, swimmers and AI; the unit types the map
+ * gives the defence and the counter-attack are kept where the new side's army fields them (else dropped); in the waves
+ * a type the new lander lacks is a rifle squad or a tank. Men the old lander had already put down inland are not carried over.
+ * The maps' own names for their units (`names`) and the counter-attack's lines are dropped.
+ */
+export function flipLanding(map, armies) {
+  const sw = (f) => (f === 'nato' ? 'pact' : f === 'pact' ? 'nato' : f);
+  const swapKeys = (o) => (o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sw(k), v])) : o);
+  const was = landerOf(map), lander = sw(was), def = was, army = fieldedArmies(map, armies);
+  const has = (id, f) => !!UNIT_TYPES[id] && armyHas(UNIT_TYPES[id], army[f]);
+  const L = map.landing ?? {};
+  // the new lander's kit: a landing by its side in this war — its own army's first
+  const donors = Object.values(MAPS).filter((m) => m !== map && m.theatre === 'coastal' && !m.wip && m.landing && m.epochs?.includes(epoch()) && landerOf(m) === lander);
+  donors.sort((a, b) => !!armiesOn(b)?.[lander]?.includes(army[lander]) - !!armiesOn(a)?.[lander]?.includes(army[lander]));
+  const pick = (ok) => donors.map((m) => m.landing).find(ok) ?? {}; // (each part from the first that has it: not every map writes its craft or its AI)
+  const K = { craft: pick((l) => l.craft).craft, swim: pick((l) => l.swim).swim, ...(({ navy, ai }) => ({ navy, ai }))(pick((l) => l.ai?.gunship && l.navy?.length)) }; // (the warships and the AI that buys them: one map's)
+  const navy = K.navy ?? [];
+  const ai = K.ai ? { ...K.ai, ...(L.ai?.inshore != null ? { inshore: L.ai.inshore } : {}) } : undefined; // (where the gunships lie: this coast's)
+  const ship = (id) => (navy.includes(id) ? id : ai?.gunship ?? null);
+  const land = (list, f) => list?.filter((id) => has(id, f));
+  const out = { ...map, flipped: true };
+  for (const [k, v] of Object.entries(map)) if (typeof v === 'function') out[k] = v.bind(map); // (decorate draws the command post at `this.bases`: the map's own)
+  out.bases = swapKeys(map.bases);
+  out.cameraStart = swapKeys(map.cameraStart);
+  out.points = map.points.map((p) => ({ ...p, owner: sw(p.owner) ?? null }));
+  out.spawns = {
+    [lander]: (map.spawns?.[was] ?? []).filter((s) => UNIT_TYPES[s.unit]?.stats?.naval).map((s) => ({ ...s, unit: ship(s.unit) })).filter((s) => s.unit), // (its ships off the beach; men put down inland — Hythe's paratroops — were that landing's own)
+    [def]: (map.spawns?.[lander] ?? []).filter((s) => !UNIT_TYPES[s.unit]?.stats?.naval && has(s.unit, def)),
+  };
+  out.airLimit = undefined; // (Iwo Jima's "no Japanese aircraft": that landing's history — the campaign's air wings say what flies here)
+  if (map.caves) out.caves = { ...map.caves, owner: sw(map.caves.owner) };
+  if (map.airfields) out.airfields = map.airfields.map((a) => ({ ...a, faction: sw(a.faction) }));
+  const fill = (id) => (has(id, lander) ? id : UNIT_TYPES[id]?.kind === 'infantry' || !has('tank', lander) ? 'rifles' : 'tank');
+  out.landing = {
+    ...L, attacker: lander, names: undefined,
+    craft: K.craft, navy, swim: K.swim, ai,
+    defence: land(L.defence, def)?.length ? land(L.defence, def) : undefined, // (none left: the mode's own)
+    counter: L.counter && { t: L.counter.t, units: land(L.counter.units, def) },
+    waves: L.waves?.map((w) => ({ ...w, units: w.units.map((o) => ({ ...o, unit: fill(o.unit), craft: undefined })) })),
+  };
+  return out;
+}
+
+/** '' when the battle can be fought on its map; otherwise why not (it is resolved instead). A landing by the side its map wasn't written for: on the map turned round (flipLanding). */
 export function fightable(c, war, b) {
   if (!b.map || !MAPS[b.map]) return 'no map for it yet';
-  if (b.kind === 'coastal' && landerOf(MAPS[b.map]) !== b.attackerSide) return 'its map is a landing by the other side';
   const s = sides(c, b);
   if (!s.nato.length || !s.pact.length) return 'one side has no force there';
   return '';
@@ -59,6 +115,7 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
     map: b.map, side: c.side, time: hourOf(c) === 'night' ? 'night' : hourOf(c), weather: ['clear', 'clear', 'overcast', 'overcast', 'rain'][(c.turn * 7 + b.id.length) % 5],
     armies,
     campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
+      flip: b.kind === 'coastal' && landerOf(map) !== b.attackerSide, // (a landing by the other side: main.js turns the map round, flipLanding)
       snow: winterNow(c, war) && b.theatre === war.winter?.theatre && b.kind !== 'sea', // (winter where it bites: the map under snow)
       // air support: a call for every 6 aircraft over it this turn (close support and the fighters' cover; none: none)
       air: Object.fromEntries(['nato', 'pact'].map((f) => [f, Math.floor(((c.support?.[f]?.[b.at] ?? 0) + (c.sky?.[b.at]?.[f] ?? 0)) / 6)])) },

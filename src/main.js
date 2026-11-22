@@ -11,6 +11,7 @@ import { GAME } from './data/game.js';
 import { getMap, forEpoch, setTheatre, setRegion, winterOf } from './maps/index.js';
 import { getMode } from './modes/index.js';
 import { MainMenu } from './ui/MainMenu.js';
+import { flipLanding } from './wcampaign/battle.js';
 import { MenuMusic } from './audio/MenuMusic.js';
 import { FACTIONS, PLAYER_FACTION } from './data/factions.js';
 import { takeReplay, rememberBattle } from './core/replay.js';
@@ -36,7 +37,8 @@ function start({ mode, map, side, time, weather, coop = false, net = null, campa
   const playerFaction = FACTIONS[side] ? side : PLAYER_FACTION;
   if (!net && !campaign) rememberBattle({ mode, map, side: playerFaction, time, weather, rules, armies, epoch: epoch() });
   const conditions = time || weather ? { time: time ?? 'day', weather: weather ?? 'overcast' } : null;
-  const m = campaign?.snow ? winterOf(getMap(map)) : getMap(map); // (a campaign battle in winter: the map under snow)
+  const at = campaign?.flip ? flipLanding(getMap(map), armies) : getMap(map); // (a campaign landing by the side the map wasn't written for: the map turned round)
+  const m = campaign?.snow ? winterOf(at) : at; // (a campaign battle in winter: the map under snow)
   if (m.modes ? !m.modes.includes(mode) : getMode(mode).only) mode = m.modes?.[0] ?? 'frontline'; // (a map fought only in some modes: Midway's sea zones, Frontline)
   const game = new GameEngine(document.getElementById('app'), { map: m, mode: getMode(mode), playerFaction, net, conditions, coop, campaign, rules, armies });
   window.game = game; // handy for poking at the simulation from the dev console
