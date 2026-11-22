@@ -70,7 +70,7 @@ export const WW2 = {
     // ---- North Africa and the Mediterranean
     alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', map: 'amiriya', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
     alamein: { name: 'El Alamein', theatre: 'med', map: 'el-alamein', prod: 1, fort: 1, land: ['alexandria', 'gazala'], lat: 30.8, lon: 28.9 },
-    gazala: { name: 'Gazala and Tobruk', theatre: 'med', map: 'gazala', port: true, seas: ['easternMed'], prod: 2, fort: 1, land: ['alamein', 'tunisiaSouth'], lat: 32.1, lon: 23.4 },
+    gazala: { name: 'Gazala and Tobruk', theatre: 'med', map: 'gazala', coastal: ['tobruk'], port: true, seas: ['easternMed'], prod: 2, fort: 1, land: ['alamein', 'tunisiaSouth'], lat: 32.1, lon: 23.4 },
     tunisiaSouth: { name: 'El Guettar', theatre: 'med', map: 'el-guettar', prod: 1, land: ['gazala', 'kasserine'], lat: 34.3, lon: 8.9 },
     kasserine: { name: 'The Kasserine Pass', theatre: 'med', map: 'kasserine-pass', prod: 1, land: ['tunisiaSouth', 'algeria'], lat: 35.3, lon: 8.7 },
     algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', map: 'medjerda', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
