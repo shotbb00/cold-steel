@@ -108,7 +108,7 @@ export const WW1 = {
     isonzo: { name: 'Gorizia and the Bainsizza', theatre: 'italy', prod: 1, fort: 2, land: ['venice', 'caporetto', 'trieste', 'carniola'], lat: 45.92, lon: 13.55 },
     trentino: { name: 'Trento and the Tyrol', theatre: 'italy', map: 'ortigara', prod: 1, fort: 3, land: ['asiago', 'carinthia'], lat: 46.1, lon: 11.1 },
     trieste: { name: 'Trieste and the Hermada', theatre: 'italy', map: 'hermada', port: true, prod: 2, fort: 3, seas: ['adriatic'], land: ['isonzo', 'carniola'], lat: 45.65, lon: 13.78 },
-    carniola: { name: 'Laibach and Carniola', theatre: 'italy', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
+    carniola: { name: 'Laibach and Carniola', theatre: 'italy', map: 'tolmein', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
     cattaro: { name: 'Cattaro and Dalmatia', theatre: 'italy', port: true, prod: 1, fort: 2, seas: ['adriatic', 'otranto'], land: ['carniola', 'belgrade'], lat: 43.0, lon: 17.4 }, // (the k.u.k. Kriegsmarine's cruisers and U-boats at Cattaro)
     carinthia: { name: 'Villach and Carinthia', theatre: 'italy', prod: 1, land: ['trentino', 'carniola', 'vienna'], lat: 46.62, lon: 13.85 },
     vienna: { name: 'Vienna', theatre: 'italy', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
@@ -119,7 +119,7 @@ export const WW1 = {
     riga: { name: 'Riga and the Dvina', theatre: 'east', map: 'riga', port: true, prod: 2, seas: ['baltic'], land: ['pskov', 'minsk', 'courland'], fort: 1, lat: 56.95, lon: 24.1 },
     minsk: { name: 'Minsk and the Western Front', theatre: 'east', prod: 1, land: ['pskov', 'riga', 'kiev', 'brest', 'courland'], fort: 1, lat: 53.9, lon: 27.56 },
     lutsk: { name: 'Lutsk and Volhynia', theatre: 'east', map: 'lutsk', prod: 1, land: ['kiev', 'brest', 'galicia', 'tarnopol'], fort: 1, lat: 50.75, lon: 25.33 },
-    tarnopol: { name: 'Tarnopol and Brody', theatre: 'east', prod: 1, land: ['kiev', 'lutsk', 'galicia', 'romania'], fort: 1, lat: 49.55, lon: 25.6 },
+    tarnopol: { name: 'Tarnopol and Brody', theatre: 'east', map: 'zborov', prod: 1, land: ['kiev', 'lutsk', 'galicia', 'romania'], fort: 1, lat: 49.55, lon: 25.6 },
     kiev: { name: 'Kiev and the Ukraine', theatre: 'east', depot: 'nato', airfield: true, prod: 5, land: ['minsk', 'lutsk', 'tarnopol', 'romania'], fort: 3, garrison: 1800, lat: 50.45, lon: 30.52 },
     romania: { name: 'Moldavia and the Romanian front', theatre: 'east', prod: 1, fort: 1, land: ['kiev', 'tarnopol', 'galicia', 'bucharest'], lat: 46.8, lon: 27.3 },
     courland: { name: 'Courland and Mitau', theatre: 'east', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
