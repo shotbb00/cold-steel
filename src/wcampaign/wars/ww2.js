@@ -44,7 +44,7 @@ export const WW2 = {
 
   provinces: {
     // ---- Western Europe: from the Channel coast to Thuringia
-    england: { name: 'England', theatre: 'west', depot: 'nato', map: 'kent', port: true, airfield: true, prod: 6, seas: ['channel', 'north-atlantic'], land: [], lat: 51.5, lon: -1 },
+    england: { name: 'England', theatre: 'west', depot: 'nato', map: 'kent', coastal: ['hythe'], port: true, airfield: true, prod: 6, seas: ['channel', 'north-atlantic'], land: [], lat: 51.5, lon: -1 },
     normandy: { name: 'Normandy', theatre: 'west', map: 'bocage', coastal: ['omaha', 'goldBeach'], seas: ['channel'], port: true, prod: 1, fort: 1, land: ['ardennes', 'arnhem'], lat: 49.2, lon: -0.7 },
     ardennes: { name: 'The Ardennes', theatre: 'west', map: 'ardennes', prod: 1, land: ['normandy', 'remagen'], lat: 50.0, lon: 5.7 },
     arnhem: { name: 'Arnhem', theatre: 'west', map: 'arnhem', prod: 2, land: ['normandy', 'remagen'], lat: 52.0, lon: 5.9 },
