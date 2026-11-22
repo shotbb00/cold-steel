@@ -268,7 +268,7 @@ export default {
     counter: { t: 300, units: ['heavyTank', 'ifv', 'tank', 'ifv', 'heavyTank'], say: 'The garrison’s armour is coming down the Safita road: T-72s and BMPs, straight for the beachhead', sayOther: 'Enemy armour coming down the Safita road: T-72s and BMPs' },
     // the landing’s AI (ai/LandingDirector.js): its buying order, a frigate inshore off the focus beach
     ai: { order: ['rifles', 'ifv', 'rifles', 'engineers', 'reconVehicle', 'rifles', 'mgTeam', 'tank', 'rifles', 'ifv', 'atTeam', 'mortar', 'rifles', 'tank'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 380 },
-    economy: { reserves: 3000, perSector: 700, beachIncome: 1.0, defenceCp: 800, defenceIncome: 1.3 }, // (run 1 of AI against AI, 2026-11-22: two beaches by 6 min, then the landing sat at its stack cap short of every village)
+    economy: { reserves: 3000, perSector: 700, beachIncome: 1.0, defenceCp: 800, defenceIncome: 1.3 }, // (AI against AI, 2026-11-22: at 600/0.8/1.5 and 22 stacks the landing stalled on the beaches; now it wins at 25 and 27 min or falls one village short)
     // the Marines’ AAVs and the scout vehicles swim in on their own, put in off the beach
     swim: { ifv: 'swimIfv', reconVehicle: 'swimRecon' },
     // the first wave at dawn, in to all three beaches at once

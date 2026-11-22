@@ -76,7 +76,7 @@ export const WW3 = {
     // ---- across the oceans: the arsenal, and the Mediterranean's two ends
     usa: { name: 'The United States', theatre: 'atlantic', depot: 'nato', safe: true, port: true, airfield: true, prod: 9, seas: ['westAtlantic'], land: [], lat: 39.0, lon: -75.0 },
     italy: { name: 'Italy and Naples', theatre: 'med', depot: 'nato', map: 'naples', coastal: ['salerno'], port: true, airfield: true, prod: 3, seas: ['ionian'], land: [], lat: 40.8, lon: 14.3 },
-    syria: { name: 'Tartus', theatre: 'med', depot: 'pact', map: 'tartus', port: true, prod: 1, seas: ['easternMed'], land: [], lat: 34.9, lon: 35.9 },
+    syria: { name: 'Tartus', theatre: 'med', depot: 'pact', map: 'tartus', coastal: ['tartus-landing'], port: true, prod: 1, seas: ['easternMed'], land: [], lat: 34.9, lon: 35.9 },
   },
 
   seas: {
