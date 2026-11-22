@@ -68,7 +68,7 @@ export const WW2 = {
     reichEast: { name: 'The Reich (east)', theatre: 'east', depot: 'pact', map: 'halbe', airfield: true, prod: 5, land: ['berlin', 'reichWest'], lat: 52.0, lon: 12.0 },
 
     // ---- North Africa and the Mediterranean
-    alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', map: 'amiriya', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
+    alexandria: { name: 'Alexandria', theatre: 'med', depot: 'nato', map: 'amiriya', coastal: ['abu-qir'], port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['alamein'], lat: 31.2, lon: 29.9 },
     alamein: { name: 'El Alamein', theatre: 'med', map: 'el-alamein', prod: 1, fort: 1, land: ['alexandria', 'gazala'], lat: 30.8, lon: 28.9 },
     gazala: { name: 'Gazala and Tobruk', theatre: 'med', map: 'gazala', coastal: ['tobruk'], port: true, seas: ['easternMed'], prod: 2, fort: 1, land: ['alamein', 'tunisiaSouth'], lat: 32.1, lon: 23.4 },
     tunisiaSouth: { name: 'El Guettar', theatre: 'med', map: 'el-guettar', prod: 1, land: ['gazala', 'kasserine'], lat: 34.3, lon: 8.9 },
