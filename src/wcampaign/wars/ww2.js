@@ -44,7 +44,7 @@ export const WW2 = {
 
   provinces: {
     // ---- Western Europe: from the Channel coast to Thuringia
-    england: { name: 'England', theatre: 'west', depot: 'nato', port: true, airfield: true, prod: 6, seas: ['channel', 'north-atlantic'], land: [], lat: 51.5, lon: -1 },
+    england: { name: 'England', theatre: 'west', depot: 'nato', map: 'kent', port: true, airfield: true, prod: 6, seas: ['channel', 'north-atlantic'], land: [], lat: 51.5, lon: -1 },
     normandy: { name: 'Normandy', theatre: 'west', map: 'bocage', coastal: ['omaha', 'goldBeach'], seas: ['channel'], port: true, prod: 1, fort: 1, land: ['ardennes', 'arnhem'], lat: 49.2, lon: -0.7 },
     ardennes: { name: 'The Ardennes', theatre: 'west', map: 'ardennes', prod: 1, land: ['normandy', 'remagen'], lat: 50.0, lon: 5.7 },
     arnhem: { name: 'Arnhem', theatre: 'west', map: 'arnhem', prod: 2, land: ['normandy', 'remagen'], lat: 52.0, lon: 5.9 },
@@ -73,20 +73,20 @@ export const WW2 = {
     gazala: { name: 'Gazala and Tobruk', theatre: 'med', map: 'gazala', port: true, seas: ['easternMed'], prod: 2, fort: 1, land: ['alamein', 'tunisiaSouth'], lat: 32.1, lon: 23.4 },
     tunisiaSouth: { name: 'El Guettar', theatre: 'med', map: 'el-guettar', prod: 1, land: ['gazala', 'kasserine'], lat: 34.3, lon: 8.9 },
     kasserine: { name: 'The Kasserine Pass', theatre: 'med', map: 'kasserine-pass', prod: 1, land: ['tunisiaSouth', 'algeria'], lat: 35.3, lon: 8.7 },
-    algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
+    algeria: { name: 'Algeria', theatre: 'med', depot: 'nato', map: 'medjerda', port: true, airfield: true, prod: 3, seas: ['westernMed'], land: ['kasserine'], lat: 36.7, lon: 3.1 },
     sicily: { name: 'Sicily', theatre: 'med', map: 'primosole', coastal: ['gela'], seas: ['westernMed', 'easternMed'], port: true, airfield: true, prod: 2, fort: 1, land: ['italy'], lat: 37.5, lon: 14.0 },
     italy: { name: 'Italy', theatre: 'med', depot: 'pact', map: 'cassino', port: true, airfield: true, prod: 5, fort: 2, seas: ['westernMed'], land: ['sicily'], lat: 41.9, lon: 12.5 },
 
     // ---- The Pacific: islands, Burma
-    hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
+    hawaii: { name: 'Hawaii', theatre: 'pacific', depot: 'nato', map: 'oahu', port: true, airfield: true, prod: 6, seas: ['centralPacific'], land: [], lat: 21.3, lon: -157.9 },
     guadalcanal: { name: 'Guadalcanal', theatre: 'pacific', map: 'guadalcanal', coastal: [], seas: ['solomons'], port: true, airfield: true, prod: 1, land: [], lat: -9.4, lon: 160.0 },
     saipan: { name: 'Saipan', theatre: 'pacific', map: 'saipan', coastal: [], seas: ['philippineSea'], port: true, airfield: true, prod: 1, fort: 1, land: [], lat: 15.2, lon: 145.7 },
-    iwoJima: { name: 'Iwo Jima', theatre: 'pacific', map: null, coastal: ['iwoJima'], seas: ['philippineSea'], airfield: true, prod: 1, fort: 2, land: [], lat: 24.8, lon: 141.3 },
+    iwoJima: { name: 'Iwo Jima', theatre: 'pacific', map: 'motoyama', coastal: ['iwoJima'], seas: ['philippineSea'], airfield: true, prod: 1, fort: 2, land: [], lat: 24.8, lon: 141.3 },
     okinawa: { name: 'Okinawa', theatre: 'pacific', map: 'okinawa', coastal: ['okinawaLanding'], seas: ['philippineSea', 'japanSeas'], port: true, airfield: true, prod: 2, fort: 2, land: [], lat: 26.3, lon: 127.8 },
     japan: { name: 'Japan', theatre: 'pacific', depot: 'pact', port: true, airfield: true, prod: 7, seas: ['japanSeas'], land: [], lat: 35.0, lon: 135.0 },
-    imphal: { name: 'Imphal', theatre: 'pacific', depot: 'nato', airfield: true, prod: 2, land: ['kohima'], lat: 24.8, lon: 93.9 },
+    imphal: { name: 'Imphal', theatre: 'pacific', depot: 'nato', map: 'imphal', airfield: true, prod: 2, land: ['kohima'], lat: 24.8, lon: 93.9 },
     kohima: { name: 'Kohima', theatre: 'pacific', map: 'kohima', prod: 1, fort: 1, land: ['imphal', 'burma'], lat: 25.7, lon: 94.1 },
-    burma: { name: 'Burma', theatre: 'pacific', depot: 'pact', port: true, airfield: true, prod: 3, seas: ['bayOfBengal'], land: ['kohima'], lat: 21.9, lon: 96.0 },
+    burma: { name: 'Burma', theatre: 'pacific', depot: 'pact', map: 'meiktila', port: true, airfield: true, prod: 3, seas: ['bayOfBengal'], land: ['kohima'], lat: 21.9, lon: 96.0 },
   },
 
   seas: {

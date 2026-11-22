@@ -97,14 +97,21 @@ import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
 import halle from './halle.ts';
+import kent from './kent.ts';
 import arnhem from './arnhem.ts';
 import kohima from './kohima.ts';
+import meiktila from './meiktila.ts';
+import imphal from './imphal.ts';
 import guadalcanal from './guadalcanal.ts';
 import saipan from './saipan.ts';
+import oahu from './oahu.ts';
+import motoyama from './motoyama.ts';
 import okinawa from './okinawa.ts';
+import kyushu from './kyushu.ts';
 import goldBeach from './goldBeach.ts';
 import gela from './gela.ts';
 import cassino from './cassino.ts';
+import medjerda from './medjerda.ts';
 import primosole from './primosole.ts';
 import okinawaLanding from './okinawaLanding.ts';
 import finnmark from './finnmark.ts';
@@ -196,14 +203,21 @@ export const MAPS = {
   [goldBeach.id]: goldBeach,
   [gela.id]: gela,
   [cassino.id]: cassino,
+  [medjerda.id]: medjerda,
   [primosole.id]: primosole,
   [okinawa.id]: okinawa,
+  [kyushu.id]: kyushu,
   [kohima.id]: kohima,
+  [meiktila.id]: meiktila,
+  [imphal.id]: imphal,
   [guadalcanal.id]: guadalcanal,
   [saipan.id]: saipan,
+  [oahu.id]: oahu,
+  [motoyama.id]: motoyama,
   [arnhem.id]: arnhem,
   [remagen.id]: remagen,
   [halle.id]: halle,
+  [kent.id]: kent,
   [bocage.id]: bocage,
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
