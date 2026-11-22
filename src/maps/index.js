@@ -104,14 +104,18 @@ import finnmark from './finnmark.ts';
 import schwerin from './schwerin.ts';
 import magdeburg from './magdeburg.ts';
 import rheinMain from './rheinMain.ts';
+import tartus from './tartus.ts';
+import naples from './naples.ts';
 import narvik from './narvik.ts';
 import malselv from './malselv.ts';
 import lyngen from './lyngen.ts';
 import pechenga from './pechenga.ts';
 import bodo from './bodo.ts';
+import andenes from './andenes.ts';
 import murmansk from './murmansk.ts';
 import ratzeburgLakes from './ratzeburgLakes.ts';
 import wesel from './wesel.ts';
+import eastAnglia from './eastAnglia.ts';
 import korea from './korea.ts';
 import chorwonValley from './chorwonValley.ts';
 import imjinRiver from './imjinRiver.ts';
@@ -119,13 +123,18 @@ import uijeongbu from './uijeongbu.ts';
 import kaesong from './kaesong.ts';
 import pyongyang from './pyongyang.ts';
 import seoul from './seoul.ts';
+import vladivostok from './vladivostok.ts';
+import hokkaido from './hokkaido.ts';
 import andoya from './andoya.ts';
 import keflavik from './keflavik.ts';
+import reykjanes from './reykjanes.ts';
 export const MAPS = {
   [andoya.id]: andoya,
   [keflavik.id]: keflavik,
+  [reykjanes.id]: reykjanes,
   [ratzeburgLakes.id]: ratzeburgLakes,
   [wesel.id]: wesel,
+  [eastAnglia.id]: eastAnglia,
   [korea.id]: korea,
   [chorwonValley.id]: chorwonValley,
   [imjinRiver.id]: imjinRiver,
@@ -133,6 +142,8 @@ export const MAPS = {
   [kaesong.id]: kaesong,
   [pyongyang.id]: pyongyang,
   [seoul.id]: seoul,
+  [vladivostok.id]: vladivostok,
+  [hokkaido.id]: hokkaido,
   [narvik.id]: narvik,
   [malselv.id]: malselv,
   [lyngen.id]: lyngen,
@@ -140,8 +151,11 @@ export const MAPS = {
   [schwerin.id]: schwerin,
   [magdeburg.id]: magdeburg,
   [rheinMain.id]: rheinMain,
+  [tartus.id]: tartus,
+  [naples.id]: naples,
   [pechenga.id]: pechenga,
   [bodo.id]: bodo,
+  [andenes.id]: andenes,
   [murmansk.id]: murmansk,
   [okinawaLanding.id]: okinawaLanding,
   [goldBeach.id]: goldBeach,
