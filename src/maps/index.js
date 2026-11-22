@@ -43,6 +43,7 @@ import bobruisk from './bobruisk.ts';
 import berlin from './berlin.ts';
 import amiriya from './amiriya.ts';
 import gazala from './gazala.ts';
+import tobruk from './tobruk.ts';
 import seelowHeights from './seelowHeights.ts';
 import krymskaya from './krymskaya.ts';
 import halbe from './halbe.ts';
@@ -104,16 +105,22 @@ import meiktila from './meiktila.ts';
 import imphal from './imphal.ts';
 import guadalcanal from './guadalcanal.ts';
 import saipan from './saipan.ts';
+import charanKanoa from './charanKanoa.ts';
 import oahu from './oahu.ts';
 import motoyama from './motoyama.ts';
 import okinawa from './okinawa.ts';
 import kyushu from './kyushu.ts';
 import goldBeach from './goldBeach.ts';
 import gela from './gela.ts';
+import hythe from './hythe.ts';
+import abuQir from './abuQir.ts';
 import cassino from './cassino.ts';
+import anzio from './anzio.ts';
 import medjerda from './medjerda.ts';
 import primosole from './primosole.ts';
 import okinawaLanding from './okinawaLanding.ts';
+import ariake from './ariake.ts';
+import redBeach from './redBeach.ts';
 import finnmark from './finnmark.ts';
 import schwerin from './schwerin.ts';
 import magdeburg from './magdeburg.ts';
@@ -200,9 +207,14 @@ export const MAPS = {
   [andenes.id]: andenes,
   [murmansk.id]: murmansk,
   [okinawaLanding.id]: okinawaLanding,
+  [ariake.id]: ariake,
+  [redBeach.id]: redBeach,
   [goldBeach.id]: goldBeach,
   [gela.id]: gela,
+  [hythe.id]: hythe,
+  [abuQir.id]: abuQir,
   [cassino.id]: cassino,
+  [anzio.id]: anzio,
   [medjerda.id]: medjerda,
   [primosole.id]: primosole,
   [okinawa.id]: okinawa,
@@ -212,6 +224,7 @@ export const MAPS = {
   [imphal.id]: imphal,
   [guadalcanal.id]: guadalcanal,
   [saipan.id]: saipan,
+  [charanKanoa.id]: charanKanoa,
   [oahu.id]: oahu,
   [motoyama.id]: motoyama,
   [arnhem.id]: arnhem,
@@ -247,6 +260,7 @@ export const MAPS = {
   [bobruisk.id]: bobruisk,
   [berlin.id]: berlin,
   [gazala.id]: gazala,
+  [tobruk.id]: tobruk,
   [amiriya.id]: amiriya,
   [seelowHeights.id]: seelowHeights,
   [krymskaya.id]: krymskaya,

@@ -281,7 +281,7 @@ export const lcvp = ship({
     nato: { name: 'LCVP Higgins boat', weapon: '2 × .30 machine guns', text: 'Plywood and a steel ramp: a section of riflemen from the transports to the sand. The ramp drops, they go — straight into whatever is waiting.' },
     pact: { name: 'Landing craft', weapon: 'machine guns', text: 'A small landing craft for a section of infantry.' },
     brit: { name: 'Landing Craft Assault (LCA)', weapon: 'Bren gun', text: 'Armoured sides, a low deck and a ramp: a platoon of riflemen run in from the landing ships, crouched below the gunwales.' },
-    wh: { name: 'Pionierlandungsboot', weapon: 'MG 34', text: 'The engineers' landing boat: a section of Grenadiers from the barges offshore to the shingle, the bow gate down and out.' },
+    wh: { name: 'Pionierlandungsboot', weapon: 'MG 34', text: 'The engineers’ landing boat: a section of Grenadiers from the barges offshore to the shingle, the bow gate down and out.' },
     jp: { name: 'Shōhatsu landing barge', weapon: 'Type 96 LMG', text: 'The small sister of the Daihatsu: a squad of infantry run in over the reef edge and off the bow ramp.' },
   },
 });
@@ -298,8 +298,8 @@ export const lct = ship({
     nato: { name: 'LCT Mk 6', weapon: '2 × 20 mm', text: 'A flat steel box with a ramp: tanks, half-tracks and guns straight onto the beach. Slow, big and an easy target on the run in.' },
     pact: { name: 'Tank landing craft', weapon: '20 mm', text: 'A landing craft for vehicles.' },
     brit: { name: 'LCT Mk 4', weapon: '2 × 20 mm Oerlikon', text: 'A long, thin-skinned box with a ramp: Churchills and carriers straight onto the beach.' },
-    wh: { name: 'Marinefährprahm', weapon: '7.5 cm, 2 cm flak', text: 'The navy's ferry barge: built for Sea Lion's heirs, armed like a small gunboat, she grounds and drops her ramp for a tank or guns.' },
-    jp: { name: 'Daihatsu landing barge', weapon: '2 × 7.7 mm', text: 'The Imperial Army's workhorse barge: a bow ramp and a twin keel that slides up the sand, for a light tank or seventy men.' },
+    wh: { name: 'Marinefährprahm', weapon: '7.5 cm, 2 cm flak', text: 'The navy’s ferry barge: built for Sea Lion’s heirs, armed like a small gunboat, she grounds and drops her ramp for a tank or guns.' },
+    jp: { name: 'Daihatsu landing barge', weapon: '2 × 7.7 mm', text: 'The Imperial Army’s workhorse barge: a bow ramp and a twin keel that slides up the sand, for a light tank or seventy men.' },
   },
 });
 
