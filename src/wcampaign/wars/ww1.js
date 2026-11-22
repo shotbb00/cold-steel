@@ -80,7 +80,7 @@ export const WW1 = {
     somme: { name: 'The Somme and Le Hamel', theatre: 'west', map: 'le-hamel', prod: 1, land: ['arras', 'cambrai', 'stQuentin', 'amiens'], fort: 1, lat: 49.98, lon: 2.75 },
     amiens: { name: 'Amiens and Villers-Bretonneux', theatre: 'west', map: 'villers-bretonneux', airfield: true, prod: 2, land: ['channelPorts', 'somme', 'stQuentin', 'soissons', 'paris'], fort: 1, lat: 49.85, lon: 2.25 },
     soissons: { name: 'Soissons and the Aisne', theatre: 'west', map: 'soissons', prod: 1, land: ['amiens', 'stQuentin', 'laon', 'champagne', 'marne'], fort: 2, lat: 49.35, lon: 3.3 },
-    champagne: { name: 'Reims and the Champagne', theatre: 'west', prod: 1, fort: 2, land: ['soissons', 'laon', 'argonne', 'verdun', 'marne'], lat: 49.2, lon: 4.1 },
+    champagne: { name: 'Reims and the Champagne', theatre: 'west', map: 'montagne-de-reims', prod: 1, fort: 2, land: ['soissons', 'laon', 'argonne', 'verdun', 'marne'], lat: 49.2, lon: 4.1 },
     verdun: { name: 'Verdun', theatre: 'west', map: 'cote-304', prod: 1, fort: 3, land: ['champagne', 'argonne', 'stMihiel', 'nancy'], lat: 49.16, lon: 5.38 },
     nancy: { name: 'Nancy and the Vosges', theatre: 'west', prod: 1, land: ['verdun', 'stMihiel', 'metz'], fort: 2, lat: 48.6, lon: 6.3 },
     marne: { name: 'The Marne and Château-Thierry', theatre: 'west', map: 'belleau-wood', prod: 1, land: ['soissons', 'champagne', 'paris'], lat: 49.05, lon: 3.4 },

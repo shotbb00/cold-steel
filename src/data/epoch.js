@@ -99,7 +99,7 @@ export const EPOCHS = {
       // standIn: a type the army lacks is fielded as this one of its own (null: not at all); else one of the same role it has (data/units/index.js standInFor)
       ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (no armour at all: the Süvari are its mobile arm)
       anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast', 'europe'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle', aa: 'manpads' } }, // (the Light Car Patrol; the Lewis AA teams)
-      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
+      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy', 'europe'] },
       ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (no tanks: the Romfell armoured car)
       ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
       // the world campaign's own armies (wcampaign/wars/ww1.js), no roster yet. `own` with no types: they field nothing of
