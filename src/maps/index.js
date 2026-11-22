@@ -107,6 +107,7 @@ import guadalcanal from './guadalcanal.ts';
 import saipan from './saipan.ts';
 import charanKanoa from './charanKanoa.ts';
 import oahu from './oahu.ts';
+import haleiwa from './haleiwa.ts';
 import motoyama from './motoyama.ts';
 import okinawa from './okinawa.ts';
 import kyushu from './kyushu.ts';
@@ -117,8 +118,10 @@ import abuQir from './abuQir.ts';
 import cassino from './cassino.ts';
 import anzio from './anzio.ts';
 import medjerda from './medjerda.ts';
+import bone from './bone.ts';
 import primosole from './primosole.ts';
 import okinawaLanding from './okinawaLanding.ts';
+import myebon from './myebon.ts';
 import ariake from './ariake.ts';
 import redBeach from './redBeach.ts';
 import finnmark from './finnmark.ts';
@@ -207,6 +210,7 @@ export const MAPS = {
   [andenes.id]: andenes,
   [murmansk.id]: murmansk,
   [okinawaLanding.id]: okinawaLanding,
+  [myebon.id]: myebon,
   [ariake.id]: ariake,
   [redBeach.id]: redBeach,
   [goldBeach.id]: goldBeach,
@@ -216,6 +220,7 @@ export const MAPS = {
   [cassino.id]: cassino,
   [anzio.id]: anzio,
   [medjerda.id]: medjerda,
+  [bone.id]: bone,
   [primosole.id]: primosole,
   [okinawa.id]: okinawa,
   [kyushu.id]: kyushu,
@@ -226,6 +231,7 @@ export const MAPS = {
   [saipan.id]: saipan,
   [charanKanoa.id]: charanKanoa,
   [oahu.id]: oahu,
+  [haleiwa.id]: haleiwa,
   [motoyama.id]: motoyama,
   [arnhem.id]: arnhem,
   [remagen.id]: remagen,
