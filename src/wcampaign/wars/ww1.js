@@ -86,7 +86,7 @@ export const WW1 = {
     marne: { name: 'The Marne and Château-Thierry', theatre: 'west', map: 'belleau-wood', prod: 1, land: ['soissons', 'champagne', 'paris'], lat: 49.05, lon: 3.4 },
     paris: { name: 'Paris', theatre: 'west', depot: 'nato', airfield: true, prod: 8, land: ['amiens', 'marne'], fort: 3, garrison: 1800, lat: 48.86, lon: 2.35 },
     belgianCoast: { name: 'Ostend and Zeebrugge', theatre: 'west', coastal: ['zeebrugge'], port: true, prod: 1, fort: 2, seas: ['channel', 'northSea'], land: ['ypres', 'lille', 'brussels'], lat: 51.25, lon: 3.1 },
-    lille: { name: 'Lille and Douai', theatre: 'west', airfield: true, prod: 3, land: ['belgianCoast', 'ypres', 'arras', 'cambrai', 'brussels'], fort: 2, lat: 50.5, lon: 3.3 },
+    lille: { name: 'Lille and Douai', theatre: 'west', map: 'hill-70', airfield: true, prod: 3, land: ['belgianCoast', 'ypres', 'arras', 'cambrai', 'brussels'], fort: 2, lat: 50.5, lon: 3.3 },
     cambrai: { name: 'Cambrai and the Hindenburg Line', theatre: 'west', map: 'cambrai', prod: 1, fort: 3, land: ['lille', 'arras', 'somme', 'stQuentin'], lat: 50.17, lon: 3.23 },
     stQuentin: { name: 'St Quentin', theatre: 'west', map: 'st-quentin', prod: 1, fort: 3, land: ['cambrai', 'somme', 'amiens', 'soissons', 'laon'], lat: 49.85, lon: 3.29 },
     laon: { name: 'Laon and the Chemin des Dames', theatre: 'west', map: 'chemin-des-dames', prod: 1, fort: 3, land: ['stQuentin', 'soissons', 'champagne', 'argonne', 'ardennes'], lat: 49.52, lon: 3.65 },
