@@ -99,7 +99,7 @@ export const WW1 = {
     wilhelmshaven: { name: 'Wilhelmshaven and the Jade', theatre: 'west', depot: 'pact', safe: true, /* (behind Heligoland's guns and the minefields: no landing) */ port: true, prod: 2, seas: ['heligoland'], land: ['germany', 'berlin'], fort: 3, lat: 53.52, lon: 8.13 },
 
     // ---- the Italian Front: the Isonzo and the Alps, Venice behind them
-    lombardy: { name: 'Milan and the Po valley', theatre: 'italy', depot: 'nato', airfield: true, prod: 7, land: ['venice', 'asiago', 'vittorio', 'rome'], fort: 3, garrison: 1800, lat: 45.45, lon: 9.9 },
+    lombardy: { name: 'Milan and the Po valley', theatre: 'italy', map: 'montello', depot: 'nato', airfield: true, prod: 7, land: ['venice', 'asiago', 'vittorio', 'rome'], fort: 3, garrison: 1800, lat: 45.45, lon: 9.9 },
     rome: { name: 'Rome, Taranto and the south', theatre: 'italy', port: true, prod: 3, seas: ['otranto', 'centralMed'], land: ['lombardy'], lat: 40.9, lon: 15.6 }, // (the Regia Marina's base at Taranto)
     asiago: { name: 'The Asiago plateau', theatre: 'italy', map: 'asiago', prod: 1, fort: 2, land: ['lombardy', 'vittorio', 'trentino'], lat: 45.87, lon: 11.51 },
     vittorio: { name: 'Vittorio Veneto and Monte Grappa', theatre: 'italy', map: 'vittorio-veneto', prod: 1, fort: 1, land: ['lombardy', 'asiago', 'venice', 'caporetto'], lat: 46.0, lon: 12.25 },
