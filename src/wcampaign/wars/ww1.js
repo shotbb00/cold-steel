@@ -90,7 +90,7 @@ export const WW1 = {
     cambrai: { name: 'Cambrai and the Hindenburg Line', theatre: 'west', map: 'cambrai', prod: 1, fort: 3, land: ['lille', 'arras', 'somme', 'stQuentin'], lat: 50.17, lon: 3.23 },
     stQuentin: { name: 'St Quentin', theatre: 'west', map: 'st-quentin', prod: 1, fort: 3, land: ['cambrai', 'somme', 'amiens', 'soissons', 'laon'], lat: 49.85, lon: 3.29 },
     laon: { name: 'Laon and the Chemin des Dames', theatre: 'west', map: 'chemin-des-dames', prod: 1, fort: 3, land: ['stQuentin', 'soissons', 'champagne', 'argonne', 'ardennes'], lat: 49.52, lon: 3.65 },
-    argonne: { name: 'The Argonne and Sedan', theatre: 'west', prod: 1, fort: 2, land: ['laon', 'champagne', 'verdun', 'stMihiel', 'ardennes'], lat: 49.45, lon: 4.9 },
+    argonne: { name: 'The Argonne and Sedan', theatre: 'west', map: 'meuse-argonne', prod: 1, fort: 2, land: ['laon', 'champagne', 'verdun', 'stMihiel', 'ardennes'], lat: 49.45, lon: 4.9 },
     stMihiel: { name: 'The St Mihiel salient', theatre: 'west', prod: 1, fort: 2, land: ['argonne', 'verdun', 'nancy', 'metz'], lat: 48.9, lon: 5.55 },
     metz: { name: 'Metz and Lorraine', theatre: 'west', prod: 2, fort: 3, land: ['stMihiel', 'nancy', 'germany'], lat: 49.12, lon: 6.4 },
     brussels: { name: 'Brussels and occupied Belgium', theatre: 'west', prod: 2, land: ['belgianCoast', 'lille', 'ardennes', 'germany'], lat: 50.85, lon: 4.35 },
