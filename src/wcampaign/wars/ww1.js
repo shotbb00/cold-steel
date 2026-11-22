@@ -121,7 +121,7 @@ export const WW1 = {
     lutsk: { name: 'Lutsk and Volhynia', theatre: 'east', map: 'lutsk', prod: 1, land: ['kiev', 'brest', 'galicia', 'tarnopol'], fort: 1, lat: 50.75, lon: 25.33 },
     tarnopol: { name: 'Tarnopol and Brody', theatre: 'east', map: 'zborov', prod: 1, land: ['kiev', 'lutsk', 'galicia', 'romania'], fort: 1, lat: 49.55, lon: 25.6 },
     kiev: { name: 'Kiev and the Ukraine', theatre: 'east', depot: 'nato', airfield: true, prod: 5, land: ['minsk', 'lutsk', 'tarnopol', 'romania'], fort: 3, garrison: 1800, lat: 50.45, lon: 30.52 },
-    romania: { name: 'Moldavia and the Romanian front', theatre: 'east', prod: 1, fort: 1, land: ['kiev', 'tarnopol', 'galicia', 'bucharest'], lat: 46.8, lon: 27.3 },
+    romania: { name: 'Moldavia and the Romanian front', theatre: 'east', map: 'marasesti', prod: 1, fort: 1, land: ['kiev', 'tarnopol', 'galicia', 'bucharest'], lat: 46.8, lon: 27.3 },
     courland: { name: 'Courland and Mitau', theatre: 'east', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
     eastPrussia: { name: 'East Prussia and the Masurian Lakes', theatre: 'east', map: 'tannenberg', port: true, prod: 2, fort: 1, seas: ['baltic'], land: ['courland', 'warsaw', 'posen'], lat: 54.0, lon: 20.6 },
     brest: { name: 'Brest-Litovsk and the Pripet', theatre: 'east', prod: 1, land: ['minsk', 'lutsk', 'warsaw'], fort: 1, lat: 52.1, lon: 23.7 },
