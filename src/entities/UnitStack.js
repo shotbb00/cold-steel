@@ -164,6 +164,7 @@ export class UnitStack {
     this.type = type;
     this.kind = type.kind ?? 'infantry';
     this.army = services.world?.armies?.[faction] ?? DEFAULT_ARMY[faction]; // US Army / Bundeswehr, Soviet Army / NVA
+    if (type.armyType?.[this.army]) this.type = type = { ...type, ...type.armyType[this.army] }; // (an army's own boat of another size: her hull, her hold — data/units45/ships.js lcvp, lct)
     const fs = type.factionStats;
     this.stats = fs?.[faction] || fs?.[this.army] ? { ...type.stats, ...fs[faction], ...fs[this.army] } : type.stats; // per-side (and per-army) differences
     const cav = RECON.has(type.id) && armyDoctrine(this.army, 'cavalry'); // the US Army's Cavalry screen sees further

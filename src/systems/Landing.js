@@ -16,7 +16,7 @@
 //              the water (the tide, coastal step 6) a craft runs onto them unseen: a mine sinks her,
 //              the rest stop her short, and her men wade in from there.
 import * as THREE from 'three';
-import { UNIT_TYPES } from '../data/units/index.js';
+import { UNIT_TYPES, standInFor } from '../data/units/index.js';
 import { forArmy, enemyOf, FACTIONS } from '../data/factions.js';
 import { createRenderer } from '../render/index.js';
 import { mulberry32 } from '../core/math.js';
@@ -131,10 +131,10 @@ export class Landing {
 
   /** Who's aboard open craft `s` (a squad, a vehicle platoon of `typeId`), drawn in their places in her hold. Host and guest alike (net 'aboard'). */
   board(s, typeId, army) {
-    const hold = HOLDS[s.type.id], type = UNIT_TYPES[typeId];
+    const hold = s.type.hold ?? HOLDS[s.type.id], type = UNIT_TYPES[typeId];
     if (!hold || !type || s.aboard || !this.game.scene) return;
     const f = s.faction, vehicle = type.kind !== 'infantry';
-    const n = Math.max(1, Math.min(type.formation.count, vehicle ? 3 : 12));
+    const n = Math.max(1, Math.min(type.formation.count, vehicle ? hold.vehicles ?? 3 : 12));
     const deck = { y: 0 };
     const stack = {
       type, faction: f, army, kind: type.kind, stats: { ...type.stats, ...type.factionStats?.[f], ...type.factionStats?.[army] }, units: [],
@@ -349,7 +349,7 @@ export class Landing {
     x = this.inLane(x, 15);
     if (UNIT_TYPES[kind].stats.swims) z0 = this.groundZ(x, 1, sign) + sign * SWIM_START; // (launched off the beach: a slow paddle in)
     const start = { x, z: z0 ?? sign * this.launchZ() };
-    const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].shortName} (${cargo.name})`);
+    const craft = g.spawnStack(kind, f, start, sign > 0 ? Math.PI : 0, `${UNIT_TYPES[kind].variants?.[g.armyOf(f)]?.name ?? UNIT_TYPES[kind].shortName} (${cargo.name})`); // (the army's own boat by her name: a Daihatsu, an LCA)
     craft.autonomous = true; // (hers is the coxswain's course: not yours to order)
     craft.cargo = cargo;
     this.board(craft, cargo.typeId, g.armyOf(f));
@@ -377,13 +377,13 @@ export class Landing {
         if (!this.lands(f)) continue;
         const roads = g.map.bases[f].entries ?? [0];
         (w.units ?? []).forEach((o, i) => {
-          const type = UNIT_TYPES[o.unit];
+          const unit = standInFor(o.unit, g.armyOf(f)), type = UNIT_TYPES[unit]; // (a type this army lacks: its own stand-in, else none — as GameEngine.spawnStack)
           if (!type) return;
           const count = g.modeState?.bought ?? this.count; // (one count with what's bought: no two Rifle Squad IIIs)
-          count[o.unit] = (count[o.unit] ?? 0) + 1;
-          const name = o.name ?? `${forArmy(type.variants, g.armyOf(f), f)?.name ?? type.shortName} ${ROMAN[count[o.unit] - 1] ?? count[o.unit]}`; // (as a bought one is named)
+          count[unit] = (count[unit] ?? 0) + 1;
+          const name = (unit === o.unit && o.name) || `${forArmy(type.variants, g.armyOf(f), f)?.name ?? type.shortName} ${ROMAN[count[unit] - 1] ?? count[unit]}`; // (as a bought one is named)
           const x = (roads[o.sector ?? 0] ?? 0) + (o.dx ?? (Math.random() - 0.5) * 40);
-          this.launch(f, { typeId: o.unit, name, kit: o.kit ?? null, craft: o.craft ?? null, owner: g.coop && f === g.playerFaction ? (i % 2 ? 'guest' : 'host') : null } /* (co-op: the wave shared out) */, x, Math.sign(g.map.bases[f].z) * (this.launchZ() - (i % 3) * 30));
+          this.launch(f, { typeId: unit, name, kit: o.kit ?? null, craft: o.craft ?? null, owner: g.coop && f === g.playerFaction ? (i % 2 ? 'guest' : 'host') : null } /* (co-op: the wave shared out) */, x, Math.sign(g.map.bases[f].z) * (this.launchZ() - (i % 3) * 30));
         });
         if (w.say) g.tell(f, w.say);
       }

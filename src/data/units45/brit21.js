@@ -2,10 +2,12 @@
 // each type it fields its `variants.brit21` (and models / factionStats / armyCost for brit21 where they differ).
 // ARMIES.brit21 is `own` (data/epoch.js): only the types given a variant here are on its list.
 // Montgomery's British and Canadian divisions: Shermans (one in four a Firefly), the Bren carriers, the 25-pounders —
-// and where Britain had no hull of its own the American one stands in (the Sherman, the M10, the dozer).
+// and the American hulls Britain re-armed and refitted in its own way (the Firefly, the Achilles, the Crab), each its own model.
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildBrDaimler, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell, buildBrChurchill21, buildBrChurchillSBG21, buildBrCrusaderAA21,
-  buildBrMorrisBofors21, buildBrGL21, buildBr37AA21, buildBrLandMattress21, buildBr42Mortar21, buildBrSmoke21 } from '../models/brit45.js';
+  buildBrMorrisBofors21, buildBrGL21, buildBr37AA21, buildBrLandMattress21, buildBr42Mortar21, buildBrSmoke21, buildBrFirefly21, buildBrAchilles21, buildBrAVRE21, buildBrCrab21 } from '../models/brit45.js';
+
+import { buildBrBofors21, buildBrShermanDD21 } from '../models/brit45more.js';
 
 const man = (o = {}) => () => buildWw2Soldier({ army: 'brit21', ...o });
 
@@ -38,12 +40,13 @@ export default function brit21(T) {
     variant: { name: 'Airborne', weapon: 'Lee-Enfield, Sten, Bren', text: 'The red berets of the 1st and 6th Airborne: by glider onto Pegasus Bridge, by parachute onto the heath outside Arnhem — and they hold until relieved.' } });
 
   // ---- the armour: American hulls in British hands
-  set(T.tank, { stats: { noStabilizer: true, damage: 420, fireCooldown: 7 }, cost: 1.05,
+  set(T.tank, { model: buildBrFirefly21, stats: { noStabilizer: true, damage: 420, fireCooldown: 7, sideGuns: T.tank.stats.sideGuns?.slice(0, 1) }, cost: 1.05, // (the coaxial only: no hull MG)
     variant: { name: 'Sherman Firefly', weapon: 'QF 17-pounder', text: 'A Sherman with the 17-pounder crammed into its turret: one in each troop, the only British tank that kills a Panther from the front. The Germans aimed for it first. Stops to fire.' } });
-  set(T.tankDestroyer, { stats: { armor: 0.35, hp: 800, speed: 6.2, damage: 480, fireCooldown: 7 },
+  set(T.tankDestroyer, { model: buildBrAchilles21, stats: { armor: 0.35, hp: 800, speed: 5.2, damage: 480, fireCooldown: 7 }, // (the M10: no Hellcat’s speed)
     variant: { name: 'M10 Achilles', weapon: 'QF 17-pounder', text: 'The American M10 re-gunned with the 17-pounder by the Royal Artillery: an open turret, and the best anti-tank gun the Allies had. Stops to fire.' } });
-  set(T.cev, { variant: { name: 'Sherman Dozer', weapon: '75 mm M3, dozer blade', text: 'A Sherman with a bulldozer blade: it fills the craters, cuts through the hedgebanks and shells the house behind them.' } });
-  set(T.mineClear, { variant: { name: 'Sherman Crab', weapon: 'flail, 75 mm M3', text: 'Hobart’s “Funnies”: chains on a spinning drum beat a lane through the minefield ahead of the infantry.' } });
+  set(T.cev, { model: buildBrAVRE21, stats: { armor: 0.78, hp: 1600, speed: 3.6, damage: 1300, vsStructure: 2.8, splash: 6, range: 100, aggroRange: 100, preferredRange: 70, fireCooldown: 14 }, cost: 1.05,
+    variant: { name: 'Churchill AVRE', weapon: 'Petard 290 mm spigot mortar, dozer blade', text: 'The Royal Engineers’ assault tank of the 79th Armoured Division: the Petard throws a 40-pound “flying dustbin” eighty yards into a pillbox or a sea wall, and the blade fitted in front fills the craters and cuts through the hedgebanks. Reloaded through the hull hatch, so slowly. Stops to fire.' } });
+  set(T.mineClear, { model: buildBrCrab21, variant: { name: 'Sherman Crab', weapon: 'flail, 75 mm M3', text: 'Hobart’s “Funnies”: chains on a spinning drum beat a lane through the minefield ahead of the infantry.' } });
   set(T.reconVehicle, { model: buildBrDaimler, stats: { weapon: 'cannon', damage: 140, vsArmor: 0.6, pierce: 0.4, splash: 1, fireCooldown: 2.4 }, cost: 0.9,
     variant: { name: 'Daimler Armoured Car', weapon: 'QF 2-pounder', text: 'The reconnaissance regiments’ armoured car: quick on the roads of France, the 2-pounder for anything lightly armoured.' } });
   set(T.ifv, { model: buildBrCarrier, stats: { armor: 0.15, hp: 420, speed: 6.4, weapon: 'rifle', damage: 32, range: 120, gunRange: 120, vsArmor: 0.05 }, cost: 0.8,
@@ -52,7 +55,7 @@ export default function brit21(T) {
   // ---- the guns
   set(T.artillery, { model: buildBr25pdr, stats: { towed: { deploy: 14 }, traverse: 6.3 }, cost: 0.9,
     variant: { name: '25-pounder', weapon: 'Ordnance QF 25-pdr', text: 'The field gun of every British army: in Normandy whole divisions of them fired together on one map reference.' } });
-  set(T.towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun: against the Focke-Wulfs over the beachhead — and lowered, against the hedges.' } });
+  set(T.towedAA, { model: buildBrBofors21, variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun: against the Focke-Wulfs over the beachhead — and lowered, against the hedges.' } });
 
   // ---- support
   set(T.ambulance, { model: buildBrAustinAmb, variant: { name: 'Austin K2 Ambulance', weapon: 'unarmed', text: 'The “Katy”: the field ambulance — patches up the wounded nearby.' } });
@@ -79,4 +82,9 @@ export default function brit21(T) {
   set(T.sam, { model: buildBr37AA21, variant: { name: '3.7-inch AA Gun', weapon: 'QF 3.7-inch AA', text: 'The heavy AA gun over the beaches and the bridges — and with the Luftwaffe gone, laid on the ground as medium artillery.' } });
   set(T.manpads, { variant: { name: 'AA Bren Team', weapon: 'Bren gun on its AA tripod', text: 'The Bren on its tall anti-aircraft tripod: a stream of .303 across the strafing run.' } });
   set(T.airRadar, { model: buildBrGL21, variant: { name: 'GL Mk III', weapon: 'unarmed', text: 'The gun-laying radar of the heavy AA, its aerials on the cabin roof: it finds the raiders by night and puts the 3.7s onto them.' } });
+
+  // ---- the DD tank (the coastal maps: it swims in on its own screen, systems/Landing.js) — the US Army's stats, its own hull and name
+  T.ddTank.armies = [...(T.ddTank.armies ?? []), 'brit21'];
+  set(T.ddTank, { model: buildBrShermanDD21,
+    variant: { name: 'Sherman DD', weapon: '75 mm M3', text: 'Hobart’s swimming Sherman: launched from the LCTs offshore, it swims in on its canvas screen ahead of the infantry. Off Sword most of them swam ashore; off Gold the sea was too rough and the LCTs ran them straight onto the beach. A wave over the screen and it sinks with its crew.' } });
 }

@@ -6,13 +6,16 @@
 //   buildBr25pdrJG    the 25-pounder on its platform, towed by a Morris Quad, in jungle green
 //   buildBrRecoveryJG a Matador-sized recovery lorry with its jib, in jungle green
 //   buildBrRadarJG    the RAF light warning radar lorry · buildBr37AAJG the 3.7-inch AA gun · buildBrBaileyJG a Bailey bridge lorry
+//   buildBrHumberJG   Humber Mk IV armoured car · buildBr6pdrJG the 6-pounder anti-tank gun behind a jeep · buildBrBoforsJG the towed Bofors
+//   buildBrBoforsLorryJG a Bofors on a lorry bed · buildBrCarrierBangaloreJG a Universal Carrier with the sappers' Bangalore torpedoes
 import { P, merge, pair, grime } from '../units/geometry.js';
-import { trackedHull, castTurret, runningGear, roadWheelGeometry } from './vehicleCommon.js';
+import { trackedHull, castTurret, runningGear, roadWheelGeometry, stationHull } from './vehicleCommon.js';
 import { rig, crane } from './ww2Armour.js';
-import { vehicle, wheeled, towTruck } from './support.js';
+import { vehicle, wheeled, tracked, towTruck } from './support.js';
 import { truckUnit } from './truck.js';
 import { heavyAA } from './ww2AirDefence.js';
-import { radarLorry } from './brit45.js';
+import { radarLorry, boforsLorry } from './brit45.js';
+import { britBofors } from './brit45more.js';
 
 const JG = 0x46503a, JG_DK = 0x343b2a, STEEL = 0x2b2d28, RUBBER = 0x1f201c, CANVAS = 0x5a5c42, RED = 0xb8231e, WHITE = 0xe6e2d6, GLASS = 0x1a1d1c;
 const C = { camo: 1 };
@@ -92,7 +95,7 @@ export const buildBrJeepAmb = jeep([
 // ---------------------------------------------------------------- the guns
 
 /** A field gun on two wheels: its trail (one box trail, or split), shield, cradle and barrel; towed by `tow`. */
-const fieldGun = ({ wheelR, axle, trail, split, shield, barrel, bore, platform, tow, hitch }) => vehicle(() => ({
+const fieldGun = ({ wheelR, axle, trail, split, shield, barrel, bore, platform, tow, hitch, pitch = 0.4 }) => vehicle(() => ({
   hull: grime(merge([
     ...(platform ? [P.cyl(1.0, 1.0, 0.08, { y: 0.05, color: STEEL }, 18)] : []),                  // the 25-pounder's round firing platform
     ...(split
@@ -103,7 +106,7 @@ const fieldGun = ({ wheelR, axle, trail, split, shield, barrel, bore, platform, 
     P.box(0.4, 0.3, 0.5, { y: wheelR + 0.1, color: JG }),                                       // the carriage the cradle sits on
   ]), 1, 0.3),
   turret: { geo: grime(merge([P.box(shield[0], shield[1], 0.05, { y: wheelR + 0.25, z: 0.45, rx: -0.1, color: JG, ...C }), P.box(0.3, 0.3, 0.7, { y: wheelR, color: STEEL })]), 0.8, 0, 0.3), at: [0, 0.1, 0] },
-  gun: { geo: merge([P.box(0.26, 0.24, 0.8, { color: STEEL }), P.cyl(bore, bore * 1.15, barrel, { z: 0.3 + barrel / 2, rx: Math.PI / 2, color: JG_DK }, 12)]), at: [0, wheelR + 0.2, 0.1], pitch: 0.4 },
+  gun: { geo: merge([P.box(0.26, 0.24, 0.8, { color: STEEL }), P.cyl(bore, bore * 1.15, barrel, { z: 0.3 + barrel / 2, rx: Math.PI / 2, color: JG_DK }, 12)]), at: [0, wheelR + 0.2, 0.1], pitch },
   muzzle: [0, 0, 0.3 + barrel],
   recoil: 0.35,
   tow: { geo: tow(), hitch },
@@ -141,5 +144,67 @@ export const buildBrBaileyJG = vehicle(() => {
       P.box(1.7, 0.4, 4.4, { y: L.deck + 0.2, z: L.rear + 2.2, color: 0x5a4632 }),                                // the timber decking
     ]),
     muzzle: [0, 2.5, 0],
+  };
+});
+
+// ---------------------------------------------------------------- what the first pass left out: the armoured car, the anti-tank gun, AA, mines
+
+/** Humber Mk IV armoured car (4.6 × 2.2 m, 2.4 m high): the tall angular hull, the engine at the back, the big wheels, the three-man
+ *  turret well forward with the American 37 mm — the Indian cavalry's reconnaissance car on the Imphal plain and down the road to Rangoon. */
+export const buildBrHumberJG = vehicle(() => ({
+  wheels: wheeled([1.3, -1.25], 0.98, 0.52),
+  hull: grime(merge([
+    stationHull([
+      [-2.3, [[0, 0.7], [0.68, 0.7], [0.8, 1.15], [0.64, 1.62], [0, 1.62]]],
+      [0.0, [[0, 0.68], [0.7, 0.68], [0.82, 1.15], [0.66, 1.82], [0, 1.82]]],
+      [1.6, [[0, 0.7], [0.68, 0.7], [0.78, 1.1], [0.6, 1.7], [0, 1.7]]],
+      [2.3, [[0, 0.82], [0.52, 0.82], [0.58, 1.0], [0.42, 1.25], [0, 1.25]]],
+    ], { color: JG, ...C }),
+    ...pair((s) => [1.3, -1.25].map((z) => P.box(0.4, 0.05, 1.2, { x: s * 1.0, y: 1.1, z, color: JG_DK }))).flat(), // the mudguards
+    P.box(1.1, 0.05, 1.2, { y: 1.63, z: -1.6, color: JG_DK }),                                     // the engine louvres at the back
+    P.box(0.5, 0.1, 0.04, { y: 1.45, z: 2.08, rx: -0.55, color: GLASS }),                           // the driver's visor
+    P.box(0.5, 0.25, 0.3, { x: 0.55, y: 1.0, z: -2.4, color: JG_DK }),                              // the stowage box on the tail
+    ...pair((s) => bar(s * 0.83, 1.15, -0.3)),
+  ]), 1, 0.4),
+  turret: { geo: grime(merge([
+    castTurret([[0.6, 0.55, 0.55], [0.3, 0.6, 0.6], [-0.55, 0.58, 0.58], [-0.75, 0.48, 0.5]], { color: JG, ...C }, 5),
+    P.box(0.42, 0.32, 0.18, { y: 0.28, z: 0.66, color: JG, ...C }),                                // the mantlet
+    P.box(0.45, 0.07, 0.45, { x: -0.12, y: 0.58, z: -0.2, color: JG_DK }),                         // the hatch
+    P.cyl(0.006, 0.006, 1.8, { x: -0.4, y: 1.4, z: -0.45, color: STEEL }, 4),                       // the No. 19 set's aerial
+  ]), 0.8, 0, 0.3), at: [0, 1.82, 0.45] },
+  gun: { geo: merge([P.cyl(0.028, 0.034, 1.45, { z: 0.72, rx: Math.PI / 2, color: JG_DK }, 8)]), at: [0, 0.28, 0.6], pitch: null },
+  muzzle: [0, 0, 1.45],
+  recoil: 0.1,
+}));
+
+/** The 6-pounder anti-tank gun: the split trail, the low two-piece shield, the long barrel laid flat, towed by a jeep — the Indian
+ *  anti-tank regiments' gun that stopped the Japanese tanks on the Tiddim road and at Bishenpur. */
+export const buildBr6pdrJG = fieldGun({ wheelR: 0.42, axle: 0.62, trail: 2.3, split: true, shield: [1.5, 0.7], barrel: 2.4, bore: 0.042, tow: jeepTow, hitch: 3.0, pitch: 0.03 });
+
+/** The towed Bofors in jungle green (models/brit45more.js) and on a lorry bed (models/brit45.js boforsLorry). */
+export const buildBrBoforsJG = britBofors(JG, JG_DK);
+export const buildBrBoforsLorryJG = boforsLorry(JG, JG_DK);
+
+/** A Universal Carrier of the sappers with Bangalore torpedoes — the long steel tubes of explosive pushed under the wire and through the
+ *  minefield and blown — stacked along both sides. */
+export const buildBrCarrierBangaloreJG = vehicle(() => {
+  const g = tracked({ halfWidth: 0.88, length: 2.4, wheels: 3, wheelR: 0.3, sprocket: 1, rollers: 0, trackWidth: 0.26, wheelColor: JG_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      P.box(1.24, 0.08, 3.4, { y: 0.4, z: -0.15, color: JG_DK }),                                      // the floor
+      ...pair((s) => P.box(0.06, 0.7, 3.4, { x: s * 0.62, y: 0.7, z: -0.15, color: JG, ...C })),       // the low walls
+      ...pair((s) => P.box(0.36, 0.06, 3.3, { x: s * 0.86, y: 0.8, z: -0.1, color: JG, ...C })),       // the guards over the tracks
+      P.box(1.3, 0.7, 0.06, { y: 0.7, z: -1.85, color: JG, ...C }),
+      P.box(1.3, 0.75, 0.06, { y: 0.72, z: 1.62, rx: -0.35, color: JG, ...C }),
+      P.box(2.0, 0.3, 0.5, { y: 0.55, z: 1.95, color: JG, ...C }),                                     // the nose over the final drives
+      P.box(0.5, 0.35, 0.8, { y: 0.6, z: -0.2, color: JG_DK }),                                        // the engine cover between the seats
+      // the Bangalores: a bundle of tubes on each track guard, lashed down
+      ...pair((s) => [0, 1, 2].flatMap((k) => [P.cyl(0.035, 0.035, 3.0, { x: s * (0.8 + (k % 2) * 0.08), y: 0.87 + k * 0.06, z: -0.1, rx: Math.PI / 2, color: 0x3c4030 }, 6)])).flat(),
+      ...pair((s) => [-1.0, 0.8].map((z) => P.box(0.3, 0.04, 0.06, { x: s * 0.84, y: 1.02, z, color: CANVAS }))).flat(),
+      ...pair((s) => bar(s * 0.655, 0.75, -0.6)),
+    ]), 1.25, 0.3),
+    muzzle: [0.35, 1.1, 1.5],
   };
 });

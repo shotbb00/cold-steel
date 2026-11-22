@@ -12,7 +12,7 @@
 // systems/VisibilitySystem.js), and deep they hear moving ships out to `hearing`. Torpedoes from
 // periscope depth or the surface, the deck gun only surfaced. `depthCharges`: the escorts' answer.
 import { buildTexas, buildFletcher, buildKagero, buildBuckley, buildKaibokan, buildBaltimore, buildTakao, buildIowa, buildYamato, buildGato, buildB1, buildEssex, buildShokaku, buildElcoPT, buildGyoraitei, buildCleveland, buildAgano, buildCasablanca, buildTaiyo, buildLiberty, buildMaru } from '../models/ships1945.js';
-import { buildLCVP, buildLCT, buildYMS, buildDD, buildLSMR } from '../models/landingCraft45.js';
+import { buildLCVP, buildLCT, buildYMS, buildDD, buildLSMR, buildLCA, buildLCT4, buildPiLB, buildMFP, buildShohatsu, buildDaihatsu } from '../models/landingCraft45.js';
 import * as S from '../models/ships1945eu.js';
 
 const NAVAL = { naval: true, eyeHeight: 18, aimHeight: 4, nightSight: { nato: 0.6, pact: 0.55 }, /* (at night: the US by radar, the Imperial Navy's lookouts with their big night glasses) */ crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1 };
@@ -276,7 +276,14 @@ export const lcvp = ship({
     range: 0, aggroRange: 0, preferredRange: 0, leash: 20, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
   mounts: { nato: [], pact: [] },
   camera: { distance: 26, height: 9, shoulder: 0 },
-  models: { nato: buildLCVP, pact: buildLCVP },
+  models: { nato: buildLCVP, pact: buildLCVP, brit: buildLCA, wh: buildPiLB, jp: buildShohatsu },
+  // each navy's own boat at her own size (entities/UnitStack.js armyType; the hold where the riders sit: systems/Landing.js board)
+  armyType: {
+    brit: { shortName: 'LCA', hull: { length: 12.6, beam: 3.0 }, hold: { y: 0.47, z: [-3.4, 4.2], w: 1.9, cols: 3 } },
+    wh: { shortName: 'Pi-Boot', hull: { length: 15.5, beam: 4.5 }, hold: { y: 0.57, z: [-3.4, 5.6], w: 2.8, cols: 3 } },
+    jp: { shortName: 'Shōhatsu', hull: { length: 10.6, beam: 2.4 }, hold: { y: 0.46, z: [-2.8, 3.6], w: 1.4, cols: 2 } },
+  },
+  factionStats: { brit: { armor: 0.08 } }, // (the LCA's armoured sides)
   variants: {
     nato: { name: 'LCVP Higgins boat', weapon: '2 × .30 machine guns', text: 'Plywood and a steel ramp: a section of riflemen from the transports to the sand. The ramp drops, they go — straight into whatever is waiting.' },
     pact: { name: 'Landing craft', weapon: 'machine guns', text: 'A small landing craft for a section of infantry.' },
@@ -293,7 +300,13 @@ export const lct = ship({
     range: 0, aggroRange: 0, preferredRange: 0, leash: 30, damage: 0, fireCooldown: 1, spread: 0.02, boltSpeed: 800, boltSize: 0.5, splash: 0, pierce: 0 },
   mounts: { nato: [], pact: [] },
   camera: { distance: 60, height: 18, shoulder: 0 },
-  models: { nato: buildLCT, pact: buildLCT },
+  models: { nato: buildLCT, pact: buildLCT, brit: buildLCT4, wh: buildMFP, jp: buildDaihatsu },
+  armyType: {
+    brit: { shortName: 'LCT Mk 4', hull: { length: 57, beam: 11.8 }, hold: { y: 1.0, z: [-16, 20], w: 0, cols: 1 }, camera: { distance: 80, height: 22, shoulder: 0 } },
+    wh: { shortName: 'MFP', hull: { length: 47, beam: 6.6 }, hold: { y: 1.06, z: [-6, 18], w: 0, cols: 1 }, camera: { distance: 70, height: 20, shoulder: 0 } },
+    jp: { shortName: 'Daihatsu', hull: { length: 14.9, beam: 3.4 }, hold: { y: 0.53, z: [-3, 4.5], w: 2.2, cols: 3, vehicles: 1 }, camera: { distance: 32, height: 11, shoulder: 0 } },
+  },
+  factionStats: { wh: { hp: 1400 }, jp: { hp: 500, radius: 2.6, height: 2.6, eyeHeight: 3 } }, // (the MFP: bigger and armed; the Daihatsu: a 15 m barge)
   variants: {
     nato: { name: 'LCT Mk 6', weapon: '2 × 20 mm', text: 'A flat steel box with a ramp: tanks, half-tracks and guns straight onto the beach. Slow, big and an easy target on the run in.' },
     pact: { name: 'Tank landing craft', weapon: '20 mm', text: 'A landing craft for vehicles.' },
@@ -303,7 +316,8 @@ export const lct = ship({
   },
 });
 
-for (const t of [lcvp, lct]) t.variants.brit21 = t.variants.brit14 = t.variants.brit; // (one Royal Navy for all three British armies)
+// one Royal Navy for all three British armies; the Fallschirmjäger come in the Wehrmacht's boats
+for (const t of [lcvp, lct]) for (const [a, b] of [['brit21', 'brit'], ['brit14', 'brit'], ['fj', 'wh']]) for (const k of ['variants', 'models', 'armyType', 'factionStats']) if (t[k][b]) t[k][a] = t[k][b];
 
 /** A DD Sherman swimming in on its canvas screen (systems/Landing.js: never bought — a `dd` tank bought on a coastal map comes as one). */
 export const ddCraft = ship({
@@ -444,36 +458,85 @@ const MERCHANT = { model: S.buildMerchantRN, variant: { name: 'Merchantman', wea
 navy(transport, 'brit', { ...MERCHANT, names: ['MV Melbourne Star', 'MV Brisbane Star', 'MV Rochester Castle', 'MV Port Chalmers', 'SS Ohio', 'MV Dorset', 'MV Waimarama', 'MV Deucalion', 'MV Glenorchy', 'MV Wairangi'] }); // (Pedestal's)
 navy(transport, ['brit21', 'brit14'], { ...MERCHANT, names: ['SS Assyrian', 'SS Empire Miniver', 'SS Beatus', 'SS Fiscus', 'SS Creekirk', 'SS Scoresby', 'SS Empire Brigade', 'SS Sedgepool', 'SS Clintonia', 'SS Shirak', 'SS Wandby', 'SS Ruperra'] }); // (the North Atlantic's: SC 7 and HX 79, October 1940)
 
-// the Kriegsmarine: no carrier — Graf Zeppelin was launched in 1938 and never commissioned; no cruisers of the light
-// class, escorts or transports either (the slots below `armies` keep the Wehrmacht out of: no Japanese ship in a German's slot)
-const NOT_KM = ['us', 'sov', 'usmc', 'brit', 'brit21', 'brit14', 'jp', 'fj'];
-for (const t of [frigate, lightCruiser, carrier, escortCarrier, transport]) t.armies = NOT_KM;
+// the Kriegsmarine, for the Wehrmacht and the Fallschirmjäger alike (one nation, one navy): no carrier — Graf Zeppelin
+// was launched in 1938 and never commissioned — and no rocket ship (the slots below `armies` keep both armies out of:
+// no Japanese or American ship in a German's slot)
+const KM_ARMIES = ['wh', 'fj'];
+const NOT_KM = ['us', 'sov', 'usmc', 'brit', 'brit21', 'brit14', 'jp'];
+for (const t of [carrier, escortCarrier, lsmr]) t.armies = NOT_KM;
 const FIFTEEN_DD = { range: 2500, reload: 7.5, damage: 440, splash: 5, pierce: 0.4, shell: 920, size: 2, spread: 0.01 };   // (the twin turret: both shells)
 const TWENTY_KM = { range: 3100, reload: 9, damage: 640, splash: 7, pierce: 0.55, shell: 950, size: 2.6, spread: 0.0085 }; // (German rangefinders: the tightest salvoes)
 const THIRTY_EIGHT = { range: 4000, reload: 26, damage: 1500, splash: 11, pierce: 0.75, shell: 1000, size: 3.8, spread: 0.0075 };
-navy(destroyer, 'wh', { names: ['Z 23', 'Z 24', 'Z 25', 'Z 26', 'Z 27', 'Z 28', 'Z 29', 'Z 30', 'Z 31', 'Z 32', 'Z 33', 'Z 34', 'Z 37', 'Z 38', 'Z 39'], model: S.buildNarvik, cost: 480,
+navy(destroyer, KM_ARMIES, { names: ['Z 23', 'Z 24', 'Z 25', 'Z 26', 'Z 27', 'Z 28', 'Z 29', 'Z 30', 'Z 31', 'Z 32', 'Z 33', 'Z 34', 'Z 37', 'Z 38', 'Z 39'], model: S.buildNarvik, cost: 480,
   stats: { hp: 4400, armor: 0.2, speed: 16, sonar: 700, range: 2500, aggroRange: 2500, preferredRange: 1800, damage: 440, fireCooldown: 7.5 }, // (balance, AI soaks 2026-11-20: the heavy guns slow and wet — they lost the Biscay fight)
   mounts: [gun([0, 8, 48], FWD, FIFTEEN_DD), gun([0, 10.5, -24], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }), gun([0, 8, -38], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }), gun([0, 8, -48], AFT, { ...FIFTEEN_DD, damage: 220, reload: 6 }),
     torps([0, 8, 5], { count: 4, range: 1500, reload: 110 }), torps([0, 6, -16], { count: 4, range: 1500, reload: 110 })],
   variant: { name: 'Zerstörer 1936A (Narvik)', weapon: '5 × 15 cm (twin forward), 8 torpedo tubes', text: 'The Narvik class: a light cruiser\'s 15 cm guns on a destroyer — heavy shells that outranged any British destroyer, but a wet, slow-firing gun in a seaway. Numbered, not named: Z 23 to Z 39.' } });
-navy(cruiser, 'wh', { names: ['Admiral Hipper', 'Prinz Eugen', 'Blücher'], model: S.buildHipper,
+navy(cruiser, KM_ARMIES, { names: ['Admiral Hipper', 'Prinz Eugen', 'Blücher'], model: S.buildHipper,
   stats: { hp: 11500, armor: 0.45, speed: 16, range: 3100, aggroRange: 3100, preferredRange: 2300, damage: 640, fireCooldown: 9 },
   mounts: [gun([0, 10, 74], FWD, TWENTY_KM), gun([0, 13, 62], FWD, TWENTY_KM), gun([0, 13, -58], AFT, TWENTY_KM), gun([0, 10, -70], AFT, TWENTY_KM),
     torps([8.6, 8, -36], { count: 6, range: 1500, reload: 140 }), torps([-8.6, 8, -36], { count: 6, range: 1500, reload: 140 })],
   variant: { name: 'Admiral Hipper-class heavy cruiser', weapon: '8 × 20.3 cm, 12 × 10.5 cm, 12 torpedo tubes', text: 'Big, fast and well armed, the Atlantic bow and the tower bridge of the big ships. Prinz Eugen sailed with Bismarck and fired the first hits on Hood; Hipper fell on the Arctic convoys.' } });
-navy(battleship, 'wh', { names: ['Bismarck', 'Tirpitz'], model: S.buildBismarck,
+navy(battleship, KM_ARMIES, { names: ['Bismarck', 'Tirpitz'], model: S.buildBismarck,
   stats: { hp: 27000, armor: 0.72, speed: 15, range: 4000, aggroRange: 4000, preferredRange: 3000, damage: 3000, fireCooldown: 26 },
   mounts: [gun([0, 15, 90], FWD, THIRTY_EIGHT), gun([0, 19, 74], FWD, THIRTY_EIGHT), gun([0, 19, -70], AFT, THIRTY_EIGHT), gun([0, 15, -86], AFT, THIRTY_EIGHT),
     SECONDARY([11.5, 11, 30], Math.PI / 2), SECONDARY([-11.5, 11, 30], -Math.PI / 2), SECONDARY([11.5, 11, -46], Math.PI / 2), SECONDARY([-11.5, 11, -46], -Math.PI / 2)],
   variant: { name: 'Bismarck-class battleship', weapon: '8 × 38 cm, 12 × 15 cm, 16 × 10.5 cm', text: 'Anton, Bruno, Caesar, Dora: four twin 38 cm turrets and a wide, steady hull. Bismarck sank Hood in the Denmark Strait with her fifth salvo; three days later a Swordfish\'s torpedo jammed her rudders and the Home Fleet caught her. Tirpitz lay in the Norwegian fjords and held half the Home Fleet in Scapa Flow.' } });
-navy(submarine, 'wh', { names: ['U 47', 'U 99', 'U 100', 'U 96', 'U 552', 'U 201', 'U 556', 'U 73', 'U 81', 'U 331', 'U 557', 'U 559', 'U 371', 'U 205'], model: S.buildTypeVII, cost: 380,
+navy(submarine, KM_ARMIES, { names: ['U 47', 'U 99', 'U 100', 'U 96', 'U 552', 'U 201', 'U 556', 'U 73', 'U 81', 'U 331', 'U 557', 'U 559', 'U 371', 'U 205'], model: S.buildTypeVII, cost: 380,
   stats: { submarine: { submerged: 3.8, dive: 1.8, periscope: 6, deep: 40 }, hp: 1700, armor: 0.08, speed: 9, radius: 3.5, height: 5, eyeHeight: 7, hearing: 2600, range: 1600, aggroRange: 1600, preferredRange: 1100, damage: 200 }, // (she dived in under 30 s; the GHG hydrophones heard a convoy far beyond sight)
   mounts: [TUBES([0, -1, 30], 0, { count: 4, range: 1500, speed: 22, damage: 2600, reload: 45 }), TUBES([0, -1, -32], Math.PI, { count: 1, range: 1500, speed: 22, damage: 2600, reload: 60 }), gun([0, 4, 9], 0, { range: 1300, reload: 4, damage: 200, splash: 3, surfaced: true, arc: 5.2 })],
   variant: { name: 'Type VIIC U-boat', weapon: '5 torpedo tubes, 8.8 cm, 2 cm', text: 'The Atlantic\'s wolf: some 570 of them were built, more than any other submarine. They hunted in packs, closed the convoys on the surface at night, fired, dived. Cheap and quick to bring in — and in 1943 the escorts\' radar, Hedgehogs and aircraft turned the hunters into the hunted.' } });
-navy(ptBoat, 'wh', { names: ['S 30', 'S 36', 'S 58', 'S 59', 'S 38', 'S 100', 'S 54', 'S 61'], model: S.buildSBoot,
+navy(ptBoat, KM_ARMIES, { names: ['S 30', 'S 36', 'S 58', 'S 59', 'S 38', 'S 100', 'S 54', 'S 61'], model: S.buildSBoot,
   stats: { hp: 620, speed: 21, radius: 3.5, height: 3.5, eyeHeight: 4.5, range: 1100, aggroRange: 1200, preferredRange: 800 },
   mounts: [torps([0, 2, 12], { facing: FWD, arc: 0.7, count: 2, range: 1400, speed: 22, damage: 2600, reload: 120 }), gun([0, 3, -12], AFT, { range: 1000, reload: 1, damage: 55, splash: 1, shell: 800, size: 0.8, arc: 5 })],
   variant: { name: 'Schnellboot (S 38 class)', weapon: '2 torpedo tubes and 2 reloads, 2 cm', text: 'The E-boat: a round-bilged diesel boat, bigger and more seaworthy than any British MTB, at 40 knots. S 30, S 36, S 58 and S 59 tore into Pedestal\'s merchantmen off Cape Bon in the night of 13 August 1942.' } });
+
+// the Kriegsmarine's escort, light cruiser and merchantman, and the coastal maps' sweeper and old battleship
+const TEN_FIVE = { range: 1700, reload: 3.5, damage: 150 };
+navy(frigate, KM_ARMIES, { names: ['T 22', 'T 23', 'T 24', 'T 25', 'T 26', 'T 27', 'T 28', 'T 29', 'T 30', 'T 31', 'T 32', 'T 33', 'T 34', 'T 35', 'T 36'], model: S.buildElbing, cost: 300,
+  stats: { hp: 2500, armor: 0.1, speed: 13.5, sonar: 700, depthCharges: DC({ count: 4, reload: 18 }), range: 1700, aggroRange: 1700, preferredRange: 1200, damage: 150, fireCooldown: 3.5 }, // (33 knots: as fast as a destroyer, lighter armed)
+  mounts: [gun([0, 7, 39], FWD, TEN_FIVE), gun([0, 9, 32], FWD, TEN_FIVE), gun([0, 9, -26], AFT, TEN_FIVE), gun([0, 6, -37], AFT, TEN_FIVE),
+    torps([0, 7, 3], { count: 3, range: 1500, reload: 110 }), torps([0, 6, -18], { count: 3, range: 1500, reload: 110 })],
+  variant: { name: 'Flottentorpedoboot 1939 (Elbing)', weapon: '4 × 10.5 cm, 6 torpedo tubes, depth charges', text: 'The fleet torpedo boat: a small destroyer in all but name, fast, with six tubes and four 10.5 cm. T 24 and T 27 fought the Channel nights of 1944; she escorts the convoys and goes in with torpedoes.' } });
+const T15 = { range: 2600, reload: 8.5, damage: 600, splash: 5, pierce: 0.45, shell: 920, size: 2.2, spread: 0.01 };   // (the triple turret: all three shells)
+navy(lightCruiser, KM_ARMIES, { names: ['Leipzig', 'Nürnberg'], model: S.buildLeipzig, cost: 580,
+  stats: { hp: 7800, armor: 0.3, speed: 16, range: 2600, aggroRange: 2600, preferredRange: 1900, damage: 600, fireCooldown: 8.5 },
+  mounts: [gun([0, 10, 60], FWD, T15), gun([0, 12, -50], AFT, T15), gun([0, 9.5, -62], AFT, T15), torps([6, 7, -38], { count: 3, range: 1500, reload: 130 }), torps([-6, 7, -38], { count: 3, range: 1500, reload: 130 })],
+  variant: { name: 'Leipzig-class light cruiser', weapon: '9 × 15 cm in triples, 12 torpedo tubes', text: 'Three triple 15 cm turrets, two of them aft, and diesels for a long cruise beside her turbines. Leipzig and Nürnberg screened the fleet in the North Sea and the Baltic; Nürnberg came through the war.' } });
+navy(transport, KM_ARMIES, { names: ['Ankara', 'Reichenfels', 'Menes', 'Ruhr', 'Ithaka', 'Kreta', 'Sparta', 'Tinos'], model: S.buildHansa, // (German freighters on Rommel's supply run)
+  mounts: [gun([0, 8, -55], AFT, { range: 1500, reload: 5, damage: 110, splash: 3, arc: 4 })],
+  variant: { name: 'Hansa-type freighter', weapon: 'one 10.5 cm, 2 cm flak', text: 'The standard German cargo ship, built in yards across occupied Europe: slow and soft, a few navy gunners aboard. While she lies in a zone of yours her cargo brings in command points.' } });
+const SWEEP_GUN = (at, facing, o) => gun(at, facing, { range: 1500, reload: 4, damage: 90, splash: 2.5, shell: 750, size: 1.2, arc: 4, ...o });
+navy(minesweeper, KM_ARMIES, { names: ['M 261', 'M 264', 'M 265', 'M 266', 'M 267', 'M 272', 'M 273', 'M 274'], model: S.buildM40,
+  stats: { hp: 1100, damage: 120, fireCooldown: 4 },
+  mounts: [SWEEP_GUN([0, 6, 20], FWD, { damage: 120 }), SWEEP_GUN([0, 4, -16], AFT, { damage: 120 })],
+  variant: { name: 'Minensuchboot 1940', weapon: '2 × 10.5 cm, 3.7 cm, 2 cm', text: 'The coal-burning fleet minesweeper, a 10.5 cm fore and aft: she cuts the moored mines ahead of the barges with her sweep streamed astern. Sturdier than any Allied motor sweeper, but still slow — keep her out of the coast guns\' reach.' } });
+navy(oldBattleship, KM_ARMIES, { names: ['Schleswig-Holstein', 'Schlesien'], model: S.buildSchleswig, cost: 800,
+  stats: { hp: 9500, armor: 0.32, speed: 6.5, range: 2800, aggroRange: 2800, preferredRange: 2400, damage: 900, fireCooldown: 26 },
+  mounts: [gun([0, 12, 42], FWD, { ...FOURTEEN_INCH, range: 2800, damage: 900 }), gun([0, 10, -40], AFT, { ...FOURTEEN_INCH, range: 2800, damage: 900 }), SECONDARY([11, 5, 4], Math.PI / 2), SECONDARY([-11, 5, 4], -Math.PI / 2)],
+  variant: { name: 'Schleswig-Holstein (old battleship)', weapon: '4 × 28 cm, 15 cm casemate guns', text: 'A pre-dreadnought of 1908, kept as a training ship: two twin 28 cm turrets and a casemate battery. She fired the war\'s first shots on the Westerplatte; offshore her heavy shells still reach the batteries and strongpoints inland — given someone to spot for her.' } });
+
+// the Royal Navy's coastal ships: the fleet minesweeper, and the LCT(R) in the LSM(R)'s slot
+const ALGERINE = {
+  model: S.buildAlgerine, stats: { hp: 1200, speed: 6.5, damage: 110 },
+  mounts: [SWEEP_GUN([0, 7.5, 22], FWD, { damage: 110 }), gun([0, 6, -10], AFT, { range: 900, reload: 1.2, damage: 30, splash: 1, shell: 800, size: 0.7, arc: 4 })],
+  variant: { name: 'Algerine-class minesweeper', weapon: 'one 4-inch, 20 mm', text: 'The Royal Navy\'s fleet minesweeper: steel, steam and a long forecastle, the 4-inch forward and the sweep gear on her quarterdeck. Algerines swept the lanes in to Sicily and Normandy ahead of the landing craft.' },
+};
+navy(minesweeper, 'brit', { ...ALGERINE, names: ['HMS Cadmus', 'HMS Circe', 'HMS Espiegle', 'HMS Fantome', 'HMS Hebe', 'HMS Mutine', 'HMS Rinaldo', 'HMS Rosario'] }); // (the 12th Flotilla's, Sicily 1943)
+navy(minesweeper, ['brit21', 'brit14'], { ...ALGERINE, names: ['HMS Fly', 'HMS Hound', 'HMS Hydra', 'HMS Orestes', 'HMS Pelorus', 'HMS Pique', 'HMS Ready', 'HMS Rattlesnake'] }); // (Algerines off Normandy)
+navy(lsmr, RN, { names: ['LCT(R) 334', 'LCT(R) 362', 'LCT(R) 368', 'LCT(R) 405', 'LCT(R) 423', 'LCT(R) 439', 'LCT(R) 448', 'LCT(R) 452'], model: S.buildLCTR, cost: 340,
+  stats: { hp: 1100, armor: 0.05, speed: 5.5, radius: 5, height: 6, eyeHeight: 7, range: 1700, aggroRange: 1700, preferredRange: 1100, damage: 30, fireCooldown: 1.2 },
+  mounts: [
+    { at: [0, 4, 0], facing: 0, arc: 6.3, shore: true, range: 1700, reload: 110, damage: 130, splash: 6, scatter: 55, rockets: { count: 64, every: 0.04, speed: 180 } }, // (her whole load in one ripple, a wide pattern — then a long wait)
+    gun([0, 4, -22], AFT, { range: 900, reload: 1.2, damage: 30, splash: 1, shell: 800, size: 0.7, arc: 4 }),
+  ],
+  variant: { name: 'LCT(R) rocket craft', weapon: 'some 1,000 5-inch rocket projectors, 2 × 20 mm', text: 'A tank landing craft with her deck plated over and packed with rocket projectors: she runs in, and in half a minute her whole load falls on the beach defences at once — then nothing more until she has reloaded. Shore targets only; thin-skinned.' } });
+
+// the Imperial Navy's fleet minesweeper (the Pacific's landing maps)
+navy(minesweeper, 'jp', { names: ['W-1', 'W-2', 'W-3', 'W-4', 'W-5', 'W-6'], model: S.buildW1,
+  stats: { hp: 1100, speed: 6.5, damage: 110 },
+  mounts: [SWEEP_GUN([0, 6, 28], FWD, { damage: 110 }), SWEEP_GUN([0, 6, -11], AFT, { damage: 110, arc: 3.4 }), SWEEP_GUN([0, 4, -22], AFT, { damage: 110 })],
+  variant: { name: 'W-1-class minesweeper', weapon: '3 × 12 cm, machine guns', text: 'The Imperial Navy\'s fleet minesweeper of the 1920s: two funnels, three 12 cm guns and the sweep gear aft. W-boats cleared the anchorages for every landing from Hong Kong to the Philippines.' } });
 
 export const SHIPS_1945 = { frigate, destroyer, cruiser, battleship, submarine, carrier, ptBoat, lightCruiser, escortCarrier, transport, lcvp, lct, minesweeper, oldBattleship, ddCraft, lsmr };
 // (the Imperial Navy's ships under the Imperial Japanese Army's name too: the Pacific's sea maps field `jp`, which is `own`)

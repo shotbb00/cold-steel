@@ -24,6 +24,7 @@
 //     S-boot (S 38 class, 35 m): the tubes under the forecastle, the armoured round bridge
 import { P, merge, loft } from '../units/geometry.js';
 import { KIT } from './ships1945.js';
+import { craft } from './landingCraft45.js';
 
 const { box, cyl, every, strut, hull, turret, aa, boat, searchlight, mast, funnel, windows, vent, raft, mount, ship, sub,
   oerlikon, depthCharges, airplane, catapult, crane, torpedoMount, submarine, torpedoBoat, transport, flattop, carrier, BLACK, GLASS, WHITE } = KIT;
@@ -429,4 +430,259 @@ export const buildSBoot = ship(() => {
     ]),
     mounts: d.mounts,
   };
+});
+
+// ---------------------------------------------------------------- navy45 batch: the coastal and the missing classes
+//   Kriegsmarine: M 1940 Minensuchboot, Schleswig-Holstein, Flottentorpedoboot 1939 (Elbing), Leipzig, a Hansa freighter
+//   Royal Navy: Algerine-class minesweeper, LCT(R) (an LCT Mk 3 full of rocket projectors)
+//   Imperial Navy: the W-1-class minesweeper
+
+/** A raised forecastle from `z0` to the stem, `h` m over the main deck, following the hull's lines. */
+const forecastle = (H, c, z0, draft, h = 2) => {
+  const fc = every(z0, H.len / 2 - 0.4, 1.5).map((z) => [z, Math.max(0.15, H.side(z, (H.top(z) - draft) / 2) * 0.96)]);
+  return [loft(fc.map(([z, w]) => [0, H.top(z) + h / 2 - 0.1, z, w, h / 2 + 0.1, 4]), { color: c.hull, surf: 'plate' }, 12),
+    loft(fc.map(([z, w]) => [0, H.top(z) + h + 0.03, z, w * 0.95, 0.06, 6]), { color: c.deck, surf: 'deck' }, 8)];
+};
+/** The sweep gear on the quarterdeck: the winch and its drum at `z`, the gallows over the stern, the Oropesa floats and the kites. */
+const sweepGear = (c, H, z, float = 0xb84a2a) => {
+  const t = H.top(z), zs = -H.len / 2 + 2.5, ts = H.top(zs), w = (q) => H.side(q, H.top(q) - 1.2);
+  return [
+    box(2.6, 1.4, 2.2, { y: t + 0.7, z, color: c.gun }),
+    P.cyl(0.55, 0.55, 2.8, { y: t + 1.1, z: z - 1.4, rz: Math.PI / 2, color: BLACK }, 10),
+    ...[-1, 1].flatMap((s) => [
+      strut([s * (w(zs) - 0.5), ts, zs], [s * (w(zs) - 0.5), ts + 4.2, zs - 1], 0.14, c.upper),          // the gallows
+      P.cyl(0.42, 0.42, 3.2, { x: s * (w(z - 5) - 1.2), y: t + 0.5, z: z - 5, rx: Math.PI / 2, color: float }, 8),   // the floats
+      P.box(0.12, 1.4, 2, { x: s * (w(z - 2) - 0.6), y: t + 0.8, z: z - 2, color: c.gun }),                 // the kites
+    ]),
+    strut([-(w(zs) - 0.5), ts + 4.2, zs - 1], [w(zs) - 0.5, ts + 4.2, zs - 1], 0.12, c.upper),
+  ];
+};
+
+/** M 1940: the coal-burning fleet minesweeper, a short forecastle, a 10.5 cm gun fore and aft, one capped funnel, the sweep gear aft. */
+export const buildM40 = ship(() => {
+  const c = KM;
+  const fb = 2.8, dr = 2.6;
+  const H = hull(62.3, 8.9, fb, dr, c, 1.4);
+  const g = mount(c, { w: 2.6, h: 2.2, d: 3.4, barrels: 1, len: 5, cal: 0.12 });
+  const fc = (z) => H.top(z) + 2;
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...forecastle(H, c, 4, dr, 2),
+      box(5.6, 2.4, 5, { y: fc(9) + 1.2, z: 9, color: c.upper }),          // the bridge
+      ...windows(0, fc(9) + 1.8, 9, 5.6, 5),
+      box(4.6, 1.2, 3, { y: fc(9) + 3, z: 8.5, color: c.upper }),
+      box(2.6, 0.4, 0.4, { y: fc(9) + 3.8, z: 8, color: c.gun }),           // the rangefinder
+      ...mast(c, 0, fc(5), 5, 11, { rake: 0.05, yard: 5 }),
+      box(5, 2.2, 13, { y: fb + 1.1, z: -4, color: c.upper }),             // the casing
+      ...funnel(c, 0, fb + 2.2, -1, 1.3, 5, 0.06, { oval: 1.2 }), cap(c, -1.3, fb + 7.2, 1.3),
+      aa(c, 0, fb + 2.2, -9, { n: 1, ry: Math.PI, cal: 0.06, len: 2.4 }),
+      ...[-1, 1].map((s) => oerlikon(c, s * 2.6, fc(9) + 2.4, 9, s * Math.PI / 2)),
+      ...[-1, 1].map((s) => boat(c, s * 3.6, fb + 0.2, -4, 5.5, s)),
+      ...sweepGear(c, H, -23),
+    ]),
+    mounts: [
+      { geo: g, at: [0, fc(20) + 0.1, 20], arc: 5 },
+      { geo: g, at: [0, fb + 0.1, -16], aft: true, arc: 5 },
+    ],
+  };
+});
+
+/** Schleswig-Holstein: the pre-dreadnought of 1908, rebuilt — two twin 28 cm turrets, the 15 cm casemates, the fore funnels trunked into one. */
+export const buildSchleswig = ship(() => {
+  const c = KM;
+  const fb = 6.2;
+  const H = hull(127.6, 22.2, fb, 7.7, c, 2.2);
+  const t2 = turret(c, { w: 8.4, h: 3.8, d: 9, barrels: 2, len: 11, cal: 0.3 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      box(12, 3.6, 16, { y: fb + 1.8, z: 26, color: c.upper }),           // the forward superstructure
+      cyl(2.8, 3, 4, { y: fb + 5.6, z: 30, color: c.gun }, 14),           // the conning tower
+      box(10, 3, 6, { y: fb + 5.1, z: 25, color: c.upper }),              // the bridge
+      ...windows(0, fb + 5.9, 25, 10, 6),
+      ...mast(c, 0, fb + 6.6, 22, 18, { yard: 9 }),                      // the tall foremast
+      box(4, 2.6, 4, { y: fb + 6.6 + 12.4, z: 22, color: c.upper }),      // its fighting top
+      box(14, 4, 40, { y: fb + 2, z: -4, color: c.upper }),               // the central casing
+      ...funnel(c, 0, fb + 4, 9, 2.4, 10, 0.03, { oval: 1.9 }), cap(c, 9 - 0.3, fb + 14.4, 2.4),   // the trunked fore funnels
+      ...funnel(c, 0, fb + 4, -6, 2, 10, 0.03, { oval: 1.3 }), cap(c, -6 - 0.3, fb + 14.4, 2),
+      ...mast(c, 0, fb + 4, -20, 16, { yard: 7 }),
+      box(7, 3, 7, { y: fb + 5.5, z: -22, color: c.upper }),              // the after control position
+      ...[-1, 1].flatMap((s) => every(-24, 24, 8).flatMap((z) => [
+        box(0.5, 1.4, 2, { x: s * (H.side(z, fb - 2) + 0.1), y: fb - 2, z, color: BLACK }),                   // the casemate ports
+        P.cyl(0.12, 0.16, 4, { x: s * (H.side(z, fb - 2) + 1.8), y: fb - 2, z, rz: Math.PI / 2, color: BLACK, surf: 'metal' }, 8),
+      ])),
+      ...[-1, 1].flatMap((s) => [14, -14].map((z) => aa(c, s * 6, fb + 4, z, { n: 2, ry: s * Math.PI / 2, cal: 0.06, len: 2.6 }))),
+      ...[-1, 1].flatMap((s) => [24, 0, -18].map((z) => oerlikon(c, s * 6.6, fb + 4, z, s * Math.PI / 2))),
+      ...[-1, 1].map((s) => boat(c, s * 8, fb + 4, -2, 9, s)),
+      ...crane(c, 6, fb + 4, -12, 8, 9, Math.PI / 2), ...crane(c, -6, fb + 4, -12, 8, 9, -Math.PI / 2),
+      ...[-1, 1].flatMap((s) => searchlight(c, s * 3, fb + 4, -16)),
+    ]),
+    mounts: [
+      { geo: t2, at: [0, H.top(42), 42], arc: 5 },
+      { geo: t2, at: [0, fb, -40], aft: true, arc: 5 },
+    ],
+  };
+});
+
+/** Flottentorpedoboot 1939 (Elbing, T 22–T 36): the Atlantic bow, four 10.5 cm (two forward, two aft), two capped funnels, two triple torpedo mounts. */
+export const buildElbing = ship(() => {
+  const c = KM;
+  const fb = 4.6;
+  const H = hull(102.5, 10, fb, 3.2, c, 2.2);
+  const g = mount(c, { w: 2.8, h: 2.3, d: 3.6, barrels: 1, len: 5.4, cal: 0.12 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...atlanticBow(H, c, 2.5, 3.2),
+      box(6.5, 2.6, 12, { y: fb + 1.3, z: 27, color: c.upper }),
+      box(5.6, 2.8, 5.5, { y: fb + 4, z: 26, color: c.upper }),           // the bridge
+      ...windows(0, fb + 4.8, 26, 5.6, 5.5),
+      box(2.6, 1.6, 2.6, { y: fb + 6.2, z: 25, color: c.gun }),
+      ...mast(c, 0, fb + 2.6, 21, 13, { rake: 0.06, yard: 6, radar: 'mattress' }),
+      box(6, 2.2, 30, { y: fb + 1.1, z: -1, color: c.upper }),            // the midships casing
+      ...funnel(c, 0, fb + 2.2, 11, 1.7, 6, 0.06, { oval: 1.3 }), cap(c, 11 - 0.4, fb + 8.2, 1.7),
+      ...funnel(c, 0, fb + 2.2, -6, 1.7, 6, 0.06, { oval: 1.3 }), cap(c, -6 - 0.4, fb + 8.2, 1.7),
+      aa(c, 0, fb + 2.2, -14, { n: 2, ry: Math.PI, cal: 0.06, len: 2.6 }),   // the 3.7 cm twin
+      box(6, 2.4, 9, { y: fb + 1.2, z: -26, color: c.upper }),            // the after deckhouse
+      ...[-1, 1].flatMap((s) => [24, -20].map((z) => oerlikon(c, s * 3.2, z > 0 ? fb + 2.6 : fb + 0.1, z, s * Math.PI / 2))),
+      ...[-1, 1].map((s) => boat(c, s * 4, fb + 0.2, 6, 6, s)),
+      ...searchlight(c, 0, fb + 2.2, 2),
+      ...depthCharges(c, H, -48, 2),
+    ]),
+    mounts: [
+      { geo: g, at: [0, H.top(39) + 0.1, 39], arc: 5 },
+      { geo: g, at: [0, fb + 2.7, 32], arc: 5 },
+      { geo: g, at: [0, fb + 2.5, -26], aft: true, arc: 5 },
+      { geo: g, at: [0, fb + 0.1, -37], aft: true, arc: 5 },
+    ],
+    torps: [{ geo: torpedoMount(c, 3), at: [0, fb + 2.3, 3] }, { geo: torpedoMount(c, 3), at: [0, fb + 0.2, -18] }],
+  };
+});
+
+/** Leipzig / Nürnberg: three triple 15 cm turrets (Anton forward, Bruno superfiring over Caesar aft), the tower bridge, one capped funnel, the catapult. */
+export const buildLeipzig = ship(() => {
+  const c = KM;
+  const fb = 6.5;
+  const H = hull(177, 16.3, fb, 5.7, c, 2.2);
+  const t3 = turret(c, { w: 7, h: 3.2, d: 8, barrels: 3, len: 9, cal: 0.2 });
+  const ha = mount(c, { w: 3.6, h: 2.3, d: 4, barrels: 2, len: 4.6, cal: 0.1 });   // the 8.8 cm twins
+  const arado = airplane(0x6a7068, { span: 12.5, len: 11, floats: true, mark: 0x161616 });
+  return {
+    fixed: merge([
+      ...H.parts,
+      box(11, 4, 22, { y: fb + 2, z: 36, color: c.upper }),
+      box(8, 8, 8, { y: fb + 8, z: 38, color: c.upper }),                 // the tower bridge
+      ...windows(0, fb + 7, 38, 8, 8), ...windows(0, fb + 10.6, 38, 8, 8),
+      cyl(2.2, 2.2, 2.4, { y: fb + 13.2, z: 37, color: c.upper }, 14),    // the foretop rangefinder
+      box(8, 1.1, 1.4, { y: fb + 13.8, z: 37, color: c.gun }),
+      ...mast(c, 0, fb + 12, 33, 12, { rake: 0.05, yard: 8, radar: 'mattress' }),
+      box(10, 4, 46, { y: fb + 2, z: 0, color: c.upper }),
+      ...funnel(c, 0, fb + 4, 14, 3, 9, 0.05, { oval: 1.4 }), cap(c, 14 - 0.4, fb + 13.6, 3),
+      catapult(c, 0, fb + 4, -6, Math.PI / 2, arado),
+      ...crane(c, 4.5, fb + 4, -2, 8, 9, Math.PI / 2), ...crane(c, -4.5, fb + 4, -2, 8, 9, -Math.PI / 2),
+      ...mast(c, 0, fb + 4, -20, 16, { yard: 7 }),
+      box(8.5, 3, 9, { y: fb + 1.5, z: -50, color: c.upper }),            // Bruno's barbette
+      ...[-1, 1].flatMap((s) => [-14, -28].map((z) => ha.clone().rotateY(s * Math.PI / 2).translate(s * 6, fb + 4, z))),
+      ...[-1, 1].flatMap((s) => [26, 8].map((z) => aa(c, s * 5, fb + 4, z, { n: 2, ry: s * Math.PI / 2, cal: 0.06, len: 2.6 }))),
+      ...[-1, 1].map((s) => torpedoMount(c, 3).clone().rotateY(s * Math.PI / 2).translate(s * 6, fb + 0.2, -38)),
+      ...[-1, 1].flatMap((s) => every(-36, 30, 12).map((z) => oerlikon(c, s * (H.side(z, fb - 1) - 1), fb, z, s * Math.PI / 2))),
+      ...[-1, 1].map((s) => boat(c, s * 5.8, fb + 4, 6, 8, s)),
+      ...[-1, 1].flatMap((s) => searchlight(c, s * 2.6, fb + 4, -16)),
+    ]),
+    mounts: [
+      { geo: t3, at: [0, H.top(60), 60], arc: 5 },
+      { geo: t3, at: [0, fb + 3, -50], aft: true, arc: 5 },
+      { geo: t3, at: [0, fb, -62], aft: true, arc: 5 },
+    ],
+  };
+});
+
+/** A Hansa-type freighter: the standard wartime German cargo ship, her house amidships, grey over a dark hull. */
+export const buildHansa = ship(() => transport({ ...KM, hull: 0x44484a, upper: 0x9a9c96, boat: 0x9a9c96 }, { len: 121, beam: 16.3, fb: 5.6, houseZ: -8, gunAft: true }));
+
+/** Algerine class: the Royal Navy's fleet minesweeper, a long forecastle, the 4-inch forward, one funnel, the lattice mast, the sweep gear aft. */
+export const buildAlgerine = ship(() => {
+  const c = RN_DD;
+  const fb = 3.4, dr = 3.4;
+  const H = hull(68.6, 10.8, fb, dr, c, 1.6);
+  const four = mount(c, { w: 2.6, h: 2.1, d: 3.2, barrels: 1, len: 4.6, cal: 0.11 });
+  const fc = (z) => H.top(z) + 2.2;
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...forecastle(H, c, -4, dr, 2.2),
+      box(6.5, 2.6, 6, { y: fc(10) + 1.3, z: 10, color: c.upper }),      // the bridge
+      ...windows(0, fc(10) + 2, 10, 6.5, 6),
+      ...[-1, 1].map((s) => box(2, 0.3, 2.4, { x: s * 4, y: fc(10) + 2.7, z: 10.5, color: c.upper })),
+      ...lattice(c, 0, fc(5), 5, 8),
+      ...funnel(c, 0, fc(-1), -1, 1.5, 5, 0.06, { oval: 1.3 }),
+      box(5, 1.8, 6, { y: fc(-1) + 0.9, z: -1, color: c.upper }),
+      ...[-1, 1].map((s) => oerlikon(c, s * 4, fc(10) + 2.8, 10, s * Math.PI / 2)),
+      ...[-1, 1].map((s) => oerlikon(c, s * 3.4, fb + 0.1, -10, s * Math.PI / 2)),
+      ...[-1, 1].map((s) => boat(c, s * 4.4, fc(0), 2, 5.5, s)),
+      ...[-1, 1].map((s) => raft(s * 4, fc(-3) + 1.2, -3)),
+      ...sweepGear(c, H, -22),
+    ]),
+    mounts: [
+      { geo: four, at: [0, fc(22) + 0.1, 22], arc: 5 },
+    ],
+  };
+});
+
+/** The W-1 class (1923): the Imperial Navy's fleet minesweeper, a forecastle, two funnels, three 12 cm guns, the sweep gear aft. */
+export const buildW1 = ship(() => {
+  const c = { hull: 0x6e747a, deck: 0x7a5640, upper: 0x7c8288, gun: 0x6e747a, black: BLACK, boat: 0x8c9296 };   // (the Imperial Navy's grey and linoleum, as models/ships1945.js IJN)
+  const fb = 3.2, dr = 2.3;
+  const H = hull(76.5, 8, fb, dr, c, 1.6);
+  const g = mount(c, { w: 2.4, h: 2, d: 3.2, barrels: 1, len: 5, cal: 0.11 });
+  const fc = (z) => H.top(z) + 2;
+  return {
+    fixed: merge([
+      ...H.parts,
+      ...forecastle(H, c, 12, dr, 2),
+      box(5, 2.4, 4.5, { y: fc(16) + 1.2, z: 16, color: c.upper }),      // the bridge
+      ...windows(0, fc(16) + 1.8, 16, 5, 4.5),
+      ...mast(c, 0, fc(13), 13, 10, { tripod: true, rake: 0.1, yard: 5, legsY: fc(13) }),
+      box(4.6, 2, 26, { y: fb + 1, z: -1, color: c.upper }),             // the casing
+      ...funnel(c, 0, fb + 2, 6, 1.2, 5, 0.15, { oval: 1.2 }),
+      ...funnel(c, 0, fb + 2, -1, 1.2, 5, 0.15, { oval: 1.2 }),
+      ...[-1, 1].map((s) => aa(c, s * 2, fb + 2, -8, { n: 2, ry: s * Math.PI / 2, cal: 0.05, len: 2.2 })),
+      ...[-1, 1].map((s) => boat(c, s * 3.2, fb + 0.2, 2, 5.5, s)),
+      ...sweepGear(c, H, -29),
+    ]),
+    mounts: [
+      { geo: g, at: [0, fc(28) + 0.1, 28], arc: 5 },
+      { geo: g, at: [0, fb + 2.1, -11], aft: true, arc: 4.4 },
+      { geo: g, at: [0, fb + 0.1, -22], aft: true, arc: 5 },
+    ],
+  };
+});
+
+/**
+ * LCT(R): an LCT Mk 3 with her tank deck plated over and filled with rows of 5-inch rocket projectors (some 1,000
+ * of them), the ramp shut, the wheelhouse aft. One ripple onto the beach before the first wave, then back to reload.
+ */
+export const buildLCTR = craft(() => {
+  const c = RN_DD;
+  const L = 58.5, B = 9.4, fb = 2.4;
+  const fixed = merge([
+    box(B, fb + 1, L - 4, { y: (fb - 1) / 2, z: -2, color: c.hull }),
+    loft(every(0, 6, 1).map((k) => [0, (fb - 1) / 2 + k * 0.05, L / 2 - 4 + k * 0.6, B / 2 * (1 - k * 0.05), (fb + 1) / 2, 4]), { color: c.hull, surf: 'plate' }, 10),   // the bow, the ramp shut in it
+    box(B - 1.6, fb + 0.6, 0.3, { y: fb / 2 + 0.6, z: L / 2 - 0.6, color: c.upper, surf: 'metal' }),
+    box(B - 0.4, 0.12, L - 12, { y: fb + 0.06, z: 2, color: c.deck, surf: 'deck' }),
+    ...[-1, 1].map((s) => box(0.3, 0.9, L - 10, { x: s * (B / 2 - 0.15), y: fb + 0.45, z: 2, color: c.hull })),
+    box(B, 1.6, 7, { y: fb + 0.8, z: -L / 2 + 3.5, color: c.hull }),                 // the after end
+    box(4.4, 2.4, 3.6, { x: -1.6, y: fb + 2.8, z: -L / 2 + 4, color: c.upper }),     // the wheelhouse
+    P.box(4.2, 0.6, 0.1, { x: -1.6, y: fb + 3.4, z: -L / 2 + 5.85, color: GLASS }),
+    P.cyl(0.55, 0.6, 3, { x: 2.4, y: fb + 3, z: -L / 2 + 2.4, color: c.upper, surf: 'plate' }, 10),  // the funnel
+    P.cyl(0.05, 0.05, 6, { x: -1.6, y: fb + 7, z: -L / 2 + 4, color: BLACK }, 5),
+    ...[-1, 1].map((s) => oerlikon(c, s * 3.6, fb + 1.6, -L / 2 + 6.5, s * Math.PI / 2)),
+    // the projectors: rows of angled racks over the deck, a frame of rails each
+    ...every(0, 9, 1).flatMap((i) => [-3, -1, 1, 3].flatMap((x) => [
+      box(1.7, 0.12, 2.2, { x, y: fb + 0.9, z: -16 + i * 4, rx: -0.7, color: c.gun }),
+      ...[-0.55, 0, 0.55].map((dx) => P.box(0.1, 0.1, 2.4, { x: x + dx, y: fb + 1.05, z: -16 + i * 4, rx: -0.7, color: BLACK, surf: 'metal' })),
+    ])),
+  ]);
+  return { fixed, ramp: null, hinge: [0, 0], gunAt: [fb + 2, 2] };
 });
