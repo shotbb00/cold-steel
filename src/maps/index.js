@@ -122,16 +122,29 @@ import imjinRiver from './imjinRiver.ts';
 import uijeongbu from './uijeongbu.ts';
 import kaesong from './kaesong.ts';
 import pyongyang from './pyongyang.ts';
+import nampo from './nampo.ts';
 import seoul from './seoul.ts';
 import vladivostok from './vladivostok.ts';
 import hokkaido from './hokkaido.ts';
 import andoya from './andoya.ts';
 import keflavik from './keflavik.ts';
+import wismar from './wismar.ts';
+import incheon from './incheon.ts';
+import scheveningen from './scheveningen.ts';
+import ofotfjord from './ofotfjord.ts';
+import bodoLanding from './bodoLanding.ts';
 import reykjanes from './reykjanes.ts';
+import varanger from './varanger.ts';
 export const MAPS = {
   [andoya.id]: andoya,
   [keflavik.id]: keflavik,
+  [wismar.id]: wismar,
+  [incheon.id]: incheon,
+  [scheveningen.id]: scheveningen,
+  [ofotfjord.id]: ofotfjord,
+  [bodoLanding.id]: bodoLanding,
   [reykjanes.id]: reykjanes,
+  [varanger.id]: varanger,
   [ratzeburgLakes.id]: ratzeburgLakes,
   [wesel.id]: wesel,
   [eastAnglia.id]: eastAnglia,
@@ -141,6 +154,7 @@ export const MAPS = {
   [uijeongbu.id]: uijeongbu,
   [kaesong.id]: kaesong,
   [pyongyang.id]: pyongyang,
+  [nampo.id]: nampo,
   [seoul.id]: seoul,
   [vladivostok.id]: vladivostok,
   [hokkaido.id]: hokkaido,

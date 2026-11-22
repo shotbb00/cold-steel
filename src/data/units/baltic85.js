@@ -60,6 +60,7 @@ export const osa = ship({
   variants: {
     pact: { name: 'Osa I missile boat', weapon: '4 P-15 Termit, 2 × twin 30 mm', text: 'Four Styx missiles for ships that aren\'t here, and two quick twin 30 mm mounts that rake the beach and the dunes. Small, fast, fragile.' },
     nato: { name: 'Missile boat', weapon: '30 mm', text: 'A missile boat.' },
+    kpa: { name: 'Osa I missile boat (KPN)', weapon: '4 P-15 Termit, 2 × twin 30 mm', text: 'The Korean People’s Navy’s Soviet-built missile boats: they escort a landing in close and rake the beach with their 30 mm.' }, // (the KPA's own roster: data/units/armies85.js — a variant puts her on it)
   },
 });
 
@@ -76,6 +77,7 @@ export const natya = ship({
   variants: {
     pact: { name: 'Natya-class minesweeper', weapon: '2 × twin 30 mm, the sweep', text: 'Where she steams the moored mines are cut: a new lane for the landing ships, or a wider one. Steel-hulled, slow.' },
     nato: { name: 'Minesweeper', weapon: '30 mm', text: 'A minesweeper.' },
+    kpa: { name: 'Yukto-class minesweeper', weapon: '2 × twin 30 mm, the sweep', text: 'A small North Korean-built sweeper: slow, wooden-hulled, but she cuts a lane through the moored mines for the landing craft.' },
   },
 });
 
