@@ -139,7 +139,7 @@ export const WW1 = {
     skopje: { name: 'Skopje and Macedonia', theatre: 'balkans', map: 'skopje', prod: 1, land: ['dobroPole', 'monastir', 'doiran', 'sofia', 'belgrade'], fort: 1, lat: 42.0, lon: 21.43 },
     sofia: { name: 'Sofia', theatre: 'balkans', depot: 'pact', airfield: true, prod: 3, land: ['skopje', 'bucharest', 'constantinople', 'belgrade'], fort: 3, garrison: 1800, lat: 42.7, lon: 23.32 },
     belgrade: { name: 'Belgrade and occupied Serbia', theatre: 'balkans', map: 'nis', prod: 1, land: ['skopje', 'sofia', 'vienna', 'cattaro'], lat: 44.8, lon: 20.47 },
-    bucharest: { name: 'Bucharest and the Wallachian oil', theatre: 'balkans', prod: 3, land: ['romania', 'sofia'], lat: 44.43, lon: 26.1 },
+    bucharest: { name: 'Bucharest and the Wallachian oil', theatre: 'balkans', map: 'arges', prod: 3, land: ['romania', 'sofia'], lat: 44.43, lon: 26.1 },
 
     // ---- Palestine and the Dardanelles: from the Suez Canal to Damascus and Aleppo; the Straits and Constantinople
     egypt: { name: 'Egypt and the Canal', theatre: 'mideast', map: 'romani', depot: 'nato', port: true, airfield: true, prod: 4, seas: ['easternMed'], land: ['sinai'], fort: 3, garrison: 1800, lat: 30.6, lon: 32.3 },
