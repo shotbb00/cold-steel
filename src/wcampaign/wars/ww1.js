@@ -129,7 +129,7 @@ export const WW1 = {
     galicia: { name: 'Galicia: Gorlice to Lemberg', theatre: 'east', map: 'gorlice', prod: 2, land: ['lutsk', 'tarnopol', 'romania', 'warsaw', 'cracow'], fort: 1, lat: 49.8, lon: 22.6 },
     cracow: { name: 'Cracow and Silesia', theatre: 'east', map: 'cracow', prod: 2, land: ['galicia', 'warsaw', 'vienna'], lat: 50.06, lon: 19.94 },
     posen: { name: 'Posen and West Prussia', theatre: 'east', prod: 2, land: ['eastPrussia', 'warsaw', 'berlin'], lat: 52.4, lon: 16.9 },
-    berlin: { name: 'Berlin and Prussia', theatre: 'east', depot: 'pact', airfield: true, prod: 8, land: ['posen', 'germany', 'wilhelmshaven'], fort: 3, garrison: 1800, lat: 52.52, lon: 13.4 },
+    berlin: { name: 'Berlin and Prussia', theatre: 'east', map: 'berlin-1918', depot: 'pact', airfield: true, prod: 8, land: ['posen', 'germany', 'wilhelmshaven'], fort: 3, garrison: 1800, lat: 52.52, lon: 13.4 },
 
     // ---- Salonika and the Balkans: the Macedonian front, occupied Serbia, Bulgaria, occupied Wallachia
     salonika: { name: 'Salonika and the Vardar', theatre: 'balkans', map: 'salonika', depot: 'nato', port: true, airfield: true, prod: 2, seas: ['aegean'], land: ['monastir', 'doiran'], fort: 3, garrison: 1800, lat: 40.64, lon: 22.94 },
