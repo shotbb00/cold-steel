@@ -148,7 +148,7 @@ export const WW1 = {
     beersheba: { name: 'Beersheba and the wells', theatre: 'mideast', map: 'beersheba', prod: 1, land: ['sinai', 'gaza', 'jerusalem'], fort: 1, lat: 31.25, lon: 34.79 },
     jerusalem: { name: 'Jerusalem and the Judean hills', theatre: 'mideast', map: 'nebi-samwil', prod: 1, fort: 2, land: ['gaza', 'beersheba', 'megiddo', 'damascus'], lat: 31.77, lon: 35.21 },
     megiddo: { name: 'Megiddo and the plain of Sharon', theatre: 'mideast', map: 'megiddo', prod: 1, land: ['jerusalem', 'damascus'], lat: 32.58, lon: 35.18 },
-    damascus: { name: 'Damascus', theatre: 'mideast', prod: 1, land: ['jerusalem', 'megiddo', 'aleppo'], lat: 33.51, lon: 36.29 },
+    damascus: { name: 'Damascus', theatre: 'mideast', map: 'damascus', prod: 1, land: ['jerusalem', 'megiddo', 'aleppo'], lat: 33.51, lon: 36.29 },
     aleppo: { name: 'Aleppo and the Taurus railway', theatre: 'mideast', map: 'haritan', prod: 1, land: ['damascus', 'constantinople'], lat: 36.2, lon: 37.16 },
     dardanelles: { name: 'Gallipoli and the Dardanelles', theatre: 'mideast', map: 'krithia', coastal: ['gallipoli'], prod: 1, fort: 3, seas: ['aegean'], land: ['constantinople'], lat: 40.2, lon: 26.4 },
     constantinople: { name: 'Constantinople', theatre: 'mideast', map: 'chatalja', depot: 'pact', port: true, airfield: true, prod: 4, seas: ['aegean'], land: ['dardanelles', 'aleppo', 'sofia'], fort: 3, garrison: 1800, lat: 41.01, lon: 28.98 },
