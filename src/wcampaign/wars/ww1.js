@@ -111,7 +111,7 @@ export const WW1 = {
     carniola: { name: 'Laibach and Carniola', theatre: 'italy', map: 'tolmein', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
     cattaro: { name: 'Cattaro and Dalmatia', theatre: 'italy', map: 'cattaro', port: true, prod: 1, fort: 2, seas: ['adriatic', 'otranto'], land: ['carniola', 'belgrade'], lat: 43.0, lon: 17.4 }, // (the k.u.k. Kriegsmarine's cruisers and U-boats at Cattaro)
     carinthia: { name: 'Villach and Carinthia', theatre: 'italy', map: 'tarvis', prod: 1, land: ['trentino', 'carniola', 'vienna'], lat: 46.62, lon: 13.85 },
-    vienna: { name: 'Vienna', theatre: 'italy', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
+    vienna: { name: 'Vienna', theatre: 'italy', map: 'vienna', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
 
     // ---- the Eastern Front: from the Gulf of Riga to the Carpathians and Romania
     petrograd: { name: 'Petrograd', theatre: 'east', map: 'narva', depot: 'nato', airfield: true, prod: 6, /* (behind Kronstadt and the minefields: no landing, no port for the campaign) */ land: ['pskov'], fort: 3, garrison: 1800, lat: 59.93, lon: 30.33 },
