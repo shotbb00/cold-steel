@@ -82,7 +82,7 @@ export const WW1 = {
     soissons: { name: 'Soissons and the Aisne', theatre: 'west', map: 'soissons', prod: 1, land: ['amiens', 'stQuentin', 'laon', 'champagne', 'marne'], fort: 2, lat: 49.35, lon: 3.3 },
     champagne: { name: 'Reims and the Champagne', theatre: 'west', map: 'montagne-de-reims', prod: 1, fort: 2, land: ['soissons', 'laon', 'argonne', 'verdun', 'marne'], lat: 49.2, lon: 4.1 },
     verdun: { name: 'Verdun', theatre: 'west', map: 'cote-304', prod: 1, fort: 3, land: ['champagne', 'argonne', 'stMihiel', 'nancy'], lat: 49.16, lon: 5.38 },
-    nancy: { name: 'Nancy and the Vosges', theatre: 'west', prod: 1, land: ['verdun', 'stMihiel', 'metz'], fort: 2, lat: 48.6, lon: 6.3 },
+    nancy: { name: 'Nancy and the Vosges', theatre: 'west', map: 'seicheprey', prod: 1, land: ['verdun', 'stMihiel', 'metz'], fort: 2, lat: 48.6, lon: 6.3 },
     marne: { name: 'The Marne and Château-Thierry', theatre: 'west', map: 'belleau-wood', prod: 1, land: ['soissons', 'champagne', 'paris'], lat: 49.05, lon: 3.4 },
     paris: { name: 'Paris', theatre: 'west', map: 'matz', depot: 'nato', airfield: true, prod: 8, land: ['amiens', 'marne'], fort: 3, garrison: 1800, lat: 48.86, lon: 2.35 },
     belgianCoast: { name: 'Ostend and Zeebrugge', theatre: 'west', map: 'nieuport', coastal: ['zeebrugge'], port: true, prod: 1, fort: 2, seas: ['channel', 'northSea'], land: ['ypres', 'lille', 'brussels'], lat: 51.25, lon: 3.1 },
