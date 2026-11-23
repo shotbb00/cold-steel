@@ -125,10 +125,10 @@ export const WW1 = {
     courland: { name: 'Courland and Mitau', theatre: 'east', map: 'jakobstadt', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
     eastPrussia: { name: 'East Prussia and the Masurian Lakes', theatre: 'east', map: 'tannenberg', port: true, prod: 2, fort: 1, seas: ['baltic'], land: ['courland', 'warsaw', 'posen'], lat: 54.0, lon: 20.6 },
     brest: { name: 'Brest-Litovsk and the Pripet', theatre: 'east', map: 'baranovichi', prod: 1, land: ['minsk', 'lutsk', 'warsaw'], fort: 1, lat: 52.1, lon: 23.7 },
-    warsaw: { name: 'Warsaw and Poland', theatre: 'east', prod: 3, land: ['brest', 'eastPrussia', 'galicia', 'cracow', 'posen'], lat: 52.23, lon: 21.0 },
+    warsaw: { name: 'Warsaw and Poland', theatre: 'east', map: 'warsaw', prod: 3, land: ['brest', 'eastPrussia', 'galicia', 'cracow', 'posen'], lat: 52.23, lon: 21.0 },
     galicia: { name: 'Galicia: Gorlice to Lemberg', theatre: 'east', map: 'gorlice', prod: 2, land: ['lutsk', 'tarnopol', 'romania', 'warsaw', 'cracow'], fort: 1, lat: 49.8, lon: 22.6 },
     cracow: { name: 'Cracow and Silesia', theatre: 'east', map: 'cracow', prod: 2, land: ['galicia', 'warsaw', 'vienna'], lat: 50.06, lon: 19.94 },
-    posen: { name: 'Posen and West Prussia', theatre: 'east', prod: 2, land: ['eastPrussia', 'warsaw', 'berlin'], lat: 52.4, lon: 16.9 },
+    posen: { name: 'Posen and West Prussia', theatre: 'east', map: 'posen', prod: 2, land: ['eastPrussia', 'warsaw', 'berlin'], lat: 52.4, lon: 16.9 },
     berlin: { name: 'Berlin and Prussia', theatre: 'east', map: 'berlin-1918', depot: 'pact', airfield: true, prod: 8, land: ['posen', 'germany', 'wilhelmshaven'], fort: 3, garrison: 1800, lat: 52.52, lon: 13.4 },
 
     // ---- Salonika and the Balkans: the Macedonian front, occupied Serbia, Bulgaria, occupied Wallachia
