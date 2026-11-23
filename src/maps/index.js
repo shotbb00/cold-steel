@@ -33,6 +33,7 @@ import doggerBank from './doggerBank.ts';
 import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
 import albion from './albion.ts';
+import lido from './lido.ts';
 import balticSea from './balticSea.ts';
 import giukGap from './giukGap.ts';
 import openSea from './openSea.ts'; // (the campaign's quiet sea zones: open water, both wars)
@@ -449,6 +450,7 @@ export const MAPS = {
   [doverStrait.id]: doverStrait,
   [zeebrugge.id]: zeebrugge,
   [albion.id]: albion,
+  [lido.id]: lido,
   [balticSea.id]: balticSea,
   [giukGap.id]: giukGap,
   [openSea.id]: openSea,
