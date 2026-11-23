@@ -55,11 +55,23 @@ import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
 import soissons from './soissons.ts';
 import passchendaele from './passchendaele.ts';
+import nieuport from './nieuport.ts';
 import belleauWood from './belleauWood.ts';
+import montagneDeReims from './montagneDeReims.ts';
 import cote304 from './cote304.ts';
 import cheminDesDames from './cheminDesDames.ts';
 import cambrai from './cambrai.ts';
 import vimy from './vimy.ts';
+import hill70 from './hill70.ts';
+import stMihiel from './stMihiel.ts';
+import seicheprey from './seicheprey.ts';
+import meuseArgonne from './meuseArgonne.ts';
+import metz from './metz.ts';
+import sedan1918 from './sedan1918.ts';
+import rhine1918 from './rhine1918.ts';
+import matz from './matz.ts';
+import theLys from './theLys.ts';
+import courtrai from './courtrai.ts';
 import suwalkiGap from './suwalkiGap.ts';
 import suwalkiTown from './suwalkiTown.ts';
 import nemanCrossing from './nemanCrossing.ts';
@@ -93,12 +105,55 @@ import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
 import gorlice from './gorlice.ts';
 import lutsk from './lutsk.ts';
+import jakobstadt from './jakobstadt.ts';
+import krevo from './krevo.ts';
+import pskov from './pskov.ts';
+import narva from './narva.ts';
+import kiev1918 from './kiev1918.ts';
+import berlin1918 from './berlin1918.ts';
+import zborov from './zborov.ts';
+import cracow from './cracow.ts';
+import warsaw from './warsaw.ts';
+import posen from './posen.ts';
+import marasesti from './marasesti.ts';
+import arges from './arges.ts';
+import baranovichi from './baranovichi.ts';
 import caporetto from './caporetto.ts';
 import piave from './piave.ts';
 import asiago from './asiago.ts';
+import ortigara from './ortigara.ts';
+import dobroPole from './dobroPole.ts';
+import doiran from './doiran.ts';
+import salonika from './salonika.ts';
+import kajmakcalan from './kajmakcalan.ts';
+import skopje from './skopje.ts';
+import nis from './nis.ts';
+import sofia from './sofia.ts';
 import vittorioVeneto from './vittorioVeneto.ts';
+import bainsizza from './bainsizza.ts';
+import montello from './montello.ts';
+import hermada from './hermada.ts';
+import trieste1918 from './trieste1918.ts';
+import tolmein from './tolmein.ts';
+import tarvis from './tarvis.ts';
+import vienna from './vienna.ts';
+import garigliano from './garigliano.ts';
+import cattaro from './cattaro.ts';
 import megiddo from './megiddo.ts';
+import gaza from './gaza.ts';
+import beersheba from './beersheba.ts';
+import damascus from './damascus.ts';
+import nebiSamwil from './nebiSamwil.ts';
+import romani from './romani.ts';
+import magdhaba from './magdhaba.ts';
+import haritan from './haritan.ts';
 import gallipoli from './gallipoli.ts';
+import salonikaLanding from './salonikaLanding.ts';
+import gazaLanding from './gazaLanding.ts';
+import samland from './samland.ts';
+import krithia from './krithia.ts';
+import chatalja from './chatalja.ts';
+import bosphorus from './bosphorus.ts';
 import otranto from './otranto.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
@@ -247,15 +302,58 @@ export const MAPS = {
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
   [gallipoli.id]: gallipoli,
+  [salonikaLanding.id]: salonikaLanding,
+  [bosphorus.id]: bosphorus,
+  [gazaLanding.id]: gazaLanding,
+  [samland.id]: samland,
+  [krithia.id]: krithia,
+  [chatalja.id]: chatalja,
   [megiddo.id]: megiddo,
+  [gaza.id]: gaza,
+  [beersheba.id]: beersheba,
+  [damascus.id]: damascus,
+  [nebiSamwil.id]: nebiSamwil,
+  [romani.id]: romani,
+  [magdhaba.id]: magdhaba,
+  [haritan.id]: haritan,
   [piave.id]: piave,
   [asiago.id]: asiago,
+  [ortigara.id]: ortigara,
+  [dobroPole.id]: dobroPole,
+  [doiran.id]: doiran,
+  [salonika.id]: salonika,
+  [kajmakcalan.id]: kajmakcalan,
+  [skopje.id]: skopje,
+  [nis.id]: nis,
+  [sofia.id]: sofia,
   [vittorioVeneto.id]: vittorioVeneto,
+  [bainsizza.id]: bainsizza,
+  [montello.id]: montello,
+  [hermada.id]: hermada,
+  [trieste1918.id]: trieste1918,
+  [tolmein.id]: tolmein,
+  [tarvis.id]: tarvis,
+  [vienna.id]: vienna,
+  [garigliano.id]: garigliano,
+  [cattaro.id]: cattaro,
   [caporetto.id]: caporetto,
   [riga.id]: riga,
   [tannenberg.id]: tannenberg,
   [gorlice.id]: gorlice,
   [lutsk.id]: lutsk,
+  [jakobstadt.id]: jakobstadt,
+  [krevo.id]: krevo,
+  [pskov.id]: pskov,
+  [narva.id]: narva,
+  [kiev1918.id]: kiev1918,
+  [berlin1918.id]: berlin1918,
+  [zborov.id]: zborov,
+  [cracow.id]: cracow,
+  [warsaw.id]: warsaw,
+  [posen.id]: posen,
+  [marasesti.id]: marasesti,
+  [arges.id]: arges,
+  [baranovichi.id]: baranovichi,
   [copenhagen.id]: copenhagen,
   [talavera.id]: talavera,
   [bussaco.id]: bussaco,
@@ -285,11 +383,23 @@ export const MAPS = {
   [stQuentin.id]: stQuentin,
   [soissons.id]: soissons,
   [passchendaele.id]: passchendaele,
+  [nieuport.id]: nieuport,
   [belleauWood.id]: belleauWood,
+  [montagneDeReims.id]: montagneDeReims,
   [cote304.id]: cote304,
   [cheminDesDames.id]: cheminDesDames,
   [cambrai.id]: cambrai,
   [vimy.id]: vimy,
+  [hill70.id]: hill70,
+  [stMihiel.id]: stMihiel,
+  [seicheprey.id]: seicheprey,
+  [meuseArgonne.id]: meuseArgonne,
+  [metz.id]: metz,
+  [sedan1918.id]: sedan1918,
+  [rhine1918.id]: rhine1918,
+  [matz.id]: matz,
+  [theLys.id]: theLys,
+  [courtrai.id]: courtrai,
   [suwalkiGap.id]: suwalkiGap,
   [suwalkiTown.id]: suwalkiTown,
   [nemanCrossing.id]: nemanCrossing,
