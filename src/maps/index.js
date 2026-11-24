@@ -68,6 +68,9 @@ import maida from './maida.ts';
 import weichselmunde from './weichselmunde.ts';
 import pillau from './pillau.ts';
 import memelLanding from './memelLanding.ts';
+import cuxhaven from './cuxhaven.ts';
+import kolberg from './kolberg.ts';
+import koge from './koge.ts';
 import civitavecchia from './civitavecchia.ts';
 import naplesLanding from './naplesLanding.ts';
 import cadizLanding from './cadizLanding.ts';
@@ -530,6 +533,9 @@ export const MAPS = {
   [weichselmunde.id]: weichselmunde,
   [pillau.id]: pillau,
   [memelLanding.id]: memelLanding,
+  [cuxhaven.id]: cuxhaven,
+  [kolberg.id]: kolberg,
+  [koge.id]: koge,
   [civitavecchia.id]: civitavecchia,
   [naplesLanding.id]: naplesLanding,
   [cadizLanding.id]: cadizLanding,
