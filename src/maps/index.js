@@ -71,6 +71,9 @@ import memelLanding from './memelLanding.ts';
 import civitavecchia from './civitavecchia.ts';
 import naplesLanding from './naplesLanding.ts';
 import cadizLanding from './cadizLanding.ts';
+import boulogneRaid from './boulogneRaid.ts';
+import quiberon from './quiberon.ts';
+import hyeres from './hyeres.ts';
 import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
@@ -530,6 +533,9 @@ export const MAPS = {
   [civitavecchia.id]: civitavecchia,
   [naplesLanding.id]: naplesLanding,
   [cadizLanding.id]: cadizLanding,
+  [boulogneRaid.id]: boulogneRaid,
+  [quiberon.id]: quiberon,
+  [hyeres.id]: hyeres,
   [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
