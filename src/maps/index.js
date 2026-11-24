@@ -150,6 +150,9 @@ import trieste1805 from './trieste1805.ts';
 import gospic from './gospic.ts';
 import ragusa from './ragusa.ts';
 import ancona from './ancona.ts';
+import chioggia from './chioggia.ts';
+import triesteRaid from './triesteRaid.ts';
+import spalatoLanding from './spalatoLanding.ts';
 import elchingen from './elchingen.ts';
 import wertingen from './wertingen.ts';
 import hohenlinden from './hohenlinden.ts';
@@ -481,6 +484,9 @@ export const MAPS = {
   [gospic.id]: gospic,
   [ragusa.id]: ragusa,
   [ancona.id]: ancona,
+  [chioggia.id]: chioggia,
+  [triesteRaid.id]: triesteRaid,
+  [spalatoLanding.id]: spalatoLanding,
   [elchingen.id]: elchingen,
   [wertingen.id]: wertingen,
   [hohenlinden.id]: hohenlinden,
