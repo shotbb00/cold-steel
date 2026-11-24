@@ -53,11 +53,11 @@ export function flipLanding(map, armies) {
   // the new lander's kit: a landing by its side in this war — its own army's first
   const donors = Object.values(MAPS).filter((m) => m !== map && m.theatre === 'coastal' && !m.wip && m.landing && m.epochs?.includes(epoch()) && landerOf(m) === lander);
   donors.sort((a, b) => !!armiesOn(b)?.[lander]?.includes(army[lander]) - !!armiesOn(a)?.[lander]?.includes(army[lander]));
-  const pick = (ok) => donors.map((m) => m.landing).find(ok) ?? {}; // (each part from the first that has it: not every map writes its craft or its AI)
+  const pick = (ok) => [...donors.map((m) => m.landing), L].find(ok) ?? {}; // (each part from the first that has it: not every map writes its craft or its AI; last, this map's own kit — 1806 has no French landing anywhere to borrow from)
   const ownCraft = (c) => Object.values(c).flat().every((id) => UNIT_TYPES[id] && armyHas(UNIT_TYPES[id], army[lander])); // (Higgins boats for the US, LCAs for the British …)
   const K = { craft: (pick((l) => l.craft && ownCraft(l.craft)).craft ?? pick((l) => l.craft).craft), swim: pick((l) => l.swim).swim, ...(({ navy, ai }) => ({ navy, ai }))(pick((l) => l.ai?.gunship && l.navy?.length)) }; // (the warships and the AI that buys them: one map's)
   const own = (id) => (id ? standInFor(id, army[lander]) : null); // (the lander's army's own ships: the Marines sail the US Navy's, an army with none none)
-  const navy = [...new Set([...(K.navy ?? []), ...donors.flatMap((m) => m.landing.navy ?? [])].map(own).filter(Boolean))]; // (every ship this side lands with somewhere: one map lists no sweeper, another no fast boat)
+  const navy = [...new Set([...(K.navy ?? []), ...donors.flatMap((m) => m.landing.navy ?? []), ...(donors.length ? [] : L.navy ?? [])].map(own).filter(Boolean))]; // (every ship this side lands with somewhere: one map lists no sweeper, another no fast boat)
   if (K.ai && !K.ai.sweeper && L.seaMines) K.ai = { ...K.ai, sweeper: pick((l) => l.ai?.sweeper).ai?.sweeper }; // (mines off this coast: a sweeper to clear the lanes)
   const ai = K.ai ? { ...K.ai, ...Object.fromEntries(['gunship', 'heavy', 'sweeper'].filter((k) => K.ai[k]).map((k) => [k, own(K.ai[k])])), ...(L.ai?.inshore != null ? { inshore: L.ai.inshore } : {}) } : undefined; // (where the gunships lie: this coast's)
   const ship = (id) => (navy.includes(own(id)) ? own(id) : ai?.gunship ?? null);
