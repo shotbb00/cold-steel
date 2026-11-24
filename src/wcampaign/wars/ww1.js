@@ -163,7 +163,7 @@ export const WW1 = {
     channel: { name: 'The Dover Strait and the Channel', theatre: 'sea', map: 'doverStrait', seas: ['northSea', 'westernApproaches'], coasts: ['britain', 'channelPorts', 'belgianCoast'], lat: 50.3, lon: -0.6 },
     westernApproaches: { name: 'The Western Approaches', theatre: 'sea', map: 'western-approaches', seas: ['northSea', 'channel', 'atlantic'], coasts: ['britain'], lat: 49.5, lon: -9 },
     atlantic: { name: 'The Atlantic convoy routes', theatre: 'sea', map: 'azores-1918', seas: ['westernApproaches', 'centralMed'], coasts: ['usa'], lat: 42, lon: -38 }, /* (round Gibraltar to the Mediterranean) */
-    baltic: { name: 'The Baltic', theatre: 'east', map: 'openSea', seas: ['heligoland'], coasts: ['riga', 'courland', 'eastPrussia'], lat: 57.6, lon: 19.4 },
+    baltic: { name: 'The Baltic', theatre: 'east', map: 'moon-sound', seas: ['heligoland'], coasts: ['riga', 'courland', 'eastPrussia'], lat: 57.6, lon: 19.4 },
     adriatic: { name: 'The Adriatic', theatre: 'med', map: 'premuda', seas: ['otranto'], coasts: ['venice', 'trieste', 'cattaro'], lat: 43.6, lon: 15.3 },
     otranto: { name: 'The Otranto Strait', theatre: 'med', map: 'otranto', seas: ['adriatic', 'centralMed'], coasts: ['rome', 'cattaro'], lat: 40.2, lon: 18.9 },
     centralMed: { name: 'The central Mediterranean', theatre: 'med', map: 'openSea', seas: ['otranto', 'aegean', 'easternMed', 'atlantic'], coasts: ['rome'], lat: 35.8, lon: 17 },
