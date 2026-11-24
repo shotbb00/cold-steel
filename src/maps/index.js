@@ -145,6 +145,9 @@ import taborBridge from './taborBridge.ts';
 import scharnitz from './scharnitz.ts';
 import stecken from './stecken.ts';
 import kehl from './kehl.ts';
+import blackForest from './blackForest.ts';
+import wurzburg from './wurzburg.ts';
+import mainz from './mainz.ts';
 import copenhagen from './copenhagen.ts';
 import finisterre1805 from './finisterre1805.ts';
 import capeOrtegal from './capeOrtegal.ts';
@@ -457,6 +460,9 @@ export const MAPS = {
   [scharnitz.id]: scharnitz,
   [stecken.id]: stecken,
   [kehl.id]: kehl,
+  [blackForest.id]: blackForest,
+  [wurzburg.id]: wurzburg,
+  [mainz.id]: mainz,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
