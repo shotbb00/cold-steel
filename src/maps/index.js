@@ -118,6 +118,9 @@ import hohenlinden from './hohenlinden.ts';
 import austerlitz from './austerlitz.ts';
 import wischau from './wischau.ts';
 import durnstein from './durnstein.ts';
+import lambach from './lambach.ts';
+import amstetten from './amstetten.ts';
+import taborBridge from './taborBridge.ts';
 import copenhagen from './copenhagen.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
@@ -409,6 +412,9 @@ export const MAPS = {
   [austerlitz.id]: austerlitz,
   [wischau.id]: wischau,
   [durnstein.id]: durnstein,
+  [lambach.id]: lambach,
+  [amstetten.id]: amstetten,
+  [taborBridge.id]: taborBridge,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
