@@ -65,6 +65,7 @@ import halbe from './halbe.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import maida from './maida.ts';
+import civitavecchia from './civitavecchia.ts';
 import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
@@ -518,6 +519,7 @@ export const MAPS = {
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [maida.id]: maida,
+  [civitavecchia.id]: civitavecchia,
   [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
