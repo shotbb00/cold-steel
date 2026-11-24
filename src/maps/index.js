@@ -135,6 +135,9 @@ import tagliamento from './tagliamento.ts';
 import marengo from './marengo.ts';
 import malborghetto from './malborghetto.ts';
 import trieste1805 from './trieste1805.ts';
+import gospic from './gospic.ts';
+import ragusa from './ragusa.ts';
+import ancona from './ancona.ts';
 import elchingen from './elchingen.ts';
 import wertingen from './wertingen.ts';
 import hohenlinden from './hohenlinden.ts';
@@ -463,6 +466,9 @@ export const MAPS = {
   [marengo.id]: marengo,
   [malborghetto.id]: malborghetto,
   [trieste1805.id]: trieste1805,
+  [gospic.id]: gospic,
+  [ragusa.id]: ragusa,
+  [ancona.id]: ancona,
   [elchingen.id]: elchingen,
   [wertingen.id]: wertingen,
   [hohenlinden.id]: hohenlinden,
