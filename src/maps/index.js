@@ -160,6 +160,9 @@ import channel1805 from './channel1805.ts';
 import baltic1807 from './baltic1807.ts';
 import toulonBlockade from './toulonBlockade.ts';
 import lissa from './lissa.ts';
+import westernApproaches1805 from './westernApproaches1805.ts';
+import texel1805 from './texel1805.ts';
+import algeciras from './algeciras.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
 import gorlice from './gorlice.ts';
@@ -442,6 +445,9 @@ export const MAPS = {
   [baltic1807.id]: baltic1807,
   [toulonBlockade.id]: toulonBlockade,
   [lissa.id]: lissa,
+  [westernApproaches1805.id]: westernApproaches1805,
+  [texel1805.id]: texel1805,
+  [algeciras.id]: algeciras,
   [talavera.id]: talavera,
   [bussaco.id]: bussaco,
   [fuentesDeOnoro.id]: fuentesDeOnoro,

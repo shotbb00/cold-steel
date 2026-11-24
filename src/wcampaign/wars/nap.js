@@ -146,16 +146,16 @@ export const NAP = {
 
   seas: {
     channel: { name: 'The Channel', theatre: 'atlantic', map: 'channel-1805', seas: ['northSea', 'ushant', 'westernApproaches'], coasts: ['britain', 'boulogne'], lat: 50.2, lon: -1.0 }, // TODO map: the Boulogne flotilla
-    westernApproaches: { name: 'The Western Approaches', theatre: 'atlantic', map: 'openSea', seas: ['channel', 'ushant', 'finisterre', 'westIndies'], coasts: ['britain'], lat: 49.3, lon: -9.5 },
+    westernApproaches: { name: 'The Western Approaches', theatre: 'atlantic', map: 'western-approaches-1805', seas: ['channel', 'ushant', 'finisterre', 'westIndies'], coasts: ['britain'], lat: 49.3, lon: -9.5 },
     ushant: { name: 'Off Brest and Ushant', theatre: 'atlantic', map: 'brest', seas: ['channel', 'westernApproaches', 'biscay'], coasts: ['brittany'], lat: 48.2, lon: -6.0 },
     biscay: { name: 'The Bay of Biscay', theatre: 'atlantic', map: 'cape-ortegal', seas: ['ushant', 'finisterre'], coasts: ['brittany'], lat: 45.5, lon: -4.5 }, // TODO map: Cape Ortegal (Strachan, 4 November 1805)
     finisterre: { name: 'Cape Finisterre and the Portuguese coast', theatre: 'atlantic', map: 'finisterre-1805', seas: ['biscay', 'cadiz', 'westernApproaches', 'westIndies'], coasts: [], lat: 41.5, lon: -11.0 }, // TODO map: Calder's action off Finisterre (July 1805)
     cadiz: { name: 'Off Cádiz and Cape Trafalgar', theatre: 'atlantic', map: 'trafalgar', seas: ['finisterre', 'alboran'], coasts: ['andalusia', 'gibraltar'], lat: 36.1, lon: -7.2 },
     westIndies: { name: 'The West Indies', theatre: 'atlantic', map: 'caribbean', seas: ['westernApproaches', 'finisterre'], coasts: [], lat: 18.3, lon: -68.5 }, // (San Domingo, February 1806)
-    northSea: { name: 'The North Sea', theatre: 'northern', map: 'openSea', seas: ['channel', 'sound'], coasts: ['britain', 'hanover'], lat: 55.0, lon: 3.5 }, // TODO map: the German Bight
+    northSea: { name: 'The North Sea', theatre: 'northern', map: 'texel-1805', seas: ['channel', 'sound'], coasts: ['britain', 'hanover'], lat: 55.0, lon: 3.5 }, // TODO map: the German Bight
     sound: { name: 'The Sound and Copenhagen', theatre: 'northern', map: 'copenhagen', seas: ['northSea', 'baltic'], coasts: ['zealand'], lat: 56.1, lon: 12.6 },
     baltic: { name: 'The Baltic', theatre: 'northern', map: 'baltic-1807', seas: ['sound'], coasts: ['stettin', 'danzig', 'konigsberg', 'memel', 'russia'], lat: 55.9, lon: 18.0 }, // TODO map: off Danzig (1807)
-    alboran: { name: 'The Strait and Cartagena', theatre: 'med', map: 'openSea', seas: ['cadiz', 'lion'], coasts: ['gibraltar'], lat: 36.4, lon: -2.4 }, // TODO map: Algeciras (1801)
+    alboran: { name: 'The Strait and Cartagena', theatre: 'med', map: 'algeciras', seas: ['cadiz', 'lion'], coasts: ['gibraltar'], lat: 36.4, lon: -2.4 }, // TODO map: Algeciras (1801)
     lion: { name: 'The Gulf of Lion and Toulon', theatre: 'med', map: 'toulon-blockade', seas: ['alboran', 'tyrrhenian'], coasts: ['toulon'], lat: 42.2, lon: 5.6 }, // TODO map: off Toulon
     tyrrhenian: { name: 'The Tyrrhenian Sea', theatre: 'med', map: 'openSea', seas: ['lion', 'ionian'], coasts: ['rome', 'naples', 'calabria', 'sicily'], lat: 39.8, lon: 12.0 }, // TODO map: the Bay of Naples
     ionian: { name: 'The Ionian Sea and Corfu', theatre: 'med', map: 'openSea', seas: ['tyrrhenian', 'adriatic'], coasts: ['calabria', 'sicily', 'corfu', 'cattaro'], lat: 38.3, lon: 18.3 }, // TODO map: off Corfu
