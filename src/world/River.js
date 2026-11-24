@@ -142,7 +142,7 @@ export function createRiver({ path, paths = [path], halfWidth = 12, level = 0, d
       const hw = I.hw, dz = I.d;
       // the floodplain: ground near the river comes down to just above the water
       const plain = level + BANK;
-      const v = 1 - smoothstep(hw + 6, valley - halfWidth + hw, dz);
+      const v = 1 - smoothstep(hw + 6, Math.max(hw + 7, valley - halfWidth + hw), dz);
       h += (plain - h) * v;
       // the channel, shallower at fords
       let bed = level - depth;
