@@ -87,13 +87,13 @@ const sea = northSea({
     { id: 'K', name: 'U-boat patrol line', x: 0, z: 2050, owner: 'pact', sector: 'centre', radius: 160 },
   ],
   spawns: {
-    // the troopships in three columns, the destroyer ahead, the sloop astern (the drifters and the rest are bought:
+    // the steamers in three columns, the destroyer ahead, the sloop astern (the drifters and the rest are bought:
     // westernApproaches' AI soaks — started with them the convoy outweighed the pack)
     nato: [{ unit: 'destroyer', x: 0, z: -1950, facing: 0 },
-      { unit: 'transport', x: -300, z: -2250, facing: 0 }, { unit: 'transport', x: 0, z: -2150, facing: 0 }, { unit: 'transport', x: 300, z: -2250, facing: 0 }, { unit: 'frigate', x: 0, z: -2400, facing: 0 }],
+      { unit: 'merchant', x: -300, z: -2250, facing: 0 }, { unit: 'merchant', x: 0, z: -2150, facing: 0 }, { unit: 'merchant', x: 300, z: -2250, facing: 0 }, { unit: 'frigate', x: 0, z: -2400, facing: 0 }],
     // (each fleet's first ship the same distance out: the routing tools measure from her)
     pact: [{ unit: 'destroyer', x: 0, z: 1950, facing: Math.PI }, { unit: 'destroyer', x: 0, z: 2250, facing: Math.PI },
-      { unit: 'submarine', x: -700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 0, z: 1750, facing: Math.PI }, // (a third boat over the type's limit: with two the convoy lost nothing)
+      { unit: 'submarine', x: -700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 700, z: 1850, facing: Math.PI }, { unit: 'minelayerSub', x: 0, z: 1750, facing: Math.PI }, // (a UC boat from Cattaro: her mines off Valletta; with two boats the convoy lost nothing)
       { unit: 'frigate', x: -400, z: 2300, facing: Math.PI }, { unit: 'frigate', x: 400, z: 2300, facing: Math.PI }],
   },
   decorate(props, height, rand) {

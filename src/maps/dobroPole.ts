@@ -127,9 +127,9 @@ export default {
   name: 'Dobro Pole',
   description: 'September 1918 in the Moglena mountains of Macedonia: Serbian and French troops storm the Bulgarian positions cut into the rock of the Dobro Pole ridge, Sokol and Vetrenik, across the valley and the village of Zborsko from Kravica. Beech forest below, alpine meadow and rock above; wheels keep to the graded mule tracks.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s — serb/bg have no roster yet and fall back to fr/de, which every region keeps)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no flat ground in the mountains: the aircraft come in from the map edge — systems/Airfields.js)
-  armies: { nato: ['serb', 'fr'], pact: ['bg', 'de'] }, // (the Serbian Second Army and the French colonials against the Bulgarian Eleventh Army; until Serbs and Bulgarians have their rosters: the French and the Germans)
+  armies: { nato: ['serb', 'fr'], pact: ['bg', 'de'] }, // (the Serbian Second Army and the French colonials against the Bulgarian Eleventh Army)
   sides: { nato: 'Serbia and France', pact: 'Bulgaria' },
   conditions: { time: 'dawn', weather: 'clear' },
   size: 1700,

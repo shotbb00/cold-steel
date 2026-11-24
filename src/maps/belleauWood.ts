@@ -131,7 +131,7 @@ export default {
   description: 'June 1918: the US 2nd Division stops the German drive on Paris and the Marines take Belleau Wood — a rocky hunting wood of boulders and ravines in a sea of open wheat, Hill 142 to the west, the Marne and Château-Thierry’s bridges on the east flank. Rifle pits and machine-gun nests, not trench systems.',
   epochs: ['1918'],
   region: 'europe',
-  armies: { nato: ['aef', 'fr'], pact: ['de', 'st'] }, // (the US 2nd Division, the French beside it, against the German 237th and 28th Divisions; aef has no units yet: fr fights for it)
+  armies: { nato: ['aef', 'fr'], pact: ['de', 'st'] }, // (the US 2nd Division, the French beside it, against the German 237th and 28th Divisions)
   sides: { nato: 'United States', pact: 'Germany' },
   conditions: { time: 'day', weather: 'clear' },      // (a hot, clear June)
   size: 1600,

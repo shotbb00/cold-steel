@@ -20,6 +20,17 @@
 //   ru  Russian Army, 1917: the khaki gymnastyorka, the Russian Adrian, the greatcoat rolled over the
 //       shoulder (skatka), jackboots, the Mosin with its bayonet always fixed (hat 'papakha': the
 //       Cossacks' and the scouts' sheepskin hat)
+//   serb  Serbian Army, 1918: re-clothed by France — a grey-blue-green between horizon blue and the old
+//       Serbian grey-green, the Adrian with the Serbian eagle, French leather boxes, puttees, the
+//       Mauser-Vasić (hat 'sajkaca': the šajkača, the soft cap with its crown dipped in the middle);
+//       mg: the Hotchkiss M1914
+//   bg  Bulgarian Army: khaki-brown grey-green, the German M16 Stahlhelm of 1918, brown leather,
+//       puttees, the Mannlicher M95 (hat 'peaked': the soft peaked cap most still wore); mg: the Maxim M1907
+//   aef the American Expeditionary Forces: olive drab wool, the M1917 helmet (the Brodie, made in the
+//       US), the M1910 cartridge belt with its pockets all round the waist, the haversack's long pack,
+//       wrap puttees, the M1917 Enfield; aefM the 4th Marine Brigade: forest green, canvas leggings, the
+//       globe-and-anchor on the helmet, the Springfield. mg: the Hotchkiss M1914 on its tripod; at: the
+//       37 mm M1916 infantry gun
 // Weapons: rifle (SMLE / Lebel / Gew 98 / Kar 98 AZ), bayonets fixed; smg (MP 18, the drum);
 // mg (Lewis / Chauchat / MG 08/15); at (rifle grenade cup / Tankgewehr); mortar; sniper; flame.
 import { P, merge, pair, grime, loft, limb } from '../units/geometry.js';
@@ -42,12 +53,17 @@ const ARMY = {
   itA: { coat: 0x6e705a, coatDk: 0x161616, trousers: 0x6a6c56, web: 0x5c5a44, belt: 0x5c5a44, boot: 0x3a2a1e, puttee: 0x666850, helmet: 0x5a5e4c },
   ah: { coat: 0x7e868a, coatDk: 0x667074, trousers: 0x7a8286, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x2a2420, puttee: 0x6e767a, helmet: 0x5e6258 },
   ahS: { coat: 0x767e80, coatDk: 0x60686c, trousers: 0x72797c, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x2a2420, puttee: 0x687074, helmet: 0x5a5e54 },
+  aef: { coat: 0x625c3c, coatDk: 0x4e4a30, trousers: 0x5e583a, web: 0x8c805a, belt: 0x8c805a, boot: 0x5a3a22, puttee: 0x57523a, helmet: 0x545a3a },
+  aefM: { coat: 0x4c5636, coatDk: 0x3c442a, trousers: 0x4a5434, web: 0x8c805a, belt: 0x8c805a, boot: 0x5a3a22, puttee: 0x9a8e66, helmet: 0x545a3a },
   ru: { coat: 0x8e8a64, coatDk: 0x757150, trousers: 0x6a6a4e, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: BLACK, helmet: 0x5c6450 },
+  serb: { coat: 0x7a8884, coatDk: 0x626f6c, trousers: 0x74807a, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x3a2a1e, puttee: 0x6c7672, helmet: 0x6e7c7e },
+  bg: { coat: 0x7a7050, coatDk: 0x625a3e, trousers: 0x6e664a, web: LEATHER_BROWN, belt: LEATHER_BROWN, boot: 0x2e2218, puttee: 0x6a6246, helmet: 0x5c5e4e },
 };
-const GERMAN_HELMET = new Set(['de', 'st', 'ah', 'ahS']);   // (Austria-Hungary wore the German M16 too)
-const ADRIAN = new Set(['fr', 'it', 'itA', 'ru']);          // (Italy and Russia bought the French helmet)
+const GERMAN_HELMET = new Set(['de', 'st', 'ah', 'ahS', 'bg']);   // (Austria-Hungary and, from 1917, Bulgaria wore the German M16 too)
+const ADRIAN = new Set(['fr', 'it', 'itA', 'ru', 'serb']);  // (Italy, Russia and the Serbs at Salonika got the French helmet)
 const GRENADIERS = new Set(['st', 'itA', 'ahS']);           // the assault troops: grenade bags across the chest
 const WEB_1908 = new Set(['uk', 'anzac']);
+const US = new Set(['aef', 'aefM']);
 
 // ------------------------------------------------------------------ weapons (in the arms' frame)
 
@@ -92,6 +108,23 @@ function weapon(kind, army) {
           P.cyl(0.035, 0.012, 0.16, { x: 0.2, y: 1.31, z: 0.86, rx: -Math.PI / 2, color: STEEL }, 8),
           P.box(0.12, 0.03, 0.06, { x: 0.1, y: 1.28, z: 0.24, color: 0x6a5a3a }),
         ], muzzle: { x: 0.2, y: 1.31, z: 0.94 } };
+      if (army === 'serb') return { // Hotchkiss M1914 (French-supplied): the brass cooling rings round the barrel's root, the long bare barrel, the strip fed in from the left, the tripod's front legs
+        parts: [
+          P.box(0.07, 0.1, 0.36, { x: 0.2, y: 1.29, z: 0.22, color: BLACK }),
+          ...pair((s) => P.box(0.014, 0.08, 0.03, { x: 0.2 + s * 0.035, y: 1.28, z: 0.04, color: WOOD })),
+          ...[0, 1, 2, 3, 4].map((i) => P.cyl(0.042, 0.042, 0.022, { x: 0.2, y: 1.31, z: 0.44 + i * 0.045, rx: Math.PI / 2, color: 0x9a7a3a }, 10)),
+          P.cyl(0.016, 0.016, 0.5, { x: 0.2, y: 1.31, z: 0.86, rx: Math.PI / 2, color: STEEL }, 6),
+          P.box(0.2, 0.012, 0.05, { x: 0.06, y: 1.3, z: 0.3, color: 0x9a7a3a }),                       // the feed strip
+          ...pair((s) => P.box(0.014, 0.014, 0.34, { x: 0.2 + s * 0.08, y: 1.18, z: 0.62, rx: 0.8, color: STEEL })),
+        ], muzzle: { x: 0.2, y: 1.31, z: 1.11 } };
+      if (army === 'bg') return { // Maxim M1907 (DWM, 8 mm Mannlicher): the smooth water jacket, the belt box, no shield
+        parts: [
+          P.box(0.08, 0.11, 0.32, { x: 0.2, y: 1.29, z: 0.22, color: BLACK }),
+          ...pair((s) => P.box(0.014, 0.08, 0.03, { x: 0.2 + s * 0.035, y: 1.28, z: 0.06, color: WOOD })),
+          P.cyl(0.05, 0.05, 0.52, { x: 0.2, y: 1.31, z: 0.63, rx: Math.PI / 2, color: 0x3c3e34 }, 12),
+          P.cyl(0.014, 0.014, 0.1, { x: 0.2, y: 1.31, z: 0.94, rx: Math.PI / 2, color: STEEL }, 6),
+          P.box(0.12, 0.1, 0.16, { x: 0.06, y: 1.22, z: 0.24, color: 0x4a4a3a }),   // the belt box
+        ], muzzle: { x: 0.2, y: 1.31, z: 1.0 } };
       if (army === 'ru') return { // Maxim 1910: the fluted water jacket, the steel shield of the Sokolov mount, the belt box
         parts: [
           P.box(0.08, 0.11, 0.32, { x: 0.2, y: 1.29, z: 0.22, color: BLACK }),
@@ -108,6 +141,16 @@ function weapon(kind, army) {
           P.cyl(0.1, 0.1, 0.035, { x: 0.2, y: 1.42, z: 0.34, color: STEEL }, 14),
           ...pair((s) => P.box(0.012, 0.012, 0.28, { x: 0.2 + s * 0.05, y: 1.22, z: 0.85, rx: 0.9, color: STEEL })),
         ], muzzle: { x: 0.2, y: 1.33, z: 1.0 } };
+      if (US.has(army)) return { // Hotchkiss M1914: the receiver, the five brass cooling rings round the breech end of the barrel, the 24-round strip out to the left, the tripod
+        parts: [
+          P.box(0.08, 0.1, 0.32, { x: 0.2, y: 1.29, z: 0.22, color: BLACK }),
+          ...pair((s) => P.box(0.014, 0.08, 0.03, { x: 0.2 + s * 0.035, y: 1.28, z: 0.05, color: WOOD })),
+          P.cyl(0.022, 0.022, 0.62, { x: 0.2, y: 1.31, z: 0.68, rx: Math.PI / 2, color: STEEL }, 8),
+          ...[0.42, 0.46, 0.5, 0.54, 0.58].map((z) => P.cyl(0.05, 0.05, 0.02, { x: 0.2, y: 1.31, z, rx: Math.PI / 2, color: 0x8a743e }, 10)),
+          P.box(0.2, 0.01, 0.05, { x: 0.06, y: 1.3, z: 0.28, color: 0x9a8a5a }),
+          ...pair((s) => P.box(0.014, 0.014, 0.32, { x: 0.2 + s * 0.07, y: 1.2, z: 0.6, rx: 0.9, color: STEEL })),
+          P.box(0.014, 0.014, 0.36, { x: 0.2, y: 1.18, z: 0.05, rx: -0.9, color: STEEL }),
+        ], muzzle: { x: 0.2, y: 1.31, z: 1.0 } };
       if (army === 'fr') return { // Chauchat: the half-moon magazine underneath, the slim barrel, the bipod, the pistol grip
         parts: [
           ...rifle({ to: 0.95, wood2: 0.38, bayonet: 0 }),
@@ -125,6 +168,35 @@ function weapon(kind, army) {
           ...pair((s) => P.box(0.014, 0.014, 0.3, { x: 0.2 + s * 0.06, y: 1.21, z: 0.85, rx: 0.9, color: STEEL })),
         ], muzzle: { x: 0.2, y: 1.31, z: 1.04 } };
     case 'at':
+      if (US.has(army)) return { // the 37 mm M1916 infantry gun: the short barrel and its recoil cylinder on a tripod, the little shield
+        parts: [
+          P.cyl(0.035, 0.042, 0.72, { x: 0.05, y: 1.0, z: 0.66, rx: Math.PI / 2, color: STEEL }, 10),
+          P.cyl(0.03, 0.03, 0.4, { x: 0.05, y: 0.94, z: 0.5, rx: Math.PI / 2, color: 0x3f4232 }, 8),
+          P.box(0.12, 0.14, 0.24, { x: 0.05, y: 0.98, z: 0.24, color: 0x3f4232 }),
+          P.box(0.46, 0.34, 0.025, { x: 0.05, y: 1.02, z: 0.42, rx: -0.1, color: 0x4a4e36 }),
+          ...pair((s) => limb([0.05, 0.92, 0.36], [0.05 + s * 0.36, 0.56, 0.62], [[0, 0.016, 0.016], [1, 0.016, 0.016]], { color: STEEL }, 5)),
+          limb([0.05, 0.92, 0.3], [0.05, 0.56, -0.2], [[0, 0.018, 0.018], [1, 0.018, 0.018]], { color: STEEL }, 5),
+        ], muzzle: { x: 0.05, y: 1.0, z: 1.03 } };
+      if (army === 'ah') return { // Škoda's 3.7 cm Infanteriegeschütz M.15: the stubby barrel in its cradle on a low two-wheeled carriage, a tall narrow shield
+        parts: [
+          P.cyl(0.032, 0.04, 0.62, { x: 0.05, y: 0.82, z: 0.62, rx: Math.PI / 2, color: STEEL }, 10),
+          P.box(0.13, 0.13, 0.36, { x: 0.05, y: 0.8, z: 0.24, color: 0x4a5048 }),
+          P.box(0.4, 0.5, 0.025, { x: 0.05, y: 0.86, z: 0.4, color: 0x5e6458 }),
+          ...pair((s) => P.cyl(0.2, 0.2, 0.04, { x: 0.05 + s * 0.24, y: 0.76, z: 0.32, rz: Math.PI / 2, color: 0x4a3c2a }, 10)),
+          limb([0.05, 0.74, 0.2], [0.05, 0.56, -0.4], [[0, 0.025, 0.02], [1, 0.02, 0.02]], { color: 0x5e6458 }, 5),
+        ], muzzle: { x: 0.05, y: 0.82, z: 0.94 } };
+      if (army === 'ru') return { // the 37 mm Rosenberg trench gun: a short barrel on a wooden frame carriage, two small iron wheels, no shield
+        parts: [
+          P.cyl(0.03, 0.038, 0.66, { x: 0.05, y: 0.78, z: 0.6, rx: Math.PI / 2, color: STEEL }, 10),
+          P.box(0.12, 0.12, 0.3, { x: 0.05, y: 0.76, z: 0.22, color: STEEL }),
+          ...pair((s) => P.box(0.05, 0.06, 0.9, { x: 0.05 + s * 0.13, y: 0.62, z: 0.05, rx: 0.12, color: WOOD })),
+          ...pair((s) => P.cyl(0.13, 0.13, 0.04, { x: 0.05 + s * 0.2, y: 0.69, z: 0.32, rz: Math.PI / 2, color: 0x3a3a34 }, 10)),
+        ], muzzle: { x: 0.05, y: 0.78, z: 0.94 } };
+      if (army === 'it') return { // the Carcano with a rifle grenade in the cup on its muzzle
+        parts: [...rifle({ to: 1.04, bayonet: 0 }),
+          P.cyl(0.03, 0.022, 0.1, { x: 0.2, y: 1.335, z: 1.08, rx: Math.PI / 2, color: STEEL }, 10),
+          P.cyl(0.022, 0.022, 0.12, { x: 0.2, y: 1.335, z: 1.17, rx: Math.PI / 2, color: 0x4a5a3a }, 8)],
+        muzzle: tip(1.2) };
       if (army === 'uk' || army === 'fr') return { // the rifle with the grenade cup on the muzzle (Mills / VB)
         parts: [...rifle({ to: army === 'fr' ? 1.08 : 0.96, bayonet: 0, nose: army === 'uk' }),
           P.cyl(0.03, 0.022, 0.1, { x: 0.2, y: 1.335, z: (army === 'fr' ? 1.08 : 0.96) + 0.04, rx: Math.PI / 2, color: STEEL }, 10)],
@@ -153,7 +225,7 @@ function weapon(kind, army) {
     }
     default: { // the rifle: SMLE (short, the snub nose), Lebel (long, the long thin bayonet), Gew 98, the Sturm's carbine (no bayonet)
       const R = { uk: [0.96, 0.43, true], fr: [1.1, 0.52, false], de: [1.04, 0.4, false], st: [0.92, 0, false],
-        ot: [1.04, 0.4, false], anzac: [0.96, 0.43, true], it: [1.0, 0.3, false], itA: [0.86, 0, false], ah: [1.0, 0.25, false], ahS: [0.88, 0, false], ru: [1.08, 0.45, false] }[army] ?? [1, 0.4, false]; // (Mauser 1903, SMLE, Carcano and its moschetto, Mannlicher and its Stutzen, the Mosin)
+        ot: [1.04, 0.4, false], anzac: [0.96, 0.43, true], it: [1.0, 0.3, false], itA: [0.86, 0, false], ah: [1.0, 0.25, false], ahS: [0.88, 0, false], ru: [1.08, 0.45, false], serb: [1.04, 0.38, false], bg: [1.0, 0.25, false], aef: [1.04, 0.43, false], aefM: [0.98, 0.42, false] }[army] ?? [1, 0.4, false]; // (Mauser 1903, SMLE, Carcano and its moschetto, Mannlicher and its Stutzen, the Mosin)
       return { parts: rifle({ to: R[0], wood2: R[0] - 0.08, bayonet: R[1], nose: R[2] }), muzzle: tip(R[0]) };
     }
   }
@@ -173,6 +245,16 @@ function headgear(army, c, crew, hat) {
   ];
   if (hat === 'papakha') return furHat(0x2a2622, 0x8a2a24, 0.15);   // (the Don Cossacks' red crown)
   if (hat === 'kalpak') return furHat(0x4a4036, 0x7a6a48, 0.12);
+  if (hat === 'sajkaca') return [ // the šajkača: a soft grey-green field cap, the crown pinched down along the middle, high peaks front and back, the red-blue-white cockade
+    loft([[0, 1.78, -0.01, 0.108, 0.12, 2.2], [0, 1.84, -0.012, 0.106, 0.124, 2.2], [0, 1.87, -0.012, 0.03, 0.13, 2]], { color: c.coatDk, warp: (v) => { v.y -= Math.max(0, 0.06 - Math.abs(v.z)) * 0.7 * Math.max(0, v.y - 1.82) / 0.05; } }, 12),
+    P.cyl(0.014, 0.014, 0.008, { y: 1.82, z: 0.12, rx: Math.PI / 2, color: 0xb02020 }, 8),
+  ];
+  if (hat === 'peaked') return [ // the Bulgarian soft peaked cap: a flat crown over a band, a short black peak
+    loft([[0, 1.78, -0.01, 0.108, 0.118, 2.2], [0, 1.83, -0.01, 0.112, 0.122, 2.2], [0, 1.86, -0.015, 0.125, 0.135, 2.4], [0, 1.875, -0.015, 0.11, 0.12, 2.4]], { color: c.coat }, 12),
+    loft([[0, 1.785, -0.01, 0.11, 0.12, 2.2], [0, 1.815, -0.01, 0.11, 0.12, 2.2]], { color: 0x7a2420 }, 12),   // the band
+    P.box(0.17, 0.012, 0.07, { y: 1.785, z: 0.13, rx: 0.25, color: LEATHER_BLACK }),                          // the peak
+    P.cyl(0.013, 0.013, 0.008, { y: 1.83, z: 0.125, rx: Math.PI / 2, color: 0xd8d6cc }, 8),                  // the white-green-red cockade
+  ];
   if (hat === 'alpini') return [ // the Alpini's grey-green felt hat: the brim down in front, up behind, the black raven's feather on the left
     loft([[0, 1.79, -0.01, 0.105, 0.118, 2.2], [0, 1.86, -0.012, 0.1, 0.112, 2.2], [0, 1.9, -0.02, 0.07, 0.085, 2]], { color: 0x5a5c48 }, 12),
     loft([[0, 1.785, 0.0, 0.17, 0.19, 2], [0, 1.795, -0.005, 0.165, 0.185, 2]], { color: 0x5a5c48, warp: (v) => { v.y += Math.max(0, -v.z) * 0.35; } }, 14),
@@ -191,14 +273,15 @@ function headgear(army, c, crew, hat) {
     loft([[0, 1.795, -0.01, 0.11, 0.12, 2.2], [0, 1.825, -0.01, 0.108, 0.118, 2.2]], { color: 0x5e5638 }, 12), // the puggaree
     ...(hat === 'plume' ? [0, 1, 2].map((i) => P.box(0.02, 0.18, 0.03, { x: -0.15, y: 1.9 + i * 0.01, z: -0.04 + i * 0.03, rz: 0.25, rx: -0.3 + i * 0.25, color: 0x2a2620 })) : []), // the emu feathers
   ];
-  if (army === 'uk') return [ // the Brodie: a shallow bowl on a wide flat brim
+  if (army === 'uk' || US.has(army)) return [ // the Brodie: a shallow bowl on a wide flat brim (the American M1917 the same, from American steel)
     helmet([[1.8, 0.21, 1.1, 2], [1.808, 0.205], [1.812, 0.13], [1.84, 0.128], [1.868, 0.1], [1.886, 0.04]], { color: c.helmet }),
     P.box(0.008, 0.12, 0.012, { x: 0, y: 1.7, z: 0.1, color: c.web }), // the chin strap
+    ...(army === 'aefM' ? [P.cyl(0.03, 0.03, 0.01, { y: 1.85, z: 0.115, rx: Math.PI / 2 - 0.6, color: 0x8a6a2e }, 10)] : []), // the Marines' globe and anchor
   ];
   if (ADRIAN.has(army)) return [ // the Adrian: the dome, the peaks front and back, the crest along the top
     helmet([[1.775, 0.148, 1.42, 2], [1.785, 0.14, 1.2], [1.8, 0.135], [1.84, 0.125], [1.87, 0.094], [1.888, 0.035]], { color: c.helmet }),
     P.box(0.022, 0.035, 0.2, { y: 1.9, color: c.helmet }),
-    P.box(0.03, 0.03, 0.006, { y: 1.83, z: 0.13, color: army === 'ru' ? 0x8a7a3a : 0x9a9a8a }), // the badge: the French grenade, the Italian arm's, the Russian eagle
+    P.box(0.03, 0.03, 0.006, { y: 1.83, z: 0.13, color: army === 'ru' || army === 'serb' ? 0x8a7a3a : 0x9a9a8a }), // the badge: the French grenade, the Italian arm's, the Russian and the Serbian eagles
   ];
   return [ // M16 Stahlhelm: the deep skirt over ears and nape, the visor, the lugs at the sides
     helmet([[1.7, 0.175, 1.1], [1.725, 0.16], [1.76, 0.15], [1.8, 0.144], [1.835, 0.125], [1.862, 0.09], [1.878, 0.03]], { color: c.helmet, skirt: 0.045 }),
@@ -223,6 +306,7 @@ export function buildWw1Soldier({ army = 'uk', weapon: kind = 'rifle', crew = fa
         .map(([x, y, z]) => [s * x, y, z, 0.02, 0.006, 2]), { color: c.web }, 6)),
       ...(WEB_1908.has(army)
         ? pair((s) => [0, 1].map((r) => P.box(0.13, 0.05, 0.045, { x: s * 0.1, y: 1.2 + r * 0.07, z: 0.15, color: c.web })))   // the 1908 pattern: five pouches a side, stacked
+        : US.has(army) ? pair((s) => [0.25, 0.6, 0.95, 1.3, 1.65].map((a) => P.box(0.06, 0.075, 0.035, { x: s * Math.sin(a) * 0.2, y: 1.07, z: Math.cos(a) * 0.15, ry: s * a, color: c.web }))) // the M1910 cartridge belt: ten pockets round the waist
         : pair((s) => [0.06, 0.13].map((dx) => P.box(0.055, 0.075, 0.04, { x: s * (0.04 + dx), y: 1.1, z: 0.15, color: c.web })))).flat(),
       P.cyl(0.044, 0.047, 0.15, { x: 0.19, y: 1.0, z: -0.1, color: army === 'fr' ? 0x6a5a40 : 0x4d4932 }, 10),  // the water bottle
       P.box(0.17, 0.15, 0.07, { x: -0.13, y: 0.98, z: -0.14, color: WEB_1908.has(army) ? c.web : 0x6a6650 }),           // haversack / bread bag
@@ -233,9 +317,14 @@ export function buildWw1Soldier({ army = 'uk', weapon: kind = 'rifle', crew = fa
         ...[0.15, -0.15].map((z) => limb([-0.12, 1.57, z * 0.4], [0.17, 1.07, z], [[0, 0.04, 0.04], [0.5, 0.045, 0.045], [1, 0.04, 0.04]], { color: 0x6e6650 }, 8)),
         P.sphere(0.05, { x: -0.12, y: 1.57, color: 0x6e6650 }, 8, 6),
         P.box(0.12, 0.14, 0.06, { x: 0.05, y: 1.0, z: -0.17, color: 0x6a6650 }),
+      ] : US.has(army) ? [
+        P.box(0.16, 0.2, 0.06, { x: 0, y: 1.32, z: 0.17, color: 0x6a6044 }),                                       // the British box respirator, worn on the chest at the alert
+        P.box(0.22, 0.34, 0.09, { x: 0, y: 1.3, z: -0.19, color: c.web }),                                         // the M1910 haversack: the long pack on the back
+        P.cyl(0.05, 0.05, 0.3, { x: 0, y: 1.08, z: -0.2, rz: Math.PI / 2, color: 0x4e4a34 }, 8),                  // its pack tail, the blanket rolled in it
+        P.box(0.03, 0.34, 0.02, { x: -0.16, y: 0.88, z: -0.1, color: 0x5a4a30 }),                                  // the bayonet in its scabbard
       ] : army === 'ot' ? [
         P.box(0.14, 0.12, 0.06, { x: 0.05, y: 1.02, z: -0.17, color: 0x6a5a3e }),                                  // the bread bag
-      ] : army === 'fr' || army === 'it' || army === 'itA' ? [
+      ] : army === 'fr' || army === 'it' || army === 'itA' || army === 'serb' ? [
         P.cyl(0.05, 0.05, 0.16, { x: 0.04, y: 1.0, z: -0.19, color: 0x5a5e5a }, 10),                               // the M2 mask tin (Italy's too)
         ...(army === 'fr' ? [loft([[0, 1.3, -0.19, 0.15, 0.06, 4], [0, 1.48, -0.2, 0.16, 0.065, 4], [0, 1.55, -0.18, 0.13, 0.05, 4]], { color: 0x5a4a34 }, 12)] : []), // the pack with its blanket roll
       ] : [

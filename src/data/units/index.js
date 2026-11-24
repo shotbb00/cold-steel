@@ -108,6 +108,7 @@ const ROLE = {
   atTeam: ['rifles'], sniper: ['scouts'], observers: ['scouts'], airAssault: ['rifles'], stormTroops: ['rifles'], kampfgruppe: ['rifles'], marines: ['rifles'], sailors: ['rifles'],
   frigate: ['destroyer', 'ptBoat'], destroyer: ['frigate'], lightCruiser: ['cruiser', 'destroyer'], cruiser: ['lightCruiser', 'destroyer'],
   battleship: ['oldBattleship', 'cruiser'], oldBattleship: ['battleship', 'cruiser'], carrier: ['escortCarrier'], escortCarrier: ['carrier'], missileSub: ['submarine'],
+  monitor: ['battleship', 'cruiser'], seaplaneCarrier: ['carrier', 'lightCruiser'], merchant: ['transport'], trawler: ['drifter', 'frigate', 'minesweeper'], minelayerSub: ['submarine'], cruiserSub: ['submarine'], // (1918: data/units1918/shipTypes.js)
 };
 
 /**

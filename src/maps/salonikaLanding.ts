@@ -121,7 +121,7 @@ export default {
   description: 'Salonika, October 1915: the Armée d’Orient and the British come ashore on the quays of the Thermaic Gulf — the harbour and its mole, the White Tower, the city climbing to the Eptapyrgio, the Vardar marshes in the west. Unopposed in history; here the Bulgarians and the Germans hold the city.',
   epochs: ['1918'],
   theatre: 'coastal',
-  region: 'italy', // (no Balkans region in 1918: the Salonika front's, as salonika.ts — bg has no roster yet and falls back to de)
+  region: 'balkans', // (the Salonika front)
   modes: ['landing'],
   airfields: [], // (the city, the hill and the delta marsh: no flat dry strip — the aircraft come in from the map edge)
   sides: { nato: 'France and Britain', pact: 'Bulgaria and Germany' },

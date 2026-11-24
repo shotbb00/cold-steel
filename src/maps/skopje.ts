@@ -155,7 +155,7 @@ export default {
   name: 'Skopje',
   description: '29 September 1918: Jouinot-Gambetta’s French cavalry, over the passes of the Šar range, falls on Üsküb (Skopje) from the north-west and cuts the Bulgarian and German retreat. The Vardar through the town with the Ottoman Stone Bridge, the Kale fortress, the Old Bazaar’s mosques and minarets, the railway station under Vodno’s spur; orchards and poplars down the valley.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, like Dobro Pole — serb/bg have no roster yet and fall back to fr/de, which every region keeps)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no strip fits between the town, the river, the orchards and the hills: the aircraft come in from the map edge — systems/Airfields.js)
   armies: { nato: ['fr', 'serb'], pact: ['bg', 'de'] }, // (the French cavalry with the Serbian First Army behind it against the Bulgarian Eleventh Army and its German rearguards)
   sides: { nato: 'France and Serbia', pact: 'Bulgaria' },

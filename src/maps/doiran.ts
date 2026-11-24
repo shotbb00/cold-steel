@@ -163,9 +163,9 @@ export default {
   name: 'Doiran',
   description: 'September 1918 on the hills west of Lake Doiran, Macedonia: the British Salonika Army goes up the ravines against the Bulgarian trenches, wire and concrete machine-gun posts on Pip Ridge and the Grand Couronné, across the Petit Couronné and the ruins of Doiran town from Kidney Hill. Dry scrub and rock above; the railway and the lake road along the reedy shore.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, like Dobro Pole — bg has no roster yet and falls back to de; uk and de fit every region)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no flat ground in the hills, the shore strip too narrow: the aircraft come in from the map edge — systems/Airfields.js)
-  armies: { nato: ['uk'], pact: ['bg', 'de'] }, // (the British XII Corps against the Bulgarian Ninth Pleven Division; until the Bulgarians have their roster: the Germans)
+  armies: { nato: ['uk'], pact: ['bg', 'de'] }, // (the British XII Corps against the Bulgarian Ninth Pleven Division)
   sides: { nato: 'Britain', pact: 'Bulgaria' },
   conditions: { time: 'dawn', weather: 'clear' },
   size: 1700,

@@ -63,12 +63,12 @@ const sea = northSea({
   spawns: {
     // the transports in three columns, the destroyer ahead, the sloop astern (westernApproaches' tested convoy)
     nato: [{ unit: 'destroyer', x: 0, z: -1950, facing: 0 },
-      { unit: 'transport', x: -300, z: -2250, facing: 0 }, { unit: 'transport', x: 0, z: -2150, facing: 0 }, { unit: 'transport', x: 300, z: -2250, facing: 0 }, { unit: 'frigate', x: 0, z: -2400, facing: 0 }],
+      { unit: 'merchant', x: -300, z: -2250, facing: 0 }, { unit: 'merchant', x: 0, z: -2150, facing: 0 }, { unit: 'merchant', x: 300, z: -2250, facing: 0 }, { unit: 'frigate', x: 0, z: -2400, facing: 0 }],
     // (each fleet's first ship the same distance out: the routing tools measure from her)
-    // the U-boats with torpedo boats in for the U-cruisers' deck guns (no U-cruiser class yet: the 1918 unit batch)
+    // the U-cruisers and a UB boat, torpedo boats behind
     pact: [{ unit: 'destroyer', x: 0, z: 1950, facing: Math.PI }, { unit: 'destroyer', x: 0, z: 2250, facing: Math.PI },
-      { unit: 'submarine', x: -700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 700, z: 1850, facing: Math.PI },
-      { unit: 'frigate', x: -400, z: 2300, facing: Math.PI }, { unit: 'frigate', x: 400, z: 2300, facing: Math.PI }],
+      { unit: 'cruiserSub', x: -700, z: 1850, facing: Math.PI }, { unit: 'cruiserSub', x: 700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 0, z: 1750, facing: Math.PI }, // (two U-cruisers: over the type's limit, the map's own)
+      { unit: 'frigate', x: -400, z: 2300, facing: Math.PI }],
   },
   decorate(props, height, rand) {
     // Horta: the white houses up the slope from the bay, the church, the harbour mole, the cable station's mast
@@ -94,6 +94,6 @@ const sea = northSea({
 export default {
   ...sea,
   region: 'europe', // (at sea: the mid-Atlantic)
-  armies: { nato: ['uk', 'aef'], pact: ['de'] }, // (the US Navy: the 1918 unit batch; the Royal Navy sails the convoy until then)
+  armies: { nato: ['uk', 'aef'], pact: ['de'] }, // (the Royal Navy and the US Navy: data/units1918/aef.js)
   sides: { nato: 'Britain and the United States', pact: 'Germany' },
 };

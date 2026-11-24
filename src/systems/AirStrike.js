@@ -1446,7 +1446,7 @@ export class AirStrike {
     if (deck) { // off her deck: spotted first (a strike longer), the flight out of her hangar
       const cu = deck.units[0];
       const spot = kind === 'diveBomb' || kind === 'torpBomb' || kind === 'seaStrike' || p.bombs ? DECK.strike : DECK.light;
-      const dk = `${faction}Deck`;
+      const dk = `${faction}${deck.stats.carrier.air ?? 'Deck'}`; // (a seaplane carrier's own: data/air18.ts natoSeaplane)
       if (p.aircraft?.[dk]) { sortie.army = dk; sortie.type = airType(kind, faction, dk); sortie.hp = sortie.type.hp; } // (the Kiev's Yak-38s, not the shore's MiG-23s)
       this.hangar(cu)[kind]--;
       cu.deckBusy = [...(cu.deckBusy ?? []).filter((t) => t > game.world.time), game.world.time + spot];

@@ -167,9 +167,9 @@ export default {
   name: 'Kajmakčalan',
   description: 'September–November 1916 on the Salonika front: the Serbian Drina Division storms the bare 2,521 m summit of Kajmakčalan against the Bulgarians and Germans, while French and Serbs push into the loop of the Crna round Hill 1050 and the village of Brod at the edge of the Pelagonian plain. Rock and snow on top, beech woods below, the river deep in its gorge; wheels keep to the graded mule tracks and the two bridges.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, as Dobro Pole — serb/bg have no roster yet and fall back to fr/de, which every region keeps)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no flat ground in the mountains: the aircraft come in from the map edge — systems/Airfields.js)
-  armies: { nato: ['serb', 'fr'], pact: ['bg', 'de'] }, // (the Drina Division and the French Armée d’Orient against the Bulgarian 8th Division with German troops; until Serbs and Bulgarians have their rosters: the French and the Germans)
+  armies: { nato: ['serb', 'fr'], pact: ['bg', 'de'] }, // (the Drina Division and the French Armée d’Orient against the Bulgarian 8th Division with German troops)
   sides: { nato: 'Serbia and France', pact: 'Bulgaria and Germany' },
   conditions: { time: 'day', weather: 'overcast' },
   size: 1700,

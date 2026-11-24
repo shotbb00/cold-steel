@@ -24,7 +24,7 @@ const THINK = 3;          // s between looks at the fleet
 const AIR_EVERY = 8;      // s between looks at the air
 const ORDER = ['destroyer', 'frigate', 'cruiser', 'ptBoat', 'corvette', 'destroyer', 'lightCruiser', 'submarine', 'transport', 'carrier', 'destroyer', 'missileSub', 'battleship', 'escortCarrier', 'droneBoat', 'cruiser', 'ptBoat', 'frigate', 'submarine', 'destroyer', 'droneBoat']; // (missileSub: 1985 only, droneBoat 2027 — the others skip what their year doesn't have)
 const SEA_ROOM = 160;   // m off the shallows the admiral wants his ships' spots (seaRoom)
-const ORDER_1918 = ['destroyer', 'lightCruiser', 'frigate', 'destroyer', 'cruiser', 'minesweeper', 'ptBoat', 'submarine', 'destroyer', 'minelayer', 'battleship', 'carrier', 'lightCruiser', 'transport', 'destroyer', 'minesweeper', 'cruiser', 'submarine', 'frigate']; // (the North Sea: the sweepers and layers among them)
+const ORDER_1918 = ['destroyer', 'lightCruiser', 'frigate', 'destroyer', 'cruiser', 'minesweeper', 'ptBoat', 'submarine', 'trawler', 'destroyer', 'minelayer', 'minelayerSub', 'battleship', 'carrier', 'monitor', 'lightCruiser', 'transport', 'seaplaneCarrier', 'destroyer', 'minesweeper', 'cruiser', 'cruiserSub', 'submarine', 'frigate', 'trawler']; // (the North Sea: the sweepers and layers among them; the trawlers, the UC boats and U-cruisers, the monitor and the seaplane carrier: data/units1918/shipTypes.js)
 const ORDER_2027 = ['destroyer', 'frigate', 'ptBoat', 'droneBoat', 'corvette', 'submarine', 'frigate', 'destroyer', 'ptBoat', 'escortCarrier', 'droneBoat', 'corvette', 'destroyer', 'submarine']; // (the Baltic, 2027: no cruisers or battleships left — the drone tender early)
 // 1945's two European navies (data/units45/ships.js): the Kriegsmarine's U-boats and destroyers first (the Atlantic's threat; no carrier),
 // the Royal Navy's escorts and destroyers to hunt them, then the cruisers and the line
@@ -33,7 +33,7 @@ const ORDER_RN = ['destroyer', 'frigate', 'frigate', 'lightCruiser', 'destroyer'
 const NAVY_ORDER = { wh: ORDER_KM, brit: ORDER_RN, brit21: ORDER_RN, brit14: ORDER_RN };
 const order = (army) => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : NAVY_ORDER[army] ?? ORDER);
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
-const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1 };
+const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1, monitor: 4, seaplaneCarrier: 3, merchant: 2, trawler: 1, minelayerSub: 1, cruiserSub: 1 };
 
 export class SeaDirector {
   constructor(game, faction, state, { tempo = 1, hunt = false, holdUntil = null } = {}) {
@@ -186,6 +186,7 @@ export class SeaDirector {
         if (d(want) > 250 && !s.moveTarget) this.move(s, want.x, want.z);
         continue;
       }
+      if (s.stats.minelayer && !s.laying && (s.minesLeft ?? s.stats.minelayer.count) > 0 && d(home) > 1400) g.orders.run(this.faction, { t: 'layMines', s: [s.id], on: 1 }, 'ai'); // (a minelayer: lays once well out, across the way to the objective; a UC boat too)
       if (s.stats.submarine) { this.submarine(s, u, target); continue; }
       if (s.stats.landing) { // a transport: to the nearest zone we hold (her landing parties bring in CP there), and stays
         const held = this.points.filter((p) => p.owner === this.faction && !p.contested).sort((a, b) => d(a) - d(b))[0];
@@ -196,7 +197,6 @@ export class SeaDirector {
         const m = g.mines.mines.filter((q) => q.live && q.f !== this.faction && q.seen[this.faction]).sort((a, b) => d(a) - d(b))[0];
         if (m) { if (!s.moveTarget || Math.hypot(s.moveTarget.x - m.x, s.moveTarget.z - m.z) > 60) this.move(s, m.x, m.z); continue; }
       }
-      if (s.stats.minelayer && !s.laying && (s.minesLeft ?? s.stats.minelayer.count) > 0 && d(home) > 1400) g.orders.run(this.faction, { t: 'layMines', s: [s.id], on: 1 }, 'ai'); // (a minelayer: lays once well out, across the way to the objective)
       if (s.stats.drone) { // 2027's sea-drone tender: back in the fleet's middle — her swarms go out on their own (systems/Drones.js)
         const rest = fleet.filter((o) => o !== s && !o.stats.submarine);
         const mid = rest.length ? { x: rest.reduce((a, o) => a + o.centroid.x, 0) / rest.length, z: rest.reduce((a, o) => a + o.centroid.z, 0) / rest.length } : home;

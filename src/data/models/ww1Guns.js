@@ -11,7 +11,7 @@ import { P, merge, pair } from '../units/geometry.js';
 import { buildFieldGun, wheel } from './napGuns.js';
 import { buildWw1Soldier } from './ww1Soldier.js';
 
-const PAINT = { uk: 0x5a5c46, fr: 0x6c7480, de: 0x5c5e50, st: 0x5c5e50, ot: 0x5c5e50, anzac: 0x5a5c46, it: 0x5e6450, ah: 0x5e6658, ru: 0x56603e };   // British service green, French grey-blue, German field grey (the Ottomans' guns were German), Italian grey-green, Austrian grey-green, Russian green
+const PAINT = { uk: 0x5a5c46, fr: 0x6c7480, de: 0x5c5e50, st: 0x5c5e50, ot: 0x5c5e50, anzac: 0x5a5c46, it: 0x5e6450, ah: 0x5e6658, ru: 0x56603e, serb: 0x6a7478, bg: 0x5c5e50, aef: 0x58583e };   // British service green, French grey-blue, German field grey (the Ottomans' guns were German), Italian grey-green, Austrian grey-green, Russian green, the Serbs' French grey-blue, the Bulgarians' German field grey
 const STEEL = 0x2e302c;
 const WOOD = 0x6a4a2c;
 const SIZES = {

@@ -94,7 +94,7 @@ const sea = northSea({
     { id: 'K', name: 'Gulf of Riga', x: 300, z: -2100, owner: 'pact', sector: 'centre', radius: 150 },
   ],
   bases: { nato: { x: 500, z: 2300, entries: [-500, 0, 500] }, pact: { x: 300, z: -2300, entries: [-500, 0, 500] } },
-  // Slava (here the side's dreadnought) with the Bayan and the destroyers; König's squadron: the dreadnought, a light cruiser, two destroyers
+  // a Gangut (the side's dreadnought: Slava is the Russians' second capital ship, the cruiser slot) with the Bayan and the destroyers; König's squadron: the dreadnought, a light cruiser, two destroyers
   spawns: {
     nato: [{ unit: 'battleship', x: 500, z: 2250, facing: Math.PI }, { unit: 'lightCruiser', x: 150, z: 2150, facing: Math.PI },
       { unit: 'destroyer', x: 850, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 500, z: 2000, facing: Math.PI }],
@@ -106,10 +106,8 @@ const sea = northSea({
 export default {
   ...sea,
   region: 'east',
-  // (the Russian Baltic Fleet against the Kaiserliche Marine. `ru` has no 1918 ships yet and, having land units, isn't skipped by
-  // GameEngine's fieldsUnits fallback — at sea it would spawn nothing — so the Royal Navy sails for it, named first, until the 1918
-  // unit batch gives `ru` its fleet; then: nato: ['ru'])
-  armies: { nato: ['uk', 'ru'], pact: ['de'] },
+  // (the Russian Baltic Fleet against the Kaiserliche Marine: data/units1918/navyEast.js)
+  armies: { nato: ['ru'], pact: ['de'] },
   sides: { nato: 'Russia', pact: 'Germany' },
   decorate({ scene, terrain, cover, rand }) {
     const props = new PropBuilder({ scene, terrain, cover });

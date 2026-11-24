@@ -88,6 +88,7 @@ export const EPOCHS = {
       east: { title: 'The Eastern Front, 1914–17', blurb: 'Russia against Germany and Austria-Hungary: the lakes of Tannenberg, the breakthrough at Gorlice, Brusilov’s offensive at Lutsk, and Riga, where the storm troops first crossed the Dvina.' },
       italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy, with British divisions, against Austria-Hungary and Germany — Caporetto, the Asiago plateau, the Piave and the last crossing at Vittorio Veneto.' },
       middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },
+      balkans: { title: 'The Salonika Front, 1915–18', blurb: 'Salonika, Doiran, Monastir and Dobro Pole: the Allied Army of the Orient — French, British, Serbs, Greeks, Italians and Russians — against the Bulgarians and the Germans in the mountains of Macedonia, until the breakthrough of September 1918.' },
       med: { title: 'The Mediterranean', blurb: 'The Otranto Barrage, 1917: Austro-Hungarian cruisers against the drifters and destroyers closing the Adriatic.' },
     },
     armies: {
@@ -97,17 +98,17 @@ export const EPOCHS = {
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
       // the other fronts (own: only the types data/units1918/fronts.js writes for them)
       // standIn: a type the army lacks is fielded as this one of its own (null: not at all); else one of the same role it has (data/units/index.js standInFor)
-      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (no armour at all: the Süvari are its mobile arm)
-      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast', 'europe'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle', aa: 'manpads' } }, // (the Light Car Patrol; the Lewis AA teams)
+      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, navy: 'Ottoman Navy', regions: ['middleEast'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (no armour at all: the Süvari are its mobile arm)
+      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast', 'europe'], navyOf: 'uk', standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (the Light Car Patrol; the Royal Navy's ships — Gallipoli's covering squadron — data/factions.js armyHas)
       it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy', 'europe'] },
       ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (no tanks: the Romfell armoured car)
-      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
+      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, navy: 'Russian Baltic Fleet', regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
       // the world campaign's own armies (wcampaign/wars/ww1.js), no roster yet. `own` with no types: they field nothing of
       // another nation's; no regions: no map picks them, so a campaign battle fights them as the side's army that fits its
       // map (data/factions.js armiesFrom — the British or French, the Germans). TODO units: their rosters, then their regions.
-      aef: { id: 'aef', faction: 'nato', name: 'American Expeditionary Forces', own: true, regions: [] },
-      serb: { id: 'serb', faction: 'nato', name: 'Serbian Army', own: true, regions: [] },
-      bg: { id: 'bg', faction: 'pact', name: 'Bulgarian Army', own: true, regions: [] },
+      aef: { id: 'aef', faction: 'nato', name: 'American Expeditionary Forces', own: true, navy: 'US Navy', regions: ['europe'] }, // (data/units1918/aef.js; no armoured cars: the scouts stand in)
+      serb: { id: 'serb', faction: 'nato', name: 'Serbian Army', own: true, regions: ['balkans'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (data/units1918/balkans.js; no armour: the cavalry division is its mobile arm)
+      bg: { id: 'bg', faction: 'pact', name: 'Bulgarian Army', own: true, regions: ['balkans'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } },
     },
     defaults: { nato: 'uk', pact: 'de' },
     types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },

@@ -16,7 +16,7 @@ const KM = { hull: 0x7e868e, deck: 0x887c64, upper: 0x8c949a, gun: 0x848c94, bla
 // ---------------------------------------------------------------- guns (geometry at 0, facing +z)
 
 /** A single gun behind its shield on a pedestal (the light cruisers', destroyers', sloops' guns). */
-const shielded = (c, { len = 5, cal = 0.1, w = 2, h = 1.5, d = 2.2 } = {}) => merge([
+export const shielded = (c, { len = 5, cal = 0.1, w = 2, h = 1.5, d = 2.2 } = {}) => merge([
   P.cyl(0.4, 0.55, 0.6, { y: 0.3, color: c.gun }, 10),                                                   // the pedestal
   sideProfile([[-d * 0.45, 0], [d * 0.5, 0], [d * 0.5, h * 0.5], [d * 0.18, h], [-d * 0.45, h]], w, { y: 0.55, color: c.gun, surf: 'plate' }, 0.06), // the shield
   P.box(w * 0.86, h * 0.8, 0.1, { y: 0.55 + h * 0.4, z: -d * 0.46, color: 0x1c1e20 }),                    // its open back, dark
@@ -42,7 +42,7 @@ const top = (c, x, y, z, r = 2.4, round = false) => [
  * [{ x, z, y, aft, len, cal }], `casemates` [z from, z to, step, y below the deck], `funnels` [[z, r, h]],
  * `fore` / `main` masts { z, h, tripod, topR, round }, `bridge` { z, w, d, h }, `tubes` [[z, n, x]], `boats`.
  */
-function warship(c, o) {
+export function warship(c, o) {
   const { len, beam, fb, draft, sheer = 1.2 } = o;
   const H = hull(len, beam, fb, draft, c, sheer);
   const parts = [...H.parts];
@@ -373,7 +373,7 @@ export const buildML = ship(() => ({ fixed: motorBoat({ ...RN, hull: 0x5c6268 },
 // ---------------------------------------------------------------- submarines
 
 /** A First War submarine: the casing over the hull, a small conning tower, the deck gun forward, the jumping wires from bow to stern over the tower. */
-function uboat(c, { len, beam, tower, gunZ, gunLen = 3 }) {
+export function uboat(c, { len, beam, tower, gunZ, gunLen = 3 }) {
   const deck = beam * 0.16;
   const secs = every(0, 20, 1).map((k) => { const t = k / 20; const r = (beam / 2) * Math.max(0.06, Math.sin(Math.PI * Math.min(1, 0.03 + t * 0.95)) ** 0.6); return [0, -beam * 0.28, -len / 2 + t * len, r, r * 0.9, 2.2]; });
   const cw = (t) => beam * 0.36 * Math.min(1, 0.2 + t * 7, (1 - t) * 5);
@@ -401,7 +401,7 @@ export const buildUB3 = sub(() => uboat({ ...KM, hull: 0x6a7076, deck: 0x50555a 
 // ---------------------------------------------------------------- motor torpedo boats
 
 /** A coastal motor boat: a stepped planing hull, the cockpit, the torpedo in its trough aft (CMB) or a tube forward (LM). */
-function motorBoat(c, { len, beam, trough }) {
+export function motorBoat(c, { len, beam, trough }) {
   const fb = 1.1;
   const H = hull(len, beam, fb, 0.7, c, 0.5, { rails: false, fittings: false });
   const y = (z) => H.top(z);
@@ -423,7 +423,7 @@ export const buildLM = ship(() => ({ fixed: motorBoat(KM, { len: 15.5, beam: 3, 
 // ---------------------------------------------------------------- steamers
 
 /** A troopship: a straight stem, a counter stern, the tall funnel amidships, two masts with their derricks, one gun aft. */
-function steamer(c, { len, beam, fb, band }) {
+export function steamer(c, { len, beam, fb, band }) {
   const H = hull(len, beam, fb, 6, c, 1.6);
   const y = fb;
   return {
@@ -443,8 +443,8 @@ export const buildTroopshipKM = ship(() => steamer({ ...KM, hull: 0x3a3c3e, uppe
 
 // ---------------------------------------------------------------- the Adriatic (the Otranto Strait)
 
-const KUK = { hull: 0x8a9096, deck: 0x8a7e66, upper: 0x969ca2, gun: 0x8c9298, black: BLACK, boat: 0xa4a49a };   // the k.u.k. Kriegsmarine's light grey
-const RM = { hull: 0x7a8288, deck: 0x887c64, upper: 0x868e94, gun: 0x7e868c, black: BLACK, boat: 0x9a9a90 };    // the Regia Marina's grey
+export const KUK = { hull: 0x8a9096, deck: 0x8a7e66, upper: 0x969ca2, gun: 0x8c9298, black: BLACK, boat: 0xa4a49a };   // the k.u.k. Kriegsmarine's light grey
+export const RM = { hull: 0x7a8288, deck: 0x887c64, upper: 0x868e94, gun: 0x7e868c, black: BLACK, boat: 0x9a9a90 };    // the Regia Marina's grey
 
 /** SMS Novara (Helgoland class): 130.6 m, nine 10 cm singles (two abreast forward, the rest along the waist and aft), three funnels, two pole masts. */
 export const buildNovara = ship(() => warship(KUK, {

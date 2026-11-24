@@ -68,7 +68,7 @@ const sea = northSea({
   bases: { nato: { x: 0, z: -2300, entries: [-300, 0, 300] }, pact: { x: 0, z: 2300, entries: [-300, 0, 300] } },
   spawns: {
     // (each fleet's first ship the same distance out: the routing tools measure from her)
-    nato: [{ unit: 'cruiser', x: 0, z: -2200, facing: 0 }, { unit: 'lightCruiser', x: 0, z: -2400, facing: 0 },
+    nato: [{ unit: 'cruiser', x: 0, z: -2200, facing: 0 }, { unit: 'monitor', x: 0, z: -2400, facing: 0 }, // (Raglan, as at Kusu Bay in January 1918)
       { unit: 'destroyer', x: -300, z: -2050, facing: 0 }, { unit: 'destroyer', x: 300, z: -2050, facing: 0 }],
     pact: [{ unit: 'cruiser', x: 0, z: 2200, facing: Math.PI }, { unit: 'lightCruiser', x: 0, z: 2400, facing: Math.PI },
       { unit: 'destroyer', x: 300, z: 2050, facing: Math.PI }, { unit: 'destroyer', x: -300, z: 2050, facing: Math.PI }],
@@ -96,15 +96,14 @@ const sea = northSea({
 });
 
 // the ships' own names here (UnitStack shipName): the Abercrombie monitors and the destroyers of the Aegean squadron;
-// the Goeben and the Breslau under their German names (stand-ins: the battlecruiser and light cruiser slots)
+// the Ottoman side's are its own (Yavuz Sultan Selim, Midilli, the Muavenet boats: data/units1918/navyEast.js)
 (sea.river as { names?: unknown }).names = {
   nato: { cruiser: ['Raglan', 'Abercrombie', 'Havelock', 'Roberts'], destroyer: ['Lizard', 'Tigress', 'Racoon', 'Basilisk', 'Harpy', 'Beagle', 'Foxhound', 'Grasshopper'] },
-  pact: { cruiser: ['Goeben'], lightCruiser: ['Breslau'] },
 };
 
 export default {
   ...sea,
   region: 'med', // (at sea: the Aegean)
-  armies: { nato: ['uk'], pact: ['de', 'ot'] }, // (the Royal Navy's Aegean squadron against the Mittelmeerdivision: German ships in Ottoman service, the German navy's slots — 'ot' has no ships)
+  armies: { nato: ['uk'], pact: ['ot', 'de'] }, // (the Royal Navy's Aegean squadron against the Mittelmeerdivision: Yavuz and Midilli under the Ottoman flag, German crews aboard)
   sides: { nato: 'Britain', pact: 'Germany & Ottoman Empire' },
 };

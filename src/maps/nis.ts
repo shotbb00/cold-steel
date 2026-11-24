@@ -163,7 +163,7 @@ export default {
   name: 'Niš',
   description: '12 October 1918: the Serbian First Army, three weeks up from the Salonika breakthrough, takes back its wartime capital from the Germans and Austro-Hungarians. The Nišava through the town with its bridges, the Ottoman fortress and its Stambol gate on the river bank, the cathedral under Gorica, Ćele Kula on the Sofia road, the station on the Belgrade–Salonika line; orchards and maize on the Morava plain.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, like Skopje and Dobro Pole — serb has no roster yet and falls back to fr; ah and de both fit italy)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no strip fits between the town, the river, the orchards and the hills: the aircraft come in from the map edge — systems/Airfields.js)
   armies: { nato: ['serb', 'fr'], pact: ['de', 'ah'] }, // (the Serbian First Army with French troops behind it against von Gallwitz’s Germans and the Austro-Hungarian divisions)
   sides: { nato: 'Serbia and France', pact: 'Germany and Austria-Hungary' },

@@ -164,7 +164,7 @@ export default {
   name: 'Sofia',
   description: 'October 1918, had Bulgaria not signed the armistice: Serbian and French columns fight up the Struma through the Pernik coal basin toward Sofia, between the bare shoulder of Vitosha and the wooded back of Lyulin. Headframes and spoil tips at the pits, red-roofed villages with their churches, the railway into the capital, hasty Bulgarian trenches on the ridges, and the gold domes of the Alexander Nevsky cathedral on the skyline.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, like Skopje, Niš and Dobro Pole — serb/bg have no roster yet and fall back to fr/de)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (no strip fits between the town, the river, the pits and the mountains: the aircraft come in from the map edge — systems/Airfields.js)
   armies: { nato: ['serb', 'fr'], pact: ['bg', 'de'] }, // (the Serbian First Army and the Armée d’Orient against the loyal Bulgarian divisions and the Germans sent to stiffen them)
   sides: { nato: 'Serbia and France', pact: 'Bulgaria and Germany' },

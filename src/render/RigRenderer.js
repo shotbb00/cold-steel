@@ -50,6 +50,9 @@ const ARMY_CAMO_1918 = {
   it: [0x6a6e58, 0x646852, 0x70745c, 0x5e624e],   // grigio-verde
   ah: [0x6e7468, 0x5e6a4c, 0x7a6e50, 0x6e7468],   // the k.u.k. three-colour of 1918
   ru: [0x5c6444, 0x56603e, 0x606848, 0x525a3a],   // Russian green
+  aef: [0x56563a, 0x52523a, 0x5a5a3e, 0x4e4e34],  // US olive drab
+  serb: [0x6a7270, 0x646c68, 0x707874, 0x5e6662],   // French-supplied grey
+  bg: [0x6e6a52, 0x66624a, 0x747058, 0x625e48],     // German-supplied field grey, browned
 };
 
 // 2027: the US Army's NATO three-tone, the Polish three-colour, Russian green, the Belarusian

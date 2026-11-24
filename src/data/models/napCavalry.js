@@ -79,7 +79,11 @@ Object.assign(CAV, {
   anzac18: { medium: { coat: 0x6f6646, facing: 0x5c5438, breeches: 0x8a7c58, hat: () => ww1Helmet('anzac', 'plume'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x4a3220 } },
   it18: { medium: { coat: 0x6e705a, facing: 0x5a5c48, breeches: 0x6a6c56, hat: () => ww1Helmet('it'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3a2a1e, lance: true } },
   ah18: { medium: { coat: 0x7e868a, facing: 0x667074, breeches: 0x7a8286, hat: () => ww1Helmet('ah'), cloth: SADDLE_18, trim: SADDLE_18 } },
+  aef18: { medium: { coat: 0x625c3c, facing: 0x4e4a30, breeches: 0x6a6244, hat: () => ww1Helmet('aef'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x5a3a22 } }, // (the 2nd Cavalry in olive drab under the American Brodie: the McClellan saddle, no lances)
   ru18: { medium: { coat: 0x8e8a64, facing: 0x757150, breeches: 0x2a3048, hat: () => ww1Helmet('ru', 'papakha'), cloth: SADDLE_18, trim: SADDLE_18, lance: true } },
+  // the Serbian cavalry in the šajkača, the Bulgarian in the peaked cap and its red band, lances for the Bulgarian lancers
+  serb18: { medium: { coat: 0x7a8884, facing: 0x626f6c, breeches: 0x74807a, hat: () => ww1Helmet('serb', 'sajkaca'), cloth: SADDLE_18, trim: SADDLE_18, boot: 0x3a2a1e } },
+  bg18: { medium: { coat: 0x7a7050, facing: 0x625a3e, breeches: 0x6e664a, hat: () => ww1Helmet('bg', 'peaked'), cloth: SADDLE_18, trim: SADDLE_18, lance: true } },
 });
 
 const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a], ru: [BLACK, 0xe08a20] };

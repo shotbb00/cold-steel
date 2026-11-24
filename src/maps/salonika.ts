@@ -164,7 +164,7 @@ export default {
   name: 'Salonika',
   description: 'The Birdcage, the Allied entrenched camp round Salonika, 1916–17 — the Bulgarian and German attack that never came: wired trenches and redoubts on the bare hills north of the city against the heights across the Langaza basin, with Lake Langaza, Lake Beşik and their malarial marshes between. Behind the Allied line the tent camps, hospitals and dumps, the railway yards, the minarets and the White Tower on the gulf.',
   epochs: ['1918'],
-  region: 'italy', // (no Balkans region in 1918: the mountain front’s, like Dobro Pole and Doiran — serb/bg have no roster yet and fall back to fr/de)
+  region: 'balkans', // (the Salonika front)
   airfields: [], // (hills, lakes and marsh: no flat dry strip long enough — the aircraft come in from the map edge)
   armies: { nato: ['fr', 'uk', 'serb'], pact: ['bg', 'de'] }, // (the Armée d’Orient, the British Salonika Army and the Serbian army in exile against the Bulgarians and the German Eleventh Army)
   sides: { nato: 'France, Britain and Serbia', pact: 'Bulgaria and Germany' },

@@ -569,7 +569,7 @@ const tabOf = (m) => m.theatre ?? 'land';
  */
 export const REGIONS = [
   { id: 'europe', name: 'Western Europe' }, { id: 'baltic', name: 'Baltic States' }, { id: 'north', name: 'Northern Flank' }, { id: 'east', name: 'Eastern Front' }, { id: 'iberia', name: 'Iberia' },
-  { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' },
+  { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' }, { id: 'balkans', name: 'Balkans' },
   { id: 'caribbean', name: 'Caribbean' }, { id: 'pacific', name: 'Asia & Pacific' }, { id: 'korea', name: 'Korea' },
 ];
 export const regionOf = (m) => m.region ?? 'europe';

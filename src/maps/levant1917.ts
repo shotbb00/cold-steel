@@ -97,13 +97,14 @@ const sea = northSea({
   ],
   spawns: {
     // the destroyers ahead, a sloop astern; the cruisers are bought (started with one the squadron outweighed the
-    // flotilla in the AI soaks: it lost 0-1 ships to their 3) — the monitor and the seaplane carrier: none built yet
+    // flotilla in the AI soaks: it lost 0-1 ships to their 3) — the seaplane carrier with them (Ben-my-Chree, Empress
+    // off the Syrian coast) in the sloop's place (with both the squadron won 1-4), the monitor bought
     // (each fleet's first ship the same distance out: the routing tools measure from her)
     nato: [{ unit: 'destroyer', x: 0, z: -1950, facing: 0 },
-      { unit: 'destroyer', x: -400, z: -2050, facing: 0 }, { unit: 'frigate', x: 400, z: -2300, facing: 0 }],
-    // the U-boats ahead, the torpedo boats behind
+      { unit: 'destroyer', x: -400, z: -2050, facing: 0 }, { unit: 'seaplaneCarrier', x: 400, z: -2300, facing: 0 }],
+    // the U-boats ahead (a UB and a UC boat), the torpedo boats behind
     pact: [{ unit: 'destroyer', x: 0, z: 1950, facing: Math.PI }, { unit: 'destroyer', x: 0, z: 2250, facing: Math.PI },
-      { unit: 'submarine', x: -700, z: 1850, facing: Math.PI }, { unit: 'submarine', x: 700, z: 1850, facing: Math.PI },
+      { unit: 'submarine', x: -700, z: 1850, facing: Math.PI }, { unit: 'minelayerSub', x: 700, z: 1850, facing: Math.PI },
       { unit: 'frigate', x: -400, z: 2300, facing: Math.PI }, { unit: 'frigate', x: 400, z: 2300, facing: Math.PI }],
   },
   decorate(props, height, rand) {
