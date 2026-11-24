@@ -69,6 +69,8 @@ import weichselmunde from './weichselmunde.ts';
 import pillau from './pillau.ts';
 import memelLanding from './memelLanding.ts';
 import civitavecchia from './civitavecchia.ts';
+import naplesLanding from './naplesLanding.ts';
+import cadizLanding from './cadizLanding.ts';
 import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
@@ -526,6 +528,8 @@ export const MAPS = {
   [pillau.id]: pillau,
   [memelLanding.id]: memelLanding,
   [civitavecchia.id]: civitavecchia,
+  [naplesLanding.id]: naplesLanding,
+  [cadizLanding.id]: cadizLanding,
   [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
