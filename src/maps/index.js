@@ -16,6 +16,9 @@ import halle1806 from './halle1806.ts';
 import erfurt from './erfurt.ts';
 import magdeburg1806 from './magdeburg1806.ts';
 import prenzlau from './prenzlau.ts';
+import spandau from './spandau.ts';
+import breslau from './breslau.ts';
+import hameln from './hameln.ts';
 import stalingrad from './stalingrad.ts';
 import mozhaisk from './mozhaisk.ts';
 import novorossiysk from './novorossiysk.ts';
@@ -495,6 +498,9 @@ export const MAPS = {
   [erfurt.id]: erfurt,
   [magdeburg1806.id]: magdeburg1806,
   [prenzlau.id]: prenzlau,
+  [spandau.id]: spandau,
+  [breslau.id]: breslau,
+  [hameln.id]: hameln,
   [stalingrad.id]: stalingrad,
   [mozhaisk.id]: mozhaisk,
   [novorossiysk.id]: novorossiysk,
