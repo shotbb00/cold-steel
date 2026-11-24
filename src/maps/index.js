@@ -106,6 +106,9 @@ import bussaco from './bussaco.ts';
 import fuentesDeOnoro from './fuentesDeOnoro.ts';
 import pultusk from './pultusk.ts';
 import heilsberg from './heilsberg.ts';
+import elchingen from './elchingen.ts';
+import wertingen from './wertingen.ts';
+import hohenlinden from './hohenlinden.ts';
 import austerlitz from './austerlitz.ts';
 import wischau from './wischau.ts';
 import durnstein from './durnstein.ts';
@@ -391,6 +394,9 @@ export const MAPS = {
   [fuentesDeOnoro.id]: fuentesDeOnoro,
   [pultusk.id]: pultusk,
   [heilsberg.id]: heilsberg,
+  [elchingen.id]: elchingen,
+  [wertingen.id]: wertingen,
+  [hohenlinden.id]: hohenlinden,
   [austerlitz.id]: austerlitz,
   [wischau.id]: wischau,
   [durnstein.id]: durnstein,
