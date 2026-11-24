@@ -112,6 +112,9 @@ import bussaco from './bussaco.ts';
 import fuentesDeOnoro from './fuentesDeOnoro.ts';
 import pultusk from './pultusk.ts';
 import heilsberg from './heilsberg.ts';
+import mohrungen from './mohrungen.ts';
+import ostroleka from './ostroleka.ts';
+import danzig from './danzig.ts';
 import caldiero from './caldiero.ts';
 import veronetta from './veronetta.ts';
 import tagliamento from './tagliamento.ts';
@@ -427,6 +430,9 @@ export const MAPS = {
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
+  [mohrungen.id]: mohrungen,
+  [ostroleka.id]: ostroleka,
+  [danzig.id]: danzig,
   [omaha.id]: omaha,
   [iwoJima.id]: iwoJima,
   [elGuettar.id]: elGuettar,
