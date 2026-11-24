@@ -152,6 +152,7 @@ import haritan from './haritan.ts';
 import gallipoli from './gallipoli.ts';
 import salonikaLanding from './salonikaLanding.ts';
 import gazaLanding from './gazaLanding.ts';
+import portSaid from './portSaid.ts';
 import samland from './samland.ts';
 import domesnes from './domesnes.ts';
 import krithia from './krithia.ts';
@@ -308,6 +309,7 @@ export const MAPS = {
   [salonikaLanding.id]: salonikaLanding,
   [bosphorus.id]: bosphorus,
   [gazaLanding.id]: gazaLanding,
+  [portSaid.id]: portSaid,
   [samland.id]: samland,
   [domesnes.id]: domesnes,
   [krithia.id]: krithia,
