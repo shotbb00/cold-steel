@@ -164,6 +164,7 @@ import dunkirk1918 from './dunkirk1918.ts';
 import otranto from './otranto.ts';
 import westernApproaches from './westernApproaches.ts';
 import azores1918 from './azores1918.ts';
+import levant1917 from './levant1917.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
@@ -312,6 +313,7 @@ export const MAPS = {
   [otranto.id]: otranto,
   [westernApproaches.id]: westernApproaches,
   [azores1918.id]: azores1918,
+  [levant1917.id]: levant1917,
   [gallipoli.id]: gallipoli,
   [salonikaLanding.id]: salonikaLanding,
   [bosphorus.id]: bosphorus,

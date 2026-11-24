@@ -168,7 +168,7 @@ export const WW1 = {
     otranto: { name: 'The Otranto Strait', theatre: 'med', map: 'otranto', seas: ['adriatic', 'centralMed'], coasts: ['rome', 'cattaro'], lat: 40.2, lon: 18.9 },
     centralMed: { name: 'The central Mediterranean', theatre: 'med', map: 'openSea', seas: ['otranto', 'aegean', 'easternMed', 'atlantic'], coasts: ['rome'], lat: 35.8, lon: 17 },
     aegean: { name: 'The Aegean', theatre: 'med', map: 'openSea', seas: ['centralMed', 'easternMed'], coasts: ['salonika', 'dardanelles', 'constantinople'], lat: 38.6, lon: 25 },
-    easternMed: { name: 'The Levant coast', theatre: 'med', map: 'openSea', seas: ['aegean', 'centralMed'], coasts: ['egypt', 'gaza'], lat: 32.9, lon: 32.4 },
+    easternMed: { name: 'The Levant coast', theatre: 'med', map: 'levant-1917', seas: ['aegean', 'centralMed'], coasts: ['egypt', 'gaza'], lat: 32.9, lon: 32.4 },
   },
 
   /** A battalion: the stacks it fields (1918's unit type ids; an army without a type fields its stand-in: data/epoch.js standIn). */
