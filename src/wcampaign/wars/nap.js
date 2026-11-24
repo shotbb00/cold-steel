@@ -154,12 +154,12 @@ export const NAP = {
     westIndies: { name: 'The West Indies', theatre: 'atlantic', map: 'caribbean', seas: ['westernApproaches', 'finisterre'], coasts: [], lat: 18.3, lon: -68.5 }, // (San Domingo, February 1806)
     northSea: { name: 'The North Sea', theatre: 'northern', map: 'openSea', seas: ['channel', 'sound'], coasts: ['britain', 'hanover'], lat: 55.0, lon: 3.5 }, // TODO map: the German Bight
     sound: { name: 'The Sound and Copenhagen', theatre: 'northern', map: 'copenhagen', seas: ['northSea', 'baltic'], coasts: ['zealand'], lat: 56.1, lon: 12.6 },
-    baltic: { name: 'The Baltic', theatre: 'northern', map: 'openSea', seas: ['sound'], coasts: ['stettin', 'danzig', 'konigsberg', 'memel', 'russia'], lat: 55.9, lon: 18.0 }, // TODO map: off Danzig (1807)
+    baltic: { name: 'The Baltic', theatre: 'northern', map: 'baltic-1807', seas: ['sound'], coasts: ['stettin', 'danzig', 'konigsberg', 'memel', 'russia'], lat: 55.9, lon: 18.0 }, // TODO map: off Danzig (1807)
     alboran: { name: 'The Strait and Cartagena', theatre: 'med', map: 'openSea', seas: ['cadiz', 'lion'], coasts: ['gibraltar'], lat: 36.4, lon: -2.4 }, // TODO map: Algeciras (1801)
-    lion: { name: 'The Gulf of Lion and Toulon', theatre: 'med', map: 'openSea', seas: ['alboran', 'tyrrhenian'], coasts: ['toulon'], lat: 42.2, lon: 5.6 }, // TODO map: off Toulon
+    lion: { name: 'The Gulf of Lion and Toulon', theatre: 'med', map: 'toulon-blockade', seas: ['alboran', 'tyrrhenian'], coasts: ['toulon'], lat: 42.2, lon: 5.6 }, // TODO map: off Toulon
     tyrrhenian: { name: 'The Tyrrhenian Sea', theatre: 'med', map: 'openSea', seas: ['lion', 'ionian'], coasts: ['rome', 'naples', 'calabria', 'sicily'], lat: 39.8, lon: 12.0 }, // TODO map: the Bay of Naples
     ionian: { name: 'The Ionian Sea and Corfu', theatre: 'med', map: 'openSea', seas: ['tyrrhenian', 'adriatic'], coasts: ['calabria', 'sicily', 'corfu', 'cattaro'], lat: 38.3, lon: 18.3 }, // TODO map: off Corfu
-    adriatic: { name: 'The Adriatic', theatre: 'med', map: 'openSea', seas: ['ionian'], coasts: ['venetia', 'trieste', 'dalmatia', 'cattaro', 'romagna'], lat: 43.6, lon: 15.0 }, // TODO map: Lissa (1811)
+    adriatic: { name: 'The Adriatic', theatre: 'med', map: 'lissa', seas: ['ionian'], coasts: ['venetia', 'trieste', 'dalmatia', 'cattaro', 'romagna'], lat: 43.6, lon: 15.0 }, // TODO map: Lissa (1811)
   },
 
   /** A battalion — here a division or a brigade: the stacks it fields (1806's unit type ids: data/units1806). */

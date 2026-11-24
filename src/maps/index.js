@@ -140,6 +140,9 @@ import copenhagen from './copenhagen.ts';
 import finisterre1805 from './finisterre1805.ts';
 import capeOrtegal from './capeOrtegal.ts';
 import channel1805 from './channel1805.ts';
+import baltic1807 from './baltic1807.ts';
+import toulonBlockade from './toulonBlockade.ts';
+import lissa from './lissa.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
 import gorlice from './gorlice.ts';
@@ -419,6 +422,9 @@ export const MAPS = {
   [finisterre1805.id]: finisterre1805,
   [capeOrtegal.id]: capeOrtegal,
   [channel1805.id]: channel1805,
+  [baltic1807.id]: baltic1807,
+  [toulonBlockade.id]: toulonBlockade,
+  [lissa.id]: lissa,
   [talavera.id]: talavera,
   [bussaco.id]: bussaco,
   [fuentesDeOnoro.id]: fuentesDeOnoro,
