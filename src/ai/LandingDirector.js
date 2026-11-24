@@ -64,8 +64,19 @@ export class LandingDirector extends FrontlineDirector {
   /** The landing's ships. */
   get fleet() { return this.game.world.stacksOf(this.faction).filter((s) => s.stats.naval && !s.stats.landingCraft && s.alive); }
 
-  /** The landing leaves nobody sitting on what it holds (the defence doesn't counter-attack the beach): every squad for the assault. */
-  garrison() { if (!this.lands) super.garrison(); }
+  /**
+   * The landing leaves nobody sitting on the beach (the defence doesn't counter-attack it): every squad for the assault.
+   * Only the villages inland (what it wins by holding) keep whoever took them. FrontlineDirector.garrison() is also what
+   * frees a consolidated assault's men and a probe whose time is up — skipped, they'd sit on the sand for the rest of the battle.
+   */
+  garrison() {
+    if (!this.lands) return super.garrison();
+    const inland = new Set(this.game.map.points.map((q) => q.opens).filter(Boolean));
+    for (const [s, r] of this.roles) {
+      if (r.role === 'probe' && this.now > r.until) this.roles.delete(s);
+      else if (r.role === 'garrison' && (!inland.has(r.point.id) || (r.point.owner !== this.faction && !r.point.contested))) this.roles.delete(s);
+    }
+  }
 
   /** The beach sectors (points with `opens`), in the order of the base's entries (Dog, Easy, Fox). */
   get sectors() {
