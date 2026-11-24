@@ -572,7 +572,10 @@ export class UnitStack {
       const p = nav.path(this.anchor, t, this.navFoot, this.stats.radius);
       r = this.route = { to: { x: t.x, z: t.z }, version: nav.version, pts: p?.pts ?? [{ x: t.x, z: t.z }], i: 0 };
     }
-    while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < 1.5) r.i++;
+    // Ships can't turn on a point: reaching within one 12 m grid step (or their own size) counts,
+    // or they circle the route's corner points round island capes and stop short of the zone
+    const reach = this.stats.naval ? Math.max(12, this.stats.radius ?? 0) : 1.5;
+    while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < reach) r.i++;
     const p = r.pts[r.i];
     return { x: p.x, z: p.z, last: r.i === r.pts.length - 1 };
   }
