@@ -10,6 +10,9 @@ import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
+import saalfeld from './saalfeld.ts';
+import schleiz from './schleiz.ts';
+import halle1806 from './halle1806.ts';
 import stalingrad from './stalingrad.ts';
 import mozhaisk from './mozhaisk.ts';
 import novorossiysk from './novorossiysk.ts';
@@ -453,6 +456,9 @@ export const MAPS = {
   [monteKali.id]: monteKali,
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
+  [saalfeld.id]: saalfeld,
+  [schleiz.id]: schleiz,
+  [halle1806.id]: halle1806,
   [stalingrad.id]: stalingrad,
   [mozhaisk.id]: mozhaisk,
   [novorossiysk.id]: novorossiysk,
