@@ -13,6 +13,9 @@ import auerstedt from './auerstedt.ts';
 import saalfeld from './saalfeld.ts';
 import schleiz from './schleiz.ts';
 import halle1806 from './halle1806.ts';
+import erfurt from './erfurt.ts';
+import magdeburg1806 from './magdeburg1806.ts';
+import prenzlau from './prenzlau.ts';
 import stalingrad from './stalingrad.ts';
 import mozhaisk from './mozhaisk.ts';
 import novorossiysk from './novorossiysk.ts';
@@ -477,6 +480,9 @@ export const MAPS = {
   [saalfeld.id]: saalfeld,
   [schleiz.id]: schleiz,
   [halle1806.id]: halle1806,
+  [erfurt.id]: erfurt,
+  [magdeburg1806.id]: magdeburg1806,
+  [prenzlau.id]: prenzlau,
   [stalingrad.id]: stalingrad,
   [mozhaisk.id]: mozhaisk,
   [novorossiysk.id]: novorossiysk,
