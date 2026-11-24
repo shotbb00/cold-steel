@@ -65,6 +65,9 @@ import halbe from './halbe.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
 import maida from './maida.ts';
+import castelnuovo from './castelnuovo.ts';
+import anconaLanding from './anconaLanding.ts';
+import corfuLanding from './corfuLanding.ts';
 import weichselmunde from './weichselmunde.ts';
 import pillau from './pillau.ts';
 import memelLanding from './memelLanding.ts';
@@ -536,6 +539,9 @@ export const MAPS = {
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
   [maida.id]: maida,
+  [castelnuovo.id]: castelnuovo,
+  [anconaLanding.id]: anconaLanding,
+  [corfuLanding.id]: corfuLanding,
   [weichselmunde.id]: weichselmunde,
   [pillau.id]: pillau,
   [memelLanding.id]: memelLanding,
