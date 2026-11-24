@@ -167,6 +167,7 @@ import azores1918 from './azores1918.ts';
 import premuda from './premuda.ts';
 import moonSound from './moonSound.ts';
 import imbros from './imbros.ts';
+import malta1917 from './malta1917.ts';
 import levant1917 from './levant1917.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
@@ -319,6 +320,7 @@ export const MAPS = {
   [premuda.id]: premuda,
   [moonSound.id]: moonSound,
   [imbros.id]: imbros,
+  [malta1917.id]: malta1917,
   [levant1917.id]: levant1917,
   [gallipoli.id]: gallipoli,
   [salonikaLanding.id]: salonikaLanding,
