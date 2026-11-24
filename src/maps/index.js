@@ -118,6 +118,9 @@ import heilsberg from './heilsberg.ts';
 import mohrungen from './mohrungen.ts';
 import ostroleka from './ostroleka.ts';
 import danzig from './danzig.ts';
+import grodno from './grodno.ts';
+import brestLitovsk from './brestLitovsk.ts';
+import sandomierz from './sandomierz.ts';
 import caldiero from './caldiero.ts';
 import veronetta from './veronetta.ts';
 import tagliamento from './tagliamento.ts';
@@ -454,6 +457,9 @@ export const MAPS = {
   [mohrungen.id]: mohrungen,
   [ostroleka.id]: ostroleka,
   [danzig.id]: danzig,
+  [grodno.id]: grodno,
+  [brestLitovsk.id]: brestLitovsk,
+  [sandomierz.id]: sandomierz,
   [omaha.id]: omaha,
   [iwoJima.id]: iwoJima,
   [elGuettar.id]: elGuettar,
