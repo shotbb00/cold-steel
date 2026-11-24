@@ -237,7 +237,8 @@ export default {
     // buy
     if (forces(game, me).length < state.maxStacks) {
       const id = ARMY_ORDER[this.buildIndex % ARMY_ORDER.length];
-      if (state.cp[me] >= UNIT_TYPES[id].cost) {
+      if (!UNIT_TYPES[id]) this.buildIndex++; // (a type this epoch hasn't got, e.g. no cev in 1918: next one)
+      else if (state.cp[me] >= UNIT_TYPES[id].cost) {
         const s = state.buy(me, id);
         this.buildIndex++;
         if (s) {
