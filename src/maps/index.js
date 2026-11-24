@@ -121,6 +121,9 @@ import danzig from './danzig.ts';
 import caldiero from './caldiero.ts';
 import veronetta from './veronetta.ts';
 import tagliamento from './tagliamento.ts';
+import marengo from './marengo.ts';
+import malborghetto from './malborghetto.ts';
+import trieste1805 from './trieste1805.ts';
 import elchingen from './elchingen.ts';
 import wertingen from './wertingen.ts';
 import hohenlinden from './hohenlinden.ts';
@@ -424,6 +427,9 @@ export const MAPS = {
   [caldiero.id]: caldiero,
   [veronetta.id]: veronetta,
   [tagliamento.id]: tagliamento,
+  [marengo.id]: marengo,
+  [malborghetto.id]: malborghetto,
+  [trieste1805.id]: trieste1805,
   [elchingen.id]: elchingen,
   [wertingen.id]: wertingen,
   [hohenlinden.id]: hohenlinden,
