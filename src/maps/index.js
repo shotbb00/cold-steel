@@ -64,6 +64,7 @@ import krymskaya from './krymskaya.ts';
 import halbe from './halbe.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
+import maida from './maida.ts';
 import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
@@ -108,6 +109,8 @@ import ivalo from './ivalo.ts';
 import pasvikValley from './pasvikValley.ts';
 
 import eylau from './eylau.ts';
+import campoTenese from './campoTenese.ts';
+import gaeta from './gaeta.ts';
 import friedland from './friedland.ts';
 import vimeiro from './vimeiro.ts';
 import talavera from './talavera.ts';
@@ -454,6 +457,8 @@ export const MAPS = {
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
+  [campoTenese.id]: campoTenese,
+  [gaeta.id]: gaeta,
   [mohrungen.id]: mohrungen,
   [ostroleka.id]: ostroleka,
   [danzig.id]: danzig,
@@ -474,6 +479,7 @@ export const MAPS = {
   [halbe.id]: halbe,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
+  [maida.id]: maida,
   [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
