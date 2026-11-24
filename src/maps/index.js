@@ -163,6 +163,7 @@ import bosphorus from './bosphorus.ts';
 import dunkirk1918 from './dunkirk1918.ts';
 import otranto from './otranto.ts';
 import westernApproaches from './westernApproaches.ts';
+import azores1918 from './azores1918.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
@@ -310,6 +311,7 @@ export const MAPS = {
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
   [westernApproaches.id]: westernApproaches,
+  [azores1918.id]: azores1918,
   [gallipoli.id]: gallipoli,
   [salonikaLanding.id]: salonikaLanding,
   [bosphorus.id]: bosphorus,
