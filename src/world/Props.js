@@ -395,7 +395,7 @@ export class PropBuilder {
   /** A burnt-out civilian car, pushed off the road. */
   wreckCar({ x, z, yaw }) {
     const r = this.rand;
-    if (year() < 1900) return; // (no motor cars yet)
+    if (year() < 1930) return; // (no motor cars yet in 1806; the only wreck model is a 1940s car, wrong for 1918)
     const old = year() < 1985;
     const car = old ? (CAR45 ??= car45Geometry()) : (CAR ??= carGeometry());
     // burnt out (charred, rusting) or just abandoned in its faded paint: Trabant beige, Lada red, VW blue — in 1945 black, dark green, grey-blue
