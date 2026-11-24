@@ -28,12 +28,13 @@ export const EPOCHS = {
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
     sides: { nato: 'France', pact: 'Prussia' },
     regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
-      europe: { name: 'Germany', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
+      europe: { name: 'Germany', title: 'Germany and Austria, 1805–06', blurb: 'Ulm, Austerlitz, Jena and Auerstedt: the Grande Armée against Austria, Russia and then Prussia from the Danube to the Elbe.', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
         sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
       east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Poland and East Prussia, 1806–07: the Grande Armée against the Russian army — the mud at Pułtusk, snow at Eylau, the redoubts of Heilsberg, the river at Friedland.' },
       iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–11: Wellington’s redcoats in their line against the French columns — Vimeiro, Talavera, the ridge of Bussaco, the village of Fuentes de Oñoro.' },
       africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
       caribbean: { title: 'The West Indies', blurb: 'Frigates and ships of the line among the sugar islands.' },
+      italy: { name: 'Italy', title: 'Italy and Dalmatia, 1805–07', blurb: 'Masséna against Archduke Charles on the Adige at Caldiero, the redcoats’ volley at Maida in Calabria, Gaeta’s siege and the Russians on the Dalmatian coast.' },
     },
     armies: {
       fr: { id: 'fr', faction: 'nato', name: 'Grande Armée' },
