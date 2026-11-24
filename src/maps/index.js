@@ -112,6 +112,7 @@ import eylau from './eylau.ts';
 import campoTenese from './campoTenese.ts';
 import gaeta from './gaeta.ts';
 import toulon from './toulon.ts';
+import civitaCastellana from './civitaCastellana.ts';
 import friedland from './friedland.ts';
 import vimeiro from './vimeiro.ts';
 import talavera from './talavera.ts';
@@ -476,6 +477,7 @@ export const MAPS = {
   [campoTenese.id]: campoTenese,
   [gaeta.id]: gaeta,
   [toulon.id]: toulon,
+  [civitaCastellana.id]: civitaCastellana,
   [mohrungen.id]: mohrungen,
   [ostroleka.id]: ostroleka,
   [danzig.id]: danzig,
