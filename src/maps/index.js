@@ -106,6 +106,9 @@ import bussaco from './bussaco.ts';
 import fuentesDeOnoro from './fuentesDeOnoro.ts';
 import pultusk from './pultusk.ts';
 import heilsberg from './heilsberg.ts';
+import caldiero from './caldiero.ts';
+import veronetta from './veronetta.ts';
+import tagliamento from './tagliamento.ts';
 import elchingen from './elchingen.ts';
 import wertingen from './wertingen.ts';
 import hohenlinden from './hohenlinden.ts';
@@ -394,6 +397,9 @@ export const MAPS = {
   [fuentesDeOnoro.id]: fuentesDeOnoro,
   [pultusk.id]: pultusk,
   [heilsberg.id]: heilsberg,
+  [caldiero.id]: caldiero,
+  [veronetta.id]: veronetta,
+  [tagliamento.id]: tagliamento,
   [elchingen.id]: elchingen,
   [wertingen.id]: wertingen,
   [hohenlinden.id]: hohenlinden,
