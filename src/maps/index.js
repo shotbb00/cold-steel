@@ -106,6 +106,9 @@ import bussaco from './bussaco.ts';
 import fuentesDeOnoro from './fuentesDeOnoro.ts';
 import pultusk from './pultusk.ts';
 import heilsberg from './heilsberg.ts';
+import austerlitz from './austerlitz.ts';
+import wischau from './wischau.ts';
+import durnstein from './durnstein.ts';
 import copenhagen from './copenhagen.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
@@ -388,6 +391,9 @@ export const MAPS = {
   [fuentesDeOnoro.id]: fuentesDeOnoro,
   [pultusk.id]: pultusk,
   [heilsberg.id]: heilsberg,
+  [austerlitz.id]: austerlitz,
+  [wischau.id]: wischau,
+  [durnstein.id]: durnstein,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
