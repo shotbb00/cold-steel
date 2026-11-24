@@ -134,7 +134,7 @@ export class GameEngine {
    */
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
-    setWind(map.wind ?? null); // (a map's own wind: the sea's for the sails — world/Wind.js)
+    setWind(map.wind ?? (epoch() === '1806' && map.theatre === 'sea' ? { from: 250, speed: 7, veer: 0.3 } : null)); // (a map's own wind: the sea's for the sails — world/Wind.js; 1806 at sea on a map with none, openSea: a fresh westerly, or the sails would barely move)
     setClimate(map.climate); // winter whitewash, desert sand paint (render/paint.js)
     const sides = { ...EPOCHS[epoch()]?.sides, ...map.sides }; // (a map may name its own sides: the Pacific's United States and Japan)
     if (sides.nato) FACTIONS.nato.name = sides.nato;

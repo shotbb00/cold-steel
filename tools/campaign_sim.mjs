@@ -1,16 +1,17 @@
 // Headless world campaign: both sides played by the strategic AI, every battle auto-resolved, the state checked
 // every turn; then a save code round trip — and the loaded save must play on exactly as the original.
 //
-//   node tools/campaign_sim.mjs [scenario=1942|1985|1917] [turns=200] [seed=7]   (1942: the Second World War's one start, 1985: World War III's, 1917: the First World War's)
+//   node tools/campaign_sim.mjs [scenario=1942|1985|1917|1805] [turns=200] [seed=7]   (1942: the Second World War's one start, 1985: World War III's, 1917: the First World War's, 1805: the Napoleonic Wars')
 import { newCampaign, resolveTurn, autoResolve, settle, endTurn, dateOf, forcesAt } from '../src/wcampaign/engine.js';
 import { aiTurn } from '../src/wcampaign/ai.js';
 import { encode, decode, toPieces, fromPieces } from '../src/wcampaign/save.js';
 import { WW2 } from '../src/wcampaign/wars/ww2.js';
 import { WW3 } from '../src/wcampaign/wars/ww3.js';
 import { WW1 } from '../src/wcampaign/wars/ww1.js';
+import { NAP } from '../src/wcampaign/wars/nap.js';
 
 const [scenario = '1942', TURNS = 200, SEED = 7] = process.argv.slice(2);
-const war = { 1985: WW3, 1917: WW1 }[scenario] ?? WW2; // (the war of that start: 1942 → 1945's, 1985 → World War III, 1917 → the First World War)
+const war = { 1985: WW3, 1917: WW1, 1805: NAP }[scenario] ?? WW2; // (the war of that start: 1942 → 1945's, 1985 → World War III, 1917 → the First World War, 1805 → the Napoleonic Wars)
 
 function check(c) {
   const bad = [];
@@ -55,6 +56,7 @@ for (let t = 0; t < +TURNS && !c.over; t++) {
 }
 console.log(summary(c));
 console.log(`battles ${battles} (${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', ')}), problems ${problems}, over: ${c.over ? `${c.over.winner} — ${c.over.why}` : 'no'}`);
+if (war.powers) console.log('powers:', [...(c.surrendered ?? []).map((p) => `${p} out`), ...(c.neutral ?? []).map((p) => `${p} neutral`), ...Object.entries(c.sides ?? {}).map(([p, s]) => `${p} → ${s}`)].join(', ') || 'all in');
 console.log('events:', c.log.filter((l) => l.event).map((l) => `${l.date} ${l.event}`).join(', ') || 'none');
 if (c.weary) console.log('collapses:', c.log.filter((l) => l.collapse).map((l) => `${l.date} ${l.collapse}`).join(', ') || 'none', '| weariness', Object.entries(c.weary).map(([p, w]) => `${p} ${Math.round(w)}`).join(' '));
 

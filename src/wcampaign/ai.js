@@ -3,7 +3,7 @@
 // fight for the sea before a landing, land where an enemy coast is weak, spend the pool on refits first, then new
 // battalions where the front needs them. It knows only what its side has seen (`seen`: its provinces and those next
 // to them), so a surprise landing is a surprise.
-import { forcesAt, enemy, power, order, refit, raise, raiseFleet, raiseAir, airShare, mission, airReach, supplied, reserves, landingZone, fleetCost, airCost, PRIORITY } from './engine.js';
+import { forcesAt, enemy, power, order, refit, raise, raiseFleet, raiseAir, airShare, mission, airReach, supplied, reserves, landingZone, fleetCost, airCost, PRIORITY, closed, idle, sideOf } from './engine.js';
 
 const ATTACK_ODDS = 1.15;   // its power (and the reserves its pool can send) against the defence it can see, before it attacks
 const LAND_ODDS = 1.6;      // a landing wants more
@@ -20,7 +20,7 @@ const fort = (c, war, id) => 1 + (war.fortWeight ?? 0.25) * Math.max(c.provinces
 /** The defence `side` expects at a province: the forces it can see there and next door, the ground, the garrison. */
 function defenceAt(c, war, side, id, seen) {
   const foe = enemy(side), here = seen.has(id) ? forcesAt(c, id, foe, 'army') : [];
-  const near = war.provinces[id].land.filter((n) => seen.has(n)).flatMap((n) => forcesAt(c, n, foe, 'army')).slice(0, 1);
+  const near = war.provinces[id].land.filter((n) => seen.has(n)).flatMap((n) => forcesAt(c, n, foe, 'army')).filter((f) => !idle(c, war, f)).slice(0, 1);
   return Math.max(war.provinces[id].garrison ?? war.garrison ?? 150, [...here, ...near].reduce((a, f) => a + power(c, f), 0)) * fort(c, war, id) + reserves(c, foe, war.provinces[id].theatre);
 }
 
@@ -39,8 +39,8 @@ function stepsTo(war, from, goal) {
 /** Orders for every force of `side`, and its spending. Returns a list of what it decided (for logs and tests). */
 export function aiTurn(c, war, side) {
   const did = [], foe = enemy(side), seen = seenBy(c, war, side);
-  const mine = c.forces.filter((f) => f.side === side);
-  const front = (id) => war.provinces[id].land.some((n) => c.provinces[n].owner === foe);
+  const mine = c.forces.filter((f) => f.side === side && !idle(c, war, f)); // (a neutral power's army stays home: engine idle())
+  const front = (id) => war.provinces[id].land.some((n) => c.provinces[n].owner === foe && !closed(c, war, n)); // (a neutral's border is no front)
   // 1985: no step that could reach the nuclear brink — counting what both sides already planned this turn (c.brinkPlan)
   if (c.brinkPlan?.turn !== c.turn) c.brinkPlan = { turn: c.turn, add: 0 };
   const E = war.escalation, DEPOT = E?.depot ?? 0, STRIKE = E?.strike ?? 0;
@@ -90,12 +90,12 @@ export function aiTurn(c, war, side) {
   }
   // every enemy province next to one of ours: who could go in, and against what
   const targets = [...new Set(armies.filter((f) => !busy.has(f)).flatMap((f) => war.provinces[f.at].land))]
-    .filter((n) => c.provinces[n].owner === foe)
+    .filter((n) => c.provinces[n].owner === foe && !closed(c, war, n))
     .map((n) => ({ n, def: defenceAt(c, war, side, n, seen), by: armies.filter((f) => !busy.has(f) && war.provinces[f.at].land.includes(n)).sort((x, y) => power(c, y) - power(c, x)) }))
     .sort((x, y) => x.def - y.def);
   for (const t of targets) {
     const go = [];
-    const take = war.take ?? 0.6, th = war.provinces[t.n].theatre, need = ATTACK_ODDS * (war.take ? take / (1 - take) / 1.5 : 1) * Math.max(0.55, 1 - 0.02 * (c.quiet?.[side]?.[th] ?? 0)); // (war.take: harder ground to win, better odds wanted) // (a quiet front: the staff’s patience runs out — a long stalemate is broken by attacks at poor odds, and production pays for them)
+    const take = war.take ?? 0.6, th = war.provinces[t.n].theatre, need = (war.edge?.[foe] ?? 1) / (war.edge?.[side] ?? 1) * ATTACK_ODDS /* (war.edge: the staff knows its own army's worth — 1805's Grande Armée) */ * (war.take ? take / (1 - take) / 1.5 : 1) * Math.max(0.55, 1 - 0.02 * (c.quiet?.[side]?.[th] ?? 0)); // (war.take: harder ground to win, better odds wanted) // (a quiet front: the staff’s patience runs out — a long stalemate is broken by attacks at poor odds, and production pays for them)
     let sum = reserves(c, side, th);
     for (const f of t.by) { if (busy.has(f) || go.length >= 3) continue; go.push(f); sum += power(c, f); if (sum >= t.def * need * 1.15) break; } // (enough, with a margin: the rest hold the line)
     if (sum < t.def * need || brink(t.n, DEPOT)) continue;
@@ -109,7 +109,7 @@ export function aiTurn(c, war, side) {
     // a landing: every free army in this port together, across a sea zone it holds, onto a weak enemy coast
     if (P.port) {
       const party = armies.filter((x) => x.at === f.at && !busy.has(x)).slice(0, 3), sum = party.reduce((a2, x) => a2 + power(c, x), 0) + reserves(c, side, P.theatre);
-      const coasts = Object.keys(war.provinces).filter((k) => c.provinces[k].owner === foe && !war.provinces[k].safe && !taken.has(k) && !brink(k, DEPOT) && (war.provinces[k].seas ?? []).length && landingZone(c, war, side, f.at, k))
+      const coasts = Object.keys(war.provinces).filter((k) => c.provinces[k].owner === foe && !war.provinces[k].safe && !closed(c, war, k) && !taken.has(k) && !brink(k, DEPOT) && (war.provinces[k].seas ?? []).length && landingZone(c, war, side, f.at, k))
         .map((k) => ({ k, odds: sum / (defenceAt(c, war, side, k, seen) * 1.3) })).sort((x, y) => y.odds - x.odds);
       if (coasts[0] && coasts[0].odds >= LAND_ODDS) {
         for (const x of party) if (!order(c, war, side, x.id, coasts[0].k, { land: true })) busy.add(x);
@@ -163,7 +163,10 @@ export function aiTurn(c, war, side) {
     const foes = c.forces.some((x) => x.side === foe && (war.provinces[x.at]?.theatre ?? war.seas[x.at]?.theatre) === t);
     c.priority[side][t] = t === top ? PRIORITY.high : foes ? PRIORITY.normal : PRIORITY.low;
   }
-  const armyIn = (t) => c.forces.find((x) => x.side === side && x.kind === 'army' && war.provinces[x.at].theatre === t)?.army ?? c.forces.find((x) => x.side === side && x.kind === 'army')?.army;
+  const ours = (x) => x.side === side && x.kind === 'army' && !idle(c, war, x); // (not a neutral power's: it raises nothing yet)
+  const armyIn = (t) => c.forces.find((x) => ours(x) && war.provinces[x.at].theatre === t)?.army ?? c.forces.find(ours)?.army;
+  // a depot in a power's own `lands` raises that power's army (Vienna Austrians, Vilna Russians: 1805's coalition)
+  const homeArmy = (d) => Object.entries(war.powers ?? {}).find(([id, pw]) => pw.lands?.includes(d) && sideOf(c, war, id) === side && !c.surrendered?.includes(id))?.[1].armies[0];
   const keepBack = Math.max(800, (c.income?.[side] ?? 1000) * 1.5); // (a turn and a half's income kept for the battles' reserves)
   // a fleet where the enemy's at sea outweighs ours in a theatre with a port of ours; an air wing where the sky is theirs
   for (const t of theatres) {
@@ -173,7 +176,7 @@ export function aiTurn(c, war, side) {
     const coastsToTake = Object.keys(war.provinces).some((k) => war.provinces[k].theatre === t && c.provinces[k].owner === foe && (war.provinces[k].seas ?? []).length);
     const kind = sea(foe) > sea(side) * 1.1 ? (t === 'pacific' ? 'carrier' : 'battle') : coastsToTake && !zones.some((z) => forcesAt(c, z, side, 'fleet').length) ? 'amphibious' : null;
     if (port && kind && c.pool[side] - fleetCost(c, war, kind) > keepBack) {
-      const r = raiseFleet(c, war, side, armyIn(t), port, kind);
+      const r = raiseFleet(c, war, side, homeArmy(port) ?? armyIn(t), port, kind);
       if (r) did.push(`builds ${r.name} at ${port}`);
     }
     const field = depots.find((d) => war.provinces[d].theatre === t && war.provinces[d].airfield);
@@ -187,7 +190,7 @@ export function aiTurn(c, war, side) {
     let raised = 0;
     for (const d of depots.sort((a, b) => need(b) - need(a))) {
       if (c.pool[side] <= keepBack) break;
-      const army = armyIn(war.provinces[d].theatre);
+      const army = homeArmy(d) ?? armyIn(war.provinces[d].theatre);
       if (!army) continue;
       const r = raise(c, war, side, army, d, need(d) > 1500 ? 'armour' : 'infantry');
       if (r) { raised++; did.push(`raises a battalion at ${d}`); } // (no room or no money here: try the next depot)

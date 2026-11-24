@@ -42,6 +42,10 @@ export const EPOCHS = {
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
       ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
       gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
+      // the world campaign's own army (wcampaign/wars/nap.js), no roster yet: `own` with no types fields nothing of another
+      // nation's; no regions: no map picks it, so a campaign battle fights it as the side's army that fits its map (data/units/
+      // index.js campaignArmy — the Prussians or the Russians). TODO units: its roster, then its regions. (Russia: `ru` above.)
+      au: { id: 'au', faction: 'pact', name: 'Austrian Army', own: true, regions: [] },
       dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', regions: [] }, // (Søetaten, at Copenhagen only: the map names it — its ships in the French hulls, her own colours: data/units1806/ships.js)
     },
     defaults: { nato: 'fr', pact: 'pr' },
