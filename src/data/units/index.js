@@ -126,3 +126,13 @@ export function standInFor(id, army) {
 
 /** Can army `a` field anything yet: an `own` army with no unit written for it (the AEF, Serbians, Bulgarians until their rosters) can't — a map listing it first falls back to the next army it names. */
 export const fieldsUnits = (a) => !ARMIES[a]?.own || Object.values(UNIT_TYPES).some((t) => t?.variants?.[a]);
+
+/** Has army `a` any warship of its own (or its navy's: `navyOf`)? */
+export const fieldsNavy = (a) => Object.values(UNIT_TYPES).some((t) => t?.stats?.naval && !t.hidden && !t.stats?.landingCraft && armyHas(t, a));
+
+/**
+ * A world-campaign battle is fought by the army that is there, whatever the map or region (the Germans holding Britain,
+ * the Russians retaking it: Kent fought by the Wehrmacht against the Red Army). Only an army with nothing to field yet
+ * (no units; at sea, no warships) leaves it to the map's own. The map's `armies` and the regions are the menu's rules.
+ */
+export const campaignArmy = (a, map) => !!a && !!ARMIES[a] && fieldsUnits(a) && (map?.theatre !== 'sea' || fieldsNavy(a));

@@ -49,7 +49,7 @@ import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { Drones } from '../systems/Drones.js';
 import { Airfields } from '../systems/Airfields.js';
-import { getUnitType, UNIT_TYPES, standInFor, fieldsUnits } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES, standInFor, fieldsUnits, campaignArmy } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
 import { VehicleDust } from '../render/VehicleDust.js';
@@ -151,6 +151,7 @@ export class GameEngine {
     this.armies = armiesFrom(armies, map); // which army each side fields (data/factions.js ARMIES; the Pacific's on its maps only)
     const only = armiesOn(map); // (a map fought by particular armies only, in this war: Omaha, Stalingrad, the Hesse maps in 1945 — maps/index.js)
     for (const f of ['nato', 'pact']) if (only?.[f] && (map.theatre === 'sea' || !only[f].includes(this.armies[f]) || !fieldsUnits(this.armies[f]))) this.armies[f] = only[f].find(fieldsUnits) ?? only[f][0]; // (at sea: the map's navy, the first it names — as the menu's side card)
+    if (campaign) for (const f of ['nato', 'pact']) if (campaignArmy(armies?.[f], map)) this.armies[f] = armies[f]; // (a world-campaign battle: the army that is there fights, any map — data/units/index.js campaignArmy)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();

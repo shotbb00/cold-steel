@@ -74,7 +74,7 @@ export const WW1 = {
   provinces: {
     // ---- the Western Front: from the Channel coast to the Vosges, the Hindenburg Line behind the German front
     britain: { name: 'Britain', theatre: 'west', depot: 'nato', safe: true, port: true, airfield: true, prod: 9, seas: ['channel', 'northSea', 'westernApproaches'], land: [], lat: 51.6, lon: -1.2 },
-    channelPorts: { name: 'Calais, Boulogne and the Channel ports', theatre: 'west', map: 'the-lys', depot: 'nato', port: true, airfield: true, prod: 2, seas: ['channel'], land: ['ypres', 'arras', 'amiens'], fort: 3, garrison: 1800, lat: 50.72, lon: 1.75 },
+    channelPorts: { name: 'Calais, Boulogne and the Channel ports', theatre: 'west', coastal: ['dunkirk-1918'], map: 'the-lys', depot: 'nato', port: true, airfield: true, prod: 2, seas: ['channel'], land: ['ypres', 'arras', 'amiens'], fort: 3, garrison: 1800, lat: 50.72, lon: 1.75 },
     ypres: { name: 'Ypres and Passchendaele', theatre: 'west', map: 'passchendaele', prod: 1, fort: 2, land: ['channelPorts', 'belgianCoast', 'lille', 'arras'], lat: 50.85, lon: 2.88 },
     arras: { name: 'Arras and Vimy Ridge', theatre: 'west', map: 'vimy', prod: 1, fort: 2, land: ['channelPorts', 'ypres', 'lille', 'cambrai', 'somme'], lat: 50.3, lon: 2.72 },
     somme: { name: 'The Somme and Le Hamel', theatre: 'west', map: 'le-hamel', prod: 1, land: ['arras', 'cambrai', 'stQuentin', 'amiens'], fort: 1, lat: 49.98, lon: 2.75 },
@@ -100,7 +100,7 @@ export const WW1 = {
 
     // ---- the Italian Front: the Isonzo and the Alps, Venice behind them
     lombardy: { name: 'Milan and the Po valley', theatre: 'italy', map: 'montello', depot: 'nato', airfield: true, prod: 7, land: ['venice', 'asiago', 'vittorio', 'rome'], fort: 3, garrison: 1800, lat: 45.45, lon: 9.9 },
-    rome: { name: 'Rome, Taranto and the south', theatre: 'italy', map: 'garigliano', port: true, prod: 3, seas: ['otranto', 'centralMed'], land: ['lombardy'], lat: 40.9, lon: 15.6 }, // (the Regia Marina's base at Taranto)
+    rome: { name: 'Rome, Taranto and the south', theatre: 'italy', coastal: ['taranto'], map: 'garigliano', port: true, prod: 3, seas: ['otranto', 'centralMed'], land: ['lombardy'], lat: 40.9, lon: 15.6 }, // (the Regia Marina's base at Taranto)
     asiago: { name: 'The Asiago plateau', theatre: 'italy', map: 'asiago', prod: 1, fort: 2, land: ['lombardy', 'vittorio', 'trentino'], lat: 45.87, lon: 11.51 },
     vittorio: { name: 'Vittorio Veneto and Monte Grappa', theatre: 'italy', map: 'vittorio-veneto', prod: 1, fort: 1, land: ['lombardy', 'asiago', 'venice', 'caporetto'], lat: 46.0, lon: 12.25 },
     venice: { name: 'Venice and the Piave', theatre: 'italy', coastal: ['lido'], map: 'piave', port: true, prod: 2, seas: ['adriatic'], land: ['lombardy', 'vittorio', 'isonzo'], lat: 45.45, lon: 12.4 },
@@ -161,7 +161,7 @@ export const WW1 = {
     northSea: { name: 'The North Sea', theatre: 'sea', map: 'doggerBank', seas: ['heligoland', 'channel', 'westernApproaches'], coasts: ['britain', 'belgianCoast'], lat: 56, lon: 3 },
     heligoland: { name: 'The Heligoland Bight', theatre: 'sea', map: 'heligolandBight', seas: ['northSea', 'baltic'], coasts: ['wilhelmshaven'], lat: 54.4, lon: 7.4 }, // (the Kiel Canal to the Baltic)
     channel: { name: 'The Dover Strait and the Channel', theatre: 'sea', map: 'doverStrait', seas: ['northSea', 'westernApproaches'], coasts: ['britain', 'channelPorts', 'belgianCoast'], lat: 50.3, lon: -0.6 },
-    westernApproaches: { name: 'The Western Approaches', theatre: 'sea', map: 'openSea', seas: ['northSea', 'channel', 'atlantic'], coasts: ['britain'], lat: 49.5, lon: -9 },
+    westernApproaches: { name: 'The Western Approaches', theatre: 'sea', map: 'western-approaches', seas: ['northSea', 'channel', 'atlantic'], coasts: ['britain'], lat: 49.5, lon: -9 },
     atlantic: { name: 'The Atlantic convoy routes', theatre: 'sea', map: 'openSea', seas: ['westernApproaches', 'centralMed'], coasts: ['usa'], lat: 42, lon: -38 }, /* (round Gibraltar to the Mediterranean) */
     baltic: { name: 'The Baltic', theatre: 'east', map: 'openSea', seas: ['heligoland'], coasts: ['riga', 'courland', 'eastPrussia'], lat: 57.6, lon: 19.4 },
     adriatic: { name: 'The Adriatic', theatre: 'med', map: 'openSea', seas: ['otranto'], coasts: ['venice', 'trieste', 'cattaro'], lat: 43.6, lon: 15.3 },

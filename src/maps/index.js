@@ -154,11 +154,14 @@ import salonikaLanding from './salonikaLanding.ts';
 import gazaLanding from './gazaLanding.ts';
 import portSaid from './portSaid.ts';
 import samland from './samland.ts';
+import taranto from './taranto.ts';
 import domesnes from './domesnes.ts';
 import krithia from './krithia.ts';
 import chatalja from './chatalja.ts';
 import bosphorus from './bosphorus.ts';
+import dunkirk1918 from './dunkirk1918.ts';
 import otranto from './otranto.ts';
+import westernApproaches from './westernApproaches.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
@@ -305,12 +308,15 @@ export const MAPS = {
   [bocage.id]: bocage,
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
+  [westernApproaches.id]: westernApproaches,
   [gallipoli.id]: gallipoli,
   [salonikaLanding.id]: salonikaLanding,
   [bosphorus.id]: bosphorus,
+  [dunkirk1918.id]: dunkirk1918,
   [gazaLanding.id]: gazaLanding,
   [portSaid.id]: portSaid,
   [samland.id]: samland,
+  [taranto.id]: taranto,
   [domesnes.id]: domesnes,
   [krithia.id]: krithia,
   [chatalja.id]: chatalja,
