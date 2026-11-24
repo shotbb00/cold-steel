@@ -163,6 +163,8 @@ import lissa from './lissa.ts';
 import westernApproaches1805 from './westernApproaches1805.ts';
 import texel1805 from './texel1805.ts';
 import algeciras from './algeciras.ts';
+import capri1808 from './capri1808.ts';
+import corfu1807 from './corfu1807.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
 import gorlice from './gorlice.ts';
@@ -448,6 +450,8 @@ export const MAPS = {
   [westernApproaches1805.id]: westernApproaches1805,
   [texel1805.id]: texel1805,
   [algeciras.id]: algeciras,
+  [capri1808.id]: capri1808,
+  [corfu1807.id]: corfu1807,
   [talavera.id]: talavera,
   [bussaco.id]: bussaco,
   [fuentesDeOnoro.id]: fuentesDeOnoro,

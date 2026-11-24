@@ -157,8 +157,8 @@ export const NAP = {
     baltic: { name: 'The Baltic', theatre: 'northern', map: 'baltic-1807', seas: ['sound'], coasts: ['stettin', 'danzig', 'konigsberg', 'memel', 'russia'], lat: 55.9, lon: 18.0 }, // TODO map: off Danzig (1807)
     alboran: { name: 'The Strait and Cartagena', theatre: 'med', map: 'algeciras', seas: ['cadiz', 'lion'], coasts: ['gibraltar'], lat: 36.4, lon: -2.4 }, // TODO map: Algeciras (1801)
     lion: { name: 'The Gulf of Lion and Toulon', theatre: 'med', map: 'toulon-blockade', seas: ['alboran', 'tyrrhenian'], coasts: ['toulon'], lat: 42.2, lon: 5.6 }, // TODO map: off Toulon
-    tyrrhenian: { name: 'The Tyrrhenian Sea', theatre: 'med', map: 'openSea', seas: ['lion', 'ionian'], coasts: ['rome', 'naples', 'calabria', 'sicily'], lat: 39.8, lon: 12.0 }, // TODO map: the Bay of Naples
-    ionian: { name: 'The Ionian Sea and Corfu', theatre: 'med', map: 'openSea', seas: ['tyrrhenian', 'adriatic'], coasts: ['calabria', 'sicily', 'corfu', 'cattaro'], lat: 38.3, lon: 18.3 }, // TODO map: off Corfu
+    tyrrhenian: { name: 'The Tyrrhenian Sea', theatre: 'med', map: 'capri-1808', seas: ['lion', 'ionian'], coasts: ['rome', 'naples', 'calabria', 'sicily'], lat: 39.8, lon: 12.0 }, // TODO map: the Bay of Naples
+    ionian: { name: 'The Ionian Sea and Corfu', theatre: 'med', map: 'corfu-1807', seas: ['tyrrhenian', 'adriatic'], coasts: ['calabria', 'sicily', 'corfu', 'cattaro'], lat: 38.3, lon: 18.3 }, // TODO map: off Corfu
     adriatic: { name: 'The Adriatic', theatre: 'med', map: 'lissa', seas: ['ionian'], coasts: ['venetia', 'trieste', 'dalmatia', 'cattaro', 'romagna'], lat: 43.6, lon: 15.0 }, // TODO map: Lissa (1811)
   },
 
