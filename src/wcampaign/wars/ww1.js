@@ -122,7 +122,7 @@ export const WW1 = {
     tarnopol: { name: 'Tarnopol and Brody', theatre: 'east', map: 'zborov', prod: 1, land: ['kiev', 'lutsk', 'galicia', 'romania'], fort: 1, lat: 49.55, lon: 25.6 },
     kiev: { name: 'Kiev and the Ukraine', theatre: 'east', map: 'kiev-1918', depot: 'nato', airfield: true, prod: 5, land: ['minsk', 'lutsk', 'tarnopol', 'romania'], fort: 3, garrison: 1800, lat: 50.45, lon: 30.52 },
     romania: { name: 'Moldavia and the Romanian front', theatre: 'east', map: 'marasesti', prod: 1, fort: 1, land: ['kiev', 'tarnopol', 'galicia', 'bucharest'], lat: 46.8, lon: 27.3 },
-    courland: { name: 'Courland and Mitau', theatre: 'east', map: 'jakobstadt', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
+    courland: { name: 'Courland and Mitau', theatre: 'east', coastal: ['domesnes'], map: 'jakobstadt', port: true, prod: 1, seas: ['baltic'], land: ['riga', 'minsk', 'eastPrussia'], fort: 1, lat: 56.6, lon: 22.3 },
     eastPrussia: { name: 'East Prussia and the Masurian Lakes', theatre: 'east', coastal: ['samland'], map: 'tannenberg', port: true, prod: 2, fort: 1, seas: ['baltic'], land: ['courland', 'warsaw', 'posen'], lat: 54.0, lon: 20.6 },
     brest: { name: 'Brest-Litovsk and the Pripet', theatre: 'east', map: 'baranovichi', prod: 1, land: ['minsk', 'lutsk', 'warsaw'], fort: 1, lat: 52.1, lon: 23.7 },
     warsaw: { name: 'Warsaw and Poland', theatre: 'east', map: 'warsaw', prod: 3, land: ['brest', 'eastPrussia', 'galicia', 'cracow', 'posen'], lat: 52.23, lon: 21.0 },

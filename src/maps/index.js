@@ -153,6 +153,7 @@ import gallipoli from './gallipoli.ts';
 import salonikaLanding from './salonikaLanding.ts';
 import gazaLanding from './gazaLanding.ts';
 import samland from './samland.ts';
+import domesnes from './domesnes.ts';
 import krithia from './krithia.ts';
 import chatalja from './chatalja.ts';
 import bosphorus from './bosphorus.ts';
@@ -308,6 +309,7 @@ export const MAPS = {
   [bosphorus.id]: bosphorus,
   [gazaLanding.id]: gazaLanding,
   [samland.id]: samland,
+  [domesnes.id]: domesnes,
   [krithia.id]: krithia,
   [chatalja.id]: chatalja,
   [megiddo.id]: megiddo,
