@@ -19,6 +19,9 @@ import prenzlau from './prenzlau.ts';
 import spandau from './spandau.ts';
 import breslau from './breslau.ts';
 import hameln from './hameln.ts';
+import konigsberg from './konigsberg.ts';
+import tilsit from './tilsit.ts';
+import posen1806 from './posen1806.ts';
 import stalingrad from './stalingrad.ts';
 import mozhaisk from './mozhaisk.ts';
 import novorossiysk from './novorossiysk.ts';
@@ -513,6 +516,9 @@ export const MAPS = {
   [spandau.id]: spandau,
   [breslau.id]: breslau,
   [hameln.id]: hameln,
+  [konigsberg.id]: konigsberg,
+  [tilsit.id]: tilsit,
+  [posen1806.id]: posen1806,
   [stalingrad.id]: stalingrad,
   [mozhaisk.id]: mozhaisk,
   [novorossiysk.id]: novorossiysk,
