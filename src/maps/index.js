@@ -127,6 +127,9 @@ import durnstein from './durnstein.ts';
 import lambach from './lambach.ts';
 import amstetten from './amstetten.ts';
 import taborBridge from './taborBridge.ts';
+import scharnitz from './scharnitz.ts';
+import stecken from './stecken.ts';
+import kehl from './kehl.ts';
 import copenhagen from './copenhagen.ts';
 import finisterre1805 from './finisterre1805.ts';
 import capeOrtegal from './capeOrtegal.ts';
@@ -427,6 +430,9 @@ export const MAPS = {
   [lambach.id]: lambach,
   [amstetten.id]: amstetten,
   [taborBridge.id]: taborBridge,
+  [scharnitz.id]: scharnitz,
+  [stecken.id]: stecken,
+  [kehl.id]: kehl,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
