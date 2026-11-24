@@ -478,7 +478,8 @@ export class Landing {
       }
       // a warship close by in the lane: she waits for it (shoved aside by its hull, she'd be over the mines)
       const big = g.world.stacks.find((o) => o.alive && o.stats.naval && !o.stats.landingCraft && Math.hypot(o.centroid.x - u.pos.x, o.centroid.z - u.pos.z) < 60 + (o.type.hull?.length ?? 60) / 2);
-      if (big && band && Math.abs(u.pos.z) > band[0] - 80 && Math.abs(u.pos.z) < band[1] + 120) { r.waitWay ??= r.way; r.way = { x: u.pos.x, z: u.pos.z }; r.still = 0; return; }
+      // (but not for ever: a warship holding station in a narrow mouth would keep every launch there till the end — 25 s in all, then on)
+      if (big && band && Math.abs(u.pos.z) > band[0] - 80 && Math.abs(u.pos.z) < band[1] + 120 && (r.waited = (r.waited ?? 0) + dt) < 25) { r.waitWay ??= r.way; r.way = { x: u.pos.x, z: u.pos.z }; r.still = 0; return; }
       if (r.waitWay) { r.way = r.waitWay; r.waitWay = null; return; } // (next tick: `d` above was measured to the spot she waited on — she'd drop her ramp out there)
       const speed = Math.hypot(u.vel.x, u.vel.z);
       r.still = speed < 0.3 && r.t > 5 ? r.still + dt : 0;

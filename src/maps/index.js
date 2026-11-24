@@ -34,6 +34,7 @@ import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
 import albion from './albion.ts';
 import lido from './lido.ts';
+import cattaroLanding from './cattaroLanding.ts';
 import balticSea from './balticSea.ts';
 import giukGap from './giukGap.ts';
 import openSea from './openSea.ts'; // (the campaign's quiet sea zones: open water, both wars)
@@ -461,6 +462,7 @@ export const MAPS = {
   [zeebrugge.id]: zeebrugge,
   [albion.id]: albion,
   [lido.id]: lido,
+  [cattaroLanding.id]: cattaroLanding,
   [balticSea.id]: balticSea,
   [giukGap.id]: giukGap,
   [openSea.id]: openSea,

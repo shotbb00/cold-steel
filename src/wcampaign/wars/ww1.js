@@ -109,7 +109,7 @@ export const WW1 = {
     trentino: { name: 'Trento and the Tyrol', theatre: 'italy', map: 'ortigara', prod: 1, fort: 3, land: ['asiago', 'carinthia'], lat: 46.1, lon: 11.1 },
     trieste: { name: 'Trieste and the Hermada', theatre: 'italy', coastal: ['trieste-1918'], map: 'hermada', port: true, prod: 2, fort: 3, seas: ['adriatic'], land: ['isonzo', 'carniola'], lat: 45.65, lon: 13.78 },
     carniola: { name: 'Laibach and Carniola', theatre: 'italy', map: 'tolmein', prod: 1, fort: 2, land: ['caporetto', 'isonzo', 'trieste', 'carinthia', 'cattaro'], lat: 46.05, lon: 14.5 },
-    cattaro: { name: 'Cattaro and Dalmatia', theatre: 'italy', map: 'cattaro', port: true, prod: 1, fort: 2, seas: ['adriatic', 'otranto'], land: ['carniola', 'belgrade'], lat: 43.0, lon: 17.4 }, // (the k.u.k. Kriegsmarine's cruisers and U-boats at Cattaro)
+    cattaro: { name: 'Cattaro and Dalmatia', theatre: 'italy', coastal: ['cattaro-landing'], map: 'cattaro', port: true, prod: 1, fort: 2, seas: ['adriatic', 'otranto'], land: ['carniola', 'belgrade'], lat: 43.0, lon: 17.4 }, // (the k.u.k. Kriegsmarine's cruisers and U-boats at Cattaro)
     carinthia: { name: 'Villach and Carinthia', theatre: 'italy', map: 'tarvis', prod: 1, land: ['trentino', 'carniola', 'vienna'], lat: 46.62, lon: 13.85 },
     vienna: { name: 'Vienna', theatre: 'italy', map: 'vienna', depot: 'pact', airfield: true, prod: 7, land: ['carinthia', 'cracow', 'belgrade'], fort: 3, garrison: 1800, lat: 48.2, lon: 16.37 },
 
