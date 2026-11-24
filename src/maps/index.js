@@ -148,6 +148,8 @@ import kehl from './kehl.ts';
 import blackForest from './blackForest.ts';
 import wurzburg from './wurzburg.ts';
 import mainz from './mainz.ts';
+import parisBarriers from './parisBarriers.ts';
+import rennes from './rennes.ts';
 import copenhagen from './copenhagen.ts';
 import finisterre1805 from './finisterre1805.ts';
 import capeOrtegal from './capeOrtegal.ts';
@@ -463,6 +465,8 @@ export const MAPS = {
   [blackForest.id]: blackForest,
   [wurzburg.id]: wurzburg,
   [mainz.id]: mainz,
+  [parisBarriers.id]: parisBarriers,
+  [rennes.id]: rennes,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
