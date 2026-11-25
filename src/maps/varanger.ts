@@ -19,7 +19,7 @@ import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createSea } from '../world/Sea.js';
-import { buildSite, commandPost } from './common.js';
+import { commandPost } from './common.js';
 import { flats } from './common2027.js';
 import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
@@ -81,8 +81,8 @@ function roadDist(x: number, z: number) {
 const roadC = gridCache((x: number, z: number) => roadDist(x, F * z), BOUNDS, 2); // (world)
 const onRoadL = (x: number, z: number) => roadC(x, F * z) < 3.5;
 
-/** Ground height in the local frame (sea toward +z), the smooth part (sampled once). */
-function naturalL(x: number, z: number) {
+/** Ground height in the local frame (sea toward +z), before Kirkenes’ plots are graded. */
+function naturalL0(x: number, z: number) {
   const sz = shoreZ(x);
   const d = z - sz; // + out to sea
   const bk = beachK(x);
@@ -105,6 +105,74 @@ function naturalL(x: number, z: number) {
   for (const [cx, cz, r, a] of HEAPS) h += a * smoothstep(r, r * 0.3, Math.hypot(x - cx, z - cz));
   const rk = runK(x, z);
   if (rk > 0) h += (14 - h) * rk; // Høybuktmoen graded
+  return h;
+}
+
+// ---- Kirkenes laid out (local): Kongens gate, the main street, is the road through the square (point F); a street
+// either side of it, two cross streets, the harbour street down to the town quay on the peninsula’s east shore. Each
+// building gets a plot graded flat into the slope (a terrace, 4 m of bank round it): `naturalL` below.
+const STREETS: number[][][] = [
+  [[-15, 120], [-50, 195], [-55, 250]],
+  [[110, 125], [80, 190], [70, 250]],
+  [[-75, 170], [140, 170]],
+  [[-60, 245], [100, 245]],
+  [[80, 205], [175, 205]],
+];
+const MAIN = ROADS[1].slice(3); // (60,130) → the square → (10,260)
+const streetDist = (x: number, z: number) => { let d = Infinity; for (const r of [...STREETS, MAIN]) for (let i = 1; i < r.length; i++) d = Math.min(d, seg(x, z, r[i - 1], r[i])); return d; };
+const TOWN_SQ = SECTORS[1].inland;
+const KEEP_CLEAR = [[TOWN_SQ.x, TOWN_SQ.z, 32], [165, 150, 16], [180, 140, 14], [275, -15, 14]]; // the square (F), the Haganes battery, two of the defence’s posts
+type Plot = { x: number, z: number, fx: number, fz: number, w: number, d: number, kind: string, level: number, hw: number, hd: number, r: number, h?: number, color?: number, name?: string };
+const plot = (x: number, z: number, fx: number, fz: number, w: number, d: number, kind: string, o: Partial<Plot> = {}, bank = 2): Plot =>
+  ({ x, z, fx, fz, w, d, kind, level: naturalL0(x, z), hw: w / 2 + bank, hd: d / 2 + bank, r: Math.hypot(w / 2, d / 2) + bank + 4, ...o });
+/** Where the plot’s footprint (plus `m`) covers (x, z). */
+const inPlot = (p: Plot, x: number, z: number, m = 0) => {
+  const dx = x - p.x, dz = z - p.z;
+  return Math.abs(dx * p.fz - dz * p.fx) < p.w / 2 + m && Math.abs(dx * p.fx + dz * p.fz) < p.d / 2 + m;
+};
+const PLOTS: Plot[] = (() => {
+  const r = mulberry32(1985_191);
+  const out: Plot[] = [
+    plot(-17, 195, 1, 0, 10, 24, 'church'),                                                     // Kirkenes kirke, its tower to the square
+    // A/S Sydvaranger: the pellet plant, the concentrator, the ore store, the office
+    plot(QUAY.x - 25, shoreZ(QUAY.x) - 85, 0, -1, 46, 22, 'hall', { h: 16, color: 0x6a5e54, name: 'pellet plant' }),
+    plot(165, -20, 0, -1, 34, 18, 'hall', { h: 13, color: 0x5e5852, name: 'concentrator' }),
+    plot(255, -58, 0, 1, 50, 16, 'hall', { h: 9, color: 0x7a6e60, name: 'ore store' }),
+    plot(128, 12, 1, 0, 18, 10, 'flats', { name: 'Sydvaranger office' }),
+  ];
+  const clear = (x: number, z: number, rr: number) => KEEP_CLEAR.every(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) > cr + rr)
+    && out.every((p) => Math.hypot(x - p.x, z - p.z) > p.r - 4 + rr);
+  const slopeOk = (x: number, z: number, rr: number) => {
+    const hs = [[0, 0], [rr, 0], [-rr, 0], [0, rr], [0, -rr]].map(([a, b]) => naturalL0(x + a, z + b));
+    return Math.min(...hs) > 2.5 && Math.max(...hs) - Math.min(...hs) < 3.5 && z < shoreZ(x) - 14 && moorK(x, z) < 0.3;
+  };
+  for (const [si, st] of [...STREETS, MAIN].entries()) {
+    const main = si === STREETS.length, harbour = si === 4;
+    for (let i = 1; i < st.length; i++) {
+      const [ax, az] = st[i - 1], [bx, bz] = st[i], len = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / len, tz = (bz - az) / len;
+      for (let s = 9; s < len - 6; s += 15) for (const side of [-1, 1]) {
+        const big = (main && r() < 0.5) || (si === 2 && r() < 0.2); // blocks of flats along Kongens gate and the long cross street
+        const store = harbour && ax + tx * s > 125;                 // the warehouses down at the quay
+        const w = store ? 22 : big ? 20 : 7 + r() * 3, d = store ? 12 : big ? 10 : 8 + r() * 1.5, back = d / 2 + 6.5;
+        const x = ax + tx * s - side * tz * back, z = az + tz * s + side * tx * back, rr = Math.hypot(w, d) / 2;
+        if (streetDist(x, z) < back - 0.5 || roadDist(x, z) < back - 0.5 || !clear(x, z, rr) || !slopeOk(x, z, rr)) continue;
+        out.push(plot(x, z, side * tz, -side * tx, w, d, store ? 'store' : big ? 'flats' : 'house', { name: store ? 'warehouse' : big ? 'block of flats' : 'house' }));
+      }
+    }
+  }
+  return out;
+})();
+const PLOT_BOX = [Math.min(...PLOTS.map((p) => p.x - p.r)), Math.max(...PLOTS.map((p) => p.x + p.r)), Math.min(...PLOTS.map((p) => p.z - p.r)), Math.max(...PLOTS.map((p) => p.z + p.r))];
+/** Ground height in the local frame, the smooth part (sampled once): Kirkenes’ plots graded flat into the slope. */
+function naturalL(x: number, z: number) {
+  let h = naturalL0(x, z);
+  if (x < PLOT_BOX[0] || x > PLOT_BOX[1] || z < PLOT_BOX[2] || z > PLOT_BOX[3]) return h;
+  for (const p of PLOTS) {
+    const dx = x - p.x, dz = z - p.z;
+    if (Math.abs(dx) > p.r || Math.abs(dz) > p.r) continue;
+    const k = Math.min(smoothstep(p.hw + 4, p.hw, Math.abs(dx * p.fz - dz * p.fx)), smoothstep(p.hd + 4, p.hd, Math.abs(dx * p.fx + dz * p.fz)));
+    if (k > 0) h += (p.level - h) * k;
+  }
   return h;
 }
 const naturalC = gridCacheSmooth((x: number, z: number) => naturalL(x, F * z), BOUNDS, 2); // (world)
@@ -137,6 +205,22 @@ const points: (ControlPointDef & { opens?: string })[] = [
 const AIRFIELD = { faction: 'nato', ...W(150, -665), yaw: Math.PI / 2, large: false, name: 'Høybuktmoen' };
 /** Kirkenes, on the peninsula (local). */
 const townK = (x: number, z: number) => smoothstep(130, 90, Math.hypot(x - 30, (z - 200) * 0.9));
+
+/** A Finnmark wooden house (occupiable): painted board walls (falu red, ochre, white, pale blue or green), white window
+ * frames and corner boards on a concrete footing, a pitched roof under snow or swept dark. */
+function woodHouse(props: PropBuilder, { x, z, yaw, width, depth, storeys }: { x: number, z: number, yaw: number, width: number, depth: number, storeys: number }) {
+  const r = props.rand, h = storeys * 2.9, t = 0.3, trim = 0xeeece6;
+  const color = [0x8a2e22, 0x8a2e22, 0xc8962e, 0xe2ded2, 0x7896a8, 0x5c7656, 0xd8c69a, 0x6e2424][Math.floor(r() * 8)];
+  const b = props.beginBuilding('house', x, z, yaw, width, depth);
+  b.plaster = color;
+  props.shell(b, { height: h, storeys, t, key: 'plain', color, frame: trim, bay: 2.4, front: [(r() - 0.5) * width * 0.4] });
+  for (let s = 1; s < storeys; s++) props.piece('plain', b, 0, s * 2.9, 0, width - t, 0.2, depth - t, 0x5a4a3c); // floors
+  props.piece('stone', b, 0, 0.05, 0, width + 0.2, 0.7, depth + 0.2, 0x5a5a58);                                // the footing
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) props.piece('plain', b, sx * (width / 2 + 0.02), h / 2, sz * (depth / 2 + 0.02), 0.24, h, 0.24, trim);
+  props.gableRoof(b, { eave: h, t, pitch: 0.6, color: r() < 0.65 ? 0xe6eaec : 0x2e3134, chimney: true });
+  props.endBuilding();
+  return b;
+}
 
 export default {
   id: 'varanger',
@@ -177,6 +261,7 @@ export default {
         const lz = F * z, sz = shoreZ(x);
         if (onRoadL(x, lz) && lz < sz - 20) return [0x9a968e, 0.9];                          // the ploughed road
         if (onRunway(x, lz)) return [0x6a6a6a, 0.95];                                      // the runway, swept
+        if (x > -80 && x < 185 && lz > 115 && lz < 265 && lz < sz - 10 && streetDist(x, lz) < 3.2) return [0x9a968e, 0.9]; // Kirkenes’ streets
         if (Math.abs(x - QUAY.x) < QUAY.w + 1 && lz > sz - 10 && lz < sz + QUAY.out) return [0x7a7874, 0.95]; // the quay’s concrete
         if (y < 0.3) return [y > -2 ? 0x8a8a84 : 0x5a5a56, 1];                              // grey stones under the water
         if (Math.hypot(x - ISLE.x, lz - ISLE.z) < ISLE.r + 25) return [noise(x * 0.06, z * 0.06) > 0 ? 0x55575a : 0xd8dcdc, 0.9]; // Prestøya’s rock
@@ -237,33 +322,81 @@ export default {
     sea.build(scene, terrain);
     const dry = (x: number, z: number) => z < shoreZ(x) - 60 && roadDist(x, z) > 9 && moorK(x, z) < 0.3 && heapK(x, z) === 0 && !points.some((p) => Math.hypot(p.x - x, p.z - F * z) < 22);
 
-    // ---- the villages: painted wooden houses (all rebuilt after 1944), Kirkenes the biggest with blocks of flats
-    for (let [cx, cz, n, spread] of [[-290, -330, 10, 45], [20, 205, 20, 75], [350, -260, 8, 36]] as [number, number, number, number][]) {
+    // ---- Hesseng and Bjørnevatn: painted wooden houses (all rebuilt after 1944)
+    for (let [cx, cz, n, spread] of [[-290, -330, 10, 45], [350, -260, 8, 36]] as [number, number, number, number][]) {
       for (let i = 0; i < n * 3 && n > 0; i++) {
         const a = r() * Math.PI * 2, dd = 22 + r() * spread;
         const x = cx + Math.cos(a) * dd, z = cz + Math.sin(a) * dd * 0.8;
         if (!dry(x, z)) continue;
         n--;
-        if (i % 4 === 0 && cx !== 20) buildSite(props, { kind: 'farm', seed: Math.floor(r() * 1e9) }, W(x, z).x, W(x, z).z, a + Math.PI / 2);
-        else if (cx === 20 && i % 3 === 0) flats(props, { ...W(x, z), yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), storeys: 3, width: 22, depth: 10 });
-        else props.townHouse({ ...W(x, z), yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), width: 7 + r() * 3, depth: 8, storeys: r() < 0.6 ? 2 : 1, name: 'house', damaged: 0 });
+        woodHouse(props, { ...W(x, z), yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), width: 7 + r() * 3, depth: 8, storeys: r() < 0.6 ? 2 : 1 });
       }
     }
-    if (dry(70, 120)) props.church({ ...W(70, 120), yaw: 0 }); // Kirkenes kirke
 
-    // ---- A/S Sydvaranger: the ore quay (bollards and the shiploader on the mole), the pellet plant behind it with its
-    // stacks, the conveyor down to the loader; the harbour’s fish plant
+    // ---- Kirkenes (PLOTS): painted wooden houses behind their picket fences, blocks of flats along Kongens gate, the
+    // church on the square, warehouses at the town quay; street lamps
+    for (const p of PLOTS) {
+      const w = W(p.x, p.z), yaw = Math.atan2(p.fx, F * p.fz);
+      if (p.kind === 'house') {
+        woodHouse(props, { ...w, yaw, width: p.w, depth: p.d, storeys: r() < 0.65 ? 2 : 1 });
+        // the picket fence round the front garden, a gate on the path
+        const L = (u: number, v: number) => W(p.x - u * p.fz + v * p.fx, p.z + u * p.fx + v * p.fz); // (u across the front, v toward the street)
+        const fv = p.d / 2 + 2.6, fu = p.w / 2 + 1.5;
+        const run = (u0: number, v0: number, u1: number, v1: number) => {
+          const n = Math.max(1, Math.round(Math.hypot(u1 - u0, v1 - v0) / 1.6));
+          for (let k = 0; k <= n; k++) { const a = L(u0 + (u1 - u0) * k / n, v0 + (v1 - v0) * k / n); props.box('plain', a.x, terrain.heightAt(a.x, a.z) + 0.5, a.z, 0.12, 1, 0.12, 0, 0xe8e6e0); }
+          const a = L(u0, v0), b = L(u1, v1), g = (terrain.heightAt(a.x, a.z) + terrain.heightAt(b.x, b.z)) / 2, len = Math.hypot(b.x - a.x, b.z - a.z), ry = Math.atan2(b.x - a.x, b.z - a.z);
+          for (const y of [0.35, 0.8]) props.box('plain', (a.x + b.x) / 2, g + y, (a.z + b.z) / 2, 0.06, 0.09, len, ry, 0xe8e6e0);
+        };
+        run(-fu, fv, -1.2, fv); run(1.2, fv, fu, fv); run(-fu, fv, -fu, 0); run(fu, fv, fu, 0);
+      } else if (p.kind === 'flats') flats(props, { ...w, yaw, storeys: p.name === 'block of flats' ? 3 + Math.floor(r() * 2) : 3, width: p.w, depth: p.d, name: p.name });
+      else if (p.kind === 'store') props.hall({ ...w, yaw, width: p.w, depth: p.d, height: 7, color: [0x8a2e22, 0xb88a3a, 0x6e7a80][Math.floor(r() * 3)], roof: 0xe4e8ea, door: 6, name: 'warehouse' });
+      else if (p.kind === 'church') { const c = W(p.x - p.fx * 2.5, p.z - p.fz * 2.5); props.church({ ...c, yaw }); } // (the nave behind, the tower 11.6 m out in front of it)
+      else if (p.kind === 'hall') props.hall({ ...w, yaw, width: p.w, depth: p.d, height: p.h!, color: p.color!, roof: 0x3a3a3a, door: 10, name: p.name! });
+    }
+    const lamp = (x: number, z: number, fx: number, fz: number) => { // a street lamp: a pole, an arm out over the street, the lamp
+      const w = W(x, z), g = terrain.heightAt(w.x, w.z), a = W(x + fx * 0.9, z + fz * 0.9), l = W(x + fx * 1.7, z + fz * 1.7), ry = Math.atan2(fx, -fz);
+      props.box('metal', w.x, g + 3.5, w.z, 0.14, 7, 0.14, 0, 0x4a4c4e);
+      props.box('metal', a.x, g + 6.9, a.z, 0.08, 0.08, 1.9, ry, 0x4a4c4e);
+      props.box('plain', l.x, g + 6.75, l.z, 0.35, 0.18, 0.6, ry, 0xfff0c8);
+    };
+    for (const st of [MAIN, ...STREETS]) for (let i = 1; i < st.length; i++) {
+      const [ax, az] = st[i - 1], [bx, bz] = st[i], len = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / len, tz = (bz - az) / len;
+      for (let s = 6, k = 0; s < len - 3; s += 24, k++) {
+        const side = k % 2 ? 1 : -1, x = ax + tx * s - side * tz * 4.6, z = az + tz * s + side * tx * 4.6;
+        if (!PLOTS.some((p) => inPlot(p, x, z, 1.5)) && z < shoreZ(x) - 8) lamp(x, z, side * tz, -side * tx);
+      }
+    }
+    // the town quay along the east shore below the warehouses: a timber wharf on piles, bollards along its edge
+    for (let z = 150; z <= 214; z += 4) {
+      let xs = 150; while (xs < 260 && naturalL0(xs, z) > 0.4) xs += 1;
+      const a = W(xs - 1, z);
+      props.box('plain', a.x, 2.1, a.z, 9, 0.45, 4.1, 0, 0x8a7e70);
+      props.box('plain', a.x + 4.2, 0.6, a.z, 0.45, 3.4, 0.45, 0, 0x3a3028);
+      if (z % 12 === 2) props.box('metal', a.x + 3.6, 2.65, a.z, 0.45, 0.6, 0.45, 0, 0x2a2a2a);
+    }
+
+    // ---- A/S Sydvaranger: the ore quay (bollards and the shiploader on the mole), the pellet plant, the concentrator and
+    // the ore store behind it (PLOTS) with the stacks, the silos and the conveyors; the ore railway in from Bjørnevatn with
+    // its wagons; the plant fence; the harbour’s fish plant
     const qs = shoreZ(QUAY.x);
     for (let k = 8; k < QUAY.out; k += 12) for (const s of [-1, 1]) { const w = W(QUAY.x + s * (QUAY.w - 1), qs + k); props.box('plain', w.x, QUAY.deck + 0.35, w.z, 0.6, 0.7, 0.6, 0, 0x2a2a2a); }
     const ld = W(QUAY.x, qs + QUAY.out - 14);
     props.box('plain', ld.x, QUAY.deck + 7, ld.z, 3, 14, 3, 0, 0x8a3a24);                  // the shiploader’s tower
     props.box('plain', ld.x, QUAY.deck + 13.5, ld.z - 6, 2, 1.5, 20, 0, 0x8a3a24);         // its boom, out over the berth
-    const pp = W(QUAY.x - 25, qs - 85);
-    props.hall({ ...pp, yaw: 0, width: 46, depth: 22, height: 16, color: 0x6a5e54, roof: 0x3a3a3a, door: 10, name: 'pellet plant' });
     for (const dx of [-14, 12]) props.chimney({ ...W(QUAY.x - 25 + dx, qs - 112), height: 48 });
     props.tanks({ ...W(QUAY.x - 70, qs - 60), yaw: 0, count: 3, radius: 5, height: 16, color: 0x8e8a82 }); // the ore silos
-    const c0 = W(QUAY.x, qs - 60), c1 = W(QUAY.x, qs + 6);
-    props.conveyor({ x0: c0.x, z0: c0.z, y0: 12, x1: c1.x, z1: c1.z, y1: 6 });
+    const conv = (a: number[], b: number[], y0: number, y1: number) => { const c0 = W(a[0], a[1]), c1 = W(b[0], b[1]); props.conveyor({ x0: c0.x, z0: c0.z, y0, x1: c1.x, z1: c1.z, y1 }); };
+    conv([QUAY.x, qs - 60], [QUAY.x, qs + 6], 12, 6);  // the pellets down to the loader
+    conv([255, -50], [236, 4], 9, 14);                 // the ore store up into the pellet plant
+    conv([182, -20], [205, 8], 11, 14);                // the concentrate across from the concentrator
+    { const a = W(110, -82), b = W(340, -82); props.rails({ x0: a.x, z0: a.z, x1: b.x, z1: b.z }); }
+    for (let k = 0; k < 6; k++) {
+      const w = W(150 + k * 12, -82);
+      props.wagon({ ...w, yaw: Math.PI / 2, color: 0x5a3426, kind: 'open' });
+      props.box('rock', w.x, terrain.heightAt(w.x, w.z) + 2.2, w.z, 10.2, 0.4, 2.55, 0, 0x2e2a28); // (heaped with ore)
+    }
+    { const a = W(120, -96), b = W(300, -96); props.fence({ x0: Math.min(a.x, b.x), x1: Math.max(a.x, b.x), z: a.z, breaches: [[155, 175]] }); }
     props.hall({ ...W(400, shoreZ(400) - 70), yaw: 0, width: 28, depth: 14, height: 7, color: 0x8a2e22, roof: 0x3a3a3c, door: 8, name: 'fish plant' });
     // Prestøya: the light on the islet
     { const w = W(ISLE.x, ISLE.z), y = terrain.heightAt(w.x, w.z); props.box('stone', w.x, y + 4, w.z, 2.4, 8, 2.4, 0, 0xe8e4dc); props.box('plain', w.x, y + 8.6, w.z, 3, 1.4, 3, 0, 0xa83a2a); }
@@ -289,13 +422,13 @@ export default {
 
     const land = (x: number, z: number) => F * z < shoreZ(x) - 45;
     const avoid = [...points.map((p) => ({ x: p.x, z: p.z, r: 14 })),
-      { test: (x: number, z: number) => roadC(x, z) < 4.5 || onRunway(x, F * z) || runK(x, F * z) > 0.2 || !land(x, z) || heapK(x, F * z) > 0 || townK(x, F * z) > 0.5 }];
+      { test: (x: number, z: number) => roadC(x, z) < 4.5 || onRunway(x, F * z) || runK(x, F * z) > 0.2 || !land(x, z) || heapK(x, F * z) > 0 || townK(x, F * z) > 0.5 || streetDist(x, F * z) < 4.5 || PLOTS.some((p) => inPlot(p, x, F * z, 3)) }];
     // birch scrub: thick in the hollows, thin on the bare rock
     const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, lane: 0, count: 1800, broadleaf: 0.4, autumn: 1, size: 0.6, maxY: 30, avoid,
       forest: (x: number, z: number) => smoothstep(0.05, 0.3, fbm(noise, x * 0.008 + 4, z * 0.008, 2)) * 0.8 });
     cover.finalize(bounds);
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, density: 0.8,
-      avoid: [...points.map((p) => ({ x: p.x, z: p.z, r: 10 })), { test: (x: number, z: number) => F * z > shoreZ(x) - 30 || roadC(x, z) < 3.5 }] });
+      avoid: [...points.map((p) => ({ x: p.x, z: p.z, r: 10 })), { test: (x: number, z: number) => F * z > shoreZ(x) - 30 || roadC(x, z) < 3.5 || streetDist(x, F * z) < 3.5 || PLOTS.some((p) => inPlot(p, x, F * z, 1)) }] });
     return {
       buildings: props.buildings,
       update(dt: number, t: number) { trees.update?.(dt, t); ground.update(dt, t); },
