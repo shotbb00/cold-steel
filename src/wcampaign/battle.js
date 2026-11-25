@@ -96,7 +96,7 @@ function stacksOf(f) {
   return f.battalions.flatMap((bn) => bn.units).map((u, i) => {
     const t = UNIT_TYPES[u.t];
     if (!t || u.hp <= 0.05) return null;
-    return { type: u.t, name: `${f.name}`, men: Math.max(1, Math.round((t.formation?.count ?? 1) * u.hp)), xp: RANKS[Math.min(u.vet ?? 0, RANKS.length - 1)]?.xp ?? 0, cid: `${f.id}:${i}`, hp: u.hp };
+    return { type: u.t, men: Math.max(1, Math.round((t.formation?.count ?? 1) * u.hp)), xp: RANKS[Math.min(u.vet ?? 0, RANKS.length - 1)]?.xp ?? 0, cid: `${f.id}:${i}`, hp: u.hp };
   }).filter(Boolean);
 }
 
