@@ -8,11 +8,13 @@
 // Sokol, Dobro Pole and Vetrenik. Trenches and caverns cut into the rock, wire belts, the village of Zborsko in the
 // valley, the French Decauville light railway and the téléphériques bringing the guns up, and the mule tracks in long
 // graded traverses — the only ground wheels will climb.
-// Not mirrored but fair: each side holds one wall of the Moglena valley — a summit over the village at the same reach
-// and height (Kravica against Dobro Pole), a flank height west and east (Sokol 60 m farther from its base than Floka, Vetrenik 60 m nearer than Kamenik: the leads even out, sum −19 m), each its own graded track
-// from its base to every one of them and from each down to the valley floor; the walls are their own shapes (the
-// valley bends, the gullies and ribs fall differently, the high ground climbs toward Kozjak in the west on both).
-// Both fight for the floor and the village between the summits.
+// The real lie of it: the Bulgarian ridge (Sokol – Dobro Pole – Vetrenik) is one high wall running south-west to
+// north-east across the field, its face falling steeply to the gully floor; the Entente's ground is not a matching wall
+// but a broken slope of separate knolls (Floka, Kravica, Kamenik) climbing from the floor, and behind Floka the shoulder
+// of Kajmakčalan (taken by the Serbs in 1916) rises out of the field's western corner on the Entente side.
+// Fair by distance, not mirrored: the Bulgarians hold the long crest, the Serbs and French the Kajmakčalan shoulder and
+// the knolls nearer the floor; every point as near to its own base as its
+// counterpart (sum of leads small), each its own graded mule track from its base and down to the floor.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -24,27 +26,27 @@ import type { MapDef } from '../types.ts';
 
 const BASE_Z = 500;
 const noise = createNoise2D(1918_0915);
-/** The floor of the Moglena valley across the middle (its own bends), and its height: a low saddle by Zborsko, falling away east. */
-const vall = (x: number) => 26 * Math.sin(x * 0.0045 + 1.1) + 8 * Math.sin(x * 0.017 + 0.3) - 14;
-const floorH = (x: number) => 3 + 16 * smoothstep(420, 30, Math.abs(x + 20));
+/** The gully floor at the foot of the Bulgarian wall, running diagonally (south-west to north-east) across the field; its height: a col in the west, a low saddle by Zborsko, falling away east. */
+const vall = (x: number) => -0.3 * x - 30 + 18 * Math.sin(x * 0.006 + 1.1) + 6 * Math.sin(x * 0.017 + 0.3);
+const floorH = (x: number, z: number) => 20 + 8 * smoothstep(300, 30, Math.abs(x + 20)) + 60 * smoothstep(-60, -560, x) * smoothstep(240, 40, Math.abs(z - vall(x))); // (rising west to the col between Kajmakčalan and Sokol)
 const away = (x: number, z: number) => Math.abs(z - vall(x));
 const north = (x: number, z: number) => z > vall(x);
 
-/** Side ribs (+) and gullies (−) down each wall [x, z, r, h] (z squeezed: they run up and down the slope), and the summits’ domes. */
-const SIDES = [[-200, 180, 85, -22], [170, 170, 90, 20], [-170, -170, 85, 22], [200, -180, 90, -24], [-40, -200, 70, -14],
-  [10, 255, 90, 26], [-30, -262, 90, 26],                                   // Kravica, Dobro Pole
-  [-340, 290, 70, 16], [-395, -262, 70, 16], [350, 300, 70, 12], [290, -322, 70, 12]]; // Floka, Sokol; Kamenik, Vetrenik
+/** Knolls (+) and gullies (−) [x, z, r, h]. */
+const SIDES = [[-360, 300, 85, 16], [20, 230, 95, 26], [350, 180, 85, 20],              // Floka, Kravica, Kamenik
+  [-400, -100, 80, 12], [-10, -217, 90, 8], [330, -319, 80, 14],                          // Sokol, Dobro Pole, Vetrenik
+  [-170, 170, 80, -22], [190, 80, 85, -24], [-210, -140, 75, -16], [150, -330, 80, 18], [-120, 420, 90, -14]];
 function slope(x: number, z: number) {
-  const a = away(x, z), n = north(x, z);
-  const crest = n ? 275 + 22 * Math.sin(x * 0.009 + 2) : 270 + 25 * Math.sin(x * 0.007 + 0.5);
-  const k = smoothstep(70, 300, a);
-  let h = floorH(x) + 2 * smoothstep(20, 60, a);
-  h += 92 * smoothstep(60, crest, a);                                                       // the wall up to the crest
-  h -= 32 * smoothstep(crest + 20, crest + 240, a);                                          // and down its back to the base
-  h += ridged(noise, x * (n ? 0.011 : 0.009) + 3, z * (n ? 0.011 : 0.009), 4) * 24 * k;     // ribs and gullies in the rock
-  for (const [sx, sz, r, sh] of SIDES) h += sh * smoothstep(r, 0, Math.hypot(x - sx, (z - sz) * 0.7)) ** 1.4;
-  h += smoothstep(-400, -540, x) * 45 * k;                                                   // the crags toward Kozjak, west on both walls
-  h -= 0.05 * x;                                                                             // (the ground falls east, down the Moglenica)
+  const a = z - vall(x), b = -a;
+  let h = floorH(x, z) + 2 * smoothstep(20, 50, Math.abs(a));
+  if (a < 0) {                                                                                 // the Bulgarian wall: steep face, long back slope
+    const crest = 190 + 20 * Math.sin(x * 0.009 + 2);
+    h += (108 - 34 * smoothstep(-150, -480, x)) * smoothstep(40, crest, b) - 38 * smoothstep(crest + 20, crest + 320, b);
+  } else h += 30 * smoothstep(50, 240, a) - 22 * smoothstep(300, 560, a);                      // the Entente slope: broken, gentler
+  h += 115 * smoothstep(560, 120, Math.hypot(x + 540, (z - 600) * 0.85));                     // the shoulder of Kajmakčalan, west on the Entente side
+  h += ridged(noise, x * 0.01 + 3, z * 0.01, 4) * 22 * smoothstep(60, 240, Math.abs(a));     // ribs and gullies in the rock
+  for (const [sx, sz, r, sh] of SIDES) h += sh * smoothstep(r, 0, Math.hypot(x - sx, z - sz)) ** 1.4;
+  h -= 0.03 * x;                                                                               // (the ground falls east, down the Moglenica)
   h += fbm(noise, x * 0.03, z * 0.03, 2) * 1.2;
   return h;
 }
@@ -52,15 +54,15 @@ function slope(x: number, z: number) {
 const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
 const points = [
   P('A', 'Dragomanci', 30, 465, 'centre'),
-  P('B', 'Floka', -340, 290, 'west', { radius: 24 }),
-  P('C', 'Kravica', 10, 255, 'centre', { radius: 24 }),
-  P('D', 'Kamenik', 350, 300, 'east', { radius: 24 }),
-  P('E', 'Moglena gully', -300, Math.round(vall(-300) - 20), 'west', { radius: 26 }),
+  P('B', 'Floka', -360, 300, 'west', { radius: 24 }),
+  P('C', 'Kravica', 20, 230, 'centre', { radius: 24 }),
+  P('D', 'Kamenik', 350, 180, 'east', { radius: 24 }),
+  P('E', 'Moglena gully', -330, Math.round(vall(-330) - 10), 'west', { radius: 26 }),
   P('F', 'Zborsko', -20, Math.round(vall(-20)), 'centre', { radius: 30 }),
   P('G', 'Decauville railhead', 300, Math.round(vall(300) + 22), 'east', { radius: 26 }),
-  P('H', 'Sokol', -395, -262, 'west', { radius: 24 }),
-  P('I', 'Dobro Pole', -30, -262, 'centre', { radius: 24 }),
-  P('J', 'Vetrenik', 290, -322, 'east', { radius: 24 }),
+  P('H', 'Sokol', -400, -100, 'west', { radius: 24 }),
+  P('I', 'Dobro Pole', -10, -217, 'centre', { radius: 24 }),
+  P('J', 'Vetrenik', 330, -319, 'east', { radius: 24 }),
   P('K', 'Kozjak road', 25, -465, 'centre'),
 ] as any[];
 const at = (id: string) => { const p = points.find((q) => q.id === id); return [p.x, p.z]; };
@@ -70,21 +72,21 @@ const SHELVES = [[0, BASE_Z, 36], [0, -BASE_Z, 36], ...points.filter((p) => !p.o
 const SHELF_H = SHELVES.map(([x, z]) => slope(x, z));
 /** The mule tracks, each from shelf to shelf, graded straight between their heights: from each base to its three heights, and from each height down its own traverse and one bend to the floor. */
 const TRACKS = [
-  [[0, BASE_Z], [-45, 440], [45, 385], [-30, 320], at('C')],
-  [[0, BASE_Z], [-130, 475], [-250, 410], at('B')],
-  [[0, BASE_Z], [130, 470], [250, 420], at('D')],
-  [at('C'), [-110, 150], at('F')],
-  [at('B'), [-440, 150], at('E')],
-  [at('D'), [180, 170], at('G')],
-  [[0, -BASE_Z], [50, -445], [-45, -380], [35, -320], at('I')],
-  [[0, -BASE_Z], [-125, -470], [-245, -415], at('H')],
-  [[0, -BASE_Z], [125, -480], [245, -400], at('J')],
-  [at('I'), [100, -150], at('F')],
-  [at('H'), [-210, -160], at('E')],
-  [at('J'), [450, -150], at('G')],
-];
+  [[0, BASE_Z], [-40, 420], [50, 340], at('C')],
+  [[0, BASE_Z], [-130, 470], [-250, 400], at('B')],
+  [[0, BASE_Z], [150, 450], [260, 330], at('D')],
+  [at('C'), [-120, 150], [60, 90], at('F')],
+  [at('B'), [-470, 160], at('E')],
+  [at('D'), [180, 30], at('G')],
+  [[0, -BASE_Z], [60, -430], [-60, -330], at('I')],
+  [[0, -BASE_Z], [-150, -420], [-280, -300], at('H')],
+  [[0, -BASE_Z], [170, -470], at('J')],
+  [at('I'), [-200, -190], at('F')],
+  [at('H'), [-250, -60], at('E')],
+  [at('J'), [110, -180], at('G')],
+]
 /** The track along the valley floor, E – Zborsko – G (the floor is gentle: not graded). */
-const FLOOR = [at('E'), ...Array.from({ length: 19 }, (_, i) => [-270 + i * 30, vall(-270 + i * 30)]), at('G')];
+const FLOOR = [at('E'), ...Array.from({ length: 19 }, (_, i) => [-300 + i * 30, vall(-300 + i * 30) - 5]), at('G')];
 /** How far along each track (m) its corners are. */
 const TRACK_S = TRACKS.map((t) => t.reduce((s: number[], p, i) => (i ? [...s, s[i - 1] + Math.hypot(p[0] - t[i - 1][0], p[1] - t[i - 1][1])] : [0]), []));
 const nearestShelf = ([x, z]: number[]) => SHELVES.reduce((b, s, i) => (Math.hypot(s[0] - x, s[1] - z) < Math.hypot(SHELVES[b][0] - x, SHELVES[b][1] - z) ? i : b), 0);
@@ -198,7 +200,7 @@ export default {
     farmVillage(props, ex, ez, 4, 191816, (x, z) => !clear(x, z, 8) || Math.hypot(x - ex, z - ez) < 14, 0.9);
     // shepherds’ huts and shelters on the shelves of the heights and the bases
     props.rand = mulberry32(1809);
-    for (const [x, z] of [[-316, 306], [-362, 280], [36, 240], [326, 316], [-412, -250], [-4, -280], [312, -336], [-30, 482], [34, -482], [276, vall(276) + 40]]) if (clear(x, z, 7)) props.house({ x, z, yaw: props.rand() * 3, width: 7, depth: 5, height: 2.6 });
+    for (const [x, z] of [[-336, 318], [-386, 290], [44, 250], [372, 196], [-424, -88], [16, -236], [352, -334], [-30, 482], [34, -482], [276, vall(276) + 40]]) if (clear(x, z, 7)) props.house({ x, z, yaw: props.rand() * 3, width: 7, depth: 5, height: 2.6 });
     // the téléphériques that carried the guns and shells up: timber posts and the cable to each summit
     const cableway = (ax: number, az: number, bx: number, bz: number) => {
       const n = Math.max(2, Math.round(Math.hypot(bx - ax, bz - az) / 45));
@@ -213,9 +215,9 @@ export default {
         prev = top;
       }
     };
-    cableway(-28, 470, 30, 262); cableway(28, -470, -50, -278); cableway(330, 60, 360, 282); cableway(-280, -30, -385, -270);
+    cableway(-28, 470, 26, 252); cableway(28, -470, -20, -240); cableway(310, -60, 345, 160); cableway(-345, 30, -395, -80);
     // the Decauville: the French 60 cm railway laid along the track from the railhead up the Kamenik traverse, wagons at the railhead
-    const dec = [at('G'), [180, 170], at('D')];
+    const dec = [at('G'), [180, 30], at('D')];
     for (let i = 0; i < dec.length - 1; i++) props.rails({ x0: dec[i][0], z0: dec[i][1], x1: dec[i + 1][0], z1: dec[i + 1][1] });
     { const [gx, gz] = at('G'); props.crates({ x: gx + 18, z: gz + 10, yaw: 0.4 }); props.crates({ x: gx - 20, z: gz + 12, yaw: 1.2 }); }
     // rock everywhere, smashed by the bombardment; dry-stone sangars (each wall its own)

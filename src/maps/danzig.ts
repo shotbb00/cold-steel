@@ -6,16 +6,17 @@
 // Kalckreuth capitulated with the honours of war.
 // On the map (1.0 × 1.12 km, a raw spring): the French come from their camp on the Praust road (south, +z), the
 // garrison and its relief from Neufahrwasser and the sea (north, −z). The bastioned city in the middle — the
-// Marienkirche over the Langer Markt, the Rathaus, the Artushof — with the Vistula down the east flank to the sea,
-// its arm split round the Holm island and the Holm redoubt on it, a bridge over to it from the city, fords at its
-// two ends; Weichselmünde’s square fort by the river mouth at the north edge. West of the city the two fortified
-// heights, the Bischofsberg to the south and the Hagelsberg to the north, the Stolzenberg plateau behind.
+// Marienkirche over the Langer Markt, the Rathaus, the Artushof. The real lie of the ground: the Vistula comes out of
+// the low Werder in the south-east and swings north-west past the town to its mouth at Weichselmünde on the north
+// edge; the Holm is the island in that bend, cut off by a side channel on its far side, with a bridge over from the
+// town bank and fords at its two tips. The moraine upland rises behind Langfuhr toward Oliva (north-west), coast dunes
+// along the north edge; the Bischofsberg is a big spur of it standing out south-west of the town over the Radaune's
+// valley, the Hagelsberg a smaller knoll west of the town; the French camp on the rise by the Praust road.
 // Lefebvre’s parallels before the French, the garrison’s covered way before the Prussians.
-// Not mirrored but fair: the river runs down the flank, not between the sides, and its fords lie as far from either
-// base; the city and the Holm — the decisive ground — stand in the middle, owned by neither. The Bischofsberg before
-// the French is traded for the Hagelsberg before the Prussians (the same height, the same works), Weichselmünde’s
-// fort for the French redoubt at Ohra, Schidlitz for Langfuhr, the parallels for the covered way; each point as
-// far from the nearer base as its counterpart (tools/map_fairness.py).
+// Fair by distance, not mirrored: the river curls round the north-east, not between the sides; the city and the Holm
+// stand in the middle, owned by neither. The Prussians' upland and dunes behind them are answered by the Bischofsberg
+// (the highest work on the field) and the Praust rise for the French; Weichselmünde's fort for the redoubt at Ohra,
+// Schidlitz for Langfuhr, the parallels for the covered way; the sum of the leads small (tools/map_fairness.py).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -37,29 +38,30 @@ const POINTS: ControlPointDef[] = [
   { id: 'D', name: 'Ohra redoubt', x: 260, z: 320, owner: null, sector: 'east' },
   { id: 'E', name: 'Stolzenberg', x: -330, z: 30, owner: null, sector: 'west' },
   { id: 'F', name: 'Langer Markt', x: 60, z: 0, owner: null, sector: 'centre', radius: 28 },
-  { id: 'G', name: 'Holm redoubt', x: 385, z: -10, owner: null, sector: 'east', radius: 24 },
-  { id: 'H', name: 'Langfuhr', x: -330, z: -300, owner: null, sector: 'west' },
-  { id: 'I', name: 'Hagelsberg', x: -140, z: -240, owner: null, sector: 'centre', radius: 24 },
-  { id: 'J', name: 'Weichselmünde', x: 330, z: -370, owner: null, sector: 'east', radius: 24 },
+  { id: 'G', name: 'Holm redoubt', x: 415, z: -50, owner: null, sector: 'east', radius: 24 },
+  { id: 'H', name: 'Langfuhr', x: -330, z: -260, owner: null, sector: 'west' },
+  { id: 'I', name: 'Hagelsberg', x: -140, z: -200, owner: null, sector: 'centre', radius: 24 },
+  { id: 'J', name: 'Weichselmünde', x: 215, z: -345, owner: null, sector: 'east', radius: 24 },
   { id: 'K', name: 'Neufahrwasser', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
 // the Vistula down the east flank, flowing north (−z) to the sea; its arm split round the Holm island
-const WEICHSEL = [[456, 720], [448, 400], [454, 200], [452, 0], [456, -200], [448, -420], [440, -720]];
-const ARM = [[452, 210], [392, 175], [334, 110], [318, 0], [334, -110], [392, -175], [454, -210]];
+const WEICHSEL = [[1000, 470], [720, 330], [500, 230], [420, 150], [365, 40], [335, -120], [300, -260], [272, -420], [262, -720]];
+const ARM = [[412, 140], [470, 60], [474, -110], [420, -200], [322, -210]];
 const river = createRiver({
   paths: [WEICHSEL, ARM],
   halfWidth: 13, level: 0, depth: 2.8, valley: 40,
   crossings: [
-    { name: 'Holm bridge', x: 318, z: 0, kind: 'bridge', width: 8, channel: 1 },
-    { name: 'Holm ford (south)', x: 372, z: 162, kind: 'ford', width: 10, channel: 1 },
-    { name: 'Holm ford (north)', x: 372, z: -162, kind: 'ford', width: 10, channel: 1 },
+    { name: 'Holm bridge', x: 349, z: -40, kind: 'bridge', width: 8, channel: 0 },
+    { name: 'Holm ford (south)', x: 393, z: 95, kind: 'ford', width: 10, channel: 0 },
+    { name: 'Holm ford (north)', x: 327, z: -160, kind: 'ford', width: 10, channel: 0 },
   ],
 });
 const wet = (x, z, m = 0) => { const I = river.project(x, z); return I.d < I.hw + m; };   // (props only: never in the height)
 /** On the Holm, between the arms (a plain box: the island’s extent). */
-const onHolm = (x, z) => Math.abs(z) < 170 && x > 345 && x < 438;
+const xAt = (poly, z) => { for (let i = 0; i < poly.length - 1; i++) { const [ax, az] = poly[i], [bx, bz] = poly[i + 1]; if ((z - az) * (z - bz) <= 0 && az !== bz) return ax + (bx - ax) * (z - az) / (bz - az); } return NaN; };
+const onHolm = (x, z) => z < 120 && z > -205 && x > xAt(WEICHSEL, z) + 14 && x < (z > 60 ? xAt(ARM.slice(0, 2), z) : z < -110 ? xAt(ARM.slice(2), z) : 474) - 14;
 /** Inside the city’s bastioned ring. */
 const CITY = { x: 70, z: 0, rx: 175, rz: 140 };
 const cityQ = (x, z) => Math.hypot((x - CITY.x) / CITY.rx, (z - CITY.z) / CITY.rz);
@@ -82,10 +84,12 @@ const woods = (x, z) => {
 
 function height(x, z) {
   let h = fbm(noise, x * 0.0022, z * 0.0022, 3) * 3 + fbm(noise, x * 0.02 + 3, z * 0.02, 3) * 0.4 + 3;
-  h += smoothstep(-60, -380, x) * 7;                                                // the Stolzenberg plateau, west of the town
-  h += hill(x, z, P.C.x, P.C.z, 75, 11) + hill(x, z, P.C.x - 60, P.C.z + 20, 60, 4);  // the Bischofsberg
-  h += hill(x, z, P.I.x, P.I.z, 75, 11) + hill(x, z, P.I.x - 55, P.I.z - 30, 60, 4);  // the Hagelsberg
-  h += smoothstep(380, 600, z) * 9 + smoothstep(380, 600, -z) * 6;                   // the rise behind the French camp, the dunes by the sea
+  h += smoothstep(-250, -650, x + 0.9 * z) * 7.5 - smoothstep(140, 30, Math.abs(z - 330 + 0.5 * x)) * smoothstep(60, -200, x) * 4; // (and the Radaune's valley below the Bischofsberg)
+  //  (above: the upland's edge, running north-west from the Bischofsberg toward Oliva (higher behind Langfuhr)
+  h += smoothstep(-420, -530, z) * 8 * smoothstep(240, 120, x) - smoothstep(-500, -560, z) * 8; // the coast dunes along the north edge, the beach below them
+  h += hill(x, z, P.C.x, P.C.z, 85, 17) + hill(x, z, P.C.x - 110, P.C.z + 50, 110, 9);  // the Bischofsberg
+  h += hill(x, z, P.I.x, P.I.z, 60, 8);  // the Hagelsberg
+  h += smoothstep(330, 600, z) * 13 * smoothstep(360, 0, x);                   // the rise behind the French camp, the dunes by the sea
   const ring = Math.exp(-(((cityQ(x, z) - 1.12) / 0.07) ** 2));                     // the glacis: a low bank round the works
   h += ring * 1.6 * smoothstep(290, 240, x);
   h += (4 - h) * smoothstep(1.05, 0.9, cityQ(x, z)) * 0.7;                          // the town on its level ground
