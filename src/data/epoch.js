@@ -26,7 +26,7 @@ export const EPOCHS = {
   1806: {
     id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
-    sides: { nato: 'France', pact: 'Prussia' },
+    sides: { nato: 'France and allies', pact: 'Coalition' },
     regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
       europe: { name: 'Germany', title: 'Germany and Austria, 1805–06', blurb: 'Ulm, Austerlitz, Jena and Auerstedt: the Grande Armée against Austria, Russia and then Prussia from the Danube to the Elbe.', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
         sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
@@ -99,7 +99,7 @@ export const EPOCHS = {
   1918: {
     id: '1918', name: '1918', title: 'The Western Front, 1918',
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
-    sides: { nato: 'Allies', pact: 'Germany' },
+    sides: { nato: 'Allies', pact: 'Central Powers' },
     regions: {
       europe: { name: 'Western Front',
         sea: { name: 'North Sea', title: 'The North Sea, 1914–18', blurb: 'Dogger Bank, the Heligoland Bight and the Dover Strait: the Grand Fleet against the High Seas Fleet.' } },
@@ -251,7 +251,7 @@ export const EPOCHS = {
       europe: { sea: { name: 'North Atlantic', title: 'The Battle of the Atlantic', blurb: 'The convoys from Halifax and New York to Britain, and the U-boat packs waiting for them in the air gap of mid-ocean: Royal Navy escorts against the Kriegsmarine.' } },
       med: { sea: { title: 'The Mediterranean, 1942', blurb: 'Malta, besieged in the middle of the sea: the convoys fight through the Sicilian narrows past U-boats, E-boats and the German cruisers.' } },
     },
-    sides: { nato: 'Allies', pact: 'Germany' },
+    sides: { nato: 'Allies', pact: 'Axis' },
     armies: {
       us: { id: 'us', faction: 'nato', name: 'US Army', pacific: 'both' }, // (Europe and the Pacific: the Army fought on Saipan and Okinawa beside the Marines)
       sov: { id: 'sov', faction: 'nato', name: 'Red Army' },
