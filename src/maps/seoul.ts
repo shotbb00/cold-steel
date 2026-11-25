@@ -1,95 +1,100 @@
 // Seoul, spring 1985 (the big field, 1.0 × 1.12 km): the northern half of the capital in the war of 1985 that never
 // came — the KPA has forced Uijeongbu and comes down the old invasion road through Dobong and the Mia-ri pass, as its
-// tanks did on 28 June 1950, against the ROK Army and the US garrison of Yongsan. The old walled city fills the middle:
-// Jongno and its hanok lanes, Gyeongbokgung palace with the domed Capitol in front of it, stretches of the Joseon city
-// wall where the streets left it standing, Heunginjimun (the East Gate), Sungnyemun (the South Gate) and Hyehwamun.
-// Seodaemun, its prison and the Independence Gate west of the walls; Seoul station south of them on the Gyeongbu line.
-// Outside the walls the new Seoul: rows of five- and twelve-storey apartment blocks, all facing south, beside the old
-// tiled hanok neighbourhoods. Bukhansan's granite stands steep and wooded on the west flank (too steep for vehicles,
-// map.steep), the Bonghwasan–Achasan hills close the east. The Jungnangcheon runs down the east from Wolgye towards the
-// Han, its banks market gardens; two bridges and the Jangan ford cross it. The Han itself, with the Hangang and Hannam
-// bridges, runs past the south edge behind Yongsan. Namsan and N Seoul Tower over the south, Bugaksan over the north.
-// The ROK and US hold the south (+z: Yongsan, the Han), the KPA the north (-z: Dobong, the road from Uijeongbu).
-// Fairness: not a mirror — the Jungnangcheon wanders its own way, the walled city, palace, prison and station are each
-// half's own, the apartment districts are each half's own dice — but Bukhansan and the eastern hills straddle the
-// middle so neither side starts on them, each side has its own bridge over the Jungnangcheon at the same distance from
-// its base (z ±422) and the one ford lies on the centre line, each side has a wooded hill on each flank of the same
-// height (Namsan and Achasan against Bugaksan and Bonghwasan), the Mia-ri pass's two hills are answered by Namsan's
-// spurs near Yongsan, Seodaemun (west, a little nearer the ROK) is answered by the Jangan ford (east, a little nearer
-// the KPA), and the points lie at about the same distances (measured: tools/map_fairness.py). The city leaves no
-// room for a runway (airfields: []).
+// tanks did on 28 June 1950, against the ROK Army and the US garrison of Yongsan. The ground is Seoul's own bowl: the
+// old walled city fills a basin ringed by granite — Bukhansan's great massif over the north-west, Inwangsan's ridge
+// down the west with Seodaemun and its prison at its foot, little Naksan on the east, Namsan standing over the south
+// with N Seoul Tower on top — and the Han sweeps round the south-east in its wide bend, a quarter of a mile of water
+// with Achasan over its north bank; the Jungnangcheon comes down from Wolgye on the east to meet it. In the basin:
+// Jongno and its hanok lanes, Gyeongbokgung palace with the domed Capitol before it under Bugaksan, stretches of the
+// Joseon city wall where the streets left it standing, Heunginjimun (the East Gate), Sungnyemun (the South Gate) and
+// Hyehwamun; Seoul station west of Namsan on the Gyeongbu line; outside the walls the new Seoul's rows of apartment
+// blocks, all facing south, beside the old tiled hanok neighbourhoods. Gwanaksan rises beyond the Han in the far
+// south-west corner. The ROK and US hold the south (+z: Yongsan), the KPA the north (-z: Dobong, the road from Uijeongbu).
+// Fairness by distance: each side has its own way into the bowl (the KPA through the Mia-ri pass, the ROK round
+// Namsan), its own hill over the city (Bugaksan, Namsan), its own crossing of the Jungnangcheon to the hills on the far
+// bank (Bonghwasan, Achasan) and the Jangan ford between them; Bukhansan's heights over the KPA are answered by
+// Namsan, Gwanaksan and the Han over the ROK's flank, and the points' leads sum to about nil (tools/map_fairness.py).
+// The city leaves no room for a runway (airfields: []).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
-import { buildVillage, commandPost } from './common.js';
+import { commandPost } from './common.js';
 import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
 const BASE_Z = 500;
 const LAND = 4;         // the city's level
-const HW = 12;          // the Jungnangcheon's half-width
+const HW = 12;          // the Jungnangcheon's half-width (the Han's is its own, per point)
 const noise = createNoise2D(1985_81);
 
-// ---- the Jungnangcheon down the east, north to south, into the Han; the Han along the south edge (outside the field)
-const JUNG = [[215, -600], [210, -480], [178, -380], [192, -250], [208, -140], [190, -30], [160, 70], [172, 190], [202, 310], [190, 430], [168, 560], [150, 690]];
-const HAN = [[-820, 700, 58], [-300, 678, 58], [150, 700, 62], [820, 668, 58]];
+// ---- the Jungnangcheon down the east, north to south, into the Han; the Han's wide bend round the south-east
+const JUNG = [[262, -640], [238, -480], [270, -330], [244, -190], [262, -40], [246, 70], [290, 170], [360, 235]];
+const HAN = [[700, -40, 46], [560, 40, 46], [455, 150, 44], [380, 260, 42], [300, 390, 42], [258, 520, 44], [262, 640, 46], [300, 800, 46]];
 const CROSS = [
-  { name: 'Wolgye bridge', x: 185, z: -422, kind: 'bridge', width: 14, channel: 0 },
-  { name: 'Jangan ford', x: 190, z: -30, kind: 'ford', width: 18, channel: 0 },
-  { name: 'Junggok bridge', x: 190, z: 422, kind: 'bridge', width: 14, channel: 0 },
+  { name: 'Wolgye bridge', x: 270, z: -330, kind: 'bridge', width: 14, channel: 0 },
+  { name: 'Jangan ford', x: 257, z: -5, kind: 'ford', width: 18, channel: 0 },
+  { name: 'Junggok bridge', x: 250, z: 85, kind: 'bridge', width: 14, channel: 0 },
 ];
-const river = createRiver({ paths: [JUNG, HAN], halfWidth: HW, level: 0, depth: 2.6, valley: 34, crossings: CROSS });
-const riverD = (x: number, z: number) => river.project(x, z).d;
-
-// ---- roads: the Uijeongbu road down the middle, a west road under Bukhansan, an east road over the Jungnangcheon
-const ROADS: number[][][] = [
-  [[0, 530], [0, 470], [30, 360], [45, 255], [15, 120], [30, -15], [-15, -130], [-85, -235], [-15, -400], [0, -470], [0, -530]], // Uijeongbu road: Yongsan – Mia-ri – Dobong
-  [[0, 470], [-180, 420], [-320, 290], [-300, 160], [-225, 36], [-255, -100], [-295, -335], [-180, -430], [0, -470]],           // west: under Bukhansan
-  [[0, 470], [260, 400], [275, 325], [270, 150], [252, -35], [280, -180], [355, -275], [260, -400], [0, -470]],                // east: over the two bridges
-  [[-320, 290], [45, 255]], [[-295, -335], [-85, -235]],                                                                       // laterals, each half its own
-  [[-225, 36], [30, -15]], [[30, -15], [252, -35]],                                                                             // Jongno, out through the East Gate to the ford
-  [[-120, 82], [120, 55]], [[-20, -60], [120, -100]], [[-65, -62], [-62, 6]],                                                  // Euljiro, Yulgok-ro, Sejong-ro
-  [[0, 530], [-60, 600], [-120, 660], [-120, 800]],                                                                            // to the Hangang bridge (beyond the field)
-];
+const river = createRiver({ paths: [JUNG, HAN], halfWidth: HW, level: 0, depth: 2.6, valley: 32, crossings: CROSS });
 function segDist(x: number, z: number, a: number[], b: number[]) {
   const dx = b[0] - a[0], dz = b[1] - a[1];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
   return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
 }
+/** Distance to the water's centre line, the Han's counted from as far out as the stream's (its banks are its own width) */
+const riverD = (x: number, z: number) => {
+  let d = Infinity;
+  for (let i = 0; i < JUNG.length - 1; i++) d = Math.min(d, segDist(x, z, JUNG[i], JUNG[i + 1]));
+  for (let i = 0; i < HAN.length - 1; i++) d = Math.min(d, segDist(x, z, HAN[i], HAN[i + 1]) - (HAN[i][2] - HW));
+  return d;
+};
+
+const points: ControlPointDef[] = [
+  { id: 'A', name: 'Yongsan', x: 0, z: 470, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Namsan', x: 55, z: 255, owner: null, sector: 'centre', radius: 24 },
+  { id: 'C', name: 'Seoul station', x: -150, z: 300, owner: null, sector: 'west' },
+  { id: 'D', name: 'Achasan', x: 395, z: 70, owner: null, sector: 'east', radius: 24 },
+  { id: 'E', name: 'Seodaemun', x: -265, z: 35, owner: null, sector: 'west', radius: 26 },
+  { id: 'F', name: 'Jongno', x: 10, z: 5, owner: null, sector: 'centre', radius: 30 },
+  { id: 'G', name: 'Jangan ford', x: 232, z: -5, owner: null, sector: 'east', radius: 24 },
+  { id: 'H', name: 'Bugaksan', x: -95, z: -255, owner: null, sector: 'west', radius: 24 },
+  { id: 'I', name: 'Mia-ri pass', x: 120, z: -240, owner: null, sector: 'centre' },
+  { id: 'J', name: 'Bonghwasan', x: 380, z: -200, owner: null, sector: 'east', radius: 24 },
+  { id: 'K', name: 'Dobong', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+];
+const at = (id: string) => { const p = points.find((q) => q.id === id)!; return [p.x, p.z]; };
+const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
+
+// ---- roads: the Uijeongbu road down through the Mia-ri pass into Jongno and round Namsan to Yongsan; a west road
+// under Inwangsan past Seodaemun; the east road over the Jungnangcheon; the city's own streets
+const ROADS: number[][][] = [
+  [[0, -640], [0, -BASE_Z], at('K'), [60, -380], at('I'), [80, -140], at('F'), [-40, 120], [-60, 220], [-40, 380], at('A'), [0, BASE_Z], [0, 640]], // Uijeongbu road – Jongno – Yongsan
+  [[0, BASE_Z], [-110, 420], at('C'), [-250, 200], at('E'), [-230, -150], at('H'), [-80, -380], [0, -BASE_Z]],                                     // west: under Inwangsan
+  [[0, -BASE_Z], [160, -420], [230, -332], [300, -335], at('J'), [330, -120], [292, 0], at('G'), [213, 101], [150, 260], [110, 400], [0, BASE_Z]], // east: over the stream and back by the ford
+  [[213, 101], [287, 69], at('D')],                                                                                                                      // up Achasan
+  [at('F'), [140, -30], at('G')], [at('E'), [-120, 10], at('F')],                                                                                 // Jongno, out through the East Gate to the ford; Seodaemun's road
+  [[-60, 220], at('B')], [[-40, 120], [150, 140], [230, 100]],                                                                                    // Namsan's road; Euljiro
+  [at('H'), [-120, -150], [-120, -110]], [[-40, -78], [-40, 60]], [[-120, -110], [120, -120]], [[-80, 60], [140, 60]],                                                       // Sejong-ro, Yulgok-ro, Toegye-ro
+];
 function roadDistExact(x: number, z: number) {
   let d = Infinity;
   for (const l of ROADS) for (let i = 0; i < l.length - 1; i++) d = Math.min(d, segDist(x, z, l[i], l[i + 1]));
   return d;
 }
+const CACHE = { x: 580, z: 640 };
 /** The road distance, sampled once onto a 2 m grid over the field and a margin (every height sample asked it twice). */
-const roadDist = gridCacheSmooth(roadDistExact, { x: 640, z: 820 }, 2);
+const roadDist = gridCacheSmooth(roadDistExact, CACHE, 3);
 // the Gyeongbu line up from the Han through Seoul station, the Gyeongui line west out of it (decoration: level crossings)
-const RAIL = [[-40, 580], [-35, 400], [-20, 262], [-60, 170], [-150, 140], [-250, 125], [-300, 122]];
-const railDist = (x: number, z: number) => Math.min(...RAIL.slice(1).map((b, i) => segDist(x, z, RAIL[i], b)));
+const RAIL = [[-60, 640], [-90, 480], [-130, 360], [-175, 290], [-250, 250], [-360, 225], [-520, 215]];
+const railDist = gridCacheSmooth((x: number, z: number) => { let d = Infinity; for (let i = 0; i < RAIL.length - 1; i++) d = Math.min(d, segDist(x, z, RAIL[i], RAIL[i + 1])); return d; }, CACHE, 4);
 
-const points: ControlPointDef[] = [
-  { id: 'A', name: 'Yongsan', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Namsan', x: -320, z: 290, owner: null, sector: 'west', radius: 24 },
-  { id: 'C', name: 'Seoul station', x: 45, z: 255, owner: null, sector: 'centre' },
-  { id: 'D', name: 'Achasan', x: 275, z: 325, owner: null, sector: 'east', radius: 24 },
-  { id: 'E', name: 'Seodaemun', x: -225, z: 36, owner: null, sector: 'west', radius: 26 },
-  { id: 'F', name: 'Jongno', x: 30, z: -15, owner: null, sector: 'centre', radius: 30 },
-  { id: 'G', name: 'Jangan ford', x: 252, z: -35, owner: null, sector: 'east', radius: 24 },
-  { id: 'H', name: 'Bugaksan', x: -295, z: -335, owner: null, sector: 'west', radius: 24 },
-  { id: 'I', name: 'Mia-ri pass', x: -85, z: -235, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Bonghwasan', x: 355, z: -275, owner: null, sector: 'east', radius: 24 },
-  { id: 'K', name: 'Dobong', x: 0, z: -470, owner: 'pact', sector: 'centre' },
-];
-const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
-
-// the hills, each half its own: [x, z, radius, height] (the four flank hills first, the same height a side)
-const HILLS = [[-320, 290, 70, 22], [275, 325, 66, 20], [-295, -335, 72, 22], [355, -275, 68, 20],
-  [-150, 385, 50, 11], [95, 345, 38, 9], [-165, -250, 45, 12], [-5, -285, 40, 9],          // Namsan's spurs, the Mia-ri pass
-  [-440, 460, 70, 14], [440, 470, 70, 16], [-450, -460, 70, 15], [450, -450, 66, 15]];
-const BIG_HILLS = { nato: [[-320, 290], [275, 325]], pact: [[-295, -335], [355, -275]] };
+// the hills with points on them and the low rises, each half its own: [x, z, radius, height]
+const HILLS = [[55, 255, 72, 27], [-95, -255, 70, 24], [395, 70, 62, 18], [380, -200, 66, 17],
+  [175, -95, 45, 9], [-200, 395, 40, 8], [140, -380, 42, 10]];                                // Naksan, Yongsan's knoll, Mia-ri's shoulder
+const BIG_HILLS = { nato: [[55, 255], [395, 70]], pact: [[-95, -255], [380, -200]] };
 const warp = (x: number, z: number) => 1 + 0.3 * fbm(noise, x * 0.012 + 50, z * 0.012, 2);
 function hillHExact(x: number, z: number) {
   let h = 0;
@@ -99,8 +104,7 @@ function hillHExact(x: number, z: number) {
   }
   return h;
 }
-/** The hills' height, sampled once onto a 2 m grid (twelve noisy hills, asked twice a height sample). */
-const hillH = gridCacheSmooth(hillHExact, { x: 640, z: 820 }, 2);
+const hillH = gridCacheSmooth(hillHExact, CACHE, 4);
 
 /** Low ground (0): along the roads, round the points and bases. */
 function lowD(x: number, z: number) {
@@ -109,15 +113,16 @@ function lowD(x: number, z: number) {
   for (const bz of [BASE_Z, -BASE_Z]) d = Math.min(d, Math.hypot(x, z - bz) - 70);
   return d;
 }
-/** Bukhansan over the west, the Bonghwasan–Achasan hills east of the Jungnangcheon: both astride the middle. */
-function mass(x: number, z: number) {
-  const bukhan = smoothstep(1.0, 0.62, Math.hypot((x + 430) / 160, (z + 15) / 225) + 0.12 * fbm(noise, x * 0.01 - 30, z * 0.01, 2));
-  const east = smoothstep(1.0, 0.6, Math.hypot((x - 475) / 100, (z + 5) / 235) + 0.12 * fbm(noise, x * 0.01 + 70, z * 0.01, 2)) * 0.55;
-  return Math.max(bukhan, east);
+/** The granite round the bowl: Bukhansan (north-west), Inwangsan's ridge (west), Gwanaksan beyond the Han (south-west corner). */
+const MASSES = [{ x: -340, z: -420, rx: 190, rz: 160, k: 0.82 }, { x: -420, z: -60, rx: 95, rz: 175, k: 0.6 }, { x: -440, z: 500, rx: 250, rz: 175, k: 1 }];
+function massExact(x: number, z: number) {
+  let m = 0;
+  for (const q of MASSES) m = Math.max(m, q.k * smoothstep(1.0, 0.45, Math.hypot((x - q.x) / q.rx, (z - q.z) / q.rz) + 0.14 * fbm(noise, x * 0.01 - 30 + q.x, z * 0.01, 2)));
+  return m * smoothstep(8, 70, lowD(x, z));
 }
-const mountK = (x: number, z: number) => mass(x, z) * smoothstep(8, 80, lowD(x, z));
+const mountK = gridCacheSmooth(massExact, CACHE, 3);
 /** The walled old city round Jongno (an ellipse; the wall runs just outside it). */
-const CITY = { x: -5, z: -10, rx: 150, rz: 140 };
+const CITY = { x: 0, z: -10, rx: 150, rz: 135 };
 const cityE = (x: number, z: number) => Math.hypot((x - CITY.x) / CITY.rx, (z - CITY.z) / CITY.rz);
 const townK = (x: number, z: number) => smoothstep(1.0, 0.85, cityE(x, z));
 /** The open city ground: flat land away from the hills, roads, points, walled city and the river's banks. */
@@ -130,15 +135,15 @@ function openK(x: number, z: number) {
 const blob = (x: number, z: number) => fbm(noise, x * 0.006 + 13, z * 0.006 - 7, 2) + 0.15;
 const gardenK = (x: number, z: number) => smoothstep(HW + 95, HW + 60, riverD(x, z));
 
+const openS = gridCacheSmooth(openK, CACHE, 3);
 function height(x: number, z: number) {
   const n = fbm(noise, x * 0.005, z * 0.005, 3);
   let h = LAND + n * 1.5 + hillH(x, z);
   const mk = mountK(x, z);
-  if (mk > 0) h += mk * (32 + ridged(noise, x * 0.007 + 9, z * 0.007, 4) * 90);
-  const ok = openK(x, z);
+  if (mk > 0) h += mk * (30 + ridged(noise, x * 0.007 + 9, z * 0.007, 4) * 85);
+  const ok = openS(x, z);
   if (ok > 0) h += (LAND + Math.round(n * 4) * 0.3 - h) * ok;                     // levelled building plots
-  h += smoothstep(BOUNDS.x - 20, BOUNDS.x + 120, Math.abs(x)) * (20 + ridged(noise, x * 0.01, z * 0.01, 3) * 24) * smoothstep(640, 580, z);
-  h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 110, -z) * 22;                         // Dobongsan behind the north edge (the Han's flats behind the south)
+  h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 110, -z) * 22;                         // Dobongsan behind the north edge
   for (const bz of [BASE_Z, -BASE_Z]) h += (LAND - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
   return river.carve(x, z, h);
 }
@@ -150,10 +155,22 @@ const woodsK = (x: number, z: number) => Math.max(smoothstep(5, 12, hillH(x, z))
 const woodsC = gridCache(woodsK, BOUNDS);
 const rows = (x: number, z: number) => Math.abs((((x + z * 0.1) % 7) + 7) % 7 - 3.5) > 2.6;
 
+/** A hanok: one storey of white plaster between dark timbers under a heavy grey tile roof, its eaves deep. */
+function hanok(props: any, { x, z, yaw, w, d }: any) {
+  const r = props.rand;
+  const b = props.beginBuilding('hanok', x, z, yaw, w, d);
+  const wall = [0xd8d2c4, 0xccc4b2, 0xe0dacc][Math.floor(r() * 3)];
+  b.plaster = wall;
+  props.shell(b, { height: 3, storeys: 1, t: 0.35, color: wall, bay: 2.2, sill: 1.0, head: 2.3, frame: 0x4a3626, front: [(r() - 0.5) * w * 0.4] });
+  props.piece('stone', b, 0, 0.2, 0, w + 0.4, 0.6, d + 0.4, 0x8a867c);
+  props.gableRoof(b, { eave: 3, pitch: 0.55, t: 0.4, overhang: 1.0, color: r() < 0.8 ? 0x3e4446 : 0x4a4038 });
+  props.endBuilding();
+}
+
 export default {
   id: 'seoul',
   name: 'Seoul',
-  description: 'Northern Seoul, spring 1985: the KPA comes down the Uijeongbu road through Dobong and the Mia-ri pass into the capital — the old walled city and its gates, Gyeongbokgung, apartment blocks beside hanok lanes, Bukhansan’s granite on the west, the Jungnangcheon on the east and the Han behind Yongsan.',
+  description: 'Northern Seoul, spring 1985: the KPA comes down the Uijeongbu road through Dobong and the Mia-ri pass into the capital’s granite bowl — the old walled city and its gates, Gyeongbokgung, apartment blocks beside hanok lanes, Bukhansan over the north-west, Namsan over the south and the Han’s wide bend round the south-east.',
   epochs: ['1985'],
   region: 'korea',
   airfields: [], // (the city fills the ground between the mountains: the aircraft come in from the map edge — systems/Airfields.js)
@@ -221,8 +238,8 @@ export default {
           works.push({ kind: a % 2 ? 'mgNest' : 'trench', x, z, yaw: Math.atan2(Math.cos(ang), Math.sin(ang)), faction: f });
         }
       }
-      const c = river.crossings.find((q) => Math.sign(q.z) === m && Math.abs(q.z) > 300)!;
-      const x = c.x - 40, z = c.z - m * 30;
+      const c = river.crossings.find((q) => q.kind === 'bridge' && Math.sign(q.z) === m)!;
+      const x = c.x - 40, z = c.z + m * 26;
       if (roadDist(x, z) > 8) works.push({ kind: 'trench', x, z, yaw: m > 0 ? Math.PI : 0, faction: f });
     }
     return { blasts: [], ruins: [], works };
@@ -233,8 +250,8 @@ export default {
     river.build(scene, terrain);
     props.rand = mulberry32(1985_82);
     const r0 = props.rand;
-    const PALACE = { x: -65, z: -95, w: 56, d: 50 };
-    const PRISON = { x: -180, z: 75, w: 48, d: 34 };
+    const PALACE = { x: -40, z: -105, w: 56, d: 50 };
+    const PRISON = { x: -215, z: 70, w: 48, d: 34 };
     const inRect = (q: { x: number, z: number, w: number, d: number }, x: number, z: number, m: number) => Math.abs(x - q.x) < q.w / 2 + m && Math.abs(z - q.z) < q.d / 2 + m;
     const free = (x: number, z: number, r: number) => roadDist(x, z) > 7 + r && railDist(x, z) > 6 + r && riverD(x, z) > HW + 12 + r
       && !nearPoint(x, z, 16 + r) && mountK(x, z) < 0.05 && hillH(x, z) < 6 && Math.hypot(x, Math.abs(z) - BASE_Z) > 45
@@ -242,14 +259,14 @@ export default {
 
     // ---- the Gyeongbu line, Seoul station by the road south of the walls
     for (let i = 0; i < RAIL.length - 1; i++) props.rails({ x0: RAIL[i][0], z0: RAIL[i][1], x1: RAIL[i + 1][0], z1: RAIL[i + 1][1] });
-    props.townHouse({ x: 0, z: 285, yaw: Math.PI / 2 - 0.1, width: 26, depth: 11, storeys: 2, name: 'Seoul station', damaged: 0 });
-    props.wagon({ x: -28.5, z: 340, yaw: Math.PI / 2 - 0.03, kind: 'box', color: 0x3e5a4a });
+    props.townHouse({ x: -125, z: 336, yaw: Math.PI / 2 + 0.57, width: 26, depth: 11, storeys: 2, name: 'Seoul station', damaged: 0 });
+    props.wagon({ x: -116.7, z: 400, yaw: Math.PI / 2 + 0.32, kind: 'box', color: 0x3e5a4a });
     // ---- the old city: tiled hanok and two-storey shops in the lanes
     for (let gx = -150; gx <= 140; gx += 15) for (let gz = -150; gz <= 130; gz += 14) {
       const x = gx + (r0() - 0.5) * 4, z = gz + (r0() - 0.5) * 4;
       if (townK(x, z) < 0.5 || !free(x, z, 3) || r0() < 0.2) continue;
       const yaw = r0() < 0.5 ? 0 : Math.PI / 2;
-      if (r0() < 0.65) props.house({ x, z, yaw, width: 9 + r0() * 2, depth: 6 + r0() * 2, height: 2.8 });
+      if (r0() < 0.65) hanok(props, { x, z, yaw, w: 9 + r0() * 2, d: 6 + r0() * 2 });
       else props.flatHouse({ x, z, yaw, width: 8 + r0() * 3, depth: 8 + r0() * 2, storeys: 2 + Math.floor(r0() * 2), name: 'shop house' });
     }
     // ---- the city wall: the stretches the streets left standing, a gap at every road
@@ -271,7 +288,7 @@ export default {
     };
     gate('Heunginjimun', -0.1);
     gate('Sungnyemun', Math.PI / 2 - 0.05);
-    gate('Hyehwamun', -Math.PI / 2 + 0.05);
+    gate('Hyehwamun', -1.0);
     // ---- Gyeongbokgung: its wall, Gwanghwamun, the throne hall and pavilions; the domed Capitol before it
     for (const [dx, dz, len, yaw] of [[0, -PALACE.d / 2, PALACE.w, 0], [0, PALACE.d / 2, PALACE.w, 0], [-PALACE.w / 2, 0, PALACE.d, Math.PI / 2], [PALACE.w / 2, 0, PALACE.d, Math.PI / 2]] as const) {
       const n = Math.round(len / 8);
@@ -299,16 +316,19 @@ export default {
       }
     }
     for (const dx of [-12, 12]) props.hall({ x: PRISON.x + dx, z: PRISON.z + 2, yaw: Math.PI / 2, width: 22, depth: 8, height: 5, color: 0x7a3e30, roof: 0x44403c, door: 2, name: 'Seodaemun prison' });
-    for (const s of [-1, 1]) props.box('stone', -262 + s * 3.4, terrain.heightAt(-262, 62) + 3.5, 62, 2.4, 7, 3.4, -0.6, 0xb0aca2);
-    props.box('stone', -262, terrain.heightAt(-262, 62) + 7.6, 62, 9.4, 1.4, 3.8, -0.6, 0xb0aca2);
+    for (const s of [-1, 1]) props.box('stone', -238 + s * 3.4, terrain.heightAt(-238, 110) + 3.5, 110, 2.4, 7, 3.4, 0, 0xb0aca2);
+    props.box('stone', -238, terrain.heightAt(-238, 110) + 7.6, 110, 9.4, 1.4, 3.8, 0, 0xb0aca2);
     // ---- Namsan: N Seoul Tower on the summit; the temple on Bugaksan's knoll
-    const tx = -300, tz = 268, ty = terrain.heightAt(tx, tz);
+    const tx = 80, tz = 275, ty = terrain.heightAt(tx, tz);
     props.box('plain', tx, ty + 24, tz, 5, 48, 5, 0, 0xd8d6d0);
     props.box('plain', tx, ty + 50, tz, 14, 6, 14, 0.4, 0xc8c6c0);
     props.box('metal', tx, ty + 66, tz, 1, 26, 1, 0, 0xb84a3a);
-    props.hall({ x: -316, z: -318, yaw: -0.3, width: 12, depth: 8, height: 4, color: 0x8a3a2a, roof: 0x3e4a44, door: 3, name: 'temple hall' });
+    props.hall({ x: -122, z: -236, yaw: -0.3, width: 12, depth: 8, height: 4, color: 0x8a3a2a, roof: 0x3e4a44, door: 3, name: 'temple hall' });
     // ---- the villages on the eastern hills
-    for (const p of points) if ('DJ'.includes(p.id)) buildVillage(props, p, 9800 + Math.round(p.x * 3 + p.z), 1);
+    for (const p of points) if ('DJ'.includes(p.id)) {
+      props.rand = mulberry32(9800 + Math.round(p.x * 3 + p.z));
+      for (let i = 0; i < 10; i++) { const a = props.rand() * 6.28, d = 20 + props.rand() * 36, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d; if (roadDist(x, z) > 9 && riverD(x, z) > HW + 18 && Math.abs(x) < 490) hanok(props, { x, z, yaw: props.rand() < 0.5 ? 0 : Math.PI / 2, w: 9, d: 6.5 }); }
+    }
     // ---- outside the walls, each half its own dice: rows of apartment blocks facing south, hanok neighbourhoods between
     for (const m of [1, -1]) {
       props.rand = mulberry32(1985_83 + m);
@@ -321,17 +341,15 @@ export default {
       for (let i = 0; i < 260; i++) {
         const x = (r() * 2 - 1) * 470, z = (110 + r() * 410) * m;
         if (openC(x, z) < 0.5 || blob(x, z) > 0.1 || gardenK(x, z) > 0.3 || !free(x, z, 5)) continue;
-        if (r() < 0.75) props.house({ x, z, yaw: r() < 0.5 ? 0 : Math.PI / 2, width: 9 + r() * 2, depth: 6 + r(), height: 2.8 });
+        if (r() < 0.75) hanok(props, { x, z, yaw: r() < 0.5 ? 0 : Math.PI / 2, w: 9 + r() * 2, d: 6 + r() });
         else props.flatHouse({ x, z, yaw: r() < 0.5 ? 0 : Math.PI / 2, width: 8 + r() * 2, depth: 8, storeys: 2, name: 'shop house' });
       }
       for (const [hx, hz] of BIG_HILLS[m > 0 ? 'nato' : 'pact']) props.mast({ x: hx + 9 * m, z: hz - 7 * m, height: 10 });
     }
-    // ---- the Han's bridges beyond the south edge: deck on piers
-    for (const bx of [-120, 210]) {
-      for (let z = 605; z <= 765; z += 20) props.box('stone', bx, -1.5, z, 3, 7, 3, 0, 0x8a8880);
-      props.box('plain', bx, 2.4, 685, 16, 0.8, 175, 0, 0x7a7872);
-      for (const s of [-1, 1]) props.box('metal', bx + s * 7.6, 3.3, 685, 0.3, 1, 175, 0, 0x5a6a72);
-    }
+    // ---- the Hannam bridge over the Han beyond the south edge: deck on piers
+    for (let x = 180; x <= 345; x += 20) props.box('stone', x, -1.5, 610, 3, 7, 3, 0, 0x8a8880);
+    props.box('plain', 262, 2.4, 610, 175, 0.8, 16, 0, 0x7a7872);
+    for (const s of [-1, 1]) props.box('metal', 262, 3.3, 610 + s * 7.6, 175, 1, 0.3, 0, 0x5a6a72);
     props.rand = mulberry32(1985_84);
     for (const c of river.crossings) props.sandbagRing({ x: c.x - 34, z: c.z + (c.z > 0 ? -22 : c.z < -200 ? 22 : 24), radius: 4.5, toward: c.z > 0 ? -1 : 1 });
     props.rand = mulberry32(404);
@@ -343,7 +361,7 @@ export default {
       { test: (x: number, z: number) => roadDist(x, z) < 6 || railDist(x, z) < 5 || openC(x, z) > 0.2 || townK(x, z) > 0.3 || riverD(x, z) < HW + 24
         || inRect(PALACE, x, z, 6) || inRect(PRISON, x, z, 6) || z > BOUNDS.z + 20 },
     ];
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 12000, broadleaf: 0.55, autumn: 0.03, maxY: LAND + 140,
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x + 80, count: 6000, broadleaf: 0.55, autumn: 0.03, maxY: LAND + 140,
       forest: (x: number, z: number) => woodsK(x, z) * 0.95 });
     cover.finalize(bounds);
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid: avoid.slice(0, -1), density: 2 });
