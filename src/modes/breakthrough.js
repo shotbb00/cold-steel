@@ -108,7 +108,6 @@ export default {
       ? { attack: false, expand: false }
       : { expand: false, firstAssault: SETUP + 20, targetable: (p) => ls[state.line]?.includes(p.id) });
     if (!game.net || game.coop) game.systems.push(make(enemyOf(game.playerFaction)));
-    if (camp?.delegate) game.systems.push(game.delegated = make(game.playerFaction)); // (the world campaign, delegated: the AI has your side too)
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     if (camp) game.tell(game.playerFaction, `Campaign: ${camp.sector}`);

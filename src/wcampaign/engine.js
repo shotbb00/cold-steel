@@ -5,7 +5,7 @@
 //   newCampaign(war, opts)        a fresh state from one of the war's scenarios
 //   order(c, side, forceId, to)   move an army, fleet or air wing (validated; `land: true` = an army's landing from a fleet)
 //   resolveTurn(c)                both sides' orders at once → this turn's battles (c.board)
-//   settle(c, battleId, outcome)  a battle's result back onto the map (a fought or delegated battle's outcome, or autoResolve's)
+//   settle(c, battleId, outcome)  a battle's result back onto the map (a fought battle's outcome, or autoResolve's)
 //   autoResolve(c, battleId)      the instant result from strength, ground, supply, air, commanders and luck
 //   endTurn(c)                    after the board: supply, attrition, pockets, production, morale, the calendar
 //

@@ -1,9 +1,9 @@
-// The world campaign's battles fought on their maps (ui/WarRoom.js: Fight, Delegate). The bridge between the campaign
+// The world campaign's battles fought on their maps (ui/WarRoom.js: Fight). The bridge between the campaign
 // (engine.js: pure data) and a battle (GameEngine with `campaign: { wc: true, … }`):
 //   fightable(c, war, b)        '' or why this battle can only be resolved
 //   battleChoice(c, war, b, o)  what MainMenu.deploy() starts: the map, the mode, the armies, the time; on land the
 //                               campaign's own army groups as stacks, at sea and on a beach both sides' command points
-//                               scaled by their campaign power. o.delegate: the AI commands both sides (fast-forward).
+//                               scaled by their campaign power.
 //   watchBattle(game)           (GameEngine) counts what each side fields and loses; at the end stores the result
 //   takeResult() / outcomeOf()  the menu's Campaign tab reads it back and settles the battle (engine.js settle)
 // The result rides in localStorage across the page load that a return to the menu is (core/replay.js toMenu).
@@ -100,7 +100,7 @@ function stacksOf(f) {
   }).filter(Boolean);
 }
 
-export function battleChoice(c, war, b, { delegate = false } = {}) {
+export function battleChoice(c, war, b) {
   const s = sides(c, b), map = MAPS[b.map];
   const pw = (fs) => fs.reduce((a, f) => a + power(c, f), 0), P = { nato: pw(s.nato), pact: pw(s.pact) }, mean = (P.nato + P.pact) / 2 || 1;
   const scale = Object.fromEntries(['nato', 'pact'].map((f) => [f, Math.max(0.4, Math.min(1.8, P[f] / mean))]));
@@ -116,7 +116,7 @@ export function battleChoice(c, war, b, { delegate = false } = {}) {
     mode: b.kind === 'sea' ? (map.modes?.[0] ?? 'frontline') : b.kind === 'coastal' ? 'landing' : 'breakthrough',
     map: b.map, side: c.side, time: hourOf(c) === 'night' ? 'night' : hourOf(c), weather: ['clear', 'clear', 'overcast', 'overcast', 'rain'][(c.turn * 7 + b.id.length) % 5],
     armies,
-    campaign: { wc: true, war: war.id, battle: b.id, delegate, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
+    campaign: { wc: true, war: war.id, battle: b.id, attacker: b.attackerSide, sector: name, forces, scale: land ? null : scale,
       flip: b.kind === 'coastal' && landerOf(map) !== b.attackerSide, // (a landing by the other side: main.js turns the map round, flipLanding)
       snow: winterNow(c, war) && b.theatre === war.winter?.theatre && b.kind !== 'sea', // (winter where it bites: the map under snow)
       // air support: a call for every 6 aircraft over it this turn (close support and the fighters' cover; none: none)
@@ -140,24 +140,8 @@ export function watchBattle(game) {
     const winner = r.victory ? game.playerFaction : enemy(game.playerFaction);
     const survivors = {};
     for (const s of game.world.stacks) if (s.cid && s.alive) survivors[s.cid] = { hp: s.aliveCount / (s.type.formation?.count ?? s.units.length ?? 1), rank: s.rank ?? 0 };
-    try { localStorage.setItem(KEY, JSON.stringify({ war: camp.war, battle: camp.battle, how: camp.delegate && !camp.tookCommand ? 'delegated' : 'fought', winner, loss: { nato: loss('nato'), pact: loss('pact') }, survivors, airLost, cids: camp.forces ? Object.values(camp.forces).flat().map((u) => u.cid) : [] })); } catch { /* storage blocked: the battle is resolved instead */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ war: camp.war, battle: camp.battle, how: 'fought', winner, loss: { nato: loss('nato'), pact: loss('pact') }, survivors, airLost, cids: camp.forces ? Object.values(camp.forces).flat().map((u) => u.cid) : [] })); } catch { /* storage blocked: the battle is resolved instead */ }
   });
-}
-
-/** The delegated battle's bar: the AI has both sides; speed 1–8×; take command (the AI lets go of your side). */
-export function delegateBar(game, onTake) {
-  const bar = document.createElement('div');
-  bar.className = 'wc-delegate';
-  bar.innerHTML = '<span>Delegated: the AI commands both sides</span>' + [1, 2, 4, 8].map((n) => `<button type="button" data-speed="${n}" class="${n === 4 ? 'on' : ''}">${n}×</button>`).join('') + '<button type="button" data-take>Take command</button>';
-  game.speed = 4;
-  bar.addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    if (b.dataset.speed) { game.speed = +b.dataset.speed; for (const x of bar.querySelectorAll('[data-speed]')) x.classList.toggle('on', x === b); }
-    if ('take' in b.dataset) { game.speed = 1; game.campaign.tookCommand = true; onTake(); bar.remove(); }
-  });
-  document.body.append(bar);
-  game.bus.on('game:end', () => { game.speed = 1; bar.remove(); });
 }
 
 // ---------------------------------------------------------------- back in the war room

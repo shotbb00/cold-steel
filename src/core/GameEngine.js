@@ -15,7 +15,7 @@ import { Caves } from '../systems/Caves.js';
 import { setClimate } from '../render/paint.js';
 import { setWind } from '../world/Wind.js';
 import { Deployment } from '../systems/Deployment.js';
-import { watchBattle, delegateBar } from '../wcampaign/battle.js';
+import { watchBattle } from '../wcampaign/battle.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
@@ -303,7 +303,7 @@ export class GameEngine {
     if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
-    this.deploys = ((!!campaign && !(campaign.wc && (campaign.delegate || !campaign.forces))) || !!mode.deploys) && mode.id !== 'bootcamp'; // (the world campaign: only a fought land battle opens in it) // (a pitched battle opens in it too: modes/pitched.js)
+    this.deploys = ((!!campaign && !(campaign.wc && !campaign.forces)) || !!mode.deploys) && mode.id !== 'bootcamp'; // (the world campaign: only a fought land battle opens in it) // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     for (const [f, n] of Object.entries(map.airLimit ?? {})) this.air.limit[f] = n; // (a map's own: no Japanese aircraft over Iwo Jima)
@@ -745,7 +745,7 @@ export class GameEngine {
       if (this.net?.isClient) this.stepClient(dt);
       else if (this.waiting) this.stepWaiting(dt);
       else if (this.deployment?.on && !this.paused) this.deployment.step(dt);
-      else if (!this.paused) for (let i = 0; i < (this.speed ?? 1) && !this.ended; i++) this.step(dt); // (a delegated battle: fast-forward)
+      else if (!this.paused) this.step(dt);
       this.render(this.paused ? 0 : dt);
     } catch (e) {
       this.reportError(e);
@@ -774,7 +774,7 @@ export class GameEngine {
 
   /**
    * A world-campaign battle (wcampaign/battle.js): at sea and on a beach each side's command points (and a frontline's
-   * strength) by its campaign power; delegated, the AI on both sides at 4× with a bar to change speed or take command;
+   * strength) by its campaign power;
    * and what the battle cost each side stored for the war room.
    */
   worldCampaign(camp) {
@@ -786,7 +786,6 @@ export class GameEngine {
     }
     if (st?.strength && camp.scale) st.maxStrength = Math.max(st.strength.nato ?? 0, st.strength.pact ?? 0, st.maxStrength ?? 0);
     watchBattle(this);
-    if (camp.delegate) delegateBar(this, () => { this.systems = this.systems.filter((s) => s !== this.delegated); });
     for (const [f, n] of Object.entries(camp.air ?? {})) this.air.limit[f] = n; // (the campaign's aircraft over the battle: so many calls, none without)
   }
 
