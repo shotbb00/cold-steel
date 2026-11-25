@@ -112,6 +112,27 @@ export function lines(map, attacker, gap = 30) {
 }
 
 /**
+ * The nearest spot to `pos` with room for a stack of this type (world/Nav.js: clear of buildings, walls, wrecks and deep
+ * water): a deployment never starts a company inside a house. Rings outward every 6 m, as far as 90 m; else `pos`.
+ */
+function clearSpot(game, pos, type) {
+  const nav = game.world.nav;
+  if (!nav || type?.stats?.naval) return pos;
+  const foot = (type?.kind ?? 'infantry') === 'infantry', need = foot ? 3 : 9;
+  if (nav.clearance(pos.x, pos.z, foot) >= need) return pos;
+  const b = game.map.bounds ?? { x: 1e4, z: 1e4 };
+  for (let r = 6; r <= 90; r += 6) {
+    const n = Math.ceil((2 * Math.PI * r) / 6);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, x = pos.x + Math.cos(a) * r, z = pos.z + Math.sin(a) * r;
+      if (Math.abs(x) > b.x - 10 || Math.abs(z) > b.z - 10) continue;
+      if (nav.clearance(x, z, foot) >= need) return game.world.river ? game.world.river.dry({ x, z }) : { x, z };
+    }
+  }
+  return pos;
+}
+
+/**
  * Spawn `units` for `faction`, spread round robin over `anchors` ({x, z}), `back` m toward home.
  * A unit is a type id, or a saved stack { type, name, men, xp, cid } (the campaign's battalion).
  */
@@ -131,7 +152,7 @@ export function deploy(game, faction, units, anchors, { back = 25, spread = 28, 
     const facing = Math.atan2(-dx, -dz);
     counter[id] = (counter[id] ?? 0) + 1;
     const name = saved?.name ?? (names[id] ? `${names[id]} ${counter[id]}` : undefined);
-    const pos = game.world.river ? game.world.river.dry({ x, z }) : { x, z };
+    const pos = clearSpot(game, game.world.river ? game.world.river.dry({ x, z }) : { x, z }, UNIT_TYPES[id]);
     const s = game.spawnStack(id, faction, pos, facing, name, saved?.men ? { count: saved.men } : {});
     if (!s) return null; // (a type this army has nothing for: GameEngine.spawnStack)
     if (saved?.xp) s.setXp(saved.xp);
