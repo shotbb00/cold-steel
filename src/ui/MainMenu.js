@@ -797,13 +797,20 @@ export class MainMenu {
     setClimate(climates.size === 1 ? [...climates][0] : undefined);
     const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction && (o.navy ?? navyName()[o.faction]) === (a.navy ?? navyName()[a.faction])) === i) // (at sea: each navy once — 2027's US and Polish navies; Japan and the Marines in Asia & Pacific only)
       .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
-    const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
+    // at most three a row (1918's Western Front: five Allied armies in the narrow column hid the Italians and the AEF), each side's own rows, the Allies' above
+    const count = (f) => armies.filter((a) => a.faction === f).length;
+    const most = Math.max(1, count('nato'), count('pact'));
+    const perRow = most > 3 ? 2 : most; // (more than three a side: two a row, the names fit)
+    const natoRows = Math.ceil(count('nato') / perRow) || 1;
     sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
+    const slot = { nato: 0, pact: 0 };
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
       const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? a.navy ?? navyName()[a.faction] ?? a.name : a.name); // (an army's own navy: the k.u.k. Kriegsmarine)
       b.type = 'button';
-      b.style.gridRow = a.faction === 'nato' ? '1' : '2'; // (the Allies' armies on the top row, their enemies' on the bottom)
+      const k = slot[a.faction]++;
+      b.style.gridRow = String((a.faction === 'nato' ? 0 : natoRows) + Math.floor(k / perRow) + 1); // (the Allies' armies in the top rows, their enemies' below)
+      b.style.gridColumn = String((k % perRow) + 1);
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;
