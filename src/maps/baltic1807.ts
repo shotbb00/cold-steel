@@ -1,16 +1,18 @@
-// The Baltic, 1807–08 (the 1806 sea battles, the campaign's `baltic` zone): off Danzig and the Hela peninsula. In the
-// spring of 1807 the French besiege Danzig and the Royal Navy's sloops (Dauntless) try to run powder up the Vistula to
-// the garrison; after Copenhagen (September 1807) Denmark goes over to France and the Gunboat War begins: the Danish
-// kanonbåde — open boats with a long 24-pounder and sweeps — row out in the summer calms against the British
-// frigates and brig-sloops escorting the Baltic convoys, and lay their guns on a helpless stern. Here they meet
-// in the Gulf of Danzig. The low Baltic coast along the south edge — sand, dunes and pinewoods, Danzig's spires
-// and the fort of Weichselmünde at the Vistula's mouth in the south-east — and the Hela peninsula, a long low
-// sand spit with its pines, its fishing village and its light at the tip, running out east from the south-west
-// corner with the bay behind it. Laid out at full size (`widened`). Fair: the homes mirrored west and east, the
-// three open zones on the line between them, equally far by sail from both (seapath); the one off Hela is out in
-// front of the tip, not behind the spit in the bay. The wind light from the north, across the fleets' line, and
-// falling to a calm now and then (`lulls`): then the sails hang and the oared gunboats row. The Danes (`dk`: the
-// French hulls' stats under the Danish flag, data/units1806/ships.js) sail their gunboats, brigs and a frigate.
+// The Baltic, 1807–08 (the 1806 sea battles, the campaign's `baltic` zone): the Gulf of Danzig. In the spring of 1807
+// the French besiege Danzig and the Royal Navy's sloops (Dauntless) try to run powder up the Vistula to the garrison;
+// after Copenhagen (September 1807) Denmark goes over to France and the Gunboat War begins: the Danish kanonbåde — open
+// boats with a long 24-pounder and sweeps — row out in the summer calms against the British frigates and brig-sloops
+// escorting the Baltic convoys, and lay their guns on a helpless stern. Laid out from the real gulf (north at z < 0):
+// the Hela peninsula, a low sand spit with its pines, its fishing village and its light at the tip, running south-east
+// from the mainland at Großendorf, with the Putziger Wiek closed behind it; the clay cliffs of Rixhöft and Oxhöft on the
+// west; the bay's south shore with Zoppot and Danzig's spires; the Vistula's mouth and the star fort of Weichselmünde;
+// and the Frische Nehrung, the long Vistula spit, running away north-east toward Pillau with the Haff behind it. The
+// open Baltic to the north. The gunboats lie in Danzig roads under the French guns; the convoy and its escort come in
+// from the open sea in the north-east. Laid out at full size (`widened`). Fair by the sailing routes (seapath): every zone —
+// the convoy route off Rixhöft, the water off Hela's tip, the Pillau road along the Nehrung — as near the gunboats as
+// the escort. The wind light from the north, dying to a calm now and then (`lulls`): then the sails hang and the
+// oared gunboats row. The Danes (`dk`: the French hulls' stats under the Danish flag, data/units1806/ships.js) sail
+// their gunboats, brigs and a frigate.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -43,34 +45,56 @@ Object.assign(sea, {
   },
 });
 
-/** The mainland coast's line (z) at x: low, with the bay of Danzig curving south in the east. */
-const coastZ = (x: number) => 2450 + fbm(noise, x * 0.0011, 4.1, 3) * 110 + Math.max(0, x - 600) * 0.12;
-/** The Hela spit: from the mainland in the south-west out east to its tip. */
-const HEL0 = { x: -3600, z: 2550 }, HEL1 = { x: 350, z: 1500 };
+/** Hela: the sand spit from the mainland at Großendorf (north-west) out south-east to its tip off Danzig. */
+const HEL0 = { x: -2650, z: -280 }, HEL1 = { x: -150, z: 950 };
 const helaDist = (x: number, z: number) => {
   const dx = HEL1.x - HEL0.x, dz = HEL1.z - HEL0.z;
   const t = Math.max(0, Math.min(1, ((x - HEL0.x) * dx + (z - HEL0.z) * dz) / (dx * dx + dz * dz)));
   return { d: Math.hypot(x - HEL0.x - dx * t, z - HEL0.z - dz * t), t };
 };
-const DANZIG = { x: 2300, z: coastZ(2300) };
+/** The Frische Nehrung: the Vistula spit from the river's mouth north-east toward Pillau, the Haff behind it. */
+const NEH0 = { x: 750, z: 2620 }, NEH1 = { x: 3400, z: 1250 };
+const nehDist = (x: number, z: number) => {
+  const dx = NEH1.x - NEH0.x, dz = NEH1.z - NEH0.z;
+  const t = Math.max(0, Math.min(1, ((x - NEH0.x) * dx + (z - NEH0.z) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - NEH0.x - dx * t, z - NEH0.z - dz * t);
+};
+/** The bay's south shore (z) at x: Zoppot, Danzig in the bight, the Vistula's mouth at Weichselmünde. */
+const coastZ = (x: number) => 2480 + fbm(noise, x * 0.0011, 4.1, 3) * 110 + Math.max(0, 1 - Math.abs(x + 100) / 1400) * 160 + Math.min(0, x + 100) * 0.16;
+const DANZIG = { x: -100, z: coastZ(-100) };
+const MOUTH = { x: 650, z: coastZ(650) };
 
 function height(x: number, z: number) {
   let h = -32 + fbm(noise, x * 0.0005, z * 0.0005, 4) * 6;
-  // the mainland: low dunes and the moraine behind them, the clay cliff at Oxhöft a little higher
-  h = Math.max(h, shore(z - coastZ(x), 30 + fbm(noise, x * 0.002, z * 0.002, 3) * 20, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 70));
+  const wob = fbm(noise, x * 0.002, z * 0.002, 3);
+  const n = fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5;
+  // Pomerania and the west shore of the Putziger Wiek: the clay cliffs at Rixhöft and Oxhöft, the moraine behind
+  const oxh = Math.max(0, 380 - Math.abs(z - 1250) * 0.7);                                  // the Oxhöft headland
+  h = Math.max(h, shore(Math.min(-2520 + Math.max(0, z + 330) * 0.22 + oxh - x, z + 330) + wob * 140, 70, n, 12));
+  // the bay's south shore, low dunes in front of the town
+  if (x < 900) h = Math.max(h, shore(z - coastZ(x) + wob * 90, 30, n, 60));
+  // the Vistula's mouth: a channel through the dunes
+  if (Math.abs(x - MOUTH.x) < 90 && z < MOUTH.z + 400) h = Math.min(h, -2 - (90 - Math.abs(x - MOUTH.x)) * 0.05);
+  // the Frische Nehrung, and the Frisches Haff behind it, too shallow for anything but a fishing boat; the Elbing upland beyond
+  const ne = nehDist(x, z);
+  if (x > 500) {
+    const behind = (x - NEH0.x) * (NEH1.z - NEH0.z) - (z - NEH0.z) * (NEH1.x - NEH0.x) < 0;
+    if (behind) h = Math.max(h, -2.5 + wob * 0.6, shore(z - 3000 - (x - 900) * 0.05 + wob * 80, 40, n, 30));
+    h = Math.max(h, shore(160 + wob * 25 - ne, 12, 0.5, 50));
+  }
   // Hela: a sand spit 250 m wide (wider at the tip), its dunes ten metres at most
   const { d, t } = helaDist(x, z);
-  const w = 110 + t * 60 + fbm(noise, x * 0.004, z * 0.004, 2) * 25;
-  h = Math.max(h, shore(w - d, 8, 0.5, 50));
+  const w = 110 + t * 70 + wob * 25;
+  if (d < w + 300) h = Math.max(h, shore(w - d, 8, 0.5, 50));
   return h;
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'The kanonbåde', x: -1650, z: -300, owner: 'nato', sector: 'west', radius: 170 },
-  { id: 'B', name: 'The open Baltic', x: 0, z: -1450, owner: null, sector: 'centre', radius: 200 },
-  { id: 'C', name: 'The convoy route', x: 0, z: -350, owner: null, sector: 'centre', radius: 200 },
-  { id: 'D', name: 'Off Hela', x: 0, z: 750, owner: null, sector: 'centre', radius: 190 },
-  { id: 'K', name: 'The convoy escort', x: 1650, z: -300, owner: 'pact', sector: 'east', radius: 170 },
+  { id: 'A', name: 'The kanonbåde', x: 600, z: 1900, owner: 'nato', sector: 'centre', radius: 170 },
+  { id: 'B', name: 'Off Hela', x: -120, z: -226, owner: null, sector: 'centre', radius: 190 },
+  { id: 'C', name: 'The convoy route', x: -1785, z: -251, owner: null, sector: 'west', radius: 200 },
+  { id: 'D', name: 'The Pillau road', x: 2330, z: 132, owner: null, sector: 'east', radius: 190 },
+  { id: 'K', name: 'The convoy escort', x: 1700, z: -1900, owner: 'pact', sector: 'east', radius: 170 },
 ];
 
 // a division in line abreast across its line of advance, 150 m apart
@@ -124,47 +148,45 @@ export default {
     },
   },
 
-  bases: { nato: { x: -1950, z: -300, entries: [-600, 0, 600] }, pact: { x: 1950, z: -300, entries: [-600, 0, 600] } },
+  bases: { nato: { x: 600, z: 2150, entries: [-450, 0, 300] }, pact: { x: 1900, z: -2150, entries: [-600, 0, 600] } },
   maxStacks: 10,
-  cameraStart: { nato: { x: -1300, z: -300 }, pact: { x: 1300, z: -300 } },
+  cameraStart: { nato: { x: 500, z: 1700 }, pact: { x: 1550, z: -1700 } },
   points,
 
   spawns: {
-    nato: line(['ptBoat', 'ptBoat', 'destroyer', 'ptBoat', 'ptBoat', 'frigate'], -1500, -330, Math.PI / 2),
-    pact: [...line(['destroyer', 'frigate', 'destroyer', 'frigate'], 1500, -330, -Math.PI / 2), ...line(['merchant', 'merchant'], 1750, -330, -Math.PI / 2)], // (the convoy: data/units1806/smallCraft.js merchant)
+    nato: line(['ptBoat', 'ptBoat', 'destroyer', 'ptBoat', 'ptBoat', 'frigate'], 550, 1900, Math.PI),
+    pact: [...line(['destroyer', 'frigate', 'destroyer', 'frigate'], 1650, -1800, -Math.PI / 4), ...line(['merchant', 'merchant'], 1850, -2050, -Math.PI / 4)], // (the convoy: data/units1806/smallCraft.js merchant)
   },
 
   decorate({ scene, terrain, cover, rand }) {
     const props = new PropBuilder({ scene, terrain, cover });
     sea.build(scene, terrain);
+    const at = (cx: number, cz: number, sx: number, sz: number, n: number, lo: number, hi: number, put: (x: number, z: number) => void) => {
+      for (let i = 0, k = 0; i < n * 25 && k < n; i++) { const x = cx + (rand() - 0.5) * sx, z = cz + (rand() - 0.5) * sz, y = height(x, z); if (y > lo && y < hi) { k++; put(x, z); } }
+    };
     // Hela: the fishing village and its church near the tip, the light on the point
-    const tip = { x: HEL1.x - 90, z: HEL1.z + 30 };
-    props.tower({ x: tip.x + 40, z: tip.z - 10 });
-    props.church({ x: tip.x - 260, z: tip.z + 80, yaw: 0.3 });
-    for (let i = 0; i < 18; i++) {
-      const k = 0.08 + rand() * 0.12, x = HEL1.x - (HEL1.x - HEL0.x) * k + (rand() - 0.5) * 40, z = HEL1.z - (HEL1.z - HEL0.z) * k + (rand() - 0.5) * 90;
-      if (height(x, z) > 2) props.house({ x, z, yaw: 0.3 + (rand() - 0.5) * 0.4, width: 6 + rand() * 3, depth: 5 + rand() * 2 });
-    }
-    // Danzig: the Hanseatic town behind the Vistula's mouth, St Mary's tower over it; Weichselmünde's star fort on the mouth
-    for (let i = 0; i < 70; i++) {
-      const x = DANZIG.x - 380 + rand() * 760, z = coastZ(x) + 260 + rand() * 420;
-      if (height(x, z) > 3) props.townHouse({ x, z, yaw: (rand() - 0.5) * 0.3, width: 8 + rand() * 4, depth: 9, storeys: 3 + Math.floor(rand() * 2), damaged: 0 });
-    }
-    props.church({ x: DANZIG.x, z: coastZ(DANZIG.x) + 480, yaw: 0 });
-    props.church({ x: DANZIG.x - 250, z: coastZ(DANZIG.x - 250) + 600, yaw: 0 });
-    const wm = { x: DANZIG.x - 650, z: coastZ(DANZIG.x - 650) + 70 };
+    const dx = HEL1.x - HEL0.x, dz = HEL1.z - HEL0.z;
+    props.tower({ x: HEL1.x - dx * 0.02, z: HEL1.z - dz * 0.02 });
+    at(HEL1.x - dx * 0.12, HEL1.z - dz * 0.12, 260, 200, 1, 2, 12, (x, z) => props.church({ x, z, yaw: 0.45 }));
+    at(HEL1.x - dx * 0.15, HEL1.z - dz * 0.15, 420, 300, 18, 2, 12, (x, z) => props.house({ x, z, yaw: 0.45 + (rand() - 0.5) * 0.4, width: 6 + rand() * 3, depth: 5 + rand() * 2 }));
+    // Danzig: the Hanseatic town behind the shore, St Mary's tower over it
+    at(DANZIG.x, DANZIG.z + 450, 760, 420, 70, 3, 60, (x, z) => props.townHouse({ x, z, yaw: (rand() - 0.5) * 0.3, width: 8 + rand() * 4, depth: 9, storeys: 3 + Math.floor(rand() * 2), damaged: 0 }));
+    props.church({ x: DANZIG.x, z: DANZIG.z + 480, yaw: 0 });
+    props.church({ x: DANZIG.x - 250, z: DANZIG.z + 600, yaw: 0 });
+    // Weichselmünde's star fort on the Vistula's east bank, at the mouth
+    const wm = { x: MOUTH.x + 230, z: MOUTH.z + 60 };
     for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; props.lowWall({ x: wm.x + Math.cos(a) * 45, z: wm.z + Math.sin(a) * 45, yaw: a + Math.PI / 2, length: 36, height: 3.5, color: 0x8a6a52 }); }
     props.tower({ x: wm.x, z: wm.z });
-    // fishing hamlets along the shore (Oxhöft, Zoppot)
-    for (let i = 0; i < 26; i++) {
-      const x = -1400 + rand() * 2600, z = coastZ(x) + 90 + rand() * 160;
-      if (height(x, z) > 3 && height(x, z) < 40) props.house({ x, z, yaw: (rand() - 0.5) * 0.6, width: 6 + rand() * 3, depth: 5 + rand() * 2 });
-    }
-    props.church({ x: 600, z: coastZ(600) + 220, yaw: 0 });
+    // Zoppot on the south shore; Gdingen and Oxhöft under the west cliffs; Rixhöft's light on its cliff; fishermen on the Nehrung
+    at(-1300, coastZ(-1300) + 160, 600, 200, 18, 3, 40, (x, z) => props.house({ x, z, yaw: (rand() - 0.5) * 0.6, width: 6 + rand() * 3, depth: 5 + rand() * 2 }));
+    props.church({ x: -1300, z: coastZ(-1300) + 260, yaw: 0 });
+    at(-2700, 1200, 200, 1600, 22, 3, 50, (x, z) => props.house({ x, z, yaw: Math.PI / 2 + (rand() - 0.5) * 0.6, width: 6 + rand() * 3, depth: 5 + rand() * 2 }));
+    at(-2700, -500, 300, 200, 1, 20, 90, (x, z) => props.tower({ x, z }));
+    at(2000, 1950, 500, 400, 10, 2, 12, (x, z) => props.house({ x, z, yaw: -0.48 + (rand() - 0.5) * 0.4, width: 6 + rand() * 2, depth: 5 }));
     props.finish();
     // the pinewoods on Hela and along the dunes
     const trees = plantTrees({ scene, terrain, cover, rand, area: { x: HALF, z: HALF }, lane: 0, count: 900, broadleaf: 0.15, autumn: 0, maxY: 80, size: 1,
-      avoid: [{ test: (x: number, z: number) => terrain.heightAt(x, z) < 3 || Math.hypot(x - DANZIG.x, z - DANZIG.z - 450) < 520 || Math.hypot(x - HEL1.x + 200, z - HEL1.z) < 260 }] });
+      avoid: [{ test: (x: number, z: number) => terrain.heightAt(x, z) < 3 || Math.hypot(x - DANZIG.x, z - DANZIG.z - 450) < 520 || Math.hypot(x - HEL1.x + 300, z - HEL1.z + 150) < 300 }] });
     cover.finalize({ x: HALF, z: HALF });
     return { buildings: props.buildings, update(dt: number, t: number) { trees.update?.(dt, t); } };
   },

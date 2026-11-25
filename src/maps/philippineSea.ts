@@ -1,10 +1,14 @@
-// The Philippine Sea, June 1944 (fought here as 1945): open ocean, the fleets out of sight of each other
-// beyond the horizon, a few coral atolls the only things that aren't water. A carrier battle: the scout
-// that finds the enemy first, and the strike that gets through his fighters. Each side opens with an
-// escort carrier and its screen. Ships only (data/units45/ships.js). Fair, not mirrored: on the west flank
-// one big volcanic island (Guam's kind) on the American half, on the east a smaller cone and a low limestone
-// island (Rota's kind) on the Japanese — as much land to hide behind either side; two atolls by each flank
-// point, one in each half; the three zones each as near one fleet as the other.
+// The Philippine Sea, 19–20 June 1944 (fought here as 1945): Ozawa's Mobile Fleet comes in from the west to break up
+// the landings on Saipan; Spruance holds Task Force 58 close west of the Marianas to cover them. The Japanese
+// carriers launched first, from beyond the American range, meaning to land on Guam, rearm and strike again — the
+// strikes were met by the Hellcats over the sea between the fleets and over Orote Field ("the Great Marianas Turkey
+// Shoot"), and Mitscher's late strike found the Mobile Fleet the next evening. Laid out from the real waters (north at
+// z < 0): the Marianas chain down the east side — Saipan and Tinian in the north-east with Aguijan off Tinian, Rota,
+// and Guam, the biggest, in the south with the Orote peninsula reaching west from it; the open Philippine Sea, deep and
+// empty, west of them. Task Force 58 lies west of Tinian, the Mobile Fleet far out to the west. Between them, by the
+// sailing routes as near one as the other (seapath): the northern search sector, the sea where the air battle was
+// fought, Ozawa's van, and the water off Orote where the strikes tried to land. A carrier battle: the scout that finds
+// the enemy first, and the strike that gets through his fighters. Ships only (data/units45/ships.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, island, jungle, jungleTint } from '../world/Sea.js';
@@ -15,37 +19,41 @@ const HALF = 2500;
 const noise = createNoise2D(1944_06);
 const sea = createSea({ level: 0, size: SIZE, color: 0x15476a });
 
-// the atolls: [x, z, radius] — a reef ring awash round a shallow lagoon, a few palms on its islets
-const ATOLLS = [[-1500, -600, 250], [-2100, 700, 130], [1250, 850, 190], [2050, -550, 150], [400, -1650, 130], [-300, 1500, 170]];
-// the high islands either side of the open sea, cliffs and jungle up to a cone: [x, z, radius, height]
-const VOLCANOES = [[-800, 550, 340, 180], [650, -400, 260, 150], [1150, -850, 180, 70]];
+// the Marianas: [x, z, radius across, radius along, turn, height] — Saipan, Tinian, Aguijan, Rota, Guam
+const ISLES = [[4250, -3500, 520, 950, 0.25, 300], [3950, -2250, 430, 620, 0.2, 110], [3620, -1650, 130, 170, 0, 90], [3350, 700, 440, 700, 1.1, 260], [2300, 3700, 750, 1450, 0.55, 280]];
+const OROTE = { x0: 1950, z0: 3450, x1: 1150, z1: 3200, w: 140 };   // the Orote peninsula, Orote Field on it
 
 function height(x: number, z: number) {
-  let h = -46 + fbm(noise, x * 0.0006, z * 0.0006, 4) * 8;
-  for (const [ax, az, r] of ATOLLS) {
-    const d = Math.hypot(x - ax, z - az);
-    const ring = Math.exp(-(((d - r) / 40) ** 2));                                  // the reef, awash
-    const islet = ring > 0.85 && fbm(noise, x * 0.02, z * 0.02, 2) > 0.6 ? 1.6 : 0;  // here and there an islet on it
-    const lagoon = d < r ? -2.6 : -Infinity;                                        // the shallow lagoon inside
-    const slope = d >= r ? -1.2 - (d - r) * 0.17 : -Infinity;                       // the outer slope down to the deep
-    h = Math.max(h, lagoon, slope, ring > 0.03 ? 0.5 * ring - 0.1 + islet : -Infinity); // (the reef only near the ring)
+  let h = -60 + fbm(noise, x * 0.0006, z * 0.0006, 4) * 10;
+  if (x < 800) return h;
+  const nn = fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5;
+  for (const [cx, cz, ra, rb, turn, top] of ISLES) {
+    const c = Math.cos(turn), s = Math.sin(turn), u = (x - cx) * c - (z - cz) * s, v = (x - cx) * s + (z - cz) * c;
+    const r = Math.hypot(u / ra, v / rb);
+    if (r > 1.7) continue;
+    const d = (1 - r) * Math.min(ra, rb) + fbm(noise, x * 0.005, z * 0.005, 2) * 60;
+    h = Math.max(h, island(d, Math.min(ra, rb), top, nn, 12));
+    if (d > -200 && d < -40) h = Math.max(h, -2.2 + fbm(noise, x * 0.03, z * 0.03, 2) * 1.4);   // the fringing reef
   }
-  for (const [vx, vz, r, top] of VOLCANOES) h = Math.max(h, island(r - Math.hypot(x - vx, z - vz) + fbm(noise, x * 0.005, z * 0.005, 2) * 60, r, top, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5));
+  const dx = OROTE.x1 - OROTE.x0, dz = OROTE.z1 - OROTE.z0, t = Math.max(0, Math.min(1, ((x - OROTE.x0) * dx + (z - OROTE.z0) * dz) / (dx * dx + dz * dz)));
+  const od = Math.hypot(x - OROTE.x0 - dx * t, z - OROTE.z0 - dz * t);
+  if (od < 400) h = Math.max(h, island(OROTE.w - od, OROTE.w, 50, 0.85, 6));
   return h;
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Task Force 58', x: 0, z: 2150, owner: 'nato', sector: 'centre', radius: 140 },
-  { id: 'B', name: 'West atolls', x: -1750, z: 30, owner: null, sector: 'west', radius: 170 },
-  { id: 'C', name: 'Open sea', x: 150, z: 10, owner: null, sector: 'centre', radius: 180 },
-  { id: 'D', name: 'East atolls', x: 1550, z: -40, owner: null, sector: 'east', radius: 170 },
-  { id: 'K', name: 'Mobile Fleet', x: 0, z: -2150, owner: 'pact', sector: 'centre', radius: 140 },
+  { id: 'A', name: 'Task Force 58', x: 1100, z: -1200, owner: 'nato', sector: 'east', radius: 140 },
+  { id: 'B', name: 'The northern search', x: -1850, z: -3900, owner: null, sector: 'west', radius: 180 },
+  { id: 'C', name: 'The Turkey Shoot', x: -950, z: -1400, owner: null, sector: 'centre', radius: 180 },
+  { id: 'D', name: 'Ozawa’s van', x: -30, z: 1150, owner: null, sector: 'centre', radius: 180 },
+  { id: 'E', name: 'Off Orote', x: 600, z: 2900, owner: null, sector: 'east', radius: 170 },
+  { id: 'K', name: 'Mobile Fleet', x: -2050, z: -100, owner: 'pact', sector: 'west', radius: 140 },
 ];
 
 export default {
   id: 'philippineSea',
   name: 'Philippine Sea',
-  description: 'Open ocean and a few coral atolls: a carrier battle. Find the enemy fleet before he finds yours, and get the strike through his fighters.',
+  description: 'June 1944, west of the Marianas: Task Force 58 off Saipan and Tinian, the Mobile Fleet coming in from the open sea to the west, Guam and Orote Field to the south. A carrier battle: find the enemy fleet before he finds yours, and get the strike through his fighters.',
   epochs: ['1945'],
   region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
@@ -92,28 +100,29 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: 2350, entries: [-800, 0, 800] }, pact: { x: 0, z: -2350, entries: [-800, 0, 800] } },
+  bases: { nato: { x: 1300, z: -1400, entries: [-700, -300, 100] }, pact: { x: -2250, z: -100, entries: [-300, 0, 300] } },
   maxStacks: 12,
-  cameraStart: { nato: { x: 0, z: 2100 }, pact: { x: 0, z: -2100 } },
+  cameraStart: { nato: { x: 900, z: -1000 }, pact: { x: -1850, z: -100 } },
   points,
 
   spawns: {
-    nato: [{ unit: 'escortCarrier', x: 0, z: 2350, facing: Math.PI }, { unit: 'destroyer', x: -350, z: 2100, facing: Math.PI }, { unit: 'destroyer', x: 350, z: 2100, facing: Math.PI }, { unit: 'cruiser', x: 0, z: 1950, facing: Math.PI }],
-    pact: [{ unit: 'escortCarrier', x: 0, z: -2350, facing: 0 }, { unit: 'destroyer', x: 350, z: -2100, facing: 0 }, { unit: 'destroyer', x: -350, z: -2100, facing: 0 }, { unit: 'cruiser', x: 0, z: -1950, facing: 0 }],
+    nato: [{ unit: 'escortCarrier', x: 1200, z: -1300, facing: -1.42 }, { unit: 'destroyer', x: 950, z: -1500, facing: -1.42 }, { unit: 'destroyer', x: 950, z: -1000, facing: -1.42 }, { unit: 'cruiser', x: 800, z: -1250, facing: -1.42 }],
+    pact: [{ unit: 'escortCarrier', x: -2150, z: -100, facing: 1.42 }, { unit: 'destroyer', x: -1900, z: 150, facing: 1.42 }, { unit: 'destroyer', x: -1900, z: -350, facing: 1.42 }, { unit: 'cruiser', x: -1750, z: -100, facing: 1.42 }],
   },
 
   decorate({ scene, terrain, cover, rand }) {
     const props = new PropBuilder({ scene, terrain, cover });
     sea.build(scene, terrain);
-    for (const [ax, az, r] of ATOLLS) {
-      for (let i = 0; i < 40; i++) {
-        const a = rand() * Math.PI * 2;
-        const x = ax + Math.cos(a) * r, z = az + Math.sin(a) * r;
-        if (height(x, z) > 1) props.palm({ x, z, height: 7 + rand() * 5 });
-      }
-    }
+    const at = (cx: number, cz: number, sx: number, sz: number, n: number, lo: number, hi: number, put: (x: number, z: number) => void) => {
+      for (let i = 0, k = 0; i < n * 25 && k < n; i++) { const x = cx + (rand() - 0.5) * sx, z = cz + (rand() - 0.5) * sz, y = height(x, z); if (y > lo && y < hi) { k++; put(x, z); } }
+    };
+    // palms on every beach; Garapan on Saipan's west shore, Agana on Guam's, the Rota village
+    at(3600, 0, 2400, 9000, 400, 1, 14, (x, z) => props.palm({ x, z, height: 7 + rand() * 5 }));
+    at(3900, -3450, 300, 700, 16, 2, 30, (x, z) => props.flatHouse({ x, z, yaw: rand() * Math.PI, width: 6 + rand() * 3, depth: 5 + rand() * 2 }));
+    at(2350, 2700, 500, 400, 16, 2, 30, (x, z) => props.flatHouse({ x, z, yaw: rand() * Math.PI, width: 6 + rand() * 3, depth: 5 + rand() * 2 }));
+    at(3100, 750, 300, 300, 8, 2, 30, (x, z) => props.flatHouse({ x, z, yaw: rand() * Math.PI, width: 6, depth: 5 }));
     props.finish();
-    const trees = jungle({ scene, terrain, cover, rand, half: HALF, count: 2500 });
+    const trees = jungle({ scene, terrain, cover, rand, half: HALF * 2, count: 3000 });
     cover.finalize({ x: HALF, z: HALF });
     return { buildings: props.buildings, update(dt: number, t: number) { trees.update(dt, t); } };
   },
