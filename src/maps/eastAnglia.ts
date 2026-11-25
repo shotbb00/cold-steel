@@ -1,24 +1,26 @@
 // East Anglia, summer 1985 (a war that did not happen; the big field, 1.0 × 1.12 km): the Breckland on the Norfolk–
 // Suffolk border, where Britain is NATO’s aircraft carrier. Soviet airborne troops have dropped on RAF Feltwell and
 // naval infantry landed on the Norfolk coast are pushing inland behind them toward the US air bases at Lakenheath and
-// Mildenhall; the bases’ defence and the US reinforcements flown in hold the south. On the map, compressed: the Little
-// Ouse across the middle, wandering west from Thetford through Brandon toward the fens (south toward Wangford in the
-// west, north toward Santon Downham in the east), with three bridges — Wilton bridge by Hockwold (west), Brandon bridge
-// (middle), the Town Bridge at Thetford (east). South of it (NATO, +z): RAF Lakenheath’s runway, tower and hardened
-// aircraft shelters behind its wire, Lakenheath and Eriswell on Lakenheath Warren’s heath, Elveden with its hall and
-// the war memorial column on the A11, Brandon Park’s pines, the King’s Forest, Thetford (the priory ruins) and the
-// Barnham weapons store on the heath. North of it (the Pact, -z): RAF Feltwell, the airborne’s airhead, Mundford,
-// Weeting and its castle ruin on Weeting Heath, the pits of the Neolithic flint mines at Grime’s Graves, the High
-// Lodge and Lynford blocks of Thetford Forest, Croxton and Thetford’s overspill estates. Flint-walled villages and
-// round-tower churches, straight firebreaks through the pine compartments, Scots pine rows (the Breckland “deals”)
-// along the heath roads.
-// Fair, not mirrored: the Ouse bends its own way and the towns, woods and heaths are each half’s own, but each side has
-// a bank point the river bends away from (Hockwold for the Pact, Thetford for NATO) about 90 m from the water, the
-// middle point on Brandon bridge straddles both banks, each half has a town on its east flank (Thetford / Croxton and
-// the estates), a heath on its west flank (Lakenheath Warren / Weeting Heath), two pine blocks of about the same area
-// (Brandon Park and the King’s Forest / High Lodge and Lynford), two rises of about the same height (Elveden and
-// Barnham heath / Grime’s Graves and Croxton heath), a trunk road across it (the A11 / the A134), an air base behind
-// its west flank, and its points at matching distances from its base (tools/map_fairness.py).
+// Mildenhall; the bases’ defence and the US reinforcements flown in hold the south. On the map, compressed but on its
+// real bearing: the Little Ouse runs diagonally across, as it really does, from Thetford in the south-east, where the
+// Thet comes down out of the north-east to join it at the town (the ford the town is named for), north-west past
+// Brandon and out of the sandy Breckland into the black peat of the Fens beyond Hockwold in the north-west corner. Three
+// bridges on the Ouse — Wilton bridge by Hockwold (west), Brandon bridge (middle), the Town Bridge at Thetford (east) —
+// and the Thet ford. South of the river (NATO, +z): RAF Lakenheath’s runway, tower and hardened aircraft shelters
+// behind its wire, Lakenheath and Eriswell on Lakenheath Warren’s heath, Elveden with its hall and the war memorial
+// column on the A11 on the Breckland’s height, Brandon Park’s pines, the King’s Forest, Thetford (the priory ruins)
+// and the Barnham weapons store on the heath. North of it (the Pact, -z): RAF Feltwell, the airborne’s airhead,
+// Mundford, Weeting and its castle ruin on Weeting Heath, the pits of the Neolithic flint mines at Grime’s Graves, the
+// High Lodge and Lynford blocks of Thetford Forest, Croxton and Thetford’s overspill estates beyond the Thet.
+// Flint-walled villages and round-tower churches, straight firebreaks through the pine compartments, Scots pine rows
+// (the Breckland “deals”) along the heath roads.
+// Fair by distance, not by shape: the Ouse runs corner to corner, so the Pact has the west bank-side and the fen, NATO
+// the east and the Thetford valley; each side has a bank point about 90 m from the water (Hockwold for the Pact,
+// Thetford for NATO), the middle point on Brandon bridge straddles both banks, each half has a town on its east flank
+// (Thetford / Croxton and the estates), a heath on its west flank (Lakenheath Warren / Weeting Heath), two pine blocks
+// of about the same area, two rises of about the same height (Elveden and Barnham heath / Grime’s Graves and Croxton
+// heath), a trunk road across it (the A11 / the A134), an air base behind its west flank, and its points at matching
+// distances from its base (tools/map_fairness.py).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -35,11 +37,13 @@ const BX = [-340, 10, 320];   // the Little Ouse bridges: Wilton (Hockwold), Bra
 const noise = createNoise2D(1985_91);
 const hill = (x: number, z: number, cx: number, cz: number, r: number, amp: number) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
-/** The Little Ouse: south toward Wangford in the west, north toward Santon Downham in the east. */
-const ouseZ = (x: number) => -46 * Math.sin(x * Math.PI / 640 + 0.15) - 8 * Math.sin(x * 0.014 + 1.2) + 14.3;
-const away = (x: number, z: number) => Math.abs(z - ouseZ(x));
+/** The Little Ouse: from Thetford (east, a little south) north-west past Brandon and out into the Fens at Hockwold. */
+const ouseZ = (x: number) => 0.35 * x - 10 * Math.sin(x * 0.014 + 1.2) + 7.5;
+/** The Thet, down from the north-east into the Ouse at Thetford (the town is named for its ford). */
+const THET = [[575, -215, 6], [520, -100, 6], [470, -10, 7], [420, 70, 8], [385, ouseZ(385) - 4, 9]];
+const away = (x: number, z: number) => Math.min(Math.abs(z - ouseZ(x)), segDist(THET, x, z) + 3);
 const river = createRiver({
-  paths: [ouseZ],
+  paths: [ouseZ, THET],
   halfWidth: 10,
   level: 0,
   depth: 2.6,
@@ -48,6 +52,7 @@ const river = createRiver({
     { name: 'Wilton bridge', x: BX[0], kind: 'bridge', width: 7, channel: 0 },
     { name: 'Brandon bridge', x: BX[1], kind: 'bridge', width: 8, channel: 0 },
     { name: 'Thetford Town Bridge', x: BX[2], kind: 'bridge', width: 8, channel: 0 },
+    { name: 'Thet ford', x: 495, z: -55, kind: 'ford', width: 12, channel: 1 },
   ],
 });
 const wet = (x: number, z: number, r = 0) => away(x, z) < river.halfWidth + 6 + r;
@@ -57,11 +62,11 @@ const points = [
   P('A', 'Lakenheath', 0, 470, 'centre'),
   P('B', 'Eriswell', -400, 300, 'west'),
   P('C', 'Elveden', 60, 200, 'centre', { radius: 28 }),
-  P('D', 'Barnham', 330, 262, 'east'),
-  P('E', 'Hockwold', -290, -40, 'west'),
+  P('D', 'Barnham', 390, 300, 'east'),
+  P('E', 'Hockwold', -300, -185, 'west'),
   P('F', 'Brandon', BX[1], ouseZ(BX[1]), 'centre', { radius: 30 }),
-  P('G', 'Thetford', 300, 62, 'east', { radius: 26 }),
-  P('H', 'Weeting', -290, -310, 'west'),
+  P('G', 'Thetford', 285, 215, 'east', { radius: 26 }),
+  P('H', 'Weeting', -330, -370, 'west'),
   P('I', 'Grime’s Graves', -90, -200, 'centre'),
   P('J', 'Croxton', 370, -230, 'east', { radius: 26 }),
   P('K', 'Mundford', 0, -470, 'centre'),
@@ -78,12 +83,12 @@ const onAirfield = (x: number, z: number, m = 0) => AIRFIELDS.some((a) => Math.a
 
 /** The roads: one up each sector over its bridge, the bank roads either side of Brandon, the two trunk roads. */
 const ROADS = [
-  [[-430, 640], [-420, 420], at('B'), [-370, 190], ...over(BX[0]), at('E'), [-330, -170], at('H'), [-420, -420], [-430, -640]],
+  [[-430, 640], [-420, 420], at('B'), [-370, 190], ...over(BX[0]), at('E'), [-330, -260], at('H'), [-420, -420], [-430, -640]],
   [[0, 640], at('A'), [30, 330], at('C'), [30, 110], ...over(BX[1]), [-40, -110], at('I'), [-40, -360], at('K'), [0, -640]],
-  [[330, 640], [330, 520], at('D'), [330, 160], at('G'), ...over(BX[2]), [330, -130], at('J'), [330, -520], [330, -640]],
-  [at('E'), [-150, -50], [-60, -40], [BX[1], ouseZ(BX[1]) - 30]],                   // the north bank road (Weeting Road)
-  [[BX[1], ouseZ(BX[1]) + 30], [100, 40], [200, 55], at('G')],                     // the south bank road (London Road)
-  [[-520, 340], at('B'), [-200, 335], at('C'), [190, 150], at('G'), [520, 40]],    // the A11: Barton Mills – Elveden – Thetford
+  [[330, 640], [330, 520], [380, 420], at('D'), at('G'), ...over(BX[2]), [330, -130], at('J'), [330, -520], [330, -640]],
+  [at('E'), [-150, -100], [-60, -75], [BX[1], ouseZ(BX[1]) - 30]],                   // the north bank road (Weeting Road)
+  [[BX[1], ouseZ(BX[1]) + 30], [100, 90], [200, 140], at('G')],                     // the south bank road (London Road)
+  [[-520, 340], at('B'), [-200, 335], at('C'), [190, 150], at('G'), [520, 280]],    // the A11: Barton Mills – Elveden – Thetford
   [[-520, -270], at('H'), at('I'), [150, -300], at('J'), [520, -190]],            // the A134 / A1065: Mundford – Thetford
 ];
 const roadExact = (x: number, z: number) => Math.min(...ROADS.map((r) => segDist(r, x, z)));
@@ -108,10 +113,12 @@ const heathK = (x: number, z: number) => Math.max(...HEATHS.map(([hx, hz, rx, rz
 const GRAVES = { x: -95, z: -255, r: 75 };
 const gravesK = (x: number, z: number) => smoothstep(GRAVES.r, GRAVES.r * 0.6, Math.hypot(x - GRAVES.x, z - GRAVES.z));
 
+/** The fen edge in the north-west, where the Ouse leaves the heath: the drained peat of the Fens (1) below the Breckland’s sand (0). */
+const fenK = (x: number, z: number) => smoothstep(1.0, 0.8, Math.hypot((x + 580) / 230, (z + 150) / 300) + 0.08 * Math.sin(z * 0.03) + 0.05 * Math.sin(x * 0.04));
 function height(x: number, z: number) {
   let h = 7 + fbm(noise, x * 0.004, z * 0.004, 4) * 3 + fbm(noise, x * 0.045 + 50, z * 0.045, 2) * 0.4;
   h += smoothstep(50, 210, away(x, z)) * (4 + ridged(noise, x * 0.008 + 3, z * 0.008, 3) * 3);   // up out of the Ouse valley
-  h += x * 0.004;                                                                                  // the Breckland rising east toward Thetford (alike for both halves)
+  h += x * 0.006;                                                                                  // the Breckland rising east toward Thetford (alike for both halves)
   for (const [cx, cz, r, a] of RISES) h += hill(x, z, cx, cz, r, a);
   const g = gravesK(x, z);
   if (g > 0) {                                                                                    // the filled shafts: a pit in each 16 m cell, its spoil ring round it
@@ -120,7 +127,8 @@ function height(x: number, z: number) {
     const d = Math.hypot(x - (i + 0.5) * 16 - jx, z - (j + 0.5) * 16 - jz);
     h += g * (0.8 * Math.exp(-(((d - 6) / 1.8) ** 2)) - 2.2 * smoothstep(5, 0, d));
   }
-  h += smoothstep(560, 690, Math.abs(z)) * 14;
+  const fk = fenK(x, z);
+  if (fk > 0) h += (1.9 + fbm(noise, x * 0.02, z * 0.02, 2) * 0.3 + 2.6 * Math.exp(-(((away(x, z) - 19) / 4.5) ** 2)) - h) * fk; // the Fens: flat black peat, the Ouse between its flood banks
   for (const a of AIRFIELDS) {                                                                    // the runway, aprons and shelters graded flat
     const k = smoothstep(190, 160, Math.abs(x - a.x)) * smoothstep(110, 85, Math.abs(z - (a.z + Math.sign(a.z) * 30)));
     if (k > 0) h += (10 - h) * k;
@@ -129,7 +137,7 @@ function height(x: number, z: number) {
   return river.carve(x, z, Math.max(1.4, h));
 }
 
-const THETFORD = { x: 335, z: 95, rx: 80, rz: 55 };
+const THETFORD = { x: 320, z: 232, rx: 80, rz: 50 };
 const CROXTON = { x: 385, z: -255, rx: 75, rz: 58 };
 const BRANDON = { x: 10, z: 0, rx: 105, rz: 80 };
 const inTown = (t: any, x: number, z: number, k = 1) => ((x - t.x) / t.rx) ** 2 + ((z - t.z) / t.rz) ** 2 < k;
@@ -215,9 +223,9 @@ export default {
     town(BRANDON, 34, 1985_93);
     // ---- Thetford (NATO’s east): St Cuthbert’s, the priory ruins, the old town round the Town Bridge
     props.rand = mulberry32(1985_94);
-    church(360, 120, 0.1);
-    for (const [dx, dz, yaw, len] of [[0, 0, 0, 22], [0, 14, 0, 22], [-11, 7, Math.PI / 2, 14], [11, 7, Math.PI / 2, 10]]) props.lowWall({ x: 255 + dx, z: 125 + dz, yaw, length: len, height: 3.2, color: FLINT });
-    placed.push([255, 132, 18]);
+    church(350, 212, 0.1);
+    for (const [dx, dz, yaw, len] of [[0, 0, 0, 22], [0, 14, 0, 22], [-11, 7, Math.PI / 2, 14], [11, 7, Math.PI / 2, 10]]) props.lowWall({ x: 230 + dx, z: 175 + dz, yaw, length: len, height: 3.2, color: FLINT });
+    placed.push([230, 182, 18]);
     town(THETFORD, 30, 1985_95);
     // ---- Croxton and Thetford’s overspill estates (the Pact’s east): the London council blocks, the village church
     props.rand = mulberry32(1985_96);
@@ -240,7 +248,7 @@ export default {
       if ('CFGJI'.includes(p.id)) continue;
       farmVillage(props, p.x, p.z, 'AK'.includes(p.id) ? 6 : 9, 1985_100 + Math.round(p.x * 3 + p.z * 7), (x, z) => !free(x, z, 8), 1.2);
     }
-    church(-262, -8, 0.4); church(-372, 322, -0.2);                                      // Hockwold’s and Eriswell’s round-tower churches
+    church(-262, -160, 0.4); church(-372, 322, -0.2);                                      // Hockwold’s and Eriswell’s round-tower churches
 
     // ---- RAF Lakenheath: hardened aircraft shelters beyond the runway’s west end, the base’s wire
     props.rand = mulberry32(1985_101);

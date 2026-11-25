@@ -2,25 +2,28 @@
 // of the Reich. The 104th “Timberwolf” Infantry Division and the 3rd Armored came in from the west, out of the Mansfeld
 // country by Nietleben and the Dölauer Heide; the Wehrmacht, flak gunners and Fallschirmjäger held the Saale and the
 // old town behind it, until Count Luckner talked the garrison into giving up the city and the last of them fought on in
-// the south. The Americans come from the west bank (+z), the Germans hold the east bank (-z). Across the middle runs the
-// Saale, the main river with the Mühlgraben split off it round the Peißnitz, the park island under the old town. Four
-// bridges: the Giebichenstein bridge between the porphyry rocks of Kröllwitz and the castle rock on the north flank
-// (-x), the Peißnitz bridge from the Saline onto the island and the Schieferbrücke from the island to the Altstadt in
-// the middle, the Ammendorf bridge on the south flank (+x). On the American bank: Nietleben with its airfield, the pines
-// of the Dölauer Heide, Passendorf, Kröllwitz on its rocks, the Saline’s boiling houses at the river, and upstream the
-// Buna works at Schkopau, towers, tanks and flak. On the German bank: the Altstadt round the Marktplatz with the
-// Marktkirche’s four towers and the Roter Turm, the Moritzburg on the river, the Oberburg Giebichenstein on its rock,
-// Ammendorf in the Saale–Elster floodplain woods, and on the skyline the chimneys of the Leuna works with their flak
-// belt. (The Saale really runs north here: the map’s -x is north, +x south toward Merseburg; Buna and Leuna, both up the
-// river, are given one to each bank.)
-// Fair, not mirrored: the main river bulges toward the Americans, the Mühlgraben toward the Germans, so the Peißnitz in
-// the middle is one bridge from each bank; each side has one flank bridge with a forward point on its own bank beside it
-// (Kröllwitz in the north for the US, Ammendorf in the south for the Germans), a rock over the north bridge (Kröllwitz’s
-// for the US, the castle rock for the Germans), one chemical works with its flak (Buna south for the US, Leuna south for
-// the Germans), one big wood (the Dölauer Heide north, the floodplain woods south), a town quarter at its bridgehead
-// (the Saline / the Moritzburg’s streets) and a built-up centre point (Passendorf / the Marktplatz), a rise behind its
-// line, and its points at matching distances from its base, though not in mirrored places (measured:
-// tools/map_fairness.py). The land falls gently north with the river, alike for both halves.
+// the south. The Americans come from the west bank (+z), the Germans hold the east bank (-z). The Saale runs as it
+// really does through the city, from the south-east (Ammendorf, +x) to the north-west (Kröllwitz, -x), diagonally
+// across the field, with the Mühlgraben split off it round the Peißnitz, the park island under the old town. The
+// ground is the real ground: in the north the river has cut its narrow bed through the porphyry — Kröllwitz’s rocks
+// over the west bank, the castle rock of Giebichenstein over the east, the Dölauer Heide’s wooded upland behind
+// Kröllwitz — while in the south the river hugs the bluff of its west bank and the flat Saale–Elster Aue opens wide on
+// the east bank, meadows and floodplain woods toward the Weiße Elster; the Altstadt sits on its terrace above the Aue’s
+// head. Four bridges: the Giebichenstein bridge in the porphyry cut (north, -x), the Peißnitz bridge from the Saline
+// onto the island and the Schieferbrücke from the island to the Altstadt in the middle, the Ammendorf bridge in the
+// south (+x). On the American bank: Nietleben with its airfield, the pines of the Heide, Passendorf, Kröllwitz on its
+// rocks, the Saline’s boiling houses at the river, and upstream the Buna works at Schkopau on the bluff, towers, tanks
+// and flak. On the German bank: the Altstadt round the Marktplatz with the Marktkirche’s four towers and the Roter
+// Turm, the Moritzburg on the river, the Oberburg Giebichenstein on its rock, Ammendorf down in the Aue, and on the
+// skyline the chimneys of the Leuna works with their flak belt. (The map’s -x is north, +x south toward Merseburg;
+// Buna and Leuna, both up the river, are given one to each bank.)
+// Fair by distance, not by shape: the high ground is the north’s for both banks (Kröllwitz and the Heide for the US,
+// Giebichenstein and the Altstadt’s terrace for the Germans), the Aue’s open floor and its woods are the Germans’ in the
+// south where the Americans have the bluff over it; the Peißnitz in the middle is one bridge from each bank; each side
+// has one flank bridge with a forward point on its own bank beside it (Kröllwitz in the north for the US, Ammendorf in
+// the south for the Germans), one chemical works with its flak, one big wood (the Heide / the Aue’s woods), a town
+// quarter at its bridgehead and a built-up centre point, and its points at matching distances from its base
+// (measured: tools/map_fairness.py).
 import * as THREE from 'three';
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -37,8 +40,8 @@ const W = -330, E = 330;   // the flank roads: Kröllwitz–Giebichenstein in th
 const noise = createNoise2D(1945_415);
 
 // the Saale across the map, bulging toward the Americans under the old town; the Mühlgraben split off it round the Peißnitz
-const saaleZ = (x: number) => 30 * Math.exp(-((x / 170) ** 2)) + 8 * Math.sin(x * 0.007 + 0.4) + 4 * Math.sin(x * 0.019);
-const ARM = [[-210, saaleZ(-210), 7], [-165, -8, 9], [-105, -34, 9], [-40, -42, 9], [0, -44, 9], [55, -41, 9], [115, -28, 9], [160, -6, 9], [200, saaleZ(200), 7]];
+const saaleZ = (x: number) => -0.22 * x + 30 * Math.exp(-((x / 170) ** 2)) + 8 * Math.sin(x * 0.007 + 0.4) + 4 * Math.sin(x * 0.019);
+const ARM = [[-210, saaleZ(-210), 7], ...[[-165, -8], [-105, -34], [-40, -42], [0, -44], [55, -41], [115, -28], [160, -6]].map(([x, z]) => [x, z - 0.22 * x, 9]), [200, saaleZ(200), 7]];
 const armZ = (x: number) => { for (let i = 0; i < ARM.length - 1; i++) { const [ax, az] = ARM[i], [bx, bz] = ARM[i + 1]; if (x <= bx) return az + (bz - az) * (x - ax) / (bx - ax); } return ARM[ARM.length - 1][1]; };
 const river = createRiver({
   paths: [saaleZ, ARM],
@@ -63,9 +66,9 @@ const points = [
   P('B', 'Dölauer Heide', -370, 320, 'west'),
   P('C', 'Passendorf', 100, 300, 'centre', { radius: 26 }),
   P('D', 'Buna works', 360, 300, 'east', { radius: 28 }),
-  P('E', 'Kröllwitz', -390, 85, 'west'),
+  P('E', 'Kröllwitz', -390, 150, 'west'),
   P('F', 'Peißnitz', 0, -8, 'centre', { radius: 24 }),
-  P('G', 'Ammendorf', 435, -135, 'east'),
+  P('G', 'Ammendorf', 435, -195, 'east'),
   P('H', 'Giebichenstein', -300, -200, 'west'),
   P('I', 'Marktplatz', -40, -260, 'centre', { radius: 26 }),
   P('J', 'Leuna works', 390, -390, 'east', { radius: 28 }),
@@ -102,14 +105,21 @@ const fieldK = (x: number, z: number) => {
 
 /** Rises [x, z, r, h]: Kröllwitz’s porphyry rocks and the castle rock of Giebichenstein over the north bridge, the old
  *  town’s hill and Passendorf’s, the heights behind each line. */
-const RISES = [[-395, 100, 72, 10.5], [-300, -190, 72, 10.5], [-50, -240, 90, 4], [110, 275, 90, 4], [-230, 480, 130, 8], [230, -440, 120, 8]];
+const RISES = [[-395, 165, 72, 11], [-300, -190, 72, 10], [-50, -240, 90, 3], [110, 275, 90, 3], [-380, 330, 220, 15], [300, 200, 160, 5]];
+/** The Saale’s floor: a narrow cut through the porphyry in the north (-x); south (+x) the river hugs its west bank’s
+ *  bluff while the flat Aue opens on the east bank toward the Weiße Elster (0 up on the plateau .. 1 on the floor). */
+const aueK = (x: number, z: number) => {
+  const s = z - saaleZ(x);
+  const half = s > 0 ? 24 + 25 * smoothstep(0, 480, x) : 30 + 330 * smoothstep(-150, 520, x) + 60 * Math.exp(-((x / 200) ** 2));
+  return smoothstep(half + (s > 0 ? 40 : 80), half, Math.abs(s));
+};
 function height(x: number, z: number) {
-  let h = 5 + fbm(noise, x * 0.0035, z * 0.0035, 4) * 3.5 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.7;
-  h += smoothstep(50, 260, away(x, z)) * 4;                                                 // up out of the Saale valley
-  for (const [hx, hz, r, hh] of RISES) { const d = Math.hypot(x - hx, z - hz); if (d < r) h += hh * smoothstep(r, 0, d) ** 1.5; }
-  h += x * 0.004;                                                                          // the land falls north (-x), with the Saale (alike for both)
-  h += smoothstep(BASE_Z - 60, 660, Math.abs(z)) * 8;
-  h += smoothstep(480, 620, Math.abs(x)) * 10;
+  // the porphyry plateau: high in the north round Giebichenstein and the Heide, falling south to the Aue
+  let up = 7 + 4 * smoothstep(250, -450, x) + fbm(noise, x * 0.0035, z * 0.0035, 4) * 3.5 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.7;
+  for (const [hx, hz, r, hh] of RISES) { const d = Math.hypot(x - hx, z - hz); if (d < r) up += hh * smoothstep(r, 0, d) ** 1.5; }
+  up += 3 * smoothstep(-90, -330, z) * smoothstep(300, 0, x);                               // the old town’s terrace east of the river
+  const floor = 2.2 + fbm(noise, x * 0.01 + 40, z * 0.01, 2) * 0.5;                         // the Aue’s meadows
+  let h = up + (floor - up) * aueK(x, z);
   h += (6 - h) * fieldK(x, z);                                                              // the airstrip fields
   for (const bz of [BASE_Z, -BASE_Z]) h += (h * 0.4 + 5 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
   return river.carve(x, z, Math.max(1.6, h));
@@ -241,7 +251,7 @@ export default {
     quarter(20, 180, 240, 360, 1945_420, 0.5, 32);      // Passendorf’s streets, the same size
     // ---- the Peißnitz: the Peißnitzhaus in the park, a flak battery, barricades at both bridgeheads
     props.townHouse({ x: 70, z: -4, yaw: 0, width: 16, depth: 11, storeys: 3, name: 'Peißnitzhaus', damaged: 0.2 });
-    for (const [x, z] of [[-60, -6], [-95, -12]]) props.townHouse({ x, z, yaw: 0, width: 10, depth: 9, storeys: 2, name: 'park house', damaged: 0.2 });
+    for (const [x, z] of [[-60, -6], [-95, 5]]) props.townHouse({ x, z, yaw: 0, width: 10, depth: 9, storeys: 2, name: 'park house', damaged: 0.2 });
     flak(-140, -14, 1); flak(125, -10, 1);
     for (const s of [1, -1]) {
       const z = s > 0 ? saaleZ(0) - 21 : armZ(0) + 16;
@@ -292,7 +302,7 @@ export default {
     flak(-190, -330, 1); flak(-160, 330, -1);
 
     // ---- the villages; the forester’s house in the Heide
-    for (const p of points) if ('ACEGK'.includes(p.id)) buildVillage(props, p, 1945_430 + Math.round(p.x * 3 + p.z * 7), 1);
+    for (const p of points) if ('ACEGK'.includes(p.id)) buildVillage(props, p.id === 'A' ? { ...p, x: p.x + 45 } : p, 1945_430 + Math.round(p.x * 3 + p.z * 7), 1); // (Nietleben beside its crossroads: the base’s road kept open)
     props.house({ x: -345, z: 300, yaw: 0.3, width: 10, depth: 8 }); placed.push([-345, 300, 9]);
 
     // ---- farmsteads, field walls, hay and wrecks over the fields, each half its own dice
