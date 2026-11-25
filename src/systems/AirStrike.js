@@ -1417,7 +1417,8 @@ export class AirStrike {
       z = Math.max(-Math.max(0, b.z - p.orbit), Math.min(Math.max(0, b.z - p.orbit), z));
     }
     const name = forArmy(p.aircraft, game.armyOf(faction), faction).name;
-    if (this.limit[faction] === 0) {
+    const ownDeck = !!deck && (p.sea || !deck.stats.airfield); // (a carrier's own air group, or a sea map's island airfield: the hangar is its limit, not the campaign's air wings over the battle)
+    if (!ownDeck && this.limit[faction] === 0) {
       game.tell(faction, 'No air support left');
       return false;
     }
@@ -1432,7 +1433,7 @@ export class AirStrike {
     }
     this.readyAt[this.key(faction, kind)] = game.time + terms.cooldown;
     this.span[this.key(faction, kind)] = terms.cooldown;
-    if (this.limit[faction] > 0) this.limit[faction]--;
+    if (!ownDeck && this.limit[faction] > 0) this.limit[faction]--;
     const jam = game.jamming?.jammed(faction, x, z);
     if (jam) { // the request gets through garbled: late, and not quite where it was asked for
       const a = Math.random() * Math.PI * 2;
