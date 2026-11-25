@@ -4,6 +4,7 @@
 // helicopters in this war, the paradrop and the recon flight come later.
 import { buildUsP47, buildUsP51, buildSovIl2, buildSovYak3, buildWhFw190F, buildWhFw190D, buildFjJu87, buildFjBf109, buildUsC47, buildSovLi2, buildDeJu52, buildUsF5, buildSovPe2, buildFjAr234, buildUsHellcat, buildUsHelldiver, buildUsAvenger, buildJpZero, buildJpVal, buildJpJill } from './models/ww2Aircraft.js';
 import { buildBrHurricane, buildBrKittyhawk, buildJpKi84, buildJpSaiun, buildBrDakota, buildJpKi57 } from './models/ww2Aircraft.js';
+import { plane } from './models/ww1Aircraft.js';
 import type { Aircraft } from '../types.ts';
 
 const MG50 = { rate: 26, damage: 120, splash: 0.6, vsArmor: 0.3, pierce: 0.25, speed: 880, tracer: 0.3, size: 0.8, sound: 'nato.aa' };   // eight .50 cals
@@ -85,6 +86,23 @@ const NAV_SCOUT: Record<string, Aircraft> = {
   nato: { name: 'TBM Avenger (search)', weapon: 'radar and cameras', text: 'An Avenger flying search: a long leg out, and what it sees shows on the plot.', model: buildUsAvenger, paint: SEA_BLUE, engineSound: 'prop', gun: NOGUN, hp: 8 },
   pact: { name: 'B6N Jill (search)', weapon: 'cameras', text: 'A carrier attack plane flying search for the fleet.', model: buildJpJill, paint: IJN_GREEN, engineSound: 'prop', gun: NOGUN, hp: 6 },
 };
+
+// the Royal Navy's Fleet Air Arm (the British armies at sea: data/units45/ships.js — off an Illustrious): the Sea Hurricane
+// over the fleet, the Albacore and the Swordfish, biplanes still, with the bomb and the torpedo
+const FAA = { colors: [0x4a5250, 0x535a50, 0x5a6058, 0x8e9a98] as [number, number, number, number], scale: 0.8 }; // (extra dark sea grey and dark slate grey over sky)
+const buildSwordfish = plane('swordfish', { color: 0x535a50, kind: 'uk', span: 6.9, len: 10.9, seats: 2, torpedo: true });
+const buildAlbacore = plane('albacore', { color: 0x535a50, kind: 'uk', span: 7.6, len: 12.2, seats: 2, bombs: 2 });
+const FAA_PLANES: Record<string, Record<string, Aircraft>> = {
+  navCap: { rn: { name: 'Sea Hurricane IB', weapon: '8 × .303 Browning', text: 'The Hurricane with an arrester hook: Indomitable’s and Eagle’s fighters over Pedestal, and the catapult fighters of the convoys — one launch, then the sea.', model: buildBrHurricane, paint: FAA, engineSound: 'prop', gun: MG50, hp: 6, guns: true } },
+  diveBomb: { rn: { name: 'Fairey Albacore', weapon: '6 × 250 lb bombs', text: 'The Swordfish’s successor, an enclosed cockpit on the same old biplane idea: it dive-bombed and torpedoed from Illustrious and Formidable.', model: buildAlbacore, paint: FAA, engineSound: 'prop', gun: MG50, rockets: { count: 1, damage: 1300, ...BOMB }, hp: 6 } },
+  torpBomb: { rn: { name: 'Fairey Swordfish', weapon: '18-inch Mark XII torpedo', text: 'The “Stringbag”: a fabric biplane at ninety knots, too slow for the gunners’ sights. Swordfish sank three battleships at Taranto and jammed Bismarck’s rudders.', model: buildSwordfish, paint: FAA, engineSound: 'prop', gun: MG50, hp: 6, torpedo: { count: 1, speed: 18, range: 1200, damage: 2400 } } },
+  navScout: { rn: { name: 'Fairey Swordfish (ASV)', weapon: 'ASV radar', text: 'A Swordfish with the air-to-surface radar under her: the convoy’s eyes, and the U-boat on the surface found at night.', model: buildSwordfish, paint: FAA, engineSound: 'prop', gun: NOGUN, hp: 6 } },
+};
+for (const [kind, t] of Object.entries({ navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT })) t.brit = t.brit21 = FAA_PLANES[kind].rn;
+// the Luftwaffe over the Mediterranean, from Sicily's airfields (maltaConvoy): Messerschmitts over the convoy, Stukas on it
+NAV_FIGHTER.wh = { name: 'Bf 109 F-4', weapon: '20 mm MG 151 · 2 × 7.92 mm', text: 'Messerschmitts from Sicily over the convoy: they came for the Sea Hurricanes first, then cleared the way for the bombers.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: CANNON, hp: 5, guns: true };
+DIVE.wh = { name: 'Ju 87 D Stuka', weapon: 'SC 500 bomb', text: 'The Stuka on ships: a near-vertical dive onto the deck. Stukas from Sicily hit Indomitable and set the merchantmen burning off Pantelleria.', model: buildFjJu87, paint: GREY, engineSound: 'prop', gun: MG50, rockets: { count: 1, damage: 1600, ...BOMB }, hp: 5 };
+NAV_SCOUT.wh = { name: 'Bf 109 (reconnaissance)', weapon: 'cameras', text: 'A Messerschmitt with a camera, out to find the convoy and report its course.', model: buildFjBf109, paint: GREY, engineSound: 'prop', gun: NOGUN, hp: 5 }; // (the 14th Army's ocean, the British Pacific Fleet: American aircraft, as theirs were)
 
 /** Per support kind: the aircraft table (data/epoch.js), keyed by side (nato, pact) and army (sov, fj). */
 export const AIR_1945 = { jet: STRIKE, cap: FIGHTER, lift: DROP, recon: RECON, navCap: NAV_FIGHTER, diveBomb: DIVE, torpBomb: TORP, navScout: NAV_SCOUT };

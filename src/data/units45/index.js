@@ -17,7 +17,9 @@ import { SHIPS_1945 } from './ships.js';
 import { buildJpChiNu, buildJpHoI, buildJpHoHa, buildJpHaTo, buildJpLorryAA, buildJpLorry25, buildJpTachi6, buildJpSmoke, buildJpType88, buildJpSeri, buildJpBridge, buildJpSsKi } from '../models/jp45.js';
 import { buildBrCrusader, buildBrGrant, buildBrDaimler, buildBrDeacon, buildBr25pdr, buildBrCarrier, buildBrAustinAmb, buildBrDorchester, buildBrScammell, buildBrCrusaderCS, buildBrBishop, buildBrScorpion, buildBrBoforsPortee, buildBrGL, buildBr37AA } from '../models/brit45.js';
 import { buildJpChiHa, buildJpHaGo, buildJpHoNi, buildJpType91, buildJpType98, buildJpRocket, buildJpIsuzu, buildJpIsuzuAmb, buildUsLvt4 } from '../models/pacific45.js';
-import { ATLANTIC_WALL } from './atlanticWall.js';
+import { ATLANTIC_WALL, lanesForts45 } from './atlanticWall.js';
+import { SOV_CRAFT_1945 } from './sovietCraft.js';
+import { buildBrBofors, buildBrCrusaderAA, buildBrValentineBridge } from '../models/brit45more.js';
 import brit21 from './brit21.js';
 import brit14 from './brit14.js';
 
@@ -592,7 +594,8 @@ pacific(commandPost, 'jp', { model: buildJpIsuzu, variant: { name: 'Command Post
 // …and the rest of its roster (models/jp45.js): every 1945 type but the DD tank (a landing army's)
 pacific(ifv, 'jp', { model: buildJpHoHa, stats: { armor: 0.15, hp: 480 }, cost: 0.85,
   variant: { name: 'Type 1 Ho-Ha', weapon: 'Type 97 7.7 mm MGs', text: 'The Army’s armoured half-track, built in small numbers: a squad rides up behind riveted plate. U unloads the squad.' } });
-pacific(airAssault, 'jp', { model: () => buildWw2Soldier({ army: 'jp' }),
+airAssault.specialistModels = { ...airAssault.specialistModels, jp: () => buildWw2Soldier({ army: 'teishin', weapon: 'mg' }) }; // (the Type 99 LMG — not the Fallschirmjäger's MG 42)
+pacific(airAssault, 'jp', { model: () => buildWw2Soldier({ army: 'teishin' }),
   variant: { name: 'Teishin Paratroopers', weapon: 'Type 100 SMG, Type 99 rifle', text: 'The raiding paratroopers who took the Palembang oil fields: dropped onto the objective, lightly armed, they hold to the last.' } });
 pacific(heavyTank, 'jp', { model: buildJpChiNu, stats: { armor: 0.5, hp: 1150, damage: 330, range: 190, fireCooldown: 5, speed: 4.6 }, cost: 0.7,
   variant: { name: 'Type 3 Chi-Nu', weapon: 'Type 3 75 mm', text: 'The last medium tank Japan built, held back to defend the home islands: at last a gun that can kill a Sherman. Stops to fire.' } });
@@ -652,7 +655,7 @@ brit(artillery, { model: buildBr25pdr, stats: { towed: { deploy: 14 }, traverse:
 brit(ifv, { model: buildBrCarrier, stats: { armor: 0.15, hp: 420, speed: 6.4, weapon: 'rifle', damage: 32, range: 120, gunRange: 120, vsArmor: 0.05 }, cost: 0.8,
   variant: { name: 'Universal Carrier', weapon: 'Bren gun', text: 'The little open tracked carrier: it brings a section and its Bren up under cover of the dust. U puts them down.' } });
 brit(recovery, { model: buildBrScammell, variant: { name: 'Scammell Pioneer', weapon: 'crane, winch', text: 'The heavy recovery lorry: it gets knocked-out tanks moving again behind the line.' } });
-brit(towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun of every British army: clips of heavy shells against the Stukas.' } });
+brit(towedAA, { model: buildBrBofors, variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun of every British army on its own four-wheeled carriage, the outriggers out and no shield: clips of heavy shells against the Stukas, laid by the "Stiffkey stick" sight.' } });
 brit(ambulance, { model: buildBrAustinAmb, variant: { name: 'Austin K2 Ambulance', weapon: 'unarmed', text: 'The “Katy”: the field ambulance of the desert — patches up the wounded nearby.' } });
 brit(commandPost, { model: buildBrDorchester, variant: { name: 'Dorchester Command Vehicle', weapon: 'wireless sets', text: 'The armoured command vehicle — “Dorchester” after the hotel: brigade headquarters on wheels. Nearby squads hold longer and react faster.' } });
 brit(cev, { model: buildBrCrusaderCS, stats: { dozer: false, armor: 0.45, hp: 950, speed: 6.2, damage: 650, vsStructure: 1.8, splash: 4, fireCooldown: 5 }, cost: 0.75,
@@ -667,9 +670,12 @@ brit(gunMissile, { model: buildBrBoforsPortee, stats: { armor: 0.05, hp: 400 }, 
   variant: { name: 'Bofors Portée', weapon: '40 mm Bofors', text: 'The Bofors carried on a lorry bed and fired from it: no unhitching, it keeps up with the column across the desert. Unarmoured.' } });
 brit(mineClear, { model: buildBrScorpion, stats: { armor: 0.72, hp: 1300, speed: 2.6, damage: 180, range: 160, fireCooldown: 3 }, cost: 0.85,
   variant: { name: 'Matilda Scorpion', weapon: 'flail, 2-pdr', text: 'An old Matilda with chains on a spinning drum out in front: on the first night of Alamein the Scorpions beat lanes through the Devil’s Gardens — slowly, in their own dust.' } });
+brit(aa, { model: buildBrCrusaderAA, stats: { armor: 0.45, hp: 950, speed: 6.2, antiAir: { ...aa.stats.antiAir, range: 300, rate: 2.2, burst: 3, pause: 1, hitNear: 0.14, hitFar: 0.04 } }, cost: 1.0,
+  variant: { name: 'Crusader AA Mk I', weapon: '40 mm Bofors', text: 'A Crusader the desert had worn out, its turret off and a Bofors in a tall open-topped box in its place: built in 1943 for the armoured regiments, it brings the light AA gun along with the tanks. Slow clips of heavy shells — one hit brings a Stuka down.' } });
+brit(bridgeLayer, { model: buildBrValentineBridge, stats: { armor: 0.6, hp: 1150, speed: 3.6 },
+  variant: { name: 'Valentine Bridgelayer', weapon: '30 ft scissors bridge', text: 'A Valentine with no turret and a scissors bridge folded on its back: it swings the bridge up over its nose and unfolds it across the anti-tank ditch or the wadi, then backs off — the tanks cross under fire.' } });
 // (nothing in the other slots: no airborne at Alamein — the SAS raided by lorry and jeep after its one parachute drop failed in 1941;
-//  no rocket launchers, no self-propelled AA mount yet (the Crusader AA came in 1943), no rivers to bridge on the Alamein line (the Bailey
-//  bridge was first used in Tunisia), and the smoke came from the 25-pounders’ and the mortars’ smoke shells)
+//  no rocket launchers, and the smoke came from the 25-pounders’ and the mortars’ smoke shells)
 
 export const TYPES_1945 = {
   rifles, atTeam, mgTeam, mortar, tank, ddTank, ifv, crew, airAssault, heavyTank, reconVehicle, tankDestroyer, cev,
@@ -677,9 +683,10 @@ export const TYPES_1945 = {
   aa, towedAA, sam, manpads, airRadar, gunMissile,
   scouts, sniper, engineers,
   ambulance, recovery, bridgeLayer, mineClear, commandPost, jammer,
-  bunker: T.bunker, strongpoint: T.strongpoint, hq: T.hq,   // the fortifications are of every war
+  ...lanesForts45(T),   // the fortifications are of every war (Japan's own: ./atlanticWall.js)
   ...SHIPS_1945,   // the open-sea maps' warships (./ships.js)
   ...ATLANTIC_WALL, // the coastal maps' fixed defences (./atlanticWall.js)
+  ...SOV_CRAFT_1945, // the Black Sea Fleet's landing craft (./sovietCraft.js: Novorossiysk)
 };
 
 /** What stands in for the types phase 1 doesn't have yet (ponytail: they get their own in phase 2). */

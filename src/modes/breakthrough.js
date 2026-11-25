@@ -8,14 +8,13 @@
 //   • The attack wins by taking the last line; the defence wins when the clock runs out or the
 //     attack has spent itself (no stacks left and no reserves to bring more).
 // Either side can be played; the AI takes the other (defending: no offensives, just holding,
-// reinforcing and fortifying). In the campaign (game.campaign) the attacker and both forces come
-// from the campaign, reserves are small, and the result goes back into it.
+// reinforcing and fortifying). In the world campaign (game.campaign: wcampaign/battle.js) the attacker and both forces
+// come from the campaign's army groups, reserves are small, and the result goes back into it (watchBattle).
 import { ControlPoints } from '../systems/ControlPoints.js';
 import { FrontlineDirector } from '../ai/FrontlineDirector.js';
 import { FrontlineHUD } from '../ui/FrontlineHUD.js';
 import { enemyOf, FACTIONS } from '../data/factions.js';
 import { lines, deploy, makeBuyer, clientSetup, clientUpdate, clock, fieldStrength } from './shared.js';
-import { loadCampaign, recordBattle } from '../campaign/Campaign.js';
 
 const ATTACKER = 'pact';
 const SETUP = 120;               // seconds the defence gets before the assault
@@ -93,7 +92,7 @@ export default {
     state.start = { [att]: fieldStrength(game, att), [def]: fieldStrength(game, def) }; // the campaign: what's left of each side
     state.strength[def] = fieldStrength(game, def);
 
-    // cut off (campaign/Campaign.js cutLevel): fewer command points; then no aircraft and shaken men
+    // cut off (camp.cut: a level per side): fewer command points; then no aircraft and shaken men
     for (const [f, cut] of Object.entries(camp?.cut ?? {})) {
       if (cut >= 1) state.cp[f] *= 0.6;
       if (cut >= 2) {
@@ -101,17 +100,14 @@ export default {
         for (const s of game.world.stacksOf(f)) s.morale *= 0.75;
       }
     }
-    // campaign events (campaign/Campaign.js EVENTS): who may call in aircraft
+    // a campaign's event for the battle (camp.event): who may call in aircraft
     if (camp?.event === 'airCover') game.air.limit[enemyOf(game.playerFaction)] = 0;
     if (camp?.event === 'enemyAir') game.air.limit[game.playerFaction] = 0;
     game.systems.push(points);
-    const ai = enemyOf(game.playerFaction);
-    if (!game.net || game.coop) {
-      const defending = ai === def;
-      game.systems.push(new FrontlineDirector(game, ai, state, defending
-        ? { attack: false, expand: false }
-        : { expand: false, firstAssault: SETUP + 20, targetable: (p) => ls[state.line]?.includes(p.id) }));
-    }
+    const make = (ai) => new FrontlineDirector(game, ai, state, ai === def
+      ? { attack: false, expand: false }
+      : { expand: false, firstAssault: SETUP + 20, targetable: (p) => ls[state.line]?.includes(p.id) });
+    if (!game.net || game.coop) game.systems.push(make(enemyOf(game.playerFaction)));
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     if (camp) game.tell(game.playerFaction, `Campaign: ${camp.sector}`);
@@ -165,19 +161,6 @@ export default {
       : { victory: true, title: 'Victory', subtitle: `${why} ${beaten(FACTIONS[loser].name)}` });
     game.net?.sendEnd(result(game.net.remoteFaction));
     const mine = result(game.playerFaction);
-    if (game.campaign) {
-      // survivors go home with what they have; the campaign moves the front
-      const survivors = game.world.stacksOf(game.playerFaction).map((s) => ({
-        cid: s.cid ?? null, type: s.type.id, name: s.name, men: s.aliveCount, xp: s.xp, rank: s.rank,
-      }));
-      const c = loadCampaign();
-      if (c?.battles?.length) {
-        const foe = enemyOf(game.playerFaction);
-        const enemyLeft = Math.min(1, fieldStrength(game, foe) / (game.modeState.start?.[foe] || 1));
-        const { gain } = recordBattle(c, { won: mine.victory, survivors, enemyLeft, scars: game.scars() });
-        mine.subtitle += ` ${survivors.length} stacks come back${gain ? `; ${gain} replacement points` : ''}.`;
-      }
-    }
     game.end(mine);
   },
 

@@ -77,7 +77,7 @@ export function makeBuyer(game, state) {
     if (landing) { // in to the beach sector of the road it was sent on (Dog, Easy, Fox), not at the base out at sea
       const craft = game.landing.launch(faction, { typeId, name, kit: kitted, owner: game.currentOwner ?? null }, roads[road] + (Math.random() - 0.5) * 50); // (owner: co-op — it lands as the buyer's)
       game.bus.emit('wave', { faction, units: [typeId], bought: true });
-      game.tell(faction, `${type.shortName} called in: an ${craft.type.shortName} is taking ${name} in`);
+      game.tell(faction, `${type.shortName} called in: ${/^[aeiou]/i.test(craft.type.shortName) ? 'an' : 'a'} ${craft.type.shortName} is taking ${name} in`);
       return craft;
     }
     const facing = type.stats.naval && game.world.coastal ? (pos.x > 0 ? -Math.PI / 2 : Math.PI / 2) : toward > 0 ? 0 : Math.PI; // (a coastal map: along the coast, toward the middle)
@@ -133,11 +133,12 @@ export function deploy(game, faction, units, anchors, { back = 25, spread = 28, 
     const name = saved?.name ?? (names[id] ? `${names[id]} ${counter[id]}` : undefined);
     const pos = game.world.river ? game.world.river.dry({ x, z }) : { x, z };
     const s = game.spawnStack(id, faction, pos, facing, name, saved?.men ? { count: saved.men } : {});
+    if (!s) return null; // (a type this army has nothing for: GameEngine.spawnStack)
     if (saved?.xp) s.setXp(saved.xp);
     if (saved?.cid) s.cid = saved.cid;
     if (saved?.bid) s.campBid = saved.bid; // (its campaign battalion: co-op, the friend's are the friend's — GameEngine)
     return s;
-  });
+  }).filter(Boolean);
 }
 
 /** Multiplayer client: the points and the HUD; the host's state packets fill in the numbers. */

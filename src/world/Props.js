@@ -152,6 +152,7 @@ export class PropBuilder {
     this.batches = new Map(); // material key (#group) -> geometries
     this.group = null;        // a building being built: its parts get their own meshes
     this.buildings = [];
+    this.ruined = null;       // a map's own say on whether its houses come shelled (shellDamage), else by the war
     this.materials = new Map();
     this.lights = [];
     this.rockGeos = [0, 1, 2, 3].map((i) => makeRockGeometry(500 + i));
@@ -283,10 +284,11 @@ export class PropBuilder {
    * away from the surviving end into a breach where the shell came in (ragged masonry along
    * the broken tops), the roof still on over the west end, its charred rafters and ridge beam
    * running on over the burnt-out rest, fallen tiles, a dropped beam and rubble inside and
-   * out. Each wall bay is cover.
+   * out. Each wall bay is cover. `ruin: false` builds it whole instead (the default: shellDamage).
    */
-  house({ x, z, yaw, width = 9, depth = 7, height = 3.2 }) {
+  house({ x, z, yaw, width = 9, depth = 7, height = 3.2, ruin = this.shellDamage() }) {
     const r = this.rand;
+    if (!ruin) return this.farmhouse({ x, z, yaw, width, depth, height });
     const names = ['farmhouse', 'barn', 'farmstead', 'cottage', 'mill house'];
     const b = this.beginBuilding(names[this.buildings.length % names.length], x, z, yaw, width, depth);
     // weathered, smoke-stained whitewash
@@ -339,6 +341,32 @@ export class PropBuilder {
       const [rx, rz] = PropBuilder.local(x, z, yaw, near ? breach + (r() - 0.5) * width * 0.5 : (r() - 0.5) * width * 0.8, (r() - 0.5) * depth * (near ? 1.3 : 0.8));
       this.rubble(rx, rz, 0.25 + r() * (near ? 0.55 : 0.3));
     }
+  }
+
+  /**
+   * Whether houses come shelled by default (house: a ruin, townHouse: a share with a slope shot in):
+   * a map's own `props.ruined` if it set one, else by the war — whole in 1806 and 1918 (a 1918
+   * front-line map knocks its villages down itself: the `ruins` of its field, GameEngine
+   * replayScars), shelled from 1945 on.
+   */
+  shellDamage() {
+    return this.ruined ?? year() >= 1930;
+  }
+
+  /** An intact farmhouse: whitewashed walls with windows, shutters and doors, a tiled or thatched roof, a chimney. */
+  farmhouse({ x, z, yaw, width = 9, depth = 7, height = 3.2 }) {
+    const r = this.rand;
+    const names = ['farmhouse', 'barn', 'farmstead', 'cottage', 'mill house'];
+    const b = this.beginBuilding(names[this.buildings.length % names.length], x, z, yaw, width, depth);
+    const plaster = new THREE.Color().setHSL(0.1, 0.08 + r() * 0.08, 0.66 + r() * 0.12).getHex();
+    b.plaster = plaster;
+    const t = 0.45;
+    this.shell(b, { height, t, color: plaster, bay: 2.3, frame: 0xa8a090, front: [width * 0.3], back: [-width * 0.2], shutters: 0.5 });
+    this.piece('stone', b, 0, 0.1, 0, width + 0.3, 0.4, depth + 0.3, 0x6a645a);                 // plinth
+    const roof = year() < 1900 && r() < 0.4 ? 0x8a7650 : r() < 0.8 ? 0x6a3024 : 0x3a3c40;  // thatch (1806), red tiles or slate
+    this.gableRoof(b, { eave: height, t, color: roof, chimney: true });
+    this.endBuilding();
+    return b;
   }
 
   /** Round hay bales left in a field, sometimes stacked. */
@@ -395,7 +423,7 @@ export class PropBuilder {
   /** A burnt-out civilian car, pushed off the road. */
   wreckCar({ x, z, yaw }) {
     const r = this.rand;
-    if (year() < 1900) return; // (no motor cars yet)
+    if (year() < 1930) return this.brokenCart({ x, z, yaw }); // (no motor cars in 1806; the car model is a 1940s one, wrong for 1918)
     const old = year() < 1985;
     const car = old ? (CAR45 ??= car45Geometry()) : (CAR ??= carGeometry());
     // burnt out (charred, rusting) or just abandoned in its faded paint: Trabant beige, Lada red, VW blue — in 1945 black, dark green, grey-blue
@@ -407,6 +435,25 @@ export class PropBuilder {
     this.push('metal', car.dark, _m, burnt ? 0x141210 : 0x1c2024);    // window holes or glass, grille, wheel arches
     this.push('metal', car.trim, _m, burnt ? 0x2a2420 : 0x6a6a64);    // bumpers, rims
     this.cover.addBox({ x, z, yaw, length: 1.7, thickness: 4.1, height: 1.3 });
+  }
+
+  /** A farm cart left by the road (wreckCar before motor cars): tipped on a broken wheel, the other one off and lying beside it, shafts down. */
+  brokenCart({ x, z, yaw }) {
+    const r = this.rand;
+    const wood = new THREE.Color().setHSL(0.07, 0.35, 0.12 + r() * 0.06).getHex();
+    const tip = 0.25 + r() * 0.15;                                     // down on the broken side
+    this.part('plain', x, z, yaw, 0, 0.75, 0, 1.5, 0.12, 2.8, wood, 0, 0, tip);                 // the bed
+    for (const s of [-1, 1]) this.part('plain', x, z, yaw, s * 0.72, 1.0, 0, 0.08, 0.45, 2.8, wood, 0, 0, tip); // its sides
+    this.part('plain', x, z, yaw, 0, 1.0, -1.38, 1.5, 0.45, 0.08, wood, 0, 0, tip);              // tailboard
+    for (const s of [-0.35, 0.35]) this.part('plain', x, z, yaw, s, 0.35, 2.4, 0.1, 0.1, 2.4, wood, 0, -0.28); // shafts, on the ground
+    const wheel = new THREE.CylinderGeometry(0.62, 0.62, 0.1, 12);
+    const [wx, wz] = PropBuilder.local(x, z, yaw, -0.85, 0.1);          // the wheel still on
+    _m.compose(_p.set(wx, this.terrain.heightAt(wx, wz) + 0.6, wz), _q.setFromEuler(_e.set(0, yaw, Math.PI / 2 - tip * 0.3, 'YXZ')), _s.set(1, 1, 1));
+    this.push('plain', wheel, _m, 0x3a2a1c);
+    const [fx, fz] = PropBuilder.local(x, z, yaw, 1.9, 0.6 + r());        // the one that came off, flat in the grass
+    _m.compose(_p.set(fx, this.terrain.heightAt(fx, fz) + 0.06, fz), _q.identity(), _s.set(1, 1, 1));
+    this.push('plain', wheel, _m, 0x3a2a1c);
+    this.cover.addBox({ x, z, yaw, length: 1.6, thickness: 2.9, height: 1.1 });
   }
 
   /** Border watchtower: concrete shaft with an observation cab (East) or a wooden OP (West). */
@@ -453,7 +500,7 @@ export class PropBuilder {
     for (let i = 0; i < 4; i++) {
       const lx = (i % 2) * 1.1 - 0.55;
       const ly = i < 2 ? 0.3 : 0.9;
-      this.part('plain', x, z, yaw, lx, ly, (r() - 0.5) * 0.2, 1, 0.6, 0.7, 0x4a5032, (r() - 0.5) * 0.2);
+      this.part('plain', x, z, yaw, lx, ly, (r() - 0.5) * 0.2, 1, 0.6, 0.7, year() < 1900 ? 0x6a5236 : 0x4a5032, (r() - 0.5) * 0.2); // (1806: bare wood, later army paint)
     }
     this.cover.addBox({ x, z, yaw, length: 2.2, thickness: 0.8, height: 1.2 });
   }
@@ -461,14 +508,16 @@ export class PropBuilder {
   /** Radio mast with guy wires (visual, a landmark for the command post). */
   mast({ x, z, height = 14 }) {
     const g = this.terrain.heightAt(x, z);
-    this.box('metal', x, g + height / 2, z, 0.16, height, 0.16, 0, 0x6a6c66);
+    // before wireless (1806): a timber signal pole on hemp guys, its crossarm the semaphore's
+    const [key, pole, guy, w] = year() < 1900 ? ['plain', 0x5a4632, 0x8a7a5a, 0.24] : ['metal', 0x6a6c66, 0x3a3a3a, 0.16];
+    this.box(key, x, g + height / 2, z, w, height, w, 0, pole);
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + 0.4;
       const len = Math.hypot(height * 0.7, 5);
       const ang = Math.atan2(5, height * 0.7);
-      this.box('metal', x + Math.cos(a) * 2.5, g + height * 0.35, z + Math.sin(a) * 2.5, 0.025, len, 0.025, -a + Math.PI / 2, 0x3a3a3a, 0, ang);
+      this.box(key, x + Math.cos(a) * 2.5, g + height * 0.35, z + Math.sin(a) * 2.5, 0.025, len, 0.025, -a + Math.PI / 2, guy, 0, ang);
     }
-    this.box('metal', x, g + height - 0.4, z, 1.6, 0.05, 0.05, 0, 0x6a6c66);
+    this.box(key, x, g + height - 0.4, z, 1.6, w - 0.11, w - 0.11, 0, pole);
     this.cover.addCylinder({ x, z, radius: 0.3, height, spots: false });
   }
 
@@ -701,7 +750,7 @@ export class PropBuilder {
   }
 
   /** German town house: storeys of plaster with windows and shutters, a tiled gable roof, a chimney. */
-  townHouse({ x, z, yaw, width = 8, depth = 9, storeys = 2, name = 'town house', damaged = 0.15 }) {
+  townHouse({ x, z, yaw, width = 8, depth = 9, storeys = 2, name = 'town house', damaged = this.shellDamage() ? 0.15 : 0 }) {
     const r = this.rand;
     const b = this.beginBuilding(name, x, z, yaw, width, depth);
     const h = storeys * 3.1;

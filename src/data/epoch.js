@@ -26,23 +26,29 @@ export const EPOCHS = {
   1806: {
     id: '1806', name: '1806', title: 'Jena and Auerstedt, 1806',
     blurb: 'October 1806. Napoleon\'s Grande Armée marches through the Thuringian Forest against Prussia and her Saxon allies: muskets, bayonets, horses and guns.',
-    sides: { nato: 'France', pact: 'Prussia' },
+    sides: { nato: 'France and allies', pact: 'Coalition' },
     regions: { // (the menu's regions: maps/index.js REGIONS — their name in this war, a title and line)
-      europe: { name: 'Germany', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
+      europe: { name: 'Germany', title: 'Germany and Austria, 1805–06', blurb: 'Ulm, Austerlitz, Jena and Auerstedt: the Grande Armée against Austria, Russia and then Prussia from the Danube to the Elbe.', // (and at sea: per theatre, ui/MainMenu.js regionInfo)
         sea: { name: 'European waters', title: 'The War at Sea, 1805–07', blurb: 'Trafalgar, the blockade of Brest and Copenhagen: the Royal Navy against the fleets of France, Spain and Denmark.' } },
       east: { name: 'Poland', title: 'Poland and East Prussia, 1807', blurb: 'Poland and East Prussia, 1806–07: the Grande Armée against the Russian army — the mud at Pułtusk, snow at Eylau, the redoubts of Heilsberg, the river at Friedland.' },
       iberia: { name: 'The Peninsula', title: 'The Peninsular War', blurb: 'Portugal and Spain, 1808–11: Wellington’s redcoats in their line against the French columns — Vimeiro, Talavera, the ridge of Bussaco, the village of Fuentes de Oñoro.' },
       africa: { name: 'Egypt', title: 'Egypt, 1798–1801', blurb: 'The Nile and the Egyptian coast: Nelson at Aboukir Bay, Abercromby’s landing.' },
       caribbean: { title: 'The West Indies', blurb: 'Frigates and ships of the line among the sugar islands.' },
+      italy: { name: 'Italy', title: 'Italy and Dalmatia, 1805–07', blurb: 'Masséna against Archduke Charles on the Adige at Caldiero, the redcoats’ volley at Maida in Calabria, Gaeta’s siege and the Russians on the Dalmatian coast.' },
     },
     armies: {
       fr: { id: 'fr', faction: 'nato', name: 'Grande Armée' },
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
-      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', navy: 'Imperial Russian Navy', regions: ['east'] },          // (Poland 1807: Eylau, Friedland; at sea Seniavin's squadron and the Baltic fleet: data/units1806/eastNavies.js)
       gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
-      dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', regions: [] }, // (Søetaten, at Copenhagen only: the map names it — its ships in the French hulls, her own colours: data/units1806/ships.js)
+      au: { id: 'au', faction: 'pact', name: 'Austrian Army', own: true, regions: ['europe', 'italy', 'east'] }, // (Ulm and Austerlitz, Caldiero and Italy 1805, Galicia 1809; its own roster: data/units1806/austria.js)
+      dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', own: true, regions: ['europe'], standIn: { tank: 'ifv', heavyTank: 'ifv', spMortar: 'artillery', rockets: 'artillery', bridgeLayer: 'engineers' } }, // (Søetaten: its ships in the French hulls, her own colours: data/units1806/ships.js; the army of Zealand 1807, Køge: ./units1806/eastNavies.js — own: no French units; no heavy horse, heavy or horse guns, pontoons)
+      // Napoleon's western allies (data/units1806/westNavies.js): Spain's own fleet and garrison (`own`: no cavalry — the light infantry and
+      // the line stand in for the horse, the field guns for the heavy guns and the howitzers); Holland's own fleet, ashore the French types
+      es: { id: 'es', faction: 'nato', name: 'Spain', own: true, navy: 'Armada Española', regions: ['iberia'], standIn: { reconVehicle: 'mgTeam', ifv: 'rifles', tank: 'rifles', mortar: 'artillery', spMortar: 'artillery', rockets: 'artillery', atTeam: 'rifles', sniper: 'mgTeam', engineers: 'militia', marines: 'rifles', sailors: 'militia' } },
+      nl: { id: 'nl', faction: 'nato', name: 'Batavian Republic', navy: 'Bataafse Marine', regions: [] }, // (the Kingdom of Holland from June 1806: the Texel squadron; no army of its own here — the French types ashore)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -72,22 +78,35 @@ export const EPOCHS = {
         { id: 'twoDeep', name: 'Two-deep line', text: 'Infantry in line that has stood still for 3 s hits 20 % harder: the thin line waits, then every musket fires at once.', still: 3, dmg: 1.2 },
         { id: 'baker', name: 'The Baker rifle', text: 'Riflemen reach 30 % further and cost 20 % less: the 95th picked off officers at ranges no musket could answer.', mods: { sniper: { range: 1.3 } }, costs: { sniper: 0.8 } },
       ],
+      au: [
+        { id: 'grenzer', name: 'The Military Frontier', text: 'Grenzer cost 25 % less and take 15 % less damage: soldier-farmers raised on the Turkish border, every one of them used to the raid and the ambush.', mods: { mgTeam: { take: 0.85 } }, costs: { mgTeam: 0.75 } },
+        { id: 'wurst', name: 'The Wurst', text: 'Cavalry batteries cost 20 % less and move 15 % faster: the gunners ride the padded ammunition chest, not horses of their own.', mods: { rockets: { speed: 1.15 } }, costs: { rockets: 0.8 } },
+      ],
       dk: [
         { id: 'blockships', name: 'Blockships', text: 'Ships of the line cost 20 % less: old hulls cut down and moored as floating batteries, fought where they lay.', costs: { cruiser: 0.8 } },
         { id: 'volunteers', name: 'Copenhagen\'s volunteers', text: 'Ships of the line and frigates take 10 % less damage: students, dock hands and the city\'s men rowed out to fill the gaps at the guns.', mods: { cruiser: { take: 0.9 }, frigate: { take: 0.9 } } },
+      ],
+      es: [
+        { id: 'havanaOak', name: 'Havana oak', text: 'Ships of the line take 10 % less damage: hulls of Cuban mahogany and cedar from the Havana yard — Santísima Trinidad was still afloat when the battle ended.', mods: { cruiser: { take: 0.9 }, battleship: { take: 0.9 } } },
+        { id: 'milicias', name: 'Milicias provinciales', text: 'Militia costs 25 % less and takes 10 % less damage: every province’s men called up to hold the coast and the towns.', mods: { militia: { take: 0.9 } }, costs: { militia: 0.75 } },
+      ],
+      nl: [
+        { id: 'shoalWater', name: 'Shoal-water pilots', text: 'Frigates and brigs sail 10 % faster: Dutch pilots who know every bank and gat between the Texel and the Vlie.', mods: { frigate: { speed: 1.1 }, destroyer: { speed: 1.1 } } },
+        { id: 'kanonneerboten', name: 'The gunboat flotilla', text: 'Gunboats cost 25 % less: the Batavian yards turned out hundreds for the invasion of England.', costs: { ptBoat: 0.75 } },
       ],
     },
   },
   1918: {
     id: '1918', name: '1918', title: 'The Western Front, 1918',
     blurb: '1918 in Picardy. Germany throws everything into one last offensive; then the Allies strike back with tanks, aircraft and guns. Trenches, wire and gas, and the first tank battles.',
-    sides: { nato: 'Allies', pact: 'Germany' },
+    sides: { nato: 'Allies', pact: 'Central Powers' },
     regions: {
       europe: { name: 'Western Front',
         sea: { name: 'North Sea', title: 'The North Sea, 1914–18', blurb: 'Dogger Bank, the Heligoland Bight and the Dover Strait: the Grand Fleet against the High Seas Fleet.' } },
       east: { title: 'The Eastern Front, 1914–17', blurb: 'Russia against Germany and Austria-Hungary: the lakes of Tannenberg, the breakthrough at Gorlice, Brusilov’s offensive at Lutsk, and Riga, where the storm troops first crossed the Dvina.' },
       italy: { title: 'The Italian Front', blurb: 'The Alps and the Piave, 1917–18: Italy, with British divisions, against Austria-Hungary and Germany — Caporetto, the Asiago plateau, the Piave and the last crossing at Vittorio Veneto.' },
       middleEast: { title: 'The Middle East', blurb: 'Gallipoli 1915 and Palestine 1918: the British Empire, ANZACs among them, against the Ottoman Empire.' },
+      balkans: { title: 'The Salonika Front, 1915–18', blurb: 'Salonika, Doiran, Monastir and Dobro Pole: the Allied Army of the Orient — French, British, Serbs, Greeks, Italians and Russians — against the Bulgarians and the Germans in the mountains of Macedonia, until the breakthrough of September 1918.' },
       med: { title: 'The Mediterranean', blurb: 'The Otranto Barrage, 1917: Austro-Hungarian cruisers against the drifters and destroyers closing the Adriatic.' },
     },
     armies: {
@@ -96,11 +115,18 @@ export const EPOCHS = {
       de: { id: 'de', faction: 'pact', name: 'German Army' },
       st: { id: 'st', faction: 'pact', name: 'Sturmtruppen' },
       // the other fronts (own: only the types data/units1918/fronts.js writes for them)
-      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, regions: ['middleEast'] },
-      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast'] },
-      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy'] },
-      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'] },
-      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, regions: ['east'] },
+      // standIn: a type the army lacks is fielded as this one of its own (null: not at all); else one of the same role it has (data/units/index.js standInFor)
+      ot: { id: 'ot', faction: 'pact', name: 'Ottoman Army', own: true, navy: 'Ottoman Navy', regions: ['middleEast'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (no armour at all: the Süvari are its mobile arm)
+      anzac: { id: 'anzac', faction: 'nato', name: 'ANZAC', own: true, regions: ['middleEast', 'europe'], navyOf: 'uk', standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (the Light Car Patrol; the Royal Navy's ships — Gallipoli's covering squadron — data/factions.js armyHas)
+      it: { id: 'it', faction: 'nato', name: 'Italian Army', own: true, navy: 'Regia Marina', regions: ['italy', 'europe'] },
+      ah: { id: 'ah', faction: 'pact', name: 'Austro-Hungarian Army', own: true, navy: 'k.u.k. Kriegsmarine', regions: ['italy', 'east'], standIn: { tank: 'reconVehicle', heavyTank: 'reconVehicle' } }, // (no tanks: the Romfell armoured car)
+      ru: { id: 'ru', faction: 'nato', name: 'Russian Army', own: true, navy: 'Russian Baltic Fleet', regions: ['east'], standIn: { tank: 'reconVehicle' } }, // (no tanks: the Austin-Putilov armoured cars)
+      // the world campaign's own armies (wcampaign/wars/ww1.js), no roster yet. `own` with no types: they field nothing of
+      // another nation's; no regions: no map picks them, so a campaign battle fights them as the side's army that fits its
+      // map (data/factions.js armiesFrom — the British or French, the Germans). TODO units: their rosters, then their regions.
+      aef: { id: 'aef', faction: 'nato', name: 'American Expeditionary Forces', own: true, navy: 'US Navy', regions: ['europe'] }, // (data/units1918/aef.js; no armoured cars: the scouts stand in)
+      serb: { id: 'serb', faction: 'nato', name: 'Serbian Army', own: true, regions: ['balkans'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } }, // (data/units1918/balkans.js; no armour: the cavalry division is its mobile arm)
+      bg: { id: 'bg', faction: 'pact', name: 'Bulgarian Army', own: true, regions: ['balkans'], standIn: { tank: 'ifv', heavyTank: 'ifv', reconVehicle: 'ifv' } },
     },
     defaults: { nato: 'uk', pact: 'de' },
     types: TYPES_1918, alias: ALIAS_1918, air: { ...AIR_1918, ...BOMBERS[1918] },
@@ -143,6 +169,19 @@ export const EPOCHS = {
         { id: 'committees', name: 'The army of 1917', text: 'Rifle squads cost 20 % less but break sooner: after the Revolution the soldiers’ committees voted on orders, and the will to go on drained away.', costs: { rifles: 0.8 }, mods: { rifles: { breakMorale: 1.3 } } },
         { id: 'cossacks', name: 'Cossacks', text: 'Horsemen do double damage to guns, mortars, ambulances, observers and staff: the Cossacks rode for the rear, not for the trenches.', soft: 2 },
       ],
+      // the world campaign's armies (no roster yet: these take effect when their units are built)
+      aef: [
+        { id: 'doughboys', name: 'Doughboys', text: 'Rifle squads are 15 % tougher but cost 10 % more: big, fresh, well-fed men, two million of them, none worn down by three years in the trenches.', mods: { rifles: { hp: 1.15 } }, costs: { rifles: 1.1 } },
+        { id: 'frenchGuns', name: 'French guns', text: 'Field guns and heavy howitzers cost 20 % less: the AEF went into battle with French 75s and 155s, and France had them by the thousand.', costs: { artillery: 0.8, spMortar: 0.8 } },
+      ],
+      serb: [
+        { id: 'albania', name: 'The retreat through Albania', text: 'Rifle squads and machine-gun teams start as Veterans: the men who survived the winter march over the Albanian mountains in 1915.', veteran: ['rifles', 'mgTeam'] },
+        { id: 'goatTracks', name: 'Goat tracks', text: 'Infantry moves 15 % faster: the Serbs went up the Kajmakčalan and the Dobro Pole by paths no mule could climb.', mods: { infantry: { speed: 1.15 } } },
+      ],
+      bg: [
+        { id: 'mountainWall', name: 'The mountain wall', text: 'Machine-gun teams and mortars take 20 % less damage: for three years the Bulgarians held the crests of Macedonia, a nest on every one.', mods: { mgTeam: { take: 0.8 }, mortar: { take: 0.8 } } },
+        { id: 'smallholders', name: 'A nation in arms', text: 'Rifle squads and cavalry cost 15 % less: a country of smallholders called up one man in four.', costs: { rifles: 0.85, ifv: 0.85 } },
+      ],
     },
   },
   1985: {
@@ -158,8 +197,9 @@ export const EPOCHS = {
       sov: { id: 'sov', faction: 'pact', name: 'Soviet Army', regions: ['europe', 'north'] },
       nva: { id: 'nva', faction: 'pact', name: 'NVA', regions: ['europe'] },
       // the Northern Flank and Korea: each only the types written for it (data/units/armies85.js)
-      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'] },
-      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'] },
+      // standIn: as 1918's; navyOf: the ships of that army of the same nation (data/factions.js armyHas)
+      no: { id: 'no', faction: 'nato', name: 'Norwegian Army', own: true, regions: ['north'], standIn: { aa: 'towedAA', sam: 'towedAA', heavyTank: 'tank', rockets: 'artillery' } }, // (Bofors L/70; Leopard 1; M109) (the Royal Norwegian Navy: data/units/navies85.js)
+      usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', own: true, regions: ['north'], navyOf: 'us', standIn: { aa: 'sam', heavyTank: 'tank', rockets: 'artillery' } }, // (the US Navy's ships; Improved HAWK; M60A1; M198)
       rok: { id: 'rok', faction: 'nato', name: 'ROK Army', own: true, regions: ['korea'] },
       kpa: { id: 'kpa', faction: 'pact', name: 'Korean People’s Army', own: true, regions: ['korea'] },
     },
@@ -205,22 +245,24 @@ export const EPOCHS = {
     blurb: 'Spring 1945. The Allies are across the Rhine and driving into the heart of Germany; the Wehrmacht fights on in the hills of Hesse and Thuringia.', // (the menu's line; 1985's is data/game.js)
     // the menu's regions (maps/index.js REGIONS): each its own title and line
     regions: {
-      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad on the Volga, Bobruisk in the marshes, the Seelow Heights over the Oder and the last battle in Berlin.' },
-      africa: { title: 'North Africa', blurb: 'The desert war: the boxes and the Cauldron at Gazala, the minefields of El Alamein, the passes of Tunisia — open sand where armour fights at long range.' },
-      pacific: { title: 'The Pacific, 1945', blurb: 'February 1945: the Marines storm Iwo Jima. Black volcanic sand, Mount Suribachi, and an Imperial Army dug into caves and tunnels that will not surrender.' },
+      east: { title: 'The Eastern Front', blurb: 'The Red Army against the Wehrmacht: Stalingrad on the Volga, the night landing at Novorossiysk, Bobruisk in the marshes, the Seelow Heights over the Oder and the last battle in Berlin.' },
+      africa: { title: 'North Africa', blurb: 'The desert war and the Mediterranean: the boxes at Gazala, the minefields of El Alamein, the passes of Tunisia, the landing at Gela in Sicily and the Malta convoys.' },
+      pacific: { title: 'The Pacific War', blurb: 'From Midway and Guadalcanal to Saipan, Iwo Jima and Okinawa, and Kohima on the Burma front: the Marines, the Army and the US Navy against an Imperial Army and Navy that will not surrender.' },
+      europe: { sea: { name: 'North Atlantic', title: 'The Battle of the Atlantic', blurb: 'The convoys from Halifax and New York to Britain, and the U-boat packs waiting for them in the air gap of mid-ocean: Royal Navy escorts against the Kriegsmarine.' } },
+      med: { sea: { title: 'The Mediterranean, 1942', blurb: 'Malta, besieged in the middle of the sea: the convoys fight through the Sicilian narrows past U-boats, E-boats and the German cruisers.' } },
     },
-    sides: { nato: 'Allies', pact: 'Germany' },
+    sides: { nato: 'Allies', pact: 'Axis' },
     armies: {
-      us: { id: 'us', faction: 'nato', name: 'US Army' },
+      us: { id: 'us', faction: 'nato', name: 'US Army', pacific: 'both' }, // (Europe and the Pacific: the Army fought on Saipan and Okinawa beside the Marines)
       sov: { id: 'sov', faction: 'nato', name: 'Red Army' },
-      wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht' },
+      wh: { id: 'wh', faction: 'pact', name: 'Wehrmacht', navy: 'Kriegsmarine' },
       fj: { id: 'fj', faction: 'pact', name: 'Fallschirmjäger' },
       // the Pacific (data/units45 the end): only on the Pacific's land maps (map.pacific), and there only they
       usmc: { id: 'usmc', faction: 'nato', name: 'US Marine Corps', pacific: true },
-      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', own: true, regions: ['africa'] },
-      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
-      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
-      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', pacific: true, own: true }, // (own: only the types written for it)
+      brit: { id: 'brit', faction: 'nato', name: 'British 8th Army', navy: 'Royal Navy', own: true, regions: ['africa'] },
+      brit21: { id: 'brit21', faction: 'nato', name: '21st Army Group', navy: 'Royal Navy', own: true, regions: ['europe'] }, // (NW Europe 1944: data/units45/brit21.js)
+      brit14: { id: 'brit14', faction: 'nato', name: '14th Army', navy: 'Royal Navy', own: true, regions: ['pacific'] },   // (Burma 1944: data/units45/brit14.js) // (North Africa: El Alamein — data/units45 the end)
+      jp: { id: 'jp', faction: 'pact', name: 'Imperial Japanese Army', navy: 'Imperial Navy', pacific: true, own: true }, // (own: only the types written for it)
     },
     defaults: { nato: 'us', pact: 'wh' },
     types: TYPES_1945, alias: ALIAS_1945, air: { ...AIR_1945, ...BOMBERS[1945] },

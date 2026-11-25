@@ -829,6 +829,7 @@ class Sortie {
       this.game.effects.explosion(w.root.position, 0.6, { ground: false, fire: 1.2 });
       this.game.effects.trail?.(w.root.position, this.dir);
       w.root.removeFromParent();
+      if (this.hp > 0) this.game.bus.emit('air:lost', { faction: this.faction, n: 1 }); // (one of the flight: the campaign counts aircraft)
       if (this.hp > 0 && this.faction === this.game.playerFaction) this.game.tell(this.faction, `${this.type.name}: one of the flight shot down`); // (the whole flight down: shotDown says it)
     }
     const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
@@ -1081,6 +1082,7 @@ class Sortie {
     if (ditch) this.game.tell(this.faction, `${this.type.name} ditched in the sea`);
     else this.game.tellBoth(this.faction, `${this.type.name} shot down!${lost}`, `Enemy ${this.type.name} shot down!`);
     this.game.bus.emit('heli:down', { faction: this.faction, name: this.type.name });
+    this.game.bus.emit('air:lost', { faction: this.faction, n: 1 + (this.wing?.length ?? 0) }); // (the aircraft still in the flight go down with it)
   }
 
   updateCrash(dt) {
@@ -1444,7 +1446,7 @@ export class AirStrike {
     if (deck) { // off her deck: spotted first (a strike longer), the flight out of her hangar
       const cu = deck.units[0];
       const spot = kind === 'diveBomb' || kind === 'torpBomb' || kind === 'seaStrike' || p.bombs ? DECK.strike : DECK.light;
-      const dk = `${faction}Deck`;
+      const dk = `${faction}${deck.stats.carrier.air ?? 'Deck'}`; // (a seaplane carrier's own: data/air18.ts natoSeaplane)
       if (p.aircraft?.[dk]) { sortie.army = dk; sortie.type = airType(kind, faction, dk); sortie.hp = sortie.type.hp; } // (the Kiev's Yak-38s, not the shore's MiG-23s)
       this.hangar(cu)[kind]--;
       cu.deckBusy = [...(cu.deckBusy ?? []).filter((t) => t > game.world.time), game.world.time + spot];

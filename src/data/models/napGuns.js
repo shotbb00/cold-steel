@@ -12,7 +12,8 @@ import { buildHorse } from './horse.js';
 import { buildNapSoldier, ARMIES_1806 } from './napSoldier.js';
 import { splitFlag } from './ships1806.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c };   // carriages: French olive green, the Germans' blue-grey, the Russians' pea green
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c, au: 0x977728, es: 0x7a5a3a };   // carriages: French olive green, the Germans' blue-grey, the Russians' pea green, the Austrians' ochre (ironwork black), Spain's oiled oak
+WOOD.dk = 0x7a3a2c; // (Denmark 1807: the carriages in oxblood red)
 const BRONZE = 0x9a7a3a;
 const IRON = 0x2a2a28;
 const SIZES = {
@@ -21,6 +22,7 @@ const SIZES = {
   horse: { wheel: 0.62, barrel: 1.6, bore: 0.09, cheek: 1.7 },
   howitzer: { wheel: 0.66, barrel: 1.1, bore: 0.15, cheek: 1.8 },
   licorne: { wheel: 0.7, barrel: 1.6, bore: 0.14, cheek: 2.0 },   // (the Russian 'unicorn': a long howitzer, shell or canister at gun range)
+  regiment: { wheel: 0.58, barrel: 1.3, bore: 0.075, cheek: 1.5 }, // (the Austrian 3-pounder regimental gun: small, light, with the battalions)
 };
 
 /** A spoked wheel standing on the ground, facing x (as a geometry list). */

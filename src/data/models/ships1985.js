@@ -554,6 +554,31 @@ export const buildTarantul = ship(() => {
   return { fixed, mounts: [{ geo: gun76(c), at: [0, H.top(18) + 0.1, 18], arc: 5 }, { geo: ak630(c), at: [2, fb, -20], aft: true, arc: 4 }, { geo: ak630(c), at: [-2, fb, -20], aft: true, arc: 4 }] };
 });
 
+/** A KT-138 launcher for the P-15 Termit (Styx): the hangar-like box with its rounded roof and the doors at the front, on a
+ *  frame, raised `up` toward the bow. */
+const styx = (c, x, y, z, up = 0.2) => merge([
+  box(1.5, 1.2, 8.2, { y: 0.6, color: c.upper }), P.cyl(0.75, 0.75, 8.2, { y: 1.2, rx: Math.PI / 2, color: c.upper, surf: 'plate' }, 12),
+  box(1.3, 1.6, 0.08, { y: 1.0, z: 4.12, color: DARK }),                                                     // the doors
+  ...[-1, 1].map((s) => box(0.06, 1.4, 0.06, { x: s * 0.2, y: 1.0, z: 4.17, color: c.gun })),
+]).rotateX(-up).translate(x, y + 0.9, z);
+
+/** Tarantul I (the Volksmarine's, 1984 on): the same hull and house as the III, but the four Termits (Styx) in their
+ *  KT-138 boxes, two a side, and the small Plank Shave radome over the bridge instead of the Band Stand. */
+export const buildTarantulI = ship(() => {
+  const c = VMF, fb = 3.4;
+  const H = hull(56, 10.2, fb, 2.6, c, 1.2, { fittings: false });
+  const fixed = merge([
+    ...H.parts,
+    ...pennant(H, '571', 1.6),
+    ...house(c, 0, fb, 3, 7, 3.6, 18),
+    ...house(c, 0, fb + 3.6, 7, 6, 2.4, 6, 1.2),
+    P.cyl(0.25, 0.35, 2.4, { y: fb + 7.2, z: 6, color: DARK }, 8), radome(1.1)(0, fb + 8.4, 6),             // Plank Shave on its post
+    ...[-1, 1].flatMap((s) => [styx(c, s * 2.5, fb + 0.4, -10), styx(c, s * 4.1, fb, -10)]),               // the four Styx boxes, the inner pair higher
+    ...[-1, 1].map((s) => box(1.6, 0.9, 7, { x: s * 3.3, y: fb + 0.45, z: -10.5, color: c.gun })),          // their frames
+  ]);
+  return { fixed, mounts: [{ geo: gun76(c), at: [0, H.top(18) + 0.1, 18], arc: 5 }, { geo: ak630(c), at: [2, fb, -20], aft: true, arc: 4 }, { geo: ak630(c), at: [-2, fb, -20], aft: true, arc: 4 }] };
+});
+
 // ---------------------------------------------------------------- landing ships
 
 export const buildNewport = ship(() => {
@@ -648,6 +673,88 @@ export const buildLosAngeles = sub(() => modernSub(SUB, { len: 110, beam: 10, sa
 export const buildVictor = sub(() => modernSub(SUB, { len: 106, beam: 10.6, sail: [14, 4.6, 6], sailPlanes: false, pod: true }));
 export const buildLosAngelesVLS = sub(() => modernSub(SUB, { len: 110, beam: 10, sail: [12, 6, 26], vls: 12 }));
 export const buildOscar = sub(() => modernSub(SUB, { len: 154, beam: 13, sail: [24, 6, 16], sailPlanes: false, lids: 12, wide: 1.3 }));
+
+// ---------------------------------------------------------------- the Bundesmarine (the Baltic landings: Wismar)
+// Its own ships, in its lighter grey with black pennant numbers: the Bremen frigate (F122), the Lütjens destroyer
+// (Type 103, the Adams hull with two macks) and the Gepard fast attack craft (Type 143A).
+const BM = { hull: 0x858c91, deck: 0x55595d, upper: 0x959ca0, gun: 0x959ca0, black: BLACK, boat: 0xc8c8c0 };
+/** A pennant number on both bows, black (the Bundesmarine's: as bowNumber). */
+const blackNumber = (H, text, h) => {
+  const z0 = H.len * 0.3, y0 = H.top(z0) - h - 0.9;
+  return [-1, 1].flatMap((s) => numerals(text, h, (u, v, du, dv) => {
+    const z = z0 + (s > 0 ? -u : u) - (s > 0 ? 0 : text.length * h * 0.83), y = y0 + v;
+    return P.box(0.12, dv, du, { x: s * (H.side(z, y) + 0.02), y, z, ry: Math.atan(s * (H.side(z + 0.5, y) - H.side(z - 0.5, y))), color: BLACK });
+  }));
+};
+/** Mk 42 5-inch/54: the tall boxy gunhouse of the 1960s, one barrel. */
+const mk42 = (c) => merge([
+  sideProfile([[-3, 0], [2.4, 0], [3, 1.4], [2.6, 2.9], [-3, 2.9]], 3.4, { color: c.gun, surf: 'plate' }, 0.12),
+  P.cyl(1.6, 1.7, 0.5, { y: -0.2, color: c.upper }, 14),
+  P.cyl(0.12, 0.16, 6.6, { y: 1.3, z: 5.9, rx: Math.PI / 2, color: c.gun, surf: 'metal' }, 8),
+]);
+
+/** Bremen (F122): 130 × 14.5 m — the 76 mm and the Sea Sparrow box forward, the WM-25 egg on the foremast, the big square funnel, the Harpoons across the deck behind the bridge, the DA-08 mainmast, the twin Lynx hangar. */
+export const buildBremen = ship(() => {
+  const c = BM, fb = 6;
+  const H = hull(130, 14.5, fb, 4.3, c, 1.6);
+  const fixed = merge([
+    ...H.parts,
+    ...blackNumber(H, '207', 2.4),
+    boxLauncher(c, 0, H.top(35), 35, 0, { w: 2.6, h: 1.8, d: 4.4 }),         // the Sea Sparrow octuple
+    ...house(c, 0, fb, 16, 12, 5.5, 22),                                     // the forward block
+    ...house(c, 0, fb + 5.5, 22, 10, 2.8, 9, 1.5),                           // the bridge
+    ...lattice(c, 0, fb + 8.3, 18, 7, 3, [radome(1.6)]),                     // the WM-25 egg
+    ...[-1, 1].map((s) => canisters(c, s * 2.4, fb, 2, s * Math.PI / 2, { n: 4, r: 0.3, len: 4.4, up: 0.3 })), // the Harpoons, across the deck
+    ...house(c, 0, fb, -10, 11, 4.5, 16),
+    loft([[0, fb + 4.5, -8, 2.6, 3.4, 4], [0, fb + 10.5, -8.6, 2.2, 3, 4]], { color: c.upper, surf: 'plate' }, 12), // the funnel
+    P.box(3.8, 0.6, 5.2, { y: fb + 10.6, z: -8.6, color: BLACK }),
+    ...lattice(c, 0, fb + 4.5, -17, 9, 3.4, [dish(5.5, 2.2)]),               // the DA-08 mainmast
+    ...house(c, 0, fb, -32, 13, 6, 20),                                      // the twin hangar
+    P.box(0.3, 4.2, 20, { y: fb + 3, z: -32, color: DARK }),
+    ...helideck(0, H.top(-52), -52, 13, 16),
+    ...[-1, 1].map((s) => boat(c, s * 6.6, fb + 1, -6, 6.5, s)),
+    ...[-1, 1].map((s) => raft(s * 5.6, fb + 5.6, 12)),
+  ]);
+  return { fixed, mounts: [{ geo: gun76(c), at: [0, H.top(46), 46], arc: 5 }] };
+});
+
+/** Lütjens (Type 103): 134 × 14.3 m — the Adams hull with two macks, 5-inch fore and aft, ASROC between the macks, the Mk 13 aft. */
+export const buildLutjens = ship(() => {
+  const c = BM, fb = 6;
+  const H = hull(134, 14.3, fb, 4.6, c, 1.8);
+  const fixed = merge([
+    ...H.parts,
+    ...blackNumber(H, '185', 2.4),
+    ...house(c, 0, fb, 24, 11, 5, 22),
+    ...house(c, 0, fb + 5, 30, 9, 2.6, 7, 1.4),                              // the bridge
+    ...mack(c, 0, fb + 5, 15, 5, 6, 5, [dish(6, 2.2)]),                      // the forward mack, SPS-40
+    boxLauncher(c, 0, fb, 0, 0, { w: 3, h: 2, d: 5 }),                       // ASROC
+    ...house(c, 0, fb, -16, 10, 4.5, 16),
+    ...mack(c, 0, fb + 4.5, -14, 5, 6, 5, [slab(4, 2.6)]),                   // the after mack, SPS-52
+    ...[-1, 1].map((s) => radome(1)(s * 2.6, fb + 4.5, -21)),                 // the SPG-51 directors
+    armLauncher(c, 0, fb, -42, { arms: 1, ry: Math.PI }),                    // the Mk 13 (Standard and Harpoon)
+    ...[-1, 1].map((s) => boat(c, s * 6.4, fb + 1, -4, 6.5, s)),
+    ...[-1, 1].map((s) => raft(s * 5, fb + 5.4, 20)),
+  ]);
+  const g = mk42(c);
+  return { fixed, mounts: [{ geo: g, at: [0, H.top(50), 50], arc: 5 }, { geo: g, at: [0, fb, -56], aft: true, arc: 5 }] };
+});
+
+/** Gepard (Type 143A): 57.6 × 7.8 m — the 76 mm forward, a compact bridge with the WM-27 egg on its mast, four Exocet boxes aft. */
+export const buildGepard = ship(() => {
+  const c = BM, fb = 3;
+  const H = hull(57.6, 7.8, fb, 2.6, c, 1, { fittings: false });
+  const fixed = merge([
+    ...H.parts,
+    ...blackNumber(H, '71', 1.4),
+    ...house(c, 0, fb, 5, 5.6, 2.8, 18),
+    ...house(c, 0, fb + 2.8, 10, 4.8, 1.8, 5, 0.9),                          // the bridge
+    box(1.2, 4, 1.2, { y: fb + 6.6, z: 6, color: c.upper }), radome(1.3)(0, fb + 8.6, 6), // the mast, the WM-27
+    box(2, 1.6, 2.4, { y: fb + 3.6, z: -2, color: c.upper }), P.box(1.6, 0.4, 2, { y: fb + 4.5, z: -2, color: BLACK }), // the exhaust
+    ...[-1, 1].flatMap((s) => [-12, -17].map((z) => box(1.3, 1.3, 6, { x: s * 2, y: fb + 1.1, z, ry: -s * 0.12, rx: -0.14, color: c.upper }))), // the Exocet boxes
+  ]);
+  return { fixed, mounts: [{ geo: gun76(c), at: [0, H.top(19) + 0.1, 19], arc: 5 }] };
+});
 
 /** The 1985 kit for the later fleets (models/ships2027.js). */
 export const KIT85 = { hull, put, mk45, gun76, phalanx, ak630, ak130, canisters, boxLauncher, lids, lattice, dish, slab, radome, house, helideck, mack, modernSub, supercarrier, USN, VMF, SUB, DOME, DARK };

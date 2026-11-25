@@ -9,7 +9,7 @@
 import { buildSoldier85 } from '../models/soldier85.js';
 import { buildNoLeopard1, buildNoNM116, buildNoNM135, buildUsM60A1, buildUsAAV7, buildUsLAV25, buildUsM198, buildUsJeepTOW,
   buildRokJeep106, buildRokM48, buildRokKIFV, buildKpaT55, buildKpaChonma, buildKpaVTT323, buildKpaKoksan, buildNoBofors, buildUsM718,
-  buildKpaS125 } from '../models/armour85.js';
+  buildKpaS125, buildRokK1, buildRokK136, buildRokKM900, buildRokAVLB, buildNoNM142, buildNoLeopard1Plough, buildKpaSungriSan } from '../models/armour85.js';
 
 const SIDE = { no: 'nato', usmc: 'nato', rok: 'nato', kpa: 'pact' };
 // each infantry type's men: [their models' options, the specialists' (the gunner, the launcher)]
@@ -59,8 +59,8 @@ export default function armies85(T) {
       boltSize: 1.4, tracer: 1, range: 180, gunRange: 180, armor: 0.3, hp: 800, speed: 6.5, nightSight: 0.6, antiArmor: true } });
   no('ifv', { name: 'NM135', weapon: '20 mm Rh 202, MG3', text: 'Norway’s M113 with a Hägglunds turret on its roof: the 20 mm keeps the infantry company and its squad. No missile — the Carl Gustafs inside do that. U unloads the squad.' },
     { model: buildNoNM135, stats: { ...noATGM, range: 170, damage: 95, armor: 0.3, hp: 700, nightSight: 0.6 }, cost: 0.8 });
-  no('tankDestroyer', { name: 'M113 with TOW', weapon: 'TOW, 10 missiles', text: 'The TOW on an M113: the brigade’s long arm against tanks. It waits hull-down at the end of a straight valley road.' },
-    { stats: { nightSight: 0.7 } });
+  no('tankDestroyer', { name: 'NM142', weapon: '2 × TOW, 10 missiles', text: 'The M113 with Hägglunds’ armoured turret and a TOW on each side of it: the brigade’s long arm against tanks, reloaded under armour. It waits hull-down at the end of a straight valley road.' },
+    { model: buildNoNM142, stats: { nightSight: 0.7 } });
   no('artillery', { name: 'M109A3GN', weapon: '155 mm howitzer', text: 'Norway’s M109 with the long barrel: the guns behind the ridge that make every valley road a killing ground.' },
     { model: T.artillery.models.bw });
   no('recovery', { name: 'Leopard 1 ARV', weapon: 'crane, winch, dozer blade', text: 'The Leopard’s recovery vehicle: it hauls knocked-out tanks out of the snow and gets them running again.' },
@@ -73,9 +73,15 @@ export default function armies85(T) {
       antiAir: { ...T.towedAA.stats.antiAir, range: 380, rate: 4, hitNear: 0.12, hitFar: 0.02 } }, cost: 1.1 });
   no('spMortar', { name: 'NM95 Mortar Carrier', weapon: '81 mm mortar on M113', text: 'An M106 rebuilt in Norway to take the infantry’s 81 mm: it fires through the open roof and is gone up the valley before the reply.' },
     { stats: { damage: 120, splash: 4 } });
+  // the engineers' Leopard 1s: the Bundeswehr's engineer and bridge tanks on the same hull, and Norway's own Leopard 1A1NO with a plough
+  no('cev', { name: 'Leopard 1 Engineer Tank', weapon: 'MG3 · demolition charges, dozer blade', text: 'The engineer tank on the Leopard 1 hull: dozer blade, crane and auger. It digs the tanks in on the valley sides, clears the rockfalls and blasts bunkers.' },
+    { model: T.cev.models.bw });
+  no('bridgeLayer', { name: 'Leopard 1 Bridge Layer', weapon: 'Unarmed · 22 m bridge', text: 'The Leopard 1 bridge layer: it pushes its bridge out flat across the river where the bridge was blown, low enough to stay out of sight while it lays.' },
+    { model: T.bridgeLayer.models.bw });
+  no('mineClear', { name: 'Leopard 1 with mine plough', weapon: '105 mm L7A3 · mine plough', text: 'A Leopard 1A1NO pushing a track-width plough: it lifts the mines out of the road ahead and still fights as a tank.' },
+    { model: buildNoLeopard1Plough, stats: { armor: 0.5, hp: 1200, damage: 370, nightSight: 0.6 } });
   // left empty — none in Norway in 1985: aa, gunMissile (no SP guns or missiles), heavyTank, rockets, sam (the Air Force’s
-  // NOAH Hawks only from 1988), airRadar, cbRadar (ARTHUR came in the late 1990s), cev, bridgeLayer, mineClear (the Leopard
-  // engineer and bridge tanks came in the 1990s), jammer
+  // NOAH Hawks only from 1988), airRadar, cbRadar (ARTHUR came in the late 1990s), jammer
 
   // ---------------------------------------------------------------- US Marine Corps
   const mc = (id, v, o) => give('usmc', id, v, o);
@@ -135,7 +141,7 @@ export default function armies85(T) {
   rok('artillery', { name: 'M109A2', weapon: '155 mm howitzer', text: 'The self-propelled 155 mm — built in Korea from this year as the K55. Every hill on the invasion routes is registered.' });
   rok('spMortar', { name: 'M106 Mortar Carrier', weapon: 'M30 4.2 in (107 mm) mortar', text: 'The battalion’s heavy mortar on an M113: quick to set up, quick to move.' });
   rok('rockets', { name: 'K136 Kooryong', weapon: '36 × 130 mm rockets', text: 'Korea’s own multiple rocket launcher on a truck: 36 rockets in one ripple on the valley the North’s column is crowding into.' },
-    { model: T.rockets.models.bw });
+    { model: buildRokK136 });
   rok('aa', { name: 'M163 Vulcan', weapon: '20 mm M61 Vulcan', text: 'The gatling on an M113, against the North’s helicopters and its An-2s coming in low over the hills.' });
   rok('towedAA', { name: 'M167 Vulcan', weapon: '20 mm M61 Vulcan', text: 'The towed Vulcan, dug in on the hills behind the line.' });
   rok('recovery', { name: 'M88A1 Recovery Vehicle', weapon: '.50 cal M2, A-frame boom, winch', text: 'Brings damaged tanks back into the fight.' });
@@ -144,13 +150,17 @@ export default function armies85(T) {
   rok('commandPost', { name: 'M577 command post', weapon: 'unarmed', text: 'The battalion’s command post: nearby squads hold longer and react faster.' });
   rok('manpads', { name: 'Redeye Team', weapon: 'FIM-43 Redeye', text: 'The first shoulder-fired heat-seeker: it has to chase a helicopter’s exhaust from behind, but on the hills over the valleys that is often enough.' });
   rok('heavyTank', { name: 'K1', weapon: '105 mm KM68A1', text: 'Korea’s own tank, the first of them off Hyundai’s line in 1985: low, with composite armour, thermal sights and a hydropneumatic suspension that lets it dip its gun over a ridge.' },
-    { stats: { armor: 0.72, damage: 400, nightSight: 0.85 }, cost: 0.9 });
+    { model: buildRokK1, stats: { armor: 0.72, damage: 400, nightSight: 0.85 }, cost: 0.9 });
   rok('sam', { name: 'Improved HAWK', weapon: '3 × MIM-23B missiles', text: 'The Army’s air defence artillery: three big radar-guided missiles over the corps’ rear, against the North’s MiGs and helicopters. Towed — slow to set up, slow to move.' },
     { model: T.sam.models.bw, stats: T.sam.factionStats.bw });
   rok('airRadar', { name: 'HAWK PAR', weapon: 'pulse acquisition radar', text: 'The HAWK battery’s search radar on its trailer: every air defence unit near it sees and reaches further.' },
     { model: T.airRadar.models.bw });
-  // left empty: reconVehicle (the recon battalions rode M113s and jeeps), gunMissile (Chun-ma and Biho came in the 1990s),
-  // cev, cbRadar, bridgeLayer, mineClear (none found in ROK service by 1985 — the K1 bridge layer came in 1992), jammer
+  rok('reconVehicle', { name: 'KM900', weapon: '.50 cal M2', text: 'The Fiat 6614 built in Korea: a boat-shaped four-wheeled carrier with a .50 cal on its cupola. Quick on the roads behind the line and with sharp eyes; thin armour and no gun to meet a tank with.' },
+    { model: buildRokKM900, stats: { ...noATGM, ...fifty, armor: 0.2, hp: 520, speed: 8.2, nightSight: 0.6 }, cost: 0.75 });
+  rok('bridgeLayer', { name: 'M48 AVLB', weapon: 'Unarmed · 18 m scissors bridge', text: 'An M48 hull carrying a folding bridge: across the streams and the anti-tank ditches of the corridors in minutes.' },
+    { model: buildRokAVLB });
+  rok('cbRadar', { name: 'AN/TPQ-37 Firefinder', weapon: 'unarmed', text: 'The American artillery-locating radar in ROK service: it sees the North’s shells in flight and hands every gun that fires in its sector to the corps’ artillery.' });
+  // left empty: gunMissile (Chun-ma and Biho came in the 1990s), cev, mineClear (none found in ROK service by 1985), jammer
 
   // ---------------------------------------------------------------- Korean People's Army
   const kpa = (id, v, o) => give('kpa', id, v, o);
@@ -194,6 +204,10 @@ export default function armies85(T) {
   kpa('bridgeLayer', { name: 'MTU-20', weapon: 'Unarmed · 20 m bridge', text: 'The bridge on a T-55 hull: across the Imjin’s side streams before the South can blow the next one.' });
   kpa('mineClear', { name: 'T-55 with mine rollers', weapon: '100 mm D-10T · KMT mine rollers', text: 'A T-55 pushing heavy rollers through the minefields south of the DMZ: they set the mines off before the tank reaches them — and it still fights.' },
     { model: T.mineClear.models.nva, stats: { ...Object.fromEntries(Object.keys(T.mineClear.factionStats.pact).map((k) => [k, T.mineClear.stats[k]])), armor: 0.5, hp: 1150, damage: 320 }, cost: 0.85 });
-  // left empty: gunMissile (no Osa or Tunguska in the North in 1985), cev, cbRadar, jammer (none known), ambulance (the
-  // KPA’s were trucks: no model for them yet)
+  kpa('cev', { name: 'IMR', weapon: 'PKT · demolition charges', text: 'The engineer tank on a T-55 hull: the crane arm with its grab and the dozer blade clear the rubble and the tank traps for the columns.' },
+    { model: T.cev.models.nva });
+  kpa('cbRadar', { name: 'ARK-1 Rys', weapon: 'unarmed', text: 'The Soviet artillery-locating radar on its tracked carrier: it watches the sky over the DMZ and gives the North’s guns the South’s batteries.' });
+  kpa('ambulance', { name: 'Sungri-58 Ambulance', weapon: 'Unarmed · red cross', text: 'The North’s own lorry with a box body behind the cab: it patches up the wounded near it behind the line.' },
+    { model: buildKpaSungriSan, stats: { armor: 0.05, hp: 340 } });
+  // left empty: gunMissile (no Osa or Tunguska in the North in 1985), jammer (none known)
 }

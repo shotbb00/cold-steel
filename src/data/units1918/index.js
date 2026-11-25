@@ -8,6 +8,12 @@ import { TYPES_1985 } from '../units/index.js';
 import { SHIPS_1918 } from './ships.js';
 import { COAST_1918 } from './coast.js';
 import fronts from './fronts.js';
+import balkans from './balkans.js';
+import navyEast from './navyEast.js';
+import navyMed from './navyMed.js';
+import roles from './roles.js';
+import aef from './aef.js';
+import shipTypes from './shipTypes.js';
 import { buildWw1Soldier } from '../models/ww1Soldier.js';
 import { buildWw1Gun } from '../models/ww1Guns.js';
 import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
@@ -436,3 +442,10 @@ export const TYPES_1918 = {
 
 /** What stands in for the types not built yet: the riflemen (ponytail: each gets its own in its step). */
 export const ALIAS_1918 = Object.fromEntries(Object.keys(T).filter((id) => !TYPES_1918[id]).map((id) => [id, 'rifles']));
+
+navyEast(TYPES_1918); // the Russian Baltic Fleet and the Ottoman Navy (./navyEast.js)
+balkans(TYPES_1918); // the Serbian and the Bulgarian armies (./balkans.js)
+roles(TYPES_1918); // the other fronts' missing roles and every army's own forts (./roles.js)
+aef(TYPES_1918); // the American Expeditionary Forces and the US Navy (./aef.js)
+shipTypes(TYPES_1918); // the monitor, the seaplane carrier, the merchant steamer, the trawler, the UC boat and U-cruiser; each navy's landing craft (./shipTypes.js)
+navyMed(TYPES_1918); // the Regia Marina, the k.u.k. Kriegsmarine and the Marine nationale (./navyMed.js; after shipTypes: the French trawler)

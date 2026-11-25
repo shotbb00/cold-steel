@@ -137,7 +137,7 @@ export function strike(st, u) {
 }
 
 /** Her boarders' weight: the men left, her size (a first rate's crew against a brig's), the soldiers aboard, their spirit. */
-const boarders = (st, u) => (u.crew ?? 1) * ((st.type.hull?.length ?? 52) / 52) ** 1.5 * (MARINES[st.faction] ?? 1) * (0.5 + st.morale * 0.5);
+const boarders = (st, u) => (u.crew ?? 1) * ((st.type.hull?.length ?? 52) / 52) ** 1.5 * (st.stats.boarders ?? 1) * (MARINES[st.faction] ?? 1) * (0.5 + st.morale * 0.5); // (stats.boarders: a boat full of soldiers — the péniche)
 
 function board(st, u, dt) {
   const g = st.services.game;

@@ -16,7 +16,7 @@ import { buildSettings } from './SettingsPanel.js';
 import { UnitPreview, INFANTRY_POSES, VEHICLE_POSES, CAVALRY_POSES, GUN_POSES, AIRCRAFT_POSES } from './UnitPreview.js';
 import { KINDS, airType } from '../systems/AirStrike.js';
 import { Lobby } from './Lobby.js';
-import { CampaignPanel } from './CampaignPanel.js';
+import { WarRoomPanel, openWarRoom } from './WarRoom.js';
 import { takeMenuTab } from '../core/replay.js';
 import { chapters, chaptersDone, chapterBattle } from '../modes/bootcamp.js';
 import { TIMES, WEATHER } from '../core/Conditions.js';
@@ -141,7 +141,8 @@ export function theatreArmies() {
 }
 
 /** A side's name as the theatre's maps give it (Aboukir: France and Britain, not 1806's Prussia), else the war's. */
-export function sideName(f) {
+export function sideName(f, map = null) {
+  if (map?.sides?.[f]) return map.sides[f]; // (the chosen map's own: Austerlitz Austria, not 1806's Prussia; Korea the KPA, not the Warsaw Pact)
   const maps = mapsFor(epoch()), n = maps[0]?.sides?.[f];
   return n && maps.every((m) => m.sides?.[f] === n) ? n : FACTIONS[f].name;
 }
@@ -464,6 +465,7 @@ export class MainMenu {
 
   open(id) {
     for (const [k, b] of Object.entries(this.tabs)) b.classList.toggle('on', k === id);
+    this.root.querySelector('.wc-backdrop')?.remove(); // (the Campaign tab's world map: only behind that tab — ui/WarRoom.js backdrop)
     if (id !== 'units' && this.preview) { this.preview.dispose(); this.preview = null; }
     this.panel.replaceChildren();
     this.panel.dataset.panel = id;
@@ -475,10 +477,8 @@ export class MainMenu {
     if (id === 'battle') this.battlePanel();
     else if (id === 'bootcamp') this.bootcampPanel();
     else if (id === 'campaign') {
-      this.panel.append(new CampaignPanel({
-        onBattle: (choice) => this.deploy(choice),
-        onPreview: (map, side) => { if (this.panel.dataset.panel === 'campaign') this.sheet?.show(MAPS[map] ?? MAPS[mapsFor(epoch())[0].id], side, true, 'menu'); },
-      }).root);
+      this.sheet?.hide();
+      this.panel.append(new WarRoomPanel({ onOpen: (c) => openWarRoom(c, { onClose: () => this.open('campaign'), onBattle: (choice) => this.deploy(choice) }) }).root); // (the world campaign: ui/WarRoom.js)
     } else if (id === 'multi') {
       this.lobby ??= new Lobby({
         onStart: (choice) => this.deploy(choice),
@@ -576,29 +576,49 @@ export class MainMenu {
     // which side
     const sides = el('div', 'side-pick');
     const atSea = theatre() === 'sea' && hasTheatre(epoch(), 'sea'); // (the navies, not the armies)
-    const sideText = {
-      1806: { nato: 'Seize the plateau: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
-      sea: epoch() === '1806'
-        ? { nato: 'Fight under sail: hold the line or the anchorage, fire into their hulls as they come down on you, and keep your flag flying.', pact: 'The Royal Navy: break their line, double-shot the guns and fight them yardarm to yardarm.' }
-        : epoch() === '1918'
-        ? { nato: 'The Royal Navy: the Grand Fleet\'s heavy guns and the Harwich Force\'s destroyers — bring their fleet to battle and keep the U-boats down.', pact: 'The Kaiserliche Marine: pick off their squadrons one by one, torpedoes by night, the U-boats and the mines where they must pass.' }
-        : epoch() === '2027'
-        ? { nato: 'The US and Polish navies: NSM and the Burkes’ SM-6 against the Baltic Fleet — find them first, with drones, and strike before their Oniks find you.', pact: 'The Russian Baltic Fleet: Kalibr, Oniks and Zircon from the corvettes and the shore — swarm their defences, jam their drones, hold the zones off Kaliningrad.' }
-        : epoch() === '1985'
-        ? { nato: 'The US Navy: Aegis and the carrier air wing against the missile raids. Radar on and you see — and are heard.', pact: 'The Soviet Navy: listen first, fire at the bearings, and swamp their defences with the big missiles.' }
-        : { nato: 'The US Navy: take the sea zones, find their carriers before they find yours.', pact: 'The Imperial Navy: strike first and hard, torpedoes by night, hold the zones around the atoll.' },
-      1918: { nato: 'Break the line: infantry behind the barrage, the tanks to flatten the wire, then the cavalry through the gap.', pact: 'Hold the trenches in depth, and storm theirs: the storm troops slip past the strongpoints, the machine guns hold what they take.' },
-      2027: { nato: 'Hold the Gap: keep the land bridge to the Baltic open — find them with drones, jam theirs, and strike what you find before it moves.', pact: 'Cut the Gap: break through between Poland and Lithuania before NATO’s reinforcements arrive — mass the guns, swarm the drones, keep moving.' },
-      1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
-      coast1806: { nato: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.', pact: 'Row in at dawn on the signal gun: get the companies ashore, take the beaches, then the castle and Mandara.' },
-      coast2027: { nato: 'Hold Gotland: the mines and the wire, the NSM trucks against their ships, drones over the beach — then the Abrams from Visby.', pact: 'Take Gotland: the Zubrs and Ropuchas onto the beaches, the BTRs swimming in, helicopters behind them — and the island’s air defence over the whole Baltic.' },
-      coast1985: { nato: 'Hold the bay: the mines, the wire and the coastal missiles, then the reserve\'s counter-attack.', pact: 'Land from the Baltic: swim the BMPs in, take the beaches, hold the villages behind them.' },
-    }[atSea ? 'sea' : mapsFor(epoch()).some((m) => m.theatre === 'coastal') && epoch() !== '1945' ? `coast${epoch()}` : epoch()] ?? {
-      nato: 'Hold the West German border: dig in, keep the villages, break the offensive.',
-      pact: 'Punch through the Fulda Gap: mass the Guards, find the weak point, take Hünfeld.',
+    // what each side does here — by the war and the kind of battle (land, landing, sea), never a place: one table served
+    // every map of a war, so Korea read the Fulda Gap and every 1806 field Aboukir. A map can bring its own (`sideText`).
+    const TEXT = {
+      land: {
+        1806: { nato: 'Seize the high ground: columns forward under the skirmishers, guns massed, the cavalry ready for the moment.', pact: 'Stand in line and fire by platoons: hold the villages, form square when their horse comes.' },
+        1918: { nato: 'Break the line: infantry behind the barrage, the tanks to flatten the wire, then exploit the gap.', pact: 'Hold in depth and storm theirs: the assault troops slip past the strongpoints, the machine guns hold what they take.' },
+        1945: { nato: 'Attack: take the villages, keep the armour and the infantry together.', pact: 'Hold every village and wood: ambush their tanks, counter-attack where they overreach.' },
+        1985: { nato: 'Hold the line: dig in, keep the villages, break their offensive with the guns and the helicopters.', pact: 'Break through: mass the regiments, find the weak point, keep the second echelon moving.' },
+        2027: { nato: 'Hold the line: find them with drones, jam theirs, and strike what you find before it moves.', pact: 'Break through before their reinforcements arrive: mass the guns, swarm the drones, keep moving.' },
+      },
+      // a landing: the side that lands and the side that holds (the map's landing.attacker says which is which)
+      lands: {
+        1806: 'Row in on the signal gun: get the companies ashore, take the beaches, then the villages and forts behind them.',
+        1918: 'Go in under the warships’ guns: get ashore through the wire, take the beaches, then the heights behind them.',
+        1945: 'Land under the naval guns: take the beaches, get the armour ashore, push inland to the villages.',
+        1985: 'Come in from the sea: swim the vehicles in, take the beaches, hold the villages behind them.',
+        2027: 'Storm the beaches: hovercraft and landing ships in, the armour swimming ashore, helicopters behind — and your air defence over all of it.',
+      },
+      holds: {
+        1806: 'Hold the beach: heated shot and canister into the boats, the cavalry onto them before they can form.',
+        1918: 'Hold the shore: the machine guns and the wire on the beach, the guns on the boats, the reserves for the counter-attack.',
+        1945: 'Hold the beach: the bunkers and the guns on the craft, then counter-attack before they are ashore in strength.',
+        1985: 'Hold the coast: the mines, the wire and the coastal missiles, then the reserve’s counter-attack.',
+        2027: 'Hold the coast: the mines and the wire, the anti-ship missiles against their ships, drones over the beach — then the armour.',
+      },
+      sea: {
+        1806: { nato: 'Fight under sail: hold the line, fire into their hulls as they come down on you, and keep your flag flying.', pact: 'Break their line: double-shot the guns and fight them yardarm to yardarm.' },
+        1918: { nato: 'Bring their fleet to battle: the heavy guns and the destroyers — and keep the submarines down.', pact: 'Pick off their squadrons one by one: torpedoes by night, submarines and mines where they must pass.' },
+        1945: { nato: 'Take the sea zones: find their heavy ships before they find yours, and keep your carriers covered.', pact: 'Strike first and hard: torpedoes by night, hold the zones.' },
+        1985: { nato: 'Missiles and radar: see them first — radar on and you see, and are seen — and shoot down the raids.', pact: 'Listen first, fire at the bearings, and swamp their defences with the big missiles.' },
+        2027: { nato: 'Find them first, with drones, and strike before their missiles find you.', pact: 'Swarm their defences, jam their drones, hold the zones under your shore missiles.' },
+      },
     };
+    const sideTextFor = (m) => {
+      if (m?.sideText) return m.sideText;
+      const e = epoch();
+      if (atSea || m?.theatre === 'sea') return TEXT.sea[e] ?? TEXT.sea[1985];
+      if (m?.theatre === 'coastal' && m.landing) { const l = m.landing.attacker ?? 'pact'; return { [l]: TEXT.lands[e] ?? TEXT.lands[1945], [l === 'nato' ? 'pact' : 'nato']: TEXT.holds[e] ?? TEXT.holds[1945] }; }
+      return TEXT.land[e] ?? TEXT.land[1985];
+    };
+    const sideText = sideTextFor(MAPS[c.map]);
     for (const f of ['nato', 'pact']) {
-      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyOn(c.map, f) : sideName(f)}</b><span>${sideText[f]}</span>`);
+      const b = el('button', `side-card ${f}${c.side === f ? ' on' : ''}`, `<b>${atSea ? navyOn(c.map, f) : sideName(f, MAPS[c.map])}</b><span>${sideText[f]}</span>`);
       b.type = 'button';
       b.setAttribute('aria-pressed', String(c.side === f));
       b.addEventListener('click', () => {
@@ -609,7 +629,7 @@ export class MainMenu {
       sides.append(b);
     }
     if (atSea) c.armies = armiesFrom(); // (at sea: one navy a side, no army to pick)
-    this.nameNavies = () => { if (atSea) for (const [i, f] of ['nato', 'pact'].entries()) sides.children[i].firstChild.textContent = navyOn(c.map, f); }; // (Copenhagen: the Danes)
+    this.nameNavies = () => { const t = sideTextFor(MAPS[c.map]); for (const [i, f] of ['nato', 'pact'].entries()) { sides.children[i].firstChild.textContent = atSea ? navyOn(c.map, f) : sideName(f, MAPS[c.map]); sides.children[i].lastChild.textContent = t[f]; } }; // (Copenhagen: the Danes; and what each side does on this map)
     q('Which side', sides, ...(atSea ? [] : [armiesPicker(c)]));
 
     // conditions and rules: one sentence, the controls folded away until asked for
@@ -777,13 +797,20 @@ export class MainMenu {
     setClimate(climates.size === 1 ? [...climates][0] : undefined);
     const armies = Object.values(ARMIES).filter((a) => (only[a.faction] ? only[a.faction].includes(a.id) : armyIn(a, regHere))).filter((a, i, all) => !sea || all.findIndex((o) => o.faction === a.faction && (o.navy ?? navyName()[o.faction]) === (a.navy ?? navyName()[a.faction])) === i) // (at sea: each navy once — 2027's US and Polish navies; Japan and the Marines in Asia & Pacific only)
       .sort((x, y) => (x.faction === 'nato' ? 0 : 1) - (y.faction === 'nato' ? 0 : 1)); // (one side on top, the other below — as everywhere)
-    const perRow = Math.max(1, ...['nato', 'pact'].map((f) => armies.filter((a) => a.faction === f).length));
+    // at most three a row (1918's Western Front: five Allied armies in the narrow column hid the Italians and the AEF), each side's own rows, the Allies' above
+    const count = (f) => armies.filter((a) => a.faction === f).length;
+    const most = Math.max(1, count('nato'), count('pact'));
+    const perRow = most > 3 ? 2 : most; // (more than three a side: two a row, the names fit)
+    const natoRows = Math.ceil(count('nato') / perRow) || 1;
     sideToggle.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
+    const slot = { nato: 0, pact: 0 };
     if (!armies.some((a) => a.id === this.unit.army)) { this.unit.army = armies[0].id; this.unit.faction = armies[0].faction; }
     for (const a of armies) { // every army's own roster
       const b = el('button', `${a.faction}${a.id === this.unit.army ? ' on' : ''}`, sea ? a.navy ?? navyName()[a.faction] ?? a.name : a.name); // (an army's own navy: the k.u.k. Kriegsmarine)
       b.type = 'button';
-      b.style.gridRow = a.faction === 'nato' ? '1' : '2'; // (the Allies' armies on the top row, their enemies' on the bottom)
+      const k = slot[a.faction]++;
+      b.style.gridRow = String((a.faction === 'nato' ? 0 : natoRows) + Math.floor(k / perRow) + 1); // (the Allies' armies in the top rows, their enemies' below)
+      b.style.gridColumn = String((k % perRow) + 1);
       b.addEventListener('click', () => {
         for (const o of sideToggle.children) o.classList.toggle('on', o === b);
         this.unit.faction = a.faction;
@@ -851,7 +878,7 @@ export class MainMenu {
       row.lastChild.textContent = text(body);
       box.append(row);
     }
-    const history = ww2 && !own ? null : army === DEFAULT_ARMY[faction] ? c[faction] : c[army]; // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
+    const history = ww2 && !own ? null : c[army] ?? (army === DEFAULT_ARMY[faction] ? c[faction] : null); // (an army's own line first: the Kriegsmarine's, though the Wehrmacht is its side's default) // (the US / Soviet history isn't the Bundeswehr's or the NVA's)
     if (history) {
       const h = el('div', 'codex-row codex-history');
       h.append(el('h4', '', 'History'), el('p', '', ''));

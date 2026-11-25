@@ -4,7 +4,9 @@
 // throwing three pontoon bridges across behind them by noon. The Russian Twelfth Army, worn out by the revolution,
 // fell back from its trenches on the far bank. The broad slow river with low sandy bluffs, Martinsholm in the middle
 // with the ruin of Bishop Meinhard's church — the oldest stone church in Livonia — birch and pine woods, wet meadows
-// and marsh in the bends, farmsteads and manors. Not mirrored but fair: each side holds one bank behind its trench line,
+// and marsh in the bends, farmsteads and manors. The real lie of it: at Üxküll the Düna runs from south-east to
+// north-west, so on the map it crosses the field diagonally — the Russian bank's bluff steep and close to the water, the
+// German bank a long low slope of meadow and wood. Not mirrored but fair: each side holds one bank behind its trench line,
 // the river between them crossed by a pontoon bridge on each flank and two over the island in the middle — the north
 // bank's bluff higher and barer round Üxküll, the south bank's lower but more wooded; each bank a landing point by a bridge.
 import { createNoise2D, fbm } from '../world/Noise.js';
@@ -21,7 +23,7 @@ const BASE_Z = 500;
 const SIDE_X = 330;
 const HW = 30;                                            // the Düna: two of the game's river widths side by side
 const noise = createNoise2D(1917_09);
-const mid = (x: number) => 22 * Math.sin(x * 0.005) + 8 * Math.sin(x * 0.013) - 26 * Math.cos(x * 0.009); // (its own bends, not a mirror)
+const mid = (x: number) => -0.45 * x + 22 * Math.sin(x * 0.005) + 8 * Math.sin(x * 0.013) - 26 * Math.cos(x * 0.009); // (south-east to north-west across the field, its own bends)
 const ISLE = 30;                                                                  // Martinsholm's middle (x)
 const split = (x: number) => 55 * Math.exp(-(((x - ISLE) / 120) ** 2));          // the two arms round Martinsholm
 const armN = (x: number) => mid(x) + split(x), armS = (x: number) => mid(x) - split(x);
@@ -49,15 +51,14 @@ const TRENCH = 85;
 const trenchZ = (x: number, north = true) => (north ? mid(x) + split(x) + TRENCH + 8 * Math.sin(x * 0.03) : mid(x) - split(x) - TRENCH - 10 * Math.sin(x * 0.023 + 1));
 
 /** Each bank's own rises [x, z, r, h]: the Üxküll heights and the Kirchholm ridge on the north, the dunes by Linden and the wooded rise over the Jungfernhof landing on the south. */
-const RISES = [[160, 340, 170, 8], [-300, 420, 170, 6], [-200, -390, 170, 8], [280, -200, 150, 6]];
+const RISES = [[90, 260, 160, 9], [-330, 380, 150, 6], [250, 140, 170, 5], [-120, -270, 150, 7], [-420, -60, 140, 5], [330, -380, 170, 6]];
 function height(x: number, z: number) {
   const d = away(x, z);
   const n = fbm(noise, x * 0.004, z * 0.004, 4), north = z > mid(x);
   // the low sandy bluffs over the river: steeper and higher on the north bank round Üxküll, lower and rolling on the south
-  let h = 0.9 + (north ? smoothstep(40, 120, d) * (7.5 + 1.5 * Math.exp(-(((x - 40) / 220) ** 2)) + n * 6) : smoothstep(40, 190, d) * (8.5 + n * 6));
+  let h = 0.9 + (north ? smoothstep(40, 110, d) * (8 + 3 * Math.exp(-(((x - 40) / 220) ** 2)) + n * 6) : smoothstep(40, 220, d) * (8.5 + n * 6));
   h += fbm(noise, x * 0.015 + 9, z * 0.015, 3) * 1.6 * smoothstep(60, 160, d);
   for (const [hx, hz, r, hh] of RISES) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.5 * smoothstep(60, 140, d);
-  h += smoothstep(BASE_Z - 90 + 50 * Math.sin(x * 0.008 + 1), 640, Math.abs(z)) * 10 + smoothstep(440 + 50 * Math.sin(z * Math.PI / 280), 600, Math.abs(x)) * 14; // (the rims rise unevenly, as much on each half)
   // the wet meadows in the bends: down nearly to the water
   const marsh = marshAt(x, z);
   h += (1.3 - h) * marsh * 0.8;

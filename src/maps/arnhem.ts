@@ -1,147 +1,186 @@
-// Arnhem, September 1944 — Operation Market Garden (1945 only; the big field, 1.0 × 1.12 km). The Lower Rhine across the
-// middle of the map and three ways over it: in the middle the road bridge, the steel arch that Frost's 2nd Parachute
-// Battalion held from the houses round its north end for three days and four nights; out west the railway bridge at
-// Oosterbeek (blown in the faces of C Company on the first afternoon) and out east the pontoon bridge. North of the river
-// Arnhem's streets of brick houses round the Eusebiuskerk, the villas and woods of Oosterbeek with the old church by the
-// river and the Hartenstein hotel, and beyond them the woods and the open heath of the drop zones, wrecked Horsa gliders
-// on it. Along the banks the winter dykes. The British come from the drop zones (+z), the Germans hold the far bank (-z):
-// the Betuwe, the polder between the Rhine and the Waal. Not mirrored, but fair: Arnhem's streets and the villas of
-// Oosterbeek on the north bank against the built-up south end of the bridge, the Malburgen brickworks and the villages
-// of the polder (Elden, Driel, Huissen) with their orchards on the south; the dyke runs unbroken along the south bank,
-// the heath of the drop zones is open, the orchards are cover; each point about as far from one base as its
-// counterpart is from the other.
+// Arnhem, September 1944 — Operation Market Garden (1945 only; the big field, 1.0 × 1.12 km). The 1st Airborne Division
+// came down on the heaths west of the town and marched east for the road bridge — the steel arch that Frost's 2nd
+// Parachute Battalion held from the houses round its north end for three days and four nights — along three routes: the
+// lower road by the river, the Utrechtseweg through Oosterbeek, the Amsterdamseweg in the north. The Germans came in
+// from the east and the north and blocked the rest of the division at the town's edge; it fell back into the Oosterbeek
+// perimeter by the river, and the Poles came down at Driel across it.
+// The real ground: the Lower Rhine runs along the south, the floodplain and the winter dyke on its far bank, the flat
+// Betuwe polder beyond; north of it the ground rises toward the Veluwe — Arnhem's old town on the slope above the quay
+// round the Eusebiuskerk, the station higher up, Den Brink and the Sonsbeek park's wooded hills over the town, the woods
+// and villas of Oosterbeek to the west where the moraine comes right down to the river at the Westerbouwing bluff, the
+// heaths of the drop zones beyond in the north-west. The railway from Utrecht runs behind Oosterbeek to the station; the
+// Nijmegen line branches off along the river and over the Oosterbeek railway bridge to Driel.
+// On the map the British come from the drop zones in the west (+z, Wolfheze), the Germans from the east (−z, Velp); real
+// north is +x, so the Rhine runs down the south flank (−x) with its three crossings, the polder strip beyond it.
+// Not mirrored but fair (by distance): the British have the moraine's heights and woods, Oosterbeek and the heath, and
+// Driel over the railway bridge; the Germans have the town and the bridge nearer them, the Sonsbeek hills, and Malburgen
+// over the pontoon bridge. Den Brink and the station lie between.
 import * as THREE from 'three';
-import { createNoise2D, fbm } from '../world/Noise.js';
+import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
 import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
 import { buildSite, commandPost } from './common.js';
+import { segDist } from './greatWarHelpers.ts';
+import { gridCache, gridCacheSmooth } from './gridCache.js';
 import { steelBridges } from './remagen.ts';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BASE_Z = 500;
-const SIDE = 330;     // the railway bridge (west) and the pontoon bridge (east)
-const HW = 26;        // the Lower Rhine's half-width
-const DYKE = 64;      // the winter dyke, from the river's middle
-const TOWN = { x: 190, a0: 44, a1: 205 }; // Arnhem: |x| < 190, from the quay back to the railway
-const RAIL_A = 236;   // the railway behind the town (Oosterbeek – Arnhem station – Velp)
+const BOUNDS = { x: 500, z: 560 };
+const HW = 24;        // the Lower Rhine's half-width
+const DYKE = 64;      // the winter dyke on the south bank, from the river's middle
 const noise = createNoise2D(1944_09);
-const lerp = (a, b, k) => a + (b - a) * k;
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
-// the river: swinging north toward Oosterbeek and Velp, south under the bridge
-const riverZ = (x) => 12 * Math.sin(x * 0.005) + 5 * Math.sin(x * 0.013) + 14 * (1 - Math.cos(x * 0.006));
-const away = (x, z) => Math.abs(z - riverZ(x));
-const zAt = (x, a) => riverZ(x) + a;
-
+// ---- the Lower Rhine down the south flank (x = rx(z)), flowing west (+z)
+const rx = (z: number) => -330 + 18 * Math.sin(z * 0.006 + 0.5) + 8 * Math.sin(z * 0.017);
+const away = (x: number, z: number) => x - rx(z);          // + north of the river (the town's bank), − south (the polder)
+const RAILBR = 250, ROADBR = -120, PONTOON = -330;           // the crossings' z
+const COURSE: number[][] = [];
+for (let z = 780; z >= -780; z -= 30) COURSE.push([rx(z), z]);
 const river = steelBridges(createRiver({
-  path: riverZ,
-  halfWidth: HW,
-  level: 0,
-  depth: 2.6,
-  valley: 40,
+  path: COURSE, halfWidth: HW, level: 0, depth: 2.6, valley: 40,
   crossings: [
-    { name: 'Oosterbeek railway bridge', x: -SIDE, kind: 'bridge', width: 7, arch: { rise: 6, panels: 10, rails: true } },
-    { name: 'Arnhem road bridge', x: 0, kind: 'bridge', width: 10, arch: { rise: 15, panels: 12 } },
-    { name: 'Pontoon bridge', x: SIDE, kind: 'bridge', width: 8, pontoon: true },
+    { name: 'Oosterbeek railway bridge', x: rx(RAILBR), z: RAILBR, kind: 'bridge', width: 7, arch: { rise: 6, panels: 10, rails: true } },
+    { name: 'Arnhem road bridge', x: rx(ROADBR), z: ROADBR, kind: 'bridge', width: 10, arch: { rise: 15, panels: 12 } },
+    { name: 'Pontoon bridge', x: rx(PONTOON), z: PONTOON, kind: 'bridge', width: 8, pontoon: true },
   ],
 }));
-
-// ---- the roads: the three from the bridges back to the bases, the riverside roads (the Utrechtseweg through Oosterbeek),
-// the town's streets; the railway behind the town
-const NS = [-SIDE, 0, SIDE];
-const nsX = (rx, z) => rx + (rx ? 10 : 0) * Math.sin(z * 0.011 + (z < 0 ? 1.7 : 0)) * smoothstep(TOWN.a1, TOWN.a1 + 60, away(rx, z));
-/** The built-up ground on each bank: Arnhem on the north; on the south the houses round the bridge's south end, out
- *  toward Elden. Its streets: `xs` across, `as` along the river (the first of `as`: the riverside road through it). */
-const TOWNS = {
-  1: { x0: -TOWN.x, x1: TOWN.x, a0: TOWN.a0, a1: TOWN.a1, xs: [-150, -100, -50, 50, 100, 150], as: [110, 160], road: 110 },
-  [-1]: { x0: -75, x1: 135, a0: DYKE + 14, a1: 150, xs: [-35, 45, 90], as: [96], road: 96 },
-};
-const bank = (x, z) => (z > riverZ(x) ? 1 : -1);
-/** The town on (x, z)'s bank, if (x, z) is in it (`da`: as if that much farther from the river). */
-const townAt = (x, z, da = 0) => { const T = TOWNS[bank(x, z)], a = away(x, z) + da; return x > T.x0 && x < T.x1 && a > T.a0 && a < T.a1 ? T : null; };
-function roadDist(x, z) {
-  const a = away(x, z), T = TOWNS[bank(x, z)];
-  if (a < HW + 6) return Infinity;
-  let d = Math.abs(a - T.road - 14 * Math.sin(x * 0.009 + (z < riverZ(x) ? 2 : 0)));   // the riverside road
-  if (x > T.x0 && x < T.x1) d = Math.abs(a - T.road);         // (straight through the town)
-  for (const rx of NS) d = Math.min(d, Math.abs(x - nsX(rx, z)));
-  if (townAt(x, z)) {
-    d = Math.min(d, Math.abs(a - T.a0 - 6));                  // the quay (Rijnkade); on the south, the street behind the dyke
-    for (const sx of T.xs) d = Math.min(d, Math.abs(x - sx));
-    for (const sa of T.as) d = Math.min(d, Math.abs(a - sa));
-  }
-  return d;
+{ // (the pontoon bridge turned square across the flow like the others)
+  const mesh = river.bridgeMesh;
+  river.bridgeMesh = (c: any, ...a: any[]) => { const g = mesh.call(river, c, ...a); if (c.pontoon) g.rotation.y = river.yawOf(c); return g; };
 }
-/** The railway behind the town on the north bank (Oosterbeek – Arnhem – Velp); on the south the line to Nijmegen's
- *  embankment, nearer the river. */
-const railA = (x, z) => (z > riverZ(x) ? RAIL_A + 18 * Math.sin(x * 0.006) * smoothstep(TOWN.x, TOWN.x + 80, Math.abs(x)) : 205 - 22 * Math.sin(x * 0.005 + 0.8));
-const railDist = (x, z) => Math.abs(away(x, z) - railA(x, z));
 
-// ---- the control points
+// ---- the points
+const P = { B: [330, 320], C: [-250, -70], D: [150, -300], E: [-200, 285], G: [-440, -320], H: [-440, 240], I: [110, 30], J: [-60, -30] };
 const points: ControlPointDef[] = [
   { id: 'A', name: 'Wolfheze', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Renkum Heath', x: -SIDE, z: 330, owner: null, sector: 'west' },
-  { id: 'C', name: 'Eusebiuskerk', x: 75, z: zAt(75, 128), owner: null, sector: 'centre' },
-  { id: 'D', name: 'Velp', x: SIDE, z: 300, owner: null, sector: 'east' },
-  { id: 'E', name: 'Oosterbeek', x: -SIDE + 45, z: zAt(-SIDE + 45, 92), owner: null, sector: 'west' },
-  { id: 'F', name: 'Arnhem road bridge', x: 0, z: 0, owner: null, sector: 'centre', radius: 34 }, // (reaches both ramps)
-  { id: 'G', name: 'Malburgen', x: -200, z: zAt(-200, -55), owner: null, sector: 'west' },
-  { id: 'H', name: 'Driel', x: -290, z: -260, owner: null, sector: 'west' },
-  { id: 'I', name: 'Elden', x: 120, z: -150, owner: null, sector: 'centre' },
-  { id: 'J', name: 'Huissen', x: 350, z: -360, owner: null, sector: 'east' },
-  { id: 'K', name: 'Elst', x: -40, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'B', name: 'Renkum Heath', x: P.B[0], z: P.B[1], owner: null, sector: 'east' },
+  { id: 'C', name: 'Eusebiuskerk', x: P.C[0], z: P.C[1], owner: null, sector: 'west' },
+  { id: 'D', name: 'Sonsbeek', x: P.D[0], z: P.D[1], owner: null, sector: 'east' },
+  { id: 'E', name: 'Oosterbeek', x: P.E[0], z: P.E[1], owner: null, sector: 'west' },
+  { id: 'F', name: 'Arnhem road bridge', x: rx(ROADBR), z: ROADBR, owner: null, sector: 'west', radius: 34 }, // (reaches both ramps)
+  { id: 'G', name: 'Malburgen', x: P.G[0], z: P.G[1], owner: null, sector: 'west' },
+  { id: 'H', name: 'Driel', x: P.H[0], z: P.H[1], owner: null, sector: 'west' },
+  { id: 'I', name: 'Den Brink', x: P.I[0], z: P.I[1], owner: null, sector: 'centre', radius: 24 },
+  { id: 'J', name: 'Arnhem station', x: P.J[0], z: P.J[1], owner: null, sector: 'centre' },
+  { id: 'K', name: 'Velp', x: 0, z: -470, owner: 'pact', sector: 'centre' },
 ];
-const PT = Object.fromEntries(points.map((p) => [p.id, p]));
-const HEATH = { x: -SIDE, z: 330, r: 120 }; // the drop zone's open heath
-const heathK = (x, z) => smoothstep(HEATH.r + 30, HEATH.r - 10, Math.hypot(x - HEATH.x, z - HEATH.z));
-/** The Betuwe's orchards: rows of apple and pear trees round Huissen and Driel (sparse cover, the ground open under them). */
-const ORCHARDS = [[PT.J.x - 40, PT.J.z + 30, 95], [PT.H.x - 60, PT.H.z - 40, 80], [PT.I.x + 70, PT.I.z - 70, 60]];
-const orchardK = (x, z) => Math.max(...ORCHARDS.map(([ox, oz, r]) => smoothstep(r + 20, r - 10, Math.hypot(x - ox, z - oz))));
-const woodsN = (x, z) => fbm(noise, x * 0.0045 + 21, z * 0.0045 - 3, 3);
-/** The woods: west of the town and round Oosterbeek, never on the heath, the town, the orchards or the polder by the river. */
-const woodsK = (x, z) => {
-  const a = away(x, z);
-  if (a < DYKE + 25 || townAt(x, z, 15) || townAt(x, z, -20)) return 0;
-  const edge = Math.max(smoothstep(440, 500, Math.abs(x)), smoothstep(530, 570, Math.abs(z)));
-  return Math.max(edge, smoothstep(0.08, 0.2, woodsN(x, z)) * (1 - heathK(x, z)) * (1 - orchardK(x, z)));
-};
 
-const lowN = (x, z) => fbm(noise, x * 0.004, z * 0.004, 4);
-const riseN = (x, z) => fbm(noise, x * 0.006 + 7, z * 0.006, 3);
-function height(x, z) {
-  const a = away(x, z), T = townAt(x, z);
-  let h = 1.6 + lowN(x, z) * 1.4;                                            // the polder and the low rise behind it
-  if (z > riverZ(x)) h += smoothstep(90, 420, a) * (7 + riseN(x, z) * 5);  // the edge of the Veluwe
-  else h += smoothstep(110, 440, a) * (7 + riseN(x, z) * 5)                 // the Betuwe: rising later…
-    + 5 * Math.exp(-(((a - 245 - 30 * Math.sin(x * 0.007)) / 55) ** 2)) * smoothstep(-260, -120, x) * smoothstep(420, 300, x); // …and its old river dune (the donk under Elden)
-  const town = TOWNS[bank(x, z)];
-  if (!T) h += 3.2 * smoothstep(9, 2.5, Math.abs(a - DYKE)) * Math.max(smoothstep(town.x1, town.x1 + 30, x), smoothstep(town.x0, town.x0 - 30, x)); // the winter dyke
-  if (T) h = lerp(h, 3 + a * 0.012, smoothstep(T.a0, T.a0 + 10, a));         // the town: level streets
-  h += smoothstep(470, 600, Math.abs(x)) * 8 + smoothstep(560, 680, Math.abs(z)) * 8;
-  for (const bz of [BASE_Z, -BASE_Z]) h += (9 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
-  return river.carve(x, z, Math.max(1.3, h));
+// ---- Arnhem: the old town on the slope from the quay up to the station, a street grid (a: from the river; z along it)
+const TOWN = { z0: -300, z1: 40, a0: 46, a1: 300 };
+const T_AS = [60, 120, 180, 240], T_ZS = [-250, -190, ROADBR, -60, -5];
+const inTown = (x: number, z: number, m = 0) => { const a = away(x, z); return z > TOWN.z0 - m && z < TOWN.z1 + m && a > TOWN.a0 - m && a < TOWN.a1 + m; };
+/** Oosterbeek's villas round its middle, the Hartenstein's park. */
+const OOST = { x: -170, z: 300, r: 115 };
+
+// ---- the roads: the lower road along the river (the Benedendorpsweg and the quay), the Utrechtseweg through Oosterbeek
+// into the town, the Amsterdamseweg in the north, the bridge road north up through the town, the Velp road, the dyke road
+// on the south bank and the lanes to Driel and Malburgen
+const lower = (): number[][] => { const o: number[][] = []; for (let z = 620; z >= -620; z -= 40) o.push([rx(z) + (inTown(rx(z) + 60, z) ? 60 : 56 + 8 * Math.sin(z * 0.01)), z]); return o; };
+const dyke = (): number[][] => { const o: number[][] = []; for (let z = 620; z >= -620; z -= 40) o.push([rx(z) - DYKE - 14, z]); return o; };
+const ROADS: number[][][] = [
+  lower(), dyke(),
+  [[-60, 620], [-110, 420], [-150, 330], P.E, [-190, 160], [-180, 60], [rx(-60) + 180, -60], [rx(-250) + 180, -250], [-150, -420], [0, -500]],   // the Utrechtseweg, out the far side as the Velp road
+  [[270, 620], [255, 420], [262, 200], [250, 0], [262, -200], [250, -620]],                                // the Amsterdamseweg
+  [[rx(ROADBR) + 30, ROADBR], [80, ROADBR - 20], [260, ROADBR - 10], [520, ROADBR]],                         // the bridge road north through the town
+  [[0, 500], [-110, 420]], [[0, 500], [255, 440]], [[0, -500], [250, -470]],
+  [[rx(RAILBR) - 30, RAILBR], [P.H[0], P.H[1]], [-470, 120], [rx(0) - DYKE - 14, 0]],                       // Driel, off the railway bridge
+  [[rx(ROADBR) - 30, ROADBR], [rx(ROADBR) - DYKE - 14, ROADBR]],
+  [[rx(PONTOON) - 30, PONTOON], [P.G[0], P.G[1]], [rx(-200) - DYKE - 14, -200]],                           // Malburgen, off the pontoon bridge
+  [[rx(PONTOON) + 30, PONTOON], [-200, PONTOON - 20], [P.D[0], P.D[1]], [262, -280]],                       // the pontoon road up past Sonsbeek
+  [P.B, [262, 300]], [P.I, [250, 40]], [P.I, [-60, 40]],
+];
+const RAIL_MAIN: number[][] = [[-40, 620], [-30, 420], [-45, 200], [-70, 40], [-80, -100], [-70, -300], [-50, -620]];   // Utrecht – Arnhem – Velp
+const RAIL_NIJ: number[][] = [[-80, -20], [-170, 60], [-230, 160], [rx(RAILBR) + 60, RAILBR], [rx(RAILBR) - 60, RAILBR], [-500, 330]];   // the Nijmegen line, over the railway bridge
+/** Distance to the nearest of `lines`, each cut into short pieces with their boxes: far pieces are skipped (the caches fill fast). */
+function nearest(lines: number[][][]) {
+  const parts: [number[][], number, number, number, number][] = [];
+  for (const l of lines) for (let i = 0; i < l.length - 1; i += 4) {
+    const p = l.slice(i, i + 5), xs = p.map((q) => q[0]), zs = p.map((q) => q[1]);
+    parts.push([p, Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]);
+  }
+  return (x: number, z: number) => {
+    let d = Infinity;
+    for (const [p, x0, x1, z0, z1] of parts) {
+      const bx = Math.max(x0 - x, 0, x - x1), bz = Math.max(z0 - z, 0, z - z1);
+      if (bx * bx + bz * bz < d * d) d = Math.min(d, segDist(p, x, z));
+    }
+    return d;
+  };
 }
+const roadNear = nearest(ROADS), railNear = nearest([RAIL_MAIN, RAIL_NIJ]);
+const roadDist = gridCacheSmooth((x: number, z: number) => {
+  let d = roadNear(x, z);
+  if (inTown(x, z)) { const a = away(x, z); for (const s of T_AS) d = Math.min(d, Math.abs(a - s)); for (const s of T_ZS) d = Math.min(d, Math.abs(z - s)); }
+  return d;
+}, { x: 800, z: 800 }, 2.5);
+const railDist = gridCacheSmooth(railNear, { x: 800, z: 800 }, 2.5);
+
+const HEATH = { x: P.B[0], z: P.B[1], r: 125 }; // the drop zone's open heath
+const heathK = (x: number, z: number) => smoothstep(HEATH.r + 30, HEATH.r - 10, Math.hypot(x - HEATH.x, z - HEATH.z));
+/** The Betuwe's orchards round Driel and Malburgen (sparse cover, the ground open under them). */
+const ORCHARDS = [[P.H[0] - 10, P.H[1] + 60, 50], [P.G[0] - 5, P.G[1] - 60, 50]];
+const orchardK = (x: number, z: number) => Math.max(...ORCHARDS.map(([ox, oz, r]) => smoothstep(r + 20, r - 10, Math.hypot(x - ox, z - oz))));
+
+// ---- the ground: the polder, the river, the slope up to the Veluwe; the moraine's hills (the Westerbouwing bluff over
+// the river at Oosterbeek, Den Brink, Sonsbeek), the dyke, the town's level streets
+// [x, z, r, h]: the Westerbouwing, Den Brink, the Sonsbeek hills, the Veluwezoom's high woods behind Velp, the Wolfheze rise
+const HILLS = [[-245, 410, 95, 20], [P.I[0], P.I[1], 90, 9], [P.D[0] + 20, P.D[1] - 10, 110, 13], [390, -350, 250, 40], [260, 470, 150, 5]];
+/** The dry valleys down the slope into the town (the Sonsbeek brook's) and into Oosterbeek. */
+const DALES: number[][][] = [[[520, -230], [300, -200], [120, -190], [-120, -180]], [[420, 200], [200, 250], [40, 290], [-110, 300]]];
+const ground = gridCacheSmooth((x: number, z: number) => {
+  const a = away(x, z);
+  let h = 1.6 + fbm(noise, x * 0.004, z * 0.004, 3) * 0.8;
+  if (a < 0) {
+    h += 4 * Math.exp(-(((-a - DYKE) / 7) ** 2));                                      // the winter dyke
+  } else {
+    const west = smoothstep(-100, 300, z);                                              // (the moraine wilder to the west)
+    h += (6 + 14 * smoothstep(-60, 320, z)) * smoothstep(40, 220, a) - 7 * smoothstep(260, 560, a) * smoothstep(-200, 100, z) +   // (up to the moraine's crest over the river, down to the heaths beyond)
+       (fbm(noise, x * 0.006 + 7, z * 0.006, 3) * 5 + ridged(noise, x * 0.008, z * 0.008, 3) * 8 * west) * smoothstep(60, 260, a);
+    for (const d of DALES) h -= 7 * Math.exp(-((segDist(d, x, z) / 34) ** 2)) * smoothstep(60, 180, a);
+    for (const [hx, hz, r, hh] of HILLS) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.3;
+    if (inTown(x, z, 20)) { const dep = Math.min(a - TOWN.a0, TOWN.a1 - a, z - TOWN.z0, TOWN.z1 - z); h = lerp(h, 3 + Math.max(0, a - 40) * 0.05, smoothstep(-20, 0, dep)); }
+  }
+  h += smoothstep(560, 700, Math.abs(z)) * 6 + smoothstep(500, 640, x) * 8;
+  for (const bz of [BASE_Z, -BASE_Z]) h += (lerp(h, 12, 0.5) - h) * smoothstep(34, 16, Math.hypot(x, z - bz));
+  return h;
+}, { x: 700, z: 800 }, 2);
+const height = (x: number, z: number) => river.carve(x, z, Math.max(1.3, ground(x, z)));
+
+const woodsN = (x: number, z: number) => fbm(noise, x * 0.0045 + 21, z * 0.0045 - 3, 3);
+/** The woods: the Veluwe's, thickest west and north; Oosterbeek's villas among them; Den Brink and Sonsbeek wooded; never the
+ *  heath, the town, the polder or the water meadows. */
+const woodsK = gridCache((x: number, z: number) => {
+  const a = away(x, z);
+  if (a < 60 || inTown(x, z, 15)) return 0;
+  let k = smoothstep(0.02 - 0.18 * smoothstep(-200, 300, z), 0.16, woodsN(x, z)) * smoothstep(60, 140, a);
+  k = Math.max(k, smoothstep(110, 70, Math.hypot(x - P.I[0], z - P.I[1])), smoothstep(120, 80, Math.hypot(x - P.D[0], z - P.D[1])), smoothstep(OOST.r + 40, OOST.r, Math.hypot(x - OOST.x, z - OOST.z)) * 0.8);
+  k = Math.max(k, smoothstep(100, 60, Math.hypot(x + 245, z - 410)));   // (the Westerbouwing's beeches)
+  return k * (1 - heathK(x, z)) * (Math.hypot(x, Math.abs(z) - BASE_Z) < 50 ? 0 : 1);
+}, { x: 800, z: 800 }, 4);
 
 const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 18, name: '1st Platoon' }];
 
 export default {
   id: 'arnhem',
   name: 'Arnhem',
-  description: 'September 1944, Market Garden: the Lower Rhine and its three bridges — the road bridge in the middle, the railway bridge at Oosterbeek, the pontoon bridge — the brick streets of Arnhem, Oosterbeek’s woods and the heath of the drop zones, the orchards of the Betuwe across the river.',
+  description: 'September 1944, Market Garden: the Lower Rhine along the south and its three crossings — the road bridge, the Oosterbeek railway bridge, the pontoon bridge — Arnhem’s brick streets on the slope above the quay, Oosterbeek’s woods and villas and the heath of the drop zones on the wooded Veluwe heights, Driel and the polder across the river.',
   epochs: ['1945'],
   region: 'europe',
   sides: { nato: 'Britain', pact: 'Germany' },
   armies: { nato: ['brit21'], pact: ['wh'] }, // (the 1st Airborne Division against II SS-Panzerkorps and the Kampfgruppen sent to the bridge)
   size: 1600,
   segments: 640,
-  bounds: { x: 500, z: 560 },
+  bounds: BOUNDS,
   seed: 1944_09,
   height,
   river,
-  bridgeAt: (x, z) => river.bridgeAt(x, z),
-  woods: (x, z) => Math.max(woodsK(x, z) * 0.8, orchardK(x, z) * 0.4), // (the orchards: half-hidden under the fruit trees)
+  bridgeAt: (x: number, z: number) => river.bridgeAt(x, z),
+  woods: (x: number, z: number) => Math.max(woodsK(x, z) * 0.8, orchardK(x, z) * 0.4), // (the orchards: half-hidden under the fruit trees)
   fields: createFields({ seed: 1944_09, cell: 62 }),
 
   theme: {
@@ -157,21 +196,22 @@ export default {
       grass: '#58692f', grassAlt: '#4c5e2c', dryGrass: '#8c8048', dirt: '#56462f', rock: '#6a665c',
       pasture: '#5c6c34', ploughed: '#5a4630', stubble: '#a08e56', meadow: '#66763a',
       farmX: [440, 500], farmZ: [540, 600], roads: [], roadZ: 0, // (no default tracks: the roads are painted below)
-      surface(x, z) {
+      surface(x: number, z: number) {
         const a = away(x, z);
-        if (railDist(x, z) < 2.4 && a > HW + 20) return [0x4a4640, 0.9];                          // ballast
+        if (Math.abs(a) < HW + 4) return null;
+        if (railDist(x, z) < 2.4) return [0x4a4640, 0.9];                                         // ballast
         const rd = roadDist(x, z);
-        if (rd < 4) return townAt(x, z) ? [0x5e5a56, 0.95] : [0x6e665a, 0.85];                     // cobbles in town, the roads
-        if (townAt(x, z)) return [0x55573c, 0.7];                                                 // yards and gardens
+        if (rd < 4) return inTown(x, z) ? [0x5e5a56, 0.95] : [0x6e665a, 0.85];                    // cobbles in town, the roads
+        if (inTown(x, z)) return [0x55573c, 0.7];                                                 // yards and gardens
         const hk = heathK(x, z);
         if (hk > 0.05) return [noise(x * 0.04, z * 0.04) > 0.1 ? 0x6a4e5a : 0x7a6c48, hk * 0.8]; // heather and dead bracken
-        if (a < DYKE - 6 && a > HW + 3) return [0x5c6e38, 0.5];                                    // the water meadows between dyke and river
+        if (a > -DYKE + 6 && a < 46) return [0x5c6e38, 0.5];                                      // the water meadows
         return null;
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: NS }, pact: { x: 0, z: -BASE_Z, entries: NS } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-150, 0, 250] }, pact: { x: 0, z: -BASE_Z, entries: [-150, 0, 250] } },
   maxStacks: 26,
   cameraStart: { nato: { x: 0, z: 380 }, pact: { x: 0, z: -380 } },
   points,
@@ -181,12 +221,13 @@ export default {
     pact: layout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1. Zug' })),
   },
 
-  decorate({ scene, terrain, cover, rand, bounds }) {
+  decorate({ scene, terrain, cover, rand, bounds }: any) {
     const props = new PropBuilder({ scene, terrain, cover });
-    const nearPoint = (x, z, r) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
+    const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
+    const blocked = (x: number, z: number, r: number) => roadDist(x, z) < r + 4 || railDist(x, z) < r + 5 || Math.abs(away(x, z)) < HW + 12 || Math.abs(-away(x, z) - DYKE) < 10 + r || nearPoint(x, z, r + 9);
 
     /** A Dutch brick house: two or three storeys, steep tiled gable roof. Occupiable, upstairs windows to fight from. */
-    const brickHouse = (x, z, yaw, w, d, storeys, name = 'house') => {
+    const brickHouse = (x: number, z: number, yaw: number, w: number, d: number, storeys: number, name = 'house') => {
       const r = props.rand;
       const b = props.beginBuilding(name, x, z, yaw, w, d);
       const brick = new THREE.Color().setHSL(0.03 + r() * 0.03, 0.35 + r() * 0.15, 0.3 + r() * 0.08).getHex();
@@ -199,58 +240,54 @@ export default {
       props.endBuilding();
     };
     /** A Horsa glider come down hard on the heath: the fuselage, a wing, the tail broken off (cover). */
-    const horsa = (x, z, yaw) => {
+    const horsa = (x: number, z: number, yaw: number) => {
       const g = terrain.heightAt(x, z), r = props.rand;
-      const P = (lx, ly, lz, sx, sy, sz, c, ry = 0, rx = 0, rz = 0) => { const [wx, wz] = PropBuilder.local(x, z, yaw, lx, lz); props.box('plain', wx, g + ly, wz, sx, sy, sz, yaw + ry, c, rx, rz); };
+      const Q = (lx: number, ly: number, lz: number, sx: number, sy: number, sz: number, c: number, ry = 0, rxx = 0, rz = 0) => { const [wx, wz] = PropBuilder.local(x, z, yaw, lx, lz); props.box('plain', wx, g + ly, wz, sx, sy, sz, yaw + ry, c, rxx, rz); };
       const ply = 0x4c4e38;
-      P(0, 1.5, 0, 2.6, 2.7, 15, ply, 0, 0.04);                     // the fuselage
-      P(0, 1.3, 9, 2.3, 2.2, 3, 0x3a3a30, 0, 0.2);                  // the nose, smashed in
-      P(0, 3.1, -1, 26 * (0.5 + r() * 0.5), 0.3, 3, ply, 0, 0, (r() - 0.5) * 0.25); // the wing, high on the fuselage (one side torn off)
-      P(2.5, 0.7, -12, 1.6, 1.3, 7, ply, 0.5, 0, 0.6);              // the tail, off and lying beside it
-      P(3, 2.4, -14.5, 0.25, 3.4, 2.4, ply, 0.5);
+      Q(0, 1.5, 0, 2.6, 2.7, 15, ply, 0, 0.04);                     // the fuselage
+      Q(0, 1.3, 9, 2.3, 2.2, 3, 0x3a3a30, 0, 0.2);                  // the nose, smashed in
+      Q(0, 3.1, -1, 26 * (0.5 + r() * 0.5), 0.3, 3, ply, 0, 0, (r() - 0.5) * 0.25); // the wing (one side torn off)
+      Q(2.5, 0.7, -12, 1.6, 1.3, 7, ply, 0.5, 0, 0.6);              // the tail, off and lying beside it
+      Q(3, 2.4, -14.5, 0.25, 3.4, 2.4, ply, 0.5);
       cover.addBox({ x, z, yaw, length: 2.6, thickness: 15, height: 2.8 });
     };
 
-    // ---- Arnhem, and the south end of the bridge: blocks of brick houses on each bank's street grid
-    for (const m of [1, -1]) {
-      const T = TOWNS[m], r = props.rand = mulberry32(1944_0917 + m);
-      const xs = [T.x0, ...T.xs, T.x1], as = [T.a0 + 6, ...T.as, T.a1];
-      for (let i = 0; i < xs.length - 1; i++) {
-        for (let j = 0; j < as.length - 1; j++) {
-          const x0 = xs[i] + 6, x1 = xs[i + 1] - 6, a0 = as[j] + 6, a1 = as[j + 1] - 6;
-          // houses round the block's edge, facing the streets; the block's yard open in the middle (the bridge's road straight up the middle)
-          for (const [aRow, yaw] of [[a0 + 5, Math.PI], [a1 - 5, 0]] as [number, number][]) {
-            for (let x = x0 + 4; x < x1 - 3; x += 7.5 + r() * 2.5) {
-              if (Math.abs(x) < 10) continue;
-              const w = 7 + r() * 1.5, d = 9, z = riverZ(x) + m * aRow;
-              if (r() < 0.1 || nearPoint(x, z, 14) || m > 0 && Math.abs(x - 75) < 16 && Math.abs(aRow - 128) < 16) continue;
-              brickHouse(x, z, m > 0 ? yaw : yaw + Math.PI, w, d, r() < 0.5 ? 2 : 3, m > 0 ? 'house in Arnhem' : 'house');
-            }
+    // ---- Arnhem: blocks of brick houses round its street grid, facing the streets, the yards open behind
+    {
+      const r = props.rand = mulberry32(1944_0917);
+      const as = [TOWN.a0 + 14, ...T_AS, TOWN.a1], zs = [TOWN.z0, ...[...T_ZS].sort((p, q) => p - q), TOWN.z1];
+      for (let i = 0; i < as.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
+        const z0 = zs[j] + 8, z1 = zs[j + 1] - 8;
+        for (const [aRow, yaw] of [[as[i] + 11, -Math.PI / 2], [as[i + 1] - 11, Math.PI / 2]] as [number, number][]) {
+          if (aRow > as[i + 1] - 8 || aRow < as[i] + 8) continue;
+          for (let z = z0 + 4; z < z1 - 3; z += 7.5 + r() * 2.5) {
+            const x = rx(z) + aRow;
+            if (r() < 0.1 || blocked(x, z, 4) || Math.hypot(x - (P.C[0] + 14), z - P.C[1]) < 18) continue;
+            brickHouse(x, z, yaw, 9, 7 + r() * 1.5, r() < 0.5 ? 2 : 3, 'house in Arnhem');
           }
         }
       }
-      // the bridge ramp: sandbags and a barricade at its foot
-      for (const sx of [-1, 1]) props.sandbagRing({ x: sx * 18, z: riverZ(sx * 18) + m * (T.a0 + 16), radius: 4, toward: -m });
-      props.logBarricade({ x: 0, z: riverZ(0) + m * (T.a0 + 30), yaw: m > 0 ? 0 : Math.PI, length: 6 });
+      // the bridge ramp: sandbags and a barricade at its north foot; the Eusebiuskerk on its square, the station
+      for (const s of [-1, 1]) props.sandbagRing({ x: rx(ROADBR) + HW + 22, z: ROADBR + s * 16, radius: 4, toward: -1 });
+      props.logBarricade({ x: rx(ROADBR) + HW + 40, z: ROADBR, yaw: Math.PI / 2, length: 6 });
+      props.church({ x: P.C[0] + 14, z: P.C[1], yaw: 0 });
+      brickHouse(P.J[0] - 4, P.J[1] + 24, 0, 10, 26, 2, 'station');
+      // the quay's low wall along the river
+      for (let z = TOWN.z0 + 6; z < TOWN.z1; z += 12) if (Math.abs(z - ROADBR) > 14) props.lowWall({ x: rx(z) + TOWN.a0 + 1, z, yaw: Math.PI / 2, length: 9, height: 0.9, color: 0x7a746a });
     }
-    // the Grote of Eusebiuskerk on its square, the station behind the town, the quay's low wall along the river
-    props.church({ x: 75, z: zAt(75, 140), yaw: Math.PI / 2 });
-    brickHouse(-30, zAt(-30, RAIL_A - 12), 0, 24, 10, 2, 'station');
-    for (let x = -TOWN.x + 6; x < TOWN.x - 6; x += 12) if (Math.abs(x) > 12) props.lowWall({ x, z: zAt(x, TOWN.a0 + 1), yaw: 0, length: 9, height: 0.9, color: 0x7a746a });
 
-    // ---- Oosterbeek — villas among the trees, the old church by the river; the Hartenstein
+    // ---- Oosterbeek — villas among the trees, the old church down by the river, the Hartenstein in its park
     {
       const r = props.rand = mulberry32(1944_0918);
-      const ox = -SIDE + 45;
-      props.church({ x: ox + 30, z: zAt(ox + 30, 80), yaw: Math.PI / 2 });
-      for (let i = 0; i < 14; i++) {
-        const ang = r() * Math.PI * 2, d = 22 + r() * 60;
-        const x = ox + Math.cos(ang) * d, z = zAt(ox, 120) + Math.sin(ang) * d * 0.9;
-        if (away(x, z) < DYKE + 10 || roadDist(x, z) < 9 || railDist(x, z) < 12 || nearPoint(x, z, 14) || Math.abs(x - (ox + 30)) < 16 && away(x, z) < 100) continue;
+      props.church({ x: rx(300) + 62, z: 300, yaw: Math.PI / 2 });
+      for (let i = 0; i < 30; i++) {
+        const ang = r() * Math.PI * 2, d = 20 + r() * OOST.r;
+        const x = OOST.x + Math.cos(ang) * d, z = OOST.z + Math.sin(ang) * d;
+        if (blocked(x, z, 6) || away(x, z) < 70) continue;
         brickHouse(x, z, Math.round(ang / (Math.PI / 2)) * (Math.PI / 2), 9 + r() * 3, 9 + r() * 2, 2, 'villa');
       }
-      const hx = ox + 70, hz = zAt(ox + 70, 205);
-      const b = props.beginBuilding('Hotel Hartenstein', hx, hz, 0, 22, 13);
+      const hx = -120, hz = 340;
+      const b = props.beginBuilding('Hotel Hartenstein', hx, hz, Math.PI / 2, 22, 13);
       b.plaster = 0xd8d4c8;
       props.shell(b, { height: 9.3, storeys: 3, key: 'plaster', color: 0xd8d4c8, t: 0.45, bay: 2.6, frame: 0x5a6a5a, shutters: 0.6, upper: true, front: [0, -6, 6] });
       for (let s = 1; s < 3; s++) props.piece('plain', b, 0, s * 3.1, 0, 21.5, 0.2, 12.5, 0x5a4a3c);
@@ -259,64 +296,62 @@ export default {
     }
     // ---- Malburgen on the south bank: workers' houses behind the dyke and the brickworks on the foreland, their kiln stacks
     {
-      const r = props.rand = mulberry32(1944_0921), p = PT.G;
-      for (let i = 0; i < 12; i++) {
-        const ang = r() * Math.PI * 2, d = 18 + r() * 45;
-        const x = p.x + Math.cos(ang) * d, z = p.z - 30 + Math.sin(ang) * d * 0.8;
-        if (away(x, z) < DYKE + 10 || roadDist(x, z) < 9 || railDist(x, z) < 12 || nearPoint(x, z, 14)) continue;
+      const r = props.rand = mulberry32(1944_0921);
+      for (let i = 0; i < 14; i++) {
+        const ang = r() * Math.PI * 2, d = 16 + r() * 40;
+        const x = P.G[0] + Math.cos(ang) * d * 0.6, z = P.G[1] + 20 + Math.sin(ang) * d;
+        if (blocked(x, z, 5) || away(x, z) > -DYKE - 10) continue;
         brickHouse(x, z, Math.round(ang / (Math.PI / 2)) * (Math.PI / 2) + 0.2, 8 + r() * 2, 8, 2, 'house');
       }
-      for (const [dx, yaw] of [[-55, 0.1], [40, -0.05]]) {
-        const x = p.x + dx, z = zAt(x, -(HW + 18));
-        props.hall({ x, z, yaw: yaw + Math.PI, width: 30, depth: 11, height: 5, color: 0x6a3a2c, roof: 0x3a3c40, door: 5, name: 'brickworks' });
-        props.chimney({ x: x + 10, z: z - 10, height: 24 });
+      for (const [z, yaw] of [[-250, 0.05], [-200, -0.05]]) {
+        const x = rx(z) - HW - 18;
+        props.hall({ x, z, yaw: Math.PI / 2 + yaw, width: 30, depth: 11, height: 5, color: 0x6a3a2c, roof: 0x3a3c40, door: 5, name: 'brickworks' });
+        props.chimney({ x: x - 4, z: z + 12, height: 24 });
       }
     }
 
-    // ---- Velp and the hamlet by Wolfheze; on the south the polder villages: Driel, Huissen, Elden and the houses at Elst
-    for (const [px, pz, n, seed] of [[SIDE, 300, 8, 1], [0, 440, 4, 2], [PT.H.x, PT.H.z, 7, 3], [PT.J.x, PT.J.z, 8, 4], [PT.I.x, PT.I.z, 6, 5], [PT.K.x, PT.K.z + 30, 4, 6]] as [number, number, number, number][]) {
+    // ---- Driel, the hamlet by Wolfheze, Velp's edge, the farms on Den Brink and by Sonsbeek
+    for (const [px, pz, n, seed] of [[P.H[0], P.H[1], 9, 3], [40, 440, 4, 2], [60, -430, 5, 6], [P.D[0] - 60, P.D[1] + 40, 5, 4], [P.I[0] + 50, P.I[1] - 50, 3, 5]] as [number, number, number, number][]) {
       const r = props.rand = mulberry32(1944_0919 * 10 + seed);
-      for (let i = 0; i < n * 2 && i < 20; i++) {
-        const ang = (i / n) * Math.PI + r() * 0.4, d = 16 + r() * 18;
+      for (let i = 0; i < n * 3; i++) {
+        const ang = (i / n) * Math.PI + r() * 0.4, d = 16 + r() * 22;
         const x = px + Math.cos(ang) * d, z = pz + Math.sin(ang) * d;
-        if (roadDist(x, z) < 8 || railDist(x, z) < 12 || Math.hypot(x, Math.abs(z) - BASE_Z) < 40 || Math.hypot(x - px, z - pz) < 11) continue;
+        if (blocked(x, z, 5) || Math.hypot(x, Math.abs(z) - BASE_Z) < 40 || Math.hypot(x - px, z - pz) < 11 || woodsK(x, z) > 0.5) continue;
         brickHouse(x, z, ang + Math.PI / 2 + seed, 8 + r() * 2, 8, 2, 'house');
       }
     }
-    props.church({ x: PT.I.x - 26, z: PT.I.z + 8, yaw: 0.3 });   // (Elden's church)
-    props.church({ x: PT.J.x + 24, z: PT.J.z - 6, yaw: -0.2 });  // (Huissen's)
+    props.rand = mulberry32(1944_0922);
+    props.church({ x: P.H[0] + 6, z: P.H[1] - 34, yaw: 0.2 });   // (Driel's church)
 
     // ---- the drop zone: Horsas down on the heath; hay out on the polder
-    props.rand = mulberry32(1944_0920);
-    for (let i = 0; i < 9; i++) {
-      const ang = props.rand() * Math.PI * 2, d = 20 + props.rand() * 85, yaw = props.rand() * Math.PI * 2;
+    for (let i = 0; i < 10; i++) {
+      const ang = props.rand() * Math.PI * 2, d = 20 + props.rand() * 90, yaw = props.rand() * Math.PI * 2;
       const x = HEATH.x + Math.cos(ang) * d, z = HEATH.z + Math.sin(ang) * d;
       if (nearPoint(x, z, 18) || roadDist(x, z) < 12) continue;
       horsa(x, z, yaw);
     }
-    for (let i = 0; i < 12; i++) {
-      const x = (props.rand() * 2 - 1) * 420, z = -120 - props.rand() * 330, yaw = props.rand() * 3;
-      if (nearPoint(x, z, 24) || roadDist(x, z) < 10 || townAt(x, z, 10) || orchardK(x, z) > 0.2) continue;
+    for (let i = 0; i < 14; i++) {
+      const z = (props.rand() * 2 - 1) * 520, x = rx(z) - DYKE - 30 - props.rand() * 80, yaw = props.rand() * 3;
+      if (blocked(x, z, 8) || orchardK(x, z) > 0.2 || x < -495) continue;
       props.hayBales({ x, z, yaw, count: 4 });
-      props.hayBales({ x: x + 5, z: z + 6, yaw: yaw + 1, count: 3 });
     }
 
-    // ---- the railways, and cover out in the fields, the command posts
-    for (const m of [1, -1]) {
-      for (let x = -560; x < 560; x += 8) {
-        const step = (xx) => { // the line's z at xx on bank m
-          const zz = riverZ(xx) + m * 1;
-          return riverZ(xx) + m * railA(xx, zz);
-        };
-        props.rails({ x0: x, z0: step(x), x1: x + 8, z1: step(x + 8) });
+    // ---- the railways
+    for (const line of [RAIL_MAIN, RAIL_NIJ]) for (let i = 0; i < line.length - 1; i++) {
+      const [ax, az] = line[i], [bx, bz] = line[i + 1], n = Math.ceil(Math.hypot(bx - ax, bz - az) / 8);
+      for (let k = 0; k < n; k++) {
+        const x0 = ax + (bx - ax) * k / n, z0 = az + (bz - az) * k / n;
+        if (Math.abs(away(x0, z0)) < HW + 8) continue;   // (over the water: the bridge carries its own)
+        props.rails({ x0, z0, x1: ax + (bx - ax) * (k + 1) / n, z1: az + (bz - az) * (k + 1) / n });
       }
     }
+    // ---- cover out in the fields and the polder, the command posts
     const kinds = ['farm', 'fieldwall', 'hay', 'hay', 'farm', 'fieldwall', 'wrecks'];
     const sites: any[] = [];
-    for (let tries = 0; sites.length < 140 && tries < 18000; tries++) {
-      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 40), a = away(x, z);
-      if (townAt(x, z, 20) || townAt(x, z, -20) || a < HW + 12 || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 32 * 32)) continue;
-      if (Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || nearPoint(x, z, 34) || roadDist(x, z) < 10 || railDist(x, z) < 10 || woodsK(x, z) > 0.4 || Math.abs(a - DYKE) < 10) continue;
+    for (let tries = 0; sites.length < 110 && tries < 18000; tries++) {
+      const x = (rand() * 2 - 1) * (bounds.x - 30), z = (rand() * 2 - 1) * (bounds.z - 40);
+      if (inTown(x, z, 20) || Math.hypot(x - OOST.x, z - OOST.z) < OOST.r || sites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 32 * 32)) continue;
+      if (Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || blocked(x, z, 8) || nearPoint(x, z, 34) || woodsK(x, z) > 0.4 || heathK(x, z) > 0.5 || (away(x, z) > 0 && away(x, z) < 50)) continue;
       sites.push({ x, z, kind: kinds[sites.length % kinds.length], yaw: rand() * Math.PI, seed: Math.floor(rand() * 1e9) });
     }
     for (const s of sites) buildSite(props, s, s.x, s.z, s.yaw);
@@ -326,28 +361,28 @@ export default {
     river.build(scene, terrain);
 
     const avoid = [{ x: 0, z: BASE_Z, r: 26 }, { x: 0, z: -BASE_Z, r: 26 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 14 })),
-      { test: (x, z) => away(x, z) < HW + 3 || roadDist(x, z) < 6 || railDist(x, z) < 5 }];
-    // oak, beech and pine round Oosterbeek and the drop zones, birches on the heath, willows by the river, trees in the town's gardens
+      { test: (x: number, z: number) => Math.abs(away(x, z)) < HW + 3 || roadDist(x, z) < 6 || railDist(x, z) < 5 }];
+    // oak, beech and pine on the Veluwe and round Oosterbeek, birches on the heath, willows by the river, trees in the town's gardens
     const trees = plantTrees({
-      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 9000, broadleaf: 0.65, autumn: 0.25,
-      forest: (x, z) => {
+      scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x + 80, count: 6000, broadleaf: 0.65, autumn: 0.25, maxY: 60,
+      forest: (x: number, z: number) => {
         const a = away(x, z);
-        if (a < HW + 3 || roadDist(x, z) < 7 || railDist(x, z) < 6 || nearPoint(x, z, 24)) return -1;
-        if (townAt(x, z)) return 0.015;
+        if (Math.abs(a) < HW + 3 || roadDist(x, z) < 7 || railDist(x, z) < 6 || nearPoint(x, z, 24)) return -1;
+        if (inTown(x, z)) return 0.015;
         if (orchardK(x, z) > 0.4) return 0.3;                // the orchards: fruit trees in rows, grass under them
-        if (a < DYKE - 8) return 0.12;                       // willows on the water meadows
+        if (a < 46 && a > -DYKE + 8) return 0.12;            // willows on the water meadows
         const w = woodsK(x, z);
         if (w > 0.5) return 0.9;
         return heathK(x, z) > 0.3 ? 0.03 : -0.02;
       },
     });
     cover.finalize(bounds);
-    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid: [...avoid, { test: (x, z) => townAt(x, z, 10) || townAt(x, z, -10) || heathK(x, z) > 0.2 || orchardK(x, z) > 0.3 || woodsK(x, z) > 0.4 }], count: 3500, lane: 0 });
+    const hedges = plantHedgerows({ scene, terrain, cover, rand, fields: this.fields, area: bounds, avoid: [...avoid, { test: (x: number, z: number) => inTown(x, z, 10) || heathK(x, z) > 0.2 || orchardK(x, z) > 0.3 || woodsK(x, z) > 0.4 }], count: 3000, lane: 0 });
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid, density: 2.5, fields: this.fields });
 
     return {
       buildings: props.buildings,
-      update(dt, t) {
+      update(dt: number, t: number) {
         ground.update(dt, t);
         trees.update(dt, t);
         hedges.update(dt, t);

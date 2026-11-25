@@ -38,6 +38,8 @@ import kampfgruppe from './kampfgruppe.ts';
 import { bunker, strongpoint, hq } from './fortifications.ts';
 import { SHIPS_1985 } from './ships85.js';
 import armies85 from './armies85.js';
+import navies85 from './navies85.js';
+import { ARMIES, armyHas } from '../factions.js';
 
 export const UNIT_TYPES = {
   [rifles.id]: rifles,
@@ -81,6 +83,7 @@ export const UNIT_TYPES = {
 };
 
 armies85(UNIT_TYPES); // the Northern Flank's and Korea's armies: Norway, the Marines, the ROK Army, the KPA (./armies85.js)
+navies85(UNIT_TYPES); // their ships: the Royal Norwegian Navy and the ROK Navy on the shared ship types (./navies85.js)
 
 /** The 1985 roster as built here; data/epoch.js swaps UNIT_TYPES between this and 1945's. */
 export const TYPES_1985 = { ...UNIT_TYPES };
@@ -95,3 +98,43 @@ export function getUnitType(id) {
   if (!type) throw new Error(`Unknown unit type "${id}"`);
   return type;
 }
+
+/** The same role, by type id, when an army lacks a type and names no stand-in of its own: the first of these it fields. */
+const ROLE = {
+  tank: ['heavyTank', 'tankDestroyer', 'reconVehicle'], heavyTank: ['tank', 'tankDestroyer'], tankDestroyer: ['tank', 'atTeam'], ddTank: ['tank'], pt76: ['reconVehicle', 'tank'],
+  reconVehicle: ['scouts'], cev: ['engineers'], mineClear: ['engineers'],
+  aa: ['gunMissile', 'towedAA', 'sam', 'manpads'], gunMissile: ['aa', 'towedAA', 'manpads'], towedAA: ['aa', 'gunMissile', 'manpads'], sam: ['aa', 'towedAA', 'manpads'],
+  rockets: ['artillery'], spMortar: ['mortar'], mortar: ['spMortar'],
+  atTeam: ['rifles'], sniper: ['scouts'], observers: ['scouts'], airAssault: ['rifles'], stormTroops: ['rifles'], kampfgruppe: ['rifles'], marines: ['rifles'], sailors: ['rifles'],
+  frigate: ['destroyer', 'ptBoat'], destroyer: ['frigate'], lightCruiser: ['cruiser', 'destroyer'], cruiser: ['lightCruiser', 'destroyer'],
+  battleship: ['oldBattleship', 'cruiser'], oldBattleship: ['battleship', 'cruiser'], carrier: ['escortCarrier'], escortCarrier: ['carrier'], missileSub: ['submarine'],
+  monitor: ['battleship', 'cruiser'], seaplaneCarrier: ['carrier', 'lightCruiser'], merchant: ['transport'], trawler: ['drifter', 'frigate', 'minesweeper'], minelayerSub: ['submarine'], cruiserSub: ['submarine'], // (1918: data/units1918/shipTypes.js)
+  prame: ['frigate', 'cruiser'], gunVessel: ['ptBoat'], peniche: ['ptBoat'], bombVessel: ['destroyer', 'frigate'], cutter: ['destroyer'], lugger: ['destroyer'], rocketTroop: ['rockets', 'artillery'], // (1806: data/units1806/smallCraft.js; merchant as 1918's)
+};
+
+/**
+ * What `army` puts on the field for type `id` (every spawn goes through here: GameEngine.spawnStack): `id` if the army fields it
+ * (data/factions.js armyHas), else its stand-in from its own roster — the army's (`standIn` on its ARMIES entry, data/epoch.js;
+ * null: none), else the first of ROLE[id] it fields — else null: no such unit. Fortifications and the hidden service types
+ * (crews, landing craft, loose horses) are the map's or the mode's: as they are.
+ */
+export function standInFor(id, army) {
+  const t = typeOf(id);
+  if (!t || !ARMIES[army] || t.hidden || t.stats?.structure || armyHas(t, army)) return t ? id : null;
+  const own = ARMIES[army].standIn ?? {};
+  const pick = t.id in own ? [own[t.id]] : ROLE[t.id] ?? [];
+  return pick.find((s) => s && UNIT_TYPES[s] && armyHas(UNIT_TYPES[s], army)) ?? null;
+}
+
+/** Can army `a` field anything yet: an `own` army with no unit written for it (the AEF, Serbians, Bulgarians until their rosters) can't — a map listing it first falls back to the next army it names. */
+export const fieldsUnits = (a) => !ARMIES[a]?.own || Object.values(UNIT_TYPES).some((t) => t?.variants?.[a]);
+
+/** Has army `a` any warship of its own (or its navy's: `navyOf`)? */
+export const fieldsNavy = (a) => Object.values(UNIT_TYPES).some((t) => t?.stats?.naval && !t.hidden && !t.stats?.landingCraft && armyHas(t, a));
+
+/**
+ * A world-campaign battle is fought by the army that is there, whatever the map or region (the Germans holding Britain,
+ * the Russians retaking it: Kent fought by the Wehrmacht against the Red Army). Only an army with nothing to field yet
+ * (no units; at sea, no warships) leaves it to the map's own. The map's `armies` and the regions are the menu's rules.
+ */
+export const campaignArmy = (a, map) => !!a && !!ARMIES[a] && fieldsUnits(a) && (map?.theatre !== 'sea' || fieldsNavy(a));

@@ -64,7 +64,8 @@ const CAPS = {
 const ARMOUR_SHARE = 0.4;
 const ARMOUR_ORDER = ['tank', 'ifv', 'tank', 'tankDestroyer', 'ifv', 'heavyTank', 'tank', 'reconVehicle', 'tankDestroyer', 'cev', 'heavyTank'];
 const VEHICLE = new Set(['tank', 'heavyTank', 'ifv', 'tankDestroyer', 'reconVehicle', 'cev']);
-const MAX_EXPANDERS = 3;            // stacks out claiming neutral points at once
+const MAX_EXPANDERS = 6;            // stacks out claiming neutral points at once (3 left the far ones — a walled city's centre — to the 4th/5th minute)
+const MAX_MARCH = 600;              // m: no expander sent further than this
 const OP_GAP = [45, 90];            // seconds between launching one operation and the next
 const FIRST_ASSAULT = 110;          // seconds before the first offensive
 const LULL = [90, 150];             // seconds of regrouping between offensives
@@ -74,11 +75,11 @@ const BREACH_WAIT = 60;             // seconds the assault waits for its enginee
 // what a settled garrison builds, in order: [kind, metres ahead, metres to the side]
 const FORT = [['sandbags', 3.5, 0], ['trench', 1, 0], ['wire', 14, 0], ['mines', 30, 0], ['wire', 16, 11], ['mines', 34, -14]];
 const RECOVER_AGAIN = 150;          // seconds before a stack that was pulled out goes again
-const ASSAULT = new Set(['rifles', 'atTeam', 'kampfgruppe', 'airAssault']); // squads that go in and take a point
+export const ASSAULT = new Set(['rifles', 'atTeam', 'kampfgruppe', 'airAssault', 'marines', 'guard']); // squads that go in and take a point (marines and the Guard are line infantry too: left out, they stood behind the line as 'support')
 const LINE = new Set([...ASSAULT, 'mgTeam']);                 // infantry that can hold one too
-const ESCORT = new Set(['tank', 'heavyTank', 'ifv', 'tankDestroyer', 'reconVehicle', 'cev', 'mineClear']); // goes with an assault
+const ESCORT = new Set(['tank', 'heavyTank', 'ifv', 'tankDestroyer', 'reconVehicle', 'cev', 'mineClear', 'ddTank', 'pt76']); // goes with an assault (the swimming tanks of a landing too)
 const OWN_ROLE = new Set(['scouts', 'sniper', 'crew']);       // have jobs of their own: not sent behind the line
-const fighter = (s) => LINE.has(s.type.id) || ESCORT.has(s.type.id);
+export const fighter = (s) => LINE.has(s.type.id) || ESCORT.has(s.type.id);
 const GARRISON_SHARE = 0.34;        // of the line an attacking side leaves sitting on points
 const THREATENED = 150;             // m: an enemy this near a point of ours is worth a garrison
 const MIN_ASSAULT = 2;              // squads an assault needs: without them it can't take anything
@@ -94,7 +95,7 @@ const hurtShare = (s) => {
   return alive.length ? alive.filter((u) => u.hp < u.maxHp * 0.5).length / alive.length : 0;
 };
 
-const strength = (s) => (s.alive ? s.hpRatio * (s.type.cost ?? 150) : 0);
+export const strength = (s) => (s.alive ? s.hpRatio * (s.type.cost ?? 150) : 0);
 const rand = ([a, b]) => a + Math.random() * (b - a);
 
 export class FrontlineDirector {
@@ -276,18 +277,26 @@ export class FrontlineDirector {
       if (r.role !== 'expand') continue;
       if (r.point.owner === this.faction) { this.roles.set(s, { role: 'garrison', point: r.point }); continue; } // taken: hold it
       if (r.point.owner || this.now > r.until) { this.roles.delete(s); continue; } // lost the race, or stuck
+      // stopped short (a bayonet charge on the way ends in Defend, a self-chosen hold goes Idle once quiet): march on
+      const st = s.ai.state;
+      if ((st === AIState.IDLE || (st === AIState.DEFEND && !s.ai.autoHold)) && Math.hypot(s.anchor.x - r.point.x, s.anchor.z - r.point.z) > r.point.radius + 8) s.ai.moveTo(this.jitter(r.point, 5), { hold: true, ordered: false });
       claimed.set(r.point, s);
     }
     const owned = this.points.filter((p) => p.owner === this.faction);
     const fromUs = (p) => Math.min(...owned.map((q) => Math.hypot(q.x - p.x, q.z - p.z)), Infinity);
-    const open = this.points
-      .filter((p) => !p.owner && this.canTarget(p) && !claimed.has(p) && !foes.some((f) => Math.hypot(f.centroid.x - p.x, f.centroid.z - p.z) < 70))
+    const theirs = this.points.filter((p) => p.owner && p.owner !== this.faction);
+    const fromThem = (p) => Math.min(...theirs.map((q) => Math.hypot(q.x - p.x, q.z - p.z)), Infinity);
+    const open = this.points // (our half and the middle: a lone squad marched deep into theirs only feeds them; the offensives go there)
+      .filter((p) => !p.owner && this.canTarget(p) && !claimed.has(p) && fromUs(p) < fromThem(p) + 60 && !foes.some((f) => Math.hypot(f.centroid.x - p.x, f.centroid.z - p.z) < 70))
       .sort((a, b) => fromUs(a) - fromUs(b));
     for (const p of open) {
       if (claimed.size >= MAX_EXPANDERS) return;
       const s = this.nearestFree(p, (st) => LINE.has(st.type.id));
       if (!s) return;
-      this.roles.set(s, { role: 'expand', point: p, until: this.now + 150 });
+      if (Math.hypot(s.anchor.x - p.x, s.anchor.z - p.z) > MAX_MARCH) continue; // (a squad from the far corner: ~8 min on foot in 1806 — a nearer one, or an offensive, will do)
+      // given up as stuck only well past the march there (a flat 150 s dropped 1806 columns, ~2 m/s, halfway to a city centre 480 m out)
+      const march = Math.hypot(s.anchor.x - p.x, s.anchor.z - p.z) / Math.max(0.5, s.stats.speed);
+      this.roles.set(s, { role: 'expand', point: p, until: this.now + 60 + march * 2 });
       s.ai.moveTo(this.jitter(p, 5), { hold: true, ordered: false });
       claimed.set(p, s);
     }

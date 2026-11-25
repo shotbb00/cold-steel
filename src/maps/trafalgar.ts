@@ -44,7 +44,8 @@ export default {
   conditions: { time: 'day', weather: 'clear' },
   wind: { from: 295, speed: 6.5, veer: 0.3 },   // west-north-west, a moderate breeze (world/Wind.js)
   fow: 0.5,
-  sides: { nato: 'France', pact: 'Britain' },
+  sides: { nato: 'France and Spain', pact: 'Britain' },
+  armies: { nato: ['fr', 'es'], pact: ['gb'] }, // (Villeneuve's Combined Fleet: the French, and Gravina's Spaniards in the Armada Española's own ships — data/units1806/westNavies.js)
   size: SIZE,
   segments: 360,
   bounds: { x: HALF, z: HALF },

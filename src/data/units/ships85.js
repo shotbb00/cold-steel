@@ -7,7 +7,8 @@
 //   mounts with `missile`: anti-ship missiles, `load` aboard, `count` a salvo, all-round launchers
 // Models: models/ships1985.js (the Iowa still her 1945 self). The carriers launch the air missions they
 // have aboard (systems/AirStrike.js: stats.carrier.airGroup); the rest come in from the shore.
-import { buildPerry, buildKrivak, buildSpruance, buildSovremenny, buildVirginia, buildKara, buildTiconderoga, buildSlava, buildIowa85, buildKirov, buildNimitz, buildKiev, buildTarawa, buildMoskva, buildPegasus, buildTarantul, buildLosAngeles, buildLosAngelesVLS, buildVictor, buildOscar, buildNewport, buildRopucha } from '../models/ships1985.js';
+import { buildPerry, buildKrivak, buildSpruance, buildSovremenny, buildVirginia, buildKara, buildTiconderoga, buildSlava, buildIowa85, buildKirov, buildNimitz, buildKiev, buildTarawa, buildMoskva, buildPegasus, buildTarantul, buildLosAngeles, buildLosAngelesVLS, buildVictor, buildOscar, buildNewport, buildRopucha, buildBremen, buildLutjens, buildGepard } from '../models/ships1985.js';
+import { buildTarantulI } from '../models/ships1985.js'; // (the Volksmarine's: ptBoat, below)
 
 // stats.helo: she carries a helicopter (Orders 'helo') — the height of her landing pad above the water
 const NAVAL = { naval: true, eyeHeight: 20, aimHeight: 4, nightSight: { nato: 0.5, pact: 0.5 }, crew: 0, breakMorale: 0, smoke: undefined, grenades: 0, lightAT: 0, fov: 6.3, burst: 1, burstInterval: 0, aimTime: 1, magSize: 9999, reloadTime: 1, antiArmor: true, tracer: 1, esm: true, sight: 1600 };
@@ -35,6 +36,7 @@ const HARPOON = { count: 4, name: 'Harpoons', speed: 160, range: 4600, seeker: 1
 const TASM = { count: 4, name: 'Tomahawks', speed: 160, range: 5800, seeker: 1400, skim: true, damage: 2800 };
 const MOSKIT = { count: 4, name: 'Moskits', speed: 280, range: 4000, seeker: 1000, skim: true, damage: 2500 };
 const BAZALT = { name: 'Bazalts', speed: 225, range: 5500, seeker: 1600, alt: 40, damage: 4200, pierce: 0.7 };
+const EXOCET = { count: 2, name: 'Exocets', speed: 170, range: 3400, seeker: 1000, skim: true, damage: 2000 }; // (MM38: a shorter reach than Harpoon)
 const GRANIT = { name: 'Granits', speed: 250, range: 6000, seeker: 1800, alt: 45, damage: 4800, pierce: 0.7 };
 
 // the defences: area SAMs (`channels` in the air at once), point SAMs, the last-ditch gun, chaff
@@ -63,18 +65,22 @@ const ship = (o) => ({
 export const frigate = ship({
   fleet: 'escort',
   id: 'frigate', name: 'Frigate', shortName: 'Frigate', cost: 300,
-  names: { nato: ['Oliver Hazard Perry', 'McInerney', 'Clark', 'George Philip', 'Samuel Eliot Morison', 'Jack Williams', 'Stark', 'Taylor'], pact: ['Bditelny', 'Razumny', 'Druzhny', 'Svirepy', 'Silny', 'Storozhevoy', 'Doblestny', 'Bezukoriznenny'] },
+  names: { bw: ['Bremen', 'Niedersachsen', 'Rheinland-Pfalz', 'Emden', 'Köln', 'Karlsruhe'], nato: ['Oliver Hazard Perry', 'McInerney', 'Clark', 'George Philip', 'Samuel Eliot Morison', 'Jack Williams', 'Stark', 'Taylor'], pact: ['Bditelny', 'Razumny', 'Druzhny', 'Svirepy', 'Silny', 'Storozhevoy', 'Doblestny', 'Bezukoriznenny'] },
   hull: { length: 136, beam: 14 },
   stats: { helo: 6, hp: 3000, armor: 0.05, speed: 14.5, accel: 0.14, turnRate: 0.11, turretRate: 0.8, radius: 6, height: 12, radar: RADAR(3000, 25), sonar: 600, depthCharges: DC(), asTorp: ASROC, ...AA(500, 0.2, 0.05),
     defence: { sam: SM1, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 80 },
-  factionStats: { pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF, ecm: ECM.pact }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
+  factionStats: { bw: { defence: { point: SEASPARROW, chaff: CHAFF, ecm: ECM.nato } }, pact: { helo: false, defence: { point: { ...OSA, channels: 2 }, chaff: CHAFF, ecm: ECM.pact }, range: 1600, aggroRange: 1600, preferredRange: 1300, sonar: 700 } }, // (Krivak: no ship-killing missiles — her SS-N-14 are for submarines)
+  // the Bundesmarine's own (Wismar): the Bremen — eight Harpoons and Sea Sparrow, no Standard and no Phalanx yet in 1985
+  armyType: { bw: { hull: { length: 130, beam: 14.5 } } },
   mounts: {
+    bw: [MSL({ ...HARPOON, at: [0, 9, 2], load: 8 }), gun([0, 9, 46], FWD, G76)],
     nato: [MSL({ ...HARPOON, at: [0, 9, 30], load: 4 }), gun([0, 12, -10], AFT, G76)],
     pact: [gun([0, 9, -45], AFT, G76), gun([0, 9, -52], AFT, G76)],
   },
   camera: { distance: 90, height: 28, shoulder: 0 },
-  models: { nato: buildPerry, pact: buildKrivak },
+  models: { nato: buildPerry, pact: buildKrivak, bw: buildBremen },
   variants: {
+    bw: { name: 'Fregatte Klasse 122 (Bremen)', weapon: '8 Harpoon, Sea Sparrow, 76 mm', text: 'The Bundesmarine’s new frigate for the North Sea and the Baltic approaches: eight Harpoons, Sea Sparrow for herself, two Lynx and a good sonar.' },
     nato: { name: 'Oliver Hazard Perry-class frigate', weapon: 'Harpoon, SM-1, 76 mm, Phalanx', text: 'The convoy escort built by the dozen: one launcher for Harpoons and Standard missiles, two helicopters, a good sonar.' },
     pact: { name: 'Krivak I-class frigate', weapon: 'SS-N-14 (anti-submarine), SA-N-4, 2 × twin 76 mm', text: 'A fast, handsome sub hunter: her big launcher is for submarines only — against ships she has her guns.' },
   },
@@ -83,18 +89,23 @@ export const frigate = ship({
 export const destroyer = ship({
   fleet: 'escort',
   id: 'destroyer', name: 'Destroyer', shortName: 'Destroyer', cost: 520,
-  names: { nato: ['Spruance', 'Paul F. Foster', 'Kinkaid', 'Hewitt', 'Elliot', 'Arthur W. Radford', 'Peterson', 'Caron'], pact: ['Sovremenny', 'Otchayanny', 'Otlichny', 'Osmotritelny', 'Bezuprechny', 'Boyevoy', 'Stoyky', 'Okrylenny'] },
+  names: { bw: ['Lütjens', 'Mölders', 'Rommel'], nato: ['Spruance', 'Paul F. Foster', 'Kinkaid', 'Hewitt', 'Elliot', 'Arthur W. Radford', 'Peterson', 'Caron'], pact: ['Sovremenny', 'Otchayanny', 'Otlichny', 'Osmotritelny', 'Bezuprechny', 'Boyevoy', 'Stoyky', 'Okrylenny'] },
   hull: { length: 172, beam: 17 },
   stats: { helo: 6.5, hp: 4600, armor: 0.05, speed: 15.5, accel: 0.12, turnRate: 0.09, turretRate: 0.6, radius: 8, height: 16, radar: RADAR(3000, 30), sonar: 900, depthCharges: DC(), asTorp: ASROC, ...AA(600, 0.2, 0.05),
     defence: { point: SEASPARROW, ciws: PHALANX, chaff: CHAFF, ecm: ECM.nato }, range: 4600, aggroRange: 4600, preferredRange: 2600, damage: 180 },
-  factionStats: { pact: { helo: 7, hp: 4800, sonar: 450, defence: { sam: SHTIL, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 4000, aggroRange: 4000, preferredRange: 2400 } },
+  factionStats: { pact: { helo: 7, hp: 4800, sonar: 450, defence: { sam: SHTIL, ciws: AK630, chaff: CHAFF, ecm: ECM.pact }, range: 4000, aggroRange: 4000, preferredRange: 2400 },
+    bw: { helo: false, hp: 3800, radius: 7, height: 14, sonar: 700, defence: { sam: SM1, chaff: CHAFF, ecm: ECM.nato } } }, // (the Lütjens: an area SAM, no hangar, no Phalanx yet)
+  // the Bundesmarine's own (Wismar): the Lütjens, the Adams hull with two macks
+  armyType: { bw: { hull: { length: 134, beam: 14.3 }, camera: { distance: 95, height: 30, shoulder: 0 } } },
   mounts: {
+    bw: [MSL({ ...HARPOON, at: [0, 9, -42], load: 4 }), gun([0, 9, 50], FWD, G5IN), gun([0, 9, -56], AFT, G5IN)],
     nato: [MSL({ ...HARPOON, at: [0, 10, -40], load: 8 }), gun([0, 9, 55], FWD, G5IN), gun([0, 9, -60], AFT, G5IN)],
     pact: [MSL({ ...MOSKIT, at: [0, 9, 35], load: 8 }), gun([0, 9, 60], FWD, G130), gun([0, 9, -55], AFT, G130)],
   },
   camera: { distance: 110, height: 34, shoulder: 0 },
-  models: { nato: buildSpruance, pact: buildSovremenny },
+  models: { nato: buildSpruance, pact: buildSovremenny, bw: buildLutjens },
   variants: {
+    bw: { name: 'Zerstörer Klasse 103 (Lütjens)', weapon: 'SM-1, Harpoon, ASROC, 2 × 5-inch', text: 'The Bundesmarine’s three American-built destroyers, Adams-class with German macks: Standard missiles over the landing force, Harpoons from the same launcher, two 5-inch guns for the beach.' },
     nato: { name: 'Spruance-class destroyer', weapon: 'Harpoon, Sea Sparrow, 2 × 5-inch, Phalanx', text: 'The big, quiet sub hunter of the carrier screen: the best sonar afloat, Harpoons for ships, Sea Sparrow for herself.' },
     pact: { name: 'Sovremenny-class destroyer', weapon: '8 Moskit (SS-N-22), SA-N-7, 2 × twin 130 mm', text: 'Built to kill ships: eight supersonic sea-skimmers, the heaviest destroyer guns afloat and a good area SAM. A poor sonar.' },
   },
@@ -204,22 +215,35 @@ export const escortCarrier = ship({
 export const ptBoat = ship({
   fleet: 'escort',
   id: 'ptBoat', name: 'Missile Boat', shortName: 'Missile boat', cost: 200,
-  names: { nato: ['Pegasus', 'Hercules', 'Taurus', 'Aquila', 'Aries', 'Gemini'], pact: ['R-47', 'R-60', 'R-71', 'R-109', 'R-187', 'R-239', 'R-291', 'R-442'] },
+  names: { bw: ['Gepard', 'Puma', 'Hermelin', 'Nerz', 'Zobel', 'Frettchen', 'Dachs', 'Ozelot', 'Wiesel', 'Hyäne'], nato: ['Pegasus', 'Hercules', 'Taurus', 'Aquila', 'Aries', 'Gemini'], pact: ['R-47', 'R-60', 'R-71', 'R-109', 'R-187', 'R-239', 'R-291', 'R-442'] },
   hull: { length: 45, beam: 9 },
   stats: { hp: 450, armor: 0, speed: 24, accel: 0.4, turnRate: 0.28, turretRate: 1, radius: 3.5, height: 6, eyeHeight: 8, stealth: 0.7, smallCraft: true, radar: RADAR(2200, 10), ...AA(400, 0.15, 0.03),
     defence: { chaff: { count: 4, cooldown: 10 } }, range: 4600, aggroRange: 4600, preferredRange: 3000, leash: 40, damage: 80 },
-  factionStats: { pact: { hp: 500, speed: 20, defence: { ciws: AK630, chaff: { count: 4, cooldown: 10 } }, range: 4000, aggroRange: 4000, preferredRange: 2800 } },
+  factionStats: { pact: { hp: 500, speed: 20, defence: { ciws: AK630, chaff: { count: 4, cooldown: 10 } }, range: 4000, aggroRange: 4000, preferredRange: 2800 },
+    bw: { hp: 550, speed: 20, accel: 0.3, radius: 4, range: 3400, aggroRange: 3400, preferredRange: 2600 } }, // (the Gepard: a displacement hull, 40 knots, Exocets)
+  // the Bundesmarine's own (Wismar): the Type 143A Schnellboot
+  armyType: { bw: { shortName: 'Schnellboot', hull: { length: 57.6, beam: 7.8 }, camera: { distance: 55, height: 16, shoulder: 0 } } },
   mounts: {
+    bw: [MSL({ ...EXOCET, at: [0, 4, -14], load: 4 }), gun([0, 5, 19], FWD, G76)],
     nato: [MSL({ ...HARPOON, at: [0, 4, -12], load: 8 }), gun([0, 5, 10], FWD, G76)],
     pact: [MSL({ ...MOSKIT, at: [0, 4, -5], load: 4, count: 2 }), gun([0, 5, 14], FWD, G76)],
   },
   camera: { distance: 50, height: 15, shoulder: 0 },
-  models: { nato: buildPegasus, pact: buildTarantul },
+  models: { nato: buildPegasus, pact: buildTarantul, bw: buildGepard },
   variants: {
+    bw: { name: 'Schnellboot Klasse 143A (Gepard)', weapon: '4 Exocet, 76 mm', text: 'The Bundesmarine’s Baltic fast attack craft: four Exocets and a 76 mm on a small, quick hull, hiding among the islands and the coast till the Volksmarine comes out.' },
     nato: { name: 'Pegasus-class hydrofoil', weapon: '8 Harpoon, 76 mm', text: 'Up on her foils at nearly 50 knots, eight Harpoons: a small, fast, hard-to-see threat — and no armour or defence at all.' },
     pact: { name: 'Tarantul III missile corvette', weapon: '4 Moskit (SS-N-22), 76 mm, AK-630', text: 'Four of the destroyers\' supersonic missiles on a small fast hull: the coastal navy\'s sting.' },
   },
 });
+// the Volksmarine's own (Hohwacht): the Tarantul I, the export boat with the old Termits (Styx) instead of the Moskits —
+// subsonic, flying higher, a shorter reach (the side's AK-630s and hull stay)
+const TERMIT = { count: 2, name: 'Termits', speed: 150, range: 3400, seeker: 1000, alt: 25, damage: 2600 };
+ptBoat.names.nva = ['Rudolf Egelhofer', 'Hans Beimler', 'Fritz Globig', 'Paul Eisenschneider', 'Heinz Kapelle'];
+ptBoat.models.nva = buildTarantulI;
+ptBoat.mounts.nva = [MSL({ ...TERMIT, at: [0, 4, -8], load: 4 }), gun([0, 5, 14], FWD, G76)];
+ptBoat.factionStats.nva = { range: 3400, aggroRange: 3400, preferredRange: 2600 };
+ptBoat.variants.nva = { name: 'Kleines Raketenschiff Projekt 1241 RÄ (Tarantul I)', weapon: '4 P-15 Termit, 76 mm, AK-630', text: 'The Volksmarine\'s newest: four of the old Styx on a fast hull — slower and easier to see than the Soviets\' Moskits, but a heavy warhead. Her 76 mm works the beach.' };
 
 export const submarine = ship({
   fleet: 'under',

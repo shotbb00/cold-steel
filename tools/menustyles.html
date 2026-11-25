@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu styles</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Special+Elite&family=Stardos+Stencil:wght@400;700&family=VT323&family=Rajdhani:wght@500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ---- the demo's own bar (not part of any style) ---- */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #111; }
+    .demo { position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 50; display: flex; gap: 12px; align-items: center; padding: 0 14px; background: #0c0c0c; border-bottom: 1px solid #333; font: 600 13px 'Segoe UI', sans-serif; color: #aaa; }
+    .demo button { background: none; border: 1px solid #333; color: #aaa; padding: 5px 12px; font: inherit; cursor: pointer; }
+    .demo button.on { color: #fff; border-color: #e0b45a; background: rgba(224, 180, 90, 0.15); }
+    .demo span { margin-left: 8px; }
+    #app { position: absolute; top: 44px; left: 0; right: 0; bottom: 0; overflow: auto; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+
+    /* ---- the shared layout: the real menu's (ui/MainMenu.js) — side column, panel; the battle HUD ---- */
+    .menu { min-height: 100%; display: grid; grid-template-columns: 330px minmax(0, 1fr); }
+    .side { padding: 34px 28px; display: flex; flex-direction: column; gap: 20px; }
+    .logo { display: flex; gap: 14px; align-items: center; }
+    .logo h1 { margin: 0; line-height: 0.9; }
+    .logo p { margin: 6px 0 0; }
+    .seg { display: inline-flex; flex-wrap: wrap; }
+    .seg button { background: none; border: 0; padding: 7px 12px; }
+    .side .seg { display: flex; flex-wrap: nowrap; } .side .seg button { flex: 1 1 auto; padding: 6px 4px; white-space: nowrap; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav button { text-align: left; background: none; border: 0; padding: 8px 12px; }
+    .panel { padding: 40px 48px 60px; position: relative; }
+    .panel > * { max-width: 860px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+    .card { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; position: relative; }
+    .row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .go { margin-top: 30px; }
+    .stamp { position: absolute; pointer-events: none; }
+    .hud { position: relative; height: 100%; min-height: 640px; overflow: hidden; background: radial-gradient(ellipse at 40% 60%, #5d6b3c 0%, #46532c 35%, #2f3a20 70%, #1d2414 100%); }
+    .hud .field { position: absolute; inset: 0; background:
+        radial-gradient(ellipse 220px 80px at 30% 40%, rgba(40, 60, 25, 0.8), transparent), radial-gradient(ellipse 300px 90px at 70% 65%, rgba(40, 60, 25, 0.7), transparent),
+        linear-gradient(100deg, transparent 47%, rgba(150, 130, 90, 0.5) 48%, rgba(150, 130, 90, 0.5) 49%, transparent 50%), radial-gradient(circle at 55% 30%, rgba(120, 110, 80, 0.4) 0 40px, transparent 41px); }
+    .hud .fig { position: absolute; width: 14px; height: 14px; border-radius: 50%; }
+    .topbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 22px; align-items: center; padding: 8px 18px; white-space: nowrap; }
+    .minimap { position: absolute; top: 12px; right: 12px; width: 190px; height: 150px; }
+    .unitcard { position: absolute; left: 12px; bottom: 12px; width: 270px; padding: 12px 14px; }
+    .bar { height: 7px; margin: 8px 0 6px; }
+    .bar i { display: block; height: 100%; width: 72%; }
+    .actions { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; }
+    .actions button { width: 84px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; padding: 4px; }
+    .actions kbd { position: absolute; top: 3px; left: 5px; font-size: 10px; }
+    .actions .ico { font-size: 20px; line-height: 1; }
+    .toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); padding: 8px 16px; }
+    @media (max-width: 820px) {
+      .menu { grid-template-columns: minmax(0, 1fr); }
+      .side, .panel { min-width: 0; margin: 0 !important; }
+      .demo { height: auto; flex-wrap: wrap; gap: 4px; padding: 4px 8px; } .demo > span:first-child { display: none; } .demo button { padding: 4px 7px; }
+      #app { top: 64px; }
+      .stamp { display: none; }
+      .panel { padding: 20px 16px 40px; }
+      .side { padding: 20px 16px; }
+      .actions { left: 12px; right: 12px; transform: none; flex-wrap: wrap; bottom: 140px; }
+      .actions button { width: calc(33% - 4px); height: 52px; }
+      .unitcard { width: auto; right: 12px; }
+      .minimap { width: 120px; height: 96px; }
+      .topbar { top: auto; bottom: auto; top: 110px; gap: 10px; font-size: 13px; }
+    }
+
+    /* ======== 1806: an engraved atlas — parchment, copperplate lettering, double rules, a wax seal ======== */
+    [data-year="1806"] { --ink: #3b2e1f; --paper: #ecdfbf; --blue: #3f5f9e; --red: #9c3f2c; color: var(--ink); font-family: 'IM Fell English', serif; }
+    [data-year="1806"] .menu { background: var(--paper) radial-gradient(ellipse at center, transparent 55%, rgba(122, 90, 42, 0.35)); }
+    [data-year="1806"] .side { border-right: 3px double var(--ink); margin: 18px 0; }
+    [data-year="1806"] .logo h1 { font: 400 46px 'IM Fell English SC', serif; letter-spacing: 0.04em; }
+    [data-year="1806"] .logo p { font-style: italic; font-size: 17px; }
+    [data-year="1806"] .logo .mark { width: 58px; height: 58px; border: 1.5px solid var(--ink); border-radius: 50%; position: relative; box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 5px var(--ink); }
+    [data-year="1806"] .logo .mark::after { content: '✠'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; }
+    [data-year="1806"] .seg { border: 1px solid var(--ink); }
+    [data-year="1806"] .seg button { font-size: 16px; border-right: 1px solid var(--ink); }
+    [data-year="1806"] .seg button:last-child { border-right: 0; }
+    [data-year="1806"] .seg button.on { background: var(--ink); color: var(--paper); }
+    [data-year="1806"] .nav button { font: italic 22px 'IM Fell English', serif; padding-left: 26px; position: relative; }
+    [data-year="1806"] .nav button.on::before { content: '☞'; position: absolute; left: 0; font-style: normal; }
+    [data-year="1806"] .nav button.on { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+    [data-year="1806"] .blurb { font-style: italic; font-size: 15px; line-height: 1.5; }
+    [data-year="1806"] h2 { font: 400 40px 'IM Fell English SC', serif; margin: 0 0 6px; text-align: center; }
+    [data-year="1806"] h2::after { content: '~ ❦ ~'; display: block; font-size: 18px; margin-top: 4px; }
+    [data-year="1806"] .lead { font-style: italic; font-size: 18px; text-align: center; line-height: 1.5; }
+    [data-year="1806"] h3 { font: 400 20px 'IM Fell English SC', serif; letter-spacing: 0.08em; border-bottom: 1px solid var(--ink); padding-bottom: 4px; margin: 30px 0 12px; }
+    [data-year="1806"] .card { background: rgba(255, 250, 230, 0.5); border: 1px solid var(--ink); box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px rgba(59, 46, 31, 0.5); }
+    [data-year="1806"] .card b { font: 400 21px 'IM Fell English SC', serif; }
+    [data-year="1806"] .card span { font-style: italic; font-size: 15px; }
+    [data-year="1806"] .card.on { background: rgba(255, 250, 230, 0.9); box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 5px var(--ink); }
+    [data-year="1806"] .card.on.nato b { color: var(--blue); } [data-year="1806"] .card.on.pact b { color: var(--red); }
+    [data-year="1806"] .deploy { width: 150px; height: 150px; border-radius: 50%; border: 0; background: radial-gradient(circle at 38% 35%, #c2432f, #8e1f14 60%, #6a150c); color: #f3dcc0; font: 400 22px 'IM Fell English SC', serif; box-shadow: 0 4px 8px rgba(60, 20, 10, 0.4), inset 0 0 0 10px rgba(0, 0, 0, 0.12), inset 0 0 0 12px rgba(255, 220, 190, 0.25); text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4); }
+    [data-year="1806"] .stamp { right: 40px; top: 30px; font: italic 15px 'IM Fell English', serif; text-align: right; }
+    [data-year="1806"] .hud .topbar, [data-year="1806"] .unitcard, [data-year="1806"] .minimap, [data-year="1806"] .actions button, [data-year="1806"] .toast { background: var(--paper); border: 1px solid var(--ink); box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px rgba(59, 46, 31, 0.5), 0 3px 8px rgba(0, 0, 0, 0.4); }
+    [data-year="1806"] .topbar { font: italic 18px 'IM Fell English', serif; }
+    [data-year="1806"] .uname { font: 400 22px 'IM Fell English SC', serif; } [data-year="1806"] .utype { font-style: italic; }
+    [data-year="1806"] .bar { border: 1px solid var(--ink); } [data-year="1806"] .bar i { background: repeating-linear-gradient(90deg, var(--blue) 0 6px, transparent 6px 8px); }
+    [data-year="1806"] .actions button { font: italic 15px 'IM Fell English', serif; } [data-year="1806"] .actions button.on { background: #e2d0a3; }
+    [data-year="1806"] .toast { font: italic 17px 'IM Fell English', serif; }
+
+    /* ======== 1918: army forms — buff paper, typewriter, boxed fields, a red rubber stamp ======== */
+    [data-year="1918"] { --ink: #24231e; --paper: #e6dfc8; --khaki: #8a7d55; --red: #a8261d; color: var(--ink); font-family: 'Special Elite', monospace; }
+    [data-year="1918"] .menu { background: #6b6447 repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.03) 3px 4px); }
+    [data-year="1918"] .side { background: var(--paper); margin: 18px 0 18px 18px; border: 1px solid var(--ink); box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.25); }
+    [data-year="1918"] .logo h1 { font: 700 40px 'Courier Prime', monospace; letter-spacing: 0.06em; }
+    [data-year="1918"] .logo p { font-size: 14px; }
+    [data-year="1918"] .logo .mark { width: 54px; height: 54px; border: 2px solid var(--ink); display: grid; place-items: center; font: 700 12px 'Courier Prime', monospace; text-align: center; }
+    [data-year="1918"] .logo .mark::after { content: 'A.F.\A W.3'; white-space: pre; }
+    [data-year="1918"] .seg { border: 1px solid var(--ink); }
+    [data-year="1918"] .seg button { border-right: 1px solid var(--ink); font-size: 14px; }
+    [data-year="1918"] .seg button:last-child { border-right: 0; }
+    [data-year="1918"] .seg button::before { content: '☐ '; } [data-year="1918"] .seg button.on::before { content: '☒ '; }
+    [data-year="1918"] .nav button { font-size: 18px; border-bottom: 1px dotted var(--ink); }
+    [data-year="1918"] .nav button::before { content: attr(data-n) '.  '; color: var(--khaki); }
+    [data-year="1918"] .nav button.on { background: #d3c9a6; }
+    [data-year="1918"] .blurb { font-size: 13px; line-height: 1.55; }
+    [data-year="1918"] .panel { background: var(--paper); margin: 18px; border: 1px solid var(--ink); box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.25); }
+    [data-year="1918"] h2 { font: 700 28px 'Courier Prime', monospace; letter-spacing: 0.1em; text-transform: uppercase; border-top: 3px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 6px 0; margin: 0 0 12px; }
+    [data-year="1918"] .lead { font-size: 15px; line-height: 1.6; }
+    [data-year="1918"] h3 { font: 700 13px 'Courier Prime', monospace; letter-spacing: 0.18em; text-transform: uppercase; margin: 26px 0 8px; }
+    [data-year="1918"] .card { background: transparent; border: 1px solid var(--ink); }
+    [data-year="1918"] .card b { font: 700 18px 'Courier Prime', monospace; text-transform: uppercase; }
+    [data-year="1918"] .card span { font-size: 13px; }
+    [data-year="1918"] .card.on { background: #f4efdc; outline: 2px solid var(--ink); }
+    [data-year="1918"] .card.on::after { content: '✓'; position: absolute; right: 12px; top: 8px; font-size: 22px; color: var(--red); }
+    [data-year="1918"] .deploy { background: none; border: 3px double var(--red); color: var(--red); font: 700 22px 'Courier Prime', monospace; letter-spacing: 0.2em; padding: 12px 26px; transform: rotate(-3deg); text-transform: uppercase; }
+    [data-year="1918"] .stamp { right: 30px; top: 26px; font-size: 12px; text-align: right; line-height: 1.6; }
+    [data-year="1918"] .topbar, [data-year="1918"] .unitcard, [data-year="1918"] .minimap, [data-year="1918"] .actions button, [data-year="1918"] .toast { background: var(--paper); border: 1px solid var(--ink); box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.3); }
+    [data-year="1918"] .uname { font: 700 18px 'Courier Prime', monospace; text-transform: uppercase; }
+    [data-year="1918"] .bar { border: 1px solid var(--ink); } [data-year="1918"] .bar i { background: var(--ink); }
+    [data-year="1918"] .actions button { font-size: 12px; } [data-year="1918"] .actions button.on { background: #d3c9a6; outline: 2px solid var(--ink); }
+    [data-year="1918"] .toast { font-size: 14px; }
+
+    /* ======== 1945: the staff office — a desk, manila folders, stencil, typewriter, index cards, a SECRET stamp ======== */
+    [data-year="1945"] { --ink: #2b2418; --manila: #e2cf9a; --card: #f3ead2; --olive: #4b5230; --red: #b3261e; color: var(--ink); font-family: 'Special Elite', monospace; }
+    [data-year="1945"] .menu { background: #3a2a1a repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 9px), #3a2a1a; }
+    [data-year="1945"] .side { color: #e8dcc0; }
+    [data-year="1945"] .logo h1 { font: 700 50px 'Stardos Stencil', sans-serif; letter-spacing: 0.05em; color: #e8dcc0; }
+    [data-year="1945"] .logo p { font-size: 14px; color: #d8b56a; }
+    [data-year="1945"] .logo .mark { width: 56px; height: 56px; border-radius: 50%; background: var(--olive); border: 3px solid #d8c9a0; display: grid; place-items: center; }
+    [data-year="1945"] .logo .mark::after { content: '★'; color: #e8dcc0; font-size: 30px; }
+    [data-year="1945"] .seg { border: 1px solid rgba(232, 220, 192, 0.35); }
+    [data-year="1945"] .seg button { color: #cfc2a0; border-right: 1px solid rgba(232, 220, 192, 0.35); font-size: 14px; }
+    [data-year="1945"] .seg button:last-child { border-right: 0; }
+    [data-year="1945"] .seg button.on { background: var(--manila); color: var(--ink); }
+    [data-year="1945"] .nav { gap: 6px; }
+    [data-year="1945"] .nav button { background: var(--manila); color: var(--ink); font: 700 16px 'Stardos Stencil', sans-serif; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 0 10px 0 0; width: 82%; box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.35); }
+    [data-year="1945"] .nav button.on { width: 100%; background: #f0e2b8; }
+    [data-year="1945"] .blurb { font-size: 13px; line-height: 1.6; color: #cfc2a0; }
+    [data-year="1945"] .panel { background: var(--manila); margin: 24px 24px 24px 0; box-shadow: 4px 8px 18px rgba(0, 0, 0, 0.5); border-radius: 0 6px 6px 0; }
+    [data-year="1945"] h2 { font: 700 38px 'Stardos Stencil', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 8px; }
+    [data-year="1945"] .lead { font-size: 15px; line-height: 1.6; }
+    [data-year="1945"] h3 { font: 700 15px 'Stardos Stencil', sans-serif; letter-spacing: 0.2em; text-transform: uppercase; margin: 28px 0 10px; }
+    [data-year="1945"] .card { background: var(--card) repeating-linear-gradient(180deg, transparent 0 21px, rgba(80, 120, 170, 0.25) 21px 22px); background-position: 0 30px; border: 0; box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3); border-top: 2px solid rgba(179, 38, 30, 0.6); }
+    [data-year="1945"] .card b { font: 700 18px 'Special Elite', monospace; text-transform: uppercase; }
+    [data-year="1945"] .card span { font-size: 13px; line-height: 22px; }
+    [data-year="1945"] .card.on { transform: rotate(-1deg) translateY(-2px); box-shadow: 4px 8px 12px rgba(0, 0, 0, 0.35); }
+    [data-year="1945"] .card.on::before { content: ''; position: absolute; top: -10px; right: 22px; width: 12px; height: 34px; border: 2px solid #8d8d88; border-radius: 6px; }
+    [data-year="1945"] .panel .seg { border-color: rgba(43, 36, 24, 0.45); }
+    [data-year="1945"] .panel .seg button { color: var(--ink); border-right-color: rgba(43, 36, 24, 0.45); }
+    [data-year="1945"] .panel .seg button.on { background: var(--ink); color: var(--manila); }
+    [data-year="1945"] .deploy { text-transform: uppercase;  background: none; border: 4px solid var(--red); color: var(--red); font: 700 28px 'Stardos Stencil', sans-serif; letter-spacing: 0.25em; padding: 10px 30px; transform: rotate(-4deg); box-shadow: inset 0 0 0 2px var(--manila), inset 0 0 0 4px var(--red); opacity: 0.88; }
+    [data-year="1945"] .deploy:hover { opacity: 1; }
+    [data-year="1945"] .stamp { right: 40px; top: 34px; border: 3px solid var(--red); color: var(--red); font: 700 20px 'Stardos Stencil', sans-serif; letter-spacing: 0.25em; padding: 4px 12px; transform: rotate(8deg); opacity: 0.75; }
+    [data-year="1945"] .topbar, [data-year="1945"] .unitcard, [data-year="1945"] .toast { background: var(--card); box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.45); border-top: 2px solid rgba(179, 38, 30, 0.6); }
+    [data-year="1945"] .minimap { background: var(--manila); border: 6px solid var(--manila); box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.45); }
+    [data-year="1945"] .uname { font: 700 20px 'Stardos Stencil', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+    [data-year="1945"] .bar { background: rgba(0, 0, 0, 0.12); } [data-year="1945"] .bar i { background: var(--olive); }
+    [data-year="1945"] .actions button { background: var(--manila); border: 0; border-radius: 0 8px 0 0; box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.4); font: 700 12px 'Stardos Stencil', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+    [data-year="1945"] .actions button.on { background: #f0e2b8; transform: translateY(-4px); }
+
+    /* ======== 1985: the command post terminal — phosphor green on black, box-drawing frames, a blinking cursor ======== */
+    [data-year="1985"] { --ph: #7dff9a; --dim: #2f8a48; --bg: #050b06; color: var(--ph); font: 22px 'VT323', monospace; text-shadow: 0 0 4px rgba(125, 255, 154, 0.55); }
+    [data-year="1985"] .menu, [data-year="1985"] .hud::after { background: var(--bg); }
+    [data-year="1985"] .menu { background: var(--bg) repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 1px, transparent 1px 3px); }
+    [data-year="1985"] .side { border-right: 2px solid var(--dim); }
+    [data-year="1985"] .logo h1 { font: 400 54px 'VT323', monospace; letter-spacing: 0.08em; }
+    [data-year="1985"] .logo p { color: var(--dim); }
+    [data-year="1985"] .logo .mark { width: 54px; height: 54px; border: 2px solid var(--ph); display: grid; place-items: center; box-shadow: 0 0 6px rgba(125, 255, 154, 0.4); }
+    [data-year="1985"] .logo .mark::after { content: '▲'; font-size: 30px; }
+    [data-year="1985"] .seg { border: 1px solid var(--dim); }
+    [data-year="1985"] .seg button { font-size: 20px; }
+    [data-year="1985"] .seg button.on { background: var(--ph); color: var(--bg); text-shadow: none; }
+    [data-year="1985"] .nav button { font-size: 26px; padding: 2px 10px; }
+    [data-year="1985"] .nav button::before { content: '  '; white-space: pre; }
+    [data-year="1985"] .nav button.on::before { content: '> '; }
+    [data-year="1985"] .nav button.on { background: rgba(125, 255, 154, 0.12); }
+    [data-year="1985"] .blurb { color: var(--dim); font-size: 19px; line-height: 1.15; }
+    [data-year="1985"] h2 { font: 400 44px 'VT323', monospace; margin: 0; }
+    [data-year="1985"] h2::before { content: '== '; color: var(--dim); } [data-year="1985"] h2::after { content: ' =='; color: var(--dim); }
+    [data-year="1985"] .lead { color: #5fd27e; line-height: 1.15; }
+    [data-year="1985"] h3 { font: 400 22px 'VT323', monospace; margin: 22px 0 6px; color: var(--dim); }
+    [data-year="1985"] h3::before { content: '-- '; }
+    [data-year="1985"] .card { background: none; border: 1px solid var(--dim); font-size: 20px; line-height: 1.1; }
+    [data-year="1985"] .card b { font-weight: 400; font-size: 26px; }
+    [data-year="1985"] .card span { color: #5fd27e; }
+    [data-year="1985"] .card.on { border: 2px solid var(--ph); background: rgba(125, 255, 154, 0.08); box-shadow: 0 0 8px rgba(125, 255, 154, 0.3); }
+    [data-year="1985"] .card.on b::before { content: '[X] '; } [data-year="1985"] .card:not(.on) b::before { content: '[ ] '; }
+    [data-year="1985"] .deploy { background: var(--ph); color: var(--bg); border: 0; font: 400 34px 'VT323', monospace; padding: 6px 30px; text-shadow: none; box-shadow: 0 0 14px rgba(125, 255, 154, 0.5); }
+    [data-year="1985"] .deploy::after { content: '_'; animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    [data-year="1985"] .stamp { right: 40px; top: 30px; color: var(--dim); text-align: right; font-size: 20px; line-height: 1.1; }
+    [data-year="1985"] .hud .field { filter: saturate(0.6) brightness(0.8); }
+    [data-year="1985"] .topbar, [data-year="1985"] .unitcard, [data-year="1985"] .minimap, [data-year="1985"] .actions button, [data-year="1985"] .toast { background: rgba(5, 11, 6, 0.9); border: 2px solid var(--dim); }
+    [data-year="1985"] .bar { border: 1px solid var(--dim); } [data-year="1985"] .bar i { background: repeating-linear-gradient(90deg, var(--ph) 0 8px, transparent 8px 10px); }
+    [data-year="1985"] .actions button { font-size: 19px; } [data-year="1985"] .actions button.on { border-color: var(--ph); background: rgba(125, 255, 154, 0.15); }
+    [data-year="1985"] .uname { font-size: 28px; }
+
+    /* ======== 2027: the battle network — dark glass, thin lines, cyan, corner brackets ======== */
+    [data-year="2027"] { --c: #38d6e8; --t: #dfeef3; --m: #7f9aa4; --bg: #070b0e; color: var(--t); font: 500 16px 'Rajdhani', sans-serif; }
+    [data-year="2027"] .menu { background: radial-gradient(ellipse at 70% 30%, #0f2028, var(--bg) 70%); }
+    [data-year="2027"] .side { border-right: 1px solid rgba(56, 214, 232, 0.2); }
+    [data-year="2027"] .logo h1 { font: 700 46px 'Rajdhani', sans-serif; letter-spacing: 0.14em; }
+    [data-year="2027"] .logo p { color: var(--c); font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
+    [data-year="2027"] .logo .mark { width: 50px; height: 50px; border: 1.5px solid var(--c); transform: rotate(45deg); display: grid; place-items: center; box-shadow: 0 0 12px rgba(56, 214, 232, 0.35); }
+    [data-year="2027"] .logo .mark::after { content: ''; width: 14px; height: 14px; background: var(--c); }
+    [data-year="2027"] .seg { border: 1px solid rgba(56, 214, 232, 0.25); }
+    [data-year="2027"] .seg button { color: var(--m); font-weight: 600; letter-spacing: 0.06em; }
+    [data-year="2027"] .seg button.on { color: var(--t); background: rgba(56, 214, 232, 0.14); box-shadow: inset 0 -2px 0 var(--c); }
+    [data-year="2027"] .nav button { font-size: 20px; font-weight: 600; letter-spacing: 0.06em; color: var(--m); border-left: 2px solid transparent; }
+    [data-year="2027"] .nav button.on { color: var(--t); border-left-color: var(--c); background: linear-gradient(90deg, rgba(56, 214, 232, 0.14), transparent); }
+    [data-year="2027"] .blurb { color: var(--m); line-height: 1.5; }
+    [data-year="2027"] h2 { font: 700 36px 'Rajdhani', sans-serif; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 6px; }
+    [data-year="2027"] .lead { color: var(--m); font-size: 17px; line-height: 1.5; }
+    [data-year="2027"] h3 { color: var(--c); font: 700 13px 'Rajdhani', sans-serif; letter-spacing: 0.3em; text-transform: uppercase; margin: 28px 0 10px; }
+    [data-year="2027"] .card { background: rgba(15, 30, 38, 0.6); border: 1px solid rgba(56, 214, 232, 0.18); backdrop-filter: blur(6px); }
+    [data-year="2027"] .card b { font-size: 21px; font-weight: 700; letter-spacing: 0.04em; }
+    [data-year="2027"] .card span { color: var(--m); font-size: 15px; }
+    [data-year="2027"] .card.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 18px rgba(56, 214, 232, 0.2); }
+    [data-year="2027"] .card.on::before, [data-year="2027"] .card.on::after { content: ''; position: absolute; width: 10px; height: 10px; border: 2px solid var(--c); }
+    [data-year="2027"] .card.on::before { top: -5px; left: -5px; border-right: 0; border-bottom: 0; } [data-year="2027"] .card.on::after { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
+    [data-year="2027"] .deploy { background: var(--c); color: #031015; border: 0; font: 700 22px 'Rajdhani', sans-serif; letter-spacing: 0.3em; padding: 14px 40px; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); text-transform: uppercase; }
+    [data-year="2027"] .stamp { right: 40px; top: 34px; color: var(--c); font-size: 12px; letter-spacing: 0.2em; text-align: right; }
+    [data-year="2027"] .topbar, [data-year="2027"] .unitcard, [data-year="2027"] .minimap, [data-year="2027"] .actions button, [data-year="2027"] .toast { background: rgba(7, 14, 18, 0.72); border: 1px solid rgba(56, 214, 232, 0.3); backdrop-filter: blur(8px); }
+    [data-year="2027"] .bar { background: rgba(255, 255, 255, 0.08); } [data-year="2027"] .bar i { background: linear-gradient(90deg, #4ce08a, var(--c)); }
+    [data-year="2027"] .actions button { font-weight: 600; font-size: 14px; letter-spacing: 0.04em; } [data-year="2027"] .actions button.on { border-color: var(--c); box-shadow: 0 0 12px rgba(56, 214, 232, 0.35); }
+    [data-year="2027"] .uname { font-size: 22px; font-weight: 700; letter-spacing: 0.06em; }
+    [data-year="2027"] .utype, [data-year="2027"] small { color: var(--m); }
+  </style>
+</head>
+<body>
+  <div class="demo"><span>Menu styles</span><span id="years"></span><span id="views"></span></div>
+  <div id="app"></div>
+  <script type="module">
+    // A mock-up of the whole menu and the battle HUD in one style per war: the real menu's layout (ui/MainMenu.js), each
+    // war's paper, type and buttons; the words as that war would put them. Not the game.
+    const Y = {
+      1806: { sub: 'Saxony, autumn 1806', blurb: 'Jena and Auerstedt: the Grande Armée against Prussia and Saxony. Columns, squares and the grand battery.', sides: [['La France', 'The Emperor’s corps and the Bavarians'], ['Prussia', 'The army of Frederick’s heirs, with Saxony']],
+        maps: [['Jena', 'The Landgrafenberg in the morning fog'], ['Auerstedt', 'Davout alone against the Duke of Brunswick'], ['Saalfeld', 'Prince Louis Ferdinand at the river']], times: ['Dawn', 'Day', 'Dusk', 'Night'], weather: ['Fair', 'Overcast', 'Rain', 'Fog'],
+        lead: 'Command a corps upon the field: march, deploy, and carry the day with the bayonet.', go: 'To battle!', stamp: 'Dépôt de la Guerre<br>No. 1806', nav: ['The Drill', 'A Battle', 'The Campaign', 'With Others', 'The Army List', 'Settings'],
+        hud: { clock: '9 o’clock in the morning, 14th October', score: 'La France 412 · Prussia 388', cp: 'Reserves 240', unit: 'IIIe Corps · 1re Division', type: 'Line infantry, in column', ammo: 'Cartridges: 48 rounds', toast: 'The Prussian cavalry is forming upon our left.', actions: [['March', '⚑'], ['Volley', '✶'], ['Hold', '⚓'], ['Square', '▣'], ['Charge', '⚔'], ['Battery', '◉']] } },
+      1918: { sub: 'Western Front, spring 1918', blurb: 'The last German offensives and the Hundred Days: storm troops, tanks and the creeping barrage.', sides: [['The Entente', 'British, French and Dominion divisions'], ['Central Powers', 'The German Army, Stoßtruppen at the front']],
+        maps: [['Amiens', '8 August 1918: the black day of the German Army'], ['St-Quentin Canal', 'The Hindenburg Line at Riqueval'], ['Belleau Wood', 'The Marines in the wheat']], times: ['Dawn', 'Day', 'Dusk', 'Night'], weather: ['Fine', 'Dull', 'Rain', 'Mist'],
+        lead: 'Form 3 · Operation Order. Units under your command will attack at zero hour behind the barrage.', go: 'Over the top', stamp: 'ARMY FORM W.3<br>Copy No. 4 of 12<br>SECRET', nav: ['Training', 'Operations', 'Campaign', 'Liaison', 'Order of Battle', 'Settings'],
+        hud: { clock: 'ZERO + 0.42', score: 'Entente 412 · Central Powers 388', cp: 'Barrage 240', unit: '2nd Bn. Royal Welch Fusiliers', type: 'Infantry, in the assault', ammo: 'S.A.A. 170 rds per man', toast: 'Message: enemy wire uncut on the left. Tanks held up.', actions: [['Advance', '➚'], ['Fire', '✶'], ['Consolidate', '⛏'], ['Bomb', '●'], ['Barrage', '☄'], ['Gas', '☁']] } },
+      1945: { sub: 'Western Front, spring 1945', blurb: 'From the bocage to the Rhine and on to Berlin: armour, infantry, artillery and the air.', sides: [['Allies', 'US, British and Commonwealth divisions'], ['Wehrmacht', 'Heer, Waffen and Fallschirmjäger']],
+        maps: [['Remagen', 'The last bridge over the Rhine'], ['Arnhem', 'A bridge too far'], ['The Bocage', 'Hedgerow fighting in Normandy']], times: ['Dawn', 'Day', 'Dusk', 'Night'], weather: ['Clear', 'Overcast', 'Rain', 'Fog'],
+        lead: 'Choose your side and the ground, then deploy your companies and take the objectives.', go: 'Deploy', stamp: 'SECRET', nav: ['Boot camp', 'Single player', 'Campaign', 'Multiplayer', 'Units', 'Settings'],
+        hud: { clock: '0612 HRS · D+3', score: 'Allies 412 · Axis 388', cp: 'Command 240', unit: 'Easy Company', type: 'Rifle company · 2nd Bn, 506th PIR', ammo: 'Ammunition: adequate', toast: 'Tiger reported at the crossroads. Bazooka teams forward.', actions: [['Move', '➜'], ['Attack', '✶'], ['Hold', '■'], ['Dig in', '⛏'], ['Smoke', '☁'], ['Artillery', '☄']] } },
+      1985: { sub: 'FULDA GAP · AUG 1985', blurb: 'NATO CENTAG VS GSFG. MECHANISED WARFARE, ATGMS AND ATTACK HELICOPTERS ACROSS THE INNER GERMAN BORDER.', sides: [['NATO', 'US V CORPS, BUNDESWEHR, BRITISH ARMY OF THE RHINE'], ['WARSAW PACT', '8 GDS ARMY, 1 GDS TANK ARMY']],
+        maps: [['FULDA GAP', 'OBJ: HÜNFELD / ROUTE 27'], ['HOF CORRIDOR', 'OBJ: HOF / A9'], ['N. GERMAN PLAIN', 'OBJ: WESER CROSSINGS']], times: ['0430', '1200', '1900', '0100'], weather: ['CLR', 'OVC', 'RA', 'FG'],
+        lead: 'SELECT FORCE. SELECT AO. CONFIRM AND TRANSMIT. ALL STATIONS STAND BY.', go: 'EXECUTE', stamp: 'SYS: TACFIRE/MCS<br>NET: SECURE · 14:32Z', nav: ['TRAINING', 'ENGAGEMENT', 'CAMPAIGN', 'NETWORK', 'ORBAT', 'SYSTEM'],
+        hud: { clock: 'H+02:14 · 0644Z', score: 'BLUFOR 412 · OPFOR 388', cp: 'CMD PTS 240', unit: 'A/1-11 ACR', type: 'M1 ABRAMS TROOP · 4 VEH', ammo: 'MAIN GUN 160 · FUEL 62%', toast: 'CONTACT: T-80 X12 GRID NB 5528 MOVING W', actions: [['MOVE', '↗'], ['ENGAGE', '⊕'], ['HOLD', '■'], ['HULL DN', '⌂'], ['SMOKE', '≈'], ['FIRES', '✸']] } },
+      2027: { sub: 'Baltic theatre · 2027', blurb: 'NATO against Russia and Belarus on the Baltic: drones, electronic warfare, precision fires and active protection.', sides: [['NATO', 'US V Corps, Polish divisions, eFP battlegroups'], ['Russia + Belarus', '6th Combined Arms Army, 11th Army Corps']],
+        maps: [['Suwałki Gap', 'The corridor between Belarus and Kaliningrad'], ['Narva', 'The border city on the river'], ['Gotland', 'The island in the middle of the Baltic']], times: ['Dawn', 'Day', 'Dusk', 'Night'], weather: ['Clear', 'Overcast', 'Rain', 'Fog'],
+        lead: 'Select force and area of operations. Your battlegroup links to the network on deployment.', go: 'Launch', stamp: 'JOC NET · LINK 16 OK<br>EW: CONTESTED', nav: ['Training', 'Single player', 'Campaign', 'Multiplayer', 'Units', 'Settings'],
+        hud: { clock: '06:42Z · H+02', score: 'NATO 412 · RU/BY 388', cp: 'CP 240', unit: 'BG Lithuania · A Coy', type: 'Leopard 2A8 · 4 vehicles', ammo: 'APS 8/8 · 120 mm 72', toast: 'UAS: two T-90M detected, 3.2 km, bearing 084', actions: [['Move', '↗'], ['Engage', '⊕'], ['Hold', '■'], ['Drone', '✈'], ['Jam', '≋'], ['Fires', '✸']] } },
+    };
+    const app = document.getElementById('app'), st = { year: new URLSearchParams(location.search).get('year') ?? '1945', view: new URLSearchParams(location.search).get('view') ?? 'menu', side: 0, map: 0, t: 1, w: 0 };
+    const seg = (list, on, key) => `<div class="seg">${list.map((x, i) => `<button class="${i === on ? 'on' : ''}" data-k="${key}" data-v="${i}">${x}</button>`).join('')}</div>`;
+    function menu(y) {
+      return `<div class="menu"><aside class="side">
+          <div class="logo"><div class="mark"></div><div><h1>${st.year === '1985' ? 'COLD<br>STEEL' : 'Cold<br>Steel'}</h1><p>${y.sub}</p></div></div>
+          ${seg(Object.keys(Y), Object.keys(Y).indexOf(st.year), 'year')}
+          ${seg(['Land', 'Sea', 'Coastal'].map((s) => (st.year === '1985' ? s.toUpperCase() : s)), 0, 'th')}
+          <nav class="nav">${y.nav.map((n, i) => `<button class="${i === 1 ? 'on' : ''}" data-n="${i + 1}">${n}</button>`).join('')}</nav>
+          <p class="blurb">${y.blurb}</p></aside>
+        <main class="panel"><div class="stamp">${y.stamp}</div>
+          <h2>${y.nav[1]}</h2><p class="lead">${y.lead}</p>
+          <h3>${st.year === '1985' ? 'FORCE' : st.year === '1806' ? 'Your Army' : 'Your side'}</h3>
+          <div class="cards">${y.sides.map(([b, s], i) => `<button class="card ${i ? 'pact' : 'nato'}${i === st.side ? ' on' : ''}" data-k="side" data-v="${i}"><b>${b}</b><span>${s}</span></button>`).join('')}</div>
+          <h3>${st.year === '1985' ? 'AREA OF OPERATIONS' : st.year === '1806' ? 'The Field' : 'Battlefield'}</h3>
+          <div class="cards">${y.maps.map(([b, s], i) => `<button class="card${i === st.map ? ' on' : ''}" data-k="map" data-v="${i}"><b>${b}</b><span>${s}</span></button>`).join('')}</div>
+          <h3>${st.year === '1985' ? 'TIME / WX' : 'Time and weather'}</h3>
+          <div class="row">${seg(y.times, st.t, 't')}${seg(y.weather, st.w, 'w')}</div>
+          <div class="go"><button class="deploy">${y.go}</button></div></main></div>`;
+    }
+    function hud(y) {
+      const h = y.hud;
+      return `<div class="hud"><div class="field"></div>
+        ${[[30, 52, '#4c7ad8'], [33, 55, '#4c7ad8'], [36, 50, '#4c7ad8'], [62, 38, '#d8463c'], [65, 42, '#d8463c']].map(([x, yy, c]) => `<div class="fig" style="left:${x}%;top:${yy}%;background:${c};box-shadow:0 0 0 2px rgba(0,0,0,.4)"></div>`).join('')}
+        <div class="topbar"><span>${h.clock}</span><span>${h.score}</span><span>${h.cp}</span></div>
+        <div class="toast">${h.toast}</div>
+        <div class="minimap"><svg viewBox="0 0 190 150" width="100%" height="100%"><path d="M0,90 C50,70 90,110 190,80" stroke="currentColor" opacity=".35" fill="none" stroke-width="2"/><path d="M80,0 L95,150" stroke="currentColor" opacity=".25" fill="none" stroke-width="5"/><rect x="40" y="60" width="10" height="7" fill="#4c7ad8"/><rect x="55" y="70" width="10" height="7" fill="#4c7ad8"/><rect x="120" y="45" width="10" height="7" fill="#d8463c"/><rect x="130" y="55" width="10" height="7" fill="#d8463c"/><rect x="25" y="30" width="80" height="60" fill="none" stroke="currentColor" opacity=".6"/></svg></div>
+        <div class="unitcard"><div class="uname">${h.unit}</div><div class="utype">${h.type}</div><div class="bar"><i></i></div><small>${h.ammo}</small></div>
+        <div class="actions">${h.actions.map(([a, ico], i) => `<button class="${i === 0 ? 'on' : ''}"><kbd>${'QWERTY'[i]}</kbd><span class="ico">${ico}</span>${a}</button>`).join('')}</div></div>`;
+    }
+    function render() {
+      app.dataset.year = st.year;
+      app.innerHTML = st.view === 'menu' ? menu(Y[st.year]) : hud(Y[st.year]);
+      document.getElementById('years').innerHTML = Object.keys(Y).map((y) => `<button data-k="year" data-v="${Object.keys(Y).indexOf(y)}" class="${y === st.year ? 'on' : ''}">${y}</button>`).join(' ');
+      document.getElementById('views').innerHTML = ['menu', 'hud'].map((v) => `<button data-view="${v}" class="${v === st.view ? 'on' : ''}">${v === 'menu' ? 'Menu' : 'Battle HUD'}</button>`).join(' ');
+    }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.view) st.view = b.dataset.view;
+      else if (b.dataset.k === 'year') st.year = Object.keys(Y)[+b.dataset.v];
+      else if (b.dataset.k && b.dataset.k in st) st[b.dataset.k] = +b.dataset.v;
+      else return;
+      render();
+    });
+    await document.fonts.ready;
+    render();
+    window.ready = true;
+  </script>
+</body>
+</html>

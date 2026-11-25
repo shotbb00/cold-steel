@@ -26,7 +26,7 @@ const TRACK = 0x3a3a34;
 const WHITE = 0xd8d6cc;
 const RED = 0xa8231b;
 const BLUE = 0x2a3a7a;
-const C = { camo: 1 };
+export const C = { camo: 1 };
 
 const cache = {};
 const once = (key, make) => (cache[key] ??= make());
@@ -130,7 +130,7 @@ const rhomboidHull = (key, { color, dark, marks, cab = true, beam = true, supply
  * The rhomboid with its left sponson gun turning too (a second gun: data/units1918 LEFT_6PDR, UnitStack.updateSideGuns
  * `cannon`): it swings toward the target its own crew has picked, within the sponson's arc, and back to the front when idle.
  */
-const rhomboid = (key, o) => (mats) => {
+export const rhomboid = (key, o) => (mats) => {
   const r = running(rhomboidHull(key, o)(mats), 'rhomb', RHOMB, 1.15, 0.55, mats);
   if (o.supply) return r;
   const left = new THREE.Group();
@@ -186,7 +186,8 @@ export const buildBeuteWhippet = whippet('beuteWhippet', { color: DE, dark: DE_D
 
 const FT = [[-1.95, 0.55], [-1.7, 0.05], [0.9, 0.05], [1.85, 0.65], [2.05, 1.05], [1.75, 1.3], [-1.3, 1.15], [-1.95, 0.95]];
 
-export const buildRenaultFT = (mats) => running(rig(once('ft', () => ({
+/** A Renault FT, its markings `marks` on the turret (the French roundels; the US Tank Corps' own: models/aef1918.js). */
+export const renaultFT = (key, marks) => (mats) => running(rig(once(key, () => ({
   gear: rollers(0.66, -1.5, 0.8, 5, 0.17), wheel: roller(0.17),
   hull: grime(merge([
     ...frames(FT, 0.66, 0.36, FR),
@@ -198,10 +199,11 @@ export const buildRenaultFT = (mats) => running(rig(once('ft', () => ({
   turret: grime(merge([
     P.cyl(0.5, 0.55, 0.72, { y: 0.36, color: FR, ...C }, 8),                                       // the octagonal turret
     P.sphere(0.24, { y: 0.8, sy: 0.6, color: FR_DK }, 10, 6),                                        // the mushroom vent on top
-    ...pair((s) => roundel(s * 0.53, 0.42, -0.1, 0.12)).flat(),
+    ...marks,
   ]), 0.5, 0.0, 0.3),
   gun: merge([P.cyl(0.045, 0.05, 0.62, { z: 0.31, rx: Math.PI / 2, color: STEEL }, 10)]),           // the short Puteaux 37 mm
 })), mats, { turretAt: [0, 1.25, 0.15], gunAt: [0, 0.4, 0.48], muzzle: 0.65, recoil: 0.08 }), 'ft', FT, 0.66, 0.36, mats);
+export const buildRenaultFT = renaultFT('ft', pair((s) => roundel(s * 0.53, 0.42, -0.1, 0.12)).flat());
 
 // ---------------------------------------------------------------- Schneider CA1
 
@@ -253,7 +255,7 @@ export const buildA7V = (mats) => rig(once('a7v', () => {
 
 // ---------------------------------------------------------------- armoured cars
 
-const car = (key, { color, dark, length, width, wheelR, track, base, body, turret, gun, turretAt, gunAt, muzzle, arc = Infinity }) => (mats) => rig(once(key, () => {
+export const car = (key, { color, dark, length, width, wheelR, track, base, body, turret, gun, turretAt, gunAt, muzzle, arc = Infinity }) => (mats) => rig(once(key, () => {
   const wheels = [];
   for (const z of base) for (const s of [-1, 1]) wheels.push({ x: s * track, y: wheelR, z });
   return {
@@ -322,7 +324,7 @@ const balloonParts = (color, kind) => [
   P.box(0.9, 0.9, 0.9, { y: BALLOON_Y - 1.5, z: -0.8, color: 0x6a5a3a }),                                         // the observers' basket
   ...(kind === 'de' ? [] : [P.cyl(1.1, 1.1, 0.03, { x: 3.55, y: BALLOON_Y + 3, z: -0.8, rz: Math.PI / 2, color: kind === 'fr' ? 0xa8231c : 0x22325c }, 16)]),
 ];
-const winch = (key, color, dark, kind) => car(key, {
+export const winch = (key, color, dark, kind) => car(key, {
   color, dark, length: 5.8, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.7],
   body: [
     P.box(0.82, 0.55, 1.35, { y: 1.05, z: 2.05, color, ...C }),                                                         // the bonnet
@@ -365,7 +367,7 @@ const lorryFront = (color, dark) => [
 const lorry = (key, color, dark, load, { turret = [P.box(0.1, 0.1, 0.1, { color: dark })], gun = [P.box(0.04, 0.04, 0.04, { color: dark })], turretAt = [0, 1.9, -1.4], gunAt = [0, 0, 0], muzzle = 0.1 } = {}) =>
   car(key, { color, dark, length: 5.8, width: 2.0, wheelR: 0.45, track: 0.85, base: [1.9, -1.7], body: [...lorryFront(color, dark), ...load], turret, gun, turretAt, gunAt, muzzle });
 
-const RED_CROSS = (x, y, z, face = 'x') => [face === 'x' ? P.box(0.02, 0.62, 0.62, { x, y, z, color: 0xe8e4da }) : P.box(0.62, 0.62, 0.02, { x, y, z, color: 0xe8e4da }),
+export const RED_CROSS = (x, y, z, face = 'x') => [face === 'x' ? P.box(0.02, 0.62, 0.62, { x, y, z, color: 0xe8e4da }) : P.box(0.62, 0.62, 0.02, { x, y, z, color: 0xe8e4da }),
   ...[[0.42, 0.13], [0.13, 0.42]].map(([a, b]) => (face === 'x' ? P.box(0.03, a, b, { x, y, z, color: 0xb02020 }) : P.box(b, a, 0.03, { x, y, z, color: 0xb02020 })))];
 const ambulanceBody = (color) => [
   P.box(1.9, 1.5, 3.0, { y: 1.75, z: -1.45, color, ...C }),                                                         // the box body
@@ -376,7 +378,7 @@ const supplyLoad = [
   ...[[-0.45, -0.4], [0.45, -0.4], [-0.45, -1.4], [0.45, -1.4], [-0.45, -2.4], [0.45, -2.4], [0, -0.9]].map(([x, z], i) => P.box(0.75, 0.5, 0.85, { x, y: 1.25 + (i === 6 ? 0.5 : 0), z, color: i % 2 ? 0x6a5a3a : 0x5a4e34 })), // crates of shells
 ];
 /** The AA lorry: a field gun on a high pedestal on the bed, laid up at the sky (the 13-pounder, the auto-canon de 75, the K-Flak). */
-const aaLorry = (key, color, dark) => lorry(key, color, dark, [
+export const aaLorry = (key, color, dark) => lorry(key, color, dark, [
   ...pair((s) => P.box(0.05, 0.3, 3.3, { x: s * 0.93, y: 1.1, z: -1.4, color: dark })),
   P.cyl(0.25, 0.4, 0.7, { y: 1.35, z: -1.4, color: STEEL, surf: 'metal' }, 10),
 ], {
@@ -523,3 +525,86 @@ export const buildGarfordPutilov = car('garford', {
   gun: [P.cyl(0.065, 0.07, 1.0, { z: 0.5, rx: Math.PI / 2, color: STEEL }, 10)],                                          // the short 76 mm
   turretAt: [0, 2.35, -1.6], gunAt: [0, 0.4, 0.8], muzzle: 1.0, arc: 2.35,
 });
+
+// ---------------------------------------------------------------- the other fronts' missing roles (data/units1918/roles.js)
+
+const OT = 0x8c7f58;    // Ottoman khaki, sun-faded
+const OT_DK = 0x6e6444;
+const TILT = 0xb4a47a;  // sand-coloured canvas
+
+/** Ottoman AA: a Krupp 7.5 cm on an improvised pivot on the lorry's bed, sandbags round it, a canvas tilt over the cab, the red pennant with the crescent. */
+export const buildAALorryOT = lorry('aaOT', OT, OT_DK, [
+  ...pair((s) => P.box(0.05, 0.3, 3.3, { x: s * 0.93, y: 1.1, z: -1.4, color: OT_DK })),
+  ...[-0.55, -2.25].flatMap((z) => [-0.6, 0, 0.6].map((x, i) => P.box(0.55, 0.26, 0.4, { x, y: 1.12 + (i % 2) * 0.02, z, color: i % 2 ? 0xa8966a : 0x9a8960 }))), // sandbags fore and aft of the pivot
+  P.box(0.9, 0.5, 0.9, { y: 1.22, z: -1.4, color: 0x5a4a34 }),                                                           // the timber crib the pivot is bolted to
+  P.box(1.95, 0.06, 1.45, { y: 2.38, z: 0.87, color: TILT }), ...pair((s) => P.box(0.04, 0.35, 1.45, { x: s * 0.97, y: 2.2, z: 0.87, color: TILT })), // the canvas over the cab
+  P.cyl(0.012, 0.012, 0.9, { x: 0.7, y: 2.85, z: 1.4, color: STEEL }, 4),
+  P.box(0.01, 0.22, 0.38, { x: 0.7, y: 3.15, z: 1.22, color: 0xb02020 }), P.cyl(0.06, 0.06, 0.02, { x: 0.71, y: 3.15, z: 1.18, rz: Math.PI / 2, color: 0xe8e4da }, 10), // the crescent pennant
+], {
+  turret: [P.cyl(0.3, 0.3, 0.18, { y: 0.09, color: STEEL, surf: 'metal' }, 10), P.box(0.45, 0.4, 0.75, { y: 0.36, color: OT, ...C }), P.box(0.9, 0.55, 0.05, { y: 0.5, z: 0.42, rx: -0.4, color: OT, ...C })],
+  gun: [P.cyl(0.06, 0.075, 1.9, { y: 0.7, z: 0.6, rx: Math.PI / 2 - 0.9, color: STEEL, surf: 'metal' }, 10), P.cyl(0.09, 0.09, 0.5, { y: 0.25, z: 0.2, rx: Math.PI / 2 - 0.9, color: STEEL }, 8)], // the short Krupp barrel, its recoil cylinder
+  turretAt: [0, 1.6, -1.4], gunAt: [0, 0.2, 0], muzzle: 1.25,
+});
+
+/** k.u.k. AA: the Škoda 8 cm M.5/8 — the field gun's long barrel on a tall cone pedestal — on the bed, outrigger legs let down either side, the black-yellow pennant. */
+export const buildAALorryAH = lorry('aaAH', AH, AH_DK, [
+  ...pair((s) => P.box(0.05, 0.3, 3.3, { x: s * 0.93, y: 1.1, z: -1.4, color: AH_DK })),
+  P.cyl(0.22, 0.48, 0.95, { y: 1.45, z: -1.5, color: STEEL, surf: 'metal' }, 12),                                         // the cone pedestal
+  ...pair((s) => [-0.9, -2.1].map((z) => P.box(1.3, 0.08, 0.12, { x: s * 1.45, y: 0.7, z, rz: s * 0.55, color: STEEL }))).flat(), // the outriggers…
+  ...pair((s) => [-0.9, -2.1].map((z) => P.box(0.3, 0.05, 0.3, { x: s * 1.98, y: 0.03, z, color: 0x4a3c2a }))).flat(),             // …on timber pads
+  P.cyl(0.012, 0.012, 0.9, { x: 0.7, y: 2.75, z: 1.4, color: STEEL }, 4),
+  P.box(0.01, 0.11, 0.38, { x: 0.7, y: 3.1, z: 1.22, color: 0x161616 }), P.box(0.01, 0.11, 0.38, { x: 0.7, y: 2.99, z: 1.22, color: 0xd8b830 }), // black over yellow
+], {
+  turret: [P.cyl(0.38, 0.38, 0.16, { y: 0.08, color: STEEL, surf: 'metal' }, 12), ...pair((s) => P.box(0.08, 0.6, 0.7, { x: s * 0.25, y: 0.4, color: AH, ...C })), P.box(0.6, 0.18, 0.18, { y: 0.15, z: -0.45, color: STEEL })], // the cradle's two cheeks, the layer's seat bar
+  gun: [P.cyl(0.05, 0.065, 3.0, { y: 1.05, z: 0.9, rx: Math.PI / 2 - 0.95, color: STEEL, surf: 'metal' }, 10), P.cyl(0.085, 0.085, 0.8, { y: 0.35, z: 0.3, rx: Math.PI / 2 - 0.95, color: STEEL }, 8)], // the long 8 cm barrel at ~55°
+  turretAt: [0, 1.95, -1.5], gunAt: [0, 0.3, 0], muzzle: 1.8,
+});
+
+/** The light car patrols' AA Ford: a Model T, two Lewis guns side by side on a tall post where the back seat was. */
+export const buildFordAA = car('fordAA', {
+  color: BR, dark: BR_DK, length: 3.6, width: 1.6, wheelR: 0.42, track: 0.7, base: [1.05, -1.0],
+  body: [
+    P.box(0.6, 0.45, 0.95, { y: 1.0, z: 1.15, color: BR, ...C }), P.box(0.62, 0.5, 0.05, { y: 1.0, z: 1.64, color: 0x26261f }),
+    P.box(1.35, 0.45, 2.0, { y: 0.95, z: -0.35, color: BR, ...C }),
+    P.box(1.2, 0.05, 1.8, { y: 1.18, z: -0.35, color: 0x1e1a14 }),
+    P.box(1.15, 0.32, 0.4, { y: 1.3, z: 0.35, color: 0x3a2a1c }),
+    P.box(1.1, 0.35, 0.04, { y: 1.42, z: 0.62, rx: -0.2, color: 0x9ab0b8 }),
+    P.box(1.2, 0.4, 0.5, { y: 1.35, z: -1.15, color: 0x5a4a34 }),                                                     // the ammunition chest across the tail
+    P.cyl(0.05, 0.07, 1.25, { y: 1.8, z: -0.5, color: STEEL }, 6),                                                     // the tall post
+    ...pair((s) => P.box(0.04, 0.04, 0.9, { x: s * 0.35, y: 1.25, z: -0.5, rx: s > 0 ? 0.7 : -0.7, ry: Math.PI / 2, color: STEEL })), // its stays
+    ...[[0.5, -0.1], [-0.5, -0.1]].map(([x, z]) => P.cyl(0.11, 0.11, 0.04, { x, y: 1.3, z, color: 0x2f3128 }, 10)),  // spare pans on the seat
+  ],
+  turret: [P.box(0.6, 0.08, 0.12, { y: 0.04, color: STEEL }), P.box(0.1, 0.25, 0.1, { y: -0.1, color: STEEL })],     // the twin cradle on its swivel
+  gun: [...pair((s) => [P.cyl(0.045, 0.04, 0.75, { x: s * 0.24, z: 0.25, rx: Math.PI / 2, color: 0x2f3128 }, 8), P.cyl(0.1, 0.1, 0.03, { x: s * 0.24, y: 0.07, z: 0.0, color: STEEL }, 12), P.box(0.04, 0.1, 0.3, { x: s * 0.24, y: -0.03, z: -0.25, color: 0x5a4632 })]).flat()], // two Lewis guns, their pans, butts
+  turretAt: [0, 2.45, -0.5], gunAt: [0, 0.05, 0.1], muzzle: 0.65,
+});
+
+/** Romfell (Budapest, 1915): 5.7 m, a rounded whale-back hull in riveted plate covering bonnet and body as one, a round turret with a domed top and the Schwarzlose. */
+const romfellRing = (w, b, t) => [[0, b], [w * 0.9, b], [w, b + (t - b) * 0.25], [w * 0.97, b + (t - b) * 0.55], [w * 0.8, b + (t - b) * 0.82], [w * 0.45, t], [0, t]];
+export const buildRomfellAC = car('romfell', {
+  color: AH, dark: AH_DK, length: 5.7, width: 1.85, wheelR: 0.5, track: 0.82, base: [1.75, -1.65],
+  body: [
+    stationHull([[-2.85, romfellRing(0.55, 0.8, 1.6)], [-2.4, romfellRing(0.88, 0.75, 2.05)], [-0.2, romfellRing(0.93, 0.75, 2.2)], [1.2, romfellRing(0.9, 0.75, 1.95)], [2.4, romfellRing(0.7, 0.78, 1.55)], [2.85, romfellRing(0.42, 0.85, 1.3)]], { color: AH, ...C }), // the one-piece hull
+    ...[-0.2, 0, 0.2].map((x) => P.box(0.1, 0.32, 0.03, { x, y: 1.05, z: 2.86, color: AH_DK })),                      // the radiator louvres in the nose
+    P.box(0.8, 0.12, 0.04, { y: 1.8, z: 1.55, rx: -0.6, color: AH_DK }), slit(0, 1.82, 1.58, 0.5),                     // the driver's visor in the slope
+    ...pair((sd) => door(sd * 0.93, 1.35, -0.3, 0.75, 0.75, AH_DK)).flat(),
+    ...pair((sd) => rivets(sd * 0.94, 1.0, -2.3, 2.2, AH_DK, 0.3)).flat(),
+  ],
+  turret: [P.cyl(0.55, 0.6, 0.45, { y: 0.22, color: AH, ...C }, 14), P.sphere(0.55, { y: 0.45, sy: 0.45, color: AH, ...C }, 14, 6)],
+  gun: [P.cyl(0.07, 0.07, 0.35, { z: 0.15, rx: Math.PI / 2, color: STEEL }, 8), P.cyl(0.028, 0.06, 0.25, { z: 0.42, rx: Math.PI / 2, color: STEEL }, 8)], // the Schwarzlose's short jacket and flash cone
+  turretAt: [0, 2.18, -0.35], gunAt: [0, 0.25, 0.55], muzzle: 0.56,
+});
+
+// ---------------------------------------------------------------- the Salonika front (data/units1918/balkans.js)
+const SB = 0x6a7270;    // the Serbs' French-supplied grey
+const SB_DK = 0x545a58;
+const BG = 0x6e6a52;    // the Bulgarians' German-supplied field grey, browned
+const BG_DK = 0x56523e;
+export const buildAmbulanceSB = lorry('ambSB', SB, SB_DK, ambulanceBody(SB));
+export const buildAmbulanceBG = lorry('ambBG', BG, BG_DK, ambulanceBody(BG));
+export const buildSupplyLorrySB = lorry('supSB', SB, SB_DK, supplyLoad);
+export const buildSupplyLorryBG = lorry('supBG', BG, BG_DK, supplyLoad);
+export const buildAALorrySB = aaLorry('aaSB', SB, SB_DK);   // a French 75 on an AA mount, on a lorry
+export const buildAALorryBG = aaLorry('aaBG', BG, BG_DK);   // the German K-Flak lent to Bulgaria
+export const buildStaffCarSB = staffCar('staffSB', SB, SB_DK, 0xb02020);   // (the Serbian red, blue, white)
+export const buildStaffCarBG = staffCar('staffBG', BG, BG_DK, 0x2a7a3a);   // (the Bulgarian white, green, red)

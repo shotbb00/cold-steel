@@ -136,7 +136,8 @@ let nextId = 1;
 /** A warship's own name (type.names per side, data/units45/ships.js): the class's next one not yet afloat in this battle. */
 function shipName(type, faction, world) {
   const own = type.names?.[world.armies?.[faction]]; // (an army's own navy, its names written in full: SMS Novara, Aquila — data/units1918/ships.js)
-  const list = world.river?.names?.[faction]?.[type.id] ?? own ?? type.names?.[faction]; // (a sea map's own navy: Copenhagen's Danish line)
+  const theirs = !own || !world.mapArmies?.[faction] || world.mapArmies[faction][0] === world.armies?.[faction]; // (another navy with names of its own — a campaign battle's Russians on Corfu's map — keeps them)
+  const list = (theirs ? world.river?.names?.[faction]?.[type.id] : null) ?? own ?? type.names?.[faction]; // (a sea map's own navy: Copenhagen's Danish line)
   if (!list?.length) return null;
   const used = (world.shipNames ??= new Map());
   const key = `${type.id}:${faction}`;
@@ -164,6 +165,7 @@ export class UnitStack {
     this.type = type;
     this.kind = type.kind ?? 'infantry';
     this.army = services.world?.armies?.[faction] ?? DEFAULT_ARMY[faction]; // US Army / Bundeswehr, Soviet Army / NVA
+    if (type.armyType?.[this.army]) this.type = type = { ...type, ...type.armyType[this.army] }; // (an army's own boat of another size: her hull, her hold — data/units45/ships.js lcvp, lct)
     const fs = type.factionStats;
     this.stats = fs?.[faction] || fs?.[this.army] ? { ...type.stats, ...fs[faction], ...fs[this.army] } : type.stats; // per-side (and per-army) differences
     const cav = RECON.has(type.id) && armyDoctrine(this.army, 'cavalry'); // the US Army's Cavalry screen sees further
@@ -571,7 +573,10 @@ export class UnitStack {
       const p = nav.path(this.anchor, t, this.navFoot, this.stats.radius);
       r = this.route = { to: { x: t.x, z: t.z }, version: nav.version, pts: p?.pts ?? [{ x: t.x, z: t.z }], i: 0 };
     }
-    while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < 1.5) r.i++;
+    // Ships can't turn on a point: reaching within one 12 m grid step (or their own size) counts,
+    // or they circle the route's corner points round island capes and stop short of the zone
+    const reach = this.stats.naval ? Math.max(12, this.stats.radius ?? 0) : 1.5;
+    while (r.i < r.pts.length - 1 && Math.hypot(r.pts[r.i].x - this.anchor.x, r.pts[r.i].z - this.anchor.z) < reach) r.i++;
     const p = r.pts[r.i];
     return { x: p.x, z: p.z, last: r.i === r.pts.length - 1 };
   }
@@ -1068,10 +1073,17 @@ export class UnitStack {
     const w = this.world.river?.water;
     if (w) {
       // deep water is a wall — but never a trap: going shallower is always allowed
-      const depth = w.level - this.world.terrain.heightAt(u.pos.x, u.pos.z);
-      if (depth > w.deep && depth > w.level - this.world.terrain.heightAt(px, pz) - 0.01) {
+      const T = this.world.terrain;
+      const depth = w.level - T.heightAt(u.pos.x, u.pos.z);
+      const was = w.level - T.heightAt(px, pz);
+      if (depth > w.deep && depth > was - 0.01) {
+        // refused — and a man jostled out there whose way runs along the edge would stand there for good (every step
+        // he wants is no shallower): he goes up the bed instead, as far as the step, out of it
+        const len = Math.hypot(u.pos.x - px, u.pos.z - pz), e = 0.3;
+        const gx = T.heightAt(px + e, pz) - T.heightAt(px - e, pz), gz = T.heightAt(px, pz + e) - T.heightAt(px, pz - e), g = Math.hypot(gx, gz);
         u.pos.x = px;
         u.pos.z = pz;
+        if (g > 1e-6 && w.level - T.heightAt(px + (gx / g) * len, pz + (gz / g) * len) < was) { u.pos.x += (gx / g) * len; u.pos.z += (gz / g) * len; }
         u.vel.multiplyScalar(0.3);
       }
     }
@@ -2801,7 +2813,7 @@ export class UnitStack {
     const t = this.world.time;
     if (!priority && t - this.lastBark < BARK_COOLDOWN) return;
     const sea1806 = this.stats.naval && year() < 1900;
-    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : this.army === 'dk' ? 'dk' : 'frn') : this.stats.raid ? 'raid18' : this.stats.naval && year() > 1900 && year() < 1930 ? (this.faction === 'pact' ? 'km' : 'rn18') : this.stats.naval && this.faction === 'pact' && year() > 1930 && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
+    const text = barkLine(this.faction, kind, sea1806 ? (this.faction === 'pact' ? 'rn' : this.army === 'dk' ? 'dk' : 'frn') : this.stats.raid ? 'raid18' : this.stats.naval && year() > 1900 && year() < 1930 ? (this.faction === 'pact' ? 'km' : 'rn18') : this.stats.naval && year() > 1930 && year() < 1960 && (this.army === 'wh' || this.army?.startsWith('brit')) ? (this.army === 'wh' ? 'km45' : 'rn45') : this.stats.naval && this.faction === 'pact' && year() > 1930 && year() < 1960 ? 'ijn' : this.army); // (at sea in 1806 the Royal Navy and the French Navy; in 1945 the Imperial Navy: Japanese; in 1985 the Soviet Navy, in Russian)
     if (!text) return;
     this.lastBark = t;
     this.services.bus.emit('bark', { unit: u, stack: this, text, priority });

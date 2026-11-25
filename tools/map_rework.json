@@ -1,0 +1,393 @@
+{
+ "cover": [
+  "ortigara",
+  "tartus",
+  "sandomierz",
+  "werra-valley",
+  "bainsizza",
+  "cattaro",
+  "hokkaido",
+  "lutsk",
+  "durnstein",
+  "trieste-1805",
+  "black-forest",
+  "neman-crossing",
+  "seoul",
+  "pskov",
+  "villers-bretonneux",
+  "magdeburg-1806",
+  "magdeburg",
+  "krevo",
+  "cassino",
+  "arnhem",
+  "asiago",
+  "hermada",
+  "marasesti",
+  "schleiz",
+  "mohrungen",
+  "kiev-1918",
+  "malborghetto"
+ ],
+ "pairs": [
+  {
+   "r": 0.96,
+   "a": "cattaro",
+   "b": "trieste-1805",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.95,
+   "a": "ortigara",
+   "b": "dobro-pole",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.97,
+   "a": "hokkaido",
+   "b": "kyushu",
+   "ep": "1985|1945"
+  },
+  {
+   "r": 0.85,
+   "a": "magdeburg",
+   "b": "halle",
+   "ep": "1985|1945"
+  },
+  {
+   "r": 0.96,
+   "a": "tartus",
+   "b": "durnstein",
+   "ep": "1985|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "lutsk",
+   "b": "jakobstadt",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.86,
+   "a": "seoul",
+   "b": "hokkaido",
+   "ep": "1985|1985"
+  },
+  {
+   "r": 0.9,
+   "a": "trieste-1805",
+   "b": "ragusa",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.88,
+   "a": "black-forest",
+   "b": "pressburg-1809",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.86,
+   "a": "neman-crossing",
+   "b": "narva-river",
+   "ep": "2027|2027"
+  },
+  {
+   "r": 0.91,
+   "a": "hermada",
+   "b": "cattaro",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.96,
+   "a": "kaesong",
+   "b": "seoul",
+   "ep": "1985|1985"
+  },
+  {
+   "r": 0.85,
+   "a": "seoul",
+   "b": "kyushu",
+   "ep": "1985|1945"
+  },
+  {
+   "r": 0.88,
+   "a": "tartus",
+   "b": "caldiero",
+   "ep": "1985|1806"
+  },
+  {
+   "r": 0.9,
+   "a": "hermada",
+   "b": "trieste-1805",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.9,
+   "a": "pskov",
+   "b": "baranovichi",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.86,
+   "a": "cattaro",
+   "b": "ragusa",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "villers-bretonneux",
+   "b": "le-hamel",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.89,
+   "a": "krevo",
+   "b": "baranovichi",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.89,
+   "a": "cassino",
+   "b": "medjerda",
+   "ep": "1945|1945"
+  },
+  {
+   "r": 0.86,
+   "a": "arnhem",
+   "b": "mainz",
+   "ep": "1945|1806"
+  },
+  {
+   "r": 0.88,
+   "a": "asiago",
+   "b": "dobro-pole",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.87,
+   "a": "kaesong",
+   "b": "hokkaido",
+   "ep": "1985|1985"
+  },
+  {
+   "r": 0.94,
+   "a": "magdeburg-1806",
+   "b": "breslau",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.87,
+   "a": "asiago",
+   "b": "ortigara",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.91,
+   "a": "krevo",
+   "b": "pskov",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.85,
+   "a": "villers-bretonneux",
+   "b": "st-quentin",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.86,
+   "a": "sandomierz",
+   "b": "tilsit",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.88,
+   "a": "marasesti",
+   "b": "durnstein",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.89,
+   "a": "black-forest",
+   "b": "werra-valley",
+   "ep": "1806|"
+  },
+  {
+   "r": 0.87,
+   "a": "lutsk",
+   "b": "baranovichi",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.86,
+   "a": "caldiero",
+   "b": "durnstein",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.86,
+   "a": "bainsizza",
+   "b": "neman-crossing",
+   "ep": "1918|2027"
+  },
+  {
+   "r": 0.88,
+   "a": "durnstein",
+   "b": "krymskaya",
+   "ep": "1806|1945"
+  },
+  {
+   "r": 0.85,
+   "a": "east-anglia",
+   "b": "bainsizza",
+   "ep": "1985|1918"
+  },
+  {
+   "r": 0.87,
+   "a": "ortigara",
+   "b": "doiran",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.87,
+   "a": "ortigara",
+   "b": "bainsizza",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.94,
+   "a": "hermada",
+   "b": "sandomierz",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.88,
+   "a": "tartus",
+   "b": "krymskaya",
+   "ep": "1985|1945"
+  },
+  {
+   "r": 0.87,
+   "a": "hermada",
+   "b": "ragusa",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.88,
+   "a": "asiago",
+   "b": "black-forest",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.87,
+   "a": "dobro-pole",
+   "b": "bainsizza",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.89,
+   "a": "tartus",
+   "b": "marasesti",
+   "ep": "1985|1918"
+  },
+  {
+   "r": 0.85,
+   "a": "east-anglia",
+   "b": "neman-crossing",
+   "ep": "1985|2027"
+  },
+  {
+   "r": 0.88,
+   "a": "cattaro",
+   "b": "sandomierz",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.89,
+   "a": "trieste-1805",
+   "b": "sandomierz",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "lutsk",
+   "b": "krevo",
+   "ep": "1918|1918"
+  },
+  {
+   "r": 0.9,
+   "a": "marasesti",
+   "b": "lambach",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "dresden",
+   "b": "werra-valley",
+   "ep": "1806|"
+  },
+  {
+   "r": 0.87,
+   "a": "bainsizza",
+   "b": "tagliamento",
+   "ep": "1918|1806"
+  },
+  {
+   "r": 0.92,
+   "a": "asiago",
+   "b": "werra-valley",
+   "ep": "1918|"
+  },
+  {
+   "r": 0.85,
+   "a": "mohrungen",
+   "b": "magdeburg-1806",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "tartus",
+   "b": "wischau",
+   "ep": "1985|1806"
+  },
+  {
+   "r": 0.9,
+   "a": "schleiz",
+   "b": "halle-1806",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.87,
+   "a": "mohrungen",
+   "b": "breslau",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.86,
+   "a": "dobro-pole",
+   "b": "werra-valley",
+   "ep": "1918|"
+  },
+  {
+   "r": 0.86,
+   "a": "kiev-1918",
+   "b": "krymskaya",
+   "ep": "1918|1945"
+  },
+  {
+   "r": 0.85,
+   "a": "ortigara",
+   "b": "werra-valley",
+   "ep": "1918|"
+  },
+  {
+   "r": 0.86,
+   "a": "ragusa",
+   "b": "sandomierz",
+   "ep": "1806|1806"
+  },
+  {
+   "r": 0.85,
+   "a": "malborghetto",
+   "b": "campo-tenese",
+   "ep": "1806|1806"
+  }
+ ]
+}

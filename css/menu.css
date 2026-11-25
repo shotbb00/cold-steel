@@ -337,7 +337,7 @@
 .title-screen { background: var(--table); }
 .map-sheet[hidden] { display: none; }
 .map-sheet { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
-.title-screen.menu-open > :not(.map-sheet), .title-screen.loading-open > :not(.map-sheet) { position: relative; z-index: 1; }
+.title-screen.menu-open > :not(.map-sheet):not(.wc-backdrop), .title-screen.loading-open > :not(.map-sheet):not(.wc-backdrop) { position: relative; z-index: 1; }
 
 /* the mark (public/brand/mark.svg) and its tagline */
 .logo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -496,3 +496,388 @@
 .menu-where { display: flex; flex-direction: column; gap: 5px; }
 .menu-region { flex-wrap: wrap; }
 .menu-region button { padding: 5px 4px; font-size: 11px; white-space: nowrap; flex: 1 1 auto; }
+
+/* ---- the world campaign's war room (src/ui/WarRoom.js): paper and ink on the map table ---- */
+.wc-start .cards.sides { margin-bottom: 12px; }
+.wc-code { width: 100%; max-width: 540px; min-height: 70px; background: rgba(0, 0, 0, 0.3); color: var(--text); border: 1px solid var(--line); font: 12px/1.4 ui-monospace, Consolas, monospace; padding: 8px; box-sizing: border-box; word-break: break-all; }
+.wc-start .deploy-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.wc-room { position: fixed; inset: 0; z-index: 60; background: var(--table); color: var(--text); font-family: var(--font-ui); display: flex; flex-direction: column; padding: var(--sat) var(--sar) var(--sab) var(--sal); }
+.wc-top { display: flex; align-items: center; gap: 24px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.wc-date b { display: block; font: 700 20px/1.1 var(--font-display); letter-spacing: 0.04em; color: var(--ink); }
+.wc-date small, .wc-pool small { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.wc-pool b { display: block; font-size: 18px; color: var(--gold); }
+.wc-morales { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.wc-morale { position: relative; display: block; font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); overflow: hidden; }
+.wc-morale i { position: absolute; inset: 0 auto 0 0; width: var(--m); z-index: -1; }
+.wc-morale { isolation: isolate; }
+.wc-morale.nato i { background: rgba(111, 168, 255, 0.3); }
+.wc-morale.pact i { background: rgba(255, 90, 72, 0.3); }
+.wc-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.wc-actions .deploy { margin: 0; }
+.wc-close { background: none; border: 1px solid var(--line); color: var(--text); font-size: 20px; width: 36px; height: 36px; cursor: pointer; }
+.wc-over { color: var(--gold); font-weight: 700; }
+.wc-tabs { margin: 8px 16px 0; align-self: flex-start; }
+.wc-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; padding: 12px 16px 16px; }
+.wc-drawer { overflow: auto; border-left: 1px solid var(--line); padding-left: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.wc-drawer h3 { margin: 0; font: 700 22px/1.1 var(--font-display); color: var(--ink); }
+.wc-msg { color: var(--gold); margin: 0; font-size: 13px; }
+.wc-order-line { margin: 0; font-size: 14px; }
+.wc-bn { display: grid; grid-template-columns: 1fr 80px auto; gap: 8px; align-items: center; width: 100%; font-size: 13px; text-transform: capitalize; }
+.wc-bn small { color: var(--muted); text-transform: none; }
+.wc-hp { height: 5px; background: rgba(255, 255, 255, 0.08); }
+.wc-hp i { display: block; height: 100%; background: var(--ink); }
+.wc-card { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px; background: rgba(207, 201, 173, 0.06); border: 1px solid var(--line); color: var(--text); cursor: pointer; font: inherit; }
+.wc-card:hover { border-color: var(--gold); }
+.wc-kicker { font: 700 20px/1 var(--font-display); color: var(--ink); letter-spacing: 0.03em; }
+.wc-bar { display: flex; height: 6px; }
+.wc-bar .nato { background: #5f93e6; }
+.wc-bar .pact { background: #e2513f; }
+.wc-line { font-size: 13px; color: var(--muted); }
+.wc-modal { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 2; }
+.wc-modal-box { background: #1b2017; border: 1px solid var(--line); max-width: 760px; width: 100%; max-height: 90vh; overflow: auto; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; }
+.wc-modal-box h3 { margin: 0; font: 700 24px/1.1 var(--font-display); color: var(--ink); }
+.wc-modal-box .deploy-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.wc-modal-box .deploy { margin: 0; }
+.wc-th { margin: 10px 0 0; color: var(--gold); font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+.wc-battle { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.wc-battle > div:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wc-battle small { color: var(--muted); }
+.wc-battle.done { opacity: 0.75; }
+.wc-vs { font-size: 13px; }
+.wc-vs .nato { color: var(--ally); }
+.wc-vs .pact { color: var(--enemy); }
+.wc-battle-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.wc-paper p { color: var(--ink); margin: 0; }
+@media (max-width: 760px) {
+  .wc-top { gap: 10px; padding: 8px 12px; }
+  .wc-morales { min-width: 0; flex: 1; }
+  .wc-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .wc-tabs { margin: 6px 12px 0; }
+  .wc-body { grid-template-columns: 1fr; grid-template-rows: minmax(260px, 1fr) auto; padding: 8px 12px 12px; overflow: auto; }
+  .wc-drawer { border-left: 0; border-top: 1px solid var(--line); padding: 10px 0 0; max-height: 40vh; }
+  .wc-battle { flex-direction: column; align-items: flex-start; }
+}
+/* the real map (ui/WorldMap.js) and the war room's layer on it */
+.wc-map { position: relative; min-height: 0; border: 1px solid var(--line); overflow: hidden; }
+.wm { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.wm:active { cursor: grabbing; }
+.wc-zoom { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; }
+.wc-zoom button { width: 34px; height: 34px; background: rgba(16, 18, 14, 0.85); color: var(--text); border: 1px solid var(--line); font-size: 18px; cursor: pointer; }
+.wc-zoom button:hover { border-color: var(--gold); }
+.wc-legend { position: absolute; left: 10px; bottom: 8px; margin: 0; padding: 4px 8px; background: rgba(16, 18, 14, 0.75); pointer-events: none; }
+.wc-drawer .wc-card { width: 100%; box-sizing: border-box; padding: 10px 12px; }
+.wc-air { flex-wrap: wrap; } .wc-air button { padding: 5px 9px; font-size: 12.5px; }
+.wc-mission line { stroke: #3d2f1e; stroke-width: 1.6; stroke-dasharray: 2 4; stroke-linecap: round; }
+.wc-mission circle { fill: none; stroke: #3d2f1e; stroke-width: 1.4; stroke-dasharray: 5 3; }
+.wc-mission.attack circle { stroke: #b3261e; } .wc-mission.support circle { stroke: #2a5bd0; }
+.wc-mission text { fill: #3d2f1e; font: 11px 'Special Elite', monospace; paint-order: stroke; stroke: rgba(233, 219, 180, 0.9); stroke-width: 3px; }
+.wc-prio { margin: -4px 0 4px; } .wc-prio button { padding: 3px 10px; font-size: 12px; text-transform: capitalize; }
+.wc-pool small + small { display: block; text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.wc-drawer .wc-kicker { font-size: 17px; }
+.wc-news { margin: 0; font-size: 13px; color: var(--ink); line-height: 1.4; }
+.wc-force { display: flex; justify-content: space-between; width: 100%; gap: 8px; padding: 6px 10px; background: rgba(207, 201, 173, 0.05); border: 1px solid var(--line); border-left: 3px solid var(--ally); color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.wc-force.pact { border-left-color: var(--enemy); cursor: default; }
+.wc-force:disabled { opacity: 0.85; }
+.wc-force small { color: var(--muted); }
+@media (max-width: 760px) {
+  .wc-body { grid-template-rows: minmax(320px, 58vh) auto; }
+  .wc-legend { display: none; }
+}
+
+/* the 1945 paper map (tools/mapstyles.html, chosen): yellowed paper, sepia ink, grease and wax pencil, glass pins, cardboard */
+.wc-map { background: #2a2116; }
+.wm-sea { fill: #bcc6bd; }
+.wm-grat { fill: none; stroke: rgba(80, 60, 30, 0.12); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
+.wm-land { fill: #e9dbb4; }
+.wm-coast { fill: none; stroke: #4b3a26; stroke-width: 1.1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.wm-border { fill: none; stroke: rgba(75, 58, 38, 0.32); stroke-width: 0.8; stroke-dasharray: 5 3 1 3; vector-effect: non-scaling-stroke; }
+.wm-front { pointer-events: none; }
+.wm-pen { fill: none; stroke-width: 5; stroke-linecap: round; opacity: 0.82; }
+.wm-pen.nato { stroke: #2a5bd0; } .wm-pen.pact { stroke: #d0302a; }
+.wc-theatre { fill: rgba(61, 47, 30, 0.22); font: 700 26px 'Stardos Stencil', var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; pointer-events: none; }
+.wc-road { stroke: rgba(61, 47, 30, 0.45); stroke-width: 1.2; }
+.wc-lane { stroke: #5f7f95; stroke-width: 1.3; stroke-dasharray: 7 5; opacity: 0.75; }
+.wc-coast { stroke: #5f7f95; stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.6; }
+.wc-order { fill: none; stroke: #2a5bd0; stroke-width: 5; stroke-linecap: round; opacity: 0.85; }
+.wc-order.attack { stroke: #d0302a; }
+.wc-order.landing { stroke-dasharray: 9 7; }
+.wc-node { cursor: pointer; }
+.wc-node .hit { fill: transparent; }
+.wc-pin .town { fill: #3d2f1e; }
+.wc-pin .needle { stroke: #8d8d88; stroke-width: 1.4; }
+.wc-pin .pshadow { stroke: rgba(42, 28, 8, 0.2); stroke-width: 1.4; fill: rgba(42, 28, 8, 0.12); filter: blur(1.5px); }
+.wc-pin .head { stroke: rgba(0, 0, 0, 0.35); stroke-width: 0.5; }
+.wc-pin.cut .head { stroke: #3d2f1e; stroke-width: 1.4; stroke-dasharray: 2 2; }
+.wc-pin .fort { fill: none; stroke: #3d2f1e; stroke-width: 1.3; stroke-dasharray: 3 2.5; }
+.wc-pin .field { stroke: #3d2f1e; stroke-width: 1.4; }
+.wc-pin.cluster .disc { fill: #f3ead2; }
+.wc-pin.cluster .edge { fill: none; stroke-width: 2.5; }
+.wc-pin.cluster.nato .edge { stroke: #2a5bd0; } .wc-pin.cluster.pact .edge { stroke: #d0302a; } .wc-pin.cluster.sea .edge { stroke: #5f7f95; }
+.wc-pin .count { fill: #2b2418; font: 13px 'Special Elite', monospace; pointer-events: none; }
+.wc-node .anchor { fill: #4d6470; }
+.wc-node .name { fill: #3d2f1e; font: 13px 'Special Elite', monospace; paint-order: stroke; stroke: rgba(233, 219, 180, 0.9); stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; }
+.wc-node .name.sea { fill: #4d6470; font: 700 12px 'Stardos Stencil', var(--font-display); letter-spacing: 0.18em; text-transform: uppercase; stroke: rgba(188, 198, 189, 0.85); }
+.wc-node.reach .hit { stroke: #b3261e; stroke-width: 2; stroke-dasharray: 4 3; }
+.wc-node.reach.landing .hit { stroke-dasharray: 2 3; }
+.wc-node.reach .name { fill: #b3261e; }
+.wc-node.sel .name { text-decoration: underline; }
+.wc-pile .face, .wc-counter .face { fill: #e9e0c6; stroke: #2a2418; stroke-width: 0.8; }
+.wc-pile .face.nato, .wc-counter.nato .face { fill: #bcd0f2; }
+.wc-pile .face.pact, .wc-counter.pact .face { fill: #f2c1b6; }
+.wc-counter .frame { fill: none; stroke: #1a1a1a; stroke-width: 1.2; }
+.wc-counter .sym { stroke: #1a1a1a; stroke-width: 1.3; fill: none; }
+.wc-counter .str { fill: #1a1a1a; }
+.wc-counter.ordered .face { stroke: #2a5bd0; stroke-width: 2; }
+.wc-counter.sel .face { stroke: #b3261e; stroke-width: 2.6; }
+.wc-pile { cursor: pointer; }
+.wc-badge rect { fill: #f4ecd4; stroke: rgba(42, 36, 24, 0.5); stroke-width: 0.6; }
+.wc-badge text { fill: #2b2418; font: 10px 'Special Elite', monospace; }
+.wc-legend { background: rgba(244, 236, 212, 0.88); color: #3d2f1e; }
+/* objectives, winter, the letter home (ui/WarRoom.js) */
+.wc-obj { color: #c9b98a; }
+.wc-star { font: 15px sans-serif; fill: #8a6a1a; paint-order: stroke; stroke: rgba(233, 219, 180, 0.95); stroke-width: 3px; pointer-events: none; }
+.wc-star.nato { fill: #2a5bd0; } .wc-star.pact { fill: #b3261e; }
+.wc-winter { color: #9cc8e8; }
+.wc-qr { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 8px; }
+.wc-qr canvas { width: min(320px, 80vw); height: auto; image-rendering: pixelated; background: #fff; padding: 6px; }
+.wc-modal-box video { width: 100%; max-height: 50vh; background: #000; }
+.wc-letter { background: #f4ecd4; color: #2b2418; padding: 14px 16px; font: 14px/1.55 'Special Elite', monospace; box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.4); transform: rotate(-0.4deg); }
+.wc-letter p { margin: 0 0 8px; color: #2b2418; }
+.wc-letter-greet { font-weight: 700; }
+.wc-letter-sign { text-align: right; margin: 6px 0 0 !important; }
+.wc-legend .star::before { content: "★"; background: none; color: #8a6a1a; width: auto; height: auto; }
+
+.wc-node.needs .hit { stroke: #4a4438; stroke-width: 2.2; stroke-dasharray: 4 3; fill: rgba(74, 68, 56, 0.08); }
+.wc-node.needs .name { fill: #6a6458; }
+
+/* taking orders back (ui/WarRoom.js) */
+.wc-cancel small { opacity: 0.6; font-size: 11px; }
+.wc-orders { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.wc-order-row { display: flex; gap: 4px; }
+.wc-order-go { flex: 1; text-align: left; background: rgba(207, 201, 173, 0.05); border: 1px solid var(--line); color: var(--text); font: 13px var(--font-ui); padding: 5px 8px; cursor: pointer; }
+.wc-order-go span { color: var(--muted); }
+.wc-order-go:hover { border-color: var(--gold); }
+.wc-order-x { width: 32px; background: none; border: 1px solid var(--line); color: var(--enemy); font-size: 14px; cursor: pointer; }
+.wc-order-x:hover { background: rgba(255, 90, 72, 0.15); }
+
+/* what a base can build (ui/WarRoom.js): a card per thing — what is in it, where it goes, cost and upkeep */
+.wc-buy { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: 8px 10px; background: rgba(207, 201, 173, 0.05); border: 1px solid var(--line); color: var(--text); font: 13px var(--font-ui); cursor: pointer; }
+.wc-buy:hover:not(:disabled) { border-color: var(--gold); background: rgba(224, 180, 90, 0.08); }
+.wc-buy:disabled { opacity: 0.45; cursor: default; }
+.wc-buy-top { display: flex; justify-content: space-between; gap: 8px; }
+.wc-buy-top b { font-size: 14px; }
+.wc-buy-top span { color: var(--gold); font-weight: 700; }
+.wc-buy-what { color: var(--text); opacity: 0.85; line-height: 1.35; }
+.wc-buy-where { color: var(--muted); font-size: 12px; }
+
+/* the Campaign tab's backdrop (ui/WarRoom.js WarRoomPanel.backdrop): the world map, still, faded toward the menu */
+.wc-backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.55; }
+.wc-backdrop .wm { cursor: default; }
+.wc-backdrop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--table) 0%, var(--table) 22%, rgba(21, 25, 18, 0.55) 48%, rgba(21, 25, 18, 0.1) 75%); }
+.wc-bd-pin { stroke: #0c0f0a; stroke-width: 1.2; }
+.wc-bd-pin.nato { fill: #2a5bd0; } .wc-bd-pin.pact { fill: #d0302a; }
+@media (max-width: 900px) { .wc-backdrop { display: none; } } /* (a phone: no map behind the Campaign tab) */
+
+/* the ground each side holds (ui/WorldMap.js territory): flat colour inside its theatre's area; the area's edge in ink; neutral ground hatched */
+.wm-wash.nato { fill: rgba(42, 91, 208, 0.13); } .wm-wash.pact { fill: rgba(208, 48, 42, 0.13); }
+.wm-area { fill: none; stroke: rgba(61, 47, 30, 0.55); stroke-width: 1.1; stroke-dasharray: 7 3 1.5 3; vector-effect: non-scaling-stroke; }
+.wm-neutral { fill: url(#wm-neutral); }
+
+/* the map's place symbols and the place strip (ui/WarRoom.js) */
+.wc-ico { font: 12px 'Segoe UI Symbol', 'DejaVu Sans', sans-serif; font-variant-emoji: text; fill: #3d2f1e; paint-order: stroke; stroke: rgba(233, 219, 180, 0.9); stroke-width: 3px; pointer-events: none; }
+.wc-ico.base { font-size: 15px; } .wc-ico.base.nato { fill: #2a5bd0; } .wc-ico.base.pact { fill: #b3261e; }
+.wc-legend .sym::before { display: none; }
+.wc-strip { width: 100%; border: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: rgba(207, 201, 173, 0.04); }
+.wc-strip-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.wc-strip-top span { color: var(--muted); font-size: 12.5px; }
+.wc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.wc-chip { background: none; border: 1px solid var(--line); color: var(--muted); font: 12.5px var(--font-ui); padding: 3px 8px; cursor: pointer; }
+.wc-chip.on { color: var(--text); border-color: var(--gold); background: rgba(224, 180, 90, 0.12); }
+.wc-build { align-self: flex-start; padding: 4px 10px; }
+
+/* the theatre card's objectives and reserves, explained (ui/WarRoom.js) */
+.wc-obj-head { color: var(--gold); font-size: 12px; margin-top: 4px; }
+.wc-obj b { color: var(--text); font-weight: 600; }
+.wc-prio-box { display: flex; flex-direction: column; gap: 4px; margin: -4px 0 8px; width: 100%; }
+.wc-prio-label { font-size: 12px; color: var(--gold); letter-spacing: 0.04em; }
+.wc-prio-what { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.wc-prio-what b { color: var(--text); }
+/* the way back from a front (ui/WarRoom.js) */
+.wc-back { background: none; border: 0; color: var(--gold); font: 13px var(--font-ui); padding: 0; cursor: pointer; }
+.wc-back:hover { text-decoration: underline; }
+
+/* 1985's nuclear shadow in the war room's top bar (ui/WarRoom.js, engine escalate()) */
+.wc-esc i { background: rgba(224, 180, 90, 0.35); }
+.wc-esc.hot i { background: rgba(214, 60, 40, 0.55); }
+
+/* ---- 1985: the acetate overlay (ui/WorldMap.js style 'acetate'): a printed map — pale land, blue sea and grid, purple
+   borders, bold sans names — under a plastic sheet marked in blue and red marker, labels in a hand (Architects Daughter) */
+.wm-acetate .wm-sea { fill: #b9d3e2; }
+.wm-acetate .wm-land { fill: #eeead6; }
+.wm-acetate .wm-grat { stroke: rgba(59, 106, 160, 0.38); stroke-width: 0.6; }
+.wm-acetate .wm-coast { stroke: #2b5f86; stroke-width: 1; }
+.wm-acetate .wm-border { stroke: rgba(138, 58, 154, 0.55); stroke-width: 1.4; stroke-dasharray: 8 3 2 3; }
+.wm-acetate .wm-area { stroke: rgba(21, 21, 21, 0.6); stroke-dasharray: 14 6; }
+.wm-acetate .wm-wash.nato { fill: rgba(31, 79, 224, 0.2); } .wm-acetate .wm-wash.pact { fill: rgba(224, 38, 31, 0.15); }
+.wm-acetate .wm-neutral { fill: url(#wm-neutral); opacity: 0.6; }
+.wm-acetate .wm-pen { stroke-width: 4; opacity: 0.9; }
+.wm-acetate .wm-pen.nato { stroke: #1f4fe0; } .wm-acetate .wm-pen.pact { stroke: #e0261f; }
+.wm-acetate .wc-theatre { fill: rgba(21, 21, 21, 0.32); font: 30px 'Architects Daughter', cursive; letter-spacing: 0.06em; text-transform: none; }
+.wm-acetate .wc-node .name { fill: #2a2a2a; font: 700 11px 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.02em; text-transform: uppercase; stroke: rgba(238, 234, 214, 0.9); }
+.wm-acetate .wc-node .name.sea { fill: #2b5f86; font: italic 12px Arial, sans-serif; letter-spacing: 0.08em; stroke: rgba(185, 211, 226, 0.9); }
+.wm-acetate .wc-node.reach .name { fill: #e0261f; }
+.wm-acetate .wc-pin .town { fill: #d23a2a; opacity: 0.8; }
+.wm-acetate .wc-pin .head { stroke: #151515; stroke-width: 0.6; }
+.wm-acetate .wc-pin.nato .head { fill: #1f4fe0; } .wm-acetate .wc-pin.pact .head { fill: #e0261f; }
+.wm-acetate .wc-pin.cluster .disc { fill: rgba(255, 255, 255, 0.75); filter: none; }
+.wm-acetate .wc-pin .count, .wm-acetate .wc-badge text { font: 13px 'Architects Daughter', cursive; fill: #151515; }
+.wm-acetate .wc-badge rect { fill: rgba(255, 255, 255, 0.85); stroke: #151515; }
+.wm-acetate .wc-pile .face, .wm-acetate .wc-counter .face { fill: rgba(255, 255, 255, 0.55); stroke-width: 2.2; filter: url(#wm-marker); }
+.wm-acetate .wc-pile .face.nato, .wm-acetate .wc-counter.nato .face { fill: rgba(255, 255, 255, 0.55); stroke: #1f4fe0; }
+.wm-acetate .wc-pile .face.pact, .wm-acetate .wc-counter.pact .face { fill: rgba(255, 255, 255, 0.55); stroke: #e0261f; }
+.wm-acetate .wc-counter.nato .sym, .wm-acetate .wc-counter.nato .frame, .wm-acetate .wc-counter.nato .str { stroke: #1f4fe0; } .wm-acetate .wc-counter.nato .str { fill: #1f4fe0; }
+.wm-acetate .wc-counter.pact .sym, .wm-acetate .wc-counter.pact .frame, .wm-acetate .wc-counter.pact .str { stroke: #e0261f; } .wm-acetate .wc-counter.pact .str { fill: #e0261f; }
+.wm-acetate .wc-counter.ordered .face { stroke-dasharray: 6 3; }
+.wm-acetate .wc-counter.sel .face { stroke: #151515; stroke-width: 3; }
+.wm-acetate .wc-order { stroke: #1f4fe0; stroke-width: 4; } .wm-acetate .wc-order.attack { stroke: #e0261f; }
+.wm-acetate .wc-road { stroke: rgba(120, 90, 40, 0.5); }
+.wm-acetate .wc-lane, .wm-acetate .wc-coast { stroke: #2b5f86; }
+.wm-acetate ~ .wc-legend, .wc-map:has(.wm-acetate) .wc-legend { background: rgba(255, 255, 255, 0.88); color: #2a2a2a; font-family: 'Architects Daughter', cursive; }
+
+/* ---- 1918: the trench map (ui/WorldMap.js style 'trench', tools/mapstyles.html): a squared sheet on pale paper, lettered
+   squares, the front as blue and red trench lines with the wire between, towns as squares, every force a glass-head pin
+   with a paper flag (ui/WarRoom.js flagPin); the sheet's title typed in the corner */
+.wc-map:has(.wm-trench) { background: #d9d4c4; }
+.wm-trench .wm-sea { fill: #dfe6e3; }
+.wm-trench .wm-land { fill: #f2efe4; }
+.wm-trench .wm-coast { stroke: #1d1d1a; stroke-width: 1; }
+.wm-trench .wm-border { stroke: rgba(29, 29, 26, 0.6); stroke-width: 1; stroke-dasharray: 1 3 6 3; }
+.wm-trench .wm-area { stroke: rgba(29, 29, 26, 0.55); stroke-dasharray: 10 4; }
+.wm-trench .wm-wash.nato { fill: rgba(36, 87, 168, 0.07); } .wm-trench .wm-wash.pact { fill: rgba(192, 40, 30, 0.07); }
+.wm-trench .wm-neutral { opacity: 0.5; }
+.wm-sheet { fill: none; stroke: #1d1d1a; vector-effect: non-scaling-stroke; }
+.wm-sheet.minor { stroke-width: 0.4; opacity: 0.16; } .wm-sheet.major { stroke-width: 0.8; opacity: 0.4; }
+.wm-squares text { fill: #1d1d1a; opacity: 0.07; font: 700 10px Georgia, 'Times New Roman', serif; }
+.wm-trench .wm-pen { fill: none; stroke-width: 2.2; opacity: 1; stroke-linejoin: miter; stroke-linecap: butt; }
+.wm-trench .wm-pen.second { stroke-width: 1.2; opacity: 0.75; }
+.wm-trench .wm-pen.nato { stroke: #2457a8; } .wm-trench .wm-pen.pact { stroke: #c0281e; }
+.wm-wire { fill: url(#wm-wire); opacity: 0.75; stroke: none; }
+.wm-trench .wc-theatre { fill: rgba(29, 29, 26, 0.28); font: 700 18px Georgia, 'Times New Roman', serif; letter-spacing: 0.16em; }
+.wm-trench .wc-node .name { fill: #1d1d1a; font: 12px Georgia, 'Times New Roman', serif; letter-spacing: 0.08em; stroke: rgba(242, 239, 228, 0.92); }
+.wm-trench .wc-node .name.sea { fill: #3a6fb0; font: italic 12px Georgia, serif; letter-spacing: 0.12em; stroke: rgba(223, 230, 227, 0.9); }
+.wm-trench .wc-node.reach .name { fill: #c0281e; }
+.wc-town .town { fill: #1d1d1a; stroke: #1d1d1a; stroke-width: 0.8; }
+.wc-town.nato .town { fill: #2457a8; } .wc-town.pact .town { fill: #c0281e; } .wc-town.contested .town { fill: #c79a2a; }
+.wc-town.depot .town { stroke-width: 1.4; }
+.wc-town.cut .town { stroke-dasharray: 2 1.5; stroke: #c79a2a; stroke-width: 1.6; }
+.wc-town .fort { fill: none; stroke: #1d1d1a; stroke-width: 1.1; stroke-dasharray: 3 2; }
+.wc-flagpin .paper { fill: #fbf8ee; stroke: #6b665a; stroke-width: 0.5; }
+.wc-flagpin .paper.under { fill: #efeadb; }
+.wc-flagpin .stripe { fill: #2457a8; } .wc-flagpin.pact .stripe { fill: #c0281e; }
+.wc-flagpin .tag { fill: #1d1d1a; font: 11px 'Special Elite', monospace; pointer-events: none; }
+.wc-flagpin .str { stroke: #2457a8; stroke-width: 1.1; } .wc-flagpin.pact .str { stroke: #c0281e; }
+.wc-flagpin .needle { stroke: #8d8d88; stroke-width: 1.4; } .wc-flagpin .shine { stroke: #e8e8e2; stroke-width: 0.4; }
+.wc-flagpin .head { stroke: rgba(0, 0, 0, 0.35); stroke-width: 0.5; }
+.wc-flagpin .pshadow { stroke: rgba(0, 0, 0, 0.2); stroke-width: 1.6; fill: rgba(0, 0, 0, 0.12); filter: blur(1.2px); }
+.wc-flagpin .count { fill: #1d1d1a; font: 700 11px 'Special Elite', monospace; paint-order: stroke; stroke: rgba(242, 239, 228, 0.9); stroke-width: 3px; }
+.wc-flagpin.sel .paper:not(.under) { stroke: #c0281e; stroke-width: 1.8; }
+.wc-flagpin.ordered .paper:not(.under) { stroke: #2457a8; stroke-width: 1.4; stroke-dasharray: 4 2; }
+.wm-trench .wc-order { stroke: #2457a8; stroke-width: 2.6; } .wm-trench .wc-order.attack { stroke: #c0281e; }
+.wm-trench .wc-road { stroke: rgba(29, 29, 26, 0.38); stroke-width: 1; stroke-dasharray: 5 2; }
+.wm-trench .wc-lane, .wm-trench .wc-coast { stroke: #3a6fb0; }
+.wc-sheet rect { fill: #f2efe4; stroke: #1d1d1a; }
+.wc-sheet text { fill: #1d1d1a; font: 12px 'Special Elite', monospace; }
+.wc-sheet text.t { font: 700 14px Georgia, serif; letter-spacing: 0.04em; } .wc-sheet text.r { fill: #c0281e; }
+.wc-map:has(.wm-trench) .wc-legend { background: rgba(242, 239, 228, 0.92); color: #1d1d1a; font-family: Georgia, serif; }
+
+/* ---- 1806: the engraved campaign map (ui/WorldMap.js style 'engraved', tools/mapstyles.html 1806): a hand-coloured
+   copperplate on cream paper — sepia ink, water lines along the coasts, the front as a soft wash of each side's colour with a
+   dotted limit, towns as engraved circles, forces as wooden blocks (ui/WarRoom.js woodBlock), dotted march routes, the
+   cartouche and compass rose; period lettering (IM Fell English, bundled) */
+.wc-map:has(.wm-engraved) { background: #3a2c1c; }
+.wm-engraved { --ink: #3b2e1f; --fell: 'IM Fell English', 'Iowan Old Style', Georgia, 'Times New Roman', serif; --fellsc: 'IM Fell English SC', 'IM Fell English', Georgia, serif; }
+.wm-engraved .wm-sea { fill: #e3dcc0; }
+.wm-engraved .wm-land { fill: #eee2c3; }
+.wm-engraved .wm-grat { stroke: rgba(59, 46, 31, 0.16); stroke-width: 0.5; }
+.wm-engraved .wm-coast { stroke: var(--ink); stroke-width: 1.2; }
+.wm-ripples use { fill: none; stroke-linejoin: bevel; }
+.wm-ripples .ink { stroke: #9c937c; } .wm-ripples .sea { stroke: #e3dcc0; }
+.wm-engraved .wm-border { stroke: rgba(59, 46, 31, 0.4); stroke-width: 0.8; stroke-dasharray: 1 2.5; }
+.wm-engraved .wm-area { stroke: rgba(59, 46, 31, 0.5); stroke-width: 0.9; stroke-dasharray: 6 2 1 2; }
+.wm-engraved .wm-wash.nato { fill: rgba(79, 111, 174, 0.12); } .wm-engraved .wm-wash.pact { fill: rgba(181, 82, 63, 0.11); }
+.wm-engraved .wm-neutral { opacity: 0.55; }
+.wm-tint { fill: none; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; opacity: 0.42; }
+.wm-tint.nato { stroke: #4f6fae; } .wm-tint.pact { stroke: #b5523f; }
+.wm-limit { fill: none; stroke: var(--ink); stroke-width: 1.1; stroke-dasharray: 0.1 3.4; stroke-linecap: round; opacity: 0.7; }
+.wm-engraved .wc-theatre { fill: rgba(59, 46, 31, 0.42); font: 23px var(--fellsc); letter-spacing: 0.16em; text-transform: none; }
+.wm-engraved .wc-node .name { fill: var(--ink); font: italic 14px var(--fell); stroke: rgba(238, 226, 195, 0.92); stroke-width: 3px; }
+.wm-engraved .wc-node .name.sea { fill: #4e6170; font: 13px var(--fellsc); letter-spacing: 0.2em; text-transform: none; stroke: rgba(227, 220, 192, 0.9); }
+.wm-engraved .wc-node.reach .name { fill: #9c3f2c; }
+.wm-engraved .wc-node .anchor { fill: #4e6170; }
+.wm-engraved .wc-ico { fill: var(--ink); stroke: rgba(238, 226, 195, 0.9); }
+.wc-etown .ring { fill: none; stroke: var(--ink); stroke-width: 1; }
+.wc-etown .dot { fill: var(--ink); }
+.wc-etown .tint { fill: rgba(59, 46, 31, 0.12); }
+.wc-etown.nato .tint { fill: rgba(79, 111, 174, 0.42); } .wc-etown.pact .tint { fill: rgba(181, 82, 63, 0.42); } .wc-etown.contested .tint { fill: rgba(199, 154, 42, 0.55); }
+.wc-etown.depot .ring { stroke-width: 1.2; }
+.wc-etown.cut .ring { stroke: #b07a12; stroke-width: 1.6; stroke-dasharray: 2 1.5; }
+.wc-etown .fort { fill: rgba(239, 227, 196, 0.6); stroke: var(--ink); stroke-width: 0.8; stroke-dasharray: none; }
+.wm-engraved .wc-pin.cluster .disc { fill: #efe3c4; filter: none; stroke: var(--ink); stroke-width: 0.8; }
+.wm-engraved .wc-pin.cluster.nato .edge { stroke: #4f6fae; } .wm-engraved .wc-pin.cluster.pact .edge { stroke: #b5523f; } .wm-engraved .wc-pin.cluster.sea .edge { stroke: #4e6170; }
+.wm-engraved .wc-pin .count { fill: var(--ink); font: 14px var(--fell); }
+.wc-block .bshadow { fill: rgba(42, 26, 8, 0.28); }
+.wc-block .side { fill: url(#wm-blockside); stroke: #4a2f14; stroke-width: 0.5; }
+.wc-block .top { fill: #3f5f9e; } .wc-block.pact .top { fill: #9c3f2c; }
+.wc-block .under .top { stroke: #2a1a08; stroke-width: 0.6; }
+.wc-block .grain { fill: none; stroke: rgba(26, 15, 4, 0.22); stroke-width: 0.5; }
+.wc-block .hl { stroke: rgba(255, 255, 255, 0.35); stroke-width: 0.8; }
+.wc-block .edge { fill: none; stroke: #2a1a08; stroke-width: 0.7; }
+.wc-block .frame { fill: none; stroke: #f3ead2; stroke-width: 1.1; }
+.wc-block .sym { fill: none; stroke: #f3ead2; stroke-width: 1.7; }
+.wc-block .str { stroke: rgba(243, 234, 210, 0.75); stroke-width: 1; }
+.wc-block .cnt { fill: var(--ink); font: 13px var(--fell); paint-order: stroke; stroke: rgba(238, 226, 195, 0.92); stroke-width: 3px; }
+.wc-block .bname { fill: var(--ink); font: italic 13px var(--fell); paint-order: stroke; stroke: rgba(238, 226, 195, 0.9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.wc-block.ordered .edge { stroke: #f3ead2; stroke-width: 1.1; stroke-dasharray: 3 2; }
+.wc-block.sel .edge { stroke: #d9a227; stroke-width: 2.4; stroke-dasharray: none; }
+.wm-engraved .wc-order { stroke: #3f5f9e; stroke-width: 3.2; stroke-dasharray: 0.1 6.5; opacity: 0.95; }
+.wm-engraved .wc-order.attack { stroke: #9c3f2c; }
+.wm-engraved .wc-order.landing { stroke-dasharray: 7 4 0.1 4; }
+.wm-engraved .wc-road { stroke: rgba(59, 46, 31, 0.4); stroke-width: 0.9; }
+.wm-engraved .wc-lane, .wm-engraved .wc-coast { stroke: #4e6170; }
+.wm-engraved .wc-star { stroke: rgba(238, 226, 195, 0.95); }
+.wm-engraved .wc-mission text { font-family: var(--fell); font-style: italic; }
+.wc-plate .neat { fill: none; stroke: var(--ink); stroke-width: 2.5; } .wc-plate .neat.fine { stroke-width: 0.8; }
+.wc-plate .cart { fill: #efe3c4; stroke: var(--ink); stroke-width: 1.4; }
+.wc-plate text { fill: var(--ink); font: 12px var(--fell); }
+.wc-plate text.sc { font: 20px var(--fellsc); } .wc-plate text.it { font: italic 16px var(--fell); }
+.wc-plate .rose .o { fill: none; stroke: var(--ink); stroke-width: 0.8; } .wc-plate .rose .o.fine { stroke-width: 0.5; }
+.wc-plate .rose .pt { fill: #efe3c4; stroke: var(--ink); stroke-width: 0.6; } .wc-plate .rose .ink { fill: var(--ink); }
+.wc-plate .rose text { font-size: 15px; }
+.wc-map:has(.wm-engraved) .wc-legend { background: rgba(239, 227, 196, 0.92); color: #3b2e1f; font-family: 'IM Fell English', Georgia, serif; font-size: 14px; }
+/* the war-weariness of each nation (wars with powers[].weary: 1918) and the sea trade's cut, in the top bar */
+.wc-weary { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11.5px; color: var(--muted); max-width: 300px; }
+.wc-weary i { font-style: normal; white-space: nowrap; }
+.wc-weary i.nato { color: var(--ally); } .wc-weary i.pact { color: var(--enemy); }
+.wc-weary i.hot { color: var(--gold); font-weight: 700; } .wc-weary i.out { opacity: 0.5; text-decoration: line-through; }
+.wc-trade { color: var(--gold); }
+/* a phone: the top bar in short rows — the date and the buttons; morale, escalation and weariness in one row that scrolls
+   sideways; production and the trade cut on one line — and the fronts' tabs in one scrolling row: the map gets the room */
+@media (max-width: 760px) {
+  .wc-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 6px 12px; }
+  .wc-date b { font-size: 17px; }
+  .wc-date small { font-size: 10.5px; }
+  .wc-actions { grid-column: 2; grid-row: 1; width: auto; gap: 6px; }
+  .wc-actions .mp-btn { padding: 7px 9px; font-size: 11.5px; letter-spacing: 0.05em; }
+  .wc-actions .deploy { padding: 8px 12px; font-size: 13px; letter-spacing: 0.12em; }
+  .wc-close { width: 32px; height: 32px; font-size: 18px; }
+  .wc-morales, .wc-pool { grid-column: 1 / -1; }
+  .wc-morales, .wc-pool, .wc-tabs { overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .wc-morales { flex-direction: row; align-items: center; gap: 6px; }
+  .wc-morale, .wc-weary { flex: none; }
+  .wc-weary { flex-wrap: nowrap; max-width: none; }
+  .wc-pool { display: flex; align-items: baseline; gap: 8px; }
+  .wc-pool b { display: inline; font-size: 15px; }
+  .wc-pool small + small { display: inline; }
+  .wc-tabs { flex-wrap: nowrap; max-width: calc(100% - 24px); }
+  .wc-tabs button { flex: none; padding: 6px 12px; font-size: 12.5px; }
+}

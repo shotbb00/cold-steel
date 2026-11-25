@@ -79,8 +79,10 @@ export default {
     const hold = map.landing?.hold ?? map.points.filter((p) => p.owner !== att);
     deploy(game, def, map.landing?.defence ?? DEFENCE_FORCE, hold, { back: 6, spread: 16, names: map.landing?.names ?? {} });
     // the Atlantic Wall: the map's resistance nests and batteries, its wire, mines and tank traps
+    const fortNo = {}, fortNames = map.landing?.names ?? {}; // (a map's own names for its forts: Gela's Italian strongpoints)
     for (const f of map.landing?.forts ?? []) {
-      const s = game.spawnStack(f.unit, def, f, f.facing ?? 0);
+      const own = f.name ?? (fortNames[f.unit] ? `${fortNames[f.unit]} ${(fortNo[f.unit] = (fortNo[f.unit] ?? 0) + 1)}` : undefined);
+      const s = game.spawnStack(f.unit, def, f, f.facing ?? 0, own);
       if (s.stats.antiShip) s.autonomous = true; // (a missile battery: its own hides — systems/Landing.js batteries)
     }
     for (const w of map.landing?.works ?? []) {
@@ -90,12 +92,10 @@ export default {
     state.strength[def] = fieldStrength(game, def);
     state.maxStrength = Math.max(state.strength[def], economy(map).reserves) * 1.2;
     game.systems.push(points);
-    const ai = enemyOf(game.playerFaction);
-    if (!game.net || game.coop) {
-      game.systems.push(new LandingDirector(game, ai, state, ai === def
-        ? { attack: false, expand: false }
-        : { expand: false, firstAssault: 30, targetable: (p) => !p.locked })); // (ai/LandingDirector.js: the landing's AI, or the defence's)
-    }
+    const make = (ai) => new LandingDirector(game, ai, state, ai === def
+      ? { attack: false, expand: false }
+      : { expand: false, firstAssault: 30, targetable: (p) => !p.locked }); // (ai/LandingDirector.js: the landing's AI, or the defence's)
+    if (!game.net || game.coop) game.systems.push(make(enemyOf(game.playerFaction)));
     game.frontlineHud = new FrontlineHUD(game, state);
     game.bus.on('ui:reinforce', (typeId) => game.orders.issue({ t: 'buy', u: typeId }));
     game.bus.emit('toast', game.playerFaction === att
@@ -158,6 +158,7 @@ export default {
     c.units.forEach((id, i) => {
       const x = roads[i % roads.length] + (Math.random() - 0.5) * 20;
       const s = game.spawnStack(id, def, { x, z: base.z }, base.z > 0 ? Math.PI : 0);
+      if (!s) return; // (nothing of the kind in this army: GameEngine.spawnStack)
       const goal = goals.reduce((a, p) => (Math.abs(p.x - x) < Math.abs(a.x - x) ? p : a), goals[0]);
       if (goal) s.ai.moveTo({ x: goal.x, z: goal.z }, { ordered: false });
     });

@@ -15,6 +15,7 @@ import { Caves } from '../systems/Caves.js';
 import { setClimate } from '../render/paint.js';
 import { setWind } from '../world/Wind.js';
 import { Deployment } from '../systems/Deployment.js';
+import { watchBattle } from '../wcampaign/battle.js';
 import { Powers1806 } from '../systems/Powers1806.js';
 import { Barrage } from '../systems/Barrage.js';
 import { Doctrine } from '../systems/Doctrine.js';
@@ -48,7 +49,7 @@ import { PLAYER_FACTION, FACTIONS, enemyOf, armiesFrom } from '../data/factions.
 import { EPOCHS, epoch } from '../data/epoch.js';
 import { Drones } from '../systems/Drones.js';
 import { Airfields } from '../systems/Airfields.js';
-import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
+import { getUnitType, UNIT_TYPES, standInFor, fieldsUnits, campaignArmy } from '../data/units/index.js';
 import { warmRig } from '../render/RigRenderer.js';
 import { BlobShadows } from '../render/BlobShadows.js';
 import { VehicleDust } from '../render/VehicleDust.js';
@@ -133,7 +134,7 @@ export class GameEngine {
    */
   constructor(container, { map, mode, playerFaction = PLAYER_FACTION, net = null, conditions = null, coop = false, campaign = null, rules = null, armies = null }) {
     this.map = map;
-    setWind(map.wind ?? null); // (a map's own wind: the sea's for the sails — world/Wind.js)
+    setWind(map.wind ?? (epoch() === '1806' && map.theatre === 'sea' ? { from: 250, speed: 7, veer: 0.3 } : null)); // (a map's own wind: the sea's for the sails — world/Wind.js; 1806 at sea on a map with none, openSea: a fresh westerly, or the sails would barely move)
     setClimate(map.climate); // winter whitewash, desert sand paint (render/paint.js)
     const sides = { ...EPOCHS[epoch()]?.sides, ...map.sides }; // (a map may name its own sides: the Pacific's United States and Japan)
     if (sides.nato) FACTIONS.nato.name = sides.nato;
@@ -145,11 +146,12 @@ export class GameEngine {
     this.view = { w: container.clientWidth || innerWidth, h: container.clientHeight || innerHeight };
     this.playerFaction = playerFaction;
     this.coop = !!(net && coop);
-    this.campaign = campaign; // a campaign battle (campaign/Campaign.js battleChoice)
+    this.campaign = campaign; // a world-campaign battle (wcampaign/battle.js battleChoice)
     this.rules = rulesFrom(campaign ? null : rules); // battle rules (data/rules.js; multiplayer: the host's)
     this.armies = armiesFrom(armies, map); // which army each side fields (data/factions.js ARMIES; the Pacific's on its maps only)
     const only = armiesOn(map); // (a map fought by particular armies only, in this war: Omaha, Stalingrad, the Hesse maps in 1945 — maps/index.js)
-    for (const f of ['nato', 'pact']) if (only?.[f] && (map.theatre === 'sea' || !only[f].includes(this.armies[f]))) this.armies[f] = only[f][0]; // (at sea: the map's navy, the first it names — as the menu's side card)
+    for (const f of ['nato', 'pact']) if (only?.[f] && (map.theatre === 'sea' || !only[f].includes(this.armies[f]) || !fieldsUnits(this.armies[f]))) this.armies[f] = only[f].find(fieldsUnits) ?? only[f][0]; // (at sea: the map's navy, the first it names — as the menu's side card)
+    if (campaign) for (const f of ['nato', 'pact']) if (campaignArmy(armies?.[f], map)) this.armies[f] = armies[f]; // (a world-campaign battle: the army that is there fights, any map — data/units/index.js campaignArmy)
     this.myOwner = !net ? null : net.role === 'host' ? 'host' : 'guest'; // co-op: whose stacks are mine
     this.currentOwner = null;  // while an order runs: who gave it (new stacks are theirs)
     this.bus = new EventBus();
@@ -202,6 +204,7 @@ export class GameEngine {
     this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
     this.world.soft = map.soft ?? null;   // (soft ground: Bobruisk's bog, Iwo Jima's ash — routes go round it: world/Nav.js)
     this.world.armies = this.armies;
+    this.world.mapArmies = only; // (the armies the map names: its ships' names are theirs — entities/UnitStack.js shipName)
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
     this.cover.onRemove = (c) => this.world.nav.removeCollider(c); // (a tree that came down)
@@ -296,10 +299,11 @@ export class GameEngine {
     this.caves = new Caves(this); // a map's cave mouths and the tunnels between them (Iwo Jima)
     this.systems.push(this.caves);
     mode.setup(this);
+    if (campaign?.wc) this.worldCampaign(campaign); // (a battle of the world campaign: its sides' weight, the AI on both, the result back)
     if (!this.net?.isClient) this.airfields.spawn(); // (the host's: a guest gets the stacks)
     if (!this.net?.isClient) this.construction.predig(); // the Bundeswehr's Sperrverband (data/doctrine.js)
     this.deployment = new Deployment(this); // the clock stopped while you place your stacks — campaign battles only, alone or in co-op
-    this.deploys = (!!campaign || !!mode.deploys) && mode.id !== 'bootcamp'; // (a pitched battle opens in it too: modes/pitched.js)
+    this.deploys = ((!!campaign && !(campaign.wc && !campaign.forces)) || !!mode.deploys) && mode.id !== 'bootcamp'; // (the world campaign: only a fought land battle opens in it) // (a pitched battle opens in it too: modes/pitched.js)
     if (this.deploys && !this.net?.isClient) this.deployment.begin(); // (a co-op guest begins once the host's battle is in: NetClient.init)
     if (this.rules.air === false) for (const f of Object.keys(FACTIONS)) this.air.limit[f] = 0; // battle rules: no air support
     for (const [f, n] of Object.entries(map.airLimit ?? {})) this.air.limit[f] = n; // (a map's own: no Japanese aircraft over Iwo Jima)
@@ -359,9 +363,15 @@ export class GameEngine {
     } else begin();
   }
 
-  /** Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. */
+  /**
+   * Create a stack of `unitId` for `faction` at {x, z}. Used by game modes. Every army fields only its own units: a type it lacks
+   * comes as its stand-in (data/units/index.js standInFor), and one it has nothing for not at all — null.
+   */
   spawnStack(unitId, faction, position, facing = 0, name, { count, id = null } = {}) {
-    const stack = this.spawnStackRaw(unitId, faction, position, facing, name, { count, id });
+    const typeId = standInFor(unitId, this.armyOf(faction));
+    if (!typeId) return null;
+    if (count && typeId !== unitId) count = Math.max(1, Math.round(count * (getUnitType(typeId).formation?.count ?? 1) / (getUnitType(unitId).formation?.count ?? 1))); // (the same share of its men: a campaign battalion's losses)
+    const stack = this.spawnStackRaw(typeId, faction, position, facing, name, { count, id });
     if (doctrineCovers(stack.army, 'veteran', stack.type, stack.stats) && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // (data/doctrine.js veteran: the ROK's conscripts)
     if (stack.type.id === 'heavyTank' && armyDoctrine(stack.army, 'cats') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // the Wehrmacht's Big cats: Veteran crews
     if (stack.type.id === 'tank' && stack.stats.cavalry && armyDoctrine(stack.army, 'gardeDuCorps') && stack.xp < RANKS[1].xp) stack.setXp(RANKS[1].xp); // Saxony's Garde du Corps: Veteran
@@ -463,7 +473,7 @@ export class GameEngine {
   }
 
   /**
-   * The campaign's memory of a sector (campaign/Campaign.js scars): what this battle leaves behind —
+   * A campaign's memory of a battlefield (its scars): what this battle leaves behind —
    * its craters (with the ones from before), the defences still standing, the collapsed houses,
    * the blown bridges and the ones laid.
    */
@@ -760,6 +770,23 @@ export class GameEngine {
     }
     const where = String(e?.stack ?? '').split('\n').slice(1, 5).join('\n');
     el.textContent = `Error (game keeps running): ${e?.message ?? e}\n${where}`;
+  }
+
+  /**
+   * A world-campaign battle (wcampaign/battle.js): at sea and on a beach each side's command points (and a frontline's
+   * strength) by its campaign power;
+   * and what the battle cost each side stored for the war room.
+   */
+  worldCampaign(camp) {
+    const st = this.modeState;
+    for (const [f, k] of Object.entries(camp.scale ?? {})) {
+      if (st?.cp?.[f] != null) st.cp[f] *= k;
+      if (st?.strength?.[f] != null) st.strength[f] *= k;
+      if (st?.income?.[f] != null) st.income[f] *= k;
+    }
+    if (st?.strength && camp.scale) st.maxStrength = Math.max(st.strength.nato ?? 0, st.strength.pact ?? 0, st.maxStrength ?? 0);
+    watchBattle(this);
+    for (const [f, n] of Object.entries(camp.air ?? {})) this.air.limit[f] = n; // (the campaign's aircraft over the battle: so many calls, none without)
   }
 
   /** Advance the simulation by dt seconds. Callable on its own for headless tests or replays. */

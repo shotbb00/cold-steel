@@ -6,7 +6,8 @@
 // Its vehicles not in models/brit45.js are in models/brit14.js.
 import { buildWw2Soldier } from '../models/ww2Soldier.js';
 import { buildBrGrant, buildBrCarrier } from '../models/brit45.js';
-import { buildBrStuart, buildBrJeepCP, buildBrJeepAmb, buildBrPack37, buildBr25pdrJG, buildBrRecoveryJG, buildBrRadarJG, buildBr37AAJG, buildBrBaileyJG } from '../models/brit14.js';
+import { buildBrStuart, buildBrJeepCP, buildBrJeepAmb, buildBrPack37, buildBr25pdrJG, buildBrRecoveryJG, buildBrRadarJG, buildBr37AAJG, buildBrBaileyJG,
+  buildBrHumberJG, buildBr6pdrJG, buildBrBoforsJG, buildBrBoforsLorryJG, buildBrCarrierBangaloreJG } from '../models/brit14.js';
 
 const man = (o = {}) => () => buildWw2Soldier({ army: 'brit14', ...o });
 
@@ -52,7 +53,7 @@ export default function brit14(T) {
     variant: { name: '25-pounder', weapon: 'Ordnance QF 25-pdr', text: 'The field gun of every British army, on its round platform that swings all the way round: at the Admin Box the gunners fired over open sights.' } });
   set(T.spMortar, { model: buildBrPack37, stats: { towed: { deploy: 10 }, damage: 200, splash: 6, range: 260, armor: 0.05, hp: 380 }, cost: 0.85,
     variant: { name: '3.7-inch Mountain Howitzer', weapon: 'QF 3.7-inch howitzer', text: 'The Indian Mountain Artillery’s pack gun: taken apart onto mules, carried up where no lorry goes, and put together to fire down onto the next ridge.' } });
-  set(T.towedAA, { variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun: against the Oscars over the Imphal plain — and lowered, against bunkers across the valley.' } });
+  set(T.towedAA, { model: buildBrBoforsJG, variant: { name: 'Bofors 40 mm', weapon: '40 mm Bofors', text: 'The light AA gun: against the Oscars over the Imphal plain — and lowered, against bunkers across the valley.' } });
 
   // ---- support
   set(T.ambulance, { model: buildBrJeepAmb, variant: { name: 'Jeep Ambulance', weapon: 'unarmed', text: 'A jeep with stretchers across its back: the only thing that got the wounded down the jungle tracks. Patches up the wounded nearby.' } });
@@ -65,8 +66,21 @@ export default function brit14(T) {
   set(T.manpads, { variant: { name: 'AA Bren Team', weapon: 'Bren gun on its AA tripod', text: 'The Bren on its tall anti-aircraft tripod: a stream of .303 across the Oscars’ strafing run.' } });
   set(T.airRadar, { model: buildBrRadarJG, variant: { name: 'Light Warning Set', weapon: 'unarmed', text: 'The RAF’s portable early-warning radar, its beam turning on a mast in the hills: no Japanese raid reaches the airfields unannounced.' } });
 
-  // (nothing in the other slots: in the hills of 1944 the reconnaissance regiments fought on foot and the armoured cars stayed on the
-  //  plain; no tank destroyers, flail or assault tanks went to Burma — the Lees did the bunker-busting and the sappers lifted mines by
-  //  hand; no rocket launchers, no self-propelled AA, no smoke companies; and no sound ranging in the jungle: guns there were found
-  //  by patrols and the air observation posts)
+  // ---- what the jungle allowed: the armoured car on the plain, the 6-pounder for the tanks, a Bofors that keeps up, the Bangalores
+  // (no tank destroyers went to Burma: the Japanese tanks were met by the 6-pounders of the anti-tank regiments — so the gun here;
+  //  no flails either: the sappers cleared mines and wire by hand and with the Bangalore torpedo — so a carrier that brings them up)
+  set(T.reconVehicle, { model: buildBrHumberJG, stats: { weapon: 'cannon', damage: 130, vsArmor: 0.6, pierce: 0.4, splash: 1, fireCooldown: 2.4, armor: 0.2, hp: 600 }, cost: 0.9,
+    variant: { name: 'Humber Armoured Car Mk IV', weapon: '37 mm M6', text: 'The tall Humber of the Indian cavalry’s armoured car regiments: on the Imphal plain and in the dash down the road to Rangoon in 1945 it ran ahead of the column and found the roadblocks.' } });
+  set(T.tankDestroyer, { model: buildBr6pdrJG,
+    stats: { towed: { deploy: 8 }, armor: 0.05, hp: 380, speed: 5.5, damage: 330, range: 200, preferredRange: 150, fireCooldown: 4, traverse: 0.78, turretRate: 0.8, smoke: undefined, sideGuns: undefined }, cost: 0.6,
+    variant: { name: '6-pounder Anti-Tank Gun', weapon: 'Ordnance QF 6-pdr', text: 'The anti-tank regiments’ gun behind a jeep: unhitched and dug in on the road, it waits for the Ha-Gos and the Chi-Has — round Bishenpur in 1944 they knocked out the Japanese tanks that came up the road. Laid, the crew stack sandbags in front.' } });
+  set(T.aa, { model: buildBrBoforsLorryJG, stats: { nightSight: undefined, armor: 0.05, hp: 400, speed: 6, antiAir: { ...T.aa.stats.antiAir, range: 300, rate: 2.2, burst: 3, pause: 1, hitNear: 0.14, hitFar: 0.04 } }, cost: 0.8,
+    variant: { name: 'Bofors on a Lorry', weapon: '40 mm Bofors', text: 'The light AA regiments’ Bofors fired from the lorry bed: no unhitching, it keeps up with the column on the jungle roads and covers it against the Oscars. Unarmoured.' } });
+  set(T.mineClear, { model: buildBrCarrierBangaloreJG,
+    stats: { minePlough: false, lineCharge: { count: 3, range: 40 }, hp: 420, armor: 0.15, speed: 6.4, range: 110, gunRange: 110, weapon: 'rifle', weaponSound: 'mg', fireCooldown: 0.12, damage: 40,
+      splash: 0, pierce: 0.05, vsArmor: 0.05, boltSpeed: 450, boltSize: 0.6, tracer: 0.35, spread: 0.02, magSize: 30, reloadTime: 3, antiArmor: false, smoke: undefined, sideGuns: undefined, crew: 3 }, cost: 0.6,
+    variant: { name: 'Sappers’ Carrier (Bangalores)', weapon: 'Bangalore torpedoes, Bren gun', text: 'A carrier of the sappers with the Bangalore torpedoes along its sides: the tubes are pushed out through the wire and the mines and blown — a lane up to 40 m. X aims it; three goes.' } });
+
+  // (nothing in the other slots: no flail or assault tanks went to Burma — the Lees did the bunker-busting; no rocket launchers, no
+  //  smoke companies; and no sound ranging in the jungle: guns there were found by patrols and the air observation posts)
 }

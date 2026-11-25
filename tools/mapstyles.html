@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map styles</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Special+Elite&family=Stardos+Stencil:wght@400;700&family=Architects+Daughter&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; background: #151912; color: #e4e6dc; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    header { display: flex; gap: 14px; align-items: center; padding: 10px 16px; flex-wrap: wrap; }
+    header b { letter-spacing: 0.1em; text-transform: uppercase; font-size: 13px; color: #e0b45a; }
+    nav { display: inline-flex; border: 1px solid rgba(190, 200, 170, 0.22); }
+    nav button { background: none; border: 0; border-right: 1px solid rgba(190, 200, 170, 0.22); color: #9a9e8c; padding: 7px 14px; font: 600 15px 'Segoe UI', sans-serif; cursor: pointer; }
+    nav button:last-child { border-right: 0; }
+    nav button.on { color: #e4e6dc; background: rgba(224, 180, 90, 0.16); box-shadow: inset 0 -2px 0 #e0b45a; }
+    #about { color: #9a9e8c; font-size: 14px; flex: 1; min-width: 260px; }
+    #stage { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 0 16px 16px; }
+    svg { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+    @keyframes march { to { stroke-dashoffset: -40; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .march { animation: march 1.2s linear infinite; }
+    .spin { animation: spin 14s linear infinite; transform-box: fill-box; transform-origin: center; }
+  </style>
+</head>
+<body>
+  <header><b>Map styles</b><nav id="tabs"></nav><span id="about"></span></header>
+  <div id="stage"><svg id="map" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice"></svg></div>
+  <script type="module" src="./mapstyles.js"></script>
+</body>
+</html>

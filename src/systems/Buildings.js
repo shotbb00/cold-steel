@@ -161,6 +161,7 @@ export class Buildings {
       if (a.medic) { a.medic = null; a.next = g.time + AID_EVERY; continue; } // lost: the next later
       const { x, z } = this.aidDoor(b);
       a.medic = g.spawnStack('ambulance', a.faction, { x, z }, b.yaw, `${b.name} medics`);
+      if (!a.medic) { a.next = Infinity; continue; } // (an army with no ambulance: no medic jeep)
       a.medic.autonomous = true; // (the station's: it goes to the wounded by itself)
       a.medic.aidOf = b;         // (lost with its driver alive: he walks back for another)
       g.tell(a.faction, `Aid station in the ${b.name}: a medic jeep is ready`);

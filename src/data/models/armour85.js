@@ -2,21 +2,24 @@
 // where the four armies' kit looks unlike anything the US Army, the Bundeswehr, the Soviets or the NVA drive:
 //   Norway   Leopard 1A1NO (the cast turret of the early Leopard, the L7 in its thermal sleeve) · NM116 (the
 //            M24 Chaffee rebuilt by Thune-Eureka: a diesel, the 90 mm D/925, a laser rangefinder) · NM135 (the
-//            M113 with the Hägglunds 20 mm turret)
+//            M113 with the Hägglunds 20 mm turret) · NM142 (the M113 with the armoured twin-TOW turret) · the
+//            Leopard 1A1NO with a mine plough
 //   USMC     M60A1 (the long needle-nose turret, the big M19 cupola) · AAV7A1 (the 26-tonne amphibious tractor,
 //            the .50 cal turret at the right front) · LAV-25 (the 8×8 with the 25 mm turret) · M198 155 mm on its
 //            split trail behind a 5-ton truck · the M151A2 jeep with a TOW · the M718A1 jeep ambulance
 //   Norway   (air defence) the 40 mm Bofors L/70 on its carriage behind a truck
 //   Korea    M48A5K (the turtle-shell M48 turret with the 105 mm and the low cupola) · KIFV (the aluminium
-//            carrier with its armoured .50 cal) · the jeep with the M40 106 mm recoilless rifle
+//            carrier with its armoured .50 cal) · the jeep with the M40 106 mm recoilless rifle · K1 (low, boxy
+//            welded turret, 105 mm) · K136 Kooryong (36 × 130 mm on the KM809) · KM900 (Fiat 6614) · M48 AVLB
 //   KPA      T-55 (plain, as the KPA has them) · Chonma-ho (the North's T-62: longer, the flatter dome, the
 //            115 mm with its fume extractor out along the barrel) · VTT-323 (the M1973 carrier with the
 //            14.5 mm turret) · Koksan M1978 (the 170 mm gun on an open mount at the back of a T-54 hull) · the
-//            S-125's 5P73 launcher (SA-3: four missiles on their beam, towed in)
+//            S-125's 5P73 launcher (SA-3: four missiles on their beam, towed in) · the Sungri-58 ambulance
 // NATO hulls are painted in parts with camo 1: each army's paint (RigRenderer ARMY_CAMO).
 import { P, merge, pair, grime } from '../units/geometry.js';
-import { planProfile, trackedHull, castTurret } from './vehicleCommon.js';
-import { vehicle, tracked, wheeled, towTruck, m113Hull, cross } from './support.js';
+import { planProfile, sideProfile, trackedHull, castTurret, stationHull } from './vehicleCommon.js';
+import { vehicle, tracked, wheeled, towTruck, m113Hull, cross, scissors } from './support.js';
+import { truckUnit } from './truck.js';
 
 const OD = 0x4a5236;
 const OD_DK = 0x353b28;
@@ -38,7 +41,7 @@ const fifty = (x, y, z, len = 1.1) => [ // a Browning .50 cal on its cradle
 // ---------------------------------------------------------------- Norway
 
 /** Leopard 1A1NO: the Leopard 1 hull, the first cast turret, the 105 mm L7 in its thermal sleeve. */
-export const buildNoLeopard1 = vehicle(() => {
+const noLeopard1 = () => {
   const g = tracked({ halfWidth: 1.35, length: 5.0, wheels: 7, wheelR: 0.35, sprocket: -1, rollers: 4, trackWidth: 0.55, wheelColor: OD_DK });
   return {
     wheels: g.wheels,
@@ -81,6 +84,24 @@ export const buildNoLeopard1 = vehicle(() => {
     muzzle: [0, 0, 4.1],
     recoil: 0.4,
     marks: merge([...pair((s) => P.box(0.02, 0.3, 0.4, { x: s * 1.69, y: 1.2, z: 0.9 }))]),
+  };
+};
+export const buildNoLeopard1 = vehicle(noLeopard1);
+
+/** Leopard 1A1NO with a track-width mine plough ahead of it: a blade and tines before each track, the frame
+ *  and push arms back to the hull sides. */
+export const buildNoLeopard1Plough = vehicle(() => {
+  const d = noLeopard1();
+  return {
+    ...d,
+    hull: merge([d.hull, grime(merge([
+      ...pair((s) => P.box(0.8, 0.6, 0.12, { x: s * 1.35, y: 0.42, z: 3.95, rx: 0.4, color: OD_DK })),
+      ...pair((s) => [0, 1, 2, 3, 4].map((k) => P.box(0.06, 0.22, 0.06, { x: s * 1.35 - 0.32 + k * 0.16, y: 0.12, z: 4.12, rx: 0.5, color: STEEL }))).flat(),
+      ...pair((s) => P.box(0.12, 0.5, 0.35, { x: s * 1.35, y: 0.62, z: 3.72, color: STEEL })),
+      P.box(3.1, 0.16, 0.16, { y: 0.82, z: 3.68, color: STEEL }),
+      ...pair((s) => P.box(0.16, 0.16, 1.6, { x: s * 1.3, y: 0.92, z: 2.95, rx: 0.08, color: STEEL })),
+      ...pair((s) => P.box(0.3, 0.3, 0.3, { x: s * 1.3, y: 0.98, z: 2.2, color: OD_DK })),
+    ]), 1.2, 0.3)]),
   };
 });
 
@@ -352,7 +373,8 @@ export const buildUsM718 = vehicle(() => {
 
 /** M48A5K: the M48's boat-shaped cast hull, six road wheels and five return rollers, the big rounded
  *  "turtle" turret with the 105 mm M68 and the low Israeli-style cupola of the A5. */
-export const buildRokM48 = vehicle(() => {
+/** The M48's chassis (the A5K tank's and the AVLB's): six road wheels, five return rollers, the cast hull. */
+const m48Chassis = (extra = []) => {
   const g = tracked({ halfWidth: 1.45, length: 4.6, wheels: 6, wheelR: 0.33, sprocket: -1, rollers: 5, trackWidth: 0.6, wheelColor: OD_DK });
   return {
     wheels: g.wheels,
@@ -364,7 +386,14 @@ export const buildRokM48 = vehicle(() => {
       P.box(2.4, 0.06, 1.5, { y: 1.52, z: -2.3, color: OD_DK }),
       ...pair((s) => P.box(0.45, 0.3, 1.3, { x: s * 1.45, y: 1.3, z: -1.4, color: OD_DK })),
       ...pair((s) => P.box(0.24, 0.17, 0.13, { x: s * 1.3, y: 1.25, z: 3.0, rx: 0.4, color: STEEL })),
+      ...extra,
     ]), 1.2, 0.3),
+  };
+};
+
+export const buildRokM48 = vehicle(() => {
+  return {
+    ...m48Chassis(),
     turret: {
       geo: grime(merge([
         castTurret([[1.75, 0.55, 0.38], [1.3, 1.15, 0.72], [0.4, 1.5, 0.86], [-0.6, 1.5, 0.86], [-1.5, 1.3, 0.72], [-1.95, 0.8, 0.45]], { color: OD, ...C }, 2.2),
@@ -412,6 +441,143 @@ export const buildRokKIFV = vehicle(() => ({
   muzzle: [0, 0, 1.4],
   recoil: 0.04,
   marks: merge([P.box(0.02, 0.3, 0.5, { x: 1.39, y: 1.4, z: -0.6 })]),
+}));
+
+/** K1 (the "88 tank"): lower and boxier than the Abrams it grew from — a hull 7.5 m long, the flat-roofed welded
+ *  turret with its sides sloped in and the narrow wedge front, the gunner's sight box on the roof, the 105 mm
+ *  KM68A1 in its thermal sleeve with the bore evacuator, six road wheels and two return rollers (hydropneumatic
+ *  at the front and rear stations: it kneels and tilts to fire over a ridge). */
+export const buildRokK1 = vehicle(() => {
+  const g = tracked({ halfWidth: 1.45, length: 4.9, wheels: 6, wheelR: 0.34, sprocket: -1, rollers: 2, trackWidth: 0.6, wheelColor: OD_DK });
+  return {
+    wheels: g.wheels,
+    hull: grime(merge([
+      ...g.parts,
+      trackedHull([[-3.6, 1.26, 0.5], [-3.35, 1.3, 0.45], [2.35, 1.32, 0.45], [3.6, 0.98, 0.6], [3.72, 0.9, 0.82]],
+        { belly: 1.15, fender: 1.8, fenderY: 1.22, chamfer: 0.04 }, { color: OD, ...C }),
+      ...Array.from({ length: 6 }, (_, i) => pair((s) => P.box(0.07, 0.62, 0.98, { x: s * 1.8, y: 0.96, z: -2.75 + i * 1.0, color: OD, ...C }))).flat(), // the side skirts
+      P.box(2.2, 0.06, 1.5, { y: 1.31, z: -2.7, color: OD_DK }),                                                  // the engine deck grilles
+      ...[-3.2, -2.9, -2.6, -2.3].map((z) => P.box(2.0, 0.03, 0.06, { y: 1.34, z, color: STEEL })),
+      P.box(1.5, 0.5, 0.06, { y: 1.0, z: -3.62, color: STEEL }),                                                  // the exhaust louvres at the back
+      P.box(0.55, 0.06, 0.5, { y: 1.33, z: 2.25, color: OD_DK }),                                                 // driver's hatch
+      ...pair((s) => P.box(0.24, 0.16, 0.12, { x: s * 1.3, y: 1.15, z: 3.55, rx: 0.4, color: STEEL })),          // headlights in their guards
+      ...pair((s) => P.box(0.14, 0.14, 0.2, { x: s * 0.7, y: 0.75, z: 3.75, color: STEEL })),                    // tow hooks
+    ]), 1.3, 0.3),
+    turret: {
+      geo: grime(merge([
+        stationHull([
+          [2.05, [[0, 0.05], [0.62, 0.05], [0.55, 0.52], [0, 0.56]]],     // the narrow wedge nose
+          [1.05, [[0, 0], [1.66, 0], [1.5, 0.64], [0, 0.68]]],
+          [-1.35, [[0, 0], [1.7, 0], [1.55, 0.66], [0, 0.68]]],
+          [-2.05, [[0, 0.08], [1.45, 0.08], [1.33, 0.6], [0, 0.63]]],      // the bustle's back
+        ], { color: OD, ...C }),
+        P.box(0.5, 0.36, 0.55, { x: -0.62, y: 0.86, z: 0.95, color: OD_DK }),                                     // the gunner's sight box
+        P.box(0.36, 0.06, 0.03, { x: -0.62, y: 0.92, z: 1.23, color: GLASS }),
+        P.cyl(0.36, 0.4, 0.22, { x: 0.68, y: 0.78, z: -0.35, color: OD, ...C }, 14),                             // commander's cupola
+        P.cyl(0.12, 0.12, 0.28, { x: 0.68, y: 1.0, z: -0.05, color: OD_DK }, 10),                                // his periscopic sight
+        ...fifty(0.68, 0.98, -0.25, 1.0),                                                                          // the K6 .50 cal
+        P.cyl(0.29, 0.29, 0.05, { x: -0.68, y: 0.7, z: -0.55, color: OD_DK }, 14),                                // loader's hatch…
+        P.box(0.12, 0.12, 0.32, { x: -0.68, y: 0.8, z: -0.3, color: STEEL }),                                     // …and his M60
+        P.cyl(0.02, 0.02, 0.6, { x: -0.68, y: 0.8, z: 0.1, rx: Math.PI / 2, color: STEEL }, 6),
+        P.cyl(0.02, 0.02, 0.8, { x: -0.9, y: 1.05, z: -1.8, color: STEEL }, 4),                                   // the crosswind sensor's mast
+        ...pair((s) => smoke(s * 1.55, 0.45, 0.6, 6, s * 1.2)).flat(),                                             // the six-barrel smoke clusters
+        P.box(2.9, 0.06, 0.9, { y: 0.32, z: -2.45, color: STEEL }),                                                // bustle rack…
+        P.box(2.5, 0.38, 0.8, { y: 0.54, z: -2.45, color: 0x56583e }),                                             // …loaded
+        P.box(0.85, 0.56, 0.22, { y: 0.34, z: 2.1, color: OD, ...C }),                                            // mantlet
+      ]), 0.9, 0, 0.4),
+      at: [0, 1.32, 0.2],
+    },
+    gun: {
+      geo: merge([
+        P.cyl(0.08, 0.1, 5.4, { z: 2.7, rx: Math.PI / 2, color: OD }, 14),
+        ...[0.6, 1.3, 3.8].map((z) => P.cyl(0.12, 0.12, 0.6, { z, rx: Math.PI / 2, color: OD_DK }, 14)),          // the thermal sleeve's sections
+        P.cyl(0.16, 0.16, 0.7, { z: 2.6, rx: Math.PI / 2, color: OD }, 14),                                         // bore evacuator
+      ]).scale(1, 1, 0.74),
+      at: [0, 0.36, 2.15],
+      pitch: 0,
+    },
+    muzzle: [0, 0, 4.0],
+    recoil: 0.4,
+    marks: merge([...pair((s) => P.box(0.02, 0.3, 0.6, { x: s * 1.84, y: 1.0, z: -0.4 }))]),
+  };
+});
+
+/** K136 Kooryong: two 18-tube 130 mm launchers side by side on a turntable at the back of the KM809 (the Korean
+ *  M809 5-ton 6×6 with its square bonnet), the rear jacks down to fire. */
+export const buildRokK136 = vehicle(() => {
+  const t = truckUnit({ length: 7.6, width: 2.45, color: OD, dark: OD_DK, camo: 1, bonnet: 'square', body: 'flat', r: 0.55, axles: [6.4, 2.0, 0.75] });
+  const L = t.layout;
+  const pod = (x) => [
+    P.box(0.98, 0.52, 2.4, { x, color: OD, ...C }),
+    ...Array.from({ length: 18 }, (_, k) => P.cyl(0.062, 0.062, 0.03, { x: x - 0.4 + (k % 6) * 0.16, y: -0.16 + Math.floor(k / 6) * 0.16, z: 1.215, rx: Math.PI / 2, color: 0x141414 }, 8)),
+  ];
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([
+      ...t.parts,
+      P.box(1.3, 0.3, 1.3, { y: L.deck + 0.25, z: L.rear + 1.5, color: OD_DK }),                         // the turntable's base
+      ...pair((s) => P.box(0.3, 0.6, 0.3, { x: s * 1.05, y: L.deck - 0.2, z: L.rear + 0.35, color: STEEL })), // the rear jacks
+      P.box(1.9, 0.5, 0.9, { y: L.deck + 0.3, z: L.cabRear - 0.6, color: 0x575a40 }),                      // the crew's kit behind the cab
+    ]), 1.2, 0.3),
+    turret: { geo: grime(merge([P.box(1.0, 0.4, 1.0, { y: 0.2, color: OD_DK })]), 0.6, 0, 0.3), at: [0, L.deck + 0.4, L.rear + 1.5] },
+    gun: { geo: merge([P.box(1.6, 0.14, 0.6, { y: -0.36, color: STEEL }), ...pod(-0.52), ...pod(0.52)]), at: [0, 0.72, 0.4], pitch: 0.5 },
+    muzzle: [0, 0, 1.25],
+    recoil: 0.04,
+    marks: merge([...pair((s) => P.box(0.02, 0.28, 0.4, { x: s * (L.hw - 0.03), y: L.deck + 0.4, z: L.cabFront - 0.5 }))]),
+  };
+});
+
+/** KM900 (the Fiat 6614 built under licence by Asia Motors): the boat-shaped 4×4 armoured carrier, the hull's
+ *  sides sloped in above and below the wheels, the glacis down to a pointed bow, the .50 cal on its cupola. */
+export const buildRokKM900 = vehicle(() => {
+  const mid = [[0, 0.45], [0.82, 0.45], [1.2, 1.02], [0.98, 1.74], [0, 1.78]];
+  return {
+    wheels: wheeled([1.45, -1.45], 1.12, 0.5),
+    hull: grime(merge([
+      stationHull([
+        [2.95, [[0, 0.7], [0.75, 0.7], [0.95, 1.02], [0.78, 1.25], [0, 1.28]]],                   // the bow
+        [2.2, mid], [-2.55, mid],
+        [-2.9, [[0, 0.6], [0.78, 0.6], [1.12, 1.02], [0.92, 1.66], [0, 1.68]]],                  // the back, its door
+      ], { color: OD, ...C }),
+      ...[1.45, -1.45].flatMap((z) => pair((s) => P.box(0.12, 0.08, 1.2, { x: s * 1.18, y: 1.08, z, color: OD_DK }))), // the wheel arches' lips
+      P.box(0.9, 0.95, 0.05, { y: 1.12, z: -2.92, color: OD_DK }),                                    // the rear door
+      P.box(0.05, 0.75, 0.7, { x: 1.1, y: 1.3, z: 0.1, rz: -0.32, color: OD_DK }),                    // the side door
+      ...pair((s) => [-1.6, -0.6, 0.7].map((z) => P.box(0.03, 0.1, 0.22, { x: s * 1.06, y: 1.5, z, rz: s * 0.32, color: GLASS }))).flat(), // vision blocks
+      ...pair((s) => [-1.2, -0.2].map((z) => P.cyl(0.04, 0.04, 0.04, { x: s * 1.13, y: 1.3, z, rz: Math.PI / 2, color: STEEL }, 8))).flat(), // firing ports
+      P.box(0.6, 0.06, 0.5, { x: -0.45, y: 1.8, z: 1.55, color: OD_DK }),                             // the driver's hatch, left
+      ...[-0.15, 0, 0.15].map((x) => P.box(0.1, 0.07, 0.04, { x: -0.45 + x, y: 1.78, z: 1.86, rx: -0.4, color: GLASS })),
+      P.box(0.5, 0.25, 0.6, { x: 0.55, y: 1.88, z: -1.6, color: STEEL }),                             // the engine's exhaust and grille, right rear
+      P.box(0.8, 0.05, 0.6, { y: 1.8, z: -0.9, color: OD_DK }),                                       // the roof hatch
+      ...pair((s) => P.box(0.2, 0.14, 0.1, { x: s * 0.6, y: 1.18, z: 2.75, color: STEEL })),         // headlights
+      ...pair((s) => P.box(0.14, 0.1, 0.02, { x: s * 0.6, y: 1.18, z: 2.81, color: GLASS })),
+    ]), 1.1, 0.3),
+    turret: {
+      geo: grime(merge([
+        P.cyl(0.42, 0.46, 0.28, { y: 0.14, color: OD, ...C }, 14),                                    // the cupola
+        ...[0, 1, 2, 3, 4].map((k) => P.box(0.1, 0.07, 0.03, { x: Math.sin(k * 0.6 - 1.2) * 0.44, y: 0.2, z: Math.cos(k * 0.6 - 1.2) * 0.44, ry: k * 0.6 - 1.2, color: GLASS })),
+        P.cyl(0.28, 0.28, 0.05, { y: 0.3, z: -0.1, color: OD_DK }, 12),
+      ]), 0.6, 0, 0.4),
+      at: [0.2, 1.78, 0.4],
+    },
+    gun: { geo: merge(fifty(0, 0, 0, 1.1)), at: [0, 0.42, 0.2], pitch: 0 },
+    muzzle: [0, 0, 1.4],
+    recoil: 0.04,
+    marks: merge([...pair((s) => P.box(0.02, 0.28, 0.45, { x: s * 1.15, y: 1.35, z: -2.0, rz: s * 0.32 }))]),
+  };
+});
+
+/** M48 AVLB: the M48's hull with the launcher where the turret was and the 18 m scissors bridge folded on top. */
+export const buildRokAVLB = vehicle(() => ({
+  ...m48Chassis([
+    stationHull([[-0.6, [[0, 1.5], [0.9, 1.5], [0.9, 1.9], [0.75, 2.0], [0, 2.0]]], [1.0, [[0, 1.5], [0.9, 1.5], [0.9, 1.9], [0.75, 2.0], [0, 2.0]]]], { color: OD, ...C }),
+    ...pair((s) => P.box(0.22, 0.22, 1.6, { x: s * 0.75, y: 1.7, z: 2.4, rx: 0.25, color: OD_DK })),         // the launching arms
+    ...pair((s) => P.cyl(0.09, 0.09, 1.2, { x: s * 0.75, y: 1.45, z: 2.7, rx: Math.PI / 2 + 0.5, color: STEEL }, 8)),
+    P.box(2.6, 0.18, 0.3, { y: 1.0, z: 3.5, color: OD_DK }),                                                 // the front spade
+    P.cyl(0.3, 0.32, 0.18, { x: 0.5, y: 2.05, z: 0.6, color: OD_DK }, 12),                                   // the commander's hatch
+  ]),
+  load: grime(scissors({ y: 2.08, length: 9.2, width: 3.8, color: OD, dark: OD_DK }), 1.2, 0.3),
+  muzzle: [0, 2, 0],
+  marks: merge([...pair((s) => P.box(0.02, 0.3, 0.6, { x: s * 1.73, y: 1.3, z: -1.2 }))]),
 }));
 
 // ---------------------------------------------------------------- Korean People's Army
@@ -606,3 +772,124 @@ export const buildKpaS125 = vehicle(() => ({
   tow: { geo: grime(merge(towTruck({ color: KPA, dark: KPA_DK, length: 7.0, width: 2.5, bonnet: 'round' })), 1, 0.4), hitch: 1.9 },
   marks: merge([P.box(0.02, 0.25, 0.4, { x: 1.11, y: 0.4, z: 0.4 })]),
 }));
+
+// ---------------------------------------------------------------- KPA: the HY-2 Silkworm coastal battery (data/units/baltic85.js coastMissile)
+
+const MISSILE = 0x8e9682;
+/** The HY-2 (CSS-C-3 Silkworm) on its towed launcher: a four-wheeled trailer with jacks, the turntable, the launch rail
+ *  and the missile on it — the fat body with its rounded radar nose, the two mid wings, the tailplanes and the fin, the
+ *  booster slung under the tail. Towed in behind a truck, set down, then away to a new hide. */
+export const buildKpaHY2 = vehicle(() => ({
+  wheels: wheeled([1.6, -1.6, -2.6], 0.85, 0.45),
+  hull: grime(merge([
+    P.box(1.6, 0.3, 6.2, { y: 0.8, z: -0.3, color: KPA }),                                                   // the trailer's frame
+    ...pair((s) => P.box(0.12, 0.35, 6.4, { x: s * 0.75, y: 0.62, z: -0.3, color: KPA_DK })),
+    P.box(0.14, 0.14, 1.6, { y: 0.6, z: 3.5, color: STEEL }), P.cyl(0.1, 0.1, 0.25, { y: 0.6, z: 4.3, color: STEEL }, 8), // the drawbar and its eye
+    ...[[-1, 2.4], [1, 2.4], [-1, -3.2], [1, -3.2]].flatMap(([x, z]) => [
+      P.box(0.8, 0.12, 0.14, { x: x * 1.15, y: 0.78, z, color: KPA_DK }),                                   // the outriggers…
+      P.box(0.12, 0.7, 0.12, { x: x * 1.5, y: 0.4, z, color: STEEL }), P.box(0.35, 0.06, 0.35, { x: x * 1.5, y: 0.04, z, color: STEEL }), // …their jacks
+    ]),
+    ...pair((s) => P.box(0.4, 0.06, 2.2, { x: s * 0.85, y: 0.98, z: -2.1, color: KPA_DK })),               // the mudguards
+    P.box(1.4, 0.25, 1.4, { y: 1.05, z: -0.3, color: KPA_DK }),                                            // the turntable's ring
+  ]), 1, 0.35),
+  turret: {
+    geo: grime(merge([
+      P.cyl(0.75, 0.8, 0.3, { y: 0.15, color: KPA }, 14),
+      ...pair((s) => P.box(0.12, 0.7, 0.9, { x: s * 0.42, y: 0.55, color: KPA })),                       // the trunnion brackets
+    ]), 0.6, 0, 0.3),
+    at: [0, 1.2, -0.3],
+  },
+  gun: {
+    geo: merge([
+      P.box(0.5, 0.22, 6.6, { y: 0.1, z: 0.6, color: KPA_DK }),                                              // the launch rail
+      ...[-2, 0, 2].map((z) => P.box(0.7, 0.08, 0.2, { y: 0.24, z, color: STEEL })),
+      P.cyl(0.38, 0.38, 5.4, { y: 0.95, z: 0.7, rx: Math.PI / 2, color: MISSILE }, 14),                      // the body
+      P.sphere(0.38, { y: 0.95, z: 3.4, sz: 1.5, color: 0xb8b8a8 }, 14, 8),                                   // the radar nose
+      ...pair((s) => planProfile([[s * 0.35, 1.5], [s * 1.25, -0.3], [s * 1.25, -0.75], [s * 0.35, -0.75]], 0.05, { y: 0.92, z: 0.6, color: MISSILE }, 0)), // the mid wings
+      ...pair((s) => planProfile([[s * 0.35, 0.2], [s * 0.85, -0.5], [s * 0.85, -0.8], [s * 0.35, -0.8]], 0.04, { y: 0.92, z: -1.4, color: MISSILE }, 0)), // the tailplanes
+      sideProfile([[-1.85, 1.3], [-1.2, 1.3], [-1.9, 2.1], [-2.2, 2.1]], 0.05, { color: MISSILE }, 0),     // the fin
+      P.cyl(0.3, 0.3, 1.9, { y: 0.45, z: -1.2, rx: Math.PI / 2, color: 0x6a705e }, 12),                    // the booster under the tail…
+      P.cone(0.3, 0.4, { y: 0.45, z: -0.05, rx: Math.PI / 2, color: 0x6a705e }, 12),
+      ...[0, 1, 2].map((k) => P.box(0.03, 0.5, 0.5, { x: Math.sin(k * 2.1 + 1) * 0.4, y: 0.45 + Math.cos(k * 2.1 + 1) * 0.4, z: -2.0, rz: -(k * 2.1 + 1), color: 0x6a705e })), // …its fins
+    ]),
+    at: [0, 0.6, 0],
+    pitch: 0.14,
+  },
+  muzzle: [0, 0.95, 4],
+  recoil: 0,
+  tow: { geo: grime(merge(towTruck({ color: KPA, dark: KPA_DK, length: 7.0, width: 2.5, bonnet: 'round' })), 1, 0.4), hitch: 4.4 },
+  marks: merge([P.box(0.02, 0.25, 0.4, { x: 0.82, y: 0.8, z: 1.4 })]),
+}));
+
+/** The battery's fire-control radar on its truck (the Chinese Type 352, NATO's Square Tie): a box body on a 6×6, the
+ *  slotted antenna turning on the roof. */
+export const buildKpaHY2Radar = vehicle(() => {
+  const t = truckUnit({ length: 7.2, width: 2.5, color: KPA, dark: KPA_DK, bonnet: 'round', body: 'box', r: 0.55, bodyH: 2.0 });
+  const L = t.layout;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.55),
+    hull: grime(merge([
+      ...t.parts,
+      P.cyl(0.35, 0.45, 0.4, { y: L.top + 0.2, z: (L.rear + L.bodyFront) / 2 - 0.6, color: KPA_DK }, 12), // the antenna's pedestal
+      ...pair((s) => P.box(0.3, 0.6, 0.3, { x: s * 1.05, y: 0.55, z: L.rear + 0.4, color: STEEL })),           // the levelling jacks
+    ]), 1.0, 0.4),
+    spin: {
+      geo: merge([
+        P.cyl(0.08, 0.1, 0.9, { y: 0.45, color: STEEL }, 8),
+        P.box(3.2, 1.0, 0.14, { y: 1.3, z: 0.1, rx: -0.2, color: 0x5e665a }),                                 // the slotted array…
+        ...[-1.2, -0.4, 0.4, 1.2].map((x) => P.box(0.04, 0.9, 0.04, { x, y: 1.3, z: 0.2, rx: -0.2, color: 0x2e3428 })), // …its slots
+        P.box(0.12, 0.12, 0.9, { y: 0.8, z: 0.45, color: STEEL }),                                            // the feed arm
+      ]),
+      at: [0, L.top + 0.4, (L.rear + L.bodyFront) / 2 - 0.6],
+      rate: 1.4,
+      always: true,
+    },
+    marks: merge([...pair((s) => P.box(0.02, 0.35, 0.35, { x: s * (L.hw + 0.04), y: L.deck + 1.2, z: L.cabRear - 0.8 }))]),
+  };
+});
+
+// ---------------------------------------------------------------- Norway's NM142 and the KPA's ambulance
+
+/** NM142: the M113 with Hägglunds' armoured TOW turret — a low box on the roof, a TOW launch tube on each side
+ *  of it, the sight in the middle (the missiles reloaded from under armour). */
+export const buildNoNM142 = vehicle(() => ({
+  ...m113Hull([], { color: OD }),
+  turret: {
+    geo: grime(merge([
+      planProfile([[-0.45, 0.65], [0.45, 0.65], [0.62, 0.3], [0.62, -0.65], [-0.62, -0.65], [-0.62, 0.3]], 0.5, { color: OD, ...C }),
+      P.cyl(0.24, 0.24, 0.05, { x: 0.25, y: 0.51, z: -0.3, color: OD_DK }, 12),                       // hatch
+      ...pair((s) => smoke(s * 0.6, 0.15, 0.3, 3, s * 1.0)).flat(),
+    ]), 0.6, 0, 0.4),
+    at: [0, 1.85, 0.3],
+  },
+  gun: {
+    geo: merge([
+      P.box(0.34, 0.3, 0.35, { color: OD_DK }),                                                         // the sight head
+      P.box(0.22, 0.12, 0.03, { y: 0.02, z: 0.18, color: GLASS }),
+      ...pair((s) => P.cyl(0.11, 0.11, 1.55, { x: s * 0.78, y: 0.05, z: 0.2, rx: Math.PI / 2, color: OD, ...C }, 12)), // the two TOW tubes
+      ...pair((s) => P.box(0.2, 0.08, 0.3, { x: s * 0.68, y: -0.05, z: 0.0, color: STEEL })),         // their trunnions
+    ]),
+    at: [0, 0.35, 0.45],
+    pitch: null,
+  },
+  muzzle: [0.78, 0.05, 1.0],
+  recoil: 0.03,
+  marks: merge([P.box(0.02, 0.3, 0.5, { x: 1.39, y: 1.4, z: -0.6 })]),
+}));
+
+/** The KPA's field ambulance: the Sungri-58 lorry (the North's own copy of the Soviet GAZ-51) with a box body,
+ *  red crosses on its sides and roof. */
+export const buildKpaSungriSan = vehicle(() => {
+  const t = truckUnit({ length: 5.7, width: 2.25, color: KPA, dark: KPA_DK, bonnet: 'round', body: 'box', r: 0.48, axles: [4.5, 1.15], bodyH: 1.7, cabLen: 1.4 });
+  const L = t.layout, mid = (L.rear + L.bodyFront) / 2, y = L.deck + 0.95;
+  return {
+    wheels: wheeled(L.axles, t.track, 0.48),
+    hull: grime(merge([
+      ...t.parts,
+      ...cross({ x: L.hw + 0.04, y, z: mid }),
+      ...cross({ x: -(L.hw + 0.04), y, z: mid }),
+      ...cross({ y: L.top + 0.02, z: mid, rz: Math.PI / 2 }),
+    ]), 1.1, 0.3),
+    muzzle: [0, 2, 0],
+  };
+});

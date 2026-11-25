@@ -44,6 +44,7 @@ export default {
   description: 'The French break out of Brest past the rocks of the Breton coast; the British squadron waits offshore. Islets, reefs, a narrow passage — and a hard westerly.',
   epochs: ['1806'],
   theatre: 'sea',
+  armies: { nato: ['fr'], pact: ['gb'] }, // (the Royal Navy, not the side's default Prussians)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'day', weather: 'overcast' },
   wind: { from: 265, speed: 9, veer: 0.3 },     // a hard westerly — in the rain, a gale

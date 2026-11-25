@@ -52,6 +52,7 @@ export default {
   epochs: ['1945'],
   region: 'pacific', // (the menu's Asia & Pacific scenarios: maps/index.js REGIONS)
   theatre: 'sea',
+  armies: { nato: ['us'], pact: ['jp'] }, // (the US Navy and the Imperial Navy: the Wehrmacht's Kriegsmarine sails in the Atlantic)
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'night', weather: 'clear' },
   fow: 0.5,

@@ -8,10 +8,13 @@ import { P, merge, loft } from '../units/geometry.js';
 import { buildHorse } from './horse.js';
 import { ARMIES_1806 } from './napSoldier.js';
 
-const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c };
+const WOOD = { fr: 0x51613a, by: 0x4a5a6a, pr: 0x3e4a5a, sx: 0x3e4a5a, gb: 0x5a6670, ru: 0x4e6a3c, au: 0x977728, es: 0x7a5a3a }; // (au: the Austrian ochre; es: Spain's oiled oak)
+WOOD.dk = 0x7a3a2c; // (Denmark 1807: oxblood red)
 const IRON = 0x2a2a28;
 const CANVAS = 0xd8d0b8;
-const FLAG = { fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0, 0x3a6ac0], pr: [0x161616, 0xf0f0f0, 0x161616], sx: [0x2a7a3a, 0xf0f0f0, 0x2a7a3a], gb: [0x1d2a8c, 0xc02020, 0x1d2a8c], ru: [0xf0f0f0, 0xe08a20, 0x161616] }; // (gb: the Union's red on blue, not a tricolour)
+const FLAG = { fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0, 0x3a6ac0], pr: [0x161616, 0xf0f0f0, 0x161616], sx: [0x2a7a3a, 0xf0f0f0, 0x2a7a3a], gb: [0x1d2a8c, 0xc02020, 0x1d2a8c], ru: [0xf0f0f0, 0xe08a20, 0x161616], au: [0x161616, 0xe0b828, 0x161616] }; // (gb: the Union's red on blue, not a tricolour)
+FLAG.dk = [0xc8102e, 0xf0f0f0, 0xc8102e]; // (the Dannebrog's red and white)
+FLAG.es = [0xf0f0f0, 0xb8141c, 0xf0f0f0]; // (Spain's army: the white field and the red Cross of Burgundy)
 
 const material = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
 const mesh = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; return m; };

@@ -10,15 +10,32 @@ import hersfeldAirbase from './hersfeldAirbase.ts';
 import monteKali from './monteKali.ts';
 import jena from './jena.ts';
 import auerstedt from './auerstedt.ts';
+import saalfeld from './saalfeld.ts';
+import schleiz from './schleiz.ts';
+import halle1806 from './halle1806.ts';
+import erfurt from './erfurt.ts';
+import magdeburg1806 from './magdeburg1806.ts';
+import prenzlau from './prenzlau.ts';
+import spandau from './spandau.ts';
+import breslau from './breslau.ts';
+import hameln from './hameln.ts';
+import konigsberg from './konigsberg.ts';
+import tilsit from './tilsit.ts';
+import posen1806 from './posen1806.ts';
 import stalingrad from './stalingrad.ts';
+import mozhaisk from './mozhaisk.ts';
+import novorossiysk from './novorossiysk.ts';
 import elAlamein from './elAlamein.ts';
 import midway from './midway.ts';
 import savoSound from './savoSound.ts';
 import surigaoStrait from './surigaoStrait.ts';
 import philippineSea from './philippineSea.ts';
+import atlanticConvoy from './atlanticConvoy.ts';
+import maltaConvoy from './maltaConvoy.ts';
 import norwegianSea from './norwegianSea.ts';
 import northCape from './northCape.ts';
 import ionianSea from './ionianSea.ts';
+import seaOfJapan from './seaOfJapan.ts';
 import trafalgar from './trafalgar.ts';
 import aboukir from './aboukir.ts';
 import brest from './brest.ts';
@@ -27,22 +44,65 @@ import heligolandBight from './heligolandBight.ts';
 import doggerBank from './doggerBank.ts';
 import doverStrait from './doverStrait.ts';
 import zeebrugge from './zeebrugge.ts';
+import albion from './albion.ts';
+import lido from './lido.ts';
+import cattaroLanding from './cattaroLanding.ts';
 import balticSea from './balticSea.ts';
+import giukGap from './giukGap.ts';
+import openSea from './openSea.ts'; // (the campaign's quiet sea zones: open water, both wars)
 import omaha from './omaha.ts';
 import iwoJima from './iwoJima.ts';
 import elGuettar from './elGuettar.ts';
 import kasserinePass from './kasserinePass.ts';
 import bobruisk from './bobruisk.ts';
 import berlin from './berlin.ts';
+import amiriya from './amiriya.ts';
 import gazala from './gazala.ts';
+import tobruk from './tobruk.ts';
 import seelowHeights from './seelowHeights.ts';
+import krymskaya from './krymskaya.ts';
+import halbe from './halbe.ts';
 import hohwacht from './hohwacht.ts';
 import aboukirLanding from './aboukirLanding.ts';
+import maida from './maida.ts';
+import castelnuovo from './castelnuovo.ts';
+import anconaLanding from './anconaLanding.ts';
+import corfuLanding from './corfuLanding.ts';
+import weichselmunde from './weichselmunde.ts';
+import pillau from './pillau.ts';
+import memelLanding from './memelLanding.ts';
+import cuxhaven from './cuxhaven.ts';
+import kolberg from './kolberg.ts';
+import koge from './koge.ts';
+import civitavecchia from './civitavecchia.ts';
+import naplesLanding from './naplesLanding.ts';
+import cadizLanding from './cadizLanding.ts';
+import boulogneRaid from './boulogneRaid.ts';
+import quiberon from './quiberon.ts';
+import hyeres from './hyeres.ts';
 import gotlandLanding from './gotlandLanding.ts';
 import villersBretonneux from './villersBretonneux.ts';
 import leHamel from './leHamel.ts';
 import stQuentin from './stQuentin.ts';
 import soissons from './soissons.ts';
+import passchendaele from './passchendaele.ts';
+import nieuport from './nieuport.ts';
+import belleauWood from './belleauWood.ts';
+import montagneDeReims from './montagneDeReims.ts';
+import cote304 from './cote304.ts';
+import cheminDesDames from './cheminDesDames.ts';
+import cambrai from './cambrai.ts';
+import vimy from './vimy.ts';
+import hill70 from './hill70.ts';
+import stMihiel from './stMihiel.ts';
+import seicheprey from './seicheprey.ts';
+import meuseArgonne from './meuseArgonne.ts';
+import metz from './metz.ts';
+import sedan1918 from './sedan1918.ts';
+import rhine1918 from './rhine1918.ts';
+import matz from './matz.ts';
+import theLys from './theLys.ts';
+import courtrai from './courtrai.ts';
 import suwalkiGap from './suwalkiGap.ts';
 import suwalkiTown from './suwalkiTown.ts';
 import nemanCrossing from './nemanCrossing.ts';
@@ -64,6 +124,10 @@ import ivalo from './ivalo.ts';
 import pasvikValley from './pasvikValley.ts';
 
 import eylau from './eylau.ts';
+import campoTenese from './campoTenese.ts';
+import gaeta from './gaeta.ts';
+import toulon from './toulon.ts';
+import civitaCastellana from './civitaCastellana.ts';
 import friedland from './friedland.ts';
 import vimeiro from './vimeiro.ts';
 import talavera from './talavera.ts';
@@ -71,73 +135,395 @@ import bussaco from './bussaco.ts';
 import fuentesDeOnoro from './fuentesDeOnoro.ts';
 import pultusk from './pultusk.ts';
 import heilsberg from './heilsberg.ts';
+import mohrungen from './mohrungen.ts';
+import ostroleka from './ostroleka.ts';
+import danzig from './danzig.ts';
+import dresden from './dresden.ts';
+import pressburg1809 from './pressburg1809.ts';
+import graz1809 from './graz1809.ts';
+import grodno from './grodno.ts';
+import brestLitovsk from './brestLitovsk.ts';
+import sandomierz from './sandomierz.ts';
+import caldiero from './caldiero.ts';
+import veronetta from './veronetta.ts';
+import tagliamento from './tagliamento.ts';
+import marengo from './marengo.ts';
+import malborghetto from './malborghetto.ts';
+import trieste1805 from './trieste1805.ts';
+import gospic from './gospic.ts';
+import ragusa from './ragusa.ts';
+import ancona from './ancona.ts';
+import chioggia from './chioggia.ts';
+import triesteRaid from './triesteRaid.ts';
+import spalatoLanding from './spalatoLanding.ts';
+import elchingen from './elchingen.ts';
+import wertingen from './wertingen.ts';
+import hohenlinden from './hohenlinden.ts';
+import austerlitz from './austerlitz.ts';
+import wischau from './wischau.ts';
+import durnstein from './durnstein.ts';
+import lambach from './lambach.ts';
+import amstetten from './amstetten.ts';
+import taborBridge from './taborBridge.ts';
+import scharnitz from './scharnitz.ts';
+import stecken from './stecken.ts';
+import kehl from './kehl.ts';
+import blackForest from './blackForest.ts';
+import wurzburg from './wurzburg.ts';
+import mainz from './mainz.ts';
+import parisBarriers from './parisBarriers.ts';
+import boulogne from './boulogne.ts';
+import rennes from './rennes.ts';
 import copenhagen from './copenhagen.ts';
+import finisterre1805 from './finisterre1805.ts';
+import capeOrtegal from './capeOrtegal.ts';
+import channel1805 from './channel1805.ts';
+import baltic1807 from './baltic1807.ts';
+import toulonBlockade from './toulonBlockade.ts';
+import lissa from './lissa.ts';
+import westernApproaches1805 from './westernApproaches1805.ts';
+import texel1805 from './texel1805.ts';
+import algeciras from './algeciras.ts';
+import capri1808 from './capri1808.ts';
+import corfu1807 from './corfu1807.ts';
 import riga from './riga.ts';
 import tannenberg from './tannenberg.ts';
 import gorlice from './gorlice.ts';
 import lutsk from './lutsk.ts';
+import jakobstadt from './jakobstadt.ts';
+import krevo from './krevo.ts';
+import pskov from './pskov.ts';
+import narva from './narva.ts';
+import kiev1918 from './kiev1918.ts';
+import berlin1918 from './berlin1918.ts';
+import zborov from './zborov.ts';
+import cracow from './cracow.ts';
+import warsaw from './warsaw.ts';
+import posen from './posen.ts';
+import marasesti from './marasesti.ts';
+import arges from './arges.ts';
+import baranovichi from './baranovichi.ts';
 import caporetto from './caporetto.ts';
 import piave from './piave.ts';
 import asiago from './asiago.ts';
+import ortigara from './ortigara.ts';
+import dobroPole from './dobroPole.ts';
+import doiran from './doiran.ts';
+import salonika from './salonika.ts';
+import kajmakcalan from './kajmakcalan.ts';
+import skopje from './skopje.ts';
+import nis from './nis.ts';
+import sofia from './sofia.ts';
 import vittorioVeneto from './vittorioVeneto.ts';
+import bainsizza from './bainsizza.ts';
+import montello from './montello.ts';
+import hermada from './hermada.ts';
+import trieste1918 from './trieste1918.ts';
+import tolmein from './tolmein.ts';
+import tarvis from './tarvis.ts';
+import vienna from './vienna.ts';
+import garigliano from './garigliano.ts';
+import cattaro from './cattaro.ts';
 import megiddo from './megiddo.ts';
+import gaza from './gaza.ts';
+import beersheba from './beersheba.ts';
+import damascus from './damascus.ts';
+import nebiSamwil from './nebiSamwil.ts';
+import romani from './romani.ts';
+import magdhaba from './magdhaba.ts';
+import haritan from './haritan.ts';
 import gallipoli from './gallipoli.ts';
+import salonikaLanding from './salonikaLanding.ts';
+import gazaLanding from './gazaLanding.ts';
+import portSaid from './portSaid.ts';
+import samland from './samland.ts';
+import taranto from './taranto.ts';
+import domesnes from './domesnes.ts';
+import krithia from './krithia.ts';
+import chatalja from './chatalja.ts';
+import bosphorus from './bosphorus.ts';
+import dunkirk1918 from './dunkirk1918.ts';
 import otranto from './otranto.ts';
+import westernApproaches from './westernApproaches.ts';
+import azores1918 from './azores1918.ts';
+import premuda from './premuda.ts';
+import moonSound from './moonSound.ts';
+import imbros from './imbros.ts';
+import malta1917 from './malta1917.ts';
+import levant1917 from './levant1917.ts';
 import ardennes from './ardennes.ts';
 import bocage from './bocage.ts';
 import remagen from './remagen.ts';
+import halle from './halle.ts';
+import kent from './kent.ts';
 import arnhem from './arnhem.ts';
 import kohima from './kohima.ts';
+import meiktila from './meiktila.ts';
+import imphal from './imphal.ts';
+import guadalcanal from './guadalcanal.ts';
+import saipan from './saipan.ts';
+import charanKanoa from './charanKanoa.ts';
+import oahu from './oahu.ts';
+import haleiwa from './haleiwa.ts';
+import motoyama from './motoyama.ts';
 import okinawa from './okinawa.ts';
+import kyushu from './kyushu.ts';
 import goldBeach from './goldBeach.ts';
+import gela from './gela.ts';
+import hythe from './hythe.ts';
+import abuQir from './abuQir.ts';
+import cassino from './cassino.ts';
+import anzio from './anzio.ts';
+import medjerda from './medjerda.ts';
+import bone from './bone.ts';
+import primosole from './primosole.ts';
 import okinawaLanding from './okinawaLanding.ts';
+import myebon from './myebon.ts';
+import ariake from './ariake.ts';
+import redBeach from './redBeach.ts';
 import finnmark from './finnmark.ts';
+import schwerin from './schwerin.ts';
+import magdeburg from './magdeburg.ts';
+import rheinMain from './rheinMain.ts';
+import tartus from './tartus.ts';
+import naples from './naples.ts';
 import narvik from './narvik.ts';
 import malselv from './malselv.ts';
 import lyngen from './lyngen.ts';
+import pechenga from './pechenga.ts';
+import bodo from './bodo.ts';
+import andenes from './andenes.ts';
+import murmansk from './murmansk.ts';
+import ratzeburgLakes from './ratzeburgLakes.ts';
+import wesel from './wesel.ts';
+import eastAnglia from './eastAnglia.ts';
 import korea from './korea.ts';
 import chorwonValley from './chorwonValley.ts';
 import imjinRiver from './imjinRiver.ts';
 import uijeongbu from './uijeongbu.ts';
+import kaesong from './kaesong.ts';
+import pyongyang from './pyongyang.ts';
+import nampo from './nampo.ts';
+import tartusLanding from './tartusLanding.ts';
+import liinakhamari from './liinakhamari.ts';
+import ussuri from './ussuri.ts';
+import seoul from './seoul.ts';
+import vladivostok from './vladivostok.ts';
+import hokkaido from './hokkaido.ts';
 import andoya from './andoya.ts';
+import motovsky from './motovsky.ts';
+import keflavik from './keflavik.ts';
+import wismar from './wismar.ts';
+import incheon from './incheon.ts';
+import scheveningen from './scheveningen.ts';
+import salerno from './salerno.ts';
+import felixstowe from './felixstowe.ts';
+import ishikari from './ishikari.ts';
+import ofotfjord from './ofotfjord.ts';
+import bodoLanding from './bodoLanding.ts';
+import reykjanes from './reykjanes.ts';
+import varanger from './varanger.ts';
 export const MAPS = {
   [andoya.id]: andoya,
+  [motovsky.id]: motovsky,
+  [keflavik.id]: keflavik,
+  [wismar.id]: wismar,
+  [incheon.id]: incheon,
+  [scheveningen.id]: scheveningen,
+  [salerno.id]: salerno,
+  [felixstowe.id]: felixstowe,
+  [ishikari.id]: ishikari,
+  [ofotfjord.id]: ofotfjord,
+  [bodoLanding.id]: bodoLanding,
+  [reykjanes.id]: reykjanes,
+  [varanger.id]: varanger,
+  [ratzeburgLakes.id]: ratzeburgLakes,
+  [wesel.id]: wesel,
+  [eastAnglia.id]: eastAnglia,
   [korea.id]: korea,
   [chorwonValley.id]: chorwonValley,
   [imjinRiver.id]: imjinRiver,
   [uijeongbu.id]: uijeongbu,
+  [kaesong.id]: kaesong,
+  [pyongyang.id]: pyongyang,
+  [nampo.id]: nampo,
+  [tartusLanding.id]: tartusLanding,
+  [liinakhamari.id]: liinakhamari,
+  [ussuri.id]: ussuri,
+  [seoul.id]: seoul,
+  [vladivostok.id]: vladivostok,
+  [hokkaido.id]: hokkaido,
   [narvik.id]: narvik,
   [malselv.id]: malselv,
   [lyngen.id]: lyngen,
   [finnmark.id]: finnmark,
+  [schwerin.id]: schwerin,
+  [magdeburg.id]: magdeburg,
+  [rheinMain.id]: rheinMain,
+  [tartus.id]: tartus,
+  [naples.id]: naples,
+  [pechenga.id]: pechenga,
+  [bodo.id]: bodo,
+  [andenes.id]: andenes,
+  [murmansk.id]: murmansk,
   [okinawaLanding.id]: okinawaLanding,
+  [myebon.id]: myebon,
+  [ariake.id]: ariake,
+  [redBeach.id]: redBeach,
   [goldBeach.id]: goldBeach,
+  [gela.id]: gela,
+  [hythe.id]: hythe,
+  [abuQir.id]: abuQir,
+  [cassino.id]: cassino,
+  [anzio.id]: anzio,
+  [medjerda.id]: medjerda,
+  [bone.id]: bone,
+  [primosole.id]: primosole,
   [okinawa.id]: okinawa,
+  [kyushu.id]: kyushu,
   [kohima.id]: kohima,
+  [meiktila.id]: meiktila,
+  [imphal.id]: imphal,
+  [guadalcanal.id]: guadalcanal,
+  [saipan.id]: saipan,
+  [charanKanoa.id]: charanKanoa,
+  [oahu.id]: oahu,
+  [haleiwa.id]: haleiwa,
+  [motoyama.id]: motoyama,
   [arnhem.id]: arnhem,
   [remagen.id]: remagen,
+  [halle.id]: halle,
+  [kent.id]: kent,
   [bocage.id]: bocage,
   [ardennes.id]: ardennes,
   [otranto.id]: otranto,
+  [westernApproaches.id]: westernApproaches,
+  [azores1918.id]: azores1918,
+  [premuda.id]: premuda,
+  [moonSound.id]: moonSound,
+  [imbros.id]: imbros,
+  [malta1917.id]: malta1917,
+  [levant1917.id]: levant1917,
   [gallipoli.id]: gallipoli,
+  [salonikaLanding.id]: salonikaLanding,
+  [bosphorus.id]: bosphorus,
+  [dunkirk1918.id]: dunkirk1918,
+  [gazaLanding.id]: gazaLanding,
+  [portSaid.id]: portSaid,
+  [samland.id]: samland,
+  [taranto.id]: taranto,
+  [domesnes.id]: domesnes,
+  [krithia.id]: krithia,
+  [chatalja.id]: chatalja,
   [megiddo.id]: megiddo,
+  [gaza.id]: gaza,
+  [beersheba.id]: beersheba,
+  [damascus.id]: damascus,
+  [nebiSamwil.id]: nebiSamwil,
+  [romani.id]: romani,
+  [magdhaba.id]: magdhaba,
+  [haritan.id]: haritan,
   [piave.id]: piave,
   [asiago.id]: asiago,
+  [ortigara.id]: ortigara,
+  [dobroPole.id]: dobroPole,
+  [doiran.id]: doiran,
+  [salonika.id]: salonika,
+  [kajmakcalan.id]: kajmakcalan,
+  [skopje.id]: skopje,
+  [nis.id]: nis,
+  [sofia.id]: sofia,
   [vittorioVeneto.id]: vittorioVeneto,
+  [bainsizza.id]: bainsizza,
+  [montello.id]: montello,
+  [hermada.id]: hermada,
+  [trieste1918.id]: trieste1918,
+  [tolmein.id]: tolmein,
+  [tarvis.id]: tarvis,
+  [vienna.id]: vienna,
+  [garigliano.id]: garigliano,
+  [cattaro.id]: cattaro,
   [caporetto.id]: caporetto,
   [riga.id]: riga,
   [tannenberg.id]: tannenberg,
   [gorlice.id]: gorlice,
   [lutsk.id]: lutsk,
+  [jakobstadt.id]: jakobstadt,
+  [krevo.id]: krevo,
+  [pskov.id]: pskov,
+  [narva.id]: narva,
+  [kiev1918.id]: kiev1918,
+  [berlin1918.id]: berlin1918,
+  [zborov.id]: zborov,
+  [cracow.id]: cracow,
+  [warsaw.id]: warsaw,
+  [posen.id]: posen,
+  [marasesti.id]: marasesti,
+  [arges.id]: arges,
+  [baranovichi.id]: baranovichi,
   [copenhagen.id]: copenhagen,
+  [finisterre1805.id]: finisterre1805,
+  [capeOrtegal.id]: capeOrtegal,
+  [channel1805.id]: channel1805,
+  [baltic1807.id]: baltic1807,
+  [toulonBlockade.id]: toulonBlockade,
+  [lissa.id]: lissa,
+  [westernApproaches1805.id]: westernApproaches1805,
+  [texel1805.id]: texel1805,
+  [algeciras.id]: algeciras,
+  [capri1808.id]: capri1808,
+  [corfu1807.id]: corfu1807,
   [talavera.id]: talavera,
   [bussaco.id]: bussaco,
   [fuentesDeOnoro.id]: fuentesDeOnoro,
   [pultusk.id]: pultusk,
   [heilsberg.id]: heilsberg,
+  [caldiero.id]: caldiero,
+  [veronetta.id]: veronetta,
+  [tagliamento.id]: tagliamento,
+  [marengo.id]: marengo,
+  [malborghetto.id]: malborghetto,
+  [trieste1805.id]: trieste1805,
+  [gospic.id]: gospic,
+  [ragusa.id]: ragusa,
+  [ancona.id]: ancona,
+  [chioggia.id]: chioggia,
+  [triesteRaid.id]: triesteRaid,
+  [spalatoLanding.id]: spalatoLanding,
+  [elchingen.id]: elchingen,
+  [wertingen.id]: wertingen,
+  [hohenlinden.id]: hohenlinden,
+  [austerlitz.id]: austerlitz,
+  [wischau.id]: wischau,
+  [durnstein.id]: durnstein,
+  [lambach.id]: lambach,
+  [amstetten.id]: amstetten,
+  [taborBridge.id]: taborBridge,
+  [scharnitz.id]: scharnitz,
+  [stecken.id]: stecken,
+  [kehl.id]: kehl,
+  [blackForest.id]: blackForest,
+  [wurzburg.id]: wurzburg,
+  [mainz.id]: mainz,
+  [parisBarriers.id]: parisBarriers,
+  [boulogne.id]: boulogne,
+  [rennes.id]: rennes,
   [vimeiro.id]: vimeiro,
   [friedland.id]: friedland,
   [eylau.id]: eylau,
+  [campoTenese.id]: campoTenese,
+  [gaeta.id]: gaeta,
+  [toulon.id]: toulon,
+  [civitaCastellana.id]: civitaCastellana,
+  [mohrungen.id]: mohrungen,
+  [ostroleka.id]: ostroleka,
+  [danzig.id]: danzig,
+  [dresden.id]: dresden,
+  [pressburg1809.id]: pressburg1809,
+  [graz1809.id]: graz1809,
+  [grodno.id]: grodno,
+  [brestLitovsk.id]: brestLitovsk,
+  [sandomierz.id]: sandomierz,
   [omaha.id]: omaha,
   [iwoJima.id]: iwoJima,
   [elGuettar.id]: elGuettar,
@@ -145,14 +531,52 @@ export const MAPS = {
   [bobruisk.id]: bobruisk,
   [berlin.id]: berlin,
   [gazala.id]: gazala,
+  [tobruk.id]: tobruk,
+  [amiriya.id]: amiriya,
   [seelowHeights.id]: seelowHeights,
+  [krymskaya.id]: krymskaya,
+  [halbe.id]: halbe,
   [hohwacht.id]: hohwacht,
   [aboukirLanding.id]: aboukirLanding,
+  [maida.id]: maida,
+  [castelnuovo.id]: castelnuovo,
+  [anconaLanding.id]: anconaLanding,
+  [corfuLanding.id]: corfuLanding,
+  [weichselmunde.id]: weichselmunde,
+  [pillau.id]: pillau,
+  [memelLanding.id]: memelLanding,
+  [cuxhaven.id]: cuxhaven,
+  [kolberg.id]: kolberg,
+  [koge.id]: koge,
+  [civitavecchia.id]: civitavecchia,
+  [naplesLanding.id]: naplesLanding,
+  [cadizLanding.id]: cadizLanding,
+  [boulogneRaid.id]: boulogneRaid,
+  [quiberon.id]: quiberon,
+  [hyeres.id]: hyeres,
   [gotlandLanding.id]: gotlandLanding,
   [villersBretonneux.id]: villersBretonneux,
   [leHamel.id]: leHamel,
   [stQuentin.id]: stQuentin,
   [soissons.id]: soissons,
+  [passchendaele.id]: passchendaele,
+  [nieuport.id]: nieuport,
+  [belleauWood.id]: belleauWood,
+  [montagneDeReims.id]: montagneDeReims,
+  [cote304.id]: cote304,
+  [cheminDesDames.id]: cheminDesDames,
+  [cambrai.id]: cambrai,
+  [vimy.id]: vimy,
+  [hill70.id]: hill70,
+  [stMihiel.id]: stMihiel,
+  [seicheprey.id]: seicheprey,
+  [meuseArgonne.id]: meuseArgonne,
+  [metz.id]: metz,
+  [sedan1918.id]: sedan1918,
+  [rhine1918.id]: rhine1918,
+  [matz.id]: matz,
+  [theLys.id]: theLys,
+  [courtrai.id]: courtrai,
   [suwalkiGap.id]: suwalkiGap,
   [suwalkiTown.id]: suwalkiTown,
   [nemanCrossing.id]: nemanCrossing,
@@ -181,7 +605,21 @@ export const MAPS = {
   [monteKali.id]: monteKali,
   [jena.id]: jena,
   [auerstedt.id]: auerstedt,
+  [saalfeld.id]: saalfeld,
+  [schleiz.id]: schleiz,
+  [halle1806.id]: halle1806,
+  [erfurt.id]: erfurt,
+  [magdeburg1806.id]: magdeburg1806,
+  [prenzlau.id]: prenzlau,
+  [spandau.id]: spandau,
+  [breslau.id]: breslau,
+  [hameln.id]: hameln,
+  [konigsberg.id]: konigsberg,
+  [tilsit.id]: tilsit,
+  [posen1806.id]: posen1806,
   [stalingrad.id]: stalingrad,
+  [mozhaisk.id]: mozhaisk,
+  [novorossiysk.id]: novorossiysk,
   [elAlamein.id]: elAlamein,
   [midway.id]: midway,
   [savoSound.id]: savoSound,
@@ -189,6 +627,7 @@ export const MAPS = {
   [norwegianSea.id]: norwegianSea,
   [northCape.id]: northCape,
   [ionianSea.id]: ionianSea,
+  [seaOfJapan.id]: seaOfJapan,
   [trafalgar.id]: trafalgar,
   [aboukir.id]: aboukir,
   [brest.id]: brest,
@@ -197,8 +636,15 @@ export const MAPS = {
   [doggerBank.id]: doggerBank,
   [doverStrait.id]: doverStrait,
   [zeebrugge.id]: zeebrugge,
+  [albion.id]: albion,
+  [lido.id]: lido,
+  [cattaroLanding.id]: cattaroLanding,
   [balticSea.id]: balticSea,
+  [giukGap.id]: giukGap,
+  [openSea.id]: openSea,
   [philippineSea.id]: philippineSea,
+  [atlanticConvoy.id]: atlanticConvoy,
+  [maltaConvoy.id]: maltaConvoy,
 };
 
 /**
@@ -249,6 +695,27 @@ export function forEpoch(year) {
   }
 }
 
+/**
+ * A map in winter (a campaign battle on the Eastern Front in December–February): its ground under snow — grass and fields
+ * most, earth and rock less — a grey winter sky, and the winter climate (whitewash and snow smocks: render/paint.js).
+ * A map that is already a winter map (or a desert) stays as it is.
+ */
+export function winterOf(map) {
+  if (map.climate) return map;
+  const mix = (c, to, k) => {
+    const n = typeof c === 'string' ? parseInt(c.replace('#', ''), 16) : c;
+    if (!Number.isFinite(n)) return c;
+    const ch = (v, s) => Math.round(((v >> s) & 255) * (1 - k) + ((to >> s) & 255) * k);
+    const out = (ch(n, 16) << 16) | (ch(n, 8) << 8) | ch(n, 0);
+    return typeof c === 'string' ? `#${out.toString(16).padStart(6, '0')}` : out;
+  };
+  const SNOW = 0xeef0f0, HOW = { grass: 0.82, grassAlt: 0.8, dryGrass: 0.78, pasture: 0.82, meadow: 0.8, stubble: 0.75, ploughed: 0.6, dirt: 0.55, rock: 0.45, strip: 0.6 };
+  const t = map.theme ?? {}, terrain = Object.fromEntries(Object.entries(t.terrain ?? {}).map(([k, v]) => [k, HOW[k] ? mix(v, SNOW, HOW[k]) : v]));
+  const sky = { fogColor: 0xb6bac0, skyTop: 0x7a828c, skyHorizon: 0xc4c8cc, skyBottom: 0x80848a, hemiGround: 0x8a8c90, cloudLight: 0xcfd2d6, cloudDark: 0x7c8086 };
+  const theme = { ...t, terrain, ...Object.fromEntries(Object.entries(sky).map(([k, v]) => [k, t[k] != null ? mix(t[k], v, 0.7) : t[k]])), sunIntensity: (t.sunIntensity ?? 1.6) * 0.85, clouds: Math.max(t.clouds ?? 0.5, 0.8) };
+  return { ...map, climate: 'winter', theme };
+}
+
 export function getMap(id) {
   return MAPS[id] ?? MAPS[DEFAULT_MAP];
 }
@@ -266,7 +733,7 @@ const tabOf = (m) => m.theatre ?? 'land';
  */
 export const REGIONS = [
   { id: 'europe', name: 'Western Europe' }, { id: 'baltic', name: 'Baltic States' }, { id: 'north', name: 'Northern Flank' }, { id: 'east', name: 'Eastern Front' }, { id: 'iberia', name: 'Iberia' },
-  { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' },
+  { id: 'italy', name: 'Italian Front' }, { id: 'med', name: 'Mediterranean' }, { id: 'africa', name: 'North Africa' }, { id: 'middleEast', name: 'Middle East' }, { id: 'balkans', name: 'Balkans' },
   { id: 'caribbean', name: 'Caribbean' }, { id: 'pacific', name: 'Asia & Pacific' }, { id: 'korea', name: 'Korea' },
 ];
 export const regionOf = (m) => m.region ?? 'europe';

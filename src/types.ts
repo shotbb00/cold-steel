@@ -289,6 +289,7 @@ export interface MapDef {
   navCell?: number;       // routing cell, m (world/Nav.js; a sea map: coarser)
   camera?: { maxHeight?: number; near?: number; far?: number }; // a big map: zoom out further, see further
   fow?: number;           // how dark unseen ground gets, 0…1 (render/FogOfWar.js; a sea map: lighter)
+  fleetOrder?: Record<string, string[]>; // a sea map's own AI buying order, by army (ai/SeaDirector.js; 1806: the Boulogne flotilla, a convoy's merchantmen)
   sides?: { nato?: string; pact?: string }; // the map's own names for the sides (the epoch's otherwise)
   modes?: string[];        // only these modes (the menu offers it with them; main.js start falls back to the first)
   theatre?: 'land' | 'sea' | 'coastal'; // where it's fought: the menu's picker under the years (land unless it says)

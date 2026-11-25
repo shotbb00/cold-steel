@@ -208,6 +208,7 @@ export default {
         units.forEach((id, k) => {
           const s = game.spawnStack(id, f, { x: base.x + lane.x + (k - (units.length - 1) / 2) * 9, z: base.z - sz * 14 },
             sz > 0 ? Math.PI : 0, `${lane.name} wave ${n}${units.length > 1 ? ` ${UNIT_TYPES[id].shortName}` : ''}`, id === 'rifles' ? { count: 6 } : {});
+          if (!s) return; // (nothing of the kind in this army: GameEngine.spawnStack)
           s.autonomous = true; // nobody's to command: it goes by itself
           s.lane = lane.i;
         });
@@ -236,7 +237,8 @@ export default {
     // buy
     if (forces(game, me).length < state.maxStacks) {
       const id = ARMY_ORDER[this.buildIndex % ARMY_ORDER.length];
-      if (state.cp[me] >= UNIT_TYPES[id].cost) {
+      if (!UNIT_TYPES[id]) this.buildIndex++; // (a type this epoch hasn't got, e.g. no cev in 1918: next one)
+      else if (state.cp[me] >= UNIT_TYPES[id].cost) {
         const s = state.buy(me, id);
         this.buildIndex++;
         if (s) {

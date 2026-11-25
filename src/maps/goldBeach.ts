@@ -200,8 +200,8 @@ export default {
     // the tide: low water at H-hour (later than Omaha's: the reefs off Gold), coming in over the battle
     tide: { rise: 1.6, over: 1500, band: [90, 430] },
     seaMines: { z: [520, 590], count: 60, lanes: SECTORS.map((s) => s.x), lane: 80, seed: 1950 },
-    // Force G's bombardment: the destroyers inshore, the minesweepers, the cruisers (Ajax and Argonaut) offshore
-    navy: ['destroyer', 'minesweeper', 'lightCruiser'],
+    // Force G's bombardment: the destroyers inshore, the minesweepers, the LCT(R)s' rocket ripples, the cruisers (Ajax and Argonaut) offshore
+    navy: ['destroyer', 'minesweeper', 'lsmr', 'lightCruiser'],
     obstacles: OBSTACLES,
     // the defence at H-hour: in the seafront houses either side of each exit, on the Mont Fleury rise, in the villages
     hold: [
