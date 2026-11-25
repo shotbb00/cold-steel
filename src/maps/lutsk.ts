@@ -1,15 +1,20 @@
 // Lutsk, 4–7 June 1916: the opening of the Brusilov Offensive. Kaledin's Eighth Army attacks the Austro-Hungarian
-// Fourth Army on the Volhynian plain east of Lutsk — not on one narrow front but everywhere at once, after a short,
-// exactly registered bombardment, the assault trenches dug forward to within a hundred metres of the enemy wire.
-// The Austro-Hungarian lines were deep — three belts of trenches with dugouts nine metres down — and that was their
-// undoing: the garrisons were still below ground when the Russians came over the parapet. By the 7th the Russians
-// were in Lutsk and over the Styr. The ground: the flat, open Volhynian plain of wheat and rye, small woods, the
-// Styr winding through it in broad loops, the old town of Lutsk on its banks with Lubart's castle and the cathedral.
-// Not mirrored but fair: the Styr runs between the two sides in an S — each side's bank reaching into the other's
-// in one loop with a point in it (Hnidava in the western loop on the north bank, Ozerdiv in the eastern on the south),
-// a bridge on each flank and the town bridge in Lutsk, which stands astride the river; each side two trench lines
-// at the same depth from the water (the deep lines of 1916, three belts of wire in front of the first), each half
-// its own woods of the same area and one low rise of the same height at the same reach.
+// Fourth Army east of Lutsk — not on one narrow front but everywhere at once, after a short, exactly registered
+// bombardment, the assault trenches dug forward to within a hundred metres of the enemy wire. The Austro-Hungarian
+// lines were deep — three belts of trenches with dugouts nine metres down — and that was their undoing: the garrisons
+// were still below ground when the Russians came over the parapet. By the 7th the Russians were in Lutsk and over the Styr.
+// The ground: the Volhynian loess plateau, wheat and rye on its flat top, cut by steep wooded ravines (the balky) that
+// run down to the Styr; the river in its sunk valley swings round the old town in a great horseshoe, the town on the
+// promontory inside it and Lubart's castle at the promontory's tip, the cathedral behind it.
+// On the map (1.0 × 1.12 km) the Russians come from the Olyka road (+z, east of the town), the Austro-Hungarians hold
+// the Volodymyr road (−z): the Styr comes in from the west edge, runs east under the Russian front, bends south round
+// the castle and runs back west under the Austrian front — a horseshoe in the western two-thirds with the town and the
+// castle inside it, reached by a bridge and a pontoon bridge on each arm and the castle bridge at the tip. East of the
+// bend the plateau is open from one side's lines to the other's: the ravines there are the only cover.
+// Not mirrored but fair: the horseshoe opens to the west edge, so each side has one arm before it with the same two
+// crossings, and the open plateau east is shared; the points are at matching reaches (tools/map_fairness.py), each
+// half has its own ravines (one long one running north-east in the Russian half, one south-east in the Austrian, and
+// a short one behind each side's west flank), its own woods of the same area, two trench lines at the same depth.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -17,71 +22,106 @@ import { createRiver } from '../world/River.js';
 import { smoothstep, mulberry32 } from '../core/math.js';
 import { commandPost, trenchLine, buildSite, shellField } from './common.js';
 import { vegetation } from './common2027.js';
-import { pontoons, farmVillage, evenThreshold } from './greatWarHelpers.ts';
+import { pontoons, farmVillage, evenThreshold, segDist } from './greatWarHelpers.ts';
+import { gridCacheSmooth } from './gridCache.js';
 import type { MapDef } from '../types.ts';
 
-const BASE_Z = 500;
-const SIDE_X = 330;
-const HW = 20;                                              // the Styr: broad and slow
+const BOUNDS = { x: 500, z: 560 };
+const BASE_Z = 480;
+const HW = 18;                                              // the Styr: broad and slow
 const noise = createNoise2D(1916_06);
-const mid = (x: number) => 62 * Math.sin(x * 0.0085) + 7 * Math.sin(x * 0.021 + 1);   // (the S through Lutsk)
+
+// ---- the Styr's horseshoe: in from the west edge under the Russian front, round the castle, out under the Austrian
+const STYR = [[-640, 150], [-460, 168], [-330, 148], [-190, 170], [-60, 160], [40, 150], [118, 112], [166, 46], [176, -26], [140, -104], [62, -156],
+  [-50, -164], [-180, -150], [-320, -172], [-470, -152], [-640, -160]];
 const river = createRiver({
-  path: mid, halfWidth: HW, level: 0, depth: 3, valley: 80,
+  paths: [STYR], halfWidth: HW, level: 0, depth: 3, valley: 46,
   crossings: [
-    { name: 'Krasne pontoon bridge', x: -SIDE_X, kind: 'bridge', width: 6, pontoon: true },
-    { name: 'Lutsk bridge', x: 0, kind: 'bridge', width: 7 },
-    { name: 'Kolky pontoon bridge', x: SIDE_X, kind: 'bridge', width: 6, pontoon: true },
+    { name: 'Krasne pontoon bridge', x: -330, z: 148, kind: 'bridge', width: 6, pontoon: true },
+    { name: 'Lutsk bridge', x: -20, z: 156, kind: 'bridge', width: 7 },
+    { name: 'Castle bridge', x: 173, z: 8, kind: 'bridge', width: 6 },
+    { name: 'Dubno bridge', x: -60, z: -163, kind: 'bridge', width: 7 },
+    { name: 'Kolky pontoon bridge', x: -320, z: -172, kind: 'bridge', width: 6, pontoon: true },
   ],
 });
-const away = (x: number, z: number) => Math.abs(z - mid(x));
-/** Each side's road along the plain behind its front line (north: the Rivne road), the roads from the bridges to the bases. */
-const bankZ = (x: number, north: boolean) => (north ? mid(x) * 0.4 + 165 + 8 * Math.sin(x * 0.01) : mid(x) * 0.4 - 170 + 10 * Math.sin(x * 0.007 + 2));
-const roadD = (x: number, z: number) => {
-  let d = Math.abs(z - bankZ(x, z > mid(x)));
-  for (const bx of [-SIDE_X, 0, SIDE_X]) d = Math.min(d, Math.abs(x - bx));
-  return d;
-};
-const onRoad = (x: number, z: number) => roadD(x, z) < 3.5;
-/** The two trench lines of each side, at `depth` from the water's middle: the first line and the support line, each its own wander. */
-const trenchZ = (x: number, north: boolean, line: number) => {
-  const m = mid(x) * (line ? 0.55 : 0.8);                  // (the lines straighten the river's loops away from it)
-  return north ? m + (line ? 235 : 105) + 9 * Math.sin(x * 0.017 + line) : m - (line ? 232 : 108) - 10 * Math.sin(x * 0.013 + 2 + line);
-};
+const EXT = { x: 640, z: 700 };
+const riverD = gridCacheSmooth((x: number, z: number) => segDist(STYR, x, z), EXT, 4);
+/** Inside the horseshoe (the promontory): between the arms, west of the bend. */
+const inLoop = (x: number, z: number) => Math.abs(z) < 150 && x < 150 && riverD(x, z) > HW;
 
-/** One low rise a side [x, z, r, h]: the Podhaitsi rise on the north, the Torchyn rise on the south; and a gentler swell each. */
-const RISES = [[90, 260, 170, 6], [-330, 330, 140, 3], [-40, -280, 170, 6], [370, -300, 140, 3]];
-function height(x: number, z: number) {
-  const d = away(x, z);
-  let h = 1.2 + smoothstep(30, 140, d) * (3.2 + fbm(noise, x * 0.004 + (z > mid(x) ? 0 : 40), z * 0.004, 4) * 3.5);
-  h += fbm(noise, x * 0.015 + 9, z * 0.015, 3) * 0.8 * smoothstep(40, 140, d);
-  for (const [hx, hz, r, hh] of RISES) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.5;
-  h += smoothstep(BASE_Z - 70 + 40 * Math.sin(x * 0.008 + 1), 640, Math.abs(z)) * 8 + smoothstep(440 + 50 * Math.sin(z * Math.PI / 280), 600, Math.abs(x)) * 12;
-  for (const bx of [-SIDE_X, 0, SIDE_X]) h += (Math.min(h, 1.2 + d * 0.05) - h) * (1 - smoothstep(5, 16, Math.abs(x - bx))) * (1 - smoothstep(90, 140, d));
-  for (const bz of [BASE_Z, -BASE_Z]) h += (h * 0.4 + 6 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
-  return river.carve(x, z, Math.max(1.4, h));
-}
+// ---- the ravines: [course, depth]; the first point is at the valley, the last its head on the plateau
+const RAVINES: [number[][], number][] = [
+  [[[150, 120], [250, 175], [340, 190], [430, 250], [520, 280]], 11],        // the Krupa balka, north-east into the Russian half
+  [[[150, -120], [220, -200], [330, -250], [400, -340], [470, -420]], 11],   // the Hnidava balka, south-east into the Austrian
+  [[[-400, 190], [-430, 280], [-480, 360]], 8],                             // short ones behind each west flank
+  [[[-240, -200], [-200, -300], [-230, -380]], 8],
+];
+const ravD = RAVINES.map(([c]) => gridCacheSmooth((x: number, z: number) => segDist(c, x, z), EXT, 4));
+
+// ---- roads: the bases' roads to the bridges, the town street across the promontory, the lateral roads, the Rivne–Dubno road up the plateau
+const ROADS = [
+  [[0, 640], [0, 440], [-12, 300], [-20, 156], [-40, 60], [-60, -60], [-60, -163], [-30, -300], [0, -440], [0, -640]],
+  [[-640, 300], [-340, 290], [-12, 300], [110, 305], [360, 270], [640, 280]],
+  [[-640, -300], [-300, -310], [-30, -300], [-60, -285], [380, -240], [640, -250]],
+  [[-340, 290], [-330, 148], [-325, 0], [-320, -172], [-300, -310]],                    // the pontoon road across the island
+  [[-325, 0], [-170, 15], [-50, 0], [75, -5], [173, 8], [340, 10], [640, 15]],          // through the old town to the castle and over its bridge
+  [[360, 270], [345, 140], [340, 10], [350, -120], [380, -240]],                        // the Rivne–Dubno road along the plateau
+];
+const roadD = gridCacheSmooth((x: number, z: number) => Math.min(...ROADS.map((r) => segDist(r, x, z))), { x: 520, z: 580 }, 2);
+const onRoad = (x: number, z: number) => roadD(x, z) < 3.5;
 
 const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
 const points = [
-  P('A', 'Olyka road', 0, 470, 'centre'),
-  P('B', 'Kivertsi', -350, 320, 'west'),
-  P('C', 'Podhaitsi', 90, 260, 'centre'),
-  P('D', 'Zhydychyn Monastery', 330, 335, 'east'),
-  P('E', 'Hnidava', -190, Math.round(mid(-190) + 72), 'west', { radius: 24 }),
-  P('F', 'Lutsk', 0, Math.round(mid(0)), 'centre', { radius: 32 }),
-  P('G', 'Ozerdiv', 200, Math.round(mid(200) - 66), 'east', { radius: 24 }),
-  P('H', 'Boratyn', -240, -330, 'west'),
-  P('I', 'Torchyn', -40, -280, 'centre'),
-  P('J', 'Lypyny', 370, -300, 'east'),
-  P('K', 'Volodymyr road', 0, -470, 'centre'),
+  P('A', 'Olyka road', 0, 440, 'centre'),
+  P('B', 'Kivertsi', -340, 290, 'west'),
+  P('C', 'Podhaitsi', 110, 305, 'centre'),
+  P('D', 'Zhydychyn Monastery', 365, 255, 'east'),
+  P('E', 'Lutsk old town', -170, 15, 'west', { radius: 32 }),
+  P('F', 'Lubart\'s Castle', 75, -5, 'centre', { radius: 28 }),
+  P('G', 'Ozerdiv', 340, 10, 'east', { radius: 26 }),
+  P('H', 'Boratyn', -300, -310, 'west'),
+  P('I', 'Torchyn', -60, -285, 'centre'),
+  P('J', 'Lypyny', 380, -240, 'east'),
+  P('K', 'Volodymyr road', 0, -440, 'centre'),
 ] as any[];
+const CASTLE = { x: 75, z: -5 };
+// each side's airfield on the plateau behind its flank (strip along x, the tower 55 m off it), graded flat
+const AIR = [{ faction: 'nato', x: -230, z: 430, yaw: Math.PI / 2, large: false }, { faction: 'pact', x: 230, z: -430, yaw: -Math.PI / 2, large: false }];
+const airD = (x: number, z: number) => Math.min(...AIR.map((a) => Math.hypot(Math.max(0, Math.abs(x - a.x) - 125), Math.max(0, Math.abs(z - a.z - 27 * Math.sign(a.z)) - 52))));
+
+const ground = gridCacheSmooth((x: number, z: number) => {
+  const d = riverD(x, z);
+  // the loess plateau: flat-topped, a long gentle swell, the wheat's small undulations
+  let h = 12.5 + fbm(noise, x * 0.0028 + (z > 0 ? 0 : 31), z * 0.0028, 4) * 3.2 + fbm(noise, x * 0.014 + 9, z * 0.014, 3) * 0.7;
+  h += 2.5 * smoothstep(300, 520, x);                                                         // (the plateau rising east toward Rivne)
+  // the Styr's sunk valley: a flat floodplain, then steep loess sides
+  h = 1.4 + (h - 1.4) * smoothstep(38, 112, d) ** 1.3;
+  // the promontory: the town on its hill, the castle mound at the tip
+  if (inLoop(x, z)) h += 2.2 * smoothstep(110, 40, Math.hypot(x + 170, z - 15)) + 2.5 * smoothstep(42, 14, Math.hypot(x - CASTLE.x, z - CASTLE.z));
+  // the ravines: steep, wooded, their floors running down to the valley
+  RAVINES.forEach(([c, dep], i) => {
+    const r = ravD[i](x, z);
+    if (r < 60) h -= dep * (1 - smoothstep(5, 42, r)) * smoothstep(0, 1, h / 10);
+  });
+  for (const p of points) if (p.id !== 'F') h += (h * 0.6 + 4.5 - h) * smoothstep(40, 18, Math.hypot(x - p.x, z - p.z)) * 0.4;
+  for (const bz of [BASE_Z, -BASE_Z]) h += (12 - h) * smoothstep(34, 16, Math.hypot(x, z - bz));
+  h += (12.5 - h) * smoothstep(30, 6, airD(x, z));
+  return h;
+}, EXT, 3);
+const height = (x: number, z: number) => river.carve(x, z, Math.max(1.4, ground(x, z)));
+
+/** The two trench lines of each side across the whole field: the first line and the support line, each its own wander. */
+const trenchZ = (x: number, north: boolean, line: number) => (north
+  ? (line ? 372 : 228) + 9 * Math.sin(x * 0.017 + line) + 14 * smoothstep(100, 300, x)
+  : -(line ? 368 : 226) - 10 * Math.sin(x * 0.013 + 2 + line) - 14 * smoothstep(100, 300, x));
+const inRavine = (x: number, z: number, m = 0) => ravD.some((f) => f(x, z) < 12 + m);
 
 const layout = [{ unit: 'rifles', x: 10, z: BASE_Z - 24, name: '1st Section' }];
 
 export default {
   id: 'lutsk',
   name: 'Lutsk',
-  description: 'June 1916, the Brusilov Offensive: the Russian Eighth Army storms the deep Austro-Hungarian dugout lines on the open Volhynian plain and drives for Lutsk and the Styr. Wheat and small woods, the river in broad loops, two trench lines on each side.',
+  description: 'June 1916, the Brusilov Offensive: the Russian Eighth Army storms the deep Austro-Hungarian dugout lines on the Volhynian plateau and drives for Lutsk. The Styr loops round the old town and Lubart\'s castle in a sunk valley; east of the bend the open loess plateau, cut by wooded ravines.',
   epochs: ['1918'],
   region: 'east',
   armies: { nato: ['ru'], pact: ['ah'] }, // (Kaledin's Eighth Army against Archduke Joseph Ferdinand's Fourth: maps/index.js armiesOn)
@@ -89,33 +129,36 @@ export default {
   conditions: { time: 'dawn', weather: 'clear' }, // (the guns opened at dawn on 4 June, a fine early-summer day)
   size: 1600,
   segments: 640,
-  bounds: { x: 500, z: 560 },
+  bounds: BOUNDS,
   seed: 1916,
   height,
   river,
   bridgeAt: (x: number, z: number) => river.bridgeAt(x, z),
+  airfields: AIR,
   fields: createFields({ seed: 1916, cell: 90, weights: [0.15, 0.5, 0.1, 0.25] as any }),
 
   theme: {
-    // a bright early-summer day on the plain
+    // a bright early-summer day on the plateau
     fogColor: 0xb4b8ae, fogDensity: 0.0011, skyTop: 0x5e86b0, skyHorizon: 0xccd2ca, skyBottom: 0x84867c,
     sunColor: 0xfff2d8, sunIntensity: 2.0, sunDisk: 0.3, clouds: 0.3, cloudLight: 0xf0f0ea, cloudDark: 0x9aa0a6,
     sunDir: [0.5, 0.65, 0.45], hemiSky: 0xc6ced8, hemiGround: 0x5e5838, hemiIntensity: 1.25, rimColor: 0xc4ccd2, rimIntensity: 0.25,
     terrain: {
       grass: '#5c6c38', grassAlt: '#50622f', dryGrass: '#9a9058', dirt: '#5e4e3a', rock: '#86827a', strip: '#4a3e2e',
       pasture: '#5a6c38', ploughed: '#5a4a38', stubble: '#a49a5a', meadow: '#66743e',   // (the black earth of Volhynia)
-      farmX: [460, 600], farmZ: [520, 640], roads: [-SIDE_X, 0, SIDE_X], roadZ: 560,
+      farmX: [BOUNDS.x - 20, BOUNDS.x + 90], farmZ: [BOUNDS.z - 10, BOUNDS.z + 90], roads: [-340, 0, 360], roadZ: BOUNDS.z - 20,
       surface(x: number, z: number, y: number) {
         if (onRoad(x, z)) return [0x6a5a46, 0.85];                                     // dirt roads
-        if (y < 1.6 && away(x, z) < HW + 14) return [0x8a8462, 0.85];                   // the reedy banks
+        if (y < 1.7 && riverD(x, z) < HW + 14) return [0x8a8462, 0.85];                 // the reedy banks
+        if (y < 2.2 && riverD(x, z) < 50) return [0x62743e, 0.5];                       // the wet meadow on the floodplain
+        if (inRavine(x, z, -4)) return [0x6a5a40, 0.45];                               // (the loess showing in the ravine sides)
         return null;
       },
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-SIDE_X, 0, SIDE_X] }, pact: { x: 0, z: -BASE_Z, entries: [-SIDE_X, 0, SIDE_X] } },
+  bases: { nato: { x: 0, z: BASE_Z, entries: [-340, 0, 360] }, pact: { x: 0, z: -BASE_Z, entries: [-300, 0, 380] } },
   maxStacks: 26,
-  cameraStart: { nato: { x: 0, z: 380 }, pact: { x: 0, z: -380 } },
+  cameraStart: { nato: { x: 0, z: 370 }, pact: { x: 0, z: -370 } },
   points,
   spawns: {
     nato: layout.map((s) => ({ ...s, facing: Math.PI })),
@@ -131,64 +174,66 @@ export default {
         const pts: number[][] = [];
         for (let x = -480; x <= 480; x += 30) pts.push([x * s, trenchZ(x * s, f === 'nato', line)]);   // (left to right as its owner looks)
         for (const w of trenchLine(pts, f, { wireAt: line ? 18 : 22, belts: line ? 1 : 3, gapEvery: line ? 50 : 70 })) {
-          if (roadD(w.x, w.z) < 8 || away(w.x, w.z) < HW + 10) continue;
+          if (roadD(w.x, w.z) < 8 || riverD(w.x, w.z) < HW + 10 || inRavine(w.x, w.z, -3) || airD(w.x, w.z) < 10) continue;
           works.push(w);
         }
-        for (const bx of [-SIDE_X, 0, SIDE_X]) works.push({ kind: 'mgNest', x: bx + 15 * s, z: trenchZ(bx + 15 * s, f === 'nato', line) - 4 * s, yaw: f === 'nato' ? Math.PI : 0, faction: f });
+        for (const bx of [-340, 0, 360]) works.push({ kind: 'mgNest', x: bx + 15 * s, z: trenchZ(bx + 15 * s, f === 'nato', line) - 4 * s, yaw: f === 'nato' ? Math.PI : 0, faction: f });
       }
     }
-    const dens = (x: number, z: number) => { const dz = Math.abs(z) - 110; return 0.8 * Math.exp(-((dz / 40) ** 2)) + 0.03; };
-    const blasts = [...shellField(1916, { x: 500, z: 560 }, dens).filter((b: number[]) => b[1] >= 0), ...shellField(1917, { x: 500, z: 560 }, dens).filter((b: number[]) => b[1] < 0)]
-      .filter((b: number[]) => away(b[0], b[1]) > HW + 12 && !onRoad(b[0], b[1]) && points.every((p) => Math.hypot(p.x - b[0], p.z - b[1]) > 35));
+    const dens = (x: number, z: number) => { const dz = Math.abs(z) - 190; return 0.8 * Math.exp(-((dz / 40) ** 2)) + 0.03; };
+    const blasts = [...shellField(1916, BOUNDS, dens).filter((b: number[]) => b[1] >= 0), ...shellField(1917, BOUNDS, dens).filter((b: number[]) => b[1] < 0)]
+      .filter((b: number[]) => riverD(b[0], b[1]) > HW + 12 && !onRoad(b[0], b[1]) && points.every((p) => Math.hypot(p.x - b[0], p.z - b[1]) > 35));
     return { blasts, ruins: [], works };
   },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });
     const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
-    const wet = (x: number, z: number, r = 0) => away(x, z) < HW + 6 + r;
-    const trenchBand = (x: number, z: number) => [0, 1].some((l) => Math.abs(z - trenchZ(x, z > mid(x), l)) < (l ? 22 : 34));
-    const skip = (x: number, z: number) => wet(x, z, 8) || roadD(x, z) < 8 || trenchBand(x, z);
+    const wet = (x: number, z: number, r = 0) => riverD(x, z) < HW + 6 + r;
+    const trenchBand = (x: number, z: number) => [0, 1].some((l) => Math.abs(z - trenchZ(x, z > 0, l)) < (l ? 22 : 34));
+    const skip = (x: number, z: number) => wet(x, z, 8) || roadD(x, z) < 8 || trenchBand(x, z) || inRavine(x, z, 4) || airD(x, z) < 25;
 
-    // Lutsk astride the Styr: town houses on both banks, the cathedral on the north bank, Lubart's castle on the south
-    const castle = { x: -44, z: mid(-44) - 58 }, cathedral = { x: 40, z: mid(40) + 50 };
+    // Lutsk on its promontory: town houses round the old town's market, the cathedral, Lubart's castle at the tip
+    const cathedral = { x: -110, z: 50 };
     props.rand = mulberry32(1916_1);
-    for (let i = 0, n = 0; n < 30 && i < 500; i++) {
-      const a = props.rand() * Math.PI * 2, d = 22 + props.rand() * 68, x = Math.cos(a) * d * 1.3, z = mid(x) + Math.sin(a) * d;
-      if (wet(x, z, 10) || roadD(x, z) < 7 || trenchBand(x, z) || Math.hypot(x - castle.x, z - castle.z) < 34 || Math.hypot(x - cathedral.x, z - cathedral.z) < 16) continue;
+    for (let i = 0, n = 0; n < 34 && i < 700; i++) {
+      const a = props.rand() * Math.PI * 2, d = 24 + props.rand() * 90, x = -150 + Math.cos(a) * d * 1.5, z = 10 + Math.sin(a) * d * 0.9;
+      if (!inLoop(x, z) || wet(x, z, 18) || roadD(x, z) < 7 || Math.hypot(x - CASTLE.x, z - CASTLE.z) < 40 || Math.hypot(x - cathedral.x, z - cathedral.z) < 16 || Math.hypot(x + 170, z - 15) < 16) continue;
       props.townHouse({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2) + Math.PI / 2, width: 7 + props.rand() * 3, depth: 8, storeys: 1 + (props.rand() < 0.6 ? 1 : 0), damaged: 0.1 });
       n++;
     }
     props.church({ x: cathedral.x, z: cathedral.z, yaw: 0.1 });
-    // Lubart's castle: brick curtain walls round a square, a tower at three corners, the gate tower toward the town
-    const cw = 0x8a5a44;
-    for (const [dx, dz, yaw, len] of [[0, -22, 0, 40], [-22, 0, Math.PI / 2, 40], [22, 0, Math.PI / 2, 40], [-13, 22, 0, 18], [13, 22, 0, 18]]) {
-      props.lowWall({ x: castle.x + dx, z: castle.z + dz, yaw, length: len, height: 5, color: cw });
+    // Lubart's castle: brick curtain walls round a square on its mound, a tower at each corner, the gate toward the town
+    const cw = 0x8a5a44, cx = CASTLE.x + 4, cz = CASTLE.z;
+    for (const [dx, dz, yaw, len] of [[22, 0, Math.PI / 2, 40], [0, -22, 0, 40], [0, 22, 0, 40], [-22, -13, Math.PI / 2, 18], [-22, 13, Math.PI / 2, 18]]) {
+      props.lowWall({ x: cx + dx, z: cz + dz, yaw, length: len, height: 5, color: cw });
     }
-    for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22]]) props.column({ x: castle.x + dx, z: castle.z + dz, radius: 3.4, height: 11 });
-    props.townHouse({ x: castle.x + 6, z: castle.z - 8, yaw: 0, width: 14, depth: 9, storeys: 2, name: 'castle palace', damaged: 0 });
-    // the villages on the plain, the monastery at Zhydychyn
+    for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22]]) props.column({ x: cx + dx, z: cz + dz, radius: 3.4, height: 11 });
+    props.townHouse({ x: cx + 9, z: cz + 10, yaw: Math.PI / 2, width: 14, depth: 9, storeys: 2, name: 'castle palace', damaged: 0 });
+    // the villages on the plateau, the monastery at Zhydychyn, the village in the ravine head at Ozerdiv
     for (const p of points) {
-      if ('AKF'.includes(p.id)) continue;
+      if ('AKEF'.includes(p.id)) continue;
       farmVillage(props, p.x, p.z, p.id === 'D' ? 4 : 7, 1916 * 10 + Math.round(p.x * 3 + p.z * 7), skip, 1.15);
     }
     props.rand = mulberry32(1933);
-    props.church({ x: 352, z: 352, yaw: 0.4 });                  // Zhydychyn's monastery church
-    props.lowWall({ x: 352, z: 372, yaw: 0.4, length: 30, height: 2, color: 0xb0aa98 });
-    props.church({ x: 120, z: 276, yaw: 0.1 });                   // Podhaitsi
-    props.church({ x: -64, z: -298, yaw: Math.PI + 0.2 });       // Torchyn
+    props.church({ x: 392, z: 274, yaw: 0.4 });                  // Zhydychyn's monastery church
+    props.lowWall({ x: 392, z: 296, yaw: 0.4, length: 30, height: 2, color: 0xb0aa98 });
+    props.church({ x: 140, z: 322, yaw: 0.1 });                   // Podhaitsi
+    props.church({ x: -84, z: -304, yaw: Math.PI + 0.2 });        // Torchyn
+    props.church({ x: 362, z: -14, yaw: Math.PI / 2 });           // Ozerdiv
     // the pioneers' stores by each pontoon bridge
-    for (const s of [1, -1]) for (const bx of [-SIDE_X, SIDE_X]) {
-      props.rand = mulberry32(1949 + s + bx);
-      const z = mid(bx) + (HW + 16) * s;
-      props.logPile({ x: bx + 14 * s, z, yaw: props.rand() * 0.6, length: 7 });
-      props.crates({ x: bx - 14 * s, z: z + 6 * s, yaw: props.rand() * 3 });
+    for (const c of river.crossings.filter((c: any) => c.pontoon)) {
+      const s = Math.sign(c.z);
+      props.rand = mulberry32(1949 + Math.round(c.x));
+      const z = c.z + (HW + 18) * s;
+      props.logPile({ x: c.x + 14, z, yaw: props.rand() * 0.6, length: 7 });
+      props.crates({ x: c.x - 14, z: z + 6 * s, yaw: props.rand() * 3 });
     }
-    // farmsteads, field walls and hay over each half's fields
+    // farmsteads, field walls and hay over the plateau
     const kinds = ['farm', 'hay', 'fieldwall', 'hay', 'farm', 'rocks'];
     for (let tries = 0, n = 0; n < 120 && tries < 9000; tries++) {
       const x = (rand() * 2 - 1) * (bounds.x - 20), z = (rand() * 2 - 1) * (bounds.z - 40);
-      if (Math.hypot(x, z - mid(x)) < 140 || Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || nearPoint(x, z, 50) || skip(x, z)) continue;
+      if (riverD(x, z) < 110 || inLoop(x, z) || Math.hypot(x, Math.abs(z) - BASE_Z) < 45 || nearPoint(x, z, 50) || skip(x, z)) continue;
       buildSite(props, { kind: kinds[n++ % kinds.length], seed: Math.floor(rand() * 1e9) }, x, z, rand() * Math.PI);
     }
     commandPost(props, this.bases.nato, -1, 0x6a6a52);
@@ -198,16 +243,19 @@ export default {
     pontoons(river, scene);
 
     const avoid = [{ x: 0, z: BASE_Z, r: 28 }, { x: 0, z: -BASE_Z, r: 28 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 14 })),
-      { test: (x: number, z: number) => wet(x, z, 2) || onRoad(x, z) || Math.hypot(x * 0.77, z - mid(x)) < 100 }];
+      ...river.crossings.map((c: any) => ({ x: c.x, z: c.z, r: HW + 14 })),
+      { test: (x: number, z: number) => wet(x, z, 2) || onRoad(x, z) || airD(x, z) < 12 || (inLoop(x, z) && Math.hypot((x + 60) * 0.6, z) < 120) }];
     const wood = (x: number, z: number) => fbm(noise, x * 0.007 + 70, z * 0.007, 3);
-    const tN = 0.22, tP = evenThreshold(wood, tN, (x, z) => z > mid(x));   // (small woods only: the plain is open)
+    const tN = 0.24, tP = evenThreshold(wood, tN, (_x, z) => z > 0);   // (small woods only: the plateau is open)
     const update = vegetation({
-      scene, terrain, cover, rand, bounds, fields: this.fields, palette: this.theme.terrain, avoid, trees: 2600, hedges: 1200, autumn: 0, broadleaf: 0.75,
+      scene, terrain, cover, rand, bounds, fields: this.fields, palette: this.theme.terrain, avoid, trees: 3000, hedges: 1200, autumn: 0, broadleaf: 0.75,
       forest: (x: number, z: number) => {
         if (wet(x, z, 3)) return -1;
+        if (inRavine(x, z, 8)) return 0.8;                                    // oak, hornbeam and thorn down the ravines
         if (trenchBand(x, z)) return 0.03;
-        if (away(x, z) < 50) return 0.25;                                     // willows and alders along the Styr
-        return Math.abs(x) > 470 || wood(x, z) > (z > mid(x) ? tN : tP) ? 0.85 : 0;
+        if (riverD(x, z) < 60) return 0.25;                                   // willows and alders along the Styr
+        if (riverD(x, z) < 110) return 0.12;                                  // (scrub on the valley's steep sides)
+        return wood(x, z) > (z > 0 ? tN : tP) ? 0.85 : 0;
       },
     });
     return { buildings: props.buildings, update };

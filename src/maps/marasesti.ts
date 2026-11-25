@@ -39,81 +39,91 @@ const xAt = (poly: number[][], z: number) => {
 };
 
 // ---- the Siret down the east flank
-const SIRET = [[392, -640], [378, -420], [404, -200], [386, -30], [400, 180], [382, 400], [398, 640]];
+const SIRET = [[262, -640], [236, -420], [258, -260], [318, -130], [380, 0], [418, 160], [432, 330], [470, 480], [478, 640]];
 const BR = { rail: 0, north: 320, south: -330 };
+// ---- the Șușița, out of the hills across the west and through the town’s south side to the Siret
+const SUSITA = [[-640, -10, 6], [-470, -40, 6], [-330, -75, 6], [-190, -50, 6], [-60, -60, 7], [70, -80, 7], [200, -110, 8], [xAt(SIRET, -125) - 6, -125, 9]];
 const river = createRiver({
-  paths: [SIRET], halfWidth: 17, level: 0, depth: 3, valley: 70,
+  paths: [SIRET, SUSITA], halfWidth: 17, level: 0, depth: 3, valley: 70,
   crossings: [
+    { name: 'Răzoare ford', x: -400, z: -57, kind: 'ford', width: 12, channel: 1 },
+    { name: 'Panciu road bridge', x: -150, z: -52, kind: 'bridge', width: 6, channel: 1 },
+    { name: 'Mărășești bridge', x: 20, z: -72, kind: 'bridge', width: 7, channel: 1 },
+    { name: 'Șușița ford', x: 160, z: -100, kind: 'ford', width: 12, channel: 1 },
     { name: 'Siret railway bridge', x: xAt(SIRET, BR.rail), z: BR.rail, kind: 'bridge', width: 10, channel: 0 },
     { name: 'Doaga pontoon bridge', x: xAt(SIRET, BR.north), z: BR.north, kind: 'bridge', width: 6, channel: 0, pontoon: true },
     { name: 'Cosmești pontoon bridge', x: xAt(SIRET, BR.south), z: BR.south, kind: 'bridge', width: 6, channel: 0, pontoon: true },
   ],
 });
-const wetD = gridCache((x: number, z: number) => segDist(SIRET, x, z), { x: 720, z: 780 }, 2);   // (the channel’s middle line: river.project searches the whole course off its grid)
+const wetD = gridCacheSmooth((x: number, z: number) => segDist(SIRET, x, z), { x: 720, z: 780 }, 4);
+const susD = gridCacheSmooth((x: number, z: number) => segDist(SUSITA, x, z), { x: 720, z: 780 }, 4);   // (the channel’s middle line: river.project searches the whole course off its grid)
 /** The reed marsh and wet meadow of the floodplain (0..1). */
-const marshAt = (x: number, z: number) => smoothstep(0.05, 0.3, fbm(noise, x * 0.008 + 30, z * 0.008, 3)) * (1 - smoothstep(80, 150, wetD(x, z)));
+const marshAt = (x: number, z: number) => smoothstep(0.05, 0.3, fbm(noise, x * 0.008 + 30, z * 0.008, 3)) * (1 - smoothstep(120, 190, wetD(x, z)));
 
 // ---- roads and railways
 const ROADS = [
-  [[0, 640], [0, 470], [12, 260], [0, 120], [40, 10], [0, -120], [-14, -260], [0, -470], [0, -640]],         // Adjud – Mărășești – Focșani
-  [[-330, 640], [-330, 470], [-352, 300], [-320, 140], [-300, 10], [-325, -150], [-342, -300], [-330, -470], [-330, -640]], // the forest track
-  [[260, 640], [262, 470], [300, 300], [275, 140], [330, -5], [285, -150], [300, -300], [258, -470], [260, -640]],         // the Siret road
-  [[-500, 290], [-352, 300], [12, 260], [300, 300], [xAt(SIRET, BR.north), BR.north], [500, 330]],           // behind the Romanian line, to Doaga bridge
-  [[-500, -310], [-342, -300], [-14, -260], [300, -300], [xAt(SIRET, BR.south), BR.south], [500, -335]],     // behind the German line, to Cosmești bridge
-  [[-500, -25], [-300, 10], [-150, 25], [40, 10]],                                                           // the Mărășești – Panciu road
-  [[40, 10], [180, -8], [330, -5], [xAt(SIRET, 0), 0], [500, 4]],                                            // the Tecuci road over the railway bridge
-  [[462, -640], [470, -330], [455, 0], [468, 330], [460, 640]],                                              // the left-bank road
+  [[0, 640], [0, 470], [12, 260], [0, 120], [40, 10], [20, -72], [0, -140], [-14, -260], [0, -470], [0, -640]],         // Adjud – Mărășești – Focșani
+  [[-330, 640], [-330, 470], [-352, 300], [-320, 140], [-300, 15], [-400, -57], [-325, -150], [-342, -300], [-330, -470], [-330, -640]], // the forest track
+  [-640, -470, -330, -200, -60, 120, 300, 470, 640].map((z) => [xAt(SIRET, z) - 80, z]),                                    // the Siret road along the floodplain
+  [[-500, 290], [-352, 300], [12, 260], [230, 320], [xAt(SIRET, BR.north), BR.north], [520, 330]],           // behind the Romanian line, to Doaga bridge
+  [[-500, -310], [-342, -300], [-14, -260], [180, -300], [xAt(SIRET, BR.south), BR.south], [500, -335]],     // behind the German line, to Cosmești bridge
+  [[-500, 40], [-300, 15], [-150, -52], [-60, -10], [40, 10]],                                                           // the Mărășești – Panciu road
+  [[40, 10], [180, -8], [320, 0], [xAt(SIRET, 0), 0], [520, 4]],                                            // the Tecuci road over the railway bridge
+  [-640, -330, 0, 330, 640].map((z) => [xAt(SIRET, z) + 70, z]),                                             // the left-bank road
 ];
 const RAILS = [
   [[30, 640], [35, 300], [62, 40], [60, -20], [40, -300], [25, -640]],   // the main line, Adjud – Focșani
-  [[62, 40], [200, 12], [xAt(SIRET, 0), 2], [500, 6]],                   // to Tecuci, over the Siret
+  [[62, 40], [200, 12], [xAt(SIRET, 0), 2], [520, 6]],                   // to Tecuci, over the Siret
   [[58, 18], [-100, 45], [-300, 42], [-500, 55]],                        // to Panciu
 ];
 const roadD = gridCache((x: number, z: number) => Math.min(...ROADS.map((r) => segDist(r, x, z))), { x: 520, z: 580 }, 2);
 const railD = gridCache((x: number, z: number) => Math.min(...RAILS.map((r) => segDist(r, x, z))), { x: 520, z: 580 }, 2);
 
 // ---- the points
-const TOWN = { x: 40, z: 10 }, RAZ = { x: -300, z: 5 };
+const TOWN = { x: 40, z: 10 }, RAZ = { x: -290, z: 12 };
 const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}): ControlPointDef => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
 const points: ControlPointDef[] = [
   P('A', 'Adjud road', 0, 470, 'centre'),
-  P('B', 'Muncelu', -350, 300, 'west'),
+  P('B', 'Muncelu', -360, 300, 'west'),
   P('C', 'Pădureni', 50, 272, 'centre'),
-  P('D', 'Doaga', 300, 300, 'east'),
+  P('D', 'Doaga', 230, 320, 'east'),
   P('E', 'Răzoare forest', RAZ.x, RAZ.z, 'west', { radius: 30 }),
   P('F', 'Mărășești', TOWN.x, TOWN.z, 'centre', { radius: 32 }),
-  P('G', 'Siret railway bridge', 330, -5, 'east', { radius: 24 }),
+  P('G', 'Siret railway bridge', 320, 0, 'east', { radius: 24 }),
   P('H', 'Varnița', -342, -300, 'west'),
   P('I', 'Călimănești', -24, -265, 'centre'),
-  P('J', 'Tișița', 300, -300, 'east'),
+  P('J', 'Tișița', 180, -300, 'east'),
   P('K', 'Focșani road', 0, -470, 'centre'),
 ];
 
 // the Răzoare forest: an oak wood on a low rise west of the town, straddling the middle
 const razK = (x: number, z: number) => smoothstep(1, 0.75, Math.hypot((x - RAZ.x) / 140, (z - RAZ.z) / 95) + fbm(noise, x * 0.02 + 3, z * 0.02, 2) * 0.25);
-// one low rise a side [x, z, r, h]: Pădureni’s on the north, Călimănești’s on the south; the forest’s own rise in the middle
-const RISES = [[60, 300, 160, 6], [-30, -295, 160, 6], [RAZ.x, RAZ.z, 160, 3]];
+// the two hill masses of the foothills in the west, split by the Șușița valley: the Muncelu–Răzoare heights north of it
+// (behind the Romanians), the lower, more wooded Varnița heights south of it (behind the Germans) [x, z, r, h]
+const HILLS = [[-450, 300, 300, 17], [-180, 360, 150, 5], [-420, -320, 260, 14], [-200, -380, 150, 4]];
+const VARNITA = { x: -330, z: -230 };
 // each side’s airfield behind its west flank (strip along x, the tower 55 m off it), graded flat and kept clear
 const AIR = [{ faction: 'nato', x: -175, z: 430, yaw: Math.PI / 2, large: false }, { faction: 'pact', x: -175, z: -430, yaw: -Math.PI / 2, large: false }];
 const airD = (x: number, z: number) => Math.min(...AIR.map((a) => Math.hypot(Math.max(0, Math.abs(x - a.x) - 125), Math.max(0, Math.abs(z - a.z - 27 * Math.sign(a.z)) - 52))));
 
 const ground = gridCacheSmooth((x: number, z: number) => {
   const north = z > 0;
-  let h = 4 + fbm(noise, x * 0.004 + (north ? 0 : 37), z * 0.004, 4) * 4 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.7;
-  // the low hills rising west toward the Carpathian foothills, the same along the whole field
-  h += smoothstep(120, -500, x) ** 1.3 * (15 + fbm(noise, x * 0.006 + 51, z * 0.006, 3) * 5);
-  for (const [hx, hz, r, hh] of RISES) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.5;
-  h += smoothstep(BASE_Z - 90 + 50 * Math.sin(x * 0.008 + 1), 640, Math.abs(z)) * 9;   // (the rims rise, as much on each half)
-  h += (5 - h) * smoothstep(120, 60, Math.hypot(x - TOWN.x, z - TOWN.z));               // the town on the level
-  // down to the floodplain toward the Siret; the left bank’s terrace beyond it
+  // the old terrace of the Siret: a level plain of maize and stubble
+  let h = 7 + fbm(noise, x * 0.004 + (north ? 0 : 37), z * 0.004, 4) * 2.5 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.6;
+  const rough = 0.85 + fbm(noise, x * 0.008 + 51, z * 0.008, 3) * 0.6;
+  for (const [hx, hz, r, hh] of HILLS) h += hh * smoothstep(r, 0, Math.hypot(x - hx, (z - hz) * 1.2)) ** 1.3 * rough;
+  // the Șușița’s valley through the hills and across the terrace
+  h = 2.4 + (h - 2.4) * smoothstep(14, 95, susD(x, z));
+  h += (6.5 - h) * smoothstep(110, 60, Math.hypot(x - TOWN.x, z - TOWN.z));               // the town on the level
+  // the terrace edge, a sharp step down to the wide floodplain; the left bank low beyond the river
   const d = wetD(x, z), east = x > xAt(SIRET, z);
-  if (!east) h += (1.6 - h) * smoothstep(190, 70, d);
-  else h = 1.6 + smoothstep(50, 100, d) * 4;
+  if (!east) h += (1.6 - h) * smoothstep(240, 185, d);
+  else h = 1.6 + smoothstep(60, 120, d) * 2.5;
   h += (1.1 - h) * marshAt(x, z) * 0.85;
-  for (const bz of [BASE_Z, -BASE_Z]) h += (h * 0.4 + 8 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
-  h += (8 - h) * smoothstep(30, 6, airD(x, z));
+  for (const bz of [BASE_Z, -BASE_Z]) h += (h * 0.4 + 5 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
+  h += (7 - h) * smoothstep(30, 6, airD(x, z));
   return h;
-}, { x: 700, z: 760 }, 2);
+}, { x: 700, z: 760 }, 4);
 const height = (x: number, z: number) => river.carve(x, z, Math.max(1.4, ground(x, z)));
 
 // each side’s hasty trench line across the field, at the same depth from the middle (each its own wander); none in the marsh
@@ -238,7 +248,7 @@ export default {
       farmVillage(props, p.x, p.z, p.id === 'C' || p.id === 'I' ? 9 : 7, SEED * 10 + Math.round(p.x * 3 + p.z * 7), skip, 1.2);
     }
     props.rand = mulberry32(SEED + 3);
-    for (const [x, z, yaw] of [[-372, 318, 0.3], [78, 290, 0.1], [322, 316, -0.2], [-362, -318, Math.PI + 0.2], [-50, -282, Math.PI - 0.1], [318, -318, Math.PI + 0.3]]) props.church({ x, z, yaw });
+    for (const [x, z, yaw] of [[-372, 318, 0.3], [78, 290, 0.1], [252, 338, -0.2], [-362, -318, Math.PI + 0.2], [-50, -282, Math.PI - 0.1], [198, -320, Math.PI + 0.3]]) props.church({ x, z, yaw });
     // the pioneers’ stores by each pontoon bridge, a sandbagged post at each end of the railway bridge
     for (const bz of [BR.north, BR.south]) {
       props.rand = mulberry32(SEED + bz);
