@@ -69,6 +69,7 @@ export default {
       strength: { [att]: 1, [def]: 1 },
       maxStrength: 1,
       maxStacks: map.maxStacks ?? 22,
+      allow: (t) => !t.stats?.naval && (!t.coastal || game.world.coastal), // (a land battle: no ships to buy, the AI's nor yours)
       line: active,
       lines: ls.length,
       setupUntil: SETUP,
