@@ -93,3 +93,4 @@ for q in pairs:
     print(f"{q['score']:.3f}  {q['a']:24s} {q['b']:24s} terrain {q['terrain']:5.2f} water {q['water']:4.2f} points {q['points']:5.1f}%  {q['theatre']} {'/'.join(q['ea'])}|{'/'.join(q['eb'])} {q['flip']}")
 print(f'{len(maps)} maps, {len(pairs)} pairs at or above {TH}; sampling errors: {[m["id"] for m in bad]}')
 json.dump(pairs, open('tools/map_similarity.json', 'w'), indent=1)
+json.dump([{k: m[k] for k in ('id', 'theatre', 'epochs', 'region', 'w', 'h', 'pts')} for m in maps], open('tools/map_samples.json', 'w'))
