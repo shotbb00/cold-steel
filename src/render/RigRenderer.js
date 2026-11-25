@@ -15,6 +15,7 @@ import { compactRig, addImpostor } from './compactRig.js';
 const materialCache = new Map();
 const WRECK = new THREE.MeshStandardMaterial({ color: 0x2a2624, vertexColors: true, roughness: 1, metalness: 0 });
 const DEAD_GLOW = new THREE.MeshStandardMaterial({ color: 0x1a1612, roughness: 1 });
+
 const COOK_OFF = { chance: 0.6, pops: [4, 11], first: [2, 6], gap: [0.6, 4], big: 0.35, hurt: 5 };
 const rnd = ([a, b]) => a + Math.random() * (b - a);
 
@@ -192,7 +193,15 @@ export class RigRenderer {
         s.audio?.play('ship.sink', _p, { volume: 1, throttle: 1 }); // her hull groaning, steam and air going up
         s.effects.burn(_p, 30, 2.5);
         s.audio?.play('explosion.big', _p, { volume: 1 });
-      } else if (!rig.dead) {
+      } else if (!rig.dead && u.recoverable) { // knocked out: stopped, smoking a little, no fire — recoverable
+        rig.dead = 'out';
+        // her own paint, not the charred wreck (u.recoverable: systems/Support.js, CrewBailout.js) — you see what a recovery
+        // vehicle or her crew can bring back; only her lights go out
+        rig.root.traverse((o) => { if (o.isMesh && o.material === this.mats.glow) o.material = DEAD_GLOW; });
+        rig.root.getWorldPosition(_p);
+        _p.y += this.stack.stats.height * 0.6;
+        this.stack.services.effects.smoulder?.(_p, 25, 0.5);
+      } else if (!rig.dead || (rig.dead === 'out' && !u.recoverable)) { // brewed up (or a knocked-out one hit again, its crew gone: past saving)
         rig.dead = true;
         rig.root.traverse((o) => {
           if (o.isMesh) o.material = o.material === this.mats.glow ? DEAD_GLOW : WRECK;
@@ -212,7 +221,7 @@ export class RigRenderer {
       if (rig.sinkT != null) this.sink(rig, dt);
       u.deathTime += dt;
       rig.die?.(u.deathTime, dt);
-      if (u.deathTime < 6 || rig.cook || (rig.sinkT != null && rig.root.visible)) animating = true;
+      if (u.deathTime < 6 || rig.cook || rig.dead === 'out' || (rig.sinkT != null && rig.root.visible)) animating = true; // (knocked out: watched, it may yet brew up)
     }
     if (!animating) this.done = true;
   }
