@@ -11,6 +11,7 @@ import { createNoise2D } from './Noise.js';
 import { packColors } from '../render/packColors.js';
 import { smoothstep } from '../core/math.js';
 import { FIELD } from './Fields.js';
+import { year } from '../data/epoch.js';
 
 const EARTH = new THREE.Color(0x3d2f24); // freshly turned soil
 const ASH = new THREE.Color(0x15130f);   // scorched ground: blasts, wrecks, burnt fields
@@ -21,7 +22,7 @@ export class Terrain {
    * @param {number} o.size      edge length in metres (square, centred on the origin)
    * @param {number} o.segments  grid resolution
    * @param {(x:number, z:number) => number} o.height
-   * @param {object} o.palette   colours: grass, grassAlt, dryGrass, dirt, rock, strip? (border strip along z = 0),
+   * @param {object} o.palette   colours: grass, grassAlt, dryGrass, dirt, rock, strip? + border: true (border strip along z = 0),
    *                             pasture / ploughed / stubble / meadow (with `fields`),
    *                             surface?(x, z, y) → [hex, amount] | null (a map's paved or bare ground)
    * @param {object} [o.fields]  farmland layout (world/Fields.js)
@@ -187,7 +188,10 @@ export class Terrain {
     const dry = col('dryGrass');
     const dirt = col('dirt');
     const rock = col('rock');
-    const strip = palette.strip ? col('strip') : null;
+    // the inner-German border's control strip along z = 0: only on a map that sits on that border
+    // (`border: true`) while it stood — most palettes carry `strip` from the map template, and it
+    // drew a thin line across every 1806 / 1918 map at z = 0
+    const strip = palette.strip && palette.border && year() >= 1950 && year() < 1990 ? col('strip') : null;
     const fieldColor = {
       [FIELD.PASTURE]: col(palette.pasture ? 'pasture' : 'grass'),
       [FIELD.PLOUGHED]: col(palette.ploughed ? 'ploughed' : 'dirt'),
@@ -239,7 +243,7 @@ export class Terrain {
       const rockK = Math.min(1, smoothstep(0.9, 0.72, ny) + smoothstep(14, 28, y) * 0.75);
       c.lerp(rock, rockK);
       let stripK = 0;
-      if (palette.strip) {
+      if (strip) {
         stripK = smoothstep(5, 2.5, Math.abs(z + Math.sin(x * 0.03) * 1.5));
         c.lerp(strip, stripK * 0.85 * (0.8 + n2 * 0.4)); // ploughed border strip
       }

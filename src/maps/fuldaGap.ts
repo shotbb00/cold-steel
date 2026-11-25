@@ -196,7 +196,7 @@ export default {
       dryGrass: '#857650',
       dirt: '#54443a',
       rock: '#6a6862',
-      strip: '#4a3d30',
+      strip: '#4a3d30', border: true, // (the control strip along z = 0, 1985 only: world/Terrain.js)
       pasture: '#55613a',
       ploughed: '#4b3c2e',
       stubble: '#8c7c4e',
