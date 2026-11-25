@@ -1,19 +1,19 @@
 // The Bainsizza, August–September 1917: the Eleventh Battle of the Isonzo. In the night of 18 to 19 August the
 // pioneers of Capello’s Second Army threw pontoon bridges over the Isonzo at Plava, Anhovo and below Canale under the
-// guns, and the infantry climbed the gorge’s walls onto the Bainsizza plateau; Monte Santo and its shattered monastery
+// guns, and the infantry climbed the gorge’s wall onto the Bainsizza plateau; Monte Santo and its shattered monastery
 // fell on the 24th, the Austro-Hungarians went back across the karst — and then held Monte San Gabriele, the bare
 // stone summit honeycombed with caverns and gun galleries, through a month of the worst fighting of the Isonzo.
-// The ground: the Isonzo deep in its gorge, a narrow ribbon of emerald water over pale gravel, its few bridges — the
-// Plava pontoons, Canale’s old stone bridge in the town, the pontoons at Anhovo — and a road along each bank at the
-// bottom; above the walls, cut with caverns and the galleries of the guns, the rough limestone of the plateaux:
-// sinkholes (dolines) with red earth in their bottoms, scrub oak and hornbeam, dry-stone walls, few roads, the mule
-// tracks cut in long traverses down the walls and the cableways (teleferiche) hauling up shells; the stony summits of Monte
-// Santo with the ruin of its monastery and Monte San Gabriele with its sangars and gallery mouths.
-// Not mirrored but fair: each side holds one rim of the gorge — the same height and depth of wall, its own three
-// roads cut down the wall to its bank road, one near each bridge — and has its summit (Monte Santo on the Italian side,
-// San Gabriele on the Austrian) at the same height and reach from its base, both standing back from the rim, a knoll
-// at each flank of its plateau. To take the other summit both must go down into the gorge, over a bridge and up the far
-// wall. The gorge’s bends, the walls’ crags, the karst and the summits’ places along the rim are each side’s own.
+// The ground, as it lies: the Isonzo runs down the east edge deep in its gorge — a narrow ribbon of emerald water
+// over pale gravel, Plava, Canale and Anhovo on its floor with their bridges, a road along each bank at the bottom —
+// and beyond it the far wall climbs higher still to the Korada’s wooded flank. West of the gorge the broken plateau:
+// rough limestone in long ribs running north-west to south-east, the great sink of a uvala in the middle with dolines
+// pitting it, scrub oak and hornbeam, dry-stone walls, few roads; Monte Santo with the ruin of its monastery stands
+// over the gorge’s lip in the north, Monte San Gabriele with its sangars and gallery mouths in the south, Kobilek and
+// Monte Kuk on the ribs between. The roads come down the gorge’s wall in long traverses; the cableways haul the shells.
+// Fair by distance, not by a mirror: each side’s points pair up at the same reach from its own base — Monte Santo
+// against San Gabriele, Vodice against Banjšice on the west plateau, Plava against Anhovo across the river on the far
+// bank (each with its own bridge); Canale, Kobilek and Monte Kuk lie between the bases. Each side has its own
+// traverse down the wall to its bridge and shares the one to Canale’s.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -26,84 +26,93 @@ import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef } from '../types.ts';
 
 const BASE_Z = 500;
-const BX = 330;                                          // the flank bridges’ x (Plava west, Anhovo east)
-const W0 = 55, W1 = 170;                                  // the gorge’s walls: from the floor (m off the river’s middle) to the rim
-const PLAT = 62;                                          // the plateaux, m over the river
+const W0 = 50, W1 = 140;                                  // the gorge’s walls: from the floor (m off the river’s middle) to the lip
+const PLAT = 55;                                          // the plateau, m over the river
 const EXT = { x: 520, z: 580 };                          // (the grids the dear parts are sampled onto)
 const BANK = 34;                                          // the road along each bank at the bottom, m off the river’s middle
 const noise = createNoise2D(1917_08_19);
-const iso = (x: number) => 22 * Math.sin(x * 0.0055 + 0.4) + 8 * Math.sin(x * 0.017) + 16 * (Math.cos(x * 0.011) - Math.cos(x * 0.004)) - 6; // (its own bends: not a mirror)
+/** The Isonzo’s middle (x at z), down the east edge on a slant (nearer the Italian base) with its own bends. */
+const gx = (z: number) => 330 - 0.2 * z + 28 * Math.sin(z * 0.005 + 0.7) + 7 * Math.sin(z * 0.017);
+const COURSE = Array.from({ length: 33 }, (_, i) => { const z = -640 + i * 40; return [gx(z), z]; });
 const river = createRiver({
-  path: iso, halfWidth: 12, level: 0, depth: 3.2, valley: 46,
+  path: COURSE, halfWidth: 12, level: 0, depth: 3.2, valley: 46,
   crossings: [
-    { name: 'Plava pontoon bridge', x: -BX, kind: 'bridge', width: 8, pontoon: true },
-    { name: 'Canale bridge', x: 0, kind: 'bridge', width: 8 },
-    { name: 'Anhovo pontoon bridge', x: BX, kind: 'bridge', width: 8, pontoon: true },
+    { name: 'Plava pontoon bridge', x: gx(260), z: 260, kind: 'bridge', width: 11, pontoon: true },
+    { name: 'Canale bridge', x: gx(0), z: 0, kind: 'bridge', width: 9 },
+    { name: 'Anhovo pontoon bridge', x: gx(-320), z: -320, kind: 'bridge', width: 11, pontoon: true },
   ],
 });
-const away = (x: number, z: number) => Math.abs(z - iso(x));
-const north = (x: number, z: number) => z > iso(x);
-/** A point `a` m off the river’s middle on the north (+) or south (−) bank. */
-const N = (x: number, a: number) => [x, Math.round(iso(x) + a)];
-const S = (x: number, a: number) => [x, Math.round(iso(x) - a)];
+/** Signed distance across the gorge from the river’s middle (− west, toward the plateau; + east, the far bank). */
+const across = (x: number, z: number) => x - gx(z);
+const away = (x: number, z: number) => Math.abs(across(x, z));
+const W = (z: number, a: number) => [Math.round(gx(z) - a), z];     // a point `a` m west of the river at z
+const E = (z: number, a: number) => [Math.round(gx(z) + a), z];
 
-/** The heights [x, z, r, h]: Monte Santo, Vodice, Monte Kuk and a shoulder on the Italian plateau; San Gabriele, Banjšice’s knoll, Kobilek and a shoulder on the Austrian. */
-const HILLS = [[-70, 315, 200, 47], [-340, 310, 120, 14], [320, 305, 120, 15], [150, 440, 120, 7],
-  [100, -300, 200, 47], [-300, -320, 120, 15], [380, -275, 120, 14], [-170, -430, 120, 7]];
-const C0 = HILLS[0], I0 = HILLS[4];
+/** The plateau’s heights [x, z, r, h]: Monte Santo, San Gabriele, Kobilek, Monte Kuk, Vodice’s and Banjšice’s knolls; the uvala’s sink. */
+const HILLS = [[110, 265, 120, 45], [60, -250, 120, 45], [60, 0, 100, 14], [-360, 0, 110, 16], [-330, 230, 100, 10], [-280, -210, 100, 10], [-170, 90, 170, -18]];
+const C0 = HILLS[0], I0 = HILLS[1];
 
 const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
 const points = [
   P('A', 'Korada road', 0, 470, 'centre'),
-  P('B', 'Vodice', -340, 310, 'west', { radius: 24 }),
-  P('C', 'Monte Santo', C0[0], C0[1], 'centre', { radius: 24 }),
-  P('D', 'Monte Kuk', 320, 305, 'east', { radius: 24 }),
-  P('E', 'Plava', ...(N(-BX + 30, 30) as [number, number]), 'west', { radius: 22 }),
-  P('F', 'Canale', 0, Math.round(iso(0)), 'centre', { radius: 30 }),
-  P('G', 'Anhovo', ...(S(BX - 30, 30) as [number, number]), 'east', { radius: 22 }),
-  P('H', 'Banjšice', -300, -320, 'west', { radius: 24 }),
+  P('B', 'Vodice', -330, 220, 'west', { radius: 24 }),
+  P('C', 'Monte Santo', C0[0], C0[1], 'east', { radius: 24 }),
+  P('D', 'Monte Kuk', -360, 0, 'west', { radius: 24 }),
+  P('E', 'Plava', ...(E(260, 36) as [number, number]), 'east', { radius: 22 }),
+  P('F', 'Canale', ...(W(0, 30) as [number, number]), 'east', { radius: 28 }),
+  P('G', 'Anhovo', ...(E(-320, 36) as [number, number]), 'east', { radius: 22 }),
+  P('H', 'Banjšice', -280, -210, 'west', { radius: 24 }),
   P('I', 'Monte San Gabriele', I0[0], I0[1], 'centre', { radius: 24 }),
-  P('J', 'Kobilek', 380, -275, 'east', { radius: 24 }),
+  P('J', 'Kobilek', 60, 0, 'centre', { radius: 24 }),
   P('K', 'Chiapovano road', 0, -470, 'centre'),
 ] as any[];
 const at = (id: string) => { const p = points.find((q) => q.id === id); return [p.x, p.z]; };
 
-/** The roads cut down the gorge’s walls, each a long traverse with its own line: [x, a] from the bank road up to the rim. */
-const ZIG_N = [[[-200, BANK], [-250, 48], [-330, 106], [-455, 186]], [[120, BANK], [70, 48], [-5, 106], [-130, 186]], [[210, BANK], [260, 48], [335, 106], [460, 186]]].map((z) => z.map(([x, a]) => N(x, a)));
-const ZIG_S = [[[-460, BANK], [-410, 48], [-335, 106], [-205, 186]], [[-110, BANK], [-60, 48], [10, 106], [140, 186]], [[190, BANK], [240, 48], [320, 110], [445, 190]]].map((z) => z.map(([x, a]) => S(x, a)));
-const top = (z: number[][]) => z[z.length - 1];
-/** All the roads: the traverses down the walls, and on each plateau the trunk from the base over the summit to the middle traverse, the road along behind the rim through the flank knolls, the tracks out to the edges. */
+/** The roads cut down the gorge’s west wall (≈ 1 in 4): each side’s long traverse from its lip down to the bank road, and
+ *  the hairpin from the lip over Canale down to the town. */
+const TRAV = [[W(380, W1 + 14), W(150, BANK)], [W(0, W1 + 14), W(100, 94), W(0, BANK)], [W(-380, W1 + 14), W(-150, BANK)]];
+/** All the roads: the traverses, and on the plateau each base’s trunk to its summit and on to the lip, the road
+ *  along behind the lip, the roads across the plateau to the west points and the tracks out to the edges. */
 const ROADS = [
-  ...ZIG_N, ...ZIG_S,
-  [[0, BASE_Z], at('C'), top(ZIG_N[1])],
-  [[0, -BASE_Z], at('I'), top(ZIG_S[1])],
-  [[-500, 300], at('B'), top(ZIG_N[0])], [at('B'), [-200, 265], top(ZIG_N[1]), [180, 260], at('D'), top(ZIG_N[2])], [at('D'), [500, 330]],
-  [[-500, -335], at('H'), top(ZIG_S[0])], [at('H'), [-180, -255], top(ZIG_S[1]), [210, -250], at('J'), top(ZIG_S[2])], [at('J'), [500, -260]],
-  [at('B'), [-250, 420], [0, BASE_Z]], [at('J'), [250, -420], [0, -BASE_Z]],
+  ...TRAV,
+  [[0, BASE_Z], [60, 380], at('C'), TRAV[0][0]],
+  [at('C'), [110, 130], TRAV[1][0], at('J')],
+  [[0, -BASE_Z], [30, -380], at('I'), [80, -330], TRAV[2][0]],
+  [at('I'), [70, -120], at('J')],
+  [[0, BASE_Z], [-180, 380], at('B'), [-500, 250]],
+  [at('B'), [-380, 110], at('D'), [-500, -20]],
+  [[0, -BASE_Z], [-160, -380], at('H'), [-500, -260]],
+  [at('H'), [-330, -110], at('D')],
+  [at('J'), [-150, -40], at('D')],
+  [at('C'), [-120, 280], at('B')],
+  [at('I'), [-140, -260], at('H')],
 ];
 
-/** The karst before the roads: the gorge, its walls, the plateaux with their heights, crags and dolines. */
+/** The karst before the roads: the gorge, its walls, the plateau with its ribs, heights and dolines, the far bank. */
 const DOLINES: number[][] = [];
 const BASE_H: number[][] = [];
 function karst(x: number, z: number) {
-  const a = away(x, z), n = north(x, z);
+  const s = across(x, z), a = Math.abs(s), east = s > 0;
   let h = 1.6 + 1.3 * smoothstep(20, W0, a);                                              // the gravel terraces at the bottom
-  const w1 = W1 + (n ? 8 * Math.sin(x * 0.012) : 9 * Math.sin(x * 0.009 + 2));            // (each rim its own line)
+  const w1 = W1 + (east ? 10 * Math.sin(z * 0.011) : 9 * Math.sin(z * 0.009 + 2));         // (each lip its own line)
   const k = smoothstep(W0, w1, a);
-  h += (PLAT + (n ? 3 * Math.sin(x * 0.008) - 3 : 3 * Math.cos(x * 0.01 + 1)) - 0.03 * x) * k; // the walls (both plateaux climb westward, toward the Kolovrat and the Trnovo forest)
-  if (n) h += 7 * smoothstep(80, 0, Math.abs(a - 105)) * k * (1 - k) * 4;                // the north wall’s ledge halfway up (the south wall one sheer face)
-  h += ridged(noise, x * 0.022 + (n ? 0 : 7), z * 0.022, 3) * 9 * 4 * k * (1 - k);         // crags and gullies down the walls
-  const p = smoothstep(w1 - 20, w1 + 60, a);
-  h += (fbm(noise, x * 0.007 + 11, z * 0.007, 3) * 6 + ridged(noise, x * 0.03, z * 0.03 + 5, 2) * 2) * p; // the plateau’s rolling stone
-  for (const [hx, hz, hr, hh] of HILLS) { const d = Math.hypot(x - hx, z - hz); if (d < hr) h += hh * (0.5 + 0.5 * Math.cos(Math.PI * d / hr)); }
+  h += (PLAT + (east ? 6 * Math.sin(z * 0.008) : 3 * Math.cos(z * 0.01 + 1))) * k;        // the walls
+  if (east) h += 60 * smoothstep(w1, w1 + 150, a);                                          // the far wall climbs on to the Korada
+  else h += 7 * smoothstep(80, 0, Math.abs(a - 100)) * k * (1 - k) * 4;                     // the west wall’s ledge halfway up
+  h += ridged(noise, x * 0.022 + (east ? 7 : 0), z * 0.022, 3) * 9 * 4 * k * (1 - k);        // crags and gullies down the walls
+  const p = east ? 0 : smoothstep(w1 - 20, w1 + 60, a);
+  h += (fbm(noise, x * 0.007 + 11, z * 0.007, 3) * 5 + ridged(noise, x * 0.03, z * 0.03 + 5, 2) * 2) * (p + (east ? smoothstep(w1, w1 + 60, a) : 0)); // the rolling stone
+  h += 20 * Math.sin(0.0115 * (0.7 * x - 0.7 * z) + 1) * p;                                  // the long ribs running north-west to south-east
+  h += 0.035 * (gx(z) - W1 - x) * p * 0.4;                                                  // (the plateau climbs gently west, toward the Lokovec)
+  for (const [hx, hz, hr, hh] of HILLS) { const d = Math.hypot(x - hx, z - hz); if (d < hr) h += hh * (0.5 + 0.5 * Math.cos(Math.PI * d / hr)) * p; }
   for (const [dx, dz, dr, dd] of DOLINES) { if (Math.abs(x - dx) > dr || Math.abs(z - dz) > dr) continue; const d = Math.hypot(x - dx, z - dz); if (d < dr) h -= dd * smoothstep(dr, 0, d) ** 1.5; }
   for (const [bz, bh] of BASE_H) { const b = Math.hypot(x, z - bz); if (b < 40) h += (bh - h) * smoothstep(40, 22, b); } // (the bases’ level ground)
   return h;
 }
 BASE_H.push([BASE_Z, karst(0, BASE_Z)], [-BASE_Z, karst(0, -BASE_Z)]);
+/** The road along each bank at the bottom (in the roads’ segments too, so the traverses meet it level). */
+const BANKS = [1, -1].map((s) => Array.from({ length: 31 }, (_, i) => { const z = -600 + i * 40; return s > 0 ? E(z, BANK) : W(z, BANK); }));
 /** The roads’ segments graded straight between the karst’s heights at their corners, with their boxes. */
-/** The road along each bank at the bottom (in the roads’ segments too, so the roads cut down the walls meet it level). */
-const BANKS = [1, -1].map((s) => Array.from({ length: 51 }, (_, i) => { const x = -500 + i * 20; return s > 0 ? N(x, BANK) : S(x, BANK); }));
 const SEGS = [...ROADS, ...BANKS].flatMap((r) => {
   const hs = r.map(([x, z]) => karst(x, z));
   return r.slice(1).map((b, i) => { const a = r[i]; return [a[0], a[1], b[0], b[1], hs[i], hs[i + 1], Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[1], b[1])]; });
@@ -130,19 +139,19 @@ function bed(x: number, z: number, cap = 18) {
 }
 const roadDC = gridCache((x: number, z: number) => road(x, z, 30), EXT, 2);
 const onBank = (x: number, z: number) => Math.abs(away(x, z) - BANK) < 3.4;
-const bridgeRoad = (x: number, z: number) => [-BX, 0, BX].some((bx) => Math.abs(x - bx) < 4 && away(x, z) < BANK);
+const bridgeRoad = (x: number, z: number) => [260, 0, -320].some((bz) => Math.abs(z - bz) < 5 && away(x, z) < BANK);
 const onRoad = (x: number, z: number) => roadDC(x, z) < 4.2 || onBank(x, z) || bridgeRoad(x, z);
 const roadNear = (x: number, z: number, r: number) => roadDC(x, z) < r || Math.abs(away(x, z) - BANK) < r;
 {
   const r = mulberry32(191708);
-  for (let i = 0; i < 600 && DOLINES.length < 80; i++) {
+  for (let i = 0; i < 900 && DOLINES.length < 95; i++) {
     const x = (r() * 2 - 1) * 480, z = (r() * 2 - 1) * 540, rad = 7 + r() * 10;
-    if (away(x, z) < W1 + 40 || points.some((p) => Math.hypot(p.x - x, p.z - z) < 45) || Math.hypot(x, Math.abs(z) - BASE_Z) < 50 || road(x, z, 30) < rad + 14) continue;
+    if (across(x, z) > -(W1 + 40) || points.some((p) => Math.hypot(p.x - x, p.z - z) < 45) || Math.hypot(x, Math.abs(z) - BASE_Z) < 50 || road(x, z, 30) < rad + 14) continue;
     DOLINES.push([x, z, rad, 2 + r() * 3]);
   }
 }
 
-// the dear parts sampled once onto grids, the gorge’s river carved after (as theLys): the karst, and the roads’ bed —
+// the dear parts sampled once onto grids, the gorge’s river carved after: the karst, and the roads’ bed —
 // its height read out to 26 m so the samples round a road’s edge all carry the road’s height, not 0
 const karstC = gridCacheSmooth(karst, EXT, 3);
 const bedK = gridCacheSmooth((x: number, z: number) => bed(x, z).k, EXT, 3);
@@ -154,18 +163,18 @@ function height(x: number, z: number) {
   return river.carve(x, z, h);
 }
 
-/** The caverns and gun galleries: in the upper walls facing across the gorge, and in the summits’ faces [x, z, yaw (0: the mouth looks south)]. */
-const MOUTHS = [[-180, iso(-180) + 150, 0], [150, iso(150) + 146, 0], [420, iso(420) + 150, 0], [-120, 210, 0], [-20, 200, 0],
-  [-230, iso(-230) - 150, Math.PI], [200, iso(200) - 150, Math.PI], [-440, iso(-440) - 146, Math.PI], [60, -205, Math.PI], [160, -210, Math.PI]];
-/** The cableways: from the gorge’s floor by Canale up over the wall, and on up the summit (each side its own line). */
-const CABLES = [[N(60, 40), N(70, 100), N(80, 160), [10, 255], [-48, 300]], [S(-60, 40), S(-70, 100), S(-80, 160), [10, -250], [80, -292]]];
+/** The caverns and gun galleries: in the upper west wall facing across the gorge, and in the summits’ faces [x, z, yaw (the way the mouth looks)]. */
+const MOUTHS = [[...W(250, 112), Math.PI / 2], [...W(60, 108), Math.PI / 2], [...W(-140, 112), Math.PI / 2], [...W(-380, 110), Math.PI / 2],
+  [C0[0] + 40, C0[1] - 70, Math.PI], [C0[0] - 60, C0[1] - 60, Math.PI], [I0[0] + 50, I0[1] + 70, 0], [I0[0] - 40, I0[1] + 70, 0]];
+/** The cableways: from the gorge’s floor by Canale up over the wall, and on up each summit (each side its own line). */
+const CABLES = [[W(80, 40), W(100, 95), W(120, 150), [140, 210], [C0[0] + 10, C0[1] - 22]], [W(-90, 40), W(-110, 95), W(-130, 150), [90, -200], [I0[0] + 18, I0[1] + 20]]];
 
 const layout = [{ unit: 'rifles', x: 10, z: BASE_Z - 22, name: '1ª Squadra' }];
 
 export default {
   id: 'bainsizza',
   name: 'Bainsizza',
-  description: 'August–September 1917, the Eleventh Battle of the Isonzo: the emerald river deep in its gorge with three bridges — Plava, Canale, Anhovo — and above its cavern-cut walls the stony karst of dolines, scrub and dry-stone walls, Monte Santo with its ruined monastery on one rim and Monte San Gabriele on the other.',
+  description: 'August–September 1917, the Eleventh Battle of the Isonzo: the emerald river deep in its gorge down one edge, with Plava, Canale and Anhovo on its floor and their bridges, and above the cavern-cut wall the broken karst of the Bainsizza — long ribs of limestone, dolines and scrub, Monte Santo with its ruined monastery over the lip and Monte San Gabriele to the south.',
   epochs: ['1918'],
   region: 'italy',
   airfields: [], // (no runway on the karst: dolines, walls and the gorge — the aircraft come in from the map edge — systems/Airfields.js)
@@ -175,7 +184,7 @@ export default {
   size: 1700,
   segments: 720,
   bounds: { x: 500, z: 560 },
-  steep: 0.55, // (wheels and horses keep to the roads cut down the gorge; men climb anywhere)
+  steep: 0.55, // (wheels and horses keep to the traverses cut down the gorge; men climb anywhere)
   overwatch: true,
   camera: { maxHeight: 600, far: 3200 },
   seed: 1917_0819,
@@ -201,7 +210,7 @@ export default {
           const g = Math.hypot(height(x + 2, z) - height(x - 2, z), height(x, z + 2) - height(x, z - 2)) / 4;
           if (g > 0.6) return [0xb2aea2, Math.min(1, (g - 0.6) * 3)];                         // the limestone walls
         }
-        if (y > PLAT - 10) {
+        if (y > PLAT - 14 && across(x, z) < 0) {
           for (const [dx, dz, dr] of DOLINES) if (Math.abs(x - dx) < dr && Math.abs(z - dz) < dr && Math.hypot(x - dx, z - dz) < dr * 0.55) return [0x8a4a2e, 0.6]; // terra rossa in the dolines
           const s = ridged(noise, x * 0.05 + 3, z * 0.05, 2);
           if (s > 0.55) return [0xb8b4a8, Math.min(0.85, (s - 0.55) * 4)];                    // bare limestone pavement
@@ -215,22 +224,22 @@ export default {
 
   bases: { nato: { x: 0, z: BASE_Z, entries: [-60, 0, 60] }, pact: { x: 0, z: -BASE_Z, entries: [-60, 0, 60] } },
   maxStacks: 26,
-  cameraStart: { nato: { x: 0, z: 330 }, pact: { x: 0, z: -330 } },
+  cameraStart: { nato: { x: 40, z: 330 }, pact: { x: 40, z: -330 } },
   points,
   spawns: {
     nato: layout.map((s) => ({ ...s, facing: Math.PI })),
     pact: layout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1. Schwarm' })),
   },
 
-  /** Each side’s line along its rim over the gorge (wire down the lip, gaps where the roads come up), MG posts on the heights. */
+  /** Each side’s line across the plateau from the lip westward (wire in front, gaps where the roads go), MG posts on the heights. */
   battlefield() {
     const works: any[] = [];
     for (const f of ['nato', 'pact'] as const) {
       const s = f === 'nato' ? 1 : -1;
       const pts: number[][] = [];
-      for (let x = -480; x <= 480; x += 30) { const X = x * s; pts.push([X, iso(X) + s * (W1 + 26 + (s > 0 ? 8 * Math.sin(X * 0.021) : 9 * Math.sin(X * 0.017 + 1)))]); } // (left to right as its owner looks)
-      for (const w of trenchLine(pts, f, { wireAt: 16, belts: 1, gapEvery: 55 })) if (!roadNear(w.x, w.z, 10) && points.every((p) => Math.hypot(p.x - w.x, p.z - w.z) > 30)) works.push(w);
-      for (const id of s > 0 ? ['B', 'C', 'D'] : ['H', 'I', 'J']) { const p = points.find((q) => q.id === id); for (const dx of [-12, 12]) if (!roadNear(p.x + dx, p.z - 16 * s, 8)) works.push({ kind: 'mgNest', x: p.x + dx, z: p.z - 16 * s, yaw: f === 'nato' ? Math.PI : 0, faction: f }); }
+      for (let x = -480; x <= 480; x += 30) { const X = x * s, Z = s * (150 + (s > 0 ? 18 * Math.sin(X * 0.013) : 22 * Math.sin(X * 0.011 + 1))); if (across(X, Z) < -(W1 + 20)) pts.push([X, Z]); } // (left to right as its owner looks)
+      for (const w of trenchLine(pts, f, { wireAt: 16, belts: 1, gapEvery: 55 })) if (!roadNear(w.x, w.z, 10) && across(w.x, w.z) < -(W1 + 10) && points.every((p) => Math.hypot(p.x - w.x, p.z - w.z) > 30)) works.push(w);
+      for (const id of s > 0 ? ['B', 'C'] : ['H', 'I']) { const p = points.find((q) => q.id === id); for (const dx of [-12, 12]) if (!roadNear(p.x + dx, p.z - 16 * s, 8)) works.push({ kind: 'mgNest', x: p.x + dx, z: p.z - 16 * s, yaw: f === 'nato' ? Math.PI : 0, faction: f }); }
     }
     return { blasts: [], ruins: [], works };
   },
@@ -242,38 +251,38 @@ export default {
     const inDoline = (x: number, z: number) => DOLINES.some(([dx, dz, dr]) => Math.hypot(x - dx, z - dz) < dr + 3);
     const skip = (x: number, z: number) => away(x, z) < 20 || roadNear(x, z, 12) || bridgeRoad(x, z) || steepAt(x, z) > 0.3 || inDoline(x, z);
 
-    // Canale: stone houses on both banks round the old bridge, the church on the north bank; sandbags at the bridge’s ends
+    // Canale: stone houses on both banks round the old bridge, the church on the west bank; sandbags at the bridge’s ends
     for (const m of [1, -1]) {
       const r = (props.rand = mulberry32(1917 + m));
       const placed: number[][] = [];
       for (let i = 0; i < 90 && placed.length < 16; i++) {
-        const x = (r() - 0.5) * 220 + (m > 0 ? -10 : 15), z = iso(x) + m * (19 + r() * 32);
-        if (skip(x, z) || roadNear(x, z, 13) || Math.abs(x) < 9 || Math.abs(x + 78) < 16 || placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 12)) continue;
+        const z = (r() - 0.5) * 220 + (m > 0 ? 15 : -10), x = gx(z) + m * (19 + r() * 30);
+        if (skip(x, z) || roadNear(x, z, 13) || Math.abs(z) < 9 || Math.abs(z + 70) < 16 || placed.some(([px, pz]) => Math.hypot(px - x, pz - z) < 12)) continue;
         placed.push([x, z]);
-        props.townHouse({ x, z, yaw: r() * 0.2, width: 7 + r() * 2, depth: 7 + r() * 2, storeys: r() < 0.4 ? 3 : 2, damaged: 0.3 });
+        props.townHouse({ x, z, yaw: Math.PI / 2 + r() * 0.2, width: 7 + r() * 2, depth: 7 + r() * 2, storeys: r() < 0.4 ? 3 : 2, damaged: 0.3 });
       }
-      props.sandbagRing({ x: 10 * m, z: iso(10 * m) + 24 * m, radius: 4, toward: -m });
+      props.sandbagRing({ x: gx(10 * m) - 24 * m, z: 10 * m, radius: 4, toward: m });
     }
-    props.church({ x: -78, z: iso(-78) + 47, yaw: Math.PI / 2 });
-    // Plava and Anhovo on their banks, Banjšice and the hamlets on the plateaux
+    props.church({ x: gx(-70) - 46, z: -70, yaw: 0 });
+    // Plava and Anhovo on the far bank, Vodice, Banjšice and the hamlets on the plateau
     for (const id of ['E', 'G']) { const [x, z] = at(id); farmVillage(props, x, z, 5, 19171 + Math.round(x * 3 + z * 7), skip, 0.7); }
-    for (const id of ['B', 'H', 'D', 'J']) { const [x, z] = at(id); farmVillage(props, x, z, id === 'H' ? 7 : 4, 19172 + Math.round(x * 3 + z * 7), skip, 1.1); }
+    for (const id of ['B', 'H', 'D']) { const [x, z] = at(id); farmVillage(props, x, z, id === 'H' ? 7 : 5, 19172 + Math.round(x * 3 + z * 7), skip, 1.1); }
     // the monastery on Monte Santo shot to a ruin, its bell tower a stump; a sangar ring and a chapel’s walls on San Gabriele
     props.rand = mulberry32(1917_24);
     props.ruinBlock({ x: C0[0] + 26, z: C0[1] + 10, yaw: 0.15, width: 24, depth: 13, storeys: 2, ruin: 0.6, name: 'monastery' });
-    props.ruinBlock({ x: C0[0] + 8, z: C0[1] + 26, yaw: 0.15, width: 6, depth: 6, storeys: 4, ruin: 0.5, name: 'bell tower' });
+    props.ruinBlock({ x: C0[0] + 8, z: C0[1] + 28, yaw: 0.15, width: 6, depth: 6, storeys: 4, ruin: 0.5, name: 'bell tower' });
     props.ruinBlock({ x: I0[0] - 24, z: I0[1] - 14, yaw: -0.3, width: 9, depth: 7, storeys: 1, ruin: 0.7, name: 'chapel' });
     for (const [cx, cz, s] of [[C0[0], C0[1], 1], [I0[0], I0[1], -1]]) {
-      for (let k = 0; k < 9; k++) { const a = (k / 9) * Math.PI * 2 + s; props.lowWall({ x: cx + Math.cos(a) * 34, z: cz + Math.sin(a) * 34, yaw: -a + Math.PI / 2, length: 7, height: 1.2, color: 0xa8a498 }); }
+      for (let k = 0; k < 9; k++) { const a = (k / 9) * Math.PI * 2 + s, x = cx + Math.cos(a) * 36, z = cz + Math.sin(a) * 36; if (!roadNear(x, z, 7)) props.lowWall({ x, z, yaw: -a + Math.PI / 2, length: 7, height: 1.2, color: 0xa8a498 }); }
     }
     // the caverns and the guns’ galleries: a timbered portal in the rock, the dark mouth, a lintel of stone, boulders round it
     for (const [x, z, yaw] of MOUTHS) {
       if (roadNear(x, z, 12)) continue;
-      const y = terrain.heightAt(x, z), s = yaw ? 1 : -1;
+      const y = terrain.heightAt(x, z), L = (lx: number, lz: number) => PropBuilder.local(x, z, yaw, lx, lz);
       props.box('stone', x, y + 1.3, z, 5.4, 3.0, 1.4, yaw, 0x9e9a8e);
-      props.box('plain', x, y + 1.0, z + 0.45 * s, 2.4, 2.1, 0.6, yaw, 0x0c0b0a);
-      props.box('stone', x, y + 3.0, z - 1.4 * s, 7.0, 0.8, 4.0, yaw, 0x8e8a80);
-      for (const dx of [-4.5, 4.5]) props.boulder({ x: x + dx, z: z + 1.5 * s, radius: 1.2 + props.rand() });
+      { const [mx, mz] = L(0, 0.45); props.box('plain', mx, y + 1.0, mz, 2.4, 2.1, 0.6, yaw, 0x0c0b0a); }
+      { const [lx, lz] = L(0, -1.4); props.box('stone', lx, y + 3.0, lz, 7.0, 0.8, 4.0, yaw, 0x8e8a80); }
+      for (const dx of [-4.5, 4.5]) { const [bx, bz] = L(dx, 1.5); props.boulder({ x: bx, z: bz, radius: 1.2 + props.rand() }); }
     }
     // the cableways: stations at the ends, timber pylons, the hauling ropes slung between
     for (const line of CABLES) {
@@ -291,20 +300,20 @@ export default {
     }
     // boats drawn up by the pontoons; supply dumps by the bridges
     props.rand = mulberry32(19173);
-    for (const s of [1, -1]) for (const bx of [-BX, BX]) { props.logPile({ x: bx + 24, z: iso(bx + 24) + 23 * s, yaw: 0.1, length: 7 }); props.crates({ x: bx - 24, z: iso(bx - 24) + 24 * s, yaw: props.rand() * 3 }); }
+    for (const s of [1, -1]) for (const bz of [260, -320]) { props.logPile({ x: gx(bz + 24) + 23 * s, z: bz + 24, yaw: 1.6, length: 7 }); props.crates({ x: gx(bz - 24) + 24 * s, z: bz - 24, yaw: props.rand() * 3 }); }
     // dry-stone walls over the karst, limestone boulders, old sangars on the walls’ ledges (each half its own)
     const r = mulberry32(19174);
     for (let i = 0; i < 900; i++) {
-      const x = (r() * 2 - 1) * 480, z = (i % 2 ? -1 : 1) * (W0 + r() * 500), big = r();
-      if (nearPoint(x, z, 28) || roadNear(x, z, 9) || inDoline(x, z) || Math.hypot(x, Math.abs(z) - BASE_Z) < 42) continue;
+      const x = (r() * 2 - 1) * 480, z = (i % 2 ? -1 : 1) * (10 + r() * 540), big = r();
+      if (nearPoint(x, z, 28) || roadNear(x, z, 9) || inDoline(x, z) || away(x, z) < W0 || Math.hypot(x, Math.abs(z) - BASE_Z) < 42) continue;
       const a = away(x, z);
       if (a < W1 && steepAt(x, z) > 0.8) continue;
       if (big < 0.55 || a < W1) props.boulder({ x, z, radius: 0.8 + r() * 1.8 });
       else props.lowWall({ x, z, yaw: r() * 3, length: 6 + r() * 8, height: 1.1, color: 0xaaa69a });
     }
     for (let i = 0, n = 0; i < 5000 && n < 40; i++) {
-      const s = n % 2 ? -1 : 1, x = (r() * 2 - 1) * 470, z = iso(x) + s * (W1 + 40 + r() * 300);
-      if (skip(x, z) || nearPoint(x, z, 45) || Math.hypot(x, Math.abs(z) - BASE_Z) < 50) continue;
+      const s = n % 2 ? -1 : 1, x = (r() * 2 - 1) * 470, z = s * (60 + r() * 420);
+      if (across(x, z) > -(W1 + 40) || skip(x, z) || nearPoint(x, z, 45) || Math.hypot(x, Math.abs(z) - BASE_Z) < 50) continue;
       n++;
       buildSite(props, { kind: ['fieldwall', 'rocks', 'hay', 'fieldwall', 'farm'][n % 5], seed: Math.floor(r() * 1e9) }, x, z, r() * 3);
     }
@@ -317,15 +326,17 @@ export default {
 
     const avoid = [{ x: 0, z: BASE_Z, r: 32 }, { x: 0, z: -BASE_Z, r: 32 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 16 })),
       ...MOUTHS.map(([x, z]) => ({ x, z, r: 8 })), { test: (x: number, z: number) => away(x, z) < 20 || roadNear(x, z, 8) || bridgeRoad(x, z) }];
-    // scrub oak and hornbeam over the karst in patches, thicker on the walls’ ledges; the summits shot bare
+    // scrub oak and hornbeam over the karst in patches, thicker on the walls’ ledges; the Korada’s flank wooded; the summits shot bare
     const wood0 = (x: number, z: number) => fbm(noise, x * 0.008 + 40, z * 0.008, 3);
-    const plateau = (x: number, z: number) => away(x, z) > W1 + 10 && Math.min(Math.hypot(x - C0[0], z - C0[1]), Math.hypot(x - I0[0], z - I0[1])) > 70;
+    const north = (x: number, z: number) => z > 0;
+    const plateau = (x: number, z: number) => across(x, z) < -(W1 + 10) && Math.min(Math.hypot(x - C0[0], z - C0[1]), Math.hypot(x - I0[0], z - I0[1])) > 70;
     const tP = evenThreshold((x, z) => (plateau(x, z) ? wood0(x, z) : -9), 0.05, north);
     const trees = plantTrees({
-      scene, terrain, cover, rand, area: bounds, lane: bounds.x - 10, avoid, count: 4200, broadleaf: 0.85, autumn: 0.1, maxY: 200,
+      scene, terrain, cover, rand, area: bounds, lane: bounds.x + 80, avoid, count: 4600, broadleaf: 0.85, autumn: 0.1, maxY: 200,
       forest: (x: number, z: number) => {
-        const a = away(x, z);
+        const s = across(x, z), a = Math.abs(s);
         if (a < 26) return 0;
+        if (s > W1) return wood0(x, z) > -0.2 ? 0.75 : 0.2;                                         // the Korada’s wooded flank
         if (a < W1 + 10) return wood0(x, z) > 0 ? 0.35 : 0.1;                                      // scrub clinging to the walls
         if (!plateau(x, z)) return 0.02;
         return wood0(x, z) > (north(x, z) ? 0.05 : tP) ? 0.7 : 0.08;                                // the copses on the plateau
