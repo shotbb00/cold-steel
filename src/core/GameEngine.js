@@ -204,6 +204,7 @@ export class GameEngine {
     this.world.steep = map.steep ?? null; // (ground too steep for vehicles: Omaha's bluffs)
     this.world.soft = map.soft ?? null;   // (soft ground: Bobruisk's bog, Iwo Jima's ash — routes go round it: world/Nav.js)
     this.world.armies = this.armies;
+    this.world.mapArmies = only; // (the armies the map names: its ships' names are theirs — entities/UnitStack.js shipName)
     this.world.nav = new NavGrid(this.world); // where bodies can go, and the way there
     this.cover.onAdd = (c) => this.world.nav.addCollider(c);
     this.cover.onRemove = (c) => this.world.nav.removeCollider(c); // (a tree that came down)

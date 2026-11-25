@@ -13,6 +13,11 @@ import { buildCavalry, buildCavalryFoot } from '../models/napCavalry.js';
 import { buildFieldGun, buildShoreGun } from '../models/napGuns.js';
 import { buildWagon } from '../models/napWagons.js';
 import { SHIPS_1806 } from './ships.js';
+import austria from './austria.js';
+import smallCraft from './smallCraft.js';
+import westNavies from './westNavies.js';
+import eastNavies from './eastNavies.js';
+import forts from './forts.js';
 
 const T = TYPES_1985;
 const men = (o = {}) => ({
@@ -414,3 +419,9 @@ export const TYPES_1806 = {
 /** 1806 has no such troops: what a map or mode that asks for one gets instead (the AI never buys these). */
 const STAND_IN = { scouts: 'reconVehicle', heavyTank: 'tank', tankDestroyer: 'artillery', cev: 'spMortar', airRadar: 'observers', cbRadar: 'observers', mineClear: 'engineers', recovery: 'jammer', crew: 'dismounted' };
 export const ALIAS_1806 = Object.fromEntries(Object.keys(T).filter((id) => !TYPES_1806[id]).map((id) => [id, STAND_IN[id] ?? 'rifles']));
+
+austria(TYPES_1806); // the Austrian army of 1805–09 (./austria.js)
+smallCraft(TYPES_1806); // the flotilla's prames, gun vessels and péniches, the bomb vessel, cutter and lugger, the merchantman, Congreve's rockets; the French landing boats (./smallCraft.js)
+westNavies(TYPES_1806); // the Armada Española, the Bataafse Marine and Spain's garrison troops (./westNavies.js)
+eastNavies(TYPES_1806); // the Imperial Russian Navy, the Russian and Prussian landing boats, the Danish Army of 1807 (./eastNavies.js)
+forts(TYPES_1806); // every army's own forts: the Lanes mode's works and the coast's shore battery (./forts.js)

@@ -197,8 +197,8 @@ export default {
     launchZ: 700,
     surf: 0.3, // (a Channel swell on the sands: some boats broach)
     signal: { t: 25, say: 'Rockets away from the boats — and every flatboat pulls for the sands', sayOther: 'Fire-arrows over the flotilla and boats on the sands at Wimereux: the English are landing!' },
-    // Owen's frigates and sloops close in to cover the boats
-    navy: ['frigate', 'destroyer'],
+    // Owen's frigates and sloops close in to cover the boats; his bomb vessels lie off and shell the camps (data/units1806/smallCraft.js)
+    navy: ['frigate', 'destroyer', 'bombVessel'],
     // the coast's guns: the Crèche fort over the cove, the battery at the basin, a field battery behind the north dunes
     forts: [
       { unit: 'shoreBattery', x: FORT.x, z: FORT.z, facing: Math.PI },
@@ -216,7 +216,7 @@ export default {
     // the camps turn out: Soult's battalions come down off the plateau
     counter: { t: 150, units: ['rifles', 'rifles', 'reconVehicle', 'ifv', 'artillery'], say: 'The générale is beating in every camp — down to the shore, at the double!', sayOther: 'French columns pouring out of the hutted camps — form on the sand!' },
     hold: [...SECTORS.flatMap((s) => [-30, 30].map((dx) => ({ x: s.x + dx, z: shoreZ(s.x + dx) + 60 }))), ...SECTORS.map((s) => ({ x: s.inland.x, z: s.inland.z }))],
-    ai: { order: ['rifles', 'mgTeam', 'rifles', 'sniper', 'atTeam', 'artillery', 'rifles', 'marines', 'rifles', 'reconVehicle', 'atTeam', 'rifles'], gunship: 'frigate', gunships: 1, heavy: null, inshore: 300 },
+    ai: { order: ['rifles', 'mgTeam', 'rifles', 'sniper', 'atTeam', 'artillery', 'rifles', 'marines', 'rocketTroop', 'rifles', 'reconVehicle', 'atTeam', 'rifles'], gunship: 'frigate', gunships: 1, heavy: 'bombVessel', inshore: 300 },
     economy: { reserves: 2200, perSector: 600, beachIncome: 0.75, defenceCp: 650, defenceIncome: 0.8 },
     waves: [
       // the first wave: the marines of the squadron, a battalion from the Downs, the 95th's riflemen
@@ -225,7 +225,7 @@ export default {
         { unit: 'marines', sector: 1 }, { unit: 'mgTeam', sector: 1 }, { unit: 'rifles', sector: 1 },
         { unit: 'rifles', sector: 2 }, { unit: 'mgTeam', sector: 2 }, { unit: 'atTeam', sector: 2 },
       ] },
-      { t: 150, say: 'The launches are bringing in the guns, and seamen to burn the boats in the basin', units: [{ unit: 'artillery', sector: 1 }, { unit: 'sailors', sector: 1 }, { unit: 'rifles', sector: 0 }] },
+      { t: 150, say: 'The launches are bringing in the guns, Congreve’s rockets, and seamen to burn the boats in the basin', units: [{ unit: 'artillery', sector: 1 }, { unit: 'rocketTroop', sector: 1 }, { unit: 'sailors', sector: 1 }, { unit: 'rifles', sector: 0 }] },
       { t: 300, say: 'The second battalion is coming ashore', units: [{ unit: 'rifles', sector: 2 }, { unit: 'rifles', sector: 1 }, { unit: 'artillery', sector: 0 }] },
     ],
   },

@@ -22,17 +22,9 @@ const SIZE = 8000;
 const HALF = 3000;
 const noise = createNoise2D(1801_07);
 const sea = createSea({ level: 0, size: SIZE, color: 0x1e4f74 });
-// the ships' names (entities/UnitStack.js shipName): Linois' French and Moreno's Spanish, Saumarez's British
+// the ships' names (entities/UnitStack.js shipName): Saumarez's British (the French and the Spanish name their own: data/units1806/ships.js, westNavies.js)
 Object.assign(sea, {
   names: {
-    nato: {
-      battleship: ['Real Carlos'],
-      cruiser: ['Formidable', 'Indomptable', 'Desaix', 'San Hermenegildo', 'San Fernando', 'Argonauta', 'San Agustín', 'Saint-Antoine', 'Hannibal'],
-      frigate: ['Muiron', 'Sabina', 'Libre', 'Indienne', 'Carmen', 'Perla'],
-      destroyer: ['Vautour', 'Pelayo', 'Vigilante', 'Galgo', 'Alerta', 'Furet'],
-      ptBoat: ['Cañonera 1', 'Cañonera 2', 'Cañonera 3', 'Cañonera 4', 'Cañonera 5', 'Cañonera 6'],
-      fireship: ['Brûlot 1', 'Brûlot 2', 'Brulote 3'],
-    },
     pact: {
       battleship: ['Caesar'],
       cruiser: ['Pompee', 'Spencer', 'Venerable', 'Superb', 'Audacious', 'Hannibal', 'Powerful', 'Gibraltar'],
@@ -105,7 +97,7 @@ export default {
   wind: { from: 90, speed: 11, veer: 0.15 },   // the levanter: east, hard and steady down the Strait (world/Wind.js)
   fow: 0.5,
   sides: { nato: 'France and Spain', pact: 'Britain' },
-  armies: { nato: ['fr'], pact: ['gb'] },
+  armies: { nato: ['fr', 'es'], pact: ['gb'] }, // (Linois' French and Moreno's Spaniards in the Armada Española's own ships: data/units1806/westNavies.js)
   size: SIZE,
   segments: 520,
   bounds: { x: HALF, z: HALF },

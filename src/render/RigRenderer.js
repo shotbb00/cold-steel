@@ -104,7 +104,7 @@ function probe(rig, u, look) {
 export class RigRenderer {
   constructor(stack, scene) {
     this.stack = stack;
-    const build = stack.type.models[stack.army] ?? stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0];
+    const build = stack.type.namedModels?.[stack.name] ?? stack.type.models[stack.army] ?? stack.type.models[stack.faction] ?? Object.values(stack.type.models)[0]; // (namedModels: a ship of her own lines in the class's slot — Príncipe de Asturias beside the Santísima Trinidad: data/units1806/westNavies.js)
     this.build = build;
     this.scene = scene;
     // specialists (the first type.specialist.count members) may have a model of their own

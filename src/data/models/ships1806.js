@@ -15,7 +15,7 @@ const WOOD = 0x6e5236;       // bright work, masts, yards
 const DECKW = 0x9a8466;      // the planking
 const SAIL = 0xe6dfcb;
 const IRON = 0x262624;
-const NAVY = {
+export const NAVY = { // (other navies add their own: models/ships1806west.js — `flag` may be a builder (y, z0, k) => parts, `pennant` its colour)
   rn: { band: 0xc8973a, port: 0x2a1e14, lid: 0x9a2a20, stern: 0xc8973a, flag: 'rn' },   // black and ochre, the port lids' red insides
   fr: { band: 0x8e3322, port: 0x241812, lid: 0x8e3322, stern: 0x2e4a7a, flag: 'fr' },   // black and red ochre, the stern in blue
   dk: { band: 0xd6caa4, port: 0x241812, lid: 0x9a2a20, stern: 0x1c1a17, flag: 'dk' },  // black, a buff band (Copenhagen 1801: the Danish line)
@@ -23,7 +23,7 @@ const NAVY = {
 };
 
 /** The hull's half-width at z (bow +z), for a ship `len` long and `beam` wide: a bluff round bow, a full body, a narrower square stern. */
-const halfWidth = (z, len, beam) => {
+export const halfWidth = (z, len, beam) => {
   const t = z / (len / 2);              // −1 stern … +1 bow
   if (t > 0.45) return (beam / 2) * Math.sqrt(Math.max(0.02, 1 - ((t - 0.45) / 0.55) ** 2));
   if (t < -0.6) return (beam / 2) * (0.78 + 0.22 * (1 + (t + 0.6) / 0.4));
@@ -54,7 +54,7 @@ export function splitFlag(y, z0, k = 1) {
  * A three-masted ship of the line. `o`: { len, beam, fb (upper deck above the water), draft, decks (gun
  * decks), ports (a side, a deck), masts [[z, height above the deck], fore … mizzen], navy }.
  */
-function shipOfTheLine(o) {
+export function shipOfTheLine(o) {
   const { len, beam, fb, draft, decks, ports, masts, navy } = o;
   const c = NAVY[navy];
   const n = masts.length, sc = beam / 14.6, L = len / 52; // (two masts: a brig; the sizes from the 74's)
@@ -145,18 +145,18 @@ function shipOfTheLine(o) {
     hull.push(P.cyl(0.05, 0.05, l, { y: (y0 + ey) / 2, z: (fz + ez) / 2, rx: Math.atan2(ez - fz, y0 - ey) * -1 + Math.PI, color: IRON }, 4));
   }
   // the colours: at the stern, and the masthead pennant
-  const flag = c.flag === 'none' ? [P.box(0.05, 0.5, 0.5, { y: fb + 7.5, z: -len / 2 - 2, color: 0x2a2a2a })] : c.flag === 'rn'
+  const flag = typeof c.flag === 'function' ? c.flag(fb + 7.5, -len / 2 - 1, 1) : c.flag === 'none' ? [P.box(0.05, 0.5, 0.5, { y: fb + 7.5, z: -len / 2 - 2, color: 0x2a2a2a })] : c.flag === 'rn'
     ? [P.box(0.05, 2.4, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xe8e8e2 }), P.box(0.06, 2.4, 0.5, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.06, 0.45, 4, { y: fb + 7.5, z: -len / 2 - 3, color: 0xb8221e }), P.box(0.07, 1.2, 2, { y: fb + 8.1, z: -len / 2 - 2, color: 0x1f2e6e })]
     : c.flag === 'dk' ? splitFlag(fb + 7.5, -len / 2 - 1, 1)
     : [P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 1.9, color: 0x1f3a8e }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 3.2, color: 0xeeeeea }), P.box(0.05, 2.4, 1.33, { y: fb + 7.5, z: -len / 2 - 4.5, color: 0xc8221e })];
   hull.push(P.cyl(0.12, 0.15, 7, { y: fb + 5, z: -len / 2 - 1, rx: -0.3, color: WOOD }, 6));
   const colours = merge(flag); // (their own: they come down when she strikes)
-  hull.push(P.box(0.04, 0.25, 6, { y: fb + masts[Math.min(1, n - 1)][1] + 0.2, z: masts[Math.min(1, n - 1)][0] - 3, color: c.flag === 'rn' || c.flag === 'dk' ? 0xb8221e : 0x1f3a8e }));
+  hull.push(P.box(0.04, 0.25, 6, { y: fb + masts[Math.min(1, n - 1)][1] + 0.2, z: masts[Math.min(1, n - 1)][0] - 3, color: c.pennant ?? (c.flag === 'rn' || c.flag === 'dk' ? 0xb8221e : 0x1f3a8e) }));
   return { fixed: merge(hull), rig, colours, len, beam, mastCount: n };
 }
 
 /** The model's builder: the hull, and the rig groups that answer the wind (UnitStack's animate hook). */
-function sailRig(describe) {
+export function sailRig(describe) {
   let d = null;
   return (mats) => {
     d ??= describe();
@@ -234,7 +234,7 @@ function sailRig(describe) {
  * An oared gunboat: an open boat with one lug sail, a heavy gun in the bow, sweeps along her sides (she rows
  * when the wind fails). Low, cheap and hard to hit.
  */
-function gunboat(navy) {
+export function gunboat(navy) {
   const c = NAVY[navy];
   const len = 18, beam = 4.6;
   const parts = [
@@ -252,7 +252,7 @@ function gunboat(navy) {
   ]);
   const oars = [-1, 1].flatMap((s) => Array.from({ length: 6 }, (_, i) => ({ at: [s * (beam / 2), 1.15, -5 + i * 1.8], side: s })));
   const sail = merge([P.box(0.08, 7, 6, { y: 7, z: -0.6, rx: 0.08, color: SAIL, surf: 'cloth' }), P.cyl(0.1, 0.1, 7.5, { y: 10.4, z: -0.6, rx: Math.PI / 2 - 0.25, color: WOOD }, 5)]);
-  const colours = merge(c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : c.flag === 'dk' ? splitFlag(2.6, -len / 2, 0.42) : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
+  const colours = merge(typeof c.flag === 'function' ? c.flag(2.6, -len / 2, 0.42) : c.flag === 'rn' ? [P.box(0.05, 1, 1.6, { y: 2.6, z: -len / 2 - 0.8, color: 0xb8221e })] : c.flag === 'dk' ? splitFlag(2.6, -len / 2, 0.42) : [P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 0.5, color: 0x1f3a8e }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.05, color: 0xeeeeea }), P.box(0.05, 1, 0.55, { y: 2.6, z: -len / 2 - 1.6, color: 0xc8221e })]);
   parts.push(P.cyl(0.05, 0.05, 2.4, { y: 1.9, z: -len / 2, color: WOOD }, 4));
   return { fixed: merge(parts), rig: [{ at: [0, 0, 1], fore: true, mast: 0, geo: sail, spars: merge([P.cyl(0.18, 0.22, 12, { y: 6.9, z: 1, color: WOOD }, 8)]) }], colours, len, beam, mastCount: 1, oars, sweep: { [-1]: sweep(-1), [1]: sweep(1) } };
 }
@@ -280,8 +280,8 @@ export const buildGunboatDK = sailRig(() => gunboat('dk'));
  * floor (systems/Landing.js HOLDS); the coxswain and a midshipman in the stern sheets, the ensign over them. No sail:
  * she rows (sailRig `rowOnly`). Hollow to the floor, so the men aboard are seen.
  */
-function landingBoat({ len, beam, oarsASide, gun = false }) {
-  const HULL = 0x4a3c2c, PAINT = 0xd8cfb8, JACKET = 0x1d2a5c, SKIN = 0xd8b090, CAP = 0x1a1a1a;
+export function landingBoat({ len, beam, oarsASide, gun = false, paint = 0xd8cfb8, flag = null, hull = 0x4a3c2c, jacket = 0x1d2a5c }) { // (paint: the gunwale's strake; flag: the colours' parts, else the red ensign — models/ships1806craft.js: the French boats; hull, jacket: her planking, the rowers' jackets — models/ships1806east.js)
+  const HULL = hull, PAINT = paint, JACKET = jacket, SKIN = 0xd8b090, CAP = 0x1a1a1a;
   const floor = 0.3, side = 0.95; // (the floor just above the water; the gunwale over it)
   const parts = [
     P.box(beam - 0.2, 0.5, len - 1.6, { y: floor - 0.25, color: HULL }),                                              // the flat bottom
@@ -311,7 +311,7 @@ function landingBoat({ len, beam, oarsASide, gun = false }) {
     P.cyl(0.03, 0.03, 2.2, { y: floor + 1.2, z: -len / 2 + 0.4, color: 0x6e5236 }, 4),
   );
   if (gun) parts.push(P.cyl(0.14, 0.2, 2.2, { y: floor + 0.6, z: len / 2 - 2.2, rx: Math.PI / 2, color: IRON }, 8)); // (a carronade in her bow)
-  const colours = merge([P.box(0.04, 0.6, 1.0, { y: floor + 2.0, z: -len / 2 - 0.1, color: 0xb8221e }), P.box(0.05, 0.3, 0.5, { y: floor + 2.15, z: -len / 2 + 0.15, color: 0x1f2e6e })]);
+  const colours = merge(flag ?? [P.box(0.04, 0.6, 1.0, { y: floor + 2.0, z: -len / 2 - 0.1, color: 0xb8221e }), P.box(0.05, 0.3, 0.5, { y: floor + 2.15, z: -len / 2 + 0.15, color: 0x1f2e6e })]);
   // the oars: shaft out over the gunwale and down to the water, each pivoting at its thole
   const DOWN = 0.42, cs = Math.cos(DOWN), sn = Math.sin(DOWN);
   const sweep = (s) => merge([

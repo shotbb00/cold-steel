@@ -31,9 +31,9 @@ const ORDER_2027 = ['destroyer', 'frigate', 'ptBoat', 'droneBoat', 'corvette', '
 const ORDER_KM = ['submarine', 'destroyer', 'ptBoat', 'destroyer', 'submarine', 'cruiser', 'ptBoat', 'destroyer', 'battleship', 'submarine', 'destroyer', 'cruiser', 'ptBoat'];
 const ORDER_RN = ['destroyer', 'frigate', 'frigate', 'lightCruiser', 'destroyer', 'submarine', 'cruiser', 'transport', 'carrier', 'frigate', 'destroyer', 'battleship', 'ptBoat', 'lightCruiser', 'frigate'];
 const NAVY_ORDER = { wh: ORDER_KM, brit: ORDER_RN, brit21: ORDER_RN, brit14: ORDER_RN };
-const order = (army) => (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : NAVY_ORDER[army] ?? ORDER);
+const order = (army, map) => map?.fleetOrder?.[army] ?? (year() < 1900 ? ORDER_1806 : year() < 1930 ? ORDER_1918 : year() >= 2000 ? ORDER_2027 : NAVY_ORDER[army] ?? ORDER); // (a map's own, by army: the Boulogne flotilla's prames and péniches, a convoy's merchantmen — maps/channel1805.ts)
 const ORDER_1806 = ['cruiser', 'frigate', 'cruiser', 'destroyer', 'cruiser', 'battleship', 'frigate', 'cruiser', 'fireship', 'cruiser', 'destroyer', 'ptBoat']; // (under sail: the line first)
-const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1, monitor: 4, seaplaneCarrier: 3, merchant: 2, trawler: 1, minelayerSub: 1, cruiserSub: 1 };
+const VALUE = { carrier: 5, battleship: 4, escortCarrier: 4, cruiser: 3, lightCruiser: 3, destroyer: 2, transport: 2, frigate: 1, submarine: 1, ptBoat: 1, monitor: 4, seaplaneCarrier: 3, merchant: 2, trawler: 1, minelayerSub: 1, cruiserSub: 1, prame: 2, bombVessel: 2 };
 
 export class SeaDirector {
   constructor(game, faction, state, { tempo = 1, hunt = false, holdUntil = null } = {}) {
@@ -76,8 +76,8 @@ export class SeaDirector {
     const army = this.game.armyOf(this.faction);
     const allowed = (id) => !!UNIT_TYPES[id] && (!getUnitType(id).armies || getUnitType(id).armies.includes(army)) && (!this.state.allow || this.state.allow(getUnitType(id))); // (a type its own navy fields: no Buyan-M for the US Navy)
     const capped = (id) => { const t = getUnitType(id); return t.limit && mine.filter((s) => s.type.id === id).length >= t.limit; };
-    for (let tries = 0; tries < order(army).length; tries++) {
-      const list = order(army);
+    const list = order(army, this.game.map);
+    for (let tries = 0; tries < list.length; tries++) {
       const id = list[this.buyIndex % list.length];
       if (!allowed(id) || capped(id)) { this.buyIndex++; continue; }
       if (this.state.cp[this.faction] >= unitCost(getUnitType(id), army)) {

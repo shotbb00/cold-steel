@@ -9,8 +9,8 @@
 // (`widened`). Fair: the homes mirrored through the middle zone — the flotilla's off the harbour, the British
 // out toward the English side — the three open zones on the line between them, equally far by sail (seapath);
 // none behind the cape or the fort's rock. The wind from south by west blows up the coast, across the fleets'
-// line: neither has it in his teeth. The 1806 roster has no prame, péniche or bomb vessel yet: the flotilla
-// sails as gunboats and brigs (data/units1806/ships.js ptBoat, destroyer), the British as frigates and brig-sloops.
+// line: neither has it in his teeth. The flotilla sails its prames, bateaux canonniers, chaloupes and péniches, the
+// Downs squadron its bomb vessels, cutters and brig-sloops (data/units1806/smallCraft.js; `fleetOrder`: what each AI buys).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -127,8 +127,13 @@ export default {
   points,
 
   spawns: {
-    nato: line(['ptBoat', 'destroyer', 'ptBoat', 'ptBoat', 'destroyer', 'ptBoat'], 450, 230, WEST),
-    pact: line(['destroyer', 'frigate', 'destroyer'], -2450, -230, EAST),
+    nato: line(['peniche', 'gunVessel', 'prame', 'ptBoat', 'peniche'], 450, 230, WEST),
+    pact: line(['cutter', 'bombVessel', 'destroyer', 'cutter'], -2450, -230, EAST),
+  },
+  // the AI's buying (ai/SeaDirector.js): the flotilla's craft and its few frigates; Keith's sloops, cutters and bombs, a 74 now and then
+  fleetOrder: {
+    fr: ['gunVessel', 'ptBoat', 'prame', 'peniche', 'destroyer', 'gunVessel', 'frigate', 'ptBoat', 'peniche', 'prame', 'fireship', 'gunVessel'],
+    gb: ['cutter', 'destroyer', 'frigate', 'bombVessel', 'lugger', 'destroyer', 'frigate', 'cutter', 'fireship', 'cruiser', 'destroyer', 'bombVessel'],
   },
 
   decorate({ scene, terrain, cover, rand }) {

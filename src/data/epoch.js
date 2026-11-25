@@ -41,13 +41,14 @@ export const EPOCHS = {
       by: { id: 'by', faction: 'nato', name: 'Bavaria' },
       pr: { id: 'pr', faction: 'pact', name: 'Prussia' },
       sx: { id: 'sx', faction: 'pact', name: 'Saxony' },
-      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', regions: ['east'] },          // (Poland 1807: Eylau, Friedland)
+      ru: { id: 'ru', faction: 'pact', name: 'Russian Army', navy: 'Imperial Russian Navy', regions: ['east'] },          // (Poland 1807: Eylau, Friedland; at sea Seniavin's squadron and the Baltic fleet: data/units1806/eastNavies.js)
       gb: { id: 'gb', faction: 'pact', name: 'British Army', regions: ['iberia', 'africa'] }, // (the Peninsula, and Egypt: the Aboukir landing)
-      // the world campaign's own army (wcampaign/wars/nap.js), no roster yet: `own` with no types fields nothing of another
-      // nation's; no regions: no map picks it, so a campaign battle fights it as the side's army that fits its map (data/units/
-      // index.js campaignArmy — the Prussians or the Russians). TODO units: its roster, then its regions. (Russia: `ru` above.)
-      au: { id: 'au', faction: 'pact', name: 'Austrian Army', own: true, regions: [] },
-      dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', regions: [] }, // (Søetaten, at Copenhagen only: the map names it — its ships in the French hulls, her own colours: data/units1806/ships.js)
+      au: { id: 'au', faction: 'pact', name: 'Austrian Army', own: true, regions: ['europe', 'italy', 'east'] }, // (Ulm and Austerlitz, Caldiero and Italy 1805, Galicia 1809; its own roster: data/units1806/austria.js)
+      dk: { id: 'dk', faction: 'nato', name: 'Denmark', navy: 'Royal Danish Navy', own: true, regions: ['europe'], standIn: { tank: 'ifv', heavyTank: 'ifv', spMortar: 'artillery', rockets: 'artillery', bridgeLayer: 'engineers' } }, // (Søetaten: its ships in the French hulls, her own colours: data/units1806/ships.js; the army of Zealand 1807, Køge: ./units1806/eastNavies.js — own: no French units; no heavy horse, heavy or horse guns, pontoons)
+      // Napoleon's western allies (data/units1806/westNavies.js): Spain's own fleet and garrison (`own`: no cavalry — the light infantry and
+      // the line stand in for the horse, the field guns for the heavy guns and the howitzers); Holland's own fleet, ashore the French types
+      es: { id: 'es', faction: 'nato', name: 'Spain', own: true, navy: 'Armada Española', regions: ['iberia'], standIn: { reconVehicle: 'mgTeam', ifv: 'rifles', tank: 'rifles', mortar: 'artillery', spMortar: 'artillery', rockets: 'artillery', atTeam: 'rifles', sniper: 'mgTeam', engineers: 'militia', marines: 'rifles', sailors: 'militia' } },
+      nl: { id: 'nl', faction: 'nato', name: 'Batavian Republic', navy: 'Bataafse Marine', regions: [] }, // (the Kingdom of Holland from June 1806: the Texel squadron; no army of its own here — the French types ashore)
     },
     defaults: { nato: 'fr', pact: 'pr' },
     types: TYPES_1806, alias: ALIAS_1806, air: {},
@@ -77,9 +78,21 @@ export const EPOCHS = {
         { id: 'twoDeep', name: 'Two-deep line', text: 'Infantry in line that has stood still for 3 s hits 20 % harder: the thin line waits, then every musket fires at once.', still: 3, dmg: 1.2 },
         { id: 'baker', name: 'The Baker rifle', text: 'Riflemen reach 30 % further and cost 20 % less: the 95th picked off officers at ranges no musket could answer.', mods: { sniper: { range: 1.3 } }, costs: { sniper: 0.8 } },
       ],
+      au: [
+        { id: 'grenzer', name: 'The Military Frontier', text: 'Grenzer cost 25 % less and take 15 % less damage: soldier-farmers raised on the Turkish border, every one of them used to the raid and the ambush.', mods: { mgTeam: { take: 0.85 } }, costs: { mgTeam: 0.75 } },
+        { id: 'wurst', name: 'The Wurst', text: 'Cavalry batteries cost 20 % less and move 15 % faster: the gunners ride the padded ammunition chest, not horses of their own.', mods: { rockets: { speed: 1.15 } }, costs: { rockets: 0.8 } },
+      ],
       dk: [
         { id: 'blockships', name: 'Blockships', text: 'Ships of the line cost 20 % less: old hulls cut down and moored as floating batteries, fought where they lay.', costs: { cruiser: 0.8 } },
         { id: 'volunteers', name: 'Copenhagen\'s volunteers', text: 'Ships of the line and frigates take 10 % less damage: students, dock hands and the city\'s men rowed out to fill the gaps at the guns.', mods: { cruiser: { take: 0.9 }, frigate: { take: 0.9 } } },
+      ],
+      es: [
+        { id: 'havanaOak', name: 'Havana oak', text: 'Ships of the line take 10 % less damage: hulls of Cuban mahogany and cedar from the Havana yard — Santísima Trinidad was still afloat when the battle ended.', mods: { cruiser: { take: 0.9 }, battleship: { take: 0.9 } } },
+        { id: 'milicias', name: 'Milicias provinciales', text: 'Militia costs 25 % less and takes 10 % less damage: every province’s men called up to hold the coast and the towns.', mods: { militia: { take: 0.9 } }, costs: { militia: 0.75 } },
+      ],
+      nl: [
+        { id: 'shoalWater', name: 'Shoal-water pilots', text: 'Frigates and brigs sail 10 % faster: Dutch pilots who know every bank and gat between the Texel and the Vlie.', mods: { frigate: { speed: 1.1 }, destroyer: { speed: 1.1 } } },
+        { id: 'kanonneerboten', name: 'The gunboat flotilla', text: 'Gunboats cost 25 % less: the Batavian yards turned out hundreds for the invasion of England.', costs: { ptBoat: 0.75 } },
       ],
     },
   },

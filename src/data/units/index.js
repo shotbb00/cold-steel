@@ -109,6 +109,7 @@ const ROLE = {
   frigate: ['destroyer', 'ptBoat'], destroyer: ['frigate'], lightCruiser: ['cruiser', 'destroyer'], cruiser: ['lightCruiser', 'destroyer'],
   battleship: ['oldBattleship', 'cruiser'], oldBattleship: ['battleship', 'cruiser'], carrier: ['escortCarrier'], escortCarrier: ['carrier'], missileSub: ['submarine'],
   monitor: ['battleship', 'cruiser'], seaplaneCarrier: ['carrier', 'lightCruiser'], merchant: ['transport'], trawler: ['drifter', 'frigate', 'minesweeper'], minelayerSub: ['submarine'], cruiserSub: ['submarine'], // (1918: data/units1918/shipTypes.js)
+  prame: ['frigate', 'cruiser'], gunVessel: ['ptBoat'], peniche: ['ptBoat'], bombVessel: ['destroyer', 'frigate'], cutter: ['destroyer'], lugger: ['destroyer'], rocketTroop: ['rockets', 'artillery'], // (1806: data/units1806/smallCraft.js; merchant as 1918's)
 };
 
 /**

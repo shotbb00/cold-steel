@@ -1,8 +1,8 @@
 // Cádiz from the sea (coastal, the 1806 epoch, hypothetical: the British land, the garrison holds; 1.0 × 1.8 km). In
 // July 1797 Nelson's bomb vessels shelled the city from the bay and his boats fought the Spanish gunboats under its
 // walls; after Trafalgar the Combined Fleet's wreck lay in the harbour, and a landing on the isthmus was the Royal
-// Navy's standing temptation. The Spanish garrison fights here as the French (Spain's ships and men sail and march
-// under the French side in this war). On the map the Atlantic is the -z side: the walled city on the tip of its rock
+// Navy's standing temptation. The Spanish garrison holds it (army es, on the French side: data/units1806/westNavies.js).
+// On the map the Atlantic is the -z side: the walled city on the tip of its rock
 // (the sea walls, Santa Catalina's castle over La Caleta, San Sebastián's castle and lighthouse on its islet off the
 // tip), the Puerta de Tierra's land front across the neck, the long narrow sand of the Arrecife running south-east
 // with the Bay of Cádiz on its far side (+z), Puntales' fort on the bay shore, the Torregorda tower down the beach,
@@ -116,8 +116,8 @@ export default {
   theatre: 'coastal',
   region: 'iberia',
   modes: ['landing'],
-  sides: { nato: 'France', pact: 'Britain' },
-  armies: { nato: ['fr'], pact: ['gb'] }, // (the Spanish garrison fights as fr — no Spanish army; gb's regions include iberia)
+  sides: { nato: 'Spain', pact: 'Britain' },
+  armies: { nato: ['es', 'fr'], pact: ['gb'] }, // (the Spanish garrison: data/units1806/westNavies.js; gb's regions include iberia)
   airfields: [],
   conditions: { time: 'day', weather: 'clear' },
   wind: { from: 280, speed: 5, veer: 0.15 }, // (the poniente off the Atlantic)

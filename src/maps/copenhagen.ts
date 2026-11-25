@@ -80,7 +80,7 @@ export default {
   wind: { from: 150, speed: 5.5, veer: 0.2 },   // south-south-east: fair up the King's Deep for the British, foul for the Danes to come out
   fow: 0.5,
   sides: { nato: 'Denmark', pact: 'Britain' },
-  armies: { nato: ['dk'] }, // (the Royal Danish Navy: maps/index.js armiesOn)
+  armies: { nato: ['dk'], pact: ['gb'] }, // (the Royal Danish Navy: maps/index.js armiesOn)
   size: SIZE,
   segments: 520,
   bounds: { x: HALF, z: HALF },

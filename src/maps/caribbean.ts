@@ -39,6 +39,7 @@ export default {
   description: 'A green island and its cays, reefs all round, the trade wind from the east — and now and then a dead calm, when the gunboats row out.',
   epochs: ['1806'],
   theatre: 'sea',
+  armies: { nato: ['fr'], pact: ['gb'] }, // (the Royal Navy, not the side's default Prussians)
   region: 'caribbean',
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
   conditions: { time: 'day', weather: 'clear' },

@@ -6,7 +6,7 @@
 // else. Laid out at full size (`widened`). Fair: the homes point-mirrored through the middle, the three open zones
 // tuned to the same sailing distance from both fleets (seapath/seatune), none in the cape's lee; the wind from the
 // west-north-west reaches both lines on a broad reach — the French have it on the quarter coming up, the British
-// abeam coming down. Spain's ships sail as the French (data/units1806/ships.js), their names among them.
+// abeam coming down. Gravina's Spaniards sail their own ships (army es: data/units1806/westNavies.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -17,14 +17,9 @@ const SIZE = 8000;
 const HALF = 3000;
 const noise = createNoise2D(1805_07);
 const sea = createSea({ level: 0, size: SIZE, color: 0x23485a });
-// the ships' names (entities/UnitStack.js shipName): Villeneuve's French and Spanish, Calder's British
+// the ships' names (entities/UnitStack.js shipName): Calder's British (the French and the Spanish name their own: data/units1806/ships.js, westNavies.js)
 Object.assign(sea, {
   names: {
-    nato: {
-      battleship: ['Bucentaure'],
-      cruiser: ['Formidable', 'Argonauta', 'Pluton', 'San Rafael', 'Mont-Blanc', 'Firme', 'Intrépide', 'España', 'Neptune', 'Terrible', 'Indomptable', 'América', 'Scipion', 'Swiftsure', 'Atlas', 'Berwick', 'Aigle', 'Achille', 'Héros', 'Duguay-Trouin'],
-      frigate: ['Hortense', 'Cornélie', 'Rhin', 'Thémis', 'Sirène', 'Didon', 'Hermione'],
-    },
     pact: {
       battleship: ['Prince of Wales', 'Glory', 'Barfleur', 'Windsor Castle'],
       cruiser: ['Hero', 'Ajax', 'Triumph', 'Malta', 'Defiance', 'Agamemnon', 'Repulse', 'Raisonnable', 'Dragon', 'Warrior', 'Thunderer'],
@@ -76,7 +71,7 @@ export default {
   wind: { from: 290, speed: 10, veer: 0.25 },   // west-north-west — in the fog it falls to a light breeze (world/Wind.js)
   fow: 0.55,
   sides: { nato: 'France and Spain', pact: 'Britain' },
-  armies: { nato: ['fr'], pact: ['gb'] },
+  armies: { nato: ['fr', 'es'], pact: ['gb'] },
   size: SIZE,
   segments: 520,
   bounds: { x: HALF, z: HALF },

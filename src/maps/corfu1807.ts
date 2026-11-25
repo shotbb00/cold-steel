@@ -9,8 +9,8 @@
 // Kassiopi beyond the edge) and the south. Laid out at full size (`widened`). Fair: the homes mirrored west and east,
 // the three open zones down the middle of the channel on the line between them, equally far by sail from both
 // (seapath); the channel kept over five kilometres wide so that no zone lies in a narrow or behind Vido. The wind the
-// winter scirocco, south-south-east up the channel across the fleets' line: both reach. (Seniavin's Russians have no
-// ships yet, so the battle is the British against the French after Tilsit.)
+// winter scirocco, south-south-east up the channel across the fleets' line: both reach. (Seniavin's Russians sail here in the
+// world campaign, under their own names: data/units1806/eastNavies.js; the map's own battle is the British against the French after Tilsit.)
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';

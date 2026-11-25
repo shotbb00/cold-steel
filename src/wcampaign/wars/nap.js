@@ -45,7 +45,7 @@ export const NAP = {
   // The powers: a power whose capitals are all lost surrenders (engine surrenders()); one too war-weary collapses
   // (weariness()) — a peace treaty: `cede` to the enemy (spoil: false — the new owner's own), the rest of its `lands` back.
   powers: {
-    france: { name: 'France', short: 'France', side: 'nato', armies: ['fr'], capitals: ['paris'],
+    france: { name: 'France', short: 'France', side: 'nato', armies: ['fr', 'es'], capitals: ['paris'],
       lands: ['paris', 'boulogne', 'brittany', 'alsace', 'rhineland', 'toulon', 'milan', 'verona', 'romagna'],
       weary: { start: 8, base: 0.06, low: 0.4, won: 0.25, lost: 0.35, ground: 0.6, home: ['paris', 'boulogne', 'brittany', 'alsace', 'rhineland', 'toulon'], at: 100, morale: 30, ends: true,
         text: 'France has had enough: the conscripts hide in the woods, the Bourse collapses, the marshals tell the Emperor the army will march no further.', endText: 'France asked for peace' } },
@@ -302,13 +302,13 @@ export const NAP = {
         { kind: 'army', side: 'nato', army: 'fr', at: 'milan', name: 'Army of Italy reserve', battalions: [INF, CAV] },
         { kind: 'army', side: 'nato', army: 'fr', at: 'rome', name: 'Gouvion Saint-Cyr’s corps', battalions: [INF, INF] },
         { kind: 'army', side: 'nato', army: 'fr', at: 'toulon', name: 'Toulon garrison', battalions: [INF] },
-        { kind: 'army', side: 'nato', army: 'fr', at: 'andalusia', name: 'Spanish garrison of Cádiz', battalions: [INF] },
+        { kind: 'army', side: 'nato', army: 'es', at: 'andalusia', name: 'Spanish garrison of Cádiz', battalions: [INF] },
         // France and Spain at sea
         { kind: 'fleet', side: 'nato', army: 'fr', at: 'cadiz', name: 'Combined Fleet (Villeneuve)', ships: 'battle' },
-        { kind: 'fleet', side: 'nato', army: 'fr', at: 'cadiz', name: 'Spanish squadron (Gravina)', ships: 'squadron' },
+        { kind: 'fleet', side: 'nato', army: 'es', at: 'cadiz', name: 'Spanish squadron (Gravina)', ships: 'squadron' },
         { kind: 'fleet', side: 'nato', army: 'fr', at: 'biscay', name: 'Brest fleet (Ganteaume)', ships: 'battle' },
         { kind: 'fleet', side: 'nato', army: 'fr', at: 'biscay', name: 'Rochefort squadron (Allemand)', ships: 'escort' },
-        { kind: 'fleet', side: 'nato', army: 'fr', at: 'lion', name: 'Cartagena squadron (Salcedo)', ships: 'squadron' },
+        { kind: 'fleet', side: 'nato', army: 'es', at: 'lion', name: 'Cartagena squadron (Salcedo)', ships: 'squadron' },
         { kind: 'fleet', side: 'nato', army: 'fr', at: 'channel', name: 'Boulogne flotilla', ships: 'gunboats' },
 
         // Austria: Mack in Swabia, Kienmayer on the Danube, Archduke John in the Tyrol, Archduke Charles in Italy

@@ -13,7 +13,7 @@ import { P, merge, loft, limb, pair } from '../units/geometry.js';
 import { head, trunk, arms as armsHold, thigh as thighPart, shin as shinPart, finish } from './soldierBody.js';
 import { buildHorse } from './horse.js';
 import { paintMaterial } from '../../render/paint.js';
-import { bicorne, shako, raupenhelm, stovepipe } from './napSoldier.js';
+import { bicorne, shako, raupenhelm, stovepipe, kiver, auHelm } from './napSoldier.js';
 import { ww1Helmet } from './ww1Soldier.js';
 
 const BLACK = 0x161616;
@@ -66,6 +66,11 @@ CAV.ru = { // the Cossacks (dark blue kaftan, the tall fur cap, the pike), the d
   medium: { coat: 0x1e3524, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => crestHelmet(0x1a1a1a), cloth: 0x1e3524, trim: 0xa82424 },
   heavy: { coat: 0xe8e2cc, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => crestHelmet(0x1a1a1a), cloth: 0x1e3524, trim: 0xa82424 },
 };
+CAV.au = { // the Hungarian hussars (dark blue dolman, yellow braid, sky-blue pantaloons, the shako), the chevaulegers in green and the cuirassiers in white, both under the crested helmet; the cuirass front only, blackened
+  light: { coat: 0x1d2a5c, facing: 0xd8b54a, breeches: 0x6f98c8, hat: () => kiver(0xe0b828), cloth: 0x1d2a5c, trim: 0xd8b54a, lace: 0xd8b54a },
+  medium: { coat: 0x2a4a32, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => auHelm(), cloth: 0x2a4a32, trim: 0xd8b54a },
+  heavy: { coat: 0xe8e4d8, facing: 0xa82424, breeches: 0xe2ddcf, hat: () => auHelm(), cuirass: 0x2c2c2e, cloth: 0xa82424, trim: 0xd8b54a },
+};
 // 1918 (data/units1918, kind 'medium'): khaki, horizon blue, field grey, the steel helmets, a plain brown saddle; lances for the lancers and the Ulanen
 const SADDLE_18 = 0x4a3a28;
 Object.assign(CAV, {
@@ -87,6 +92,11 @@ Object.assign(CAV, {
 });
 
 const COCKADE = { gb: [BLACK], fr: [0x1d2a8c, 0xf0f0f0, 0xc02020], by: [0x3a6ac0, 0xf0f0f0], pr: [BLACK, 0xf0f0f0], sx: [0xf0f0f0, 0x2a7a3a], ru: [BLACK, 0xe08a20] };
+COCKADE.dk = [0xc8102e, 0xf0f0f0]; // (Denmark 1807: the red cockade)
+CAV.dk = { // Denmark 1807: the Hussars in red dolmans with white braid and light-blue breeches under the busby, the Zealand Dragoons in red and the crested helmet (no heavy horse: data/units1806/eastNavies.js)
+  light: { coat: 0xb4281f, facing: 0xe6e2d6, breeches: 0x7aa0c8, hat: () => busby(0xe6e2d6), cloth: 0x1d2a5c, trim: 0xe6e2d6, lace: 0xe6e2d6 },
+  medium: { coat: 0xb4281f, facing: 0x161616, breeches: 0xe2ddcf, hat: () => crestHelmet(0x1a1a1a), cloth: 0xb4281f, trim: 0xe6e2d6 },
+};
 
 /** The trooper's parts in standing coordinates (feet at 0, hips at 0.96): torso, arms, a thigh, a shin. */
 function trooper(army, kind) {

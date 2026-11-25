@@ -9,7 +9,7 @@
 // mirrored west and east — the Dutch off the Marsdiep, the British out over the horizon — the three open zones
 // on the line halfway between, equally far by sail from both (seapath), all far off the coast and the shoals.
 // The north-north-easterly the Dutch waited for blows across the fleets' line: they have it abaft the beam running
-// out, the British reach in. The Dutch ships sail as the French (data/units1806/ships.js), with their own names.
+// out, the British reach in. The Dutch sail their own ships, the Bataafse Marine (army nl: data/units1806/westNavies.js).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -20,17 +20,9 @@ const SIZE = 8000;
 const HALF = 3000;
 const noise = createNoise2D(1806_06);
 const sea = createSea({ level: 0, size: SIZE, color: 0x3a5a5e });
-// the ships' names (entities/UnitStack.js shipName): the Dutch Texel squadron, Russell's North Sea squadron
+// the ships' names (entities/UnitStack.js shipName): Russell's North Sea squadron (the Dutch name their own: data/units1806/westNavies.js)
 Object.assign(sea, {
   names: {
-    nato: {
-      battleship: ['Koninklijke Hollander'],
-      cruiser: ['Brutus', 'Doggersbank', 'Haarlem', 'Utrecht', 'Wreker', 'Pluto', 'Hersteller', 'Schrikverwekker', 'Chatham'],
-      frigate: ['Kenau Hasselaar', 'Pallas', 'Proserpina', 'Maria Riggersbergen', 'Rijn', 'Amphitrite', 'Utile'],
-      destroyer: ['Lynx', 'Zeemeeuw', 'Atalante', 'Mercurius', 'Echo', 'Ajax'],
-      ptBoat: ['Kanonneerboot 1', 'Kanonneerboot 2', 'Kanonneerboot 3', 'Kanonneerboot 4', 'Kanonneerboot 5', 'Kanonneerboot 6'],
-      fireship: ['Brander 1', 'Brander 2', 'Brander 3'],
-    },
     pact: {
       battleship: ['Princess Royal'],
       cruiser: ['Majestic', 'Monmouth', 'Ardent', 'Polyphemus', 'Inflexible', 'Agincourt', 'Standard', 'Texel', 'Veteran', 'Repulse'],
@@ -89,7 +81,7 @@ export default {
   wind: { from: 25, speed: 8, veer: 0.25 },   // north-north-east, the cold wind the Dutch waited for (world/Wind.js)
   fow: 0.55,
   sides: { nato: 'France and Holland', pact: 'Britain' },
-  armies: { nato: ['fr'], pact: ['gb'] },
+  armies: { nato: ['nl', 'fr'], pact: ['gb'] }, // (the Bataafse Marine's Texel squadron first)
   size: SIZE,
   segments: 520,
   bounds: { x: HALF, z: HALF },

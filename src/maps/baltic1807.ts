@@ -131,7 +131,7 @@ export default {
 
   spawns: {
     nato: line(['ptBoat', 'ptBoat', 'destroyer', 'ptBoat', 'ptBoat', 'frigate'], -1500, -330, Math.PI / 2),
-    pact: line(['destroyer', 'frigate', 'destroyer', 'frigate'], 1500, -330, -Math.PI / 2),
+    pact: [...line(['destroyer', 'frigate', 'destroyer', 'frigate'], 1500, -330, -Math.PI / 2), ...line(['merchant', 'merchant'], 1750, -330, -Math.PI / 2)], // (the convoy: data/units1806/smallCraft.js merchant)
   },
 
   decorate({ scene, terrain, cover, rand }) {

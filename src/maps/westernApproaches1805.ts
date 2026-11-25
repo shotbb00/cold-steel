@@ -10,7 +10,8 @@
 // east (the British, toward the Channel); the three open zones on the line halfway between them, equally far by
 // sail (seapath); the islands lie off in the corner, no zone near them or in their lee. The wind from south by
 // west across the fleets' line: the French have it just abaft the beam running east, the British reach west.
-// No merchantman in the 1806 roster yet (data/units1806/ships.js): the convoy is only the zone's name.
+// The British start with two homeward Indiamen behind their line (data/units1806/smallCraft.js merchant: while she lies in a
+// zone of theirs her cargo brings in command points), the French with two more brigs to go after them.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
@@ -124,8 +125,8 @@ export default {
   points,
 
   spawns: {
-    nato: line(['frigate', 'cruiser', 'cruiser', 'frigate'], -1500, 300, Math.PI / 2),
-    pact: line(['frigate', 'cruiser', 'cruiser', 'frigate'], 1500, 300, -Math.PI / 2),
+    nato: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], -1500, 300, Math.PI / 2), ...line(['destroyer', 'destroyer'], -1700, 300, Math.PI / 2)],
+    pact: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], 1500, 300, -Math.PI / 2), ...line(['merchant', 'merchant'], 1750, 300, -Math.PI / 2)], // (the convoy from St Helena)
   },
 
   decorate({ scene, terrain, cover, rand }) {

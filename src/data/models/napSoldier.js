@@ -14,6 +14,12 @@
 //   ru  Russia (1807): the dark green coat with red collar and cuffs, the kiver (the felt shako of
 //       1803) with its pompon; the grenadiers in the leather kasket with its big brass plate and
 //       black horsehair crest; the jägers all in green
+//   au  Austria (1805–09): the white coat without lapels, facings in the regiment's colour, grey trousers
+//       and short black gaiters (kind line: the German regiments in the crested 1798 helmet); kind
+//       hungarian: the Kaskett of 1806 and the tight light-blue pantaloons with laced half-boots;
+//       grenadier: the bearskin with its brass plate; light: the Grenzer in brown and Hungarian blue under
+//       the felt shako; rifle: the Jäger in pike grey, green facings, the Corsican hat; pioneer: pike grey
+//       and the Kaskett; officer and the gunners (armed false): artillery brown, the Corsican hat
 // All: the white crossbelts (cartridge box on the right hip, bayonet and sabre on the left), the
 // smoothbore musket with its bayonet fixed. kind: line | grenadier (French: the bearskin; others:
 // a tall plume) | light (French voltigeurs: the shako).
@@ -34,6 +40,25 @@ export const ARMIES_1806 = {
   sx: { coat: 0xe4e0d2, facing: 0xa82a2a, lapel: 0xa82a2a, breeches: 0xd8d2bc, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [0xf0f0f0, 0x2a7a3a] },
   gb: { coat: 0xb0261e, facing: 0x1d2a5c, lapel: 0xb0261e, breeches: 0xe2ddcf, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [BLACK] },
   ru: { coat: 0x1e3524, facing: 0xa82424, lapel: 0x1e3524, breeches: 0xe2ddcf, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [BLACK, 0xe08a20] },
+  es: { coat: 0xe6e2d6, facing: 0x5a2a6a, lapel: 0x5a2a6a, breeches: 0xe2ddcf, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [0xc02020] }, // (Spain: the white coat, the Rey's violet facings, the red cockade)
+  au: { coat: 0xe8e4d8, facing: 0x6fa0d0, lapel: 0xe8e4d8, breeches: 0xb2b2aa, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [0xd8b54a, BLACK] },
+  dk: { coat: 0xb4281f, facing: 0xe0c040, lapel: 0xb4281f, breeches: 0x9ab0c8, gaiter: BLACK, belt: WHITE, hat: BLACK, cockade: [0xc8102e, 0xf0f0f0] }, // (Denmark 1807: DK_KIND)
+};
+
+// Austria, per kind (over ARMIES_1806.au): coat, facings (no lapels: the coat's own colour), trousers, the hat
+const AU_GREY = 0x7d8288;   // hechtgrau, the pike grey of the Jäger and the technical troops
+const AU_BROWN = 0x6a4a30;  // the artillery's brown
+const HUNG = 0x6f98c8;      // the Hungarians' tight light-blue pantaloons
+const YELLOW = 0xe0b828;
+const AU_KIND = {
+  line: { facing: 0x6fa0d0, cap: 'helm' },                                                                   // (the Hoch- und Deutschmeister's sky blue)
+  hungarian: { facing: YELLOW, breeches: HUNG, hungarian: true, cap: 'kaskett' },
+  grenadier: { facing: 0xa82424, cap: 'bearskin' },
+  light: { coat: 0x5e4630, facing: 0xa82424, lapel: 0x5e4630, breeches: HUNG, hungarian: true, cap: 'shako' },
+  rifle: { coat: AU_GREY, facing: 0x2f7a3a, lapel: AU_GREY, breeches: AU_GREY, cap: 'corse', plume: 0x141814 },
+  pioneer: { coat: AU_GREY, facing: 0x8a1f2a, lapel: AU_GREY, breeches: AU_GREY, cap: 'kaskett' },
+  officer: { coat: AU_BROWN, facing: 0xa82424, lapel: AU_BROWN, cap: 'bicorne' },
+  gunner: { coat: AU_BROWN, facing: 0xa82424, lapel: AU_BROWN, breeches: 0x8a8478, cap: 'corse', pompon: YELLOW },
 };
 
 /** The smoothbore musket (Charleville / Potsdam), bayonet fixed (in the arms' frame). */
@@ -126,23 +151,71 @@ const kasket = () => [
   P.box(0.16, 0.13, 0.012, { y: 1.83, z: 0.105, rx: -0.15, color: BRASS }),
 ];
 
+/** The Austrian infantry helmet of 1798: the leather skull, the brass front plate and comb, the black-and-yellow woollen crest. */
+export const auHelm = () => [
+  loft([[0, 1.74, -0.01, 0.112, 0.12, 2], [0, 1.8, -0.01, 0.112, 0.12, 2], [0, 1.86, -0.012, 0.085, 0.095, 2]], { color: BLACK }, 12),
+  P.box(0.18, 0.012, 0.07, { y: 1.75, z: 0.125, rx: 0.2, color: BLACK }),
+  P.box(0.11, 0.06, 0.012, { y: 1.79, z: 0.118, color: BRASS }),
+  loft([[0, 1.86, 0.11, 0.03, 0.028, 2], [0, 1.93, 0.03, 0.045, 0.055, 2], [0, 1.92, -0.07, 0.045, 0.06, 2], [0, 1.84, -0.14, 0.028, 0.028, 2]], { color: 0x161412 }, 10),
+  loft([[0, 1.875, 0.105, 0.012, 0.02, 2], [0, 1.945, 0.03, 0.016, 0.045, 2], [0, 1.935, -0.07, 0.016, 0.05, 2], [0, 1.855, -0.135, 0.01, 0.02, 2]], { color: YELLOW }, 8), // (the yellow in it)
+];
+
+/** The Kaskett of 1806: a tall leather cap, the front shield standing up over it with the brass plate, the black-and-yellow rose at the side. */
+export const kaskett = () => [
+  loft([[0, 1.74, -0.01, 0.11, 0.118, 2], [0, 1.86, -0.012, 0.104, 0.11, 2], [0, 1.9, -0.012, 0.098, 0.104, 2], [0, 1.91, -0.012, 0.05, 0.05, 2]], { color: BLACK }, 12),
+  P.box(0.17, 0.012, 0.07, { y: 1.75, z: 0.125, rx: 0.2, color: BLACK }),                                    // peak
+  P.box(0.2, 0.17, 0.014, { y: 1.88, z: 0.104, rx: -0.1, color: BLACK }),                                    // the front shield
+  P.box(0.08, 0.07, 0.01, { y: 1.86, z: 0.114, rx: -0.1, color: BRASS }),                                    // the plate with the cypher
+  P.cyl(0.032, 0.032, 0.012, { x: -0.108, y: 1.88, z: 0.02, rz: Math.PI / 2, color: YELLOW }, 10),           // the rose
+  P.cyl(0.016, 0.016, 0.014, { x: -0.11, y: 1.88, z: 0.02, rz: Math.PI / 2, color: BLACK }, 8),
+];
+
+/** The Austrian grenadier's bearskin: tall black fur, the big brass front plate, the cloth patch at the back. */
+const auBearskin = (back) => [
+  loft([[0, 1.74, -0.01, 0.112, 0.12, 2], [0, 1.85, -0.015, 0.125, 0.13, 2], [0, 1.97, -0.02, 0.12, 0.124, 2], [0, 2.04, -0.03, 0.085, 0.09, 2], [0, 2.06, -0.03, 0.03, 0.03, 2]], { color: 0x1a1612 }, 12),
+  P.box(0.17, 0.15, 0.012, { y: 1.84, z: 0.118, rx: -0.06, color: BRASS }),
+  P.box(0.08, 0.08, 0.01, { y: 1.97, z: -0.145, color: back }),
+];
+
+/** The Corsican hat (Korsehut): the round crown, the wide brim hooked up on the left, a plume of black cock's feathers or a pompon. */
+export const corse = (plume, pompon) => [
+  P.cyl(0.19, 0.19, 0.014, { x: 0.02, y: 1.77, color: BLACK }, 14),
+  P.cyl(0.098, 0.106, 0.15, { y: 1.845, color: BLACK }, 14),
+  P.box(0.012, 0.15, 0.27, { x: -0.155, y: 1.84, rz: -0.32, color: BLACK }),                                 // the left brim, turned up
+  ...(plume ? [loft([[-0.13, 1.86, 0, 0.022, 0.022, 2], [-0.15, 1.98, -0.03, 0.035, 0.03, 2], [-0.12, 2.05, -0.07, 0.012, 0.012, 2]], { color: plume }, 8)] : []),
+  ...(pompon ? [P.sphere(0.026, { x: -0.16, y: 1.9, z: 0.02, color: pompon }, 8, 6)] : []),
+];
+
+// Spain's others (data/units1806/westNavies.js): the light infantry, the Guardias Españolas and the gunners in dark blue with red, the provincial
+// militia in brown paño pardo; the light troops and the militia in the round hat
+const ES_KIND = { light: { coat: 0x1d2a5c, facing: 0xb02424, lapel: 0xb02424 }, guard: { coat: 0x1d2a5c, facing: 0xb02424, lapel: 0xb02424 }, gunner: { coat: 0x1d2a5c, facing: 0xb02424, lapel: 0xb02424 }, militia: { coat: 0x6a5038, facing: 0xb02424, lapel: 0x6a5038, breeches: 0x8a7a5a } };
+
+// Denmark 1807 (over ARMIES_1806.dk: the red coat, yellow facings, light-blue trousers, the round hat): the Landeværn in
+// grey vadmel, the Livgarde in red and dark blue under the bearskin; the light troops and Jægers in green (the generic rule)
+const DK_KIND = { militia: { coat: 0x6c6c66, facing: 0xb02424, lapel: 0x6c6c66, breeches: 0x76766e }, grenadier: { facing: 0x1d2a5c, lapel: 0x1d2a5c, breeches: 0xe2ddcf } };
+
 export function buildNapSoldier({ army = 'fr', kind = 'line', armed = true } = {}) {
   // the light troops and the riflemen of the German armies in green; the officers with a sash, no musket
   const green = army === 'ru' && (kind === 'rifle' || kind === 'light') ? { facing: 0x1e3524, breeches: 0x1e3524 } // (the Russian jägers: green from collar to gaiters)
+    : army === 'es' ? ES_KIND[!armed ? 'gunner' : kind] ?? {}
     : (kind === 'rifle' || (kind === 'light' && army !== 'gb')) && army !== 'fr' ? { coat: kind === 'rifle' ? 0x26402c : 0x30553a, facing: kind === 'rifle' ? 0x161616 : 0xa82626, lapel: kind === 'rifle' ? 0x26402c : 0xa82626 } : {};
   // the fleet's men ashore (Aboukir 1801): the seamen in short blue jackets and white trousers, the marines in red with white facings
   const sailor = kind === 'sailor', marine = kind === 'marine';
   const navy = sailor ? { coat: 0x1d2a5c, facing: 0x1d2a5c, lapel: 0x1d2a5c, breeches: 0xe8e4d8, gaiter: 0x1a1a1a } : marine ? { facing: 0xe6e2d6 } : {};
-  const c = { ...(ARMIES_1806[army] ?? ARMIES_1806.fr), ...green, ...navy };
+  const au = army === 'au' ? AU_KIND[!armed && kind === 'line' ? 'gunner' : kind] ?? AU_KIND.line : null; // (Austria: the unarmed are the gunners)
+  const dk = army === 'dk' ? DK_KIND[kind] ?? {} : null; // (Denmark 1807: data/units1806/eastNavies.js)
+  const c = { ...(ARMIES_1806[army] ?? ARMIES_1806.fr), ...green, ...navy, ...au, ...dk };
   const officer = kind === 'officer';
   const w = !armed || officer ? { parts: officer ? [P.box(0.012, 0.75, 0.03, { x: 0.2, y: 1.62, z: 0.12, rx: -0.35, color: 0xb8bab6 })] : [], muzzle: { x: 0.2, y: 1.3, z: 0.4 } } // (gunners: the rammer and the sponge; officers: the sword)
     : kind === 'rifle' ? musket(false, 1.0) : musket();
   const plume = kind === 'grenadier' ? 0xb02424 : kind === 'light' ? 0x2a7a3a : officer ? 0xf0f0f0 : kind === 'rifle' ? 0x161616 : null;
   const highland = army === 'gb' && kind === 'highland';
-  const hat = sailor ? roundHat(null) : marine ? roundHat(WHITE) : army === 'gb' ? (highland ? featherBonnet() : officer ? bicorne(c, null) : stovepipe(kind === 'grenadier' ? WHITE : kind === 'light' || kind === 'rifle' ? 0x2a5a32 : 0xd0d0c8))
+  const hat = au ? { helm: auHelm, kaskett, bearskin: () => auBearskin(c.facing), shako: () => kiver(YELLOW), corse: () => corse(c.plume, c.pompon), bicorne: () => bicorne(c, null) }[c.cap]()
+    : sailor ? roundHat(null) : marine ? roundHat(WHITE) : army === 'es' && (kind === 'light' || kind === 'militia') ? roundHat(kind === 'light' ? 0xb02424 : null) : army === 'gb' ? (highland ? featherBonnet() : officer ? bicorne(c, null) : stovepipe(kind === 'grenadier' ? WHITE : kind === 'light' || kind === 'rifle' ? 0x2a5a32 : 0xd0d0c8))
     : army === 'by' ? raupenhelm(plume)
+    : army === 'dk' && kind !== 'grenadier' && !officer ? corse(kind === 'light' || kind === 'rifle' ? 0x1e3a24 : null, 0xc8102e) // (the Danish round hat, its brim turned up, the red cockade; the Landeværn too)
     : army === 'ru' && !officer ? (kind === 'grenadier' ? kasket() : kiver(kind === 'light' || kind === 'rifle' ? 0x2a5a32 : 0xe6e2d6))
-    : kind === 'grenadier' && army === 'fr' ? bearskin()
+    : kind === 'grenadier' && (army === 'fr' || army === 'dk') ? bearskin() // (and the Danish Livgarde til Fods)
       : (kind === 'light' || kind === 'rifle') && army === 'fr' ? shako(kind === 'rifle' ? 0xb02424 : 0xd8c040)
         : bicorne(c, plume);
   const torso = [
@@ -175,7 +248,7 @@ export function buildNapSoldier({ army = 'fr', kind = 'line', armed = true } = {
   ];
   const arms = [...armsHold({ sleeve: c.coat, cuff: c.facing }), ...w.parts];
   const thigh = merge([thighPart({ color: highland ? 0xd8b8a0 : c.breeches })]);   // (under the kilt: the bare knee)
-  const shin = grime(merge(shinPart(highland ? { color: 0xc84040, boot: BLACK, bootTop: 0.1, blouse: false } : sailor ? { color: c.breeches, boot: BLACK, bootTop: 0.08, blouse: false } : { color: c.breeches, boot: c.gaiter, bootTop: 0.42, blouse: false })), -0.3, -0.5); // (the Highlander's diced hose and shoes)
+  const shin = grime(merge(shinPart(c.hungarian ? { color: c.breeches, boot: BLACK, bootTop: 0.2, blouse: false } : au ? { color: c.breeches, boot: c.gaiter, bootTop: 0.3, blouse: false } : highland ? { color: 0xc84040, boot: BLACK, bootTop: 0.1, blouse: false } : sailor ? { color: c.breeches, boot: BLACK, bootTop: 0.08, blouse: false } : { color: c.breeches, boot: c.gaiter, bootTop: 0.42, blouse: false })), -0.3, -0.5); // (the Highlander's diced hose and shoes)
   return {
     torso: finish(merge(torso)),
     arms: finish(merge(arms)),

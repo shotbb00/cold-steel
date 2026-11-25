@@ -136,7 +136,8 @@ let nextId = 1;
 /** A warship's own name (type.names per side, data/units45/ships.js): the class's next one not yet afloat in this battle. */
 function shipName(type, faction, world) {
   const own = type.names?.[world.armies?.[faction]]; // (an army's own navy, its names written in full: SMS Novara, Aquila — data/units1918/ships.js)
-  const list = world.river?.names?.[faction]?.[type.id] ?? own ?? type.names?.[faction]; // (a sea map's own navy: Copenhagen's Danish line)
+  const theirs = !own || !world.mapArmies?.[faction] || world.mapArmies[faction][0] === world.armies?.[faction]; // (another navy with names of its own — a campaign battle's Russians on Corfu's map — keeps them)
+  const list = (theirs ? world.river?.names?.[faction]?.[type.id] : null) ?? own ?? type.names?.[faction]; // (a sea map's own navy: Copenhagen's Danish line)
   if (!list?.length) return null;
   const used = (world.shipNames ??= new Map());
   const key = `${type.id}:${faction}`;
