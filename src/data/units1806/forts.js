@@ -37,7 +37,7 @@ const WORDS = {
   dk: [['Batteri', 'A breastwork of dressed granite, Danish musketeers behind it, and a gun in a stone-faced embrasure beside it.'],
     ['Skanse', 'A closed stone-faced redoubt of the Danish engineers, a gun in its embrasure.'],
     ['Fæstning', 'A round stone fort, embrasures in its parapet, a guardhouse on top and the Dannebrog over it: the commandant\'s headquarters.'],
-    null], // (the shore battery: the Trekroner fort's own words stay — ./index.js)
+    null], // (the shore battery: its own words in ./index.js)
   es: [['Batería', 'A breastwork of dressed sandstone, Spanish infantry in white behind it, and a gun in a stone-faced embrasure beside it.'],
     ['Reducto', 'A closed stone-faced redoubt of the Spanish engineers, a gun in its embrasure.'],
     ['Castillo', 'A round stone castillo on the shore, embrasures in its parapet, a guardhouse on top and the red and gold over it: the governor\'s headquarters.'],

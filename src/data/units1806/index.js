@@ -404,7 +404,7 @@ const shoreBattery = {
   models: { nato: buildShoreGun(), pact: buildShoreGun(), dk: buildShoreGun('dk') },
   variants: {
     nato: { name: 'Batterie de côte', weapon: '2 × 24-pounders, heated shot', text: 'Two heavy guns behind a sand parapet, laid on the sea, the furnace beside them: red-hot shot into the boats as they come in, and into any frigate that stands in to cover them — her timbers catch.' },
-    dk: { name: 'Trekroner Fort', weapon: '24-pounders, heated shot', text: 'The Trekroner: a round stone fort on its own island at the head of the King\'s Deep, the Danish flag over it. Nelson never came near enough to try it.' },
+    dk: { name: 'Kystbatteri', weapon: '24-pounders, heated shot', text: 'A Danish coast battery: heavy guns behind a stone-faced parapet laid on the sea, the furnace beside them for red-hot shot, the Dannebrog over it.' },
     pact: { name: 'Shore battery', weapon: '2 × 24-pounders', text: 'Heavy guns behind a parapet, laid on the sea.' },
   },
 };
