@@ -7,7 +7,9 @@
 //                                              style 'paper' (1945) or 'acetate' (1985: a printed map under a plastic sheet —
 //                                              blue grid, marker on the plastic, its glare; css .wm-acetate) or 'trench'
 //                                              (1918: the squared trench-map sheet, its big square letters, the front as
-//                                              blue and red trench lines with the wire between; css .wm-trench)
+//                                              blue and red trench lines with the wire between; css .wm-trench) or
+//                                              'engraved' (1806: a hand-coloured copperplate — cream paper, water lines
+//                                              along the coasts, the front as a soft wash of each side's colour; css .wm-engraved)
 //   await m.load()                             the coastlines
 //   m.xy(lon, lat) → [x, y]                    world units (W × H)
 //   m.territory(points, areas)                 [{ x, y, side }], [[[x, y] …] …]: each side's ground and the front, inside the war's areas
@@ -69,11 +71,16 @@ export class WorldMap {
         <radialGradient id="wm-ph-pact" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#f05a48"/><stop offset="0.8" stop-color="#9a1a12"/><stop offset="1" stop-color="#4a0806"/></radialGradient>
         <radialGradient id="wm-ph-gold" fx="0.32" fy="0.3" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.95"/><stop offset="0.2" stop-color="#f2c24a"/><stop offset="0.8" stop-color="#a87810"/><stop offset="1" stop-color="#5a3c04"/></radialGradient>
         <pattern id="wm-wire" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M1,1L6,6M6,1L1,6" stroke="#1d1d1a" stroke-width="0.8"/></pattern>
+        <path id="wm-coastd" vector-effect="non-scaling-stroke"/>
+        <filter id="wm-tintblur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5"/></filter>
+        <linearGradient id="wm-blockside" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b48a55"/><stop offset="1" stop-color="#7a5430"/></linearGradient>
+        <marker id="wm-arrowe" viewBox="0 0 10 10" refX="3" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10L2.5 5z" fill="context-stroke"/></marker>
         <marker id="wm-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
       </defs>
       <g class="wm-world">
         <rect class="wm-sea" width="${W}" height="${H}"/>
         <path class="wm-grat"/>
+        ${style === 'engraved' ? `<g class="wm-ripples">${[21, 14, 8, 3.4].map((w) => `<use href="#wm-coastd" class="ink" stroke-width="${w}"/><use href="#wm-coastd" class="sea" stroke-width="${w - 1.3}"/>`).join('')}</g>` : '' /* 1806: the engraver's water lines along every coast, the land laid over their inner half */}
         <path class="wm-land"/>
         <path class="wm-neutral"/>
         <g class="wm-terr" clip-path="url(#wm-landclip)"></g>
@@ -81,11 +88,12 @@ export class WorldMap {
         <path class="wm-coast"/>
         ${style === 'acetate' ? `<g class="wm-paper" pointer-events="none">${this.smudges()}<rect width="${W}" height="${H}" fill="url(#wm-glare)"/></g>` /* the plastic: old marker wiped off, its glare */
     : style === 'trench' ? `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)" opacity="0.5"/><path class="wm-sheet minor"/><path class="wm-sheet major"/><g class="wm-squares"></g></g>` /* the squared sheet: its grid and square letters (sheetGrid) */
+    : style === 'engraved' ? `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)" fill-opacity="0.55"/><rect width="${W}" height="${H}" fill="url(#wm-age)" fill-opacity="0.6"/></g>` /* the copperplate's cream paper, its edges browned */
     : `<g class="wm-paper" pointer-events="none"><rect width="${W}" height="${H}" fill="url(#wm-grain)"/>
           ${fold(W / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(W / 2 - 5, 0, 10, H, 'wm-foldv')}${fold((3 * W) / 4 - 5, 0, 10, H, 'wm-foldv')}${fold(0, H / 2 - 5, W, 10, 'wm-foldh')}
           ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>`}
       </g>
-      <g class="wm-front" clip-path="url(#wm-frontclip)"${style === 'trench' ? '' : ` filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"`}></g>
+      <g class="wm-front" clip-path="url(#wm-frontclip)"${style === 'trench' || style === 'engraved' ? '' : ` filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"`}></g>
       <g class="wm-over"></g>`;
     host.append(this.svg);
     this.world = this.svg.querySelector('.wm-world');
@@ -129,7 +137,12 @@ export class WorldMap {
       return { geo, bounds, path: path(geo), mid: [bounds[0][0] <= bounds[1][0] ? (bounds[0][0] + bounds[1][0]) / 2 : ((bounds[0][0] + bounds[1][0] + 360) / 2 + 180) % 360 - 180, (bounds[0][1] + bounds[1][1]) / 2] };
     });
     if (this.terrArgs) this.territory(...this.terrArgs);
-    this.svg.querySelector('.wm-coast').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a === b)));
+    const coast = path(mesh(topo, topo.objects.countries, (a, b) => a === b));
+    this.svg.querySelector('.wm-coast').setAttribute('d', coast);
+    if (this.style === 'engraved') { // (the water lines: <use>s of the coarser 110m coast — ten strokes of the 50m one on every pan cost ten times the map)
+      const c110 = (await import('world-atlas/countries-110m.json')).default;
+      this.svg.querySelector('#wm-coastd').setAttribute('d', path(mesh(c110, c110.objects.countries, (a, b) => a === b)));
+    }
     this.svg.querySelector('.wm-border').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a !== b))); // (today's borders, faint: only to find one's way)
   }
 
@@ -261,9 +274,12 @@ export class WorldMap {
         wire += `${d([...off(P, 3), ...off(P, -3).reverse()])}Z`;
         continue;
       }
+      if (this.style === 'engraved') { blue += d(off(P, 11)); red += d(off(P, -11)); blue2 += d(P); continue; } // (1806: a broad soft band of each side's colour, a fine dotted limit between)
       blue += d(off(P, o)); red += d(off(P, -o));
     }
-    this.front.innerHTML = this.style === 'trench'
+    this.front.innerHTML = this.style === 'engraved'
+      ? `<path d="${blue}" class="wm-tint nato" filter="url(#wm-tintblur)"/><path d="${red}" class="wm-tint pact" filter="url(#wm-tintblur)"/><path d="${blue2}" class="wm-limit"/>`
+      : this.style === 'trench'
       ? `<path d="${wire}" class="wm-wire"/><path d="${blue2}" class="wm-pen nato second"/><path d="${red2}" class="wm-pen pact second"/><path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`
       : `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
   }

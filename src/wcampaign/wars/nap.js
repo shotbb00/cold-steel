@@ -24,7 +24,7 @@ export const NAP = {
   id: 'nap',
   epoch: '1806',
   name: 'The Napoleonic Wars, 1805–07',
-  mapStyle: 'paper', // (ui/WorldMap.js: the yellowed paper sheet, sepia coast and grease-pencil front — the closest of the war room's styles to an engraved campaign map: tools/mapstyles.js 'engraved' is a sketch only)
+  mapStyle: 'engraved', // (ui/WorldMap.js: the hand-coloured copperplate campaign map — water lines along the coasts, wooden blocks for the corps, dotted march routes: tools/mapstyles.js 1806)
   sides: { nato: 'French Empire', pact: 'Coalition' },
   blurb: 'Autumn 1805 on one map: the Grande Armée has left the Channel camps and crosses the Rhine for the Danube; the Austrians wait at Ulm, the Russians are on the march, Nelson is off Cádiz. Prussia sits on the fence. Coalitions form and break — Austria may make peace, Prussia may join, Saxony may change sides, Russia may come to terms on a raft on the Niemen. Turns of half a week.',
   sideText: { nato: 'France, the Kingdom of Italy and Bavaria — Spain’s fleet, later Saxony and Denmark', pact: 'Britain, Austria, Russia — and Prussia and Saxony, when they come in' },

@@ -154,6 +154,8 @@ function strength(f) {
   const us = f.kind === 'army' ? f.battalions.flatMap((b) => b.units) : f.ships;
   return us.reduce((a, u) => a + u.hp, 0) / (us.length || 1);
 }
+/** 1806's fortress on the engraved map: a five-bastioned trace round the town. */
+const BASTION = `M${Array.from({ length: 10 }, (_, i) => { const a = (i * Math.PI) / 5 - Math.PI / 2, r = i % 2 ? 6.8 : 10; return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`; }).join('L')}Z`;
 const CLUSTER = 30; // px: places closer than this on screen share one pin (click it: the map zooms in)
 
 export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = Object.values(WARS).find((w) => w.id === c.war) ?? WW2 } = {}) {
@@ -172,6 +174,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
   const map = new WorldMap(mapBox, { onView: () => drawOverlay(), neutral: war.neutral, style: war.mapStyle });
   const acetate = map.style === 'acetate'; // (1985: hostile counters are diamonds, as marked on a situation map)
   const trench = map.style === 'trench'; // (1918: towns as squares, every force a glass-head pin with a paper flag — tools/mapstyles.html)
+  const engraved = map.style === 'engraved'; // (1806: towns as engraved circles, every force a wooden block, orders as dotted march routes)
   /** A battle's margin to take the ground: a fought one 0.6 (who won it), a resolved one takeAt (war.take on land). */
   const winAt = (x) => (x.how === 'fought' ? 0.6 : takeAt(war, x));
   const faceOf = (side, cls = 'face', dx = 0, dy = 0) => (acetate && side === 'pact' ? `<path class="${cls}" d="M${dx},${dy - 16}L${dx + 19},${dy}L${dx},${dy + 16}L${dx - 19},${dy}Z"/>` : `<rect class="${cls}" x="${dx - 15}" y="${dy - 11}" width="30" height="22" rx="1.5" filter="url(#wm-shadow)"/>`);
@@ -311,9 +314,9 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       const d = Math.hypot(B.x - A.x, B.y - A.y), cut = Math.max(0, (d - 16) / d), ex = A.x + (B.x - A.x) * cut, ey = A.y + (B.y - A.y) * cut;
       const bow = Math.min(40, d * 0.14), cx = (A.x + ex) / 2 - ((B.y - A.y) / d) * bow, cy = (A.y + ey) / 2 + ((B.x - A.x) / d) * bow; // (drawn by hand: bowed)
       const attack = war.provinces[o.to] && c.provinces[o.to].owner !== me;
-      arrows += `<path class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)}Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" marker-end="url(#wm-arrow)"/>`;
+      arrows += `<path class="wc-order${attack ? ' attack' : ''}${o.land ? ' landing' : ''}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)}Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" marker-end="url(#wm-arrow${engraved ? 'e' : ''})"/>`;
     }
-    s += `<g filter="url(#wm-pencil)">${arrows}</g>`;
+    s += engraved ? arrows : `<g filter="url(#wm-pencil)">${arrows}</g>`; // (1806: the dotted march routes, crisp)
     for (const o of war.objectives ?? []) {
       const N = nodeOf[o.at], ob = c.objectives?.[o.id];
       if (!N || ob?.won) continue;
@@ -341,7 +344,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     };
     const visible = nodes.filter((n) => !(n.x < -80 || n.y < -80 || n.x > vw + 80 || n.y > vh + 80)); // (off the screen: not drawn)
     // the piles first (1918's flags take their room before the town names: flagPin)
-    if (trench) for (const n of visible) { // (the names that must show — where the chosen force can go — keep their room from the flags)
+    if (trench || engraved) for (const n of visible) { // (the names that must show — where the chosen force can go — keep their room from the flags)
       const one = n.ids.length === 1 && !n.sea ? n.ids[0] : null;
       if (one && ((st.reach.has(one) && !st.reach.get(one).needs) || st.place === one || sf?.at === one)) { const w = nameOf(one).length * 6.6 + 6; boxes.push([n.x - w / 2, n.y - 24, n.x + w / 2, n.y - 9]); }
     }
@@ -361,6 +364,10 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
         const P = c.provinces[one], r = P.depot ? 4.5 : 3.2;
         g += `<g class="wc-pin wc-town ${P.contested ? 'contested' : P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><title>${esc(nameOf(one))}</title><circle class="hit" r="14"/>${P.fort ? `<rect class="fort" x="-9" y="-9" width="18" height="18"/>` : ''}<rect class="town" x="${-r}" y="${-r}" width="${2 * r}" height="${2 * r}"/>${P.depot && P.depot === P.owner ? `<text class="wc-ico base ${P.owner}" x="6" y="-8">⚑︎</text>` : ''}${war.provinces[one].port ? '<text class="wc-ico" x="-19" y="4">⚓︎</text>' : ''}${war.provinces[one].airfield ? '<text class="wc-ico" x="-19" y="-9">✈︎</text>' : ''}</g>`;
         if (k >= 60 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one).toUpperCase(), -12, '', n.x, n.y, reach || st.place === one || sf?.at === one); // (the sheet is crowded: a town's name when it matters, or close in)
+      } else if (one && engraved) { // (1806: the engraver's town circle, hand-coloured in its holder's colour; a fortress's bastions round it)
+        const P = c.provinces[one], r = P.depot ? 4.6 : 3.2;
+        g += `<g class="wc-pin wc-etown ${P.contested ? 'contested' : P.owner}${P.depot ? ' depot' : ''}${P.owner === me && !ok.has(one) ? ' cut' : ''}"><title>${esc(nameOf(one))}</title><circle class="hit" r="14"/>${P.fort ? `<path class="fort" d="${BASTION}"/>` : ''}<circle class="tint" r="${r + 2.6}"/><circle class="ring" r="${r}"/>${P.depot ? `<circle class="ring" r="${r - 1.7}"/>` : ''}<circle class="dot" r="1.2"/>${P.depot && P.depot === P.owner ? `<text class="wc-ico base ${P.owner}" x="6" y="-8">⚑︎</text>` : ''}${war.provinces[one].port ? '<text class="wc-ico" x="-19" y="4">⚓︎</text>' : ''}${war.provinces[one].airfield ? '<text class="wc-ico" x="-19" y="-9">✈︎</text>' : ''}</g>`;
+        if (k >= 2.5 || P.depot || reach || st.place === one || sf?.at === one) g += label(nameOf(one), -11, '', n.x, n.y, reach || st.place === one || sf?.at === one);
       } else if (one) {
         const P = c.provinces[one];
         const head = P.depot ? 7 : 5.5, hy = P.depot ? -24 : -20;
@@ -377,12 +384,22 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     }
     for (const n of visible) if (n.flags) s += `<g data-ids="${n.ids.join(',')}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})">${n.flags}</g>`; // (1918's paper flags over every pin and town: flagPin)
     if (trench && vw > 760) s += `<g class="wc-sheet" transform="translate(${vw - 296} ${vh - 74})"><rect width="282" height="62"/><text x="10" y="20" class="t">SHEET ${esc(war.sheet ?? '51 B')} · EDITION ${Math.min(9, 1 + Math.floor(c.turn / 26))} ${'ABCD'[c.turn % 4]}</text><text x="10" y="38">Trenches corrected to ${Number(dateOf(c).slice(8))}-${Number(dateOf(c).slice(5, 7))}-${dateOf(c).slice(2, 4)}.</text><text x="10" y="54" class="r">Enemy trenches in red. Wire shown thus: ✕✕</text></g>`;
+    if (engraved) { // (1806: the plate's double neat line; the cartouche and the compass rose where there is room)
+      s += `<g class="wc-plate" pointer-events="none"><rect class="neat" x="4" y="4" width="${vw - 8}" height="${vh - 8}"/><rect class="neat fine" x="9" y="9" width="${vw - 18}" height="${vh - 18}"/>`;
+      if (vw > 760) {
+        const y = dateOf(c).slice(0, 4);
+        s += `<g transform="translate(${vw - 318} ${vh - 126})"><rect class="cart" width="300" height="80"/><rect class="neat fine" x="4" y="4" width="292" height="72"/><text class="sc" x="150" y="30" text-anchor="middle">Carte du Théâtre de la Guerre</text><text class="it" x="150" y="52" text-anchor="middle">pour la Campagne de ${esc(y)}</text><text x="150" y="69" text-anchor="middle">Dépôt de la Guerre · turn ${c.turn}</text></g>`;
+        s += `<g class="rose" transform="translate(${vw - 58} ${vh - 180})"><circle r="30" class="o"/><circle r="25" class="o fine"/><path class="pt" d="M0,-36L5,0L0,36L-5,0Z M-36,0L0,5L36,0L0,-5Z"/><path class="ink" d="M0,-36L5,0L0,0Z M36,0L0,5L0,0Z M0,36L-5,0L0,0Z M-36,0L0,-5L0,0Z"/><text class="sc" y="-40" text-anchor="middle">N</text></g>`;
+      }
+      s += '</g>';
+    }
     map.over.innerHTML = s;
   }
   /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
   function pile(fs, dx, kind, node, boxes) {
     if (!fs.length) return '';
     if (trench) return flagPin(fs, dx, kind, node, boxes);
+    if (engraved) return woodBlock(fs, dx, kind, node, boxes);
     const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
     let s = `<g class="wc-pile" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})">`;
     for (let i = Math.min(n, 3) - 1; i > 0; i--) s += faceOf(top.side, `face under ${top.side}`, i * 3, -i * 3);
@@ -418,6 +435,28 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
     if (n > 1) s += `<text class="count" x="${dir > 0 ? 5 : -11}" y="-33" text-anchor="middle">${n}</text>`;
     node.flags = `${node.flags ?? ''}${s}</g></g>`; // (drawn on top of the pins and towns: drawOverlay)
     return '';
+  }
+
+  /**
+   * 1806's counter: a wooden block in its side's colour, as on the staff's map table — its side and bottom faces in bare
+   * wood, the grain over its painted top, the unit's mark in a cream frame, more blocks stacked behind it and their count;
+   * the force's name in italic under it once the map is close enough to read (where it fits, or the chosen one always).
+   * No filters: the shadow is a flat offset shape (the war room redraws every block on every pan).
+   */
+  function woodBlock(fs, dx, kind, node, boxes) {
+    const top = fs.find((f) => f.id === st.sel) ?? fs[0], n = fs.length, x = dx + (dx > 0 ? 8 : -8), tilt = ((top.id * 37) % 9) - 4;
+    const face = (ox, oy, cls) => `<g class="${cls}" transform="translate(${ox} ${oy})"><path class="side" d="M15,-9L18.5,-5.5V12.5H-11.5L-15,9H15Z"/><rect class="top" x="-15" y="-9" width="30" height="18" rx="1"/></g>`;
+    let s = `<g class="wc-pile wc-block ${top.side}${top.id === st.sel ? ' sel' : ''}${c.orders[me][top.id] ? ' ordered' : ''}" data-pile="${kind}" transform="translate(${x} 14) rotate(${tilt})"><title>${esc(fs.map((f) => f.name).join(' · '))}</title><path class="bshadow" d="M-12,-5H21V15H-12Z"/>`;
+    for (let i = Math.min(n, 3) - 1; i > 0; i--) s += face(i * 3, -i * 3, 'under');
+    s += `${face(0, 0, 'blk')}<path class="grain" d="M-14.5,-5.5q7,-1 14,0t14,0M-14.5,-1q8,1.1 15,0t13.5,0M-14.5,3.5q9,-0.8 17,0t11.5,0M-14.5,7q6,0.7 12,0t16,0"/><path class="hl" d="M-14.4,-8.4H14.4"/><rect class="edge" x="-15" y="-9" width="30" height="18" rx="1"/>`;
+    s += `${top.kind === 'army' ? '<rect class="frame" x="-8" y="-5.5" width="16" height="10"/>' : ''}<g class="sym" transform="translate(0 -0.5) scale(${top.kind === 'army' ? 0.7 : 0.85})">${glyph(top)}</g><path class="str" d="M-13,6.8h${(26 * strength(top)).toFixed(1)}"/>`;
+    if (n > 1) s += `<text class="cnt" x="${12 + Math.min(n, 3) * 3}" y="${-11 - Math.min(n, 3) * 3}" text-anchor="middle">${n}</text>`;
+    const forced = top.id === st.sel || node.ids.includes(st.place);
+    if (zoomK >= 2.5 || forced) {
+      const name = top.name.length > 24 ? `${top.name.slice(0, 23)}…` : top.name, w = name.length * 6.2 + 6, b = [node.x + x - w / 2, node.y + 14 + 14, node.x + x + w / 2, node.y + 14 + 29];
+      if (forced || !boxes.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1])) { boxes.push(b); s += `<text class="bname" y="26" text-anchor="middle">${esc(name)}</text>`; }
+    }
+    return `${s}</g>`;
   }
 
   /** Select a force: its place and where it can go must be on screen, each on a pin of its own — else the map moves there. */

@@ -6,6 +6,9 @@
 @font-face { font-family: 'Barlow Semi Condensed'; src: url('../fonts/BarlowSemiCondensed-SemiBold.woff2') format('woff2'); font-weight: 600 700; font-display: swap; }
 @font-face { font-family: 'Special Elite'; src: url('../fonts/SpecialElite-Regular.woff2') format('woff2'); font-display: swap; }   /* the 1945 paper map (ui/WorldMap.js) */
 @font-face { font-family: 'Architects Daughter'; src: url('../fonts/ArchitectsDaughter-Regular.woff2') format('woff2'); font-display: swap; } /* 1985's marker on the acetate (ui/WorldMap.js) */
+@font-face { font-family: 'IM Fell English'; src: url('../fonts/IMFellEnglish-Regular.woff2') format('woff2'); font-display: swap; } /* 1806's engraved map (ui/WorldMap.js) */
+@font-face { font-family: 'IM Fell English'; src: url('../fonts/IMFellEnglish-Italic.woff2') format('woff2'); font-style: italic; font-display: swap; }
+@font-face { font-family: 'IM Fell English SC'; src: url('../fonts/IMFellEnglishSC-Regular.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Stardos Stencil'; src: url('../fonts/StardosStencil-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 
 :root {

@@ -794,6 +794,71 @@
 .wc-sheet text { fill: #1d1d1a; font: 12px 'Special Elite', monospace; }
 .wc-sheet text.t { font: 700 14px Georgia, serif; letter-spacing: 0.04em; } .wc-sheet text.r { fill: #c0281e; }
 .wc-map:has(.wm-trench) .wc-legend { background: rgba(242, 239, 228, 0.92); color: #1d1d1a; font-family: Georgia, serif; }
+
+/* ---- 1806: the engraved campaign map (ui/WorldMap.js style 'engraved', tools/mapstyles.html 1806): a hand-coloured
+   copperplate on cream paper — sepia ink, water lines along the coasts, the front as a soft wash of each side's colour with a
+   dotted limit, towns as engraved circles, forces as wooden blocks (ui/WarRoom.js woodBlock), dotted march routes, the
+   cartouche and compass rose; period lettering (IM Fell English, bundled) */
+.wc-map:has(.wm-engraved) { background: #3a2c1c; }
+.wm-engraved { --ink: #3b2e1f; --fell: 'IM Fell English', 'Iowan Old Style', Georgia, 'Times New Roman', serif; --fellsc: 'IM Fell English SC', 'IM Fell English', Georgia, serif; }
+.wm-engraved .wm-sea { fill: #e3dcc0; }
+.wm-engraved .wm-land { fill: #eee2c3; }
+.wm-engraved .wm-grat { stroke: rgba(59, 46, 31, 0.16); stroke-width: 0.5; }
+.wm-engraved .wm-coast { stroke: var(--ink); stroke-width: 1.2; }
+.wm-ripples use { fill: none; stroke-linejoin: bevel; }
+.wm-ripples .ink { stroke: #9c937c; } .wm-ripples .sea { stroke: #e3dcc0; }
+.wm-engraved .wm-border { stroke: rgba(59, 46, 31, 0.4); stroke-width: 0.8; stroke-dasharray: 1 2.5; }
+.wm-engraved .wm-area { stroke: rgba(59, 46, 31, 0.5); stroke-width: 0.9; stroke-dasharray: 6 2 1 2; }
+.wm-engraved .wm-wash.nato { fill: rgba(79, 111, 174, 0.12); } .wm-engraved .wm-wash.pact { fill: rgba(181, 82, 63, 0.11); }
+.wm-engraved .wm-neutral { opacity: 0.55; }
+.wm-tint { fill: none; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; opacity: 0.42; }
+.wm-tint.nato { stroke: #4f6fae; } .wm-tint.pact { stroke: #b5523f; }
+.wm-limit { fill: none; stroke: var(--ink); stroke-width: 1.1; stroke-dasharray: 0.1 3.4; stroke-linecap: round; opacity: 0.7; }
+.wm-engraved .wc-theatre { fill: rgba(59, 46, 31, 0.42); font: 23px var(--fellsc); letter-spacing: 0.16em; text-transform: none; }
+.wm-engraved .wc-node .name { fill: var(--ink); font: italic 14px var(--fell); stroke: rgba(238, 226, 195, 0.92); stroke-width: 3px; }
+.wm-engraved .wc-node .name.sea { fill: #4e6170; font: 13px var(--fellsc); letter-spacing: 0.2em; text-transform: none; stroke: rgba(227, 220, 192, 0.9); }
+.wm-engraved .wc-node.reach .name { fill: #9c3f2c; }
+.wm-engraved .wc-node .anchor { fill: #4e6170; }
+.wm-engraved .wc-ico { fill: var(--ink); stroke: rgba(238, 226, 195, 0.9); }
+.wc-etown .ring { fill: none; stroke: var(--ink); stroke-width: 1; }
+.wc-etown .dot { fill: var(--ink); }
+.wc-etown .tint { fill: rgba(59, 46, 31, 0.12); }
+.wc-etown.nato .tint { fill: rgba(79, 111, 174, 0.42); } .wc-etown.pact .tint { fill: rgba(181, 82, 63, 0.42); } .wc-etown.contested .tint { fill: rgba(199, 154, 42, 0.55); }
+.wc-etown.depot .ring { stroke-width: 1.2; }
+.wc-etown.cut .ring { stroke: #b07a12; stroke-width: 1.6; stroke-dasharray: 2 1.5; }
+.wc-etown .fort { fill: rgba(239, 227, 196, 0.6); stroke: var(--ink); stroke-width: 0.8; stroke-dasharray: none; }
+.wm-engraved .wc-pin.cluster .disc { fill: #efe3c4; filter: none; stroke: var(--ink); stroke-width: 0.8; }
+.wm-engraved .wc-pin.cluster.nato .edge { stroke: #4f6fae; } .wm-engraved .wc-pin.cluster.pact .edge { stroke: #b5523f; } .wm-engraved .wc-pin.cluster.sea .edge { stroke: #4e6170; }
+.wm-engraved .wc-pin .count { fill: var(--ink); font: 14px var(--fell); }
+.wc-block .bshadow { fill: rgba(42, 26, 8, 0.28); }
+.wc-block .side { fill: url(#wm-blockside); stroke: #4a2f14; stroke-width: 0.5; }
+.wc-block .top { fill: #3f5f9e; } .wc-block.pact .top { fill: #9c3f2c; }
+.wc-block .under .top { stroke: #2a1a08; stroke-width: 0.6; }
+.wc-block .grain { fill: none; stroke: rgba(26, 15, 4, 0.22); stroke-width: 0.5; }
+.wc-block .hl { stroke: rgba(255, 255, 255, 0.35); stroke-width: 0.8; }
+.wc-block .edge { fill: none; stroke: #2a1a08; stroke-width: 0.7; }
+.wc-block .frame { fill: none; stroke: #f3ead2; stroke-width: 1.1; }
+.wc-block .sym { fill: none; stroke: #f3ead2; stroke-width: 1.7; }
+.wc-block .str { stroke: rgba(243, 234, 210, 0.75); stroke-width: 1; }
+.wc-block .cnt { fill: var(--ink); font: 13px var(--fell); paint-order: stroke; stroke: rgba(238, 226, 195, 0.92); stroke-width: 3px; }
+.wc-block .bname { fill: var(--ink); font: italic 13px var(--fell); paint-order: stroke; stroke: rgba(238, 226, 195, 0.9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.wc-block.ordered .edge { stroke: #f3ead2; stroke-width: 1.1; stroke-dasharray: 3 2; }
+.wc-block.sel .edge { stroke: #d9a227; stroke-width: 2.4; stroke-dasharray: none; }
+.wm-engraved .wc-order { stroke: #3f5f9e; stroke-width: 3.2; stroke-dasharray: 0.1 6.5; opacity: 0.95; }
+.wm-engraved .wc-order.attack { stroke: #9c3f2c; }
+.wm-engraved .wc-order.landing { stroke-dasharray: 7 4 0.1 4; }
+.wm-engraved .wc-road { stroke: rgba(59, 46, 31, 0.4); stroke-width: 0.9; }
+.wm-engraved .wc-lane, .wm-engraved .wc-coast { stroke: #4e6170; }
+.wm-engraved .wc-star { stroke: rgba(238, 226, 195, 0.95); }
+.wm-engraved .wc-mission text { font-family: var(--fell); font-style: italic; }
+.wc-plate .neat { fill: none; stroke: var(--ink); stroke-width: 2.5; } .wc-plate .neat.fine { stroke-width: 0.8; }
+.wc-plate .cart { fill: #efe3c4; stroke: var(--ink); stroke-width: 1.4; }
+.wc-plate text { fill: var(--ink); font: 12px var(--fell); }
+.wc-plate text.sc { font: 20px var(--fellsc); } .wc-plate text.it { font: italic 16px var(--fell); }
+.wc-plate .rose .o { fill: none; stroke: var(--ink); stroke-width: 0.8; } .wc-plate .rose .o.fine { stroke-width: 0.5; }
+.wc-plate .rose .pt { fill: #efe3c4; stroke: var(--ink); stroke-width: 0.6; } .wc-plate .rose .ink { fill: var(--ink); }
+.wc-plate .rose text { font-size: 15px; }
+.wc-map:has(.wm-engraved) .wc-legend { background: rgba(239, 227, 196, 0.92); color: #3b2e1f; font-family: 'IM Fell English', Georgia, serif; font-size: 14px; }
 /* the war-weariness of each nation (wars with powers[].weary: 1918) and the sea trade's cut, in the top bar */
 .wc-weary { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11.5px; color: var(--muted); max-width: 300px; }
 .wc-weary i { font-style: normal; white-space: nowrap; }
