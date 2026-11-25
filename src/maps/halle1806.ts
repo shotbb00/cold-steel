@@ -4,17 +4,15 @@
 // the Mühlgraben, the Klaustor in the town wall — with guns and jägers. Dupont’s division stormed the bridges at the
 // run, burst through the gate and fought through the streets to the market, and Württemberg’s battalions, turned out
 // of the town, were broken on the open ground to the east on the road to Dessau.
-// On the map (the big field, 1.0 × 1.12 km): the French come from the west bank (the Lauchstädt road, +z), the
-// Prussians hold the east bank (the Dessau road, −z). The Saale crosses the middle; the Mühlgraben splits off it under
-// the town round the meadows island, and the causeway runs over both bridges straight into the Klaustor. Fords at
-// Kröllwitz under its porphyry crags (north, −x) and at Böllberg (south, +x). On the west bank the pines of the
-// Dölauer Heide, Passendorf and Angersdorf; on the east bank the walled town with its market church, Giebichenstein
-// on its rock, the Galgenberg, Glaucha and Böllberg among the floodplain woods. (The Saale runs north here: −x is north.)
-// Not mirrored but fair: the causeway’s two bridges put the meadows island in the middle, one bridge from each bank,
-// and the two fords lie on opposite flanks at matching distances; the walled town before the Prussian centre is traded
-// for the Dölauer Heide and the bigger village of Passendorf before the French, the Giebichenstein rock and the Galgenberg
-// for the Kröllwitz crags and the rise of the Lauchstädt plateau, the floodplain woods by Böllberg for the Heide’s
-// edge; each village is as far from the nearer base as its counterpart (tools/map_fairness.py). 1806 only (`epochs`).
+// On the map (1.0 × 1.12 km): the French come from the west bank (the Lauchstädt road, +z), the Prussians hold the east
+// bank (the Dessau road, −z); the Saale slants north-west past the town (−x is north). The real ground: in the north it breaks
+// through the porphyry — Kröllwitz's crags on the west bank, Giebichenstein's rock, the Reilsberg and the Galgenberg on
+// the east — while in the south it spreads into wide wet meadows round Böllberg. The Dölauer Heide's low wooded plateau
+// fills the north-west; Passendorf and Angersdorf lie on the flat west bank, the walled town on its terrace on the east.
+// The Mühlgraben splits off under the town round the meadows island, the causeway crossing both bridges into the Klaustor.
+// Fair by distance, not by shape: each village is as far from the nearer base as its counterpart (tools/map_fairness.py);
+// the Heide before the French is answered by the porphyry hills before the Prussians, the walled town by Passendorf.
+// 1806 only (`epochs`).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -45,8 +43,8 @@ const POINTS: ControlPointDef[] = [
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
 // the Saale across the map; the Mühlgraben split off it under the town round the meadows island (the Pulverweiden)
-const saaleZ = (x) => 40 + 10 * Math.sin(x * 0.006 + 0.3) + 4 * Math.sin(x * 0.021);
-const ARM = [[-240, saaleZ(-240), 6], [-190, -10, 8], [-120, -40, 8], [-40, -48, 8], [40, -46, 8], [120, -36, 8], [180, -12, 8], [225, saaleZ(225), 6]];
+const saaleZ = (x) => 40 + 0.22 * x + 10 * Math.sin(x * 0.006 + 0.3) + 4 * Math.sin(x * 0.021); // (slanting: north-west down past the town)
+const ARM = [[-240, saaleZ(-240), 6], [-190, -10 - 42, 8], [-120, -40 - 26, 8], [-40, -48 - 9, 8], [40, -46 + 9, 8], [120, -36 + 26, 8], [180, -12 + 40, 8], [225, saaleZ(225), 6]];
 const armZ = (x) => { for (let i = 0; i < ARM.length - 1; i++) { const [ax, az] = ARM[i], [bx, bz] = ARM[i + 1]; if (x <= bx) return az + (bz - az) * (x - ax) / (bx - ax); } return ARM[ARM.length - 1][1]; };
 const river = createRiver({
   paths: [saaleZ, ARM],
@@ -67,7 +65,7 @@ const blob = (x, z, cx, cz, rx, rz, a) => {
   return smoothstep(1.1, 0.75, Math.hypot(u, v) + fbm(noise, x * 0.02, z * 0.02, 2) * 0.25);
 };
 // the Dölauer Heide (west bank, north), the floodplain woods by Böllberg (east bank, south), willows on the island’s ends
-const WOODS = [[-380, 330, 125, 85, 0.25], [300, -190, 95, 50, -0.5], [-200, 8, 30, 14, 0.3], [190, 12, 28, 14, -0.3]];
+const WOODS = [[-380, 330, 125, 85, 0.25], [300, -190, 95, 50, -0.5], [-200, -36, 30, 14, 0.5], [190, 54, 28, 14, -0.1]];
 const woods = (x, z) => {
   let k = smoothstep(0.55, 0.7, fbm(noise, x * 0.006 - 17, z * 0.006 + 41, 3)) * 0.75;
   for (const [cx, cz, rx, rz, a] of WOODS) k = Math.max(k, blob(x, z, cx, cz, rx, rz, a));
@@ -77,18 +75,18 @@ const woods = (x, z) => {
   return Math.min(k, smoothstep(140, 170, Math.hypot((x - P.I.x) * 0.8, z - P.I.z + 10)));               // (no wood in the town)
 };
 
+/** The Dölauer Heide's low wooded plateau in the north-west (west bank). */
+const heide = (x, z) => smoothstep(1.2, 0.65, Math.hypot((x + 390) / 230, (z - 360) / 200) + fbm(noise, x * 0.008 + 3, z * 0.008, 2) * 0.15);
 function height(x, z) {
-  let h = fbm(noise, x * 0.0024, z * 0.0024, 3) * 4 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.5 + 3;
-  h += smoothstep(380, 590, z) * 17 * (0.8 + 0.2 * Math.tanh((x + 100) / 240));    // the Lauchstädt plateau behind the French
-  h += smoothstep(360, 600, -z) * 17 * (0.85 + 0.3 * Math.tanh((x - 100) / 200));  // the rise towards the Dessau road
-  h += hill(x, z, -410, 140, 55, 8);                                               // Kröllwitz’s porphyry crags over the ford
-  h += hill(x, z, -330, -120, 50, 8);                                              // the Giebichenstein rock
-  h += hill(x, z, -180, -380, 85, 5);                                              // the Galgenberg
-  h += hill(x, z, 220, 380, 110, 4);                                               // the swell by Angersdorf
+  let h = fbm(noise, x * 0.0024, z * 0.0024, 3) * 3 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.5 + 3;
+  h += heide(x, z) * (12 + fbm(noise, x * 0.01, z * 0.01 - 5, 2) * 5);              // the Dölauer Heide
+  // the porphyry: the Saale breaks through it in the north — Kröllwitz's crags on the west bank, Giebichenstein's rock, the Reilsberg and the Galgenberg on the east
+  h += hill(x, z, -420, 135, 50, 13) + hill(x, z, -335, -115, 48, 17) + hill(x, z, -380, -330, 80, 15) + hill(x, z, -150, -400, 110, 19) + hill(x, z, -255, -240, 55, 10);
+  h += smoothstep(150, 520, -z) * smoothstep(200, -50, x) * 4;                     // the rise toward the Dessau road behind the porphyry
+  h -= smoothstep(-50, 350, x) * smoothstep(250, 40, Math.abs(z - saaleZ(x))) * 2;
+  h += smoothstep(200, 560, z) * smoothstep(-100, 450, x) * 13;                   // the loess plateau rising south-west toward Lauchstädt         // the wide wet meadows of the Saale in the south
   const town = smoothstep(150, 90, Math.hypot((x - P.I.x) * 0.8, z - P.I.z - 10)); // the old town’s terrace, a little above the river
   h += (5 - h) * town * 0.6;
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 28;
-  h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 26;
   for (const p of POINTS) if (p.id !== 'I' && p.id !== 'F') h += (h * 0.5 + 2 - h) * smoothstep(45, 25, Math.hypot(x - p.x, z - p.z)) * 0.6;
   return river.carve(x, z, Math.max(1.6, h));
 }
@@ -183,7 +181,7 @@ export default {
     props.church({ x: P.I.x + 28, z: P.I.z - 24, yaw: Math.PI / 2 });                // (the Marktkirche)
     props.hall({ x: -150, z: -105, yaw: 0.2, width: 22, depth: 14, height: 8, color: 0x9a8a74, roof: 0x5a3a2a, door: 4, name: 'Moritzburg' });
     // the town wall along the river front, the Klaustor gap where the causeway comes in
-    for (const [x, z, yaw, length] of [[-70, -88, 0.05, 130], [75, -90, -0.1, 110], [-150, -190, Math.PI / 2 + 0.2, 70], [140, -200, Math.PI / 2 - 0.2, 80]] as const) {
+    for (const [x, z, yaw, length] of [[-70, -103, 0.05, 130], [75, -73, -0.1, 110], [-150, -190, Math.PI / 2 + 0.2, 70], [140, -200, Math.PI / 2 - 0.2, 80]] as const) {
       props.wall({ x, z, yaw, length, height: 3 });
     }
     // Giebichenstein: the castle on its rock
