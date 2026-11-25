@@ -32,6 +32,7 @@ const ROLE = {
   men: { ring: mat(0x8fe07a, 0.45), fill: mat(0x8fe07a, 0.035), css: '#8fe07a' },
   indirect: { ring: mat(0xc8ccd0, 0.35), fill: null, css: '#c8ccd0', dashed: true },
   drone: { ring: mat(0xc49bff, 0.4), fill: null, css: '#c49bff', dashed: true },
+  ssm: { ring: mat(0xff6a5a, 0.45), fill: null, css: '#ff6a5a' }, // (a ship's anti-ship missiles)
 };
 const EFFECTIVE = 0.6; // of the reach: where the spread is still small (1.6x at most)
 const AIR_RING = mat(0x9fd2ff, 0.22);       // reach against aircraft
@@ -85,7 +86,8 @@ export function weapons(stack) {
     if (s.weapon !== s0.weapon && s.damage > 0 && !s.indirect && s.weapon !== 'artillery') rifles = Math.max(rifles, s.range ?? 0);
   }
   const D = stack.stats.drone ?? s0.drone;
-  if (s0.naval || s0.structure) return out; // (ships and forts: nothing here)
+  if (stack.stats.naval) return shipWeapons(stack, add, out);
+  if (s0.structure) return out; // (forts: nothing here)
   const w = s0.weapon, main = s0.gunRange ?? s0.range ?? 0, own = !D && weaponName(stack, 0); // (a drone team's weapon line names its drones)
   if (s0.indirect || w === 'artillery') add({ role: 'indirect', range: main, min, name: own || (w === 'artillery' ? 'Guns' : 'Mortar'), vs: 'indirect, at what is spotted' });
   else if (s0.damage > 0) {
@@ -97,6 +99,20 @@ export function weapons(stack) {
   if (side) add({ role: 'men', range: side, name: 'MG', vs: 'vs men' });
   if (law) add({ role: 'missile', range: law, name: 'AT rockets', vs: 'vs armour, close' });
   if (D?.range && D.kind !== 'usv') add({ role: 'drone', range: D.range, name: D.kind === 'recon' ? 'Recon drone' : D.kind === 'fpv' ? 'FPV drones' : 'Loitering munitions', vs: D.kind === 'recon' ? 'finds them' : 'vs what is spotted' });
+  return out;
+}
+/** A ship's weapons, from her mounts (data/units45/ships.js, ships85.js): main guns, secondaries, torpedoes, missiles, ASW. */
+function shipWeapons(stack, add, out) {
+  const st = stack.stats, mounts = stack.type.mounts?.[stack.army] ?? stack.type.mounts?.[stack.faction] ?? [];
+  const mounted = mounts.filter((m) => !m.missile && !m.torpedo).map((m) => m.range ?? 0).filter((r) => r > 1); // (her turrets: `stats.range` is her longest reach, missiles too)
+  const guns = [...new Set(mounted.length ? mounted : st.damage > 0 && st.range > 1 ? [st.range] : [])].sort((a, b) => b - a);
+  if (guns[0]) add({ role: 'armour', range: guns[0], name: 'Main guns', vs: 'vs ships' });
+  if (guns.length > 1 && guns[0] - guns.at(-1) > 150) add({ role: 'men', range: guns.at(-1), name: 'Secondary guns', vs: 'vs light craft' });
+  const most = (f) => mounts.filter(f).reduce((a, m) => ((m.range ?? 0) > (a?.range ?? 0) ? m : a), null);
+  const msl = most((m) => m.missile), torp = most((m) => m.torpedo);
+  if (msl) add({ role: 'ssm', range: msl.range, name: msl.name ?? 'Missiles', vs: 'vs ships' });
+  if (torp) add({ role: 'missile', range: torp.range, name: 'Torpedoes', vs: 'vs ships' });
+  if (st.asTorp?.range) add({ role: 'indirect', range: st.asTorp.range, name: 'ASW torpedo', vs: 'vs submarines' });
   return out;
 }
 export const ROLE_CSS = Object.fromEntries(Object.entries(ROLE).map(([k, v]) => [k, v.css]));
@@ -228,7 +244,7 @@ export class RangeIndicators {
       put(R.dashed ? dashedGeometry(w.range) : ringGeometry(w.range), R.ring);
       if (w.min > 1) put(dashedGeometry(w.min), R.ring);
       if (!full) continue;
-      if (R.fill) put(discGeometry(w.range * EFFECTIVE), R.fill);
+      if (R.fill && !s.stats.naval) put(discGeometry(w.range * EFFECTIVE), R.fill); // (a ship's reach is kilometres: the rings alone)
       const el = document.createElement('div');
       el.className = 'range-tag';
       el.style.color = R.css;

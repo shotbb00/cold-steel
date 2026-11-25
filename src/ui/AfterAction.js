@@ -154,8 +154,8 @@ function lossMap(r, me, foe) {
   if (!B || !L.length) return '<p class="aar-empty">No losses to show.</p>';
   const W = 300;
   const H = Math.round(W * Math.min(1.6, Math.max(0.6, B.z / B.x)));
-  const flip = (r.baseZ?.[me] ?? 1) < 0;            // put the player's base at the bottom
-  const x = (v) => ((v + B.x) / (2 * B.x)) * W;
+  const flip = (r.baseZ?.[me] ?? 1) < 0;            // put the player's base at the bottom: turned round (both axes, as the minimap), never mirrored
+  const x = (v) => (((flip ? -v : v) + B.x) / (2 * B.x)) * W;
   const y = (v) => (((flip ? -v : v) + B.z) / (2 * B.z)) * H;
   const colour = { [me]: 'var(--ally)', [foe]: 'var(--enemy)' };
   const pts = (r.points ?? []).map((p) => `<g><circle cx="${x(p.x).toFixed(1)}" cy="${y(p.z).toFixed(1)}" r="6" class="aar-point" stroke="${p.owner ? colour[p.owner] : 'var(--muted)'}"/><title>${esc(p.name)}</title></g>`).join('');
