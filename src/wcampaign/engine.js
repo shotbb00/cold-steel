@@ -12,6 +12,8 @@
 // Power comes from the unit types through `c.power` (set by the caller: in the game the types' costs, headless a table).
 // Randomness is the campaign's own seeded generator, stored in the state — a saved campaign replays the same.
 
+import { formationName } from './names.js'; // (a new force's name: pure data, no game imports either)
+
 export const VERSION = 1;
 const TURN_DAYS = 3.5;
 const CUT_SURRENDER = 6;           // turns cut off before a pocket surrenders (three weeks)
@@ -849,7 +851,7 @@ export function raiseFleet(c, war, side, army, port, kind = 'escort') {
   const zone = room.find((z) => !forcesAt(c, z, enemy(side), 'fleet').length) ?? room[0]; // (blockaded: it sails out to fight)
   if (!zone) return null;
   c.pool[side] -= cost;
-  return spawnForce(c, war, { kind: 'fleet', side, army, at: zone, name: `New ${kind} group`, ships: kind });
+  return spawnForce(c, war, { kind: 'fleet', side, army, at: zone, name: formationName(c, war, army, 'fleet', kind), ships: kind });
 }
 
 /** A new air wing formed at a depot with an airfield. */
@@ -857,7 +859,7 @@ export function raiseAir(c, war, side, army, base) {
   const cost = airCost();
   if (!war.provinces[base]?.airfield || c.provinces[base].depot !== side || c.provinces[base].owner !== side || c.pool[side] < cost) return null;
   c.pool[side] -= cost;
-  return spawnForce(c, war, { kind: 'air', side, army, at: base, name: 'New air wing', squadrons: { ...AIR_WING } });
+  return spawnForce(c, war, { kind: 'air', side, army, at: base, name: formationName(c, war, army, 'air'), squadrons: { ...AIR_WING } });
 }
 
 /** A new battalion for an army at a depot (or a new army there), from the pool. */
@@ -870,5 +872,5 @@ export function raise(c, war, side, army, depot, kind = 'infantry') {
     ?? c.forces.find((f) => f.side === side && f.kind === 'army' && f.army === army && f.battalions.length < STACK.battalions && !f.cut && ok.has(f.at) && war.provinces[f.at].theatre === theatre); // (sent up the line to a group with room)
   if (!here && forcesAt(c, depot, side, 'army').length >= STACK.army) { c.pool[side] += cost; return null; } // (no room at the depot: send what's there to the front first)
   if (here) { here.battalions.push({ kind, units: types.map((t) => ({ t, hp: 1, vet: 0 })) }); return here; }
-  return spawnForce(c, war, { kind: 'army', side, army, at: depot, name: `New ${kind} group`, battalions: [kind] });
+  return spawnForce(c, war, { kind: 'army', side, army, at: depot, name: formationName(c, war, army, 'land', kind), battalions: [kind] });
 }
