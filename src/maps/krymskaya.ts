@@ -11,11 +11,14 @@
 // through them. The foothills (+x): oak and hornbeam woods on the spurs, vineyards on the lower slopes. Each half has
 // its anti-tank ditch across the plain (the Germans’ old Krymskaya line on the Soviet side, the Blue Line’s on theirs)
 // with trenches and wire behind it and gaps only at the roads and the railway.
-// Not a mirror but fair: the plavni and the foothills each run the whole length of the field, so both sides have the
-// same marsh flank and the same hill flank; the river and its four crossings are shared in the middle; each side has a
-// marsh village, a stanitsa on the main road and a foothill village, each about as far from its own base as the other
-// side’s; the middle points are the stanitsa on the river, Adagum at the plavni’s edge and the vineyard heights in
-// the hills (on the German bank, Adagum on the Soviet bank); each ditch lies as far out in front of its own base.
+// The real lie of it: south of the town the foothills' edge runs south-west, closing in on the road and the railway as
+// they turn toward Novorossiysk — so on the map the hills crowd in diagonally on the German side (+x, −z) and stand
+// back on the Soviet side, where the plavni reach further in instead (−x, +z). The Soviet side's own high ground is
+// the long rise behind its base along the Abinskaya road, and the foothills it holds on the +x edge.
+// Fair by distance, not mirrored: each side has a marsh village, a stanitsa on the main road and a foothill village,
+// each about as far from its own base as the other side's; the middle points are the stanitsa on the river, Adagum at
+// the plavni's edge and the vineyard heights; the Germans' hills are answered by the rise behind the Soviet base, the foothills on its own +x edge and the wider plavni flank
+// (cover for the Soviet infantry); each ditch lies as far out in front of its own base.
 import * as THREE from 'three';
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -74,17 +77,20 @@ const ROADS = [R1,
 const roadDist = (x: number, z: number) => { let d = Infinity; for (const p of ROADS) d = Math.min(d, segDist(p, x, z)); return d; };
 const RAIL = [[60, 580], [45, 330], [RAIL_X, 120], [RAIL_X, -60], [150, -140], [290, -215], [420, -330], [560, -480]];
 const railDist = (x: number, z: number) => segDist(RAIL, x, z);
+/** The same two, sampled once for the ground (height() asks for every vertex; a 3 m grid read between the samples). */
+const roadDistG = gridCacheSmooth(roadDist, { x: 560, z: 620 }, 3), railDistG = gridCacheSmooth(railDist, { x: 560, z: 620 }, 3);
 
 // ---- the plavni (−x) and the foothills (+x), each the whole length of the field
-const plavK = (x: number, z: number) => smoothstep(-175, -270, x + 22 * Math.sin(z * 0.011) + 14 * Math.sin(z * 0.027 + 1));
-const hillK = (x: number, z: number) => smoothstep(110, 430, x + 28 * Math.sin(z * 0.009 + 2));
-const TILT = -0.1;
+const plavK = (x: number, z: number) => smoothstep(-175, -270, x - 0.3 * z + 22 * Math.sin(z * 0.011) + 14 * Math.sin(z * 0.027 + 1));
+const hillK = (x: number, z: number) => Math.max(smoothstep(110, 430, x - 0.45 * z + 28 * Math.sin(z * 0.009 + 2)), 0.9 * smoothstep(190, 40, Math.hypot((x - 40) * 0.45, (z - 545) * 1.3))); // (the edge runs diagonally: near the stanitsa on the German side, the rise behind the Soviet base its own)
+const TILT = 0.22;
 /** The ground before roads, ditches and water (cached: the noise is dear). */
 const ground = gridCacheSmooth((x: number, z: number) => {
   let h = 2.2 + fbm(noise, x * 0.004 + 7, z * 0.004, 3) * 1.4;
   const hk = hillK(x, z) * smoothstep(20, 150, Math.abs(z - chan(x))) * (1 + TILT * Math.tanh(z / 200)); // (the Adagum’s valley opens the hills; TILT evens the high ground)
   // spurs running down out of the mountains (along x), woods and vineyards on them
   h += hk * (24 + 16 * fbm(noise, x * 0.004 + 21, z * 0.006 - 5, 3) + 6 * Math.sin(z * 0.017 + 0.6));
+  h += 14 * smoothstep(210, 30, Math.hypot((x - 40) * 0.45, (z - 545) * 1.3)) ** 1.3;                  // the rise behind the Soviet base along the Abinskaya road (behind it: no hill in front of either base)
   h = lerp(h, 0.95 + fbm(noise, x * 0.02, z * 0.02, 2) * 0.15, plavK(x, z));          // the plavni: a hand above the water
   h += smoothstep(480, 620, x) * 18 + smoothstep(560, 680, Math.abs(z)) * 10;           // the mountains beyond the south edge
   for (const bz of [BASE_Z, -BASE_Z]) h += (lerp(2.4, h, 0.3) - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
@@ -131,9 +137,9 @@ const poolQ = (x: number, z: number) => {
 
 function height(x: number, z: number) {
   let h = ground(x, z);
-  const rd = roadDist(x, z);
+  const rd = roadDistG(x, z);
   if (rd < 9 && plavK(x, z) > 0.05) h = lerp(h, Math.max(h, 2.0), smoothstep(9, 4.5, rd));   // the causeway over the plavni
-  const rl = railDist(x, z);
+  const rl = railDistG(x, z);
   if (rl < 7) h = lerp(h, Math.max(h, 3.2), smoothstep(7, 3, rl));                         // the rail embankment on the plain
   const dd = ditch(x, z);
   if (dd < 6) h -= 2.6 * smoothstep(6, 2.5, dd);                                                // the anti-tank ditch: steep, 2.6 m deep
