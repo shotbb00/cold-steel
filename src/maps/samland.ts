@@ -148,7 +148,10 @@ const points: ControlPointDef[] = [
 const GUNS = [{ name: 'Batterie Brüsterort', x: 140, back: 95 }, { name: 'Batterie Rauschen', x: -220, back: 90 }].map((g) => ({ ...g, z: shoreZ(g.x) - g.back }));
 const nearGorge = (x: number, z: number, m: number) => gorgeD(x, z) < m;
 /** The trenches along the cliff top over each sector (not in a gorge). */
-const TRENCHES = SECTORS.flatMap((s) => [-70, -40, 40, 70].map((dx) => W(s.x + dx, crest(s.x + dx) + 7))).filter((p) => !nearGorge(p.x, p.z, 20));
+// (the works and the landing below are worked out on first use, not at import: every map is imported at start, and they
+// sample the cached ground)
+let TRENCHES_: { x: number; z: number }[] | undefined, LANDING_: any;
+const trenches = () => (TRENCHES_ ??= SECTORS.flatMap((s) => [-70, -40, 40, 70].map((dx) => W(s.x + dx, crest(s.x + dx) + 7))).filter((p) => !nearGorge(p.x, p.z, 20)));
 
 export default {
   id: 'samland',
@@ -203,7 +206,7 @@ export default {
   points,
   spawns: { nato: [], pact: [] },
 
-  landing: {
+  get landing() { return (LANDING_ ??= {
     attacker: 'nato',
     // the Russian army has no landing boats of its own yet (data/units1918/ships.js): the side’s motor launches and ferries
     // stand in for the fleet’s cutters, the minesweepers’ boats and the requisitioned steamers
@@ -220,7 +223,7 @@ export default {
     ],
     // the Landsturm’s trenches on the cliff top, MGs over each gorge, wire at the back of the beaches (gaps at the gorges)
     works: [
-      ...TRENCHES.map((p) => ({ kind: 'trench', ...p, yaw: 0 })),
+      ...trenches().map((p) => ({ kind: 'trench', ...p, yaw: 0 })),
       ...SECTORS.flatMap((s) => [-28, 28].map((dx) => ({ kind: 'mgNest', ...W(s.x + dx, crest(s.x + dx) + 3), yaw: 0 }))).filter((p) => !nearGorge(p.x, p.z, 10)),
       ...SECTORS.map((s, i) => ({ kind: 'mgNest', x: GORGES[i][2][0] + 9, z: GORGES[i][2][1], yaw: 0 })),
       ...Array.from({ length: 82 }, (_, i) => -450 + i * 11).filter((x) => GORGES.every((g) => Math.abs(g[0][0] - x) > 16))
@@ -229,7 +232,7 @@ export default {
     ],
     // the coast’s garrison at dawn: Landsturm battalions on the cliff, their machine guns, gunners and a few marksmen
     defence: ['rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'mgTeam', 'rifles', 'sniper', 'rifles', 'mortar', 'rifles', 'mgTeam'],
-    hold: [...TRENCHES.map((p) => ({ x: p.x, z: p.z - 6 })), ...SECTORS.map((s) => s.inland)],
+    hold: [...trenches().map((p) => ({ x: p.x, z: p.z - 6 })), ...SECTORS.map((s) => s.inland)],
     // the reserve from Königsberg by the Galtgarben road: infantry and armoured cars
     counter: { t: 270, units: ['rifles', 'reconVehicle', 'mgTeam', 'rifles', 'rifles', 'mortar'], say: 'The reserve is coming up from Königsberg past the Galtgarben — infantry and armoured cars for the cliffs', sayOther: 'German infantry and armoured cars on the Galtgarben road!' },
     ai: { order: ['rifles', 'rifles', 'mgTeam', 'engineers', 'rifles', 'mortar', 'reconVehicle', 'rifles', 'mgTeam', 'sniper', 'rifles', 'artillery'], gunship: 'destroyer', gunships: 1, heavy: 'battleship', inshore: 420 },
@@ -243,7 +246,7 @@ export default {
       ] },
       { t: 150, say: 'The steamers are bringing in the second wave — and an Austin armoured car in a ferry', units: [{ unit: 'rifles', sector: 0 }, { unit: 'rifles', sector: 1 }, { unit: 'rifles', sector: 2 }, { unit: 'reconVehicle', sector: 1 }] },
     ],
-  },
+  }); },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
     const props = new PropBuilder({ scene, terrain, cover });

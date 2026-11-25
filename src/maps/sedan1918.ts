@@ -130,14 +130,17 @@ const height = (x: number, z: number) => river.carve(x, z, Math.max(1.4, ground(
 const WOODS = [[-130, 205, 115], [90, -262, 115], [-400, 470, 95], [385, -478, 100]];
 const wn = (x: number, z: number) => fbm(noise, x * 0.008 + 70, z * 0.008, 3);
 const copseF = (x: number, z: number) => (wetD(x, z) > 60 && Math.abs(Math.abs(z) - BASE_Z) > 50 ? wn(x, z) : -9);
-const T_N = 0.42, T_P = evenThreshold(copseF, T_N, (_x, z) => z > 0);
+const T_N = 0.42;
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let T_P_: number | undefined;
+const tP = () => (T_P_ ??= evenThreshold(copseF, T_N, (_x, z) => z > 0));
 const nearPt = (x: number, z: number, r: number) => points.some((p) => Math.hypot(p.x - x, p.z - z) < r);
 const woodField = gridCache((x: number, z: number) => {
   if (wetD(x, z) < HW + 10 || airD(x, z) < 18 || nearPt(x, z, 34)) return 0;
   let k = 0;
   for (const [wx, wz, r] of WOODS) k = Math.max(k, smoothstep(1.0, 0.8, Math.hypot(x - wx, z - wz) / r + fbm(noise, x * 0.015 + 3, z * 0.015, 2) * 0.25));
   if (k > 0.3) return k;
-  return copseF(x, z) > (z > 0 ? T_N : T_P) ? 0.8 : 0;
+  return copseF(x, z) > (z > 0 ? T_N : tP()) ? 0.8 : 0;
 }, { x: 520, z: 580 }, 4);
 
 // ---- the rearguards: machine-gun nests at the river villages and the woods' edges (the Americans' own outposts the

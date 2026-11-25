@@ -143,13 +143,15 @@ const AIRFIELDS = [
 ];
 /** How far outside the air strips' ground: < 0 inside. */
 const airD = (x: number, z: number) => Math.max(Math.abs(x + Math.sign(z) * 250) - 150, Math.abs(Math.abs(z) - 497) - 58);
-const AIR_H = [groundExact(-250, 497), groundExact(250, -497)];
-const ground = gridCacheSmooth((x: number, z: number) => { const h = groundExact(x, z); return h + ((z > 0 ? AIR_H[0] : AIR_H[1]) - h) * smoothstep(24, 0, airD(x, z)); }, CACHE, 2);
-const BASE_H = [groundExact(0, BASE_Z), groundExact(0, -BASE_Z)];
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let AIR_H_: number[] | undefined, BASE_H_: number[] | undefined;
+const airH = () => (AIR_H_ ??= [groundExact(-250, 497), groundExact(250, -497)]);
+const ground = gridCacheSmooth((x: number, z: number) => { const h = groundExact(x, z); return h + ((z > 0 ? airH()[0] : airH()[1]) - h) * smoothstep(24, 0, airD(x, z)); }, CACHE, 2);
+const baseH = () => (BASE_H_ ??= [groundExact(0, BASE_Z), groundExact(0, -BASE_Z)]);
 function height(x: number, z: number) {
   let h = ground(x, z);
-  h += (BASE_H[0] - h) * smoothstep(30, 16, Math.hypot(x, z - BASE_Z));
-  h += (BASE_H[1] - h) * smoothstep(30, 16, Math.hypot(x, z + BASE_Z));
+  h += (baseH()[0] - h) * smoothstep(30, 16, Math.hypot(x, z - BASE_Z));
+  h += (baseH()[1] - h) * smoothstep(30, 16, Math.hypot(x, z + BASE_Z));
   return river.carve(x, z, Math.max(1.4, h));
 }
 /** 0 on the floor and the heights, 1 on the valley sides */

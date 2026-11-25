@@ -156,9 +156,14 @@ function slope(x: number, z: number) {
 // Slizza (Lussari, Malborghet) at one height, the two on the roads' bank (Predil, the Ofen) at another: each pair the
 // mean of its own ground, so neither side looks down on the other
 const SHELVES = [[-340, 320, 36], [320, 290, 34], [-300, -250, 34], [370, -330, 36]];
-const NAT = SHELVES.map(([x, z]) => slope(x, z));
-const WEST_H = Math.max(70, (NAT[0] + NAT[2]) / 2), EAST_H = Math.min(100, (NAT[1] + NAT[3]) / 2); // (within reach of the graded roads)
-const SHELF_H = [WEST_H, EAST_H, WEST_H, EAST_H];
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let SHELF_H_: number[] | undefined;
+const shelfH = () => {
+  if (SHELF_H_) return SHELF_H_;
+  const NAT = SHELVES.map(([x, z]) => slope(x, z));
+  const WEST_H = Math.max(70, (NAT[0] + NAT[2]) / 2), EAST_H = Math.min(100, (NAT[1] + NAT[3]) / 2); // (within reach of the graded roads)
+  return (SHELF_H_ = [WEST_H, EAST_H, WEST_H, EAST_H]);
+};
 /** Nearest point on a polyline: its distance and how far along (m), and the polyline's length. */
 function along(poly: number[][], x: number, z: number) {
   let best = { d: Infinity, s: 0 }, run = 0;
@@ -188,14 +193,15 @@ function gradAt(x: number, z: number) {
 /** The ground with its shelves (the mountain roads are cut into this). */
 function ground(x: number, z: number) {
   let h = slope(x, z);
-  SHELVES.forEach(([sx, sz, r], i) => { h += (SHELF_H[i] - h) * smoothstep(r + 28, r, Math.hypot(x - sx, z - sz)); });
+  SHELVES.forEach(([sx, sz, r], i) => { h += (shelfH()[i] - h) * smoothstep(r + 28, r, Math.hypot(x - sx, z - sz)); });
   return h;
 }
 const TRACK_TO = [1, 2, 0, 3];
 const GRADE = 0.27, STEP = 4;
 /** Each mountain road's height along it (every STEP m): it follows the ground as closely as a grade of GRADE allows,
  *  from the valley floor to its shelf — so it is a road cut along the hillside, not a trench driven through the ridges. */
-const PROFILES = TRACKS.map((t, i) => {
+let PROFILES_: number[][] | undefined;
+const profiles = () => (PROFILES_ ??= TRACKS.map((t, i) => {
   const pts: number[][] = [];                                                                   // (a point every STEP m along it)
   let carry = 0;
   for (let j = 0; j < t.length - 1; j++) {
@@ -206,7 +212,7 @@ const PROFILES = TRACKS.map((t, i) => {
   pts.push(t[t.length - 1]);
   const n = pts.length - 1, d = GRADE * STEP;
   const p = pts.map(([x, z]) => ground(x, z));
-  p[n] = SHELF_H[TRACK_TO[i]];
+  p[n] = shelfH()[TRACK_TO[i]];
   const nat = p.slice();
   for (let round = 0; round < 3; round++) {
     for (let k = 1; k < n; k++) p[k] = Math.max(p[k - 1] - d, Math.min(p[k - 1] + d, round ? p[k] : nat[k]));
@@ -214,7 +220,7 @@ const PROFILES = TRACKS.map((t, i) => {
   }
   for (let round = 0; round < 3; round++) { const q = p.slice(); for (let k = 2; k < n - 1; k++) p[k] = (q[k - 2] + q[k - 1] + q[k] + q[k + 1] + q[k + 2]) / 5; } // (no kinks)
   return p;
-});
+}));
 const TRACK_BOX = TRACKS.map((t) => [Math.min(...t.map((p) => p[0])) - 14, Math.max(...t.map((p) => p[0])) + 14, Math.min(...t.map((p) => p[1])) - 14, Math.max(...t.map((p) => p[1])) + 14]);
 function height(x: number, z: number) {
   let h = ground(x, z);
@@ -223,7 +229,7 @@ function height(x: number, z: number) {
     if (x < x0 || x > x1 || z < z0 || z > z1) return;
     const a = along(t, x, z);
     if (a.d >= 12) return;
-    const P = PROFILES[i], f = Math.min(P.length - 1.001, a.s / STEP), k = Math.floor(f);
+    const P = profiles()[i], f = Math.min(P.length - 1.001, a.s / STEP), k = Math.floor(f);
     h += (P[k] + (P[k + 1] - P[k]) * (f - k) - h) * smoothstep(12, 5, a.d);
   });
   return river.carve(x, z, h);

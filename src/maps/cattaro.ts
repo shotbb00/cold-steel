@@ -166,10 +166,12 @@ function mountain(x: number, z: number) {
 }
 /** The shelves each point and base stands on (eased level, so the roads meet there level and a gun can unlimber). */
 const SHELVES = [[0, BASE_Z, 36], [0, -BASE_Z, 36], ...points.filter((p) => !p.owner).map((p) => [p.x, p.z, 22])];
-const SHELF_H = SHELVES.map(([x, z]) => mountain(x, z));
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let SHELF_H_: number[] | undefined;
+const shelfH = () => (SHELF_H_ ??= SHELVES.map(([x, z]) => mountain(x, z)));
 function ground(x: number, z: number) {
   let h = mountain(x, z);
-  SHELVES.forEach(([sx, sz, r], i) => { const d = Math.hypot(x - sx, z - sz); if (d < r + 24) h += (SHELF_H[i] - h) * smoothstep(r + 24, r, d); });
+  SHELVES.forEach(([sx, sz, r], i) => { const d = Math.hypot(x - sx, z - sz); if (d < r + 24) h += (shelfH()[i] - h) * smoothstep(r + 24, r, d); });
   return h;
 }
 /** Each road’s height every STEP m: the ground as closely as a grade of GRADE allows, its ends held at their shelves, smoothed (tarvis.ts). Worked out on first use. */

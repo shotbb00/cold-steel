@@ -82,7 +82,9 @@ const at = (id: string) => { const p = points.find((q) => q.id === id); return [
 
 // the shelves each point and base stands on (flattened, so a gun can unlimber there)
 const SHELVES = [[0, BASE_Z, 36], [0, -BASE_Z, 36], ...points.filter((p) => !p.owner).map((p) => [p.x, p.z, p.id === 'G' ? 34 : 22])];
-const SHELF_H = SHELVES.map(([x, z]) => slope(x, z));
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let SHELF_H_: number[] | undefined;
+const shelfH = () => (SHELF_H_ ??= SHELVES.map(([x, z]) => slope(x, z)));
 /** The tracks, each from shelf to shelf, graded straight between their heights: from each base to its three heights, and from each height down its own traverse to the hollow. */
 const TRACKS = [
   [[0, BASE_Z], [45, 440], [-45, 385], [30, 320], at('C')],
@@ -107,7 +109,9 @@ const RAIL = Array.from({ length: 29 }, (_, i) => [railX(-560 + i * 40), -560 + 
 /** How far along each track (m) its corners are. */
 const TRACK_S = TRACKS.map((t) => t.reduce((s: number[], p, i) => (i ? [...s, s[i - 1] + Math.hypot(p[0] - t[i - 1][0], p[1] - t[i - 1][1])] : [0]), []));
 const nearestShelf = ([x, z]: number[]) => SHELVES.reduce((b, s, i) => (Math.hypot(s[0] - x, s[1] - z) < Math.hypot(SHELVES[b][0] - x, SHELVES[b][1] - z) ? i : b), 0);
-const TRACK_H = TRACKS.map((t) => [SHELF_H[nearestShelf(t[0])], SHELF_H[nearestShelf(t[t.length - 1])]]);
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let TRACK_H_: number[][] | undefined;
+const trackH = () => (TRACK_H_ ??= TRACKS.map((t) => [shelfH()[nearestShelf(t[0])], shelfH()[nearestShelf(t[t.length - 1])]]));
 /** The tracks’ boxes (padded), so a point far from a track skips it. */
 const TRACK_BOX = TRACKS.map((t) => [Math.min(...t.map((p) => p[0])) - 32, Math.max(...t.map((p) => p[0])) + 32, Math.min(...t.map((p) => p[1])) - 32, Math.max(...t.map((p) => p[1])) + 32]);
 const EXT = { x: 520, z: 580 };
@@ -122,11 +126,11 @@ const onRoad = (x: number, z: number) => trackD(x, z) < 3.2;
 /** The ground before the lake: the hills, the shelves, the graded tracks (sampled once: it is dear). */
 const ground = gridCacheSmooth((x: number, z: number) => {
   let h = slope(x, z);
-  SHELVES.forEach(([sx, sz, r], i) => { h += (SHELF_H[i] - h) * smoothstep(r + 26, r, Math.hypot(x - sx, z - sz)); });
+  SHELVES.forEach(([sx, sz, r], i) => { h += (shelfH()[i] - h) * smoothstep(r + 26, r, Math.hypot(x - sx, z - sz)); });
   TRACKS.forEach((t, i) => {
     const b = TRACK_BOX[i]; if (x < b[0] || x > b[1] || z < b[2] || z > b[3]) return;
     // the legs as near as the nearest vote their own grade (shared on a hairpin’s bisector): no step where two legs meet; past its ends a track is the shelf’s
-    const [h0, h1] = TRACK_H[i], S = TRACK_S[i], L = S[S.length - 1], D: number[] = [], G: number[] = [];
+    const [h0, h1] = trackH()[i], S = TRACK_S[i], L = S[S.length - 1], D: number[] = [], G: number[] = [];
     let W = 0, H = 0, dmin = Infinity;
     for (let j = 0; j < t.length - 1; j++) {
       const [ax, az] = t[j], [bx, bz] = t[j + 1], l = S[j + 1] - S[j];

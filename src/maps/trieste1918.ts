@@ -100,10 +100,12 @@ const ROADS = [
   [[10, QUAY - 150], [60, QUAY - 400], [-130, QUAY - 500], [70, QUAY - 600], [-80, QUAY - 700], [0, -860]],
   [[310, QUAY - 20], [300, QUAY - 180], [SAN_GIUSTO.x, SAN_GIUSTO.z], [340, QUAY - 470], [210, QUAY - 590], [340, QUAY - 710], [300, -860]],
 ];
-const ROAD_H = ROADS.map((r) => r.map(([x, z]) => land(x, z)));
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let ROAD_H_: number[][] | undefined;
+const roadH = () => (ROAD_H_ ??= ROADS.map((r) => r.map(([x, z]) => land(x, z))));
 const roadD = (x: number, z: number) => {
   let best = { d: Infinity, h: 0 };
-  ROADS.forEach((r, i) => { const g = graded(r, ROAD_H[i], x, z); if (g.d < best.d) best = g; });
+  ROADS.forEach((r, i) => { const g = graded(r, roadH()[i], x, z); if (g.d < best.d) best = g; });
   return best;
 };
 const inCanal = (x: number, z: number) => x > CANAL[0] && x < CANAL[1] && QUAY - z >= 0 && QUAY - z < CANAL_LEN;

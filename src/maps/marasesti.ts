@@ -132,16 +132,22 @@ const trenchZ = (x: number, north: boolean) => (north ? TRENCH + 9 * Math.sin(x 
 const trenchBand = (x: number, z: number) => Math.abs(z - trenchZ(x, z > 0)) < 28;
 
 // the vineyards on the hillsides west: as many on each half, each its own place [x, z, yaw]
-const VINES: number[][] = [];
-for (const s of [1, -1]) {
-  const r = mulberry32(SEED + (s > 0 ? 11 : 29));
-  for (let i = 0, n = 0; n < 8 && i < 400; i++) {
-    const x = -470 + r() * 330, z = s * (160 + r() * 280);
-    if (roadD(x, z) < 22 || railD(x, z) < 22 || airD(x, z) < 30 || razK(x, z) > 0 || points.some((p) => Math.hypot(p.x - x, p.z - z) < 60) || VINES.some(([vx, vz]) => Math.hypot(vx - x, vz - z) < 60)) continue;
-    VINES.push([x, z, (r() - 0.5) * 0.6]); n++;
+// (placed on first use, not at import: roadD/railD fill their grids, which every map's load would pay for)
+let VINES_: number[][] | null = null;
+const vines = () => {
+  if (VINES_) return VINES_;
+  const VINES: number[][] = (VINES_ = []);
+  for (const s of [1, -1]) {
+    const r = mulberry32(SEED + (s > 0 ? 11 : 29));
+    for (let i = 0, n = 0; n < 8 && i < 400; i++) {
+      const x = -470 + r() * 330, z = s * (160 + r() * 280);
+      if (roadD(x, z) < 22 || railD(x, z) < 22 || airD(x, z) < 30 || razK(x, z) > 0 || points.some((p) => Math.hypot(p.x - x, p.z - z) < 60) || VINES.some(([vx, vz]) => Math.hypot(vx - x, vz - z) < 60)) continue;
+      VINES.push([x, z, (r() - 0.5) * 0.6]); n++;
+    }
   }
-}
-const vineD = (x: number, z: number) => Math.min(...VINES.map(([vx, vz]) => Math.max(Math.abs(x - vx) - 20, Math.abs(z - vz) - 16)));
+  return VINES;
+};
+const vineD = (x: number, z: number) => Math.min(...vines().map(([vx, vz]) => Math.max(Math.abs(x - vx) - 20, Math.abs(z - vz) - 16)));
 
 const layout = [{ unit: 'rifles', x: 10, z: BASE_Z - 24, name: '1st Section' }];
 
@@ -260,7 +266,7 @@ export default {
     props.sandbagRing({ x: xAt(SIRET, 0) - 40, z: -18, radius: 4, toward: -1 });
 
     // the vineyards: rows of vines on their stakes (visual), an arbour hut at each
-    for (const [vx, vz, yaw] of VINES) {
+    for (const [vx, vz, yaw] of vines()) {
       const c = Math.cos(yaw), s = Math.sin(yaw);
       for (let k = -14; k <= 14; k += 2.4) {
         const x = vx + s * k, z = vz + c * k, y = terrain.heightAt(x, z);

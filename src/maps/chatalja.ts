@@ -111,15 +111,17 @@ const slope = gridCacheSmooth((x: number, z: number) => {
 // the shelves the points and bases stand on, the pairs levelled alike (B/H, C/I, D/J, E/G)
 const SHELVES = [[-20, BASE_Z, 34], [-20, -BASE_Z, 34], ...points.filter((p) => !p.owner).map((p) => [p.x, p.z, p.id === 'F' ? 40 : 22])];
 const PAIRS: Record<string, string> = { B: 'H', H: 'B', C: 'I', I: 'C', D: 'J', J: 'D', E: 'G', G: 'E' };
-const SHELF_H = SHELVES.map(([x, z], i) => {
+// (worked out on first use, not at import: every map is imported at start, and this samples a cached grid)
+let SHELF_H_: number[] | undefined;
+const shelfH = () => (SHELF_H_ ??= SHELVES.map(([x, z], i) => {
   if (i < 2) return (slope(-20, BASE_Z) + slope(-20, -BASE_Z)) / 2;
   const p = points.filter((q) => !q.owner)[i - 2], q = PAIRS[p.id] && at(PAIRS[p.id]);
   const s = q ? (slope(x, z) + slope(q.x, q.z)) / 2 : slope(x, z);
   return Math.max(s, 1.4);
-});
+}));
 const ground = gridCacheSmooth((x: number, z: number) => {
   let h = slope(x, z);
-  SHELVES.forEach(([sx, sz, r], i) => { h += (SHELF_H[i] - h) * smoothstep(r + 26, r, Math.hypot(x - sx, z - sz)); });
+  SHELVES.forEach(([sx, sz, r], i) => { h += (shelfH()[i] - h) * smoothstep(r + 26, r, Math.hypot(x - sx, z - sz)); });
   return h;
 }, EXT, 2);
 
