@@ -1073,10 +1073,17 @@ export class UnitStack {
     const w = this.world.river?.water;
     if (w) {
       // deep water is a wall — but never a trap: going shallower is always allowed
-      const depth = w.level - this.world.terrain.heightAt(u.pos.x, u.pos.z);
-      if (depth > w.deep && depth > w.level - this.world.terrain.heightAt(px, pz) - 0.01) {
+      const T = this.world.terrain;
+      const depth = w.level - T.heightAt(u.pos.x, u.pos.z);
+      const was = w.level - T.heightAt(px, pz);
+      if (depth > w.deep && depth > was - 0.01) {
+        // refused — and a man jostled out there whose way runs along the edge would stand there for good (every step
+        // he wants is no shallower): he goes up the bed instead, as far as the step, out of it
+        const len = Math.hypot(u.pos.x - px, u.pos.z - pz), e = 0.3;
+        const gx = T.heightAt(px + e, pz) - T.heightAt(px - e, pz), gz = T.heightAt(px, pz + e) - T.heightAt(px, pz - e), g = Math.hypot(gx, gz);
         u.pos.x = px;
         u.pos.z = pz;
+        if (g > 1e-6 && w.level - T.heightAt(px + (gx / g) * len, pz + (gz / g) * len) < was) { u.pos.x += (gx / g) * len; u.pos.z += (gz / g) * len; }
         u.vel.multiplyScalar(0.3);
       }
     }

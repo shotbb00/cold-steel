@@ -6,7 +6,7 @@
 //            close off the beach; its engineers blow the tank traps on the shingle and across the draw's mouth
 //            so the armour can get off the sand
 //   defence  holds (no offensives); when a sector falls, its reserves go to the village up that draw
-import { FrontlineDirector } from './FrontlineDirector.js';
+import { FrontlineDirector, fighter, strength, ASSAULT } from './FrontlineDirector.js';
 import { getUnitType, UNIT_TYPES } from '../data/units/index.js';
 import { unitCost } from '../data/doctrine.js';
 import { enemyOf, armyHas } from '../data/factions.js';
@@ -20,6 +20,9 @@ const INSHORE = 395;        // z (from the sea's side) the destroyers lie at: a 
 const WAVES_THROUGH = 150; // s: the destroyers wait in the offing till the first waves are through the lanes
 const CLEAR_WAIT = 150;     // s for an engineer job before it's given again (under fire on the sand it takes a while)
 const RESERVE = 2;          // defence: stacks sent to the village behind a fallen sector
+const GARRISON = 2;         // landing: squads left holding a quiet village it has taken
+const KEEP = 2;             // landing: free squads kept back for the next operation (the rest go in behind the running assault)
+const REGROUP = 30;         // landing: s between one offensive ending and the next (the frontline AI's lull is 90-150 s: with the clock running it stood idle on the beach)
 
 export class LandingDirector extends FrontlineDirector {
   constructor(game, faction, state, opts = {}) {
@@ -36,6 +39,29 @@ export class LandingDirector extends FrontlineDirector {
     super.update(dt);
     if (!due) return;
     if (this.lands) { this.pickFocus(); this.ships(); this.sweep(); this.engineers(); this.stayInshore(); } else this.reserves();
+  }
+
+  /**
+   * The landing's offensives, and its reserve sent in: the frontline AI sends a group just big enough for the target and one
+   * fresh squad every 50 s, the rest of the army standing about on the sand (at the stack cap, so the CP piled up unspent too).
+   * Every idle fighter beyond KEEP squads goes in behind the nearest running assault; with none running, the next one comes soon.
+   */
+  offensive() {
+    super.offensive();
+    if (!this.lands) return;
+    const idle = this.myStacks().filter((s) => this.free(s) && fighter(s) && !this.baseOfFire(s) && !s.moveTarget && !s.cargo);
+    const going = this.ops.filter((o) => o.phase === 'assault');
+    if (!this.ops.length) this.nextOffensive = Math.min(this.nextOffensive, this.now + REGROUP * this.tempo);
+    if (!going.length) return;
+    let keep = KEEP;
+    for (const s of idle) {
+      if (keep > 0 && ASSAULT.has(s.type.id)) { keep--; continue; }
+      const op = going.reduce((a, o) => (Math.hypot(o.plan.target.x - s.centroid.x, o.plan.target.z - s.centroid.z) < Math.hypot(a.plan.target.x - s.centroid.x, a.plan.target.z - s.centroid.z) ? o : a));
+      this.roles.set(s, { role: 'strike', point: op.plan.target, op });
+      op.plan.group.push(s);
+      op.plan.startStrength += strength(s);
+      this.goIn(s, op.plan.target);
+    }
   }
 
   /** The destroyers stay on their stations until they sink (pulled out to mend, they'd go back out through the mines). */
@@ -68,13 +94,18 @@ export class LandingDirector extends FrontlineDirector {
    * The landing leaves nobody sitting on the beach (the defence doesn't counter-attack it): every squad for the assault.
    * Only the villages inland (what it wins by holding) keep whoever took them. FrontlineDirector.garrison() is also what
    * frees a consolidated assault's men and a probe whose time is up — skipped, they'd sit on the sand for the rest of the battle.
+   * A quiet village keeps GARRISON of them (every squad of the assault that took it stayed: 9 of 26 stacks sat in one village).
    */
   garrison() {
     if (!this.lands) return super.garrison();
-    const inland = new Set(this.game.map.points.map((q) => q.opens).filter(Boolean));
+    const inland = new Set(this.game.map.points.map((q) => q.opens).filter(Boolean)), kept = new Map();
     for (const [s, r] of this.roles) {
       if (r.role === 'probe' && this.now > r.until) this.roles.delete(s);
       else if (r.role === 'garrison' && (!inland.has(r.point.id) || (r.point.owner !== this.faction && !r.point.contested))) this.roles.delete(s);
+      else if (r.role === 'garrison') {
+        kept.set(r.point, (kept.get(r.point) ?? 0) + 1);
+        if (kept.get(r.point) > GARRISON && !r.point.contested) this.roles.delete(s);
+      }
     }
   }
 
