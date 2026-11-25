@@ -1,18 +1,21 @@
 // Trieste and the Karst, November 1805 (hypothetical): after Caldiero Archduke Charles drew the Army of Italy back
 // through Friuli to defend Vienna, and Masséna’s advance guard took Trieste without a fight on 13 November. Here it
 // is fought for: an Austrian rearguard holds the port and the Karst above it against the French coming over the
-// plateau from the Isonzo. The ground, compressed: the Gulf of Trieste along the west edge (−x), the town on its
-// narrow shore strip under the Karst edge — the port with its moles, the old town under the hill of San Giusto,
-// castle and cathedral on top; the coast road along the water from Barcola to Servola. Behind the town the edge rises
-// steeply onto the limestone plateau, where the villages stand among dry-stone walls, dolines (the round sinkholes),
-// scrub oak, black pine and the sumac turned red. The French come from the north-west (+z: the plateau road from
-// Prosecco), the Austrians from the south-east (−z: the road to Fiume). Two roads climb the edge from the town in
-// hairpins — the Strada Nuova to Opicina and the road to Basovizza — and a serpentine from each shore village.
-// Fair, not mirrored: the gulf, the shore strip and the edge run the whole length; the port and San Giusto’s castle
-// over it are in the middle, as is Banne on the plateau. Each side has a shore village with its own serpentine
-// (Barcola, Servola), a plateau village at the head of a road up from the town (Opicina, Basovizza) and a hill on the
-// east flank (Monrupino with its walled church, Lipizza under Monte Cocusso), each as far from its own base, as high.
-// The dolines and walls are each half’s own dice, the same number on each.
+// plateau from the Isonzo. The ground, compressed and turned so the bay sits in the south-west corner of the field:
+// the Gulf of Trieste and the bay of Muggia fill that corner, the shore an arc round it, and the Karst edge follows the
+// arc behind the town, so it runs across the field from the west flank round to the south edge — the amphitheatre
+// Trieste sits in. On the narrow shore strip under it the port with its moles in the middle, the old town under the
+// hill of San Giusto with the castle and cathedral on top; Barcola up the coast toward Miramare, Servola down it toward
+// Muggia, the coast road along the water. Above the edge the limestone plateau fills the rest of the field: the
+// villages among dry-stone walls, dolines (the round sinkholes), scrub oak, black pine and the sumac turned red, and
+// Monte Cocusso, the plateau’s summit, over Lipizza in the south-east. The French come down the plateau road from
+// Prosecco in the north (+z), the Austrians up the road from Fiume in the south-east (−z), both on top of the edge.
+// Two roads climb it from the port on long slants, the Strada Nuova to Opicina and the road to Basovizza.
+// Fair, not mirrored, by distance: the port and San Giusto are as far from both bases, as is Banne; each side has a
+// shore village on the coast road (Barcola, Servola), a plateau village at the head of a road up from the town
+// (Opicina, Basovizza) and a height on the east (Monrupino with its walled church, Lipizza under Monte Cocusso), each
+// as far from its own base as its counterpart; the plateau’s top heights — the ribs, Monrupino, Cocusso — fall evenly
+// on the two halves. The dolines and walls are each half’s own dice, the same number on each.
 import * as THREE from 'three';
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -28,39 +31,48 @@ import type { MapDef, ControlPointDef } from '../types.ts';
 const BOUNDS = { x: 500, z: 560 };
 const EXT = { x: 520, z: 580 };
 const BASE_Z = 470;
+const NATO = { x: 150, z: BASE_Z }, PACT = { x: 375, z: -BASE_Z };
 const EDGE = 100;                                                                // the Karst edge’s height over the shore
 const noise = createNoise2D(1805_1113);
-/** The gulf’s waterline down the west edge, bowed inland at the town; inland distance from it. */
-const shoreX = (z) => -400 + 160 * Math.exp(-(((z + 10) / 230) ** 2)) + 6 * Math.sin(z * 0.013 + 0.7);
-const inland = (x, z) => x - shoreX(z);
+/** The bay: the gulf fills the south-west corner of the field, its shore an arc round the corner (C0) — the waterline
+ *  `R(θ)` from it by bearing, bowed inland at the port; inland distance from the water. */
+const C0 = { x: -500, z: -560 };
+const TH_PORT = 0.94;
+const R = (th) => 520 + 26 * Math.exp(-(((th - TH_PORT) / 0.15) ** 2)) + 9 * Math.sin(th * 7 + 0.7);
+const bearing = (x, z) => Math.atan2(z - C0.z, x - C0.x);
+const inland = (x, z) => Math.hypot(x - C0.x, z - C0.z) - R(bearing(x, z));
+/** The point `inl` m inland of the water at bearing `th` (and its x, z rounded, for the points). */
+const polar = (inl, th) => [C0.x + (R(th) + inl) * Math.cos(th), C0.z + (R(th) + inl) * Math.sin(th)];
+const PZ = (inl, th) => polar(inl, th).map(Math.round);
 /** 0..1 up the edge: the shore strip (0) to the plateau (1). */
 const edgeK = (x, z) => smoothstep(90, 230, inland(x, z));
 
 const POINTS: ControlPointDef[] = [
-  { id: 'A', name: 'Prosecco road', x: 0, z: 470, owner: 'nato', sector: 'centre' },
-  { id: 'B', name: 'Barcola', x: -335, z: 280, owner: null, sector: 'west' },
-  { id: 'C', name: 'Opicina', x: -55, z: 250, owner: null, sector: 'centre', radius: 26 },
-  { id: 'D', name: 'Monrupino', x: 320, z: 290, owner: null, sector: 'east' },
-  { id: 'E', name: 'Trieste harbour', x: -205, z: 10, owner: null, sector: 'west', radius: 30 },
-  { id: 'F', name: 'San Giusto', x: -140, z: -25, owner: null, sector: 'centre', radius: 24 },
-  { id: 'G', name: 'Banne', x: 300, z: -10, owner: null, sector: 'east' },
-  { id: 'H', name: 'Servola', x: -325, z: -270, owner: null, sector: 'west' },
-  { id: 'I', name: 'Basovizza', x: -30, z: -255, owner: null, sector: 'centre', radius: 26 },
-  { id: 'J', name: 'Lipizza', x: 335, z: -280, owner: null, sector: 'east' },
-  { id: 'K', name: 'Fiume road', x: 0, z: -470, owner: 'pact', sector: 'centre' },
+  { id: 'A', name: 'Prosecco road', x: NATO.x, z: NATO.z, owner: 'nato', sector: 'centre' },
+  { id: 'B', name: 'Barcola', x: PZ(40, 1.42)[0], z: PZ(40, 1.42)[1], owner: null, sector: 'west' },
+  { id: 'C', name: 'Opicina', x: -200, z: 230, owner: null, sector: 'centre', radius: 26 },
+  { id: 'D', name: 'Monrupino', x: 230, z: 300, owner: null, sector: 'east' },
+  { id: 'E', name: 'Trieste harbour', x: PZ(28, TH_PORT)[0], z: PZ(28, TH_PORT)[1], owner: null, sector: 'west', radius: 30 },
+  { id: 'F', name: 'San Giusto', x: PZ(92, 0.84)[0], z: PZ(92, 0.84)[1], owner: null, sector: 'centre', radius: 24 },
+  { id: 'G', name: 'Banne', x: 270, z: 40, owner: null, sector: 'east' },
+  { id: 'H', name: 'Servola', x: PZ(40, 0.4)[0], z: PZ(40, 0.4)[1], owner: null, sector: 'west' },
+  { id: 'I', name: 'Basovizza', x: 180, z: -200, owner: null, sector: 'centre', radius: 26 },
+  { id: 'J', name: 'Lipizza', x: 390, z: -250, owner: null, sector: 'east' },
+  { id: 'K', name: 'Fiume road', x: PACT.x, z: PACT.z, owner: 'pact', sector: 'centre' },
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 const at = (id) => [P[id].x, P[id].z];
+const nearBase = (x, z, r) => Math.hypot(x - NATO.x, z - NATO.z) < r || Math.hypot(x - PACT.x, z - PACT.z) < r;
 
-/** The hills [x, z, r, h]: San Giusto’s over the town, Monrupino’s, Monte Cocusso’s over Lipizza. */
-const HILLS = [[P.F.x - 10, P.F.z, 85, 22], [P.D.x + 20, P.D.z + 10, 95, 22], [P.J.x + 25, P.J.z - 15, 95, 22]];
+/** The hills [x, z, r, h]: San Giusto’s over the town, Monrupino’s, Monte Cocusso’s over Lipizza (the highest). */
+const HILLS = [[P.F.x + 6, P.F.z + 6, 85, 22], [P.D.x + 20, P.D.z + 10, 95, 16], [P.J.x + 40, P.J.z - 80, 165, 44]];
 /** The dolines [x, z, r]: the same number on each half, each half from its own seed, clear of the points and the roads’ lines. */
 const DOLINES: number[][] = [];
 for (const s of [1, -1]) {
   const r = mulberry32(s > 0 ? 1805_71 : 1805_79);
   for (let i = 0, n = 0; i < 4000 && n < 12; i++) {
-    const x = -120 + r() * 600, z = s * (60 + r() * 440), rad = 16 + r() * 14;
-    if (inland(x, z) < 260 || POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < 60) || DOLINES.some(([dx, dz, dr]) => Math.hypot(dx - x, dz - z) < dr + rad + 30) || Math.abs(x) < 50 && Math.abs(Math.abs(z) - BASE_Z) < 60) continue;
+    const x = (r() * 2 - 1) * 470, z = s * (60 + r() * 440), rad = 16 + r() * 14;
+    if (inland(x, z) < 260 || POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < 60) || DOLINES.some(([dx, dz, dr]) => Math.hypot(dx - x, dz - z) < dr + rad + 30) || nearBase(x, z, 70)) continue;
     DOLINES.push([x, z, rad]); n++;
   }
 }
@@ -78,27 +90,29 @@ function ground(x, z) {
   if (inl < 14) h += (0.4 + inl * 0.05 - h) * (1 - smoothstep(6, 14, inl));                       // the quays and the shingle
   for (const [hx, hz, hr, hh] of HILLS) { const d = Math.hypot(x - hx, z - hz); if (d < hr) h += hh * smoothstep(hr, 0, d) ** 1.3; }
   for (const [dx, dz, dr] of DOLINES) { if (Math.abs(x - dx) > dr || Math.abs(z - dz) > dr) continue; const d = Math.hypot(x - dx, z - dz); if (d < dr) h -= 6 * smoothstep(dr, 0, d) ** 1.4; }
-  for (const bz of [BASE_Z, -BASE_Z]) { const b = Math.hypot(x, z - bz); if (b < 40) h += (EDGE + 4 - h) * smoothstep(40, 22, b); }
+  for (const b of [NATO, PACT]) { const d = Math.hypot(x - b.x, z - b.z); if (d < 40) h += (EDGE + 4 - h) * smoothstep(40, 22, d); }
   return h;
 }
 
-/** A serpentine: legs along z at the given x’s, between z0 and z1, turning at each end. */
-const serp = (from, xs, z0, z1, to) => [from, ...xs.flatMap((x, i) => (i % 2 ? [[x, z1], [x, z0]] : [[x, z0], [x, z1]])), to];
-const COAST = Array.from({ length: 49 }, (_, i) => -600 + i * 25).map((z) => [shoreX(z) + 22, z]);
+/** A road up the edge in two long slanting legs and one hairpin, as the Strada Nuova climbs: from `from` out to bearing
+ *  `thTurn` halfway up, then back to `thTop` at the top. */
+const ramp = (from, thFrom, thTurn, thTop, to) => [from, ...Array.from({ length: 13 }, (_, i) => polar(34 + 116 * (i / 12), thFrom + (thTurn - thFrom) * (i / 12))),
+  ...Array.from({ length: 12 }, (_, i) => polar(150 + 98 * ((i + 1) / 12), thTurn + (thTop - thTurn) * ((i + 1) / 12))), to];
+const COAST = Array.from({ length: 60 }, (_, i) => -0.08 + i * 0.03).map((th) => polar(22, th));
 /** The roads: [polyline, serpentine?] (each graded below). */
 const ROAD_DEFS: [number[][], boolean][] = [
   [COAST, false],
-  [serp(at('E'), [-178, -143, -108, -73], 55, 175, at('C')), true],                                  // the Strada Nuova to Opicina
-  [serp(at('E'), [-172, -137, -102, -67], -60, -180, at('I')), true],                                // the road to Basovizza
-  [serp(at('B'), [-300, -262, -224, -186, -148], 300, 410, [-110, 330]), true],                      // Barcola’s serpentine
-  [serp(at('H'), [-290, -252, -214, -176, -138], -290, -400, [-100, -320]), true],                   // Servola’s
-  [[at('E'), [-196, -40], [-168, -62], [-150, -45], at('F')], false],                                                          // up to San Giusto
-  [[[0, 600], [0, BASE_Z], [-20, 380], at('C'), [-110, 330]], false],
-  [[[0, -600], [0, -BASE_Z], [-10, -380], at('I'), [-100, -320]], false],
-  [[at('C'), [130, 270], at('D'), [600, 300]], false],
-  [[at('I'), [150, -270], at('J'), [600, -285]], false],
-  [[at('C'), [120, 140], at('G'), [130, -140], at('I')], false],
-  [[at('G'), [600, -15]], false],
+  [ramp(at('E'), 0.96, 1.38, 0.99, [-60, 130]), false],                                            // the Strada Nuova up to Opicina
+  [ramp(at('E'), 0.9, 0.5, 0.87, [10, 70]), false],                                             // the road to Basovizza
+  [[at('E'), polar(60, 0.9), polar(80, 0.86), at('F')], false],                                   // up to San Giusto
+  [[[NATO.x, 600], [NATO.x, NATO.z], [-40, 330], at('C')], false],
+  [[[PACT.x, -600], [PACT.x, PACT.z], [270, -330], at('I')], false],
+  [[at('C'), [0, 250], at('D'), [600, 310]], false],
+  [[at('J'), [600, -240]], false],
+  [[at('I'), [290, -215], at('J')], false],
+  [[at('C'), [-60, 130], [10, 70], at('G'), [230, -80], at('I')], false],
+  [[[10, 70], [100, -60], at('I')], false],
+  [[at('G'), [600, 30]], false],
 ];
 /** Each road resampled every 4 m, its height the ground’s as closely as a grade of 0.24 allows, smoothed (as cattaro.ts). */
 const STARTS: number[][] = [];                                                 // (where each corner falls in its resampled road)
@@ -131,18 +145,18 @@ const roadD = gridCache((x, z) => (roadNear(x, z) > 20 ? 99 : roadExact(x, z)), 
 /** The land with the roads benched in, sampled once every 2 m. */
 const land = gridCacheSmooth((x, z) => {
   let h = ground(x, z);
-  if (roadNear(x, z) > 20) return h;
-  let best = { d: 13, h: 0 };
+  if (roadNear(x, z) > 24) return h;
+  let best = { d: 16, h: 0 };
   ROAD0.forEach((r0, i) => {
     for (let j = 0; j < r0.length - 1; j++) { // (only the corners' stretches within reach: the resampled road there)
       const [ax, az] = r0[j], [bx, bz] = r0[j + 1];
-      if (x < Math.min(ax, bx) - 14 || x > Math.max(ax, bx) + 14 || z < Math.min(az, bz) - 14 || z > Math.max(az, bz) + 14) continue;
+      if (x < Math.min(ax, bx) - 17 || x > Math.max(ax, bx) + 17 || z < Math.min(az, bz) - 17 || z > Math.max(az, bz) + 17) continue;
       const a = STARTS[i][j], b = STARTS[i][j + 1] + 1;
       const g = graded(ROADS[i].slice(a, b), HS[i].slice(a, b), x, z);
       if (g.d < best.d) best = g;
     }
   });
-  if (best.d < 13) h += (best.h - h) * smoothstep(13, 5, best.d);
+  if (best.d < 16) h += (best.h - h) * smoothstep(16, 7.5, best.d);                    // (a wide bench: wheels need room on the hairpins)
   return h;
 }, EXT, 2);
 function height(x, z) {
@@ -173,11 +187,11 @@ const woods = gridCache((x, z) => {
   let k = ek * (1 - ek) * 4 * 0.7 * smoothstep(-0.3, 0.1, fbm(noise, x * 0.01 + 4, z * 0.01 - 9, 2));
   k = Math.max(k, smoothstep(0.5, 0.68, fbm(noise, x * 0.007 - 20, z * 0.007 + 3, 3)) * 0.75 * ek);
   for (const p of POINTS) k = Math.min(k, smoothstep(34, 60, Math.hypot(x - p.x, z - p.z)));
-  return Math.min(k, smoothstep(5, 12, roadD(x, z)));
+  return Math.min(k, smoothstep(8, 14, roadD(x, z)));
 }, EXT, 4);
-const inTown = (x, z) => inland(x, z) > 14 && inland(x, z) < 95 && Math.abs(z) < 120;
+const inTown = (x, z) => inland(x, z) > 14 && inland(x, z) < 95 && Math.abs(bearing(x, z) - TH_PORT) < 0.21;
 
-const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1re Compagnie' }];
+const layout = [{ unit: 'rifles', x: NATO.x, z: BASE_Z - 24, name: '1re Compagnie' }];
 
 export default {
   id: 'trieste-1805',
@@ -192,7 +206,7 @@ export default {
   segments: 640,
   bounds: BOUNDS,
   seed: 180511,
-  steep: 0.5, // (wheels keep to the serpentines up the edge; men climb anywhere)
+  steep: 0.5, // (wheels keep to the roads slanting up the edge; men climb anywhere)
   overwatch: true,
   height,
   river: water,
@@ -248,14 +262,14 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: BASE_Z, entries: [-60, 0, 60] }, pact: { x: 0, z: -BASE_Z, entries: [-60, 0, 60] } },
+  bases: { nato: { x: NATO.x, z: BASE_Z, entries: [-60, 0, 60] }, pact: { x: PACT.x, z: -BASE_Z, entries: [-60, 0, 60] } },
   maxStacks: 26,
-  cameraStart: { nato: { x: -60, z: 360 }, pact: { x: -60, z: -360 } },
+  cameraStart: { nato: { x: NATO.x - 60, z: 360 }, pact: { x: PACT.x - 60, z: -360 } },
   points: POINTS,
 
   spawns: {
     nato: layout.map((s) => ({ ...s, facing: Math.PI })),
-    pact: layout.map((s) => ({ ...s, x: -s.x, z: -s.z, facing: 0, name: '1. Kompanie' })),
+    pact: layout.map((s) => ({ ...s, x: PACT.x, z: -s.z, facing: 0, name: '1. Kompanie' })),
   },
 
   decorate({ scene, terrain, cover, rand, bounds }) {
@@ -263,12 +277,12 @@ export default {
     const nearPoint = (x, z, r) => POINTS.some((p) => Math.hypot(p.x - x, p.z - z) < r);
     const steepAt = (x, z) => Math.hypot(terrain.heightAt(x + 2, z) - terrain.heightAt(x - 2, z), terrain.heightAt(x, z + 2) - terrain.heightAt(x, z - 2)) / 4;
     const taken: number[][] = [];
-    const free = (x, z, r = 14) => roadD(x, z) > 8 && inland(x, z) > 12 && steepAt(x, z) < 0.35 && !taken.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < r);
+    const free = (x, z, r = 14) => roadD(x, z) > 12 && inland(x, z) > 12 && steepAt(x, z) < 0.35 && !taken.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < r);
     const STONE = 0xc4bca8;
 
     // ---- San Giusto: the castle’s walls round its court on the hilltop, the round bastion, the cathedral beside it
     props.rand = mulberry32(1805_1101);
-    const C = { x: P.F.x - 14, z: P.F.z - 6 }, g0 = terrain.heightAt(C.x, C.z);
+    const C = { x: P.F.x - 34, z: P.F.z - 12 }, g0 = terrain.heightAt(C.x, C.z);
     for (const [dx, dz, yaw] of [[0, -13, 0], [0, 13, 0], [-13, 0, Math.PI / 2], [13, 0, Math.PI / 2]] as const) {
       props.box('stone', C.x + dx, g0 + 2.5, C.z + dz, 28, 6.5, 3.5, yaw, STONE);
       props.cover.addBox({ x: C.x + dx, z: C.z + dz, yaw, length: 28, thickness: 3.5, height: 5.5 });
@@ -281,24 +295,25 @@ export default {
     // ---- the town on the strip: the old town under the hill, the Theresian quarter by the port; the moles into the gulf
     const rr = mulberry32(1805_1102);
     for (let i = 0, n = 0; i < 1400 && n < 80; i++) {
-      const z = (rr() * 2 - 1) * 125, x = shoreX(z) + 22 + rr() * 85;
+      const th = TH_PORT + (rr() * 2 - 1) * 0.22, [x, z] = polar(22 + rr() * 85, th);
       if (!inTown(x, z) || !free(x, z, 13) || Math.hypot(x - P.E.x, z - P.E.z) < 16 || steepAt(x, z) > 0.3) continue;
       taken.push([x, z]); n++;
       props.rand = mulberry32(Math.floor(rr() * 1e9));
-      props.townHouse({ x, z, yaw: (rr() < 0.6 ? Math.PI / 2 : 0) + (rr() - 0.5) * 0.1, width: 7 + rr() * 3, depth: 8 + rr() * 2, storeys: rr() < 0.5 ? 3 : 2, damaged: 0 });
+      props.townHouse({ x, z, yaw: -th + (rr() < 0.6 ? Math.PI / 2 : 0) + (rr() - 0.5) * 0.1, width: 7 + rr() * 3, depth: 8 + rr() * 2, storeys: rr() < 0.5 ? 3 : 2, damaged: 0 });
     }
     props.rand = mulberry32(1805_1103);
-    props.church({ x: P.E.x + 34, z: P.E.z + 42, yaw: Math.PI / 2 });                             // (Sant’Antonio)
-    taken.push([P.E.x + 34, P.E.z + 42]);
-    for (const mz of [-60, 40, 95]) {                                                              // the moles: stone piers out into the gulf
-      const x0 = shoreX(mz) + 4;
-      props.box('stone', x0 - 30, 0.2, mz, 64, 1.8, 9, 0, 0xa8a294);
-      props.box('stone', x0 - 62, 1.6, mz, 3, 1.2, 3, 0, 0x8a8478);                               // (a bollard at its head)
+    const [sx, sz] = polar(76, TH_PORT - 0.03);
+    props.church({ x: sx, z: sz, yaw: -TH_PORT });                                                  // (Sant’Antonio)
+    taken.push([sx, sz]);
+    for (const th of [TH_PORT - 0.11, TH_PORT + 0.04, TH_PORT + 0.14]) {                           // the moles: stone piers out into the gulf
+      const [mx, mz] = polar(-26, th), [bx, bz] = polar(-58, th);
+      props.box('stone', mx, 0.2, mz, 64, 1.8, 9, -th, 0xa8a294);
+      props.box('stone', bx, 1.6, bz, 3, 1.2, 3, -th, 0x8a8478);                                   // (a bollard at its head)
     }
-    for (const [mz, len] of [[-20, 16], [70, 14]] as const) {                                       // two trabaccoli moored by the quay
-      const x0 = shoreX(mz) - 10;
-      props.box('wood', x0, 0.4, mz, 4.2, 1.6, len, 0, 0x5a4432);
-      props.box('wood', x0, 6, mz, 0.4, 10, 0.4, 0, 0x4a3a2a);
+    for (const [th, len] of [[TH_PORT - 0.04, 16], [TH_PORT + 0.09, 14]] as const) {                 // two trabaccoli moored by the quay
+      const [bx, bz] = polar(-10, th);
+      props.box('wood', bx, 0.4, bz, 4.2, 1.6, len, -th, 0x5a4432);
+      props.box('wood', bx, 6, bz, 0.4, 10, 0.4, -th, 0x4a3a2a);
     }
 
     // ---- Monrupino: the Tabor, the church inside its fortified wall on the hilltop
@@ -326,14 +341,14 @@ export default {
         props.house({ x, z, yaw: Math.round(a / (Math.PI / 2)) * (Math.PI / 2), width: 8 + r() * 3, depth: 6 + r() * 2, height: 3.4 });
       }
     }
-    for (const p of POINTS) if ('BH'.includes(p.id)) buildVillage(props, p, 18051 + Math.round(p.x * 3 + p.z * 7));
+    for (const [p, th] of [[P.B, 1.27], [P.H, 0.47]] as const) { const [vx, vz] = polar(52, th); buildVillage(props, { x: vx, z: vz }, 18051 + Math.round(p.x * 3 + p.z * 7)); } // (inland of the coast road)
 
     // ---- the dry-stone walls round the plateau’s little fields (the same number on each half), stone huts in the dolines’ gardens
     for (const s of [1, -1]) {
       const r = mulberry32(s > 0 ? 1805_1191 : 1805_1197);
       for (let i = 0, n = 0; i < 3000 && n < 50; i++) {
-        const x = -140 + r() * 620, z = s * (40 + r() * 500), yaw = Math.round(r() * 3) * (Math.PI / 2) + (r() - 0.5) * 0.3, len = 14 + r() * 16;
-        if (edgeK(x, z) < 0.95 || !free(x, z, 6) || nearPoint(x, z, 26) || roadD(x, z) < 10 || Math.abs(x) < 50 && Math.abs(Math.abs(z) - BASE_Z) < 50) continue;
+        const x = (r() * 2 - 1) * 480, z = s * (40 + r() * 500), yaw = Math.round(r() * 3) * (Math.PI / 2) + (r() - 0.5) * 0.3, len = 14 + r() * 16;
+        if (edgeK(x, z) < 0.95 || !free(x, z, 6) || nearPoint(x, z, 26) || roadD(x, z) < 10 || nearBase(x, z, 55)) continue;
         n++;
         props.wall({ x, z, yaw, length: len, height: 1.1, thickness: 0.8 });
       }
@@ -343,13 +358,13 @@ export default {
     const r = mulberry32(1805_1109);
     for (let i = 0, n = 0; i < 5000 && n < 34; i++) {
       const x = (r() * 2 - 1) * 470, z = (r() * 2 - 1) * 520;
-      if (!free(x, z, 45) || nearPoint(x, z, 50) || Math.hypot(x, z - BASE_Z) < 60 || Math.hypot(x, z + BASE_Z) < 60 || inTown(x, z)) continue;
+      if (!free(x, z, 45) || nearPoint(x, z, 50) || nearBase(x, z, 60) || inTown(x, z)) continue;
       taken.push([x, z]); n++;
       buildSite(props, { kind: ['hay', 'fieldwall', 'farm', 'hay'][n % 4], seed: Math.floor(r() * 1e9) }, x, z, r() * 3);
     }
     for (let i = 0; i < 400; i++) {
       const x = (r() * 2 - 1) * 490, z = (r() * 2 - 1) * 550, ek = edgeK(x, z);
-      if (ek < 0.1 || ek > 0.9 || nearPoint(x, z, 30) || roadD(x, z) < 8) continue;
+      if (ek < 0.1 || ek > 0.9 || nearPoint(x, z, 30) || roadD(x, z) < 11) continue;
       props.boulder({ x, z, radius: 1 + r() * 1.8 });
     }
     for (const [base, toward, canvas] of [[this.bases.nato, -1, 0xd8d0b8], [this.bases.pact, 1, 0xd4d0c0]] as const) {
@@ -360,8 +375,8 @@ export default {
     props.finish();
     water.build(scene);
 
-    const avoid = [{ x: 0, z: BASE_Z, r: 30 }, { x: 0, z: -BASE_Z, r: 30 }, ...POINTS.map((p) => ({ x: p.x, z: p.z, r: 14 })), ...taken.map(([x, z]) => ({ x, z, r: 9 })),
-      { test: (x, z) => inland(x, z) < 16 || roadD(x, z) < 5 || inTown(x, z) }];
+    const avoid = [{ x: NATO.x, z: BASE_Z, r: 30 }, { x: PACT.x, z: -BASE_Z, r: 30 }, ...POINTS.map((p) => ({ x: p.x, z: p.z, r: 14 })), ...taken.map(([x, z]) => ({ x, z, r: 9 })),
+      { test: (x, z) => inland(x, z) < 16 || roadD(x, z) < 8 || inTown(x, z) }];
     // scrub oak and hornbeam, black pine; the sumac’s and the oaks’ November colours
     const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 2600, broadleaf: 0.6, autumn: 0.8, maxY: 160, forest: (x, z) => woods(x, z) * 0.95 });
     cover.finalize(bounds);

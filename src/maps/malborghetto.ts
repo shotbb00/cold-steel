@@ -4,7 +4,9 @@
 // and the Predil fort did the same on the road south from Tarvis over the pass; the French took both by storm,
 // climbing the slopes round them, and Hensel died at his guns. The French come up the valley from the west (+z here:
 // the Pontebba road), the Austrians from Tarvis (−z). The Fella runs down the narrow floor, shallow and fast over its
-// gravel; the road runs along it under the north wall, the blockhouse on its bench above in the middle. The walls
+// gravel, and the floor winds between the spurs like the Canal del Ferro below it — swung hard to the south wall at the
+// French end, back across to the north at the Austrian end, so nowhere is there a straight look down the valley; the
+// road runs along it under the north wall, the blockhouse on its bench above in the middle. The walls
 // rise 250–300 m: the Carnic side (north, −x) higher and unbroken, the Julian side (south, +x) cut by two side
 // valleys — the Dogna valley on the French half, the Predil road up the Raibl valley on the Austrian half.
 // Fair, not mirrored: the blockhouse, Malborghetto on the floor below it and the Miezegnot spur opposite are in the
@@ -28,7 +30,7 @@ const FLOOR = 5;
 const W = 88;                                                                    // the floor’s half-width
 const noise = createNoise2D(1809_0517);
 /** The valley floor’s middle line. */
-const fx = (z) => 60 + 30 * Math.sin(z * 0.0045 + 0.5) + 12 * Math.sin(z * 0.013);
+const fx = (z) => 10 + 205 * Math.sin(z * 0.0047 + 0.25) + 14 * Math.sin(z * 0.013 + 0.4);
 /** The Fella: along the south side of the floor. */
 const fellaX = (z) => fx(z) + 34 + 8 * Math.sin(z * 0.02);
 /** The side valleys up the south wall: Val Dogna (French half), the Raibl valley and the Predil road (Austrian half). */
@@ -41,8 +43,8 @@ const POINTS: ControlPointDef[] = [
   { id: 'C', name: 'San Leopoldo', x: Math.round(fx(235) - 30), z: 235, owner: null, sector: 'centre', radius: 26 },
   { id: 'D', name: 'Val Dogna', x: Math.round(fx(300) + W + 70), z: 300, owner: null, sector: 'east' },
   { id: 'E', name: 'Hensel blockhouse', x: Math.round(fx(-15) - W - 95), z: -15, owner: null, sector: 'west', radius: 24 },
-  { id: 'F', name: 'Malborghetto', x: Math.round(fx(15) - 30), z: 15, owner: null, sector: 'centre', radius: 28 },
-  { id: 'G', name: 'Miezegnot spur', x: Math.round(fx(10) + W + 85), z: 10, owner: null, sector: 'east' },
+  { id: 'F', name: 'Malborghetto', x: Math.round(fx(-20) - 30), z: -20, owner: null, sector: 'centre', radius: 28 },
+  { id: 'G', name: 'Miezegnot spur', x: Math.round(fx(-70) + W + 85), z: -70, owner: null, sector: 'east' },
   { id: 'H', name: 'Ugovizza alp', x: Math.round(fx(-290) - W - 105), z: -290, owner: null, sector: 'west' },
   { id: 'I', name: 'Valbruna', x: Math.round(fx(-235) - 30), z: -235, owner: null, sector: 'centre', radius: 26 },
   { id: 'J', name: 'Predil road', x: Math.round(fx(-310) + W + 75), z: -310, owner: null, sector: 'east' },
@@ -60,7 +62,7 @@ const river = createRiver({
   valley: 26,
   crossings: [
     { name: 'San Leopoldo bridge', x: fellaX(260), z: 260, kind: 'bridge', width: 6 },
-    { name: 'Malborghetto bridge', x: fellaX(30), z: 30, kind: 'bridge', width: 6 },
+    { name: 'Malborghetto bridge', x: fellaX(P.F.z + 15), z: P.F.z + 15, kind: 'bridge', width: 6 },
     { name: 'Valbruna bridge', x: fellaX(-270), z: -270, kind: 'bridge', width: 6 },
   ],
 });
@@ -73,7 +75,7 @@ const ROADS: number[][][] = [
   [...Array.from({ length: 49 }, (_, i) => -600 + i * 25).map((z) => [ROAD_X(z), z])],
   [[ROAD_X(250), 250], [fellaX(260) - 10, 260], [fellaX(275) + 30, 280], [P.D.x, P.D.z], [P.D.x + 160, P.D.z + 30]],
   [[ROAD_X(-250), -250], [fellaX(-270) - 10, -270], [fellaX(-290) + 30, -300], [P.J.x, P.J.z], [P.J.x + 170, P.J.z - 45]],
-  [[ROAD_X(15), 15], [fellaX(30) + 20, 30], [P.G.x - 40, P.G.z + 30], [P.G.x, P.G.z]],
+  [[ROAD_X(P.F.z), P.F.z], [fellaX(P.F.z + 15) + 20, P.F.z + 15], [P.G.x - 40, P.G.z + 30], [P.G.x, P.G.z]],
   zig(P.E, 1),
   zig(P.B, -1),
   zig(P.H, 1),
@@ -86,7 +88,7 @@ const roadD = (x, z) => (roadNear(x, z) > 18 ? 99 : roadExact(x, z));
 function mountainExact(x, z) {
   const c = fx(z), dN = c - W - x, dS = x - c - W;
   let h = FLOOR + fbm(noise, x * 0.004, z * 0.004, 2) * 1.5 + 2.5 * (-z / 560);  // (the floor climbing gently to Tarvis)
-  if (dN > 0) h += 300 * smoothstep(0, 430, dN) ** 1.35;                          // the Carnic wall
+  if (dN > 0) h += 300 * (1 - 0.22 * Math.tanh(z / 400)) * smoothstep(0, 430, dN) ** 1.35; // the Carnic wall, climbing toward Tarvis
   if (dS > 0) h += 250 * smoothstep(0, 380, dS) ** 1.3 * (1 - 0.82 * sideCut(x, z)) + 14 * smoothstep(0, 120, dS) * sideCut(x, z); // the Julian wall, the side valleys up into it
   const rise = Math.max(h - FLOOR - 4, 0);
   h += ridged(noise, x * 0.005 + 5, z * 0.005, 3) * Math.min(80, rise * 0.3);      // spurs and crests
@@ -95,7 +97,7 @@ function mountainExact(x, z) {
   return h;
 }
 // the benches the points and bases stand on (their own height, levelled round them)
-const SHELVES = [...POINTS.map((p) => [p.x, p.z, 'BEH'.includes(p.id) ? 28 : 32]), [P.A.x, BASE_Z, 30], [P.K.x, -BASE_Z, 30]];
+const SHELVES = [...POINTS.map((p) => [p.x, p.z, 'EG'.includes(p.id) ? 44 : 'BH'.includes(p.id) ? 28 : 32]), [P.A.x, BASE_Z, 30], [P.K.x, -BASE_Z, 30]];
 const mountain = gridCacheSmooth(mountainExact, { x: 880, z: 880 }, 4);
 const SHELF_H = SHELVES.map(([x, z]) => mountainExact(x, z));
 SHELF_H[POINTS.findIndex((p) => p.id === 'H')] = SHELF_H[POINTS.findIndex((p) => p.id === 'B')]; // (the two alps on one bench height)
@@ -192,7 +194,7 @@ export default {
 
   bases: { nato: { x: P.A.x, z: BASE_Z, entries: [-40, 0, 40] }, pact: { x: P.K.x, z: -BASE_Z, entries: [-40, 0, 40] } },
   maxStacks: 26,
-  cameraStart: { nato: { x: 60, z: 360 }, pact: { x: 60, z: -360 } },
+  cameraStart: { nato: { x: Math.round(fx(360)), z: 360 }, pact: { x: Math.round(fx(-360)), z: -360 } },
   points: POINTS,
 
   spawns: {
@@ -213,9 +215,9 @@ export default {
     props.box('stone', E.x - 14, g0 + 3, E.z, 10, 7, 16, 0, 0x7a6248);                         // the blockhouse: squared logs on a stone foot
     props.box('stone', E.x - 14, g0 + 7.2, E.z, 12, 1.4, 18, 0, 0x4e4034);                     // (its shingled roof)
     props.cover.addBox({ x: E.x - 14, z: E.z, yaw: Math.PI / 2, length: 16, thickness: 10, height: 6.5 });
-    props.wall({ x: E.x + 20, z: E.z, yaw: Math.PI / 2, length: 34, height: 1.8, thickness: 1.6 }); // the battery over the road
+    props.wall({ x: E.x + 20, z: E.z + 6, yaw: Math.PI / 2, length: 22, height: 1.8, thickness: 1.6 }); // the battery over the road (the track in at its south end)
     for (const s of [-1, 1]) props.wall({ x: E.x + 4, z: E.z + s * 18, yaw: 0.25 * s, length: 30, height: 1.6, thickness: 0.6 }); // (the palisade’s sides)
-    taken.push([E.x - 14, E.z], [E.x + 20, E.z]);
+    taken.push([E.x - 14, E.z], [E.x + 20, E.z + 6]);
     // ---- Malborghetto, San Leopoldo, Valbruna: churches and houses along the road; the Venetian palazzo at Malborghetto
     for (const [q, seed, n] of [[P.F, 1809_51, 22], [P.C, 1809_52, 14], [P.I, 1809_53, 14]] as const) {
       props.rand = mulberry32(seed);
@@ -233,7 +235,8 @@ export default {
     props.rand = mulberry32(1809_54);
     props.townHouse({ x: P.F.x + 26, z: P.F.z - 30, yaw: Math.PI / 2, width: 16, depth: 11, storeys: 3, name: 'Palazzo Veneziano', damaged: 0 });
     taken.push([P.F.x + 26, P.F.z - 30]);
-    for (const p of POINTS) if ('BDGHJ'.includes(p.id)) buildVillage(props, p, 18095 + Math.round(p.x * 3 + p.z * 7)); // (the alps’ huts, the side valleys’ farms)
+    for (const p of POINTS) if ('BDHJ'.includes(p.id)) buildVillage(props, p, 18095 + Math.round(p.x * 3 + p.z * 7));
+    buildVillage(props, { x: P.G.x + 50, z: P.G.z - 40 }, 18095 + Math.round(P.G.x * 3 + P.G.z * 7)); // (the spur’s farm, off the track’s end) // (the alps’ huts, the side valleys’ farms)
     // ---- hay barns on the floor’s meadows, boulders under the walls
     const r = mulberry32(1809_55);
     for (let i = 0, n = 0; i < 6000 && n < 40; i++) {
