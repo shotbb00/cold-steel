@@ -6,17 +6,19 @@
 // plain with its citrus groves inside their windbreaks and the olive groves on the slopes, the town in the middle — the
 // walled Crusader citadel quarter of Tortosa on the shore with its keep, the cathedral of Our Lady of Tortosa at the
 // east edge of the town, flat-roofed houses and the new concrete blocks — the port and its tank farm in the north-west,
-// the coast road, the main road and the railway north–south, two dry wadis across the plain (the Wadi al-Abrash in the
-// south under its bridge), and in the east terraced limestone hills climbing to the Alawite mountains: Yahmur with the
-// Crusader tower of Chastel Rouge, the Safita road over its spur, the villages on the Dreikish road.
+// the coast road, the main road and the railway north–south, and in the east the Jebel Ansariyah's foothills coming
+// down to the plain in long terraced limestone spurs, the valleys between them running up toward the Alawite mountains:
+// the Yahmur spur in the south with the Crusader tower of Chastel Rouge, the low Safita road spur in the middle, the
+// Dreikish spur in the north, reaching far west toward the coast as the hills do toward Baniyas; a dry wadi down each
+// valley to the sea (the Wadi al-Abrash in the south under its bridge).
 // The US Marines and airborne hold the south (+z, Al-Hamidiyah), the Soviet Army the north (-z, the Baniyas road).
-// Fairness: not a mirror — the sea is on one flank and the mountains on the other, the town, citadel, cathedral, port
-// and groves stand where they stand — but the sea and the hills run the whole length of the field so both halves have
-// the same of each; the town straddles the middle (the citadel a little nearer the US, the cathedral a little nearer
-// the Soviets); each half has a shore point (Amrit's temple / the port), a wadi crossing on its centre road (the
-// Abrash bridge / the station by the northern wadi), a terraced hill village (Yahmur / the Dreikish road) of the same
-// height, groves of the same area, and the Safita road spur in the hills on the centre line; points at matching
-// distances from the bases (measured: tools/map_fairness.py).
+// Fair by distance, not by mirrored ground: the sea is on one flank and the hills on the other, the town, citadel,
+// cathedral, port and groves stand where they stand, and the spurs are not matched — the Dreikish spur reaches nearer
+// the coast than the Yahmur spur — but each half has a shore point (Amrit's temple / the port), a wadi crossing on its
+// centre road (the Abrash bridge / the station by the northern wadi), a terraced spur village of about the same height
+// (Yahmur / the Dreikish road) and groves of the same area; the town straddles the middle (the citadel a little nearer
+// the US, the cathedral a little nearer the Soviets), the Safita road spur in the hills on the centre line; points at
+// matching distances from the bases (measured: tools/map_fairness.py).
 import * as THREE from 'three';
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -85,7 +87,7 @@ const SIDING = [[-110, -200], [-230, -250], [-400, -270]];
 const railDist = (x: number, z: number) => Math.min(polyDist(RAIL, x, z), polyDist(SIDING, x, z));
 
 // ---- the dry wadis: the Wadi al-Abrash across the south (under the Abrash bridge), its northern twin across the north
-const wadiZ = (x: number, n: number) => (n > 0 ? 250 + 22 * Math.sin(x * 0.008 + 0.4) + 8 * Math.sin(x * 0.03) : -232 - 26 * Math.sin(x * 0.007 + 2.1) - 7 * Math.sin(x * 0.027 + 1));
+const wadiZ = (x: number, n: number) => (n > 0 ? 255 + 0.3 * Math.max(0, x) + 18 * Math.sin(x * 0.008 + 0.4) + 7 * Math.sin(x * 0.03) : -232 + 0.3 * Math.max(0, x) - 20 * Math.sin(x * 0.007 + 2.1) - 6 * Math.sin(x * 0.027 + 1));
 const wadiD = (x: number, z: number) => Math.min(Math.abs(z - wadiZ(x, 1)), Math.abs(z - wadiZ(x, -1)));
 
 // ---- the town: the walled citadel quarter on the shore, the new town east to the cathedral
@@ -99,12 +101,18 @@ const GROVES = [[-210, 385, 110, 70], [125, 365, 90, 60], [-170, 190, 70, 56], [
   [-215, -400, 100, 70], [120, -345, 90, 70], [-235, -165, 80, 50], [150, -230, 70, 70]];
 const inGrove = (x: number, z: number, pad = 0) => GROVES.some(([gx, gz, w, d]) => Math.abs(x - gx) < w / 2 + pad && Math.abs(z - gz) < d / 2 + pad);
 
-// ---- the hills: limestone rising east to the Alawite mountains, spurs and re-entrants; the knolls of the hill points
-const KNOLLS = [[320, 290, 55, 9], [360, -245, 55, 4], [285, -30, 60, 5]];
+// ---- the hills: the Jebel Ansariyah's foothills come down to the plain in long limestone spurs, the valleys between
+// them running up to the field's east edge: the Yahmur spur in the south (Chastel Rouge on it), the low Safita road
+// spur in the middle, the Dreikish spur in the north, which reaches far west toward the coast as the hills do toward
+// Baniyas. [from, to (the high end, inland), half-width, height at the high end]
+const SPURS = [[[-120, 150], [520, 300], 90, 28], [[150, -30], [520, 40], 70, 16], [[-190, -380], [520, -200], 85, 26]] as const;
 function hillsExact(x: number, z: number) {
-  const k = smoothstep(70, 480, x + 30 * fbm(noise, z * 0.006, x * 0.004, 2));
-  let h = k ** 1.25 * (36 + 16 * ridged(noise, x * 0.006 + 11, z * 0.009, 3));
-  for (const [cx, cz, r, a] of KNOLLS) h += a * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
+  let h = 4 * smoothstep(150, 480, x) ** 1.25;
+  for (const [a, b, w, amp] of SPURS) {
+    const dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
+    const d = Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) * (1 + 0.15 * fbm(noise, x * 0.01, z * 0.01, 2));
+    h += amp * (0.45 + 0.55 * t) * Math.exp(-((d / w) ** 2)) * (0.8 + 0.35 * ridged(noise, x * 0.006 + 11, z * 0.009, 3));
+  }
   return h;
 }
 const hillsH = gridCacheSmooth(hillsExact, EXT, 4);

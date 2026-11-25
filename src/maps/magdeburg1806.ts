@@ -4,18 +4,21 @@
 // without a breach made, Kleist surrendered the city, the citadel on the Elbe island and the Sternschanze with their
 // 700 guns.
 // On the map (the big field, 1.0 × 1.12 km): the French come from Ney’s camp on the Börde (south-west, +z), the
-// Prussians from the Neustadt side and the Wolmirstedt road (north, −z). The Elbe runs down the east flank; the
-// Stromelbe splits off it round the Werder island, and the citadel stands on the island, the Strombrücke over to it
-// from the town. The walled and bastioned city in the middle, the Dom over the Domplatz and the Breiter Weg through it,
-// the Sternschanze — the star fort — before its south front, the Neustadt with its entrenchments before its north
-// front. Ney’s siege parallels before the French, the garrison’s covered lines before the Prussians. Fords over the
-// Stromelbe onto the island at its two ends.
-// Not mirrored but fair: the river runs down the flank, not between the sides, and its fords lie as far from either
-// base; the city and the island citadel — the decisive ground — stand in the middle, owned by neither. The Sternschanze
-// before the French centre is traded for the entrenched Neustadt before the Prussian centre, Ney’s parallels for the
-// garrison’s lines, Diesdorf and Buckau for Olvenstedt and Rothensee, the Rotehorn wood at the island’s south end for
-// the floodplain wood at its north end; each village is as far from the nearer base as its counterpart
-// (tools/map_fairness.py). 1806 only (`epochs`); the id is `magdeburg-1806` (`magdeburg` is the 1985 map).
+// Prussians from the Neustadt side and the Wolmirstedt road (north, −z). The ground is the real ground: the Börde falls
+// gently north-east to the Elbe; the river runs down the east flank, bending north-west below the town, the Stromelbe
+// split off it round the Werder island with the citadel on it, the Strombrücke over to it from the town. The city
+// stands on its terrace, the Domfelsen, at the floodplain’s edge; north of it the edge swings far west and the low Elbe
+// meadows widen toward the Neustadt and Rothensee, with their meadow woods; south of it they narrow under Buckau. The
+// Schrote brook’s valley comes slantwise off the Börde past Diesdorf and the city’s west front down into the Neustadt,
+// between the Hohe Börde’s swell behind Olvenstedt and the lower swell before Sudenburg where Ney’s batteries stood.
+// The walled and bastioned city round the Dom, the Breiter Weg through it, the Sternschanze before its south front, the
+// entrenched Neustadt before its north front; Ney’s siege parallels before the French, the garrison’s covered lines
+// before the Prussians. Fords over the Stromelbe at the island’s two ends.
+// Fair by distance, not by mirrored ground: the river runs down the flank and its fords lie as far from either base;
+// the city and the island citadel stand in the middle, owned by neither; each village is as far from the nearer base
+// as its counterpart (tools/map_fairness.py). The French get the high Börde and the Sternschanze; the Prussians get
+// the Hohe Börde swell behind Olvenstedt, the entrenched Neustadt and the meadow woods round Rothensee for cover.
+// 1806 only (`epochs`); the id is `magdeburg-1806` (`magdeburg` is the 1985 map).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -23,6 +26,8 @@ import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { createRiver } from '../world/River.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { buildSite, buildVillage } from './common.js';
+import { segDist } from './greatWarHelpers.ts';
+import { gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -35,7 +40,7 @@ const POINTS: ControlPointDef[] = [
   { id: 'B', name: 'Diesdorf', x: -350, z: 300, owner: null, sector: 'west' },
   { id: 'C', name: 'Sternschanze', x: -20, z: 290, owner: null, sector: 'centre', radius: 24 },
   { id: 'D', name: 'Buckau', x: 270, z: 320, owner: null, sector: 'east' },
-  { id: 'E', name: 'Bastion Cleve', x: -330, z: 10, owner: null, sector: 'west' },
+  { id: 'E', name: 'Bastion Cleve', x: -330, z: 0, owner: null, sector: 'west' },
   { id: 'F', name: 'Domplatz', x: 50, z: 10, owner: null, sector: 'centre', radius: 28 },
   { id: 'G', name: 'Citadel', x: 378, z: 0, owner: null, sector: 'east', radius: 24 },
   { id: 'H', name: 'Olvenstedt', x: -350, z: -300, owner: null, sector: 'west' },
@@ -45,9 +50,9 @@ const POINTS: ControlPointDef[] = [
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
-// the Elbe down the east flank (it flows north, −z); the Stromelbe split off it round the Werder island by the town
-const ELBE = [[452, 720], [446, 400], [452, 200], [450, 0], [452, -200], [446, -400], [452, -720]];
-const ARM = [[450, 215], [380, 175], [322, 110], [305, 0], [322, -110], [380, -175], [450, -215]];
+// the Elbe down the east flank (it flows north, −z), bending north-west below the town toward Rothensee; the Stromelbe split off it round the Werder island by the town
+const ELBE = [[540, 720], [492, 420], [452, 200], [450, 0], [432, -150], [372, -300], [290, -440], [228, -720]];
+const ARM = [[449, 215], [380, 175], [322, 110], [305, 0], [322, -110], [380, -175], [418, -192]];
 const river = createRiver({
   paths: [ELBE, ARM],
   halfWidth: 13, level: 0, depth: 2.8, valley: 40,
@@ -69,8 +74,9 @@ const blob = (x, z, cx, cz, rx, rz, a) => {
   const dx = x - cx, dz = z - cz, u = (dx * Math.cos(a) + dz * Math.sin(a)) / rx, v = (-dx * Math.sin(a) + dz * Math.cos(a)) / rz;
   return smoothstep(1.1, 0.75, Math.hypot(u, v) + fbm(noise, x * 0.02, z * 0.02, 2) * 0.25);
 };
-// the Rotehorn at the island’s south end, the floodplain wood at its north end, copses on the Börde’s two wings
-const WOODS = [[395, 130, 40, 55, 0], [395, -130, 40, 55, 0], [-420, 150, 55, 40, 0.3], [-420, -160, 55, 40, -0.3]];
+// the Rotehorn at the island’s south end, the floodplain wood at its north end, copses on the Börde’s two wings, the
+// meadow woods on the wide Elbe floodplain toward Rothensee
+const WOODS = [[395, 130, 40, 55, 0], [395, -130, 40, 55, 0], [-420, 150, 55, 40, 0.3], [-420, -160, 55, 40, -0.3], [180, -430, 80, 45, 0.6], [330, -250, 50, 35, 0.9]];
 const woods = (x, z) => {
   let k = smoothstep(0.6, 0.74, fbm(noise, x * 0.006 + 13, z * 0.006 - 29, 3)) * 0.7; // (the Börde: open ploughland, few trees)
   for (const [cx, cz, rx, rz, a] of WOODS) k = Math.max(k, blob(x, z, cx, cz, rx, rz, a));
@@ -80,18 +86,28 @@ const woods = (x, z) => {
   return Math.min(k, smoothstep(1.1, 1.35, cityQ(x, z)));                            // (no wood on the glacis)
 };
 
+/** The edge of the Elbe’s floodplain: the terrace the city stands on; north of it the meadows widen far west toward
+ *  Rothensee and the Neustadt, south of it they narrow under Buckau. */
+const edgeX = (z) => 235 + 0.5 * z + 14 * Math.sin(z * 0.011);
+// the Schrote: a shallow brook valley off the Börde, from Diesdorf down past the Sternschanze’s rear and the city’s
+// west front to the Neustadt and the Elbe meadows
+const SCHROTE = [[-560, 330], [-420, 250], [-300, 150], [-230, 40], [-170, -90], [-90, -200], [-10, -260], [90, -300]];
+const EXT = { x: 640, z: 760 };
+const schroteD = gridCacheSmooth((x, z) => segDist(SCHROTE, x, z), EXT, 4);
+
 function height(x, z) {
-  let h = fbm(noise, x * 0.0022, z * 0.0022, 3) * 3 + fbm(noise, x * 0.02 + 3, z * 0.02, 3) * 0.4 + 3;
-  h += smoothstep(360, 600, z) * 12 * (0.8 + 0.2 * Math.tanh((-x - 60) / 240));     // the Börde rising behind Ney’s camp
-  h += smoothstep(360, 600, -z) * 12 * (0.8 + 0.2 * Math.tanh((-x - 60) / 240));    // and towards Wolmirstedt
-  h += smoothstep(150, -300, x) * 3;                                                // the plateau’s edge west of the town
-  h += hill(x, z, -200, 330, 80, 3) + hill(x, z, -200, -330, 80, 3);                // (low swells either side)
+  let h = fbm(noise, x * 0.0022, z * 0.0022, 3) * 1.6 + fbm(noise, x * 0.02 + 3, z * 0.02, 3) * 0.4 + 3;
+  h += 2.5 * smoothstep(-700, 500, 0.8 * z - x);                                     // the Börde: falling gently north-east to the Elbe
+  h += hill(x, z, -330, -120, 180, 5);                                               // the Hohe Börde’s swell behind Olvenstedt
+  h += hill(x, z, -100, 350, 140, 4.5);                                              // the swell Ney’s batteries stood on, before Sudenburg
+  h -= 4 * Math.exp(-((schroteD(x, z) / 55) ** 2));                                    // the Schrote’s shallow valley
+  h += (6 - h) * smoothstep(1.05, 0.9, cityQ(x, z)) * 0.6;                           // the town on its terrace
   const ring = Math.exp(-(((cityQ(x, z) - 1.12) / 0.07) ** 2));                     // the glacis: a low bank round the works
   h += ring * 1.6 * smoothstep(280, 230, x);                                         // (none on the river front)
-  h += (4.5 - h) * smoothstep(1.05, 0.9, cityQ(x, z)) * 0.6;                        // the town on its level ground
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, -x) * 26;
-  h += smoothstep(BOUNDS.x + 20, BOUNDS.x + 160, x) * 8;                            // (the low east bank)
-  h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 24;
+  const xe = edgeX(z);
+  h = Math.min(h, 1.9 + (h - 1.9) * smoothstep(xe + 30, xe - 40, x));               // the Elbe meadows below the terrace edge
+  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, -x) * 20;
+  h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 14;
   for (const p of POINTS) if (p.id !== 'F') h += (h * 0.5 + 2 - h) * smoothstep(45, 25, Math.hypot(x - p.x, z - p.z)) * 0.6;
   return river.carve(x, z, Math.max(1.6, h));
 }
@@ -152,6 +168,10 @@ export default {
       surface(x, z) {
         if (cityQ(x, z) < 0.98 || Math.hypot(x - P.G.x, z - P.G.z) < 46) return [0x6a6050, 0.45]; // the streets and the parade
         if (onIsland(x, z)) return [0x5e7040, 0.4];                                                  // the Werder’s meadows
+        const xe = edgeX(z);
+        if (x > xe - 20) return [0x667a44, 0.55 * smoothstep(xe - 20, xe + 30, x)];                // the Elbe meadows below the terrace
+        const sd = schroteD(x, z);
+        if (sd < 24) return [0x5a6a3c, 0.5 * smoothstep(24, 8, sd)];                                 // the Schrote’s wet bottom
         return null;
       },
     },

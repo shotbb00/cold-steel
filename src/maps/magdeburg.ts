@@ -1,21 +1,24 @@
 // Magdeburg and the Elbe, autumn 1985 (a war that did not happen; the big field, 1.0 × 1.12 km): deep in the GDR, where
 // a NATO counteroffensive down the autobahn from Helmstedt would reach the rear of the Group of Soviet Forces in Germany.
 // The US Army and the Bundeswehr come from the west (+z, the Börde toward Helmstedt), the Soviet Army and the NVA hold
-// the east bank (-z, toward Burg and the Fläming). Across the middle runs the Elbe, the Stromelbe with the Alte Elbe
-// split off it round the Werder, the long island under the city with the Stadthalle and the Rotehorn park. Four bridges:
-// the A2 autobahn bridge at Hohenwarthe on the north flank (-x), the Strombrücke from the Altstadt onto the Werder and
-// the Anna-Ebert-Brücke from the Werder to Brückfeld in the middle, the Schönebeck bridge on the south flank (+x).
-// On NATO’s bank: the Altstadt with the Dom on its rock over the river, the Plattenbau estate of Neu Olvenstedt, the
-// Rothensee harbour, and in the north the Letzlinger Heide — heath, sand and pines, tank trails and the Soviet garrison
-// at Hillersleben. On the Pact’s bank: Brückfeld and the Plattenbau of Cracau, Pechau in the meadows, Hohenwarthe at the
-// autobahn bridge, and in the south the Altengrabow training area — its own heath, pines, trails and Soviet barracks.
-// Fair, not mirrored: the Stromelbe bulges toward NATO, the Alte Elbe toward the Pact, so the Werder in the middle is
-// one bridge from each bank; each side has one flank bridge with a forward point on its own bank beside it (Rothensee
-// in the north for NATO, Pechau in the south for the Pact), a heath with its barracks on one flank (the Letzlinger Heide
-// north, Altengrabow south), a Plattenbau estate in its centre sector, a town quarter at its bridgehead (the Altstadt /
-// Brückfeld), a moraine rise behind its line (the Hohe Börde, the Fläming’s edge) and its points at matching distances
-// from its base, though not in mirrored places (measured: tools/map_fairness.py). The land falls gently north with the
-// river, alike for both halves.
+// the east bank (-z, toward Burg and the Fläming). The Elbe slants across the field, south-east to north-west, as it
+// runs here: the Stromelbe with the Alte Elbe split off it round the Werder, the long island under the city with the
+// Stadthalle and the Rotehorn park. Four Elbe bridges: the A2 autobahn bridge at Hohenwarthe on the north flank (-x),
+// the Strombrücke from the Altstadt onto the Werder and the Anna-Ebert-Brücke from the Werder to Brückfeld in the
+// middle, the Schönebeck bridge on the south flank (+x). The Mittelland canal comes dead straight off the Börde to the
+// Rothensee ship lift and the Elbe north of the city, cutting off the Rothensee harbour corner: the A2 and the
+// Glindenberg road cross it on their own bridges.
+// The ground is the real ground, and not the same on both banks: on NATO’s bank the city stands on the Domfelsen’s
+// step over the river and the Börde rises behind it — the Altstadt with the Dom, the Plattenbau of Neu Olvenstedt, the
+// Rothensee harbour, and in the north the Letzlinger Heide, heath and pines round the Soviet garrison at Hillersleben.
+// On the Pact’s bank the flat meadows of the old glacial valley, with their forests (the Biederitzer Busch, the
+// Kreuzhorst), Brückfeld and the SKET works, the Plattenbau of Cracau, Pechau, Hohenwarthe at the autobahn bridge, and
+// in the south the Altengrabow training area on the Fläming’s edge — its heath, trails and Soviet barracks.
+// Fair by distance, not by mirrored ground: the Stromelbe bulges toward NATO, the Alte Elbe toward the Pact, so the
+// Werder is one bridge from each bank; each side has one flank bridge near it, with a point on the far bank beyond it
+// that it reaches first (Rothensee past the canal for the Pact, Pechau in the meadows for NATO); NATO has the Börde’s
+// higher ground, the Pact the meadow forests for cover and the Fläming’s edge at its back; the points are at matching
+// distances from the bases, though not in mirrored places (measured: tools/map_fairness.py).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -24,69 +27,89 @@ import { smoothstep, mulberry32 } from '../core/math.js';
 import { commandPost, buildSite, buildVillage } from './common.js';
 import { vegetation, flats } from './common2027.js';
 import { evenThreshold, segDist } from './greatWarHelpers.ts';
+import { gridCache } from './gridCache.js';
 import type { MapDef } from '../types.ts';
 
 const BASE_Z = 500;
-const W = -330, E = 330;   // the flank roads: the A2 in the north (-x), the road to Schönebeck in the south (+x)
+const W = -330, E = 330;   // the flank bridges: the A2 at Hohenwarthe in the north (-x), the Schönebeck bridge in the south (+x)
 const noise = createNoise2D(1985_81);
+const EXT = { x: 640, z: 760 };
 
-// the Stromelbe across the map, bulging toward NATO under the city; the Alte Elbe split off it round the Werder
-const elbeZ = (x: number) => 32 * Math.exp(-((x / 175) ** 2)) + 9 * Math.sin(x * 0.006 + 0.8) + 5 * Math.sin(x * 0.017);
-const ARM = [[-215, elbeZ(-215), 8], [-170, -6, 10], [-110, -34, 10], [-40, -44, 10], [0, -45, 10], [50, -43, 10], [115, -30, 10], [165, -8, 10], [205, elbeZ(205), 8]];
-const armZ = (x: number) => { for (let i = 0; i < ARM.length - 1; i++) { const [ax, az] = ARM[i], [bx, bz] = ARM[i + 1]; if (x <= bx) return az + (bz - az) * (x - ax) / (bx - ax); } return ARM[ARM.length - 1][1]; };
+// The Elbe slants across the field from the south-east corner to the north-west one (z = 0.75 x: the river really runs
+// north-west here, and the two sides face each other over it on the slant). The Stromelbe bulges toward NATO under the
+// city; the Alte Elbe splits off it round the Werder.
+const elbeZ = (x: number) => 0.75 * x + 30 * Math.exp(-((x / 180) ** 2)) + 8 * Math.sin(x * 0.006 + 0.8) + 4 * Math.sin(x * 0.017);
+const armZ = (x: number) => {
+  const k = smoothstep(150, 215, Math.abs(x));
+  return (0.75 * x - 45 + 8 * Math.sin(x * 0.006 + 0.8)) * (1 - k) + elbeZ(x) * k;
+};
+const ELBE: number[][] = []; for (let x = -1000; x <= 1000; x += 30) ELBE.push([x, elbeZ(x)]);
+const ARM: number[][] = []; for (let x = -215; x <= 215; x += 25) ARM.push([x, armZ(x), Math.abs(x) > 190 ? 8 : 10]);
+// the Mittelland canal: dead straight off the Börde to the Rothensee ship lift and the Elbe north of the city
+const CANAL = [[-900, 650], [-470, 170], [-300, -20], [-232, elbeZ(-232) + 14]];
+const canalX = (z: number) => { const [a, b] = z > 170 ? [CANAL[0], CANAL[1]] : [CANAL[1], CANAL[2]]; return a[0] + (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]); };
 const river = createRiver({
-  paths: [elbeZ, ARM],
+  paths: [ELBE, ARM, CANAL],
   halfWidth: 15,
   level: 0,
   depth: 2.6,
   valley: 40,
   crossings: [
-    { name: 'Hohenwarthe autobahn bridge', x: W, kind: 'bridge', width: 13, channel: 0 },
-    { name: 'Strombrücke', x: 0, kind: 'bridge', width: 9, channel: 0 },
+    { name: 'Hohenwarthe autobahn bridge', x: W, z: elbeZ(W), kind: 'bridge', width: 13, channel: 0 },
+    { name: 'Strombrücke', x: 0, z: elbeZ(0), kind: 'bridge', width: 9, channel: 0 },
     { name: 'Anna-Ebert-Brücke', x: 0, z: armZ(0), kind: 'bridge', width: 8, channel: 1 },
-    { name: 'Schönebeck bridge', x: E, kind: 'bridge', width: 8, channel: 0 },
+    { name: 'Schönebeck bridge', x: E, z: elbeZ(E), kind: 'bridge', width: 8, channel: 0 },
+    { name: 'A2 canal bridge', x: canalX(120), z: 120, kind: 'bridge', width: 13, channel: 2 },
+    { name: 'Glindenberg canal bridge', x: canalX(-10), z: -10, kind: 'bridge', width: 8, channel: 2 },
   ],
 });
-/** How far from the water (either arm), roughly in z. */
-const away = (x: number, z: number) => Math.min(Math.abs(z - elbeZ(x)), Math.abs(x) < 215 ? Math.abs(z - armZ(x)) : 1e9);
-const onWerder = (x: number, z: number) => Math.abs(x) < 200 && z < elbeZ(x) - 15 && z > armZ(x) + 10;
+/** Signed distance across the Elbe (+ on NATO’s west bank, − on the Pact’s east bank, past the Alte Elbe). */
+const bankV = (x: number, z: number) => { const e = elbeZ(x); return z > e ? (z - e) * 0.8 : (z - (Math.abs(x) < 215 ? Math.min(e, armZ(x)) : e)) * 0.8; };
+/** How far from the water (any channel’s centre line). */
+const away = gridCache((x: number, z: number) => river.project(x, z).d, EXT, 4);
+const onWerder = (x: number, z: number) => Math.abs(x) < 195 && z < elbeZ(x) - 20 && z > armZ(x) + 14;
+/** A point in the river’s frame: u along the Elbe (toward the south-east), v across it (toward NATO). */
+const fr = (u: number, v: number) => [0.8 * u - 0.6 * v, 0.6 * u + 0.8 * v];
+const YAW = -Math.atan2(0.6, 0.8);   // (a building squared to the river)
 
 const P = (id: string, name: string, x: number, z: number, sector: string, o: any = {}) => ({ id, name, x, z, owner: id === 'A' ? 'nato' : id === 'K' ? 'pact' : null, sector, ...o });
 const points = [
   P('A', 'Irxleben', 0, 470, 'centre'),
-  P('B', 'Letzlinger Heide', -370, 320, 'west'),
-  P('C', 'Neu Olvenstedt', 100, 300, 'centre', { radius: 26 }),
-  P('D', 'Ottersleben', 350, 330, 'east'),
-  P('E', 'Rothensee', -390, 85, 'west'),
+  P('B', 'Letzlinger Heide', -380, 330, 'west'),
+  P('C', 'Neu Olvenstedt', 90, 300, 'centre', { radius: 26 }),
+  P('D', 'Ottersleben', 350, 335, 'east'),
+  P('E', 'Rothensee', -420, -80, 'west'),
   P('F', 'Werder', 0, -8, 'centre', { radius: 24 }),
-  P('G', 'Pechau', 435, -135, 'east'),
-  P('H', 'Hohenwarthe', -300, -250, 'west'),
+  P('G', 'Pechau', 440, 120, 'east'),
+  P('H', 'Hohenwarthe', -300, -330, 'west'),
   P('I', 'Cracau', -40, -280, 'centre', { radius: 26 }),
   P('J', 'Altengrabow', 400, -400, 'east'),
   P('K', 'Burg', 0, -470, 'centre'),
 ] as any[];
 const at = (id: string) => { const p = points.find((q) => q.id === id); return [p.x, p.z]; };
+/** d m off the channel `f` at x, square to it (+ toward NATO). */
+const across = (x: number, d: number, f = elbeZ) => [x - 0.6 * d, f(x) + 0.8 * d];
 
-/** The roads: the A2 up the north flank over its bridge, the B1 through the city over both bridges, the Schönebeck road
- *  up the south flank, and the laterals behind each line and along each bank. */
+/** The roads: the A2 over the canal and the Elbe at Hohenwarthe, the B1 through the city over both bridges, the
+ *  Schönebeck road over the south bridge, and the laterals behind each line and along each bank. */
 const ROADS = [
-  [[W, 640], [W, 520], [-345, 420], at('B'), [-360, 200], at('E'), [W, elbeZ(W) + 50], [W, elbeZ(W) - 50], [-335, -180], at('H'), [W, -520], [W, -640]],
-  [[0, 640], at('A'), [40, 390], at('C'), [40, 180], [0, 110], [0, elbeZ(0) + 40], [0, armZ(0) - 40], [-30, -150], at('I'), [-30, -400], at('K'), [0, -640]],
-  [[E, 640], [E, 520], at('D'), [345, 200], [E, elbeZ(E) + 50], [E, elbeZ(E) - 50], at('G'), [365, -200], at('J'), [E, -520], [E, -640]],
+  [[-330, 640], [-345, 450], at('B'), [-400, 210], [canalX(120) + 25, 145], [canalX(120) - 25, 95], at('E'), across(W, 45), across(W, -45), at('H'), [-330, -520], [-330, -640]],
+  [[0, 640], at('A'), [40, 390], at('C'), [40, 180], [0, 120], across(0, 40), across(0, -40, armZ), [-30, -150], at('I'), [-30, -400], at('K'), [0, -640]],
+  [[330, 640], [330, 520], at('D'), across(E, 45), across(E, -45), at('G'), [400, -60], [410, -250], at('J'), [330, -520], [330, -640]],
   [at('B'), [-150, 270], at('C'), [220, 320], at('D')],
-  [at('E'), [-220, 110], [-90, 120], [0, 110], [160, 110], [345, 200]],
-  [[-335, -180], [-160, -110], [0, -100], [120, -110], [260, -95], at('G')],
-  [at('H'), [-220, -290], at('I'), [130, -330], at('J')],
+  [at('E'), [canalX(-10) - 28, -10], [canalX(-10) + 28, -10], [-200, 60], [-90, 105], [0, 120], [160, 225], at('D')],
+  [at('H'), [-200, -235], [-90, -150], [0, -110], [150, -25], [300, 95], at('G')],
+  [at('H'), [-200, -330], at('I'), [130, -330], at('J')],
 ];
 const AUTOBAHN = ROADS[0];
-const roadD = (x: number, z: number) => Math.min(...ROADS.map((r) => segDist(r, x, z)));
+const roadD = gridCache((x: number, z: number) => Math.min(...ROADS.map((r) => segDist(r, x, z))), EXT, 2);
 
 /** The heaths: the Letzlinger Heide (NATO’s north flank) and Altengrabow (the Pact’s south flank), each with its tank trails. */
-const HEATHS = [{ x: -330, z: 330, r: 190 }, { x: 360, z: -370, r: 190 }];
+const HEATHS = [{ x: -330, z: 340, r: 180 }, { x: 360, z: -370, r: 190 }];
 const heathK = (x: number, z: number) => Math.max(...HEATHS.map((h) => smoothstep(h.r, h.r - 60, Math.hypot(x - h.x, z - h.z))));
 const TRAILS = [
-  [[-480, 470], [-420, 400], [-440, 300], [-380, 230], [-300, 250], [-230, 200]],
-  [[-470, 230], [-400, 280], [-300, 330], [-250, 420], [-200, 470]],
+  [[-480, 470], [-420, 400], [-440, 300], [-380, 250], [-300, 260], [-230, 220]],
+  [[-450, 250], [-400, 290], [-300, 330], [-250, 420], [-200, 470]],
   [[-260, 300], [-330, 380], [-410, 360], [-480, 330]],
   [[470, -480], [400, -505], [300, -515], [235, -460], [230, -380], [250, -280], [200, -220]],
   [[480, -250], [420, -300], [330, -280], [270, -330], [240, -440]],
@@ -95,7 +118,7 @@ const TRAILS = [
 const trailD = (x: number, z: number) => Math.min(...TRAILS.map((t) => segDist(t, x, z)));
 
 /** The barracks: Hillersleben in the Heide, Altengrabow’s camp — a walled square of blocks and vehicle sheds each. */
-const BARRACKS = [{ x: -300, z: 380, yaw: 0.25 }, { x: 330, z: -440, yaw: -0.3 }];
+const BARRACKS = [{ x: -300, z: 390, yaw: 0.25 }, { x: 330, z: -440, yaw: -0.3 }];
 const inBarracks = (x: number, z: number) => BARRACKS.some((b) => Math.hypot(x - b.x, z - b.z) < 50);
 
 /** Each side’s flat field for its airstrip behind its own line (systems/Airfields.js finds the strip there). */
@@ -105,17 +128,18 @@ const fieldK = (x: number, z: number) => {
   return smoothstep(175, 150, Math.abs(x - f.x)) * smoothstep(f.z0 - 30, f.z0, z) * smoothstep(f.z1 + 30, f.z1, z);
 };
 
-/** Rises [x, z, r, h]: the Hohe Börde behind NATO, the Fläming’s edge behind the Pact, the Domfelsen and the Cracau terrace. */
-const RISES = [[-210, 500, 140, 12.5], [240, -430, 110, 7], [-70, 115, 55, 3.5], [60, -120, 55, 3.5], [-120, 250, 80, 4], [140, -250, 80, 4]];
+/** Rises [x, z, r, h]: the Hohe Börde behind NATO, the Fläming’s edge behind the Pact. */
+const RISES = [[-200, 520, 170, 5], [230, -480, 230, 17], [420, -250, 120, 6], [-120, 250, 80, 3]];
 function height(x: number, z: number) {
-  let h = 5 + fbm(noise, x * 0.0035, z * 0.0035, 4) * 3.5 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.7;
-  h += smoothstep(50, 260, away(x, z)) * 4;                                                 // up out of the Elbe valley
+  let h = 4 + fbm(noise, x * 0.0035, z * 0.0035, 4) * 2.2 + fbm(noise, x * 0.02 + 9, z * 0.02, 3) * 0.6;
+  const v = bankV(x, z);
+  if (v > 0) h += 5 * smoothstep(30, 110, v) + 2 * smoothstep(160, 520, v);               // west bank: the Domfelsen’s step up onto the Börde, rising on
+  else h -= 0.8 * smoothstep(-20, -200, v);                                               // east bank: the flat meadows of the old glacial valley
   for (const [hx, hz, r, hh] of RISES) h += hh * smoothstep(r, 0, Math.hypot(x - hx, z - hz)) ** 1.5;
   const hk = heathK(x, z);
   if (hk > 0) h += hk * (ridged(noise, x * 0.012 + 40, z * 0.012, 3) * 4 - 1);             // the heath’s sandy swells and dunes
-  h += x * 0.004;                                                                          // the land falls north, with the Elbe (alike for both)
-  h += smoothstep(BASE_Z - 60, 660, Math.abs(z)) * 8;
-  h += smoothstep(480, 620, Math.abs(x)) * 10;
+  h += smoothstep(BASE_Z - 60, 660, Math.abs(z)) * 6;
+  h += smoothstep(480, 620, Math.abs(x)) * 8;
   h += (6 - h) * fieldK(x, z);                                                              // the airstrip fields
   for (const bz of [BASE_Z, -BASE_Z]) h += (h * 0.4 + 5 - h) * smoothstep(30, 16, Math.hypot(x, z - bz));
   return river.carve(x, z, Math.max(1.6, h));
@@ -182,38 +206,51 @@ export default {
     const skip = (x: number, z: number) => fieldK(x, z) > 0.01 || away(x, z) < 34 || roadD(x, z) < 9 || crossingNear(x, z, 36);
     const placed: number[][] = [];
     const free = (x: number, z: number, r: number) => !skip(x, z) && placed.every(([qx, qz, qr]) => Math.hypot(qx - x, qz - z) > qr + r);
-    const quarter = (x0: number, x1: number, z0: number, z1: number, seed: number, keep: number) => {
+    /** A town quarter squared to the river: a 17 m grid over u0..u1 along the Elbe and v0..v1 across it. */
+    const quarter = (u0: number, u1: number, v0: number, v1: number, seed: number, keep: number) => {
       const r = mulberry32(seed);
-      for (let gx = x0; gx <= x1; gx += 17) for (let gz = z0; gz <= z1; gz += 17) {
-        const x = gx + (r() - 0.5) * 3, z = gz + (r() - 0.5) * 3;
-        if (r() > keep || !free(x, z, 7) || nearPoint(x, z, 18)) continue;
+      for (let gu = u0; gu <= u1; gu += 17) for (let gv = v0; gv <= v1; gv += 17) {
+        const [x, z] = fr(gu + (r() - 0.5) * 3, gv + (r() - 0.5) * 3);
+        if (r() > keep || !free(x, z, 7) || nearPoint(x, z, 18) || onWerder(x, z)) continue;
         placed.push([x, z, 7]);
-        props.townHouse({ x, z, yaw: r() < 0.5 ? 0 : Math.PI / 2, width: 9 + r() * 4, depth: 9, storeys: 2 + Math.floor(r() * 3), damaged: 0.1 });
+        props.townHouse({ x, z, yaw: YAW + (r() < 0.5 ? 0 : Math.PI / 2), width: 9 + r() * 4, depth: 9, storeys: 2 + Math.floor(r() * 3), damaged: 0.1 });
       }
     };
+    /** The nearest free spot to (u, v) in the river frame, for a building of radius r (taken). */
+    const spot = (u: number, v: number, r: number) => {
+      for (let k = 0; k < 60; k++) {
+        const a = k * 2.4, d = k * 4, [x, z] = fr(u + Math.cos(a) * d, v + Math.sin(a) * d);
+        if (free(x, z, r) && !nearPoint(x, z, r + 14)) { placed.push([x, z, r]); return { x, z }; }
+      }
+      const [x, z] = fr(u, v); return { x, z };
+    };
 
-    // ---- the Altstadt on NATO’s bank: the Dom on its rock over the river, the old town round the Breiter Weg
+    // ---- the Altstadt on NATO’s bank: the Dom on its rock over the river, the old town along the Breiter Weg
     props.rand = mulberry32(1985_82);
-    props.church({ x: -70, z: 112, yaw: Math.PI / 2 }); placed.push([-70, 112, 15]);               // the Dom
-    props.church({ x: 70, z: 135, yaw: 0 }); placed.push([70, 135, 14]);                           // the Johanniskirche
-    quarter(-170, 150, 80, 175, 1985_83, 0.6);
-    // ---- Brückfeld on the Pact’s bank, the same size
-    props.church({ x: 85, z: -120, yaw: 0.1 }); placed.push([85, -120, 14]);
-    props.hall({ x: -70, z: -125, yaw: 0, width: 30, depth: 14, height: 7, color: 0x7a5a48, name: 'SKET works hall' }); placed.push([-70, -125, 18]);
-    quarter(-160, 160, -175, -80, 1985_84, 0.6);
+    props.church({ ...spot(-80, 80, 15), yaw: YAW + Math.PI / 2 });                                 // the Dom
+    props.church({ ...spot(60, 110, 14), yaw: YAW });                                               // the Johanniskirche
+    quarter(-210, 150, 66, 165, 1985_83, 0.6);
+    // ---- Brückfeld on the Pact’s bank, the same size, and the SKET heavy-engineering works
+    props.church({ ...spot(-170, -100, 14), yaw: YAW + 0.1 });
+    props.hall({ ...spot(60, -150, 18), yaw: YAW, width: 30, depth: 14, height: 7, color: 0x7a5a48, name: 'SKET works hall' });
+    props.hall({ ...spot(140, -120, 18), yaw: YAW, width: 34, depth: 16, height: 9, color: 0x6e5a4a, name: 'SKET rolling mill' });
+    quarter(-200, 170, -165, -70, 1985_84, 0.6);
     // ---- the Werder: the Stadthalle and the Albinmüller tower in the Rotehorn park
-    props.hall({ x: 75, z: -6, yaw: 0.05, width: 30, depth: 14, height: 9, color: 0x8a5040, roof: 0x5a4c44, name: 'Stadthalle' });
-    props.mast({ x: 52, z: -14, height: 22 });
-    for (const [x, z] of [[-60, -4], [-95, -10], [-130, -14]]) props.townHouse({ x, z, yaw: 0, width: 10, depth: 9, storeys: 3, damaged: 0.1 });
-    for (const s of [1, -1]) {                                                                        // barricades at both bridgeheads on the island
-      const z = s > 0 ? elbeZ(0) - 22 : armZ(0) + 17;
-      props.jersey({ x: -7, z, yaw: 0.15, length: 5 });
-      props.jersey({ x: 7, z, yaw: -0.15, length: 5 });
+    const mid = (x: number) => (elbeZ(x) + armZ(x)) / 2;
+    props.hall({ x: 75, z: mid(75), yaw: YAW, width: 30, depth: 14, height: 9, color: 0x8a5040, roof: 0x5a4c44, name: 'Stadthalle' });
+    props.mast({ x: 50, z: mid(50) - 6, height: 22 });
+    for (const x of [-60, -95, -130]) props.townHouse({ x, z: mid(x), yaw: YAW, width: 10, depth: 9, storeys: 3, damaged: 0.1 });
+    for (const [d, f] of [[-24, elbeZ], [20, armZ]] as const) {                                       // barricades at both bridgeheads on the island
+      const [x, z] = across(0, d, f);
+      props.jersey({ x: x - 7 * 0.8, z: z - 7 * 0.6, yaw: YAW + Math.PI / 2 + 0.15, length: 5 });
+      props.jersey({ x: x + 7 * 0.8, z: z + 7 * 0.6, yaw: YAW + Math.PI / 2 - 0.15, length: 5 });
     }
-    // ---- Rothensee harbour (cranes and sheds) and Pechau’s farms
-    props.hall({ x: -440, z: 50, yaw: Math.PI / 2, width: 28, depth: 12, height: 8, color: 0x6e6a60, name: 'harbour shed' }); placed.push([-440, 50, 16]);
-    props.tanks({ x: -420, z: 130, count: 3, radius: 4, height: 7 }); placed.push([-420, 130, 12]);
-    props.hall({ x: 440, z: -130, yaw: 0.1, width: 30, depth: 12, height: 6, color: 0x7a6a58, name: 'LPG barn' }); placed.push([440, -130, 16]);
+    // ---- Rothensee: the harbour basin’s sheds and tanks, the ship lift at the canal’s end; Pechau’s farms
+    props.hall({ ...spot(-460, -150, 16), yaw: YAW, width: 28, depth: 12, height: 8, color: 0x6e6a60, name: 'harbour shed' });
+    props.tanks({ ...spot(-470, -60, 12), count: 3, radius: 4, height: 7 });
+    { const z = -75, x = canalX(z) + 34, yaw = -Math.atan2(CANAL[2][1] - CANAL[1][1], CANAL[2][0] - CANAL[1][0]);
+      props.hall({ x, z, yaw, width: 24, depth: 14, height: 16, color: 0x7a7468, roof: 0x4c4a46, name: 'Rothensee ship lift' }); placed.push([x, z, 18]); }
+    props.hall({ ...spot(470, 60, 16), yaw: 0.1, width: 30, depth: 12, height: 6, color: 0x7a6a58, name: 'LPG barn' });
 
     // ---- the Plattenbau estates: Neu Olvenstedt (NATO), Cracau (the Pact)
     for (const [px, pz, seed] of [[...at('C'), 1], [...at('I'), 2]]) {
@@ -267,7 +304,8 @@ export default {
       { test: (x: number, z: number) => away(x, z) < 20 || roadD(x, z) < 6 || trailD(x, z) < 5 || fieldK(x, z) > 0.01 || inBarracks(x, z) }];
     const wood = (x: number, z: number) => fbm(noise, x * 0.006 + 70, z * 0.006, 3);
     const tN = 0.12, tP = evenThreshold(wood, tN, (x, z) => z > 0);   // (each half its own woods, the same in area)
-    const town = (x: number, z: number) => (Math.abs(x) < 175 && Math.abs(z) > 75 && Math.abs(z) < 180);
+    const town = (x: number, z: number) => { const u = 0.8 * x + 0.6 * z, v = -0.6 * x + 0.8 * z; return u > -215 && u < 175 && ((v > 60 && v < 170) || (v < -60 && v > -170)); };
+    const meadowWood = (x: number, z: number) => fbm(noise, x * 0.008 - 40, z * 0.008 + 15, 3);
     const update = vegetation({
       scene, terrain, cover, rand, bounds, fields: this.fields, palette: this.theme.terrain, avoid, trees: 4200, hedges: 1400, autumn: 0.5, broadleaf: 0.45,
       forest: (x: number, z: number) => {
@@ -275,6 +313,8 @@ export default {
         if (town(x, z)) return 0.03;                                                     // the city’s street trees
         if (onWerder(x, z)) return x < 40 && x > -50 ? 0.05 : 0.6;                     // the Rotehorn park
         if (away(x, z) < 70 && Math.abs(x) > 230) return 0.55;                          // the Elbe’s floodplain woods
+        const v = bankV(x, z);
+        if (v < -40 && v > -300 && meadowWood(x, z) > -0.05) return 0.85;              // the Biederitzer Busch and the Kreuzhorst: the east bank’s meadow forests
         const hk = heathK(x, z);
         if (hk > 0.3) return wood(x + 300, z) > 0.0 ? 0.85 : 0.04;                      // the heath’s pine stands
         return x < -480 || x > 480 || wood(x, z) > (z > 0 ? tN : tP) ? 0.85 : 0;
