@@ -562,6 +562,7 @@ class Sortie {
     if (this.p.asmStrike && this.state === 'attack' && !this.dropped) this.fireMissiles(); // (from stand-off: then away)
     if (this.kind === 'torpBomb' && this.state === 'attack' && !this.dropped && this.ship?.alive && d < p.drop) { // the fish goes in, then away low over the water
       this.dropped = true;
+      this.attacked = true; // (the report: it went in, hit or not)
       if (!game.net?.isClient) game.torpedoes?.launch(this, _p.set(this.pos.x, game.world.river?.level ?? 0, this.pos.z), this.ship, { ...this.type.torpedo, count: 1 + (this.wing?.length ?? 0) }); // (each plane of the flight its fish)
       this.state = 'break';
     }
@@ -630,6 +631,7 @@ class Sortie {
         u.locatedUntil = Math.max(u.locatedUntil ?? 0, g.time + p.hold);
         if (!this.torpedoed && this.type.torpedo && !g.net?.isClient) {
           this.torpedoed = true;
+          this.attacked = true; // (the report: it went in, hit or not)
           g.torpedoes?.dropCharges(this, { pos: this.pos, yaw: this.yaw }, u, { ...this.type.torpedo }, true); // (a homing torpedo: one charge, a wide reach)
           g.tellBoth(this.faction, `${this.type.name}: torpedo away on a submarine contact`, 'Enemy aircraft has dropped on one of our submarines!');
         }
@@ -829,7 +831,7 @@ class Sortie {
       this.game.effects.explosion(w.root.position, 0.6, { ground: false, fire: 1.2 });
       this.game.effects.trail?.(w.root.position, this.dir);
       w.root.removeFromParent();
-      if (this.hp > 0) this.game.bus.emit('air:lost', { faction: this.faction, n: 1 }); // (one of the flight: the campaign counts aircraft)
+      if (this.hp > 0) { this.game.bus.emit('air:lost', { faction: this.faction, n: 1 }); this.lost = (this.lost ?? 0) + 1; } // (one of the flight: the campaign counts aircraft)
       if (this.hp > 0 && this.faction === this.game.playerFaction) this.game.tell(this.faction, `${this.type.name}: one of the flight shot down`); // (the whole flight down: shotDown says it)
     }
     const line = this.state === 'takeoff' || this.state === 'landing' || this.state === 'rollout';
@@ -885,6 +887,7 @@ class Sortie {
       const across = (Math.random() - 0.5) * 14 * (this.p.spread ?? 1); _a.x += this.dir.z * across; _a.z -= this.dir.x * across; // (scattered across: the rows of the flight's carpet run together, no gaps between them)
       _a.y = g.terrain.heightAt(_a.x, _a.z);
       const vx = (_a.x - _p.x) / fall, vz = (_a.z - _p.z) / fall, vh = Math.hypot(vx, vz) || 1; // (the drift that carries it to its own spot: the projectile flies its velocity, not to `target`)
+      this.attacked = true; // (the report: it went in, hit or not)
       g.projectiles.spawn({
         origin: _p, dir: new THREE.Vector3(vx / vh, 0, vz / vh), speed: vh, damage: b.damage, faction: this.faction,
         color: new THREE.Color(0x1a1a18), size: 0.9, source: this, life: fall + 4,
@@ -1015,6 +1018,7 @@ class Sortie {
   shoot(from, to, wp, tracer, guide = null) {
     _d.subVectors(to, from);
     const dist = _d.length();
+    this.attacked = true; // (the report: it went in, hit or not)
     this.game.projectiles.spawn({
       origin: from, dir: _d.normalize(), speed: wp.speed, damage: wp.damage, faction: this.faction,
       color: new THREE.Color(FACTIONS[this.faction].bolt).multiplyScalar(2.4), size: wp.size ?? 1.2,
@@ -1083,6 +1087,7 @@ class Sortie {
     else this.game.tellBoth(this.faction, `${this.type.name} shot down!${lost}`, `Enemy ${this.type.name} shot down!`);
     this.game.bus.emit('heli:down', { faction: this.faction, name: this.type.name });
     this.game.bus.emit('air:lost', { faction: this.faction, n: 1 + (this.wing?.length ?? 0) }); // (the aircraft still in the flight go down with it)
+    this.lost = (this.lost ?? 0) + 1 + (this.wing?.length ?? 0);
   }
 
   updateCrash(dt) {
@@ -1108,7 +1113,37 @@ class Sortie {
     this.finish(true);
   }
 
+  /** A hit by this flight's bombs, rockets, guns or torpedoes (UnitStack.damageUnit): counted for the report when it is home. */
+  tally(stack, u, dmg, killed) {
+    if (stack.faction === this.faction || !(dmg > 0)) return;
+    const r = (this.hits ??= new Map());
+    const e = r.get(stack) ?? { name: stack.name, ship: !!stack.stats.naval, men: !!stack.usesCover, fort: !!stack.stats.structure, dmg: 0, max: u.maxHp ?? stack.stats.hp ?? 1, killed: 0, hurt: new Set() };
+    e.dmg += dmg; e.hurt.add(u); if (killed) e.killed++;
+    r.set(stack, e);
+  }
+
+  /** What the flight did and what it cost, said when it is back (or gone): the player's own flights only. */
+  report() {
+    if (this.reported || this.kind === 'lift' || this.faction !== this.game.playerFaction) return;
+    this.reported = true;
+    const hits = [...(this.hits?.values() ?? [])], lost = this.lost ?? 0;
+    if (!hits.length && !lost && !this.attacked) return; // (a patrol that met nothing: nothing to say)
+    const parts = [], n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+    for (const e of hits.filter((h) => h.ship)) parts.push(e.killed ? `${e.name} sunk` : `${e.name} hit (${Math.min(99, Math.max(1, Math.round((e.dmg / e.max) * 100)))} % of her hull)`);
+    const sum = (f, k) => hits.filter(f).reduce((a, h) => a + h[k], 0);
+    const men = sum((h) => h.men, 'killed'), vehK = sum((h) => !h.ship && !h.men && !h.fort, 'killed'), forts = sum((h) => h.fort, 'killed');
+    const vehHurt = hits.filter((h) => !h.ship && !h.men && !h.fort).reduce((a, h) => a + h.hurt.size, 0) - vehK;
+    if (vehK) parts.push(n(vehK, 'vehicle destroyed', 'vehicles destroyed'));
+    if (vehHurt > 0) parts.push(n(vehHurt, 'vehicle damaged', 'vehicles damaged'));
+    if (men) parts.push(n(men, 'man down', 'men down'));
+    if (forts) parts.push(n(forts, 'position destroyed', 'positions destroyed'));
+    const flight = this.state === 'down' ? lost : 1 + (this.wing?.length ?? 0) + lost; // (down: every aircraft of it is counted in `lost`)
+    const cost = !lost ? 'all aircraft back' : lost >= flight ? 'the whole flight lost' : `${lost} of ${flight} aircraft lost`;
+    this.game.tell(this.faction, `${this.type.name} report: ${parts.length ? parts.join(' · ') : 'no hits'} — ${cost}`);
+  }
+
   finish(wreck = false) {
+    this.report();
     this.state = 'done';
     this.wrecked = wreck; // (shot down or ditched: not coming back aboard)
     this.loop.stop();

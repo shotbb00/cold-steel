@@ -2653,6 +2653,7 @@ export class UnitStack {
     if (this.stats.structure) dir = null; // concrete all round: no weak sides
     if (this.stats.structure && source?.stats?.vsStructure) amount *= source.stats.vsStructure; // demolition charges are made for concrete
     if (this.stats.structure && (source?.stats ?? source?.stack?.stats)?.ignite) { vsArmor = Math.max(vsArmor, 0.5); pierce = Math.max(pierce, 0.5); } // (flame: in through the embrasure — the concrete doesn't stop it)
+    const hp0 = u.hp;
     if (this.usesCover) {
       // Infantry: a solid hit is usually decisive — down, or wounded if lucky. Wounded men
       // don't survive a second one. Small grazes (splash edges, beam spill) just wear on them.
@@ -2682,6 +2683,7 @@ export class UnitStack {
       // an anti-armour hit that didn't kill: the crew pops smoke toward the shooter
       if (u.hp > 0 && vsArmor >= 0.5 && this.stats.smoke && !u.possessed) this.popSmoke(u, dir);
     }
+    source?.tally?.(this, u, hp0 - Math.max(0, u.hp), hp0 > 0 && u.hp <= 0); // (an aircraft's strike counts what it did: AirStrike Sortie.report)
     u.flash = 0.12;
     u.flinch = 1;
     u.suppress(this.usesCover ? 0.35 : 0.05);
