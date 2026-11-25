@@ -392,7 +392,7 @@ export function openWarRoom(c, { onClose = () => {}, onBattle = () => {}, war = 
       }
       s += '</g>';
     }
-    map.over.innerHTML = s;
+    map.over.innerHTML = map.own(s); // (its ids: this map's filters and gradients — WorldMap.own)
   }
   /** A pile of counters beside a pin: the top one face up, the rest peeking out under it, the number on it. */
   function pile(fs, dx, kind, node, boxes) {

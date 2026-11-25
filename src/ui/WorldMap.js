@@ -24,6 +24,11 @@ import { feature, mesh, merge } from 'topojson-client';
 export const W = 2000;
 const SQUARE = 25; // world units: a lettered square of the 1918 trench-map sheet (about 4.5° of longitude)
 const NS = 'http://www.w3.org/2000/svg';
+// each map's own ids (clip paths, filters, gradients): two maps on the page at once — the Campaign tab's behind the war
+// room's — must never use each other's (a front clipped by the other map's land, still while this one pans). The patterns
+// the css names (wm-neutral, wm-wire, wm-blockside) are the same in every map and keep their plain ids.
+let maps = 0;
+const OWN_IDS = /(id="|url\(#|href="#)wm-(?!neutral\b|wire\b|blockside\b)/g;
 const LAT = [-58, 80];
 
 /** The paper's grain: a tile of noise drawn once (a canvas → an image the sheet repeats). */
@@ -48,9 +53,11 @@ export class WorldMap {
     this.proj = geoMercator().rotate([-40, 0]).scale(s).translate([W / 2, s * merc(LAT[1])]).clipExtent([[0, 0], [W, this.H]]);
     const H = this.H, fold = (x, y, w, h, id) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${id})"/>`;
     const ring = (lon, lat, r, seed, o = {}) => { const [x, y] = this.proj([lon, lat]); return coffeeStain(x, y, r, seed, o); };
+    this.uid = `wm${++maps}${Math.random().toString(36).slice(2, 6)}`; // (random too: a second copy of this module counts from 1 again)
+    this.own = (html) => html.replace(OWN_IDS, `$1${this.uid}-`); // (markup with this map's ids: WarRoom's overlay too)
     this.svg = document.createElementNS(NS, 'svg');
     this.svg.classList.add('wm', `wm-${style}`);
-    this.svg.innerHTML = `<defs>
+    this.svg.innerHTML = this.own(`<defs>
         <pattern id="wm-neutral" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V7" stroke="#6a5a3a" stroke-opacity="0.35" stroke-width="0.9"/></pattern>
         <pattern id="wm-grain" width="140" height="140" patternUnits="userSpaceOnUse"><image href="${grainTile()}" width="140" height="140"/></pattern>
         <linearGradient id="wm-foldv" x1="0" x2="1"><stop offset="0" stop-color="#5a4320" stop-opacity="0"/><stop offset="0.45" stop-color="#5a4320" stop-opacity="0.14"/><stop offset="0.5" stop-color="#fff8e0" stop-opacity="0.3"/><stop offset="0.58" stop-color="#5a4320" stop-opacity="0"/></linearGradient>
@@ -94,7 +101,7 @@ export class WorldMap {
           ${ring(-30, -38, 46, 1, { twice: true })}${ring(102, 63, 38, 2, { drip: true })}${ring(-12, 8, 30, 3, { twice: true, drip: true })}<rect width="${W}" height="${H}" fill="url(#wm-age)"/></g>`}
       </g>
       <g class="wm-front" clip-path="url(#wm-frontclip)"${style === 'trench' || style === 'engraved' ? '' : ` filter="url(#${style === 'acetate' ? 'wm-marker' : 'wm-pencil'})"`}></g>
-      <g class="wm-over"></g>`;
+      <g class="wm-over"></g>`);
     host.append(this.svg);
     this.world = this.svg.querySelector('.wm-world');
     this.front = this.svg.querySelector('.wm-front');
@@ -117,6 +124,15 @@ export class WorldMap {
     const first = !this.w;
     this.w = w; this.h = h;
     this.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    // the front's filters (pencil, marker, wash) work on the screen and a margin, not on the front's whole length: zoomed in,
+    // the front runs thousands of px off the screen and the browser shrinks or cuts a region that big — the pencil drifted
+    // away from the colours as the map moved, or came out in pieces
+    for (const id of ['pencil', 'marker', 'tintblur']) {
+      const f = this.svg.querySelector(`#${this.uid}-${id}`);
+      if (!f) continue;
+      f.setAttribute('filterUnits', 'userSpaceOnUse');
+      f.setAttribute('x', -60); f.setAttribute('y', -60); f.setAttribute('width', w + 120); f.setAttribute('height', h + 120);
+    }
     this.kMin = Math.max(w / W, h / this.H);
     this.zoom.extent([[0, 0], [w, h]]).scaleExtent([this.kMin, this.kMin * 120]).translateExtent([[0, 0], [W, this.H]]);
     if (first && this.pending) { const [pts, maxK, anchor] = this.pending; this.pending = null; this.flyTo(pts, maxK, 0, anchor); } else this.sel.call(this.zoom.transform, this.t.k < this.kMin ? zoomIdentity.scale(this.kMin) : this.t);
@@ -141,7 +157,7 @@ export class WorldMap {
     this.svg.querySelector('.wm-coast').setAttribute('d', coast);
     if (this.style === 'engraved') { // (the water lines: <use>s of the coarser 110m coast — ten strokes of the 50m one on every pan cost ten times the map)
       const c110 = (await import('world-atlas/countries-110m.json')).default;
-      this.svg.querySelector('#wm-coastd').setAttribute('d', path(mesh(c110, c110.objects.countries, (a, b) => a === b)));
+      this.svg.querySelector(`#${this.uid}-coastd`).setAttribute('d', path(mesh(c110, c110.objects.countries, (a, b) => a === b)));
     }
     this.svg.querySelector('.wm-border').setAttribute('d', path(mesh(topo, topo.objects.countries, (a, b) => a !== b))); // (today's borders, faint: only to find one's way)
   }
@@ -231,7 +247,7 @@ export class WorldMap {
       clips += `<clipPath id="wm-land${g.k}"><path d="${this.lands[g.k].path}"/></clipPath>`;
       fills += `<g clip-path="url(#wm-land${g.k})">${Object.entries(g.cells).map(([i, d]) => `<path class="wm-wash ${points[i].side}" d="${d ?? this.lands[g.k].path}"/>`).join('')}</g>`;
     }
-    this.svg.querySelector('.wm-terr').innerHTML = `${clips}<g clip-path="url(#wm-warclip)">${fills}</g>` + areas.map((A) => `<path class="wm-area" d="${poly(A)}"/>`).join('');
+    this.svg.querySelector('.wm-terr').innerHTML = this.own(`${clips}<g clip-path="url(#wm-warclip)">${fills}</g>` + areas.map((A) => `<path class="wm-area" d="${poly(A)}"/>`).join(''));
     // the front: the edges between neighbours on a landmass held by different sides, in runs inside the areas (where it
     // leaves one it stops, at its ink edge) — the very edges the colours meet on
     const inArea = (q) => areas.some((A) => inside(q, A));
@@ -277,11 +293,11 @@ export class WorldMap {
       if (this.style === 'engraved') { blue += d(off(P, 11)); red += d(off(P, -11)); blue2 += d(P); continue; } // (1806: a broad soft band of each side's colour, a fine dotted limit between)
       blue += d(off(P, o)); red += d(off(P, -o));
     }
-    this.front.innerHTML = this.style === 'engraved'
+    this.front.innerHTML = this.own(this.style === 'engraved'
       ? `<path d="${blue}" class="wm-tint nato" filter="url(#wm-tintblur)"/><path d="${red}" class="wm-tint pact" filter="url(#wm-tintblur)"/><path d="${blue2}" class="wm-limit"/>`
       : this.style === 'trench'
       ? `<path d="${wire}" class="wm-wire"/><path d="${blue2}" class="wm-pen nato second"/><path d="${red2}" class="wm-pen pact second"/><path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`
-      : `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`;
+      : `<path d="${blue}" class="wm-pen nato"/><path d="${red}" class="wm-pen pact"/>`);
   }
 
   /**
