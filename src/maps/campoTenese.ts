@@ -5,17 +5,14 @@
 // up the road, his light infantry climbed round through the snow on the mountain flanks, and the Neapolitans broke
 // and ran for the defile, leaving their guns. The French come from the north (+z), the coalition holds the south
 // (−z) — the Neapolitans have no army of their own in the game, so the British and the Russians stand in for them.
-// The ground: the flat snowfield of the plateau down the middle, the hamlet and posthouse of Campotenese on the road
-// in its centre; the walls of the massif either side — the Palanuda's beech woods on the west, the Serra del Prete's
-// slopes and pines on the east — each throwing a spur out onto the plain.
-// Fair, not mirrored: the plain narrows at each end into the valley each side comes up (the Mercure valley behind
-// the French, the Morano defile behind the coalition), equally far out; the plain bows east in its middle, and the
-// Palanuda's wall (west) stands higher than the Serra del Prete's (east), the walls a little higher at the north end
-// to even out the high ground. The Palanuda spur on the French left is traded for the broader, lower Serra del Prete
-// spur on the coalition right, about as far out from each base; the
-// Neapolitan redoubts in front of the defile for Il Fortino's old blockhouse on the French side; the hamlet in the
-// middle is no one's. Each flank has a high track round the mountainside (the way Reynier's voltigeurs went) in
-// both halves. No `climate`: the winter tint whitens the coats as at Eylau.
+// The real ground: the plain of Campotenese is a high karst basin — the road climbs up onto it from the Mercure valley
+// in the north and falls off it again down the defile to Morano in the south, so the snowfield in the middle is the high
+// ground of the road and both sides come up out of a valley. The Serra del Prete and the Pollino behind it wall the
+// whole east side, highest toward the north-east; the Palanuda–Caramolo block stands out of the south-west with the
+// plain running round its north end.
+// Fair by distance, not by shape: each side's points are as far from its base as the other's (tools/map_fairness.py);
+// the Pollino's height before the French is traded for the Palanuda block before the coalition. Each flank has a high
+// track (the way Reynier's voltigeurs went). No `climate`: the winter tint whitens the coats as at Eylau.
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -44,17 +41,15 @@ const POINTS: ControlPointDef[] = [
 ];
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 
-/** The plateau's half-width at z: wide in the middle, narrowing into the Mercure valley (north) and the Morano defile (south). */
-const pinch = (z: number) => 60 * smoothstep(250, 470, Math.abs(z));
-const bow = (z: number) => 70 * Math.cos(z * 0.0045); // (the plain bows east in the middle)
-const westX = (z: number) => bow(z) - 330 + pinch(z) - 45 * Math.sin(z * 0.006 + 1.0);
-const eastX = (z: number) => bow(z) + 320 - pinch(z) + 40 * Math.sin(z * 0.0045 - 0.4) + 20 * Math.sin(z * 0.017);
-/** How far up out of the plain (m beyond the foot of the nearer mountain wall; < 0 on the plain). */
-const sideOf = (x: number, z: number) => Math.max(westX(z) - x, x - eastX(z));
-/** The east wall (the Serra del Prete) stands higher than the west (the Palanuda). */
-const wallH = (x: number) => (x < 0 ? 58 : 54);
-/** The two spurs thrown out onto the plain (x, z, r, height). */
-const SPURS = [[-300, 85, 115, 22], [285, -150, 140, 18]];
+/** The foot of the Serra del Prete and the Pollino behind it, the whole east side, closer in toward the north-east. */
+const eastX = (z: number) => 250 + 45 * Math.sin(z * 0.006 + 0.5) - 60 * smoothstep(-100, 400, z) + 14 * Math.sin(z * 0.019);
+/** The Palanuda–Caramolo block standing out of the south-west, an island of mountain with the plain round its north end. */
+const PAL = { x: -440, z: -220, rx: 190, rz: 280 };
+const palIn = (x: number, z: number) => (1 - Math.hypot((x - PAL.x) / PAL.rx, (z - PAL.z) / PAL.rz)) * 200 - 40 + fbm(noise, x * 0.006 - 7, z * 0.006, 2) * 30;
+/** How far up out of the plain (m beyond the foot of the nearer mountain; < 0 on the plain). */
+const sideOf = (x: number, z: number) => Math.max(x - eastX(z), palIn(x, z));
+/** The two spurs thrown out onto the plain (x, z, r, height): the Palanuda's north spur, the Serra del Prete's. */
+const SPURS = [[-300, 85, 100, 16], [285, -150, 130, 14]];
 
 /** Beech and Bosnian pine on the mountainsides, a few copses on the plain (0..1). */
 const woods = (x: number, z: number) => {
@@ -80,19 +75,20 @@ const ROADS: number[][] = [
 ];
 const roadDist = (x: number, z: number) => Math.min(...ROADS.map(([ax, az, bx, bz]) => seg(x, z, ax, az, bx, bz)));
 
+const BASE_H = 13;
 function height(x: number, z: number) {
   // the plateau floor: a few metres of swell under the snow
-  let h = 10 + fbm(noise, x * 0.003, z * 0.003, 3) * 3 + fbm(noise, x * 0.02 + 7, z * 0.02, 2) * 0.4;
-  // the mountain walls either side
-  const side = sideOf(x, z);
-  h += smoothstep(-60, 160, side) * (wallH(x) * (1 + 0.1 * z / 560) - 12 + ridged(noise, x * 0.005, z * 0.005, 3) * 34); // (the walls a little higher toward the north end)
+  let h = 36 + fbm(noise, x * 0.003, z * 0.003, 3) * 3 + fbm(noise, x * 0.02 + 7, z * 0.02, 2) * 0.4;
+  const rg = ridged(noise, x * 0.005, z * 0.005, 3);
+  h += smoothstep(-50, 180, x - eastX(z)) * (32 + 14 * smoothstep(-200, 450, z) + rg * 30);   // the Serra del Prete, the Pollino rising behind it to the north-east
+  h += smoothstep(-50, 180, palIn(x, z)) * (48 + rg * 30);                                    // the Palanuda and Caramolo
   for (const [cx, cz, r, a] of SPURS) h += hill(x, z, cx, cz, r, a);
   h += hill(x, z, P.C.x, P.C.z, 70, 4) + hill(x, z, P.I.x, P.I.z, 70, 4);        // the low knolls the blockhouse and the redoubts stand on
-  // the ends: each valley falls away a little behind its base
-  h -= smoothstep(470, 560, Math.abs(z)) * 4;
+  h -= smoothstep(150, 560, z) * (26 + 14 * smoothstep(200, -300, x));          // the road falls north off the plateau toward the Mercure valley and Rotonda
+  h -= smoothstep(220, 560, -z) * (22 + 12 * smoothstep(-200, 300, x));         // and south down the defile to Morano
   for (const p of POINTS) if ('BDFHJ'.includes(p.id)) h += (h * 0.7 + 3 - h) * smoothstep(42, 20, Math.hypot(x - p.x, z - p.z)) * 0.5; // (level ground at the farms)
-  for (const bz of [BASE_Z, -BASE_Z]) h += (10 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
-  return h;
+  for (const bz of [BASE_Z, -BASE_Z]) h += (BASE_H - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
+  return Math.max(1.5, h);
 }
 
 const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1re Compagnie' }];
@@ -101,7 +97,7 @@ export default {
   id: 'campo-tenese',
   armies: { nato: ['fr'], pact: ['gb', 'ru'] }, // (Reynier against Damas's Neapolitans: no Neapolitan army yet — the British stand in; the map names them, so they field in Italy)
   name: 'Campo Tenese',
-  description: 'Calabria, March 1806: the snowbound plateau of Campotenese high in the Pollino massif, the post road across it, the Neapolitan redoubts before the defile to Morano and the beech woods of the mountain walls either side.',
+  description: 'Calabria, March 1806: the snowbound plateau of Campotenese high in the Pollino massif, the post road across it, the Neapolitan redoubts before the defile to Morano, the Pollino walling the east and the Palanuda standing out of the south-west.',
   epochs: ['1806'],
   region: 'italy',
   airfields: [],

@@ -9,11 +9,14 @@
 // Behind the city Mount Srđ goes up steep and bare to the summit straight over the walls; beyond its edge the karst
 // plateau with Bosanka and the villages on the roads inland. To the north (+z) Gruž bay cuts in, the harbour for the
 // French relief from Ston; to the south (−z) the cove under Sveti Jakov and the road to Cavtat the Russians came up.
-// Fair, not mirrored: the city, Srđ over it and Bosanka on the plateau are in the middle. Each side has a harbour
-// village at the water with its own serpentine up the edge (Gruž at its bay, Sveti Jakov at its cove), a bench on the
-// mountainside on that serpentine (Kono, Žarkovica) and a plateau village at the head of its road inland (Šumet,
-// Dubac), each as far from its own base and as high. Gruž bay is the deeper inlet, Lokrum lies off the south half; the
-// karst’s ribs, dolines and walls are each half’s own dice, the same number on each.
+// The rest of the real coast: Lapad’s peninsula closes Gruž bay on the west, and from the head of the bay the Rijeka
+// Dubrovačka (the Ombla’s drowned valley) cuts deep inland between the French and the plateau; Srđ’s crest is the
+// highest ground and the karst sinks inland behind it; in the south-east the low Župa basin, the Russians’ road up from
+// Cavtat, lies under Dubac.
+// Fair by distance, not by shape: the city, Srđ over it and Bosanka on the plateau are in the middle. Each side has a
+// harbour village at the water with its own serpentine up the edge (Gruž, Sveti Jakov), a bench on that serpentine
+// (Kono, Žarkovica) and a village at the head of its road inland (Šumet over the Ombla valley, Dubac over Župa), each as
+// far from its own base. The French must cross the Ombla’s valley, the Russians climb out of the Župa basin.
 import * as THREE from 'three';
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -22,7 +25,7 @@ import { createSea } from '../world/Sea.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { buildSite } from './common.js';
-import { graded } from './greatWarHelpers.ts';
+import { graded, segDist } from './greatWarHelpers.ts';
 import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
@@ -36,6 +39,9 @@ const shoreX = (z) => -340 - 40 * Math.exp(-(((z + 5) / 95) ** 2)) + 125 * Math.
 const inland = (x, z) => x - shoreX(z);
 /** 0..1 up the mountainside: the shore (0) to the plateau (1). */
 const edgeK = (x, z) => smoothstep(55, 290, inland(x, z));
+/** Lapad: the peninsula west of Gruž bay, the bay between it and the town’s shore, the Petka hill on its neck. */
+const LAPAD = { x: -470, z: 340, rx: 135, rz: 120, px: -420, pz: 380 };
+const lapadQ = (x, z) => Math.hypot((x - LAPAD.x) / LAPAD.rx, (z - LAPAD.z) / LAPAD.rz) + fbm(noise, x * 0.012 + 5, z * 0.012, 2) * 0.12;
 /** Lokrum: the island off the old port. */
 const LOKRUM = { x: -470, z: -120, r: 50 };
 
@@ -76,10 +82,15 @@ for (const s of [1, -1]) {
   }
 }
 
+/** The Rijeka Dubrovačka (the Ombla’s drowned valley) inland from the head of Gruž bay; the Župa basin in the south-east under Dubac. */
+const OMBLA = [[shoreX(360) + 10, 380], [0, 425], [250, 440], [620, 455]];
+const ZUPA = { x: 480, z: -610, rx: 320, rz: 280 };
 /** The ground (no roads): the sea floor, the shore, the mountainside, the plateau with its ribs and hollows. */
-function ground(x, z) {
+const PAD_H: number[] = [];
+function ground(x, z, pad = true) {
   const inl = inland(x, z);
   const lk = Math.hypot(x - LOKRUM.x, (z - LOKRUM.z) * 1.4);
+  if (inl < 0) { const q = lapadQ(x, z); if (q < 1) return Math.max(-9, -0.8 + (1 - q) * 60 * (0.55 + 0.45 * smoothstep(0.75, 0.1, Math.hypot((x - LAPAD.px) / 70, (z - LAPAD.pz) / 60))) + fbm(noise, x * 0.03, z * 0.03, 2) * 2); } // Lapad and the Petka
   if (inl < 0) return lk < LOKRUM.r ? Math.max(-9, 6 * smoothstep(LOKRUM.r, LOKRUM.r * 0.4, lk) - 1.5 + fbm(noise, x * 0.05, z * 0.05, 2)) : Math.max(-9, -0.8 + inl * 0.12);
   const ek = edgeK(x, z);
   let h = 1.2 + Math.min(inl, 50) * 0.05 + EDGE * ek ** 1.15;
@@ -88,12 +99,15 @@ function ground(x, z) {
   if (ek > 0) h += (ridged(noise, x * 0.011 + 3, z * 0.011, 3) * 7 + fbm(noise, x * 0.05, z * 0.05, 2) * 0.8) * ek * (0.3 + 0.7 * calm); // limestone ribs
   if (ek > 0 && ek < 1) h += fbm(noise, x * 0.03 + 9, z * 0.03, 2) * 4 * ek * (1 - ek) * 4;                              // gullies down the mountain
   if (inl < 10) h += (0.4 + inl * 0.08 - h) * (1 - smoothstep(4, 10, inl));                       // the rocks at the water
+  h -= smoothstep(280, 760, inl) * 58 + smoothstep(-300, -580, z) * ek * 26;   // (and the ridge falls away south-east toward Župa)                                             // (Srđ’s crest the highest: the plateau sinks inland behind it)
+  { const v = smoothstep(170, 30, segDist(OMBLA, x, z)) * smoothstep(300, 440, z); if (v > 0) h += (3 + inl * 0.045 - h) * v * 0.5; }            // the Rijeka Dubrovačka’s valley
+  { const k = smoothstep(1, 0.45, Math.hypot((x - ZUPA.x) / ZUPA.rx, (z - ZUPA.z) / ZUPA.rz)); if (k > 0) h += (12 + inl * 0.02 - h) * k * 0.9; } // the Župa basin
   for (const [hx, hz, hr, hh] of HILLS) { const d = Math.hypot(x - hx, z - hz); if (d < hr) h += hh * smoothstep(hr, 0, d) ** 1.3; }
   for (const [dx, dz, dr] of DOLINES) { if (Math.abs(x - dx) > dr || Math.abs(z - dz) > dr) continue; const d = Math.hypot(x - dx, z - dz); if (d < dr) h -= 6 * smoothstep(dr, 0, d) ** 1.4; }
   for (const [sx, sz, sr, sh] of SHELVES) { if (!sr) continue; const d = Math.hypot(x - sx, z - sz); if (d < sr + 22) h += (sh - h) * smoothstep(sr + 22, sr, d); }
   if (inCity(x, z, 24)) { const k = 1 - Math.max(smoothstep(CITY.hz, CITY.hz + 24, Math.abs(z - CITY.z)), smoothstep(CITY.hx, CITY.hx + 24, Math.abs(x - CITY.x))); h += (3 + Math.max(0, inl) * 0.07 - h) * k; } // the city’s floor
   { const d = Math.hypot(x - LOVRIJENAC.x, z - LOVRIJENAC.z); if (d < 18) h += 12 * smoothstep(18, 6, d); }                   // Lovrijenac’s crag
-  for (const bz of [BASE_Z, -BASE_Z]) { const bx = bz > 0 ? P.A.x : P.K.x, b = Math.hypot(x - bx, z - bz); if (b < 40) h += (EDGE + 4 - h) * smoothstep(40, 22, b); }
+  if (pad) for (const bz of [BASE_Z, -BASE_Z]) { const bx = bz > 0 ? P.A.x : P.K.x, b = Math.hypot(x - bx, z - bz); if (b < 40) { const i = bz > 0 ? 0 : 1; PAD_H[i] ??= ground(bx, bz, false) + 1; h += (PAD_H[i] - h) * smoothstep(40, 22, b); } }
   return h;
 }
 
@@ -113,6 +127,7 @@ const ROAD_DEFS: number[][][] = [
   [[P.A.x, 600], [P.A.x, BASE_Z], [P.C.x + 170, 300], at('D'), [600, 310]],
   [[P.K.x, -600], [P.K.x, -BASE_Z], [P.I.x + 170, -300], at('J'), [600, -290]],
   [at('F'), [130, 0], at('G'), [600, -20]],
+  [at('F'), [40, 120], [P.C.x + 170, 300]],                                       // (the track along Srđ’s back to the head of the Gruž serpentine)
   [at('D'), [330, 140], at('G'), [320, -140], at('J')],
   [[P.A.x, BASE_Z], [110, 250], [120, 100], [130, 0]],
   [[P.K.x, -BASE_Z], [140, -250], [130, -100], [130, 0]],
@@ -189,7 +204,7 @@ const water = {
 /** The woods (0..1): pine and cypress on Lokrum and round Gruž, holm oak and scrub in patches; the mountainside itself bare. */
 const woods = gridCache((x, z) => {
   const ek = edgeK(x, z), inl = inland(x, z);
-  if (inl < 0) return Math.hypot(x - LOKRUM.x, (z - LOKRUM.z) * 1.4) < LOKRUM.r * 0.8 ? 0.8 : 0;
+  if (inl < 0) return Math.hypot(x - LOKRUM.x, (z - LOKRUM.z) * 1.4) < LOKRUM.r * 0.8 ? 0.8 : lapadQ(x, z) < 0.85 ? 0.65 * smoothstep(-0.25, 0.1, fbm(noise, x * 0.015, z * 0.015 + 7, 2)) : 0; // (pines on Lokrum and over Lapad)
   if (inl < 14 || inCity(x, z, 14)) return 0;
   let k = (1 - ek) * 0.55 * smoothstep(-0.2, 0.2, fbm(noise, x * 0.012 + 4, z * 0.012 - 9, 2)) * smoothstep(60, 140, Math.abs(z - CITY.z));
   k = Math.max(k, smoothstep(0.25, 0.55, fbm(noise, x * 0.007 - 20, z * 0.007 + 3, 3)) * 0.7 * smoothstep(0.85, 1, ek)); // (holm oak and pine scrub in patches on the plateau)
@@ -394,7 +409,7 @@ export default {
     water.build(scene);
 
     const avoid = [{ x: P.A.x, z: BASE_Z, r: 30 }, { x: P.K.x, z: -BASE_Z, r: 30 }, ...POINTS.map((p) => ({ x: p.x, z: p.z, r: 14 })), ...taken.map(([x, z]) => ({ x, z, r: 9 })),
-      { test: (x, z) => (inland(x, z) < 10 && Math.hypot(x - LOKRUM.x, (z - LOKRUM.z) * 1.4) > LOKRUM.r * 0.8) || roadD(x, z) < 5 || inCity(x, z, 8) || Math.hypot(x - LOVRIJENAC.x, z - LOVRIJENAC.z) < 22 }];
+      { test: (x, z) => (inland(x, z) < 10 && Math.hypot(x - LOKRUM.x, (z - LOKRUM.z) * 1.4) > LOKRUM.r * 0.8 && lapadQ(x, z) > 0.88) || roadD(x, z) < 5 || inCity(x, z, 8) || Math.hypot(x - LOVRIJENAC.x, z - LOVRIJENAC.z) < 22 }];
     // Aleppo pine and cypress by the sea, holm oak and scrub up the karst
     const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x + 80, count: 3200, broadleaf: 0.45, autumn: 0, maxY: 160, forest: (x, z) => woods(x, z) * 0.95 });
     cover.finalize(bounds);

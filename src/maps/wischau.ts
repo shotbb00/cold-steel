@@ -1,14 +1,15 @@
 // Wischau, 28 November 1805: four days before Austerlitz the Allied army moved off from Olmütz, and Bagration's
 // advance guard — Russian hussars, Cossacks and Austrian horse — fell on Murat's cavalry in Wischau (Vyškov) on
 // the Olmütz–Brünn chaussée, took the town and a squadron of dragoons in it, and drove the French back through
-// Rausnitz. Napoleon let them come: the retreat drew the Allies on to the field he had chosen. Open, rolling Hanna
-// country made for horsemen: the tree-lined chaussée down the middle, the little town with its market, church and
-// the bishops' château by the Hanna river, the wooded Drahan hills along the north, the plain open to the south.
-// The French come from the west (+z: Rausnitz), the Allies from the east (−z: Pustomersch, the road from Olmütz);
-// north is −x. Fair, not mirrored: the Drahan hills run the whole length of the north edge, so each side has the
-// same wooded foothills and villages under them; the Hanna meanders across the middle and puts Wischau on the
-// French bank but Drnowitz and Topolan on the Allied one, with a bridge or ford by each; the Kutscherau rise
-// before the French is answered by the Krzischanowitz rise before the Allies. 1806 only (`epochs`).
+// Rausnitz. Napoleon let them come: the retreat drew the Allies on to the field he had chosen.
+// The real ground: Wischau lies in the Vyškov Gate, the corridor between the Drahany upland (north-west) and the
+// Litenčice hills (south-east), with the Hanna coming down out of the Drahany past the town and on across the gate.
+// The French come from the west (+z: Rausnitz), the Allies from the east (−z: Pustomersch); north is −x. The Drahany
+// upland fills the French side's north-west corner, wooded, with the Hanna's valley cut into it; the lower, rolling
+// Litenčice hills fill the Allied side's south-east corner; the chaussée runs down the gate between them.
+// Fair by distance, not by shape: each village is as far from its nearer base as its counterpart (tools/map_fairness.py);
+// the high wooded corner before the French (Lultsch) is answered by the hills over Hoschtitz before the Allies.
+// 1806 only (`epochs`).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -16,6 +17,7 @@ import { plantTrees, growGround, plantHedgerows } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
 import { buildSite, buildVillage } from './common.js';
+import { segDist } from './greatWarHelpers.ts';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -42,7 +44,7 @@ const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 const roadX = (z) => 14 * Math.sin(z * 0.0042 + 0.6) - 8;
 const roadD = (x, z) => Math.abs(x - roadX(z));
 // the Hanna, out of the Drahan hills (north, −x) across the field to the south: east of the town, west of Drnowitz and Topolan
-const HANA = [[-650, 70], [-440, 95], [-330, 82], [-190, 40], [-60, -40], [80, -52], [210, -30], [300, 12], [420, 5], [650, 25]];
+const HANA = [[-650, 380], [-440, 205], [-300, 120], [-190, 40], [-60, -40], [80, -52], [210, -30], [300, 12], [420, 5], [650, 25]];
 const river = createRiver({
   paths: [HANA],
   halfWidth: 7,
@@ -56,18 +58,21 @@ const river = createRiver({
     { name: 'Mill ford', x: -150, z: 22, kind: 'ford', width: 12 },
     { name: 'Ford', x: 160, z: -42, kind: 'ford', width: 12 },
     { name: 'Ford', x: 440, z: 6, kind: 'ford', width: 12 },
-    { name: 'Ford', x: -450, z: 94, kind: 'ford', width: 12 },
+    { name: 'Ford', x: -470, z: 230, kind: 'ford', width: 12 },
   ],
 });
 /** 1 in the town, 0 outside it: Wischau's houses round the market on the chaussée. */
 const town = (x, z) => smoothstep(1.1, 0.85, Math.hypot((x - P.F.x) / 70, (z - P.F.z - 10) / 60));
-/** The Drahan hills' rise (0..1) along the north edge. */
-const drahan = (x, z) => smoothstep(-230, -500, x + fbm(noise, z * 0.004 + 3, x * 0.004, 2) * 60);
-
+/** The Drahan upland's rise (0..1): a lobe filling the north-west corner (−x, +z), its edge running diagonally. */
+const drahan = (x, z) => smoothstep(330, 560, -0.9 * x + 0.5 * z + fbm(noise, z * 0.004 + 3, x * 0.004, 2) * 70);
+/** The Litenčice hills (0..1): lower, rolling, in the south-east corner (+x, −z) across the Vyškov Gate. */
+const litencice = (x, z) => smoothstep(300, 520, 0.6 * x - 0.8 * z + fbm(noise, z * 0.004 - 11, x * 0.004 + 5, 2) * 70);
+/** The Haná's own valley up into the Drahan upland (a cheap analytic line, not the river). */
+const HANA_UP = [[-640, 330], [-440, 205], [-300, 120]];
 /** Woods (0..1): the Drahan forest on the hills, a few spinneys, willows on the Hanna. */
 const woods = (x, z) => {
   let k = smoothstep(0.55, 0.7, fbm(noise, x * 0.006 + 13, z * 0.006 - 21, 3)) * 0.7;
-  k = Math.max(k, smoothstep(0.35, 0.7, drahan(x, z)) * (0.75 + 0.25 * fbm(noise, x * 0.01, z * 0.01, 2)));
+  k = Math.max(k, smoothstep(0.35, 0.7, drahan(x, z)) * (0.75 + 0.25 * fbm(noise, x * 0.01, z * 0.01, 2)), smoothstep(0.5, 0.85, litencice(x, z)) * smoothstep(-0.15, 0.2, fbm(noise, x * 0.008 + 3, z * 0.008, 2)));
   k = Math.min(k, 1 - town(x, z), smoothstep(10, 24, roadD(x, z)));
   for (const p of POINTS) k = Math.min(k, smoothstep(32, 56, Math.hypot(x - p.x, z - p.z)));
   return k;
@@ -75,15 +80,15 @@ const woods = (x, z) => {
 
 function height(x, z) {
   let h = fbm(noise, x * 0.0024, z * 0.0024, 3) * 4 + fbm(noise, x * 0.02 + 7, z * 0.02, 3) * 0.4 + 5;
-  h += drahan(x, z) * 15 + hill(x, z, -420, 190, 90, 4) + hill(x, z, -430, -170, 90, 4);          // the Drahan hills and their spurs
-  h += hill(x, z, P.C.x + 30, P.C.z - 20, 110, 6);                                                // the Kutscherau rise
-  h += hill(x, z, P.I.x + 20, P.I.z + 10, 110, 6);                                                // the Krzischanowitz rise
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * 22 + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * 20;
+  const dk = drahan(x, z) * smoothstep(20, 110, segDist(HANA_UP, x, z));                          // (the Haná's valley cut into it)
+  h += dk * (24 + ridgeN(x, z) * 10) + litencice(x, z) * (16 + fbm(noise, x * 0.011, z * 0.011 + 9, 2) * 14);
+  h += hill(x, z, -260, 330, 80, 6) + hill(x, z, 330, -330, 90, 5);                               // the spurs over Lultsch and Hoschtitz
   h += (h * 0.5 + 2.6 - h) * town(x, z) * 0.7;                                                    // the town on its gentle slope to the river
   for (const p of POINTS) if (p.id !== 'F') h += (h * 0.6 + 2.4 - h) * smoothstep(42, 20, Math.hypot(x - p.x, z - p.z)) * 0.5;
   for (const bz of [BASE_Z, -BASE_Z]) h += (5 - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
   return river.carve(x, z, Math.max(1.4, h));
 }
+const ridgeN = (x, z) => fbm(noise, x * 0.006 + 41, z * 0.006 - 3, 3);
 
 const layout = [{ unit: 'rifles', x: 0, z: BASE_Z - 24, name: '1re Compagnie' }];
 
@@ -91,7 +96,7 @@ export default {
   id: 'wischau',
   armies: { nato: ['fr'], pact: ['ru'] }, // (Murat's cavalry against Bagration's advance guard)
   name: 'Wischau',
-  description: 'Moravia, 28 November 1805: the little town of Wischau on the Olmütz chaussée, the Hanna river by it, the wooded Drahan hills to the north and the open plain to the south — cavalry country.',
+  description: 'Moravia, 28 November 1805: the little town of Wischau on the Olmütz chaussée, the Hanna river by it, in the gate between the wooded Drahany upland and the Litenčice hills — cavalry country.',
   epochs: ['1806'],
   region: 'europe',
   conditions: { time: 'day', weather: 'overcast' }, // (a raw late-November morning)

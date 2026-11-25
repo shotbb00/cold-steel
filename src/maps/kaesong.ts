@@ -1,26 +1,29 @@
 // Kaesong, autumn 1985 (the big field, 1.0 × 1.12 km): the old Koryo capital just north of the DMZ, in the war of 1985
 // that never came — South Korea and the US 2nd Infantry Division counterattack north out of the DMZ up the Panmunjom
 // road against the KPA, the ground the KPA took on the first morning of the war in 1950. The old city fills the middle
-// of the basin round the Namdaemun gate, Kaesong station on the Gyeongui line south-west of it; Songak-san, the
-// granite mountain over the city, stands steep and wooded on the west flank with the Manwoldae palace terraces at its
-// foot (too steep for vehicles, map.steep); the low Kaepung hills close the east. The Sachon runs down the east of the
-// basin from Kaepung towards Panmunjom, its valley floor and the land south of the city all rice paddies, ripe for the
-// harvest and still wet (soft: vehicles wallow, map.soft); two bridges on the east road and the Sachon ford below the
-// city cross it. Hyonnung (Wang Kon's tomb) and King Kongmin's tomb sit on their wooded knolls west, Songgyungwan up
-// the Pakyon road north. The ROK and US hold the south (+z: Bongdong, the road to Panmunjom), the KPA the north.
-// Fairness: not a mirror — the Sachon wanders its own way, the city lies off-centre, the knolls, rolls and villages are
-// each half's own — but Songak-san and the Kaepung hills straddle the middle so neither side starts on them, each side
+// of the basin round the Namdaemun gate, Kaesong station on the Gyeongui line south-west of it. The ground is the
+// real basin’s: Songak-san, the granite mountain over the city, fills the north-west (steep and wooded, too steep for
+// vehicles, map.steep), its south spur reaching down to the Manwoldae palace terraces at its foot; across the basin
+// the long wooded ridges of Jinbong-san run up the south-east over the Panmunjom road. The Sachon winds down the east
+// of the basin in wide bends from Kaepung towards Panmunjom, its valley floor and the land south of the city all rice paddies, ripe
+// for the harvest and still wet (soft: vehicles wallow, map.soft); two bridges on the east road and the Sachon ford
+// below the city cross it. Hyonnung (Wang Kon's tomb) and King Kongmin's tomb sit on their wooded knolls west, King
+// Kongmin's in a fold of Songak-san, Songgyungwan up the Pakyon road north. The ROK and US hold the south (+z:
+// Bongdong, the road to Panmunjom), the KPA the north.
+// Fairness by distance, not by shape: Songak-san is the KPA's mountain and Jinbong-san the ROK's, on opposite
+// corners and not alike (a granite massif / a long lower ridge, the ROK's nearer the Sachon and its bridges); the
+// Sachon wanders its own way, the city lies off-centre, the knolls, rolls and villages are each half's own; each side
 // has its own bridge over the Sachon at the same distance from its base (z ±422) and the one ford lies on the centre
-// line, each side has a wooded knoll with a tomb or village on each flank of the same height, Manwoldae (west, a
-// little nearer the ROK) is answered by the Sachon ford (east, a little nearer the KPA), and the points lie at about the
-// same distances (measured: tools/map_fairness.py).
+// line, each side has a wooded knoll with a tomb or village on each flank, Manwoldae (west, a little nearer the ROK)
+// is answered by the Sachon ford (east, a little nearer the KPA), and the points lie at about the same distances
+// (measured: tools/map_fairness.py).
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees, growGround } from '../world/Vegetation.js';
 import { mulberry32, smoothstep } from '../core/math.js';
 import { createRiver } from '../world/River.js';
 import { buildVillage, commandPost } from './common.js';
-import { gridCache } from './gridCache.js';
+import { gridCache, gridCacheSmooth } from './gridCache.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const BOUNDS = { x: 500, z: 560 };
@@ -29,15 +32,15 @@ const LAND = 4;         // the paddies' level
 const HW = 13;          // the Sachon's half-width
 const noise = createNoise2D(1985_71);
 
-// ---- the Sachon: down the east of the basin, north to south
-const SACHON = [[200, -600], [195, -480], [165, -380], [175, -260], [195, -150], [185, -40], [150, 60], [160, 180], [195, 300], [180, 420], [150, 600]];
+// ---- the Sachon: down the east of the basin, north to south, in wide bends from Kaepung toward Panmunjom
+const SACHON = [[330, -600], [230, -500], [170, -400], [150, -260], [210, -150], [260, -40], [200, 60], [120, 170], [110, 300], [170, 420], [260, 600]];
 const CROSS = [
-  { name: 'Kaepung bridge', x: 178, z: -422, kind: 'bridge', width: 14 },
-  { name: 'Sachon ford', x: 182, z: -31, kind: 'ford', width: 18 },
-  { name: 'Panmun bridge', x: 180, z: 422, kind: 'bridge', width: 14 },
+  { name: 'Kaepung bridge', x: 182, z: -421, kind: 'bridge', width: 14 },
+  { name: 'Sachon ford', x: 258, z: -38, kind: 'ford', width: 18 },
+  { name: 'Panmun bridge', x: 172, z: 424, kind: 'bridge', width: 14 },
 ];
 const river = createRiver({ paths: [SACHON], halfWidth: HW, level: 0, depth: 2.6, valley: 34, crossings: CROSS.map((c) => ({ ...c, channel: 0 })) });
-const riverD = (x: number, z: number) => river.project(x, z).d;
+const riverD = gridCacheSmooth((x: number, z: number) => river.project(x, z).d, BOUNDS, 4);
 
 // ---- roads: the Panmunjom road / Pakyon road down the middle, a west road under Songak-san, an east road over the Sachon
 const ROADS: number[][][] = [
@@ -53,11 +56,12 @@ function segDist(x: number, z: number, a: number[], b: number[]) {
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
   return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
 }
-function roadDist(x: number, z: number) {
+function roadDistExact(x: number, z: number) {
   let d = Infinity;
   for (const l of ROADS) for (let i = 0; i < l.length - 1; i++) d = Math.min(d, segDist(x, z, l[i], l[i + 1]));
   return d;
 }
+const roadDist = gridCacheSmooth(roadDistExact, BOUNDS, 2);
 // the Gyeongui line west of the road, through Kaesong station (decoration: level crossings)
 const RAIL = [[-50, 580], [-40, 380], [-30, 250], [-60, 120], [-90, 0], [-90, -120], [-150, -250], [-90, -400], [-60, -580]];
 const railDist = (x: number, z: number) => Math.min(...RAIL.slice(1).map((b, i) => segDist(x, z, RAIL[i], b)));
@@ -79,30 +83,36 @@ const nearPoint = (x: number, z: number, r: number) => points.some((p) => Math.h
 
 // the knolls and rolls, each half its own: [x, z, radius, height] (the four flank knolls first, the same height a side)
 const HILLS = [[-330, 280, 70, 22], [270, 330, 66, 20], [-290, -340, 72, 22], [355, -275, 68, 20],
-  [-160, 390, 50, 10], [-440, 460, 70, 14], [440, 470, 70, 16], [-150, -400, 55, 10], [-450, -460, 70, 15], [450, -450, 66, 15]];
+  [-160, 390, 50, 10], [-440, 460, 70, 14], [440, 470, 70, 16], [-120, -320, 45, 8], [-450, -460, 70, 15], [450, -450, 66, 15]];
 const BIG_HILLS = { nato: [[-330, 280], [270, 330]], pact: [[-290, -340], [355, -275]] };
 const warp = (x: number, z: number) => 1 + 0.3 * fbm(noise, x * 0.012 + 50, z * 0.012, 2);
 function hillH(x: number, z: number) {
   let h = 0;
   for (const [hx, hz, r, a] of HILLS) {
-    const d = (Math.hypot(x - hx, z - hz) / r) * warp(x, z);
+    const d0 = Math.hypot(x - hx, z - hz) / r;
+    if (d0 > 2.6) continue;
+    const d = d0 * warp(x, z);
     h += a * Math.exp(-d * d) * (0.88 + 0.24 * ridged(noise, x * 0.02 + hx, z * 0.02, 2));
   }
   return h;
 }
 
 /** Low ground (0): along the roads, round the points and bases. */
+/** The paddies the KPA's air strip is laid on, at Songak-san's foot behind its line (the ROK's lies in the open south-west). */
+const stripD = (x: number, z: number) => Math.max(Math.abs(x + 195) - 150, Math.abs(z + 435) - 55);
 function lowD(x: number, z: number) {
   let d = roadDist(x, z) - 14;
   for (const p of points) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - 55);
   for (const bz of [BASE_Z, -BASE_Z]) d = Math.min(d, Math.hypot(x, z - bz) - 70);
-  return d;
+  return Math.min(d, stripD(x, z));
 }
-/** Songak-san over the west of the city, the Kaepung hills east of the Sachon: both astride the middle. */
+/** Songak-san, the granite mountain over the city’s north-west (the KPA’s side), and Jinbong-san’s wooded ridges south-east
+ *  of the basin over the Panmunjom road (the ROK’s): the basin and the Sachon’s paddies between. */
 function mass(x: number, z: number) {
-  const songak = smoothstep(1.0, 0.62, Math.hypot((x + 420) / 165, z / 215) + 0.12 * fbm(noise, x * 0.01 - 30, z * 0.01, 2));
-  const kaepung = smoothstep(1.0, 0.6, Math.hypot((x - 470) / 100, (z - 10) / 230) + 0.12 * fbm(noise, x * 0.01 + 70, z * 0.01, 2)) * 0.55;
-  return Math.max(songak, kaepung);
+  const songak = smoothstep(1.0, 0.55, Math.hypot((x + 380) / 250, (z + 330) / 230) + 0.12 * fbm(noise, x * 0.01 - 30, z * 0.01, 2));
+  const jinbong = smoothstep(1.0, 0.55, Math.hypot((x - 450 + 0.25 * (z - 300)) / 130, (z - 330) / 330) + 0.12 * fbm(noise, x * 0.01 + 70, z * 0.01, 2)) * 0.65;
+  const spur = smoothstep(1.0, 0.6, Math.hypot((x + 330) / 140, (z + 40) / 110) + 0.1 * fbm(noise, x * 0.012, z * 0.012, 2)) * 0.55; // its south spur over Manwoldae
+  return Math.max(songak, jinbong, spur);
 }
 const mountK = (x: number, z: number) => mass(x, z) * smoothstep(8, 80, lowD(x, z));
 /** The old city round Namdaemun. */
@@ -114,7 +124,7 @@ function paddyK(x: number, z: number) {
     * smoothstep(BOUNDS.x + 5, BOUNDS.x - 30, Math.abs(x)) * smoothstep(55, 70, Math.hypot(x, Math.abs(z) - BASE_Z));
 }
 
-function height(x: number, z: number) {
+function groundExact(x: number, z: number) {
   const n = fbm(noise, x * 0.005, z * 0.005, 3);
   let h = LAND + n * 1.5 + hillH(x, z);
   const mk = mountK(x, z);
@@ -124,12 +134,15 @@ function height(x: number, z: number) {
   h += smoothstep(BOUNDS.x - 20, BOUNDS.x + 120, Math.abs(x)) * (20 + ridged(noise, x * 0.01, z * 0.01, 3) * 24);
   h += smoothstep(BOUNDS.z - 10, BOUNDS.z + 110, Math.abs(z)) * 14;
   for (const bz of [BASE_Z, -BASE_Z]) h += (LAND - h) * smoothstep(34, 18, Math.hypot(x, z - bz));
-  return river.carve(x, z, h);
+  return h;
 }
+/** The ground on a 3 m grid (the mountains' noise is dear), the Sachon carved into it exactly. */
+const groundC = gridCacheSmooth(groundExact, BOUNDS, 3);
+const height = (x: number, z: number) => river.carve(x, z, groundC(x, z));
 
 const paddyC = gridCache((x: number, z: number) => paddyK(x, z), BOUNDS);
 const soft = (x: number, z: number, foot: boolean) => { const pk = paddyC(x, z); return pk <= 0.05 ? 1 : 1 - pk * (foot ? 0.3 : 0.55); }; // (October: the rice ripe, the fields still wet)
-/** Pine and oak on Songak-san, the Kaepung hills and the knolls. */
+/** Pine and oak on Songak-san, Jinbong-san and the knolls. */
 const woodsK = (x: number, z: number) => Math.max(smoothstep(5, 12, hillH(x, z)), smoothstep(0.06, 0.25, mountK(x, z)))
   * smoothstep(4, 12, roadDist(x, z)) * (nearPoint(x, z, 26) ? 0 : 1);
 const woodsC = gridCache(woodsK, BOUNDS);
@@ -221,7 +234,7 @@ export default {
     river.build(scene, terrain);
     props.rand = mulberry32(1985_72);
     const r0 = props.rand;
-    const free = (x: number, z: number, r: number) => roadDist(x, z) > 7 + r && railDist(x, z) > 6 + r && riverD(x, z) > HW + 12 + r
+    const free = (x: number, z: number, r: number) => stripD(x, z) > r && roadDist(x, z) > 7 + r && railDist(x, z) > 6 + r && riverD(x, z) > HW + 12 + r
       && !nearPoint(x, z, 16 + r) && mountK(x, z) < 0.05 && hillH(x, z) < 6 && Math.hypot(x, Math.abs(z) - BASE_Z) > 45;
 
     // ---- the Gyeongui line, Kaesong station by the road south of the city
@@ -268,7 +281,7 @@ export default {
 
     const avoid = [{ x: 0, z: BASE_Z, r: 30 }, { x: 0, z: -BASE_Z, r: 30 }, ...points.map((p) => ({ x: p.x, z: p.z, r: 14 })),
       { test: (x: number, z: number) => roadDist(x, z) < 6 || railDist(x, z) < 5 || paddyC(x, z) > 0.2 || townK(x, z) > 0.3 || riverD(x, z) < HW + 24 }];
-    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x - 10, count: 12000, broadleaf: 0.5, autumn: 0.45, maxY: LAND + 130,
+    const trees = plantTrees({ scene, terrain, cover, rand, area: bounds, avoid, lane: bounds.x + 80, count: 6000, broadleaf: 0.5, autumn: 0.45, maxY: LAND + 130,
       forest: (x: number, z: number) => woodsK(x, z) * 0.95 });
     cover.finalize(bounds);
     const ground = growGround({ scene, terrain, cover, rand, area: bounds, palette: this.theme.terrain, avoid: avoid.slice(0, -1), density: 2 });

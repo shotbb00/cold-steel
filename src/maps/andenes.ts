@@ -4,12 +4,14 @@
 // base that watched the Northern Fleet's submarines — while Brigade Nord's Norwegians and the US Marines come up the
 // coast road from Dverberg and Risøyhamn to throw them back into the sea. On the map: the air station's runway and
 // hangars across the middle; the town of Andenes, its harbour and red lighthouse on the east shore (Andfjorden, the
-// east edge); the coast road (Rv82) along it; Andmyran, the great bog plain in the middle of the island, snowed over
+// east edge); the coast road (Rv82) along it; in the north-west the island narrows toward its tip and the open sea of
+// Bleiksvika comes in under Måtind on the west coast; Andmyran, the great bog plain in the middle of the island, snowed over
 // and soft (vehicles keep to the roads); the island's mountain spine down the west — Måtind over Bleik, the fells
 // above Stave — with the road along its foot. The Soviets hold the beachhead in the north (-z), NATO comes from the
 // south (+z). (Compressed and turned: the real runway runs along the east shore south of the town, Bleik, Nordmela
 // and Stave lie over the spine on the west coast, Dverberg and Haugnes far down the coast road.)
-// Fairness: not a mirror — the sea is only on the east edge, the spine only on the west, the bog lies where it lies
+// Fairness by distance, not by shape: the sea runs down the whole east edge and into the north-west (the beachhead's
+// side, the island's tip), the spine only on the west, the bog lies where it lies
 // and the town and harbour are on the east shore — but each side has the same three roads to the middle (the foot
 // of the spine in the west, across the bog in the centre, the coast road in the east), a village on each and a hill
 // of its own in the bog plain; the air station, Andenes and the Måtind shoulder sit on the middle line, and each side
@@ -33,7 +35,9 @@ const noise = createNoise2D(1985_71);
 // ---- the sea: Andfjorden on the east edge, Andenes harbour's bight reaching in by the harbour
 const coastX = (z: number) => 445 + 10 * Math.sin(z * 0.012) - 45 * Math.exp(-(((z + 225) / 55) ** 2));
 /** Metres from the sea (negative: on it). */
-const seaD = (x: number, z: number) => coastX(z) - x;
+// ---- and the west coast in the north-west, where the island narrows to its tip: Bleiksvika under Måtind
+const westX = (z: number) => -575 + 185 * smoothstep(-80, -470, z) + 12 * Math.sin(z * 0.02);
+const seaD = (x: number, z: number) => Math.min(coastX(z) - x, x - westX(z));
 
 // ---- Andøya air station's runway across the middle (east–west here), the apron either side
 const RUNWAY = { x0: -210, x1: 230, z: -15, w: 22 };

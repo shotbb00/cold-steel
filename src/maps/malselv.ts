@@ -1,16 +1,19 @@
 // Målselv / Bardufoss, winter 1985 (the big field, 1.0 × 1.12 km): the hypothetical Soviet drive on north Norway, come
 // down the E6 from Nordkjosbotn into the broad Målselv valley in Troms — the heart of Brigade Nord's ground and the
-// Norwegian Air Force's Bardufoss air station, the prize of inner Troms. A wide flat valley floor of farms, birch woods
-// and snowed-over fields between mountains either side; the Målselva (frozen at the edges, open and fast in the middle)
-// runs across it from the east (Øverbygd) to the west (Målsnes), three bridges over it: Moen's in the west, the E6's at
-// Bardufoss in the middle, Bjørkeng's in the east. Bardufoss air station on its terrace above the north bank, its
-// runway along the valley; the Fossmoen and Rundhaug terraces south of the river. Vehicles keep to the floor and the
-// terraces (`steep`: the mountainsides are for the infantry).
+// Norwegian Air Force's Bardufoss air station, the prize of inner Troms. The valley as it really lies: east–west, its
+// wide flat floor of farms, birch woods and snowed-over fields filling the field from side to side, the Målselva
+// (frozen at the edges, open and fast in the middle) running down it from the east (Øverbygd) to the west (Målsnes),
+// three bridges over it: Moen's in the west, the E6's at Bardufoss in the middle, Bjørkeng's in the east. The valley
+// sides rise behind each line, not alike: Målselvfjellet's shoulder over the south-east behind Brandvoll, the Andselv
+// fells over the north. The glacial river terraces are the ground to hold: Bardufoss air station on its big terrace
+// above the north bank in the east, its runway along the valley, and the smaller, lower Rundhaug terrace in the
+// south-west. Vehicles keep to the floor and the terraces (`steep`: the mountainsides are for the infantry).
 // Norway (with the US Marines' 4th MAB, flown in to reinforce Troms) holds the south (+z) from Setermoen; the Soviet
-// Army comes from the north. Fairness: not a mirror — the river winds its own way, the air station's terrace (north,
-// east) and the Rundhaug terrace (south, west) are each half's own high ground, the roads and woods are each half's —
-// but each side has one bank to itself, one bridge to cross on each flank and the E6's in the middle, the same reach
-// of road to its points and a terrace to hold (measured: tools/map_fairness.py).
+// Army comes from the north. Fairness by distance, not by shape: the river winds its own way, the air station's
+// terrace (north, east) is bigger than Rundhaug's (south, west), traded for Målselvfjellet's shoulder and Fossmoen's
+// camp on NATO's side; the roads and woods are each half's — but each side has one bank to itself, one bridge to cross
+// on each flank and the E6's in the middle, the same reach of road to its points and a terrace to hold (measured:
+// tools/map_fairness.py).
 import * as THREE from 'three';
 import { createNoise2D, fbm, ridged } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
@@ -75,7 +78,7 @@ const points: ControlPointDef[] = [
 ];
 
 // ---- the terraces: the air station's above the north bank (east), Rundhaug's in the south-west — [cx, cz, hx, hz, h]
-const TERRACES = [[250, -110, 190, 70, 14], [-250, 230, 130, 110, 12]];
+const TERRACES = [[250, -110, 190, 70, 14], [-290, 300, 110, 80, 10]];
 const RUNWAY = { x0: 120, x1: 400, z: -118, w: 14 }; // Bardufoss's runway (along the valley), on its terrace
 function terraceK(x: number, z: number) {
   let k = 0;
@@ -85,21 +88,24 @@ function terraceK(x: number, z: number) {
   }
   return k;
 }
-// the mountains either side, each its own: Målselvfjellet and Kistefjellet west, Snøtinden and the Øverbygd fells east
-const MASSIFS = [[-470, 300, 120, 40], [480, 380, 110, 35], [-480, -200, 130, 45], [470, -340, 110, 30], [-440, 40, 90, 20], [450, 100, 90, 25]];
-const massif = (x: number, z: number) => MASSIFS.reduce((h, [cx, cz, r, a]) => h + a * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r)), 0);
+// the valley sides behind each line, each its own: Målselvfjellet's shoulder (south-east, NATO), the Andselv fells (north, the
+// Soviets) and the knoll over the Målsnes bend (north-west) — [x, z, r, h]
+const MASSIFS = [[430, 610, 250, 60], [-150, -690, 280, 60], [-600, -280, 170, 28]];
+/** The flat field east of the E6 behind the Soviet line where they lay their air strip (NATO's lies on the floor by Rundhaug). */
+const stripD = (x: number, z: number) => Math.max(Math.abs(x - 200) - 155, Math.abs(z + 435) - 60);
+const massif = (x: number, z: number) => MASSIFS.reduce((h, [cx, cz, r, a]) => h + a * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r)), 0)
+  * smoothstep(80, 210, Math.min(Math.hypot(x, z - BASE_Z), Math.hypot(x, z + BASE_Z)))   // (each base on the valley floor, its road out open)
+  * smoothstep(0, 90, stripD(x, z));                                                         // (and the Soviets' strip behind theirs)
 
 function ground(x: number, z: number) {
   const rd = riverD(x, z);
   if (rd < 0) return Math.max(-4, 0.8 + rd * 0.35);                                   // the river: a gravel bed, deep in the middle
   let h = 5 + fbm(noise, x * 0.02, z * 0.02, 2) * 0.6 + fbm(noise, x * 0.005, z * 0.005, 2) * 2.5; // the valley floor: fields and moraine swells
   h += terraceK(x, z) * smoothstep(10, 45, rd);
-  // the mountainsides: up from where the floor ends (each side its own edge)
-  const vx = x - 70 * Math.cos(z * 0.005) + 25;                                       // (the valley swings: west in the middle, east at the ends)
-  const edge = Math.abs(vx) - (vx > 0 ? 365 + 30 * Math.sin(z * 0.008) : 355 + 35 * Math.sin(z * 0.006 + 2));
-  const mt = (ridged(noise, x * 0.006 + 5, z * 0.006, 4) * 60 + 30 + massif(x, z)) * smoothstep(0, 140, edge);
-  h += mt + massif(x, z) * 0.15;
-  h += smoothstep(BOUNDS.z - 30, BOUNDS.z + 120, Math.abs(z)) * 30;
+  // the valley sides: the floor runs east–west with the river; the mountains rise behind each line, not alike — the
+  // Målselvfjellet's shoulder over the south-east (NATO's, behind Brandvoll), the Andselv fells' foot in the north-west
+  // (the Soviets', behind Olsborg), lower ground elsewhere where the valley opens toward Målsnes and Øverbygd
+  h += massif(x, z) + (ridged(noise, x * 0.006 + 5, z * 0.006, 4) * 0.5 + 0.5) * massif(x, z) * 0.6;
   return 1.6 + (h - 1.6) * smoothstep(0, 18, rd); // the banks down to the water
 }
 function height(x: number, z: number) {
@@ -229,7 +235,7 @@ export default {
       const r = props.rand;
       for (let i = 0; i < 70; i++) {
         const x = (r() * 2 - 1) * 340, z = (30 + r() * 480) * m;
-        if (points.some((p) => Math.hypot(p.x - x, p.z - z) < 40) || Math.hypot(x, Math.abs(z) - BASE_Z) < 55 || terrain.heightAt(x, z) > 22
+        if (stripD(x, z) < 10 || points.some((p) => Math.hypot(p.x - x, p.z - z) < 40) || Math.hypot(x, Math.abs(z) - BASE_Z) < 55 || terrain.heightAt(x, z) > 22
           || (Math.abs(z - RUNWAY.z) < 70 && x > RUNWAY.x0 - 40)) continue;
         const rd = roadDist(x, z);
         if (rd > 14 && rd < 40 && free(x, z, 14) && r() < 0.5) {

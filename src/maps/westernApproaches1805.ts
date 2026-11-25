@@ -3,19 +3,22 @@
 // for five months across the mouth of the Channel, takes the 50-gun Calcutta and the merchantmen she was guarding
 // home from St Helena, and is never brought to action; the frigates and privateers of 1806 work the same waters
 // after the convoys from the Indies and the Mediterranean, and the British cruisers and the Channel fleet's detached
-// squadrons hunt them. Here the squadron and a British cruising force meet on the convoy's track. The open Atlantic
-// in a grey early autumn, the long south-westerly swell; the Isles of Scilly — St Mary's with Hugh Town and Star
-// Castle, St Agnes' lighthouse, Tresco, the Western Rocks and Bishop Rock — low on the north-east edge, far from
-// every zone. Laid out at full size (`widened`). Fair: the homes mirrored west (the French, out in the ocean) and
-// east (the British, toward the Channel); the three open zones on the line halfway between them, equally far by
-// sail (seapath); the islands lie off in the corner, no zone near them or in their lee. The wind from south by
-// west across the fleets' line: the French have it just abaft the beam running east, the British reach west.
-// The British start with two homeward Indiamen behind their line (data/units1806/smallCraft.js merchant: while she lies in a
-// zone of theirs her cargo brings in command points), the French with two more brigs to go after them.
+// squadrons hunt them. Here the squadron and a British cruising force meet off the Isles of Scilly, the landfall of
+// every homeward convoy. Laid out from the real isles (north at z < 0), the archipelago in the north of the map: St
+// Mary's with Hugh Town and Star Castle, Tresco, Bryher and Samson round St Mary's Road and its sands, St Martin's,
+// St Agnes and Gugh, the Eastern Isles; the Western Rocks and Bishop Rock off to the south-west, St Mary's Sound and
+// Crow Sound into the road; the Seven Stones reef out toward Land's End, whose last cliffs just show in the north-east
+// corner. The open Atlantic south and west in a grey early autumn, the long south-westerly swell. The French come up
+// from the south-west (from Rochefort), the British down from the north-east (from the Channel). Laid out at full size
+// (`widened`). Fair by the sailing routes (seapath): every zone — Broad Sound off the Western Rocks, the water south of
+// St Mary's on the convoy's track, the Soundings out to the south — as near the one squadron as the other. The wind from
+// south by west: the French have it on the quarter coming up, the British beat down to them. The British start with
+// two homeward Indiamen behind their line (data/units1806/smallCraft.js merchant: while she lies in a zone of theirs
+// her cargo brings in command points), the French with two more brigs to go after them.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { plantTrees } from '../world/Vegetation.js';
-import { createSea, island } from '../world/Sea.js';
+import { createSea, shore, island } from '../world/Sea.js';
 import type { MapDef, ControlPointDef } from '../types.ts';
 
 const SIZE = 8000;
@@ -44,29 +47,40 @@ Object.assign(sea, {
   },
 });
 
-// the Isles of Scilly in the north-east corner: [x, z, radius, height] — St Mary's, Tresco, St Martin's, Bryher, St Agnes
-const ISLES = [[2500, -2350, 300, 45], [2180, -2620, 190, 38], [2560, -2780, 200, 40], [1950, -2560, 140, 34], [2150, -2150, 140, 30]] as const;
-const ROCKS = [[1750, -2250], [1700, -2400], [1820, -2120], [1620, -2300]] as const;   // the Western Rocks, Bishop Rock outermost
+// the Isles of Scilly, laid out as they lie (north at z < 0): [x, z, radius, height, stretch] — St Mary's, Tresco,
+// Bryher, Samson, St Martin's, St Agnes and Gugh, the Eastern Isles; the road between them shoal and sand
+const ISLES = [[350, -650, 470, 48, 1], [-450, -1350, 320, 40, 1.4], [-850, -1100, 210, 34, 1.5], [-700, -700, 170, 36, 1], [300, -1550, 300, 38, 0.6], [-450, -50, 220, 34, 1], [850, -1150, 80, 20, 1], [1000, -950, 70, 18, 1]] as const;
+// the Western Rocks and Bishop Rock outermost, the Seven Stones reef to the north-east
+const ROCKS = [[-1050, -250], [-1200, -100], [-950, 50], [-1300, -380], [-1550, -150], [1950, -2150], [2050, -2250], [2150, -2150], [2000, -2050]] as const;
+const ROAD = { x: -200, z: -800, r: 520 };                    // St Mary's Road: the anchorage inside the isles, shoal round its edge
+const LANDS_END = { x: 3400, z: -3300 };                      // Cornwall's last cliffs, just in the north-east corner
 
 function height(x: number, z: number) {
   let h = -110 + fbm(noise, x * 0.0005, z * 0.0005, 4) * 16;
-  for (const [ix, iz, r, t] of ISLES) {
-    const d = r * (1 + fbm(noise, x * 0.004, z * 0.004, 3) * 0.25) - Math.hypot(x - ix, z - iz);
-    h = Math.max(h, island(d, r, t, fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5, 18));
+  const nn = fbm(noise, x * 0.01, z * 0.01, 2) * 0.5 + 0.5;
+  // the shelf the isles stand on, shoaling toward them
+  const shelf = Math.hypot((x + 100) / 1.2, z + 800);
+  if (shelf < 2000) h = Math.max(h, -14 - Math.max(0, shelf - 900) * 0.09 + fbm(noise, x * 0.003, z * 0.003, 2) * 4);
+  if (Math.hypot(x - ROAD.x, z - ROAD.z) < ROAD.r) h = Math.max(h, -6 + fbm(noise, x * 0.006, z * 0.006, 2) * 2.5);  // the road's sands
+  for (const [ix, iz, r, t, k] of ISLES) {
+    const d = r * (1 + fbm(noise, x * 0.004, z * 0.004, 3) * 0.3) - Math.hypot(x - ix, (z - iz) / k);
+    if (d > -300) h = Math.max(h, island(d, r, t, nn, 18));
   }
   for (const [rx, rz] of ROCKS) {
     const r = Math.hypot(x - rx, z - rz);
-    if (r < 30) h = Math.max(h, -2 + (30 - r) / 30 * 9);
+    if (r < 60) h = Math.max(h, -3 + (60 - r) / 60 * 9);
   }
+  const le = Math.hypot(x - LANDS_END.x, z - LANDS_END.z);
+  if (le < 1100) h = Math.max(h, shore(800 - le + fbm(noise, x * 0.004, z * 0.004, 2) * 120, 70, nn, 6));
   return h;
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'The invisible squadron', x: -1650, z: 300, owner: 'nato', sector: 'west', radius: 170 },
-  { id: 'B', name: 'Soundings', x: 0, z: -950, owner: null, sector: 'centre', radius: 200 },
-  { id: 'C', name: 'The convoy’s track', x: 0, z: 300, owner: null, sector: 'centre', radius: 200 },
-  { id: 'D', name: 'The Rochefort road', x: 0, z: 1550, owner: null, sector: 'centre', radius: 200 },
-  { id: 'K', name: 'The Channel cruisers', x: 1650, z: 300, owner: 'pact', sector: 'east', radius: 170 },
+  { id: 'A', name: 'The invisible squadron', x: -2150, z: 2250, owner: 'nato', sector: 'west', radius: 170 },
+  { id: 'B', name: 'Broad Sound', x: -1650, z: -1680, owner: null, sector: 'west', radius: 200 },
+  { id: 'C', name: 'South of St Mary’s', x: 460, z: 860, owner: null, sector: 'centre', radius: 200 },
+  { id: 'D', name: 'Soundings', x: 1830, z: 2170, owner: null, sector: 'east', radius: 200 },
+  { id: 'K', name: 'The Channel cruisers', x: 2300, z: -1450, owner: 'pact', sector: 'east', radius: 170 },
 ];
 
 // a squadron in line abreast across its line of advance, 160 m apart
@@ -119,14 +133,14 @@ export default {
     },
   },
 
-  bases: { nato: { x: -1950, z: 300, entries: [-600, 0, 600] }, pact: { x: 1950, z: 300, entries: [-600, 0, 600] } },
+  bases: { nato: { x: -2350, z: 2450, entries: [-400, 0, 400] }, pact: { x: 2500, z: -1650, entries: [-400, 0, 300] } },
   maxStacks: 10,
-  cameraStart: { nato: { x: -1300, z: 300 }, pact: { x: 1300, z: 300 } },
+  cameraStart: { nato: { x: -1800, z: 1900 }, pact: { x: 1950, z: -1150 } },
   points,
 
   spawns: {
-    nato: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], -1500, 300, Math.PI / 2), ...line(['destroyer', 'destroyer'], -1700, 300, Math.PI / 2)],
-    pact: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], 1500, 300, -Math.PI / 2), ...line(['merchant', 'merchant'], 1750, 300, -Math.PI / 2)], // (the convoy from St Helena)
+    nato: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], -1950, 2050, 2.36), ...line(['destroyer', 'destroyer'], -2200, 2300, 2.36)],
+    pact: [...line(['frigate', 'cruiser', 'cruiser', 'frigate'], 2050, -1250, -0.9), ...line(['merchant', 'merchant'], 2350, -1550, -0.9)], // (the convoy from St Helena)
   },
 
   decorate({ scene, terrain, cover, rand }) {
@@ -141,7 +155,8 @@ export default {
     props.tower({ x: mx - 210, z: mz + 120 });
     props.church({ x: mx + 60, z: mz + 40, yaw: 0 });
     // St Agnes' lighthouse, the Tresco abbey ruins and a few farms on the off-islands
-    props.tower({ x: ISLES[4][0], z: ISLES[4][1] });
+    props.tower({ x: ISLES[5][0], z: ISLES[5][1] });
+    props.tower({ x: ROCKS[4][0], z: ROCKS[4][1] });                       // (Bishop Rock: the light was not built until 1858 — a daymark beacon then)
     props.church({ x: ISLES[1][0], z: ISLES[1][1] + 40, yaw: Math.PI / 2 });
     for (const [ix, iz] of ISLES.slice(1)) for (let i = 0; i < 5; i++) {
       const x = ix - 70 + rand() * 140, z = iz - 70 + rand() * 140;
@@ -150,7 +165,7 @@ export default {
     props.finish();
     // wind-bent elms and pines in the hollows only — the islands are bare to the gales
     const trees = plantTrees({ scene, terrain, cover, rand, area: { x: HALF, z: HALF }, lane: 0, count: 120, broadleaf: 0.6, autumn: 0.3, maxY: 30, size: 0.7,
-      avoid: [{ test: (x: number, z: number) => terrain.heightAt(x, z) < 6 || x < 1500 || z > -1900 }] });
+      avoid: [{ test: (x: number, z: number) => terrain.heightAt(x, z) < 6 || z > 300 }] });
     cover.finalize({ x: HALF, z: HALF });
     return { buildings: props.buildings, update(dt: number, t: number) { trees.update?.(dt, t); } };
   },

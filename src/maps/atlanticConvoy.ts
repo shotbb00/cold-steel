@@ -1,14 +1,15 @@
-// The North Atlantic by Rockall, October 1940: the slow convoy SC 7 from Sydney, Cape Breton, and the fast HX 79
-// behind it ran into the U-boats here in the Western Approaches — Kretschmer's U 99, Prien's U 47, Schepke's U 100
-// among them — and lost thirty-two ships in three nights. Open, deep ocean, a long grey swell; in the west the
-// Rockall Bank, with Rockall itself, a lone granite stump in the sea, and Helen's Reef awash beside it, no keel
-// crosses; the George Bligh Bank to the south-west and the Anton Dohrn Seamount in the Rockall Trough to the east,
-// both deep enough to sail over. The convoy (the Royal Navy's escorts, its merchantmen: they bring in command points
-// while they lie in a zone the convoy holds — data/units45/ships.js transport) comes up from the south, the U-boats
-// and a destroyer group (the Kriegsmarine) wait in the north. Ships only.
-// Fair, not mirrored: the two banks point for point, one nearer each fleet (George Bligh the convoy's, Anton Dohrn
-// the U-boats'); Rockall and the Trough the two middle zones, each as near one fleet as the other by the sailing
-// routes (scratchpad seapath), Rockall's reef in nobody's way. Laid out at full size (`widened`).
+// The North Atlantic by Rockall, 18–19 October 1940: the slow convoy SC 7 from Sydney, Cape Breton — thirty-five
+// tramps in nine columns, five knots, the sloops Scarborough and Fowey and the corvettes Bluebell, Heartsease and Leith
+// round it — steams east for the North Channel and runs into the pack: Kretschmer's U 99, Schepke's U 100, Frauenheim,
+// Endrass and the rest, sent in from the patrol line to the south-east on the night of the 18th. They attacked on the
+// surface in the moonlight, inside the columns, and sank twenty ships in two nights; the stragglers astern were
+// picked off one by one. Laid out as that convoy battle: the convoy comes in from the west, the pack closes from the
+// south; between them the convoy's track — the stragglers astern, the columns, the head of the convoy where the
+// escorts' rendezvous was — running out north-east to the Rockall Bank, with Rockall itself, a lone granite stump,
+// and Helen's Reef awash beside it that no keel crosses. The Anton Dohrn Seamount to the east is deep enough to sail
+// over. A clear night under the moon. Ships only (the convoy's merchantmen bring in command points while they lie in a
+// zone the convoy holds — data/units45/ships.js transport). Fair by the sailing routes (seapath): every zone on the
+// convoy's track as near the escorts as the pack. Laid out at full size (`widened`).
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createSea, island } from '../world/Sea.js';
@@ -19,7 +20,7 @@ const SIZE = 12000;
 const HALF = 5000;
 const noise = createNoise2D(1940_10);
 const sea = createSea({ level: 0, size: SIZE, color: 0x23404c });
-const ROCKALL = [-1750, 950];
+const ROCKALL = [2450, -2400];
 
 function height(x: number, z: number) {
   let h = -150 + fbm(noise, x * 0.0004, z * 0.0004, 4) * 25;                         // the open Atlantic
@@ -28,33 +29,32 @@ function height(x: number, z: number) {
     const d = Math.hypot((x - cx) / rx, (z - cz) / rz) - wob / Math.max(rx, rz);
     h = Math.max(h, top - Math.max(0, d - 0.55) * 160);
   };
-  bank(ROCKALL[0] + 150, ROCKALL[1] - 100, 1300, 900, -55);                              // the Rockall Bank
-  bank(-3000, -1950, 650, 520, -48);                                                      // the George Bligh Bank
-  bank(3000, 1950, 650, 520, -48);                                                        // the Anton Dohrn Seamount
-  h = Math.max(h, -2.5 - Math.max(0, Math.hypot(x - ROCKALL[0] + 230, z - ROCKALL[1] + 160) - 140) * 0.35); // Helen's Reef, just awash: no keel crosses it
+  bank(ROCKALL[0] + 400, ROCKALL[1] - 300, 1700, 1100, -55);                             // the Rockall Bank, running off to the north-east
+  bank(3300, 1700, 700, 560, -48);                                                        // the Anton Dohrn Seamount
+  h = Math.max(h, -2.5 - Math.max(0, Math.hypot(x - ROCKALL[0] + 260, z - ROCKALL[1] - 180) - 150) * 0.35); // Helen's Reef, just awash: no keel crosses it
   h = Math.max(h, island(40 - Math.hypot(x - ROCKALL[0], (z - ROCKALL[1]) * 1.25), 40, 19, 0.9, 4)); // Rockall: the stump, 17 m of granite
   return h;
 }
 
 const points: ControlPointDef[] = [
-  { id: 'A', name: 'Convoy SC 7', x: 0, z: -3950, owner: 'nato', sector: 'centre', radius: 160 },
-  { id: 'B', name: 'George Bligh Bank', x: -2750, z: -1335, owner: null, sector: 'west', radius: 180 },
-  { id: 'C', name: 'Rockall', x: -1250, z: 5, owner: null, sector: 'west', radius: 180 },
-  { id: 'D', name: 'Rockall Trough', x: 1250, z: -5, owner: null, sector: 'east', radius: 180 },
-  { id: 'E', name: 'Anton Dohrn Seamount', x: 2750, z: 1440, owner: null, sector: 'east', radius: 180 },
-  { id: 'K', name: 'U-boat patrol line', x: 0, z: 3950, owner: 'pact', sector: 'centre', radius: 160 },
+  { id: 'A', name: 'Convoy SC 7', x: -4300, z: -1500, owner: 'nato', sector: 'west', radius: 160 },
+  { id: 'B', name: 'The stragglers', x: -2840, z: 1720, owner: null, sector: 'west', radius: 180 },
+  { id: 'C', name: 'The columns', x: -1210, z: 400, owner: null, sector: 'centre', radius: 180 },
+  { id: 'D', name: 'The head of the convoy', x: 320, z: -860, owner: null, sector: 'centre', radius: 180 },
+  { id: 'E', name: 'Rockall', x: 1840, z: -2100, owner: null, sector: 'east', radius: 180 },
+  { id: 'K', name: 'The pack', x: 1000, z: 4400, owner: 'pact', sector: 'east', radius: 160 },
 ];
 
 export default {
   id: 'atlanticConvoy',
   name: 'North Atlantic Convoy',
-  description: 'October 1940, the Western Approaches by Rockall: a British convoy and its escorts against the U-boat packs and a German destroyer group. Open, deep ocean, the lone rock of Rockall on its bank.',
+  description: 'October 1940, a moonlit night by Rockall: slow convoy SC 7 steams east in its columns with a handful of escorts, and the U-boat pack closes from the south on the surface. The stragglers astern, the columns, the head of the convoy, the lone rock of Rockall on its bank.',
   epochs: ['1945'],
   region: 'europe', // (the menu's Western Europe — at sea named the North Atlantic: data/epoch.js)
   theatre: 'sea',
   widened: true,
   modes: ['frontline', 'pitched', 'hill', 'skirmish'],
-  conditions: { time: 'day', weather: 'overcast' },
+  conditions: { time: 'night', weather: 'clear' },   // (the moonlit nights of 18 and 19 October)
   fow: 0.5,
   sides: { nato: 'Britain', pact: 'Germany' },
   armies: { nato: ['brit21'], pact: ['wh'] }, // (the Royal Navy and the Kriegsmarine: data/units45/ships.js)
@@ -86,16 +86,17 @@ export default {
     },
   },
 
-  bases: { nato: { x: 0, z: -4300, entries: [-800, 0, 800] }, pact: { x: 0, z: 4300, entries: [-800, 0, 800] } },
+  bases: { nato: { x: -4600, z: -1500, entries: [-600, 0, 600] }, pact: { x: 1000, z: 4650, entries: [-800, 0, 800] } },
   maxStacks: 14,
-  cameraStart: { nato: { x: 0, z: -3900 }, pact: { x: 0, z: 3900 } },
+  cameraStart: { nato: { x: -4000, z: -1300 }, pact: { x: 900, z: 4100 } },
   points,
 
   spawns: {
-    nato: [{ unit: 'transport', x: -300, z: -4250, facing: 0 }, { unit: 'transport', x: 0, z: -4150, facing: 0 }, { unit: 'transport', x: 300, z: -4250, facing: 0 },
-      { unit: 'destroyer', x: 0, z: -3800, facing: 0 }, { unit: 'frigate', x: -600, z: -3950, facing: 0 }, { unit: 'frigate', x: 600, z: -3950, facing: 0 }],
-    pact: [{ unit: 'submarine', x: -700, z: 3600, facing: Math.PI }, { unit: 'submarine', x: 700, z: 3600, facing: Math.PI },
-      { unit: 'destroyer', x: -250, z: 4100, facing: Math.PI }, { unit: 'destroyer', x: 250, z: 4100, facing: Math.PI }],
+    // the convoy in columns heading east, the escorts on its bow and beam; the pack spread on the surface to the south
+    nato: [{ unit: 'transport', x: -4450, z: -1800, facing: 1.75 }, { unit: 'transport', x: -4450, z: -1500, facing: 1.75 }, { unit: 'transport', x: -4450, z: -1200, facing: 1.75 },
+      { unit: 'destroyer', x: -3950, z: -1500, facing: 1.75 }, { unit: 'frigate', x: -4200, z: -2050, facing: 1.75 }, { unit: 'frigate', x: -4200, z: -950, facing: 1.75 }],
+    pact: [{ unit: 'submarine', x: 300, z: 4000, facing: Math.PI }, { unit: 'submarine', x: 1700, z: 4000, facing: Math.PI },
+      { unit: 'destroyer', x: 800, z: 4350, facing: Math.PI }, { unit: 'destroyer', x: 1200, z: 4350, facing: Math.PI }],
   },
 
   decorate({ scene, terrain, cover }) {

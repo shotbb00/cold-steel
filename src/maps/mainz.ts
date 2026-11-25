@@ -3,19 +3,16 @@
 // islands, until Mainz surrendered; by 1805 it was French again, Mont-Tonnerre’s chief town and the Grande Armée’s
 // door over the Rhine. Here a hypothetical summer battle of the Third Coalition: Austrians and Prussians come down
 // out of the Taunus on the right bank to force the crossing, the French come up from the left-bank plateau to hold it.
-// On the map (1.0 × 1.12 km): the French from the Alzey road (+z), the coalition from the Wiesbaden road (−z); the
-// Rhine across the middle, flowing from upstream (+x, Weisenau) to downstream (−x, Mombach and Biebrich). The city
-// of Mainz on its bank with the Dom and its bastioned wall, the citadel’s four bastions on the Jakobsberg above it;
-// the bridge of boats over to Kastel and its crown-work on the right bank. The Main comes in from the right bank on
-// the upstream wing past Kostheim; the Mainspitze, the tongue of land between the Main and the Rhine, carries the
-// Weisenau flying bridge. Downstream the Ingelheimer Aue lies by the Mainz bank behind its side arm, the Mombach
-// flying bridge landing on it from the right bank.
-// Fair, not mirrored: each bank has its fortress by the bridge — the citadel on the left, Kastel on the right — at
-// the same reach from the bridge and its base. Each side has one middle point behind a lesser water of its own and
-// the full Rhine from the other: the Ingelheimer Aue behind the side arm (the French) and the Mainspitze behind the
-// Main (the coalition), each with its flying bridge to the far bank; the bridge of boats in the middle. Gonsenheim
-// answers Biebrich, Weisenau Kostheim; the left-bank plateau rises to the French as the Taunus foothills to the
-// coalition (tools/map_fairness.py). 1806 only (`epochs`); summer, no `climate`.
+// On the map (1.0 × 1.12 km): the French from the Alzey road (+z), the coalition from the Wiesbaden road (−z). The real
+// Rhine runs diagonally past Mainz, down from Weisenau (south-east, +x) to the elbow at Biebrich (north-west, −x). On the
+// left bank the Rheinhessen plateau stands as a steep wall over Weisenau and falls back behind the city to the low
+// Mainzer Sand and the Lennebergwald by Gonsenheim; the city on its bank with the Dom and its wall, the citadel on the
+// Jakobsberg. The right bank is the flat Kastel–Kostheim plain, the Main coming in past Kostheim; only the first Taunus
+// slopes toward Wiesbaden (north-west) and the Hochheim heights beyond the Main rise out of it.
+// Fair by distance, not by shape: each side's points are as far from its base as the other's (tools/map_fairness.py);
+// the plateau over Weisenau before the French is answered by the Taunus slope before the coalition; each side has a
+// middle point behind a lesser water (the Ingelheimer Aue behind its side arm, the Mainspitze behind the Main), the
+// bridge of boats in the middle. 1806 only (`epochs`); summer, no `climate`.
 import { createNoise2D, fbm } from '../world/Noise.js';
 import { PropBuilder } from '../world/Props.js';
 import { createFields } from '../world/Fields.js';
@@ -32,7 +29,7 @@ const noise = createNoise2D(1793_722);
 const hill = (x, z, cx, cz, r, amp) => amp * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
 // the Rhine across the middle, upstream (+x) to downstream (−x)
-const rhineZ = (x) => 11 * Math.sin(x * 0.004 + 0.6) + 5 * Math.sin(x * 0.013 + 1.1) - 2;
+const rhineZ = (x) => 0.3 * x + 11 * Math.sin(x * 0.004 + 0.6) + 5 * Math.sin(x * 0.013 + 1.1) - 8; // (diagonal: down from Weisenau in the south-east to the elbow at Biebrich in the north-west)
 // the side arm behind the Ingelheimer Aue on the Mainz bank; the Main in from the right bank past Kostheim
 const AUE = [[-520, 20, 7], [-440, 52, 10], [-330, 70, 12], [-220, 62, 10], [-140, 34, 6]].map(([x, dz, w]) => [x, rhineZ(x) + dz, w]);
 const MAIN = [[600, -460, 12], [500, -300, 12], [430, -170, 12], [370, -70, 13], [320, rhineZ(320) - 10, 14]];
@@ -71,19 +68,20 @@ const POINTS: ControlPointDef[] = [
 const P = Object.fromEntries(POINTS.map((p) => [p.id, p]));
 const CITADEL = { x: P.C.x, z: P.C.z, R: 50, yaw: Math.PI / 4 };
 /** The city of Mainz along its bank, under the citadel. */
-const CITY = { x: -110, z: 140, rx: 170, rz: 80 };
+const CITY = { x: -90, z: 66, rx: 165, rz: 70 };
 const cityQ = (x, z) => Math.hypot((x - CITY.x) / CITY.rx, (z - CITY.z) / CITY.rz);
 const CROWN = { x: P.I.x, z: P.I.z + 70 };                                              // Kastel’s crown-work round the bridge’s far end
 
 function height(x, z) {
   let h = fbm(noise, x * 0.0028, z * 0.0028, 3) * 3.4 + fbm(noise, x * 0.02 + 7, z * 0.02, 2) * 0.4 + 4.5;
-  const dr = Math.abs(z - rhineZ(x));
-  h += z > 0 ? smoothstep(70, 240, dr) * 12 : smoothstep(150, 480, dr) * (12 + 4 * smoothstep(-200, 400, x)); // the bluff and plateau behind Mainz; the long Taunus slope, higher upstream toward Hochheim
+  const dr = z - rhineZ(x);
+  // the left bank: the Rheinhessen plateau's edge, a steep wall over Weisenau upstream, falling back behind the city to the low Mainzer Sand downstream
+  if (dr > 0) h += smoothstep(40 + 60 * smoothstep(300, -300, x), 200 + 120 * smoothstep(300, -300, x), dr) * (6 + 26 * smoothstep(-250, 350, x) + fbm(noise, x * 0.006, z * 0.006, 2) * 4);
+  // the right bank: the flat Kastel–Kostheim plain; only the Hochheim heights beyond the Main and the first Taunus slopes toward Wiesbaden rise out of it
+  else h += smoothstep(120, 460, -dr) * smoothstep(250, -350, x) * (50 + fbm(noise, x * 0.006 + 9, z * 0.006, 2) * 6) + hill(x, z, 480, -440, 150, 14);
   h += hill(x, z, CITADEL.x + 10, CITADEL.z + 10, 85, 5);                             // the Jakobsberg under the citadel
-  h += hill(x, z, -360, -420, 120, 7);                                               // the Biebrich heights
-  h += hill(x, z, 340, 420, 110, 10);                                                 // the Hechtsheim heights
+  h += hill(x, z, -380, 430, 160, 6);                                                // the Lennebergwald's sand ridge behind Gonsenheim
   h += (5 - h) * smoothstep(1.15, 0.85, cityQ(x, z)) * 0.6;                          // the city on its low terrace
-  h += smoothstep(BOUNDS.x - 30, BOUNDS.x + 160, Math.abs(x)) * (x < 0 ? 22 : 12) + smoothstep(BOUNDS.z - 10, BOUNDS.z + 160, Math.abs(z)) * (z > 0 ? 32 : 14);
   for (const p of POINTS) if ('ABDHIJK'.includes(p.id)) h += (h * 0.6 + 2 - h) * smoothstep(44, 22, Math.hypot(x - p.x, z - p.z)) * 0.5;
   return river.carve(x, z, Math.max(1.6, h));
 }
